@@ -21,7 +21,25 @@ import {
   Search,
   ChevronDown,
   LucideIcon,
+  Wheat,
+  Heart,
+  Palette,
+  UtensilsCrossed,
+  Home,
+  Menu,
+  X,
 } from 'lucide-react';
+
+const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
+  agribusiness: <Wheat className="w-4 h-4" />,
+  personal_care: <Heart className="w-4 h-4" />,
+  accommodation: <Building2 className="w-4 h-4" />,
+  creative_agency: <Palette className="w-4 h-4" />,
+  food_and_beverage: <UtensilsCrossed className="w-4 h-4" />,
+  short_term_rental: <Home className="w-4 h-4" />,
+  property_management: <Building2 className="w-4 h-4" />,
+  real_estate: <Building2 className="w-4 h-4" />,
+};
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -67,7 +85,7 @@ const navSections: NavSection[] = [
   },
 ];
 
-function Header() {
+function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const router = useRouter();
   const { user, businesses, activeBusiness, setActiveBusiness, userRole } = useBusinessContext();
   const supabase = createClient();
@@ -118,7 +136,15 @@ function Header() {
 
   return (
     <>
-      <header className="fixed top-0 left-64 right-0 h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-30 flex items-center justify-between px-6">
+      <header className="fixed top-0 left-0 md:left-64 right-0 h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-30 flex items-center justify-between px-4 md:px-6">
+      {/* Mobile Menu Button */}
+      <button
+        onClick={onMenuClick}
+        className="md:hidden p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+      >
+        <Menu className="w-6 h-6" />
+      </button>
+
       {/* Business Switcher */}
       <div className="relative" ref={dropdownRef}>
         {/* <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
@@ -149,13 +175,13 @@ function Header() {
                     }`}
                   >
                     <div
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-medium ${
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                         business.id === activeBusiness?.id
                           ? 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                       }`}
                     >
-                      {business.business_name.charAt(0).toUpperCase()}
+                      {BUSINESS_TYPE_ICONS[business.business_type] || <Building2 className="w-4 h-4" />}
                     </div>
                     <span
                       className={`text-sm flex-1 truncate ${
@@ -198,9 +224,9 @@ function Header() {
       </div>
 
       {/* Right Side Actions */}
-      <div className="flex items-center gap-4">
-        {/* Search */}
-        <button className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+      <div className="flex items-center gap-2 md:gap-4">
+        {/* Search - hidden on mobile */}
+        <button className="hidden md:block p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
           <Search className="w-5 h-5" />
         </button>
 
@@ -212,7 +238,7 @@ function Header() {
           <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
             {userName.charAt(0).toUpperCase()}
           </div>
-          <div className="text-right">
+          <div className="text-right hidden md:block">
             <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{userName}</p>
             {userRole && (
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -253,13 +279,30 @@ function Header() {
   );
 }
 
-function Sidebar() {
+function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed top-0 left-0 w-64 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-5 flex flex-col">
-      {/* Logo */}
-      <div className="flex items-center gap-3 mb-8">
+    <>
+      {/* Mobile backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      <aside className={`fixed top-0 left-0 w-64 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-5 flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+        {/* Mobile close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 md:hidden"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        {/* Logo */}
+        <div className="flex items-center gap-3 mb-8">
         <Image
           src="/images/KV.png"
           alt="Katalis Ventura Logo"
@@ -285,6 +328,7 @@ function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={onClose}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                       isActive
                         ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'
@@ -306,20 +350,23 @@ function Sidebar() {
         <p className="text-xs text-gray-400 dark:text-gray-500 text-left">Created by @imamabdrsyd</p>
       </div>
     </aside>
+    </>
   );
 }
 
 function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Fixed Sidebar */}
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Fixed Header */}
-      <Header />
+      <Header onMenuClick={() => setSidebarOpen(true)} />
 
       {/* Main Content - with margins for sidebar and header */}
-      <main className="ml-64 pt-16 min-h-screen overflow-auto">
+      <main className="ml-0 md:ml-64 pt-16 min-h-screen overflow-auto">
         {children}
       </main>
     </div>

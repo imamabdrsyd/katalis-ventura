@@ -75,7 +75,7 @@ export default function LandingPage() {
             Make Data-driven Decisions 
             <br />
             <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              for your Assets & Businesses
+              for your Business & Asset
             </span>
           </h1>
 
