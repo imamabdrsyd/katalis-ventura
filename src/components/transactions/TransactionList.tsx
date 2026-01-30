@@ -84,7 +84,11 @@ export function TransactionList({
               <td className="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">
                 {transaction.description}
               </td>
-              <td className="py-4 px-4 text-sm text-gray-900 dark:text-gray-100">
+              <td className={`py-4 px-4 text-sm font-medium ${
+                transaction.category === 'EARN'
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-gray-900 dark:text-gray-100'
+              }`}>
                 {formatCurrency(transaction.amount)}
               </td>
               <td className="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">{transaction.account}</td>
