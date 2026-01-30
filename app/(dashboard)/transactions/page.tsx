@@ -183,15 +183,23 @@ export default function TransactionsPage() {
             <div className="flex items-end gap-2">
               <button
                 onClick={() => setQuickAddMode('earn')}
-                className="btn-secondary mt-6 bg-green-50 text-green-700 border-green-200 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/50"
+                className="mt-6 p-2 md:px-4 md:py-2 rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/50 transition-colors"
+                title="Tambah Pemasukan"
               >
-                + Earn
+                <span className="hidden md:inline">+ Earn</span>
+                <svg className="w-5 h-5 md:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
               </button>
               <button
                 onClick={() => setQuickAddMode('spend')}
-                className="btn-secondary mt-6 bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/50"
+                className="mt-6 p-2 md:px-4 md:py-2 rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/50 transition-colors"
+                title="Tambah Pengeluaran"
               >
-                + Spend
+                <span className="hidden md:inline">+ Spend</span>
+                <svg className="w-5 h-5 md:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
               </button>
             </div>
           )}
@@ -217,7 +225,7 @@ export default function TransactionsPage() {
       )}
 
       {/* Transaction List */}
-      <div className="card-static">
+      <div className="card-static overflow-hidden">
         <TransactionList
           transactions={transactions}
           loading={loading}

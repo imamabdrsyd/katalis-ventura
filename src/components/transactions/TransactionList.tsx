@@ -4,6 +4,15 @@ import type { Transaction, TransactionCategory } from '@/types';
 import { CATEGORY_LABELS } from '@/lib/calculations';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
+// Short date format for mobile (DD/MM/YYYY)
+function formatDateShort(dateString: string): string {
+  const date = new Date(dateString);
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
 interface TransactionListProps {
   transactions: Transaction[];
   loading: boolean;
@@ -55,13 +64,13 @@ export function TransactionList({
       <table className="w-full min-w-[600px]">
         <thead>
           <tr className="border-b border-gray-200 dark:border-gray-700">
-            <th className="text-left py-4 px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Tanggal</th>
-            <th className="text-left py-4 px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Kategori</th>
-            <th className="text-left py-4 px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Deskripsi</th>
-            <th className="text-left py-4 px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Jumlah</th>
-            <th className="text-left py-4 px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Akun</th>
+            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs md:text-sm font-normal text-gray-500 dark:text-gray-400">Tanggal</th>
+            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs md:text-sm font-normal text-gray-500 dark:text-gray-400">Kategori</th>
+            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs md:text-sm font-normal text-gray-500 dark:text-gray-400">Deskripsi</th>
+            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs md:text-sm font-normal text-gray-500 dark:text-gray-400">Jumlah</th>
+            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs md:text-sm font-normal text-gray-500 dark:text-gray-400">Akun</th>
             {showActions && (
-              <th className="text-right py-4 px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Aksi</th>
+              <th className="text-right py-3 px-2 md:py-4 md:px-4 text-xs md:text-sm font-normal text-gray-500 dark:text-gray-400">Aksi</th>
             )}
           </tr>
         </thead>
@@ -71,30 +80,31 @@ export function TransactionList({
               key={transaction.id}
               className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
             >
-              <td className="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">
-                {formatDate(transaction.date)}
+              <td className="py-3 px-2 md:py-4 md:px-4 text-xs md:text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                <span className="hidden md:inline">{formatDate(transaction.date)}</span>
+                <span className="md:hidden">{formatDateShort(transaction.date)}</span>
               </td>
-              <td className="py-4 px-4">
+              <td className="py-3 px-2 md:py-4 md:px-4">
                 <span
-                  className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${BADGE_CLASSES[transaction.category]}`}
+                  className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${BADGE_CLASSES[transaction.category]}`}
                 >
                   {CATEGORY_LABELS[transaction.category]}
                 </span>
               </td>
-              <td className="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">
+              <td className="py-3 px-2 md:py-4 md:px-4 text-xs md:text-sm text-gray-700 dark:text-gray-300">
                 {transaction.description}
               </td>
-              <td className={`py-4 px-4 text-sm font-medium ${
+              <td className={`py-3 px-2 md:py-4 md:px-4 text-xs md:text-sm font-medium whitespace-nowrap ${
                 transaction.category === 'EARN'
                   ? 'text-emerald-600 dark:text-emerald-400'
                   : 'text-gray-900 dark:text-gray-100'
               }`}>
                 {formatCurrency(transaction.amount)}
               </td>
-              <td className="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">{transaction.account}</td>
+              <td className="py-3 px-2 md:py-4 md:px-4 text-xs md:text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{transaction.account}</td>
               {showActions && (
-                <td className="py-4 px-4">
-                  <div className="flex items-center justify-end gap-2">
+                <td className="py-3 px-2 md:py-4 md:px-4">
+                  <div className="flex items-center justify-end gap-1 md:gap-2">
                     {onEdit && (
                       <button
                         onClick={() => onEdit(transaction)}
