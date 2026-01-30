@@ -26,6 +26,7 @@ export default function TransactionsPage() {
 
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false);
+  const [quickAddMode, setQuickAddMode] = useState<'earn' | 'spend' | null>(null);
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null);
   const [deleteTransaction, setDeleteTransaction] = useState<Transaction | null>(null);
   const [saving, setSaving] = useState(false);
@@ -71,6 +72,7 @@ export default function TransactionsPage() {
         created_by: user.id,
       });
       setShowAddModal(false);
+      setQuickAddMode(null);
       fetchTransactions();
     } catch (err: any) {
       alert(err.message || 'Gagal menambahkan transaksi');
@@ -177,6 +179,22 @@ export default function TransactionsPage() {
               ))}
             </select>
           </div>
+          {canManageTransactions && (
+            <div className="flex items-end gap-2">
+              <button
+                onClick={() => setQuickAddMode('earn')}
+                className="btn-secondary mt-6 bg-green-50 text-green-700 border-green-200 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/50"
+              >
+                + Earn
+              </button>
+              <button
+                onClick={() => setQuickAddMode('spend')}
+                className="btn-secondary mt-6 bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/50"
+              >
+                + Spend
+              </button>
+            </div>
+          )}
           {categoryFilter && (
             <button
               onClick={() => setCategoryFilter('')}
@@ -218,6 +236,36 @@ export default function TransactionsPage() {
           onSubmit={handleAddTransaction}
           onCancel={() => setShowAddModal(false)}
           loading={saving}
+        />
+      </Modal>
+
+      {/* Quick Add Earn Modal */}
+      <Modal
+        isOpen={quickAddMode === 'earn'}
+        onClose={() => setQuickAddMode(null)}
+        title="Tambah Pemasukan"
+      >
+        <TransactionForm
+          onSubmit={handleAddTransaction}
+          onCancel={() => setQuickAddMode(null)}
+          loading={saving}
+          defaultCategory="EARN"
+          allowedCategories={['EARN']}
+        />
+      </Modal>
+
+      {/* Quick Add Spend Modal */}
+      <Modal
+        isOpen={quickAddMode === 'spend'}
+        onClose={() => setQuickAddMode(null)}
+        title="Tambah Pengeluaran"
+      >
+        <TransactionForm
+          onSubmit={handleAddTransaction}
+          onCancel={() => setQuickAddMode(null)}
+          loading={saving}
+          defaultCategory="OPEX"
+          allowedCategories={['OPEX', 'VAR']}
         />
       </Modal>
 

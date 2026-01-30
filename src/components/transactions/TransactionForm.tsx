@@ -17,19 +17,24 @@ interface TransactionFormProps {
   onSubmit: (data: TransactionFormData) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
+  defaultCategory?: TransactionCategory;
+  allowedCategories?: TransactionCategory[];
 }
 
-const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
+const ALL_CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
 export function TransactionForm({
   transaction,
   onSubmit,
   onCancel,
   loading = false,
+  defaultCategory,
+  allowedCategories,
 }: TransactionFormProps) {
+  const categories = allowedCategories || ALL_CATEGORIES;
   const [formData, setFormData] = useState<TransactionFormData>({
     date: transaction?.date || new Date().toISOString().split('T')[0],
-    category: transaction?.category || 'EARN',
+    category: transaction?.category || defaultCategory || categories[0],
     description: transaction?.description || '',
     amount: transaction?.amount || 0,
     account: transaction?.account || '',
@@ -92,7 +97,7 @@ export function TransactionForm({
           className="input"
           required
         >
-          {CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <option key={cat} value={cat}>
               {CATEGORY_LABELS[cat]}
             </option>
