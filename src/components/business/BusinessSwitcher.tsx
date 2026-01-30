@@ -5,6 +5,18 @@ import { useRouter } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { BusinessForm, type BusinessFormData } from './BusinessForm';
 import * as businessesApi from '@/lib/api/businesses';
+import { Building2, Palette, Heart, Wheat, UtensilsCrossed, Home } from 'lucide-react';
+
+const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
+  agribusiness: <Wheat className="w-4 h-4" />,
+  personal_care: <Heart className="w-4 h-4" />,
+  accommodation: <Building2 className="w-4 h-4" />,
+  creative_agency: <Palette className="w-4 h-4" />,
+  food_and_beverage: <UtensilsCrossed className="w-4 h-4" />,
+  short_term_rental: <Home className="w-4 h-4" />,
+  property_management: <Building2 className="w-4 h-4" />,
+  real_estate: <Building2 className="w-4 h-4" />,
+};
 
 export function BusinessSwitcher() {
   const { user, businesses, activeBusiness, setActiveBusiness, userRole } = useBusinessContext();
@@ -57,8 +69,8 @@ export function BusinessSwitcher() {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors w-full"
       >
-        <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center text-white text-sm">
-          {activeBusiness.business_name.charAt(0).toUpperCase()}
+        <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center text-white">
+          {BUSINESS_TYPE_ICONS[activeBusiness.business_type] || <Building2 className="w-4 h-4" />}
         </div>
         <div className="flex-1 text-left min-w-0">
           <div className="text-sm font-semibold text-gray-800 truncate">
@@ -93,13 +105,13 @@ export function BusinessSwitcher() {
                 }`}
               >
                 <div
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-medium ${
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                     business.id === activeBusiness.id
                       ? 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'
                       : 'bg-gray-100 text-gray-600'
                   }`}
                 >
-                  {business.business_name.charAt(0).toUpperCase()}
+                  {BUSINESS_TYPE_ICONS[business.business_type] || <Building2 className="w-4 h-4" />}
                 </div>
                 <span
                   className={`text-sm flex-1 truncate ${
