@@ -8,6 +8,10 @@ const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Katalis Ventura - Private Equity Management',
   description: 'Multi-role finance management platform for business managers and investors',
+  icons: {
+    icon: '/images/KV.png',
+    apple: '/images/KV.png',
+  },
 };
 
 export default function RootLayout({
