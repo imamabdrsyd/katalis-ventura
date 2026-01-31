@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useBusinessContext } from '@/context/BusinessContext';
-import { Calendar, TrendingUp, TrendingDown, Download } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, Download, FileText, FileSpreadsheet } from 'lucide-react';
 import * as transactionsApi from '@/lib/api/transactions';
 import { calculateFinancialSummary, filterTransactionsByDateRange } from '@/lib/calculations';
 import { formatCurrency } from '@/lib/utils';
+import { exportIncomeStatementToPDF, exportIncomeStatementToExcel } from '@/lib/export';
 import type { Transaction } from '@/types';
 
 type Period = 'month' | 'quarter' | 'year' | 'custom';
@@ -18,6 +19,8 @@ export default function IncomeStatementPage() {
   const [period, setPeriod] = useState<Period>('month');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportButtonRef = useRef<HTMLDivElement>(null);
 
   // Initialize dates based on current month
   useEffect(() => {
@@ -86,6 +89,35 @@ export default function IncomeStatementPage() {
     setStartDate(start.toISOString().split('T')[0]);
     setEndDate(end.toISOString().split('T')[0]);
   };
+
+  // Handle export
+  const handleExportPDF = () => {
+    if (!activeBusiness) return;
+    const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    exportIncomeStatementToPDF(activeBusiness.business_name, periodLabel, summary);
+    setShowExportMenu(false);
+  };
+
+  const handleExportExcel = () => {
+    if (!activeBusiness) return;
+    const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    exportIncomeStatementToExcel(activeBusiness.business_name, periodLabel, summary);
+    setShowExportMenu(false);
+  };
+
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportButtonRef.current && !exportButtonRef.current.contains(event.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+
+    if (showExportMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showExportMenu]);
 
   const summary = calculateFinancialSummary(filteredTransactions);
 
@@ -188,10 +220,35 @@ export default function IncomeStatementPage() {
           </div>
 
           {/* Export Button */}
-          <button className="btn-secondary flex items-center gap-2">
-            <Download className="w-4 h-4" />
-            Export
-          </button>
+          <div className="relative" ref={exportButtonRef}>
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Export
+            </button>
+
+            {/* Export Dropdown */}
+            {showExportMenu && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-10">
+                <button
+                  onClick={handleExportPDF}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3"
+                >
+                  <FileText className="w-4 h-4 text-red-500" />
+                  Export as PDF
+                </button>
+                <button
+                  onClick={handleExportExcel}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-green-500" />
+                  Export as Excel
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useBusinessContext } from '@/context/BusinessContext';
-import { Calendar, TrendingUp, TrendingDown, Download, Wallet } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, Download, Wallet, FileText, FileSpreadsheet } from 'lucide-react';
 import * as transactionsApi from '@/lib/api/transactions';
 import { calculateCashFlow, filterTransactionsByDateRange } from '@/lib/calculations';
 import { formatCurrency } from '@/lib/utils';
+import { exportCashFlowToPDF, exportCashFlowToExcel } from '@/lib/export';
 import type { Transaction } from '@/types';
 
 type Period = 'month' | 'quarter' | 'year' | 'custom';
@@ -18,6 +19,8 @@ export default function CashFlowPage() {
   const [period, setPeriod] = useState<Period>('month');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportButtonRef = useRef<HTMLDivElement>(null);
 
   // Get capital from active business
   const capital = activeBusiness?.capital_investment || 0;
@@ -91,6 +94,35 @@ export default function CashFlowPage() {
   };
 
   const cashFlow = calculateCashFlow(filteredTransactions, capital);
+
+  // Handle export
+  const handleExportPDF = () => {
+    if (!activeBusiness) return;
+    const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    exportCashFlowToPDF(activeBusiness.business_name, periodLabel, cashFlow);
+    setShowExportMenu(false);
+  };
+
+  const handleExportExcel = () => {
+    if (!activeBusiness) return;
+    const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    exportCashFlowToExcel(activeBusiness.business_name, periodLabel, cashFlow);
+    setShowExportMenu(false);
+  };
+
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportButtonRef.current && !exportButtonRef.current.contains(event.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+
+    if (showExportMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showExportMenu]);
 
   if (loading) {
     return (
@@ -184,10 +216,35 @@ export default function CashFlowPage() {
           </div>
 
           {/* Export Button */}
-          <button className="btn-secondary flex items-center gap-2">
-            <Download className="w-4 h-4" />
-            Export
-          </button>
+          <div className="relative" ref={exportButtonRef}>
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Export
+            </button>
+
+            {/* Export Dropdown */}
+            {showExportMenu && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-10">
+                <button
+                  onClick={handleExportPDF}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3"
+                >
+                  <FileText className="w-4 h-4 text-red-500" />
+                  Export as PDF
+                </button>
+                <button
+                  onClick={handleExportExcel}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-green-500" />
+                  Export as Excel
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
