@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Briefcase, TrendingUp, Shield } from 'lucide-react';
 
 interface Stats {
   users: number;
@@ -103,8 +104,8 @@ export default function LandingPage() {
         {/* Features Grid */}
         <div id="features" className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-32 max-w-6xl mx-auto">
           <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-            <div className="w-14 h-14 bg-indigo-100 rounded-xl flex items-center justify-center text-3xl mb-4">
-              👔
+            <div className="w-14 h-14 bg-indigo-100 rounded-xl flex items-center justify-center mb-4">
+              <Briefcase className="w-7 h-7 text-indigo-600" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-3">
               For Business Managers
@@ -116,8 +117,8 @@ export default function LandingPage() {
           </div>
 
           <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-            <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center text-3xl mb-4">
-              📊
+            <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
+              <TrendingUp className="w-7 h-7 text-purple-600" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-3">
               For Investors
@@ -129,8 +130,8 @@ export default function LandingPage() {
           </div>
 
           <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-            <div className="w-14 h-14 bg-pink-100 rounded-xl flex items-center justify-center text-3xl mb-4">
-              🔐
+            <div className="w-14 h-14 bg-pink-100 rounded-xl flex items-center justify-center mb-4">
+              <Shield className="w-7 h-7 text-pink-600" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-3">
               Secure & Private
@@ -235,7 +236,7 @@ export default function LandingPage() {
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
-                      <span>imamabdrsyd@gmail.com</span>
+                      <span>imam.isyida@gmail.com</span>
                     </a>
                   </div>
                 </div>

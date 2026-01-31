@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -14,6 +14,27 @@ export default function LoginPage() {
 
   const router = useRouter();
   const supabase = createClient();
+
+  // Clear invalid session on mount to prevent refresh token errors
+  useEffect(() => {
+    const clearInvalidSession = async () => {
+      try {
+        const { error: sessionError } = await supabase.auth.getSession();
+
+        // If there's a session error (like invalid refresh token), sign out
+        if (sessionError) {
+          await supabase.auth.signOut();
+        }
+      } catch (err) {
+        // Silently handle any errors during session check
+        console.error('Session check error:', err);
+        // Sign out to clear any corrupted session data
+        await supabase.auth.signOut();
+      }
+    };
+
+    clearInvalidSession();
+  }, [supabase]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

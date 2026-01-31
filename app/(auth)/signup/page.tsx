@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Briefcase, TrendingUp } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
 import type { UserRole } from '@/types';
 
@@ -19,6 +20,27 @@ export default function SignUpPage() {
 
   const router = useRouter();
   const supabase = createClient();
+
+  // Clear invalid session on mount to prevent refresh token errors
+  useEffect(() => {
+    const clearInvalidSession = async () => {
+      try {
+        const { error: sessionError } = await supabase.auth.getSession();
+
+        // If there's a session error (like invalid refresh token), sign out
+        if (sessionError) {
+          await supabase.auth.signOut();
+        }
+      } catch (err) {
+        // Silently handle any errors during session check
+        console.error('Session check error:', err);
+        // Sign out to clear any corrupted session data
+        await supabase.auth.signOut();
+      }
+    };
+
+    clearInvalidSession();
+  }, [supabase]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,7 +154,8 @@ export default function SignUpPage() {
               />
               <div className="flex-1">
                 <div className="font-semibold text-gray-800 dark:text-white flex items-center gap-2">
-                  👔 Business Manager
+                  <Briefcase className="w-5 h-5" />
+                  Business Manager
                 </div>
                 <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   Setup and manage a new business
@@ -151,7 +174,8 @@ export default function SignUpPage() {
               />
               <div className="flex-1">
                 <div className="font-semibold text-gray-800 dark:text-white flex items-center gap-2">
-                  📊 Investor
+                  <TrendingUp className="w-5 h-5" />
+                  Investor
                 </div>
                 <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   Join and monitor existing business

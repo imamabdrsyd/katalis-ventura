@@ -5,6 +5,7 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import { Modal } from '@/components/ui/Modal';
 import { BusinessCard } from '@/components/business/BusinessCard';
 import { BusinessForm, type BusinessFormData } from '@/components/business/BusinessForm';
+import { InviteCodeManager } from '@/components/business/InviteCodeManager';
 import * as businessesApi from '@/lib/api/businesses';
 import type { Business } from '@/types';
 
@@ -24,6 +25,7 @@ export default function BusinessesPage() {
   const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
   const [archivingBusiness, setArchivingBusiness] = useState<Business | null>(null);
+  const [managingInviteBusiness, setManagingInviteBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
 
@@ -202,10 +204,21 @@ export default function BusinessesPage() {
                 setIsArchiveConfirmOpen(true);
               }}
               onRestore={isInvestor ? undefined : () => handleRestoreBusiness(business)}
+              onInvite={isInvestor ? undefined : () => setManagingInviteBusiness(business)}
               showActions={!isInvestor}
             />
           ))}
         </div>
+      )}
+
+      {/* Invite Code Manager Modal */}
+      {managingInviteBusiness && user && (
+        <InviteCodeManager
+          businessId={managingInviteBusiness.id}
+          businessName={managingInviteBusiness.business_name}
+          userId={user.id}
+          onClose={() => setManagingInviteBusiness(null)}
+        />
       )}
 
       {/* Add Business Modal */}

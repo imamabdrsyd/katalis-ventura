@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, PackageOpen, Home } from 'lucide-react';
+import { MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, PackageOpen, Home, UserPlus } from 'lucide-react';
 import type { Business } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 
@@ -12,6 +12,7 @@ interface BusinessCardProps {
   onEdit?: () => void;
   onArchive?: () => void;
   onRestore?: () => void;
+  onInvite?: () => void;
   showActions?: boolean;
 }
 
@@ -45,6 +46,7 @@ export function BusinessCard({
   onEdit,
   onArchive,
   onRestore,
+  onInvite,
   showActions = true,
 }: BusinessCardProps) {
   const [creatorName, setCreatorName] = useState<string>('');
@@ -105,13 +107,18 @@ export function BusinessCard({
             </p>
           </div>
         </div>
-        {isActive && !business.is_archived && (
-          <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Active</span>
-        )}
-        {business.is_archived && (
-          <span className="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs font-semibold rounded-lg">
-            Archived
-          </span>
+        {/* Invite Button Icon */}
+        {onInvite && !business.is_archived && showActions && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onInvite();
+            }}
+            className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+            title="Kelola Undangan"
+          >
+            <UserPlus className="w-5 h-5" />
+          </button>
         )}
       </div>
 
@@ -168,11 +175,21 @@ export function BusinessCard({
         </div>
       )}
 
-      <div className="text-sm text-gray-500 dark:text-gray-400 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-        <span className="text-xs">Created by: </span>
-        <span className="font-medium text-gray-700 dark:text-gray-300">
-          {loading ? 'Loading...' : creatorName}
-        </span>
+      <div className="flex items-center justify-between text-sm mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+        <div className="text-gray-500 dark:text-gray-400">
+          <span className="text-xs">Created by: </span>
+          <span className="font-medium text-gray-700 dark:text-gray-300">
+            {loading ? 'Loading...' : creatorName}
+          </span>
+        </div>
+        {isActive && !business.is_archived && (
+          <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Active</span>
+        )}
+        {business.is_archived && (
+          <span className="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs font-semibold rounded-lg">
+            Archived
+          </span>
+        )}
       </div>
     </div>
   );
