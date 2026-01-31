@@ -333,11 +333,17 @@ export default function IncomeStatementPage() {
           </div>
 
           {/* NET INCOME */}
-          <div className="bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl p-6 text-white">
+          <div className={`rounded-xl p-6 text-white ${
+            summary.netProfit >= 0
+              ? 'bg-gradient-to-r from-green-500 to-emerald-500'
+              : 'bg-gradient-to-r from-red-500 to-rose-500'
+          }`}>
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="font-bold text-xl mb-1">NET INCOME</h3>
-                <p className="text-indigo-100 text-sm">Net Margin: {netMargin.toFixed(2)}%</p>
+                <p className={`text-sm ${
+                  summary.netProfit >= 0 ? 'text-green-100' : 'text-red-100'
+                }`}>Net Margin: {netMargin.toFixed(2)}%</p>
               </div>
               <div className="text-right">
                 <div className="flex items-center gap-2 justify-end mb-1">
