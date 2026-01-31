@@ -238,7 +238,7 @@ function Header({ onMenuClick }: { onMenuClick: () => void }) {
           <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
             {userName.charAt(0).toUpperCase()}
           </div>
-          <div className="text-right hidden md:block">
+          <div className="hidden md:block">
             <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{userName}</p>
             {userRole && (
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

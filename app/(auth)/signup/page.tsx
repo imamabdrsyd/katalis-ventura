@@ -39,15 +39,10 @@ export default function SignUpPage() {
 
       if (signUpError) throw signUpError;
 
-      // Create profile
+      // Profile is auto-created by database trigger
+      // Wait a moment for the trigger to complete
       if (data.user) {
-        const { error: profileError } = await supabase.from('profiles').insert({
-          id: data.user.id,
-          full_name: fullName,
-          default_role: selectedRole,
-        });
-
-        if (profileError) console.error('Profile creation error:', profileError);
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
 
       // Redirect based on role

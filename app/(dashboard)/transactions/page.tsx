@@ -253,17 +253,27 @@ export default function TransactionsPage() {
           {/* Right side - Controls */}
           <div className="flex items-center gap-2">
             {/* Rows per page */}
-            <select
-              value={rowsPerPage}
-              onChange={(e) => setRowsPerPage(Number(e.target.value))}
-              className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-            >
-              <option value={5}>Show 5 Row</option>
-              <option value={8}>Show 8 Row</option>
-              <option value={10}>Show 10 Row</option>
-              <option value={20}>Show 20 Row</option>
-              <option value={50}>Show 50 Row</option>
-            </select>
+            <div className="relative">
+              <select
+                value={rowsPerPage}
+                onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                className="appearance-none pl-4 pr-10 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+              >
+                <option value={5}>Show 5 Row</option>
+                <option value={8}>Show 8 Row</option>
+                <option value={10}>Show 10 Row</option>
+                <option value={20}>Show 20 Row</option>
+                <option value={50}>Show 50 Row</option>
+              </select>
+              <svg
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400 pointer-events-none"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
 
             {/* Quick Add Buttons */}
             {canManageTransactions && (
