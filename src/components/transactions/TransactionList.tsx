@@ -1,21 +1,12 @@
 'use client';
 
 import type { Transaction, TransactionCategory } from '@/types';
-import { CATEGORY_LABELS } from '@/lib/calculations';
 import { formatCurrency, formatDate } from '@/lib/utils';
-
-// Short date format for mobile (DD/MM/YYYY)
-function formatDateShort(dateString: string): string {
-  const date = new Date(dateString);
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
-}
 
 interface TransactionListProps {
   transactions: Transaction[];
   loading: boolean;
+  onRowClick?: (transaction: Transaction) => void;
   onEdit?: (transaction: Transaction) => void;
   onDelete?: (transaction: Transaction) => void;
 }
@@ -32,6 +23,7 @@ const BADGE_CLASSES: Record<TransactionCategory, string> = {
 export function TransactionList({
   transactions,
   loading,
+  onRowClick,
   onEdit,
   onDelete,
 }: TransactionListProps) {
@@ -61,53 +53,66 @@ export function TransactionList({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[600px]">
+      <table className="w-full min-w-[700px]">
         <thead>
           <tr className="border-b border-gray-200 dark:border-gray-700">
-            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs md:text-sm font-normal text-gray-500 dark:text-gray-400">Tanggal</th>
-            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs md:text-sm font-normal text-gray-500 dark:text-gray-400">Kategori</th>
-            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs md:text-sm font-normal text-gray-500 dark:text-gray-400">Deskripsi</th>
-            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs md:text-sm font-normal text-gray-500 dark:text-gray-400">Jumlah</th>
-            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs md:text-sm font-normal text-gray-500 dark:text-gray-400">Akun</th>
+            <th className="text-left py-3 px-2 md:py-4 text-sm font-normal text-gray-500 dark:text-gray-400 w-1 whitespace-nowrap">No</th>
+            <th className="text-left py-3 pl-1 pr-2 md:py-4 md:pl-2 md:pr-4 text-sm font-normal text-gray-500 dark:text-gray-400">Kategori</th>
+            <th className="text-left py-3 px-2 md:py-4 text-sm font-normal text-gray-500 dark:text-gray-400">Nama</th>
+            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Deskripsi</th>
+            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Tanggal</th>
+            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Jumlah</th>
+            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Akun</th>
             {showActions && (
-              <th className="text-right py-3 px-2 md:py-4 md:px-4 text-xs md:text-sm font-normal text-gray-500 dark:text-gray-400">Aksi</th>
+              <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Aksi</th>
             )}
           </tr>
         </thead>
         <tbody>
-          {transactions.map((transaction) => (
+          {transactions.map((transaction, index) => (
             <tr
               key={transaction.id}
-              className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+              onClick={() => onRowClick?.(transaction)}
+              className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
             >
-              <td className="py-3 px-2 md:py-4 md:px-4 text-xs md:text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                <span className="hidden md:inline">{formatDate(transaction.date)}</span>
-                <span className="md:hidden">{formatDateShort(transaction.date)}</span>
+              <td className="py-3 px-2 md:py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap w-1">
+                {index + 1}
               </td>
-              <td className="py-3 px-2 md:py-4 md:px-4">
+              <td className="py-3 pl-1 pr-2 md:py-4 md:pl-2 md:pr-4">
                 <span
                   className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${BADGE_CLASSES[transaction.category]}`}
                 >
-                  {CATEGORY_LABELS[transaction.category]}
+                  {transaction.category}
                 </span>
               </td>
-              <td className="py-3 px-2 md:py-4 md:px-4 text-xs md:text-sm text-gray-700 dark:text-gray-300">
+              <td className="py-3 px-2 md:py-4 text-sm font-medium text-gray-800 dark:text-gray-200">
+                {transaction.name}
+              </td>
+              <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300">
                 {transaction.description}
               </td>
-              <td className={`py-3 px-2 md:py-4 md:px-4 text-xs md:text-sm font-medium whitespace-nowrap ${
+              <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                {formatDate(transaction.date)}
+              </td>
+              <td className={`py-3 px-2 md:py-4 md:px-4 text-sm font-medium whitespace-nowrap ${
                 transaction.category === 'EARN'
                   ? 'text-emerald-600 dark:text-emerald-400'
-                  : 'text-gray-900 dark:text-gray-100'
+                  : transaction.category === 'OPEX' || transaction.category === 'VAR' || transaction.category === 'TAX'
+                  ? 'text-red-600 dark:text-red-400'
+                  : 'text-gray-900 dark:text-gray-300'
               }`}>
                 {formatCurrency(transaction.amount)}
               </td>
-              <td className="py-3 px-2 md:py-4 md:px-4 text-xs md:text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{transaction.account}</td>
+              <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{transaction.account}</td>
               {showActions && (
                 <td className="py-3 px-2 md:py-4 md:px-4">
-                  <div className="flex items-center justify-end gap-1 md:gap-2">
+                  <div className="flex items-center justify-start gap-1 md:gap-2">
                     {onEdit && (
                       <button
-                        onClick={() => onEdit(transaction)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(transaction);
+                        }}
                         className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                         title="Edit"
                       >
@@ -123,7 +128,10 @@ export function TransactionList({
                     )}
                     {onDelete && (
                       <button
-                        onClick={() => onDelete(transaction)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(transaction);
+                        }}
                         className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                         title="Hapus"
                       >

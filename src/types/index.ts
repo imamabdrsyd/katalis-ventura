@@ -54,6 +54,7 @@ export interface Transaction {
   business_id: string;
   date: string;
   category: TransactionCategory;
+  name: string;
   description: string;
   amount: number;
   account: string;

@@ -7,6 +7,7 @@ import { CATEGORY_LABELS } from '@/lib/calculations';
 export interface TransactionFormData {
   date: string;
   category: TransactionCategory;
+  name: string;
   description: string;
   amount: number;
   account: string;
@@ -35,6 +36,7 @@ export function TransactionForm({
   const [formData, setFormData] = useState<TransactionFormData>({
     date: transaction?.date || new Date().toISOString().split('T')[0],
     category: transaction?.category || defaultCategory || categories[0],
+    name: transaction?.name || '',
     description: transaction?.description || '',
     amount: transaction?.amount || 0,
     account: transaction?.account || '',
@@ -45,6 +47,7 @@ export function TransactionForm({
     const newErrors: Partial<Record<keyof TransactionFormData, string>> = {};
 
     if (!formData.date) newErrors.date = 'Tanggal harus diisi';
+    if (!formData.name.trim()) newErrors.name = 'Nama harus diisi';
     if (!formData.description.trim()) newErrors.description = 'Deskripsi harus diisi';
     if (formData.amount <= 0) newErrors.amount = 'Jumlah harus lebih dari 0';
     if (!formData.account.trim()) newErrors.account = 'Akun harus diisi';
@@ -106,6 +109,20 @@ export function TransactionForm({
       </div>
 
       <div>
+        <label className="label">Nama *</label>
+        <input
+          type="text"
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
+          className="input"
+          placeholder="Customer atau vendor terkait"
+          required
+        />
+        {errors.name && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.name}</p>}
+      </div>
+
+      <div>
         <label className="label">Deskripsi *</label>
         <textarea
           name="description"
@@ -151,7 +168,7 @@ export function TransactionForm({
         {errors.account && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.account}</p>}
       </div>
 
-      <div className="flex gap-3 pt-4">
+      <div className="flex gap-3 pt-2">
         <button
           type="button"
           onClick={onCancel}

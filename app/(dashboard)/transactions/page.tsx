@@ -5,12 +5,21 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import { Modal } from '@/components/ui/Modal';
 import { TransactionForm, TransactionFormData } from '@/components/transactions/TransactionForm';
 import { TransactionList } from '@/components/transactions/TransactionList';
+import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import { DeleteConfirmModal } from '@/components/transactions/DeleteConfirmModal';
-import { CATEGORY_LABELS } from '@/lib/calculations';
 import * as transactionsApi from '@/lib/api/transactions';
 import type { Transaction, TransactionCategory } from '@/types';
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
+
+const CATEGORY_LABELS_ID: Record<TransactionCategory, string> = {
+  EARN: 'Pendapatan',
+  OPEX: 'Beban Operasional',
+  VAR: 'Beban Variabel',
+  CAPEX: 'Belanja Modal',
+  TAX: 'Pajak',
+  FIN: 'Financing',
+};
 
 export default function TransactionsPage() {
   const { user, activeBusinessId: businessId, loading: businessLoading, error: businessError, userRole } = useBusinessContext();
@@ -24,9 +33,47 @@ export default function TransactionsPage() {
   // Filter state
   const [categoryFilter, setCategoryFilter] = useState<TransactionCategory | ''>('');
 
+  // Table state
+  const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
+    start: '',
+    end: '',
+  });
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+
+  // Apply filters
+  const filteredTransactions = transactions.filter((transaction) => {
+    // Date range filter
+    if (dateRange.start && new Date(transaction.date) < new Date(dateRange.start)) {
+      return false;
+    }
+    if (dateRange.end && new Date(transaction.date) > new Date(dateRange.end)) {
+      return false;
+    }
+    return true;
+  });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredTransactions.length / rowsPerPage);
+  const startIndex = (currentPage - 1) * rowsPerPage;
+  const endIndex = startIndex + rowsPerPage;
+  const visibleTransactions = filteredTransactions.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [categoryFilter, rowsPerPage, dateRange]);
+
+  // Handle print/export to PDF
+  const handlePrint = () => {
+    window.print();
+  };
+
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false);
   const [quickAddMode, setQuickAddMode] = useState<'earn' | 'spend' | null>(null);
+  const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null);
   const [deleteTransaction, setDeleteTransaction] = useState<Transaction | null>(null);
   const [saving, setSaving] = useState(false);
@@ -148,7 +195,7 @@ export default function TransactionsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Transaksi</h1>
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Kelola Transaksi</h1>
           {/* <p className="text-gray-500 mt-1">
             {canManageTransactions ? 'Kelola transaksi keuangan bisnis Anda' : 'Lihat transaksi keuangan bisnis'}
           </p> */}
@@ -160,59 +207,6 @@ export default function TransactionsPage() {
         )}
       </div>
 
-      {/* Filters */}
-      <div className="card-static mb-6">
-        <div className="flex items-center gap-4">
-          <div>
-            <label className="label">Filter Kategori</label>
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value as TransactionCategory | '')}
-              className="input"
-              style={{ minWidth: '200px' }}
-            >
-              <option value="">Semua Kategori</option>
-              {CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {CATEGORY_LABELS[cat]}
-                </option>
-              ))}
-            </select>
-          </div>
-          {canManageTransactions && (
-            <div className="flex items-end gap-2">
-              <button
-                onClick={() => setQuickAddMode('earn')}
-                className="mt-6 p-2 md:px-4 md:py-2 rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/50 transition-colors"
-                title="Tambah Pemasukan"
-              >
-                <span className="hidden md:inline">+ Earn</span>
-                <svg className="w-5 h-5 md:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </button>
-              <button
-                onClick={() => setQuickAddMode('spend')}
-                className="mt-6 p-2 md:px-4 md:py-2 rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/50 transition-colors"
-                title="Tambah Pengeluaran"
-              >
-                <span className="hidden md:inline">+ Spend</span>
-                <svg className="w-5 h-5 md:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </button>
-            </div>
-          )}
-          {categoryFilter && (
-            <button
-              onClick={() => setCategoryFilter('')}
-              className="btn-secondary mt-6"
-            >
-              Reset Filter
-            </button>
-          )}
-        </div>
-      </div>
 
       {/* Error */}
       {error && (
@@ -225,13 +219,211 @@ export default function TransactionsPage() {
       )}
 
       {/* Transaction List */}
-      <div className="card-static overflow-hidden">
+      <div className="card-static">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+          {/* Left side - Date Range */}
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={dateRange.start}
+              onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+              className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+              placeholder="Start date"
+            />
+            <span className="text-gray-500 dark:text-gray-400">-</span>
+            <input
+              type="date"
+              value={dateRange.end}
+              onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+              className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+              placeholder="End date"
+            />
+            <button
+              onClick={handlePrint}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              title="Print / Export to PDF"
+            >
+              <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Right side - Controls */}
+          <div className="flex items-center gap-2">
+            {/* Rows per page */}
+            <select
+              value={rowsPerPage}
+              onChange={(e) => setRowsPerPage(Number(e.target.value))}
+              className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+            >
+              <option value={5}>Show 5 Row</option>
+              <option value={8}>Show 8 Row</option>
+              <option value={10}>Show 10 Row</option>
+              <option value={20}>Show 20 Row</option>
+              <option value={50}>Show 50 Row</option>
+            </select>
+
+            {/* Quick Add Buttons */}
+            {canManageTransactions && (
+              <>
+                <button
+                  onClick={() => setQuickAddMode('earn')}
+                  className="px-3 py-1.5 text-sm border border-green-200 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/50 transition-colors font-medium"
+                >
+                  + Earn
+                </button>
+                <button
+                  onClick={() => setQuickAddMode('spend')}
+                  className="px-3 py-1.5 text-sm border border-red-200 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/50 transition-colors font-medium"
+                >
+                  + Spend
+                </button>
+              </>
+            )}
+
+            {/* Filter */}
+            <div className="relative">
+              <button
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className={`p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                  showFilterDropdown ? 'bg-gray-50 dark:bg-gray-700' : ''
+                }`}
+              >
+                <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+              </button>
+
+              {/* Filter Dropdown */}
+              {showFilterDropdown && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowFilterDropdown(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20">
+                    <div className="p-3">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Filter Kategori</p>
+                      <div className="space-y-1">
+                        <button
+                          onClick={() => {
+                            setCategoryFilter('');
+                            setShowFilterDropdown(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                            categoryFilter === ''
+                              ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium'
+                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          Semua Kategori
+                        </button>
+                        {CATEGORIES.map((cat) => (
+                          <button
+                            key={cat}
+                            onClick={() => {
+                              setCategoryFilter(cat);
+                              setShowFilterDropdown(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                              categoryFilter === cat
+                                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium'
+                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                            }`}
+                          >
+                            {CATEGORY_LABELS_ID[cat]} ({cat})
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* More options */}
+            <button className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+              <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
         <TransactionList
-          transactions={transactions}
+          transactions={visibleTransactions}
           loading={loading}
+          onRowClick={setDetailTransaction}
           onEdit={canManageTransactions ? setEditTransaction : undefined}
           onDelete={canManageTransactions ? setDeleteTransaction : undefined}
         />
+
+        {/* Pagination */}
+        {!loading && transactions.length > 0 && (
+          <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Previous
+            </button>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                // Show first page, last page, current page, and pages around current
+                const showPage =
+                  page === 1 ||
+                  page === totalPages ||
+                  (page >= currentPage - 1 && page <= currentPage + 1);
+
+                const showEllipsis =
+                  (page === currentPage - 2 && currentPage > 3) ||
+                  (page === currentPage + 2 && currentPage < totalPages - 2);
+
+                if (showEllipsis) {
+                  return (
+                    <span key={page} className="px-2 text-gray-500 dark:text-gray-400">
+                      ...
+                    </span>
+                  );
+                }
+
+                if (!showPage) return null;
+
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`min-w-[40px] h-[40px] rounded-lg text-sm font-medium transition-colors ${
+                      currentPage === page
+                        ? 'bg-indigo-600 text-white dark:bg-indigo-500'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+            >
+              Next
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Add Modal */}
@@ -290,6 +482,15 @@ export default function TransactionsPage() {
           loading={saving}
         />
       </Modal>
+
+      {/* Transaction Detail Modal */}
+      <TransactionDetailModal
+        transaction={detailTransaction}
+        isOpen={!!detailTransaction}
+        onClose={() => setDetailTransaction(null)}
+        onEdit={canManageTransactions ? setEditTransaction : undefined}
+        onDelete={canManageTransactions ? setDeleteTransaction : undefined}
+      />
 
       {/* Delete Confirmation */}
       <DeleteConfirmModal

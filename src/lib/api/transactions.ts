@@ -5,6 +5,7 @@ export interface TransactionInsert {
   business_id: string;
   date: string;
   category: TransactionCategory;
+  name: string;
   description: string;
   amount: number;
   account: string;
@@ -14,6 +15,7 @@ export interface TransactionInsert {
 export interface TransactionUpdate {
   date?: string;
   category?: TransactionCategory;
+  name?: string;
   description?: string;
   amount?: number;
   account?: string;

@@ -37,6 +37,17 @@ export function formatDateShort(date: string | Date): string {
   }).format(new Date(date));
 }
 
+// Format date and time
+export function formatDateTime(date: string | Date): string {
+  return new Intl.DateTimeFormat('id-ID', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(date));
+}
+
 // Format percentage
 export function formatPercentage(value: number, decimals: number = 2): string {
   return `${value.toFixed(decimals)}%`;
