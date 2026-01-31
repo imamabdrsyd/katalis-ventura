@@ -28,6 +28,7 @@ import {
   Home,
   Menu,
   X,
+  Settings,
 } from 'lucide-react';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -81,6 +82,12 @@ const navSections: NavSection[] = [
     label: 'ANALYSIS',
     items: [
       { href: '/roi-forecast', label: 'ROI & Forecast', icon: TrendingUp },
+    ],
+  },
+  {
+    label: 'ACCOUNT',
+    items: [
+      { href: '/settings', label: 'Settings', icon: Settings },
     ],
   },
 ];
@@ -235,8 +242,18 @@ function Header({ onMenuClick }: { onMenuClick: () => void }) {
 
         {/* Profile */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-            {userName.charAt(0).toUpperCase()}
+          <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
+            {user?.user_metadata?.avatar_url ? (
+              <Image
+                src={user.user_metadata.avatar_url}
+                alt={userName}
+                width={36}
+                height={36}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span>{userName.charAt(0).toUpperCase()}</span>
+            )}
           </div>
           <div className="hidden md:block">
             <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{userName}</p>

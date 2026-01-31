@@ -195,15 +195,21 @@ export default function LandingPage() {
               <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
                 {/* Developer Avatar */}
                 <div className="flex-shrink-0">
-                  <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white text-3xl font-bold">
-                    IA
+                  <div className="w-24 h-24 rounded-full overflow-hidden">
+                    <Image
+                      src="/images/Imam.jpeg"
+                      alt="Imam Abdurasyid"
+                      width={96}
+                      height={96}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                 </div>
 
                 {/* Developer Info */}
                 <div className="flex-1 text-center md:text-left">
                   <h3 className="text-2xl font-bold text-gray-900 mb-1">Imam Abdurasyid</h3>
-                  <p className="text-indigo-600 font-medium mb-4">Software Developer</p>
+                  <p className="text-indigo-600 font-medium mb-4">Software Developer, CEO Katalis Ventura</p>
 
                   <div className="space-y-3">
                     {/* Instagram */}
@@ -225,7 +231,7 @@ export default function LandingPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
-                      <span>Ciumbuleuit, Kota Bandung</span>
+                      <span>Bandung, Indonesia</span>
                     </div>
 
                     {/* Email */}
