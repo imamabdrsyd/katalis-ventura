@@ -131,7 +131,7 @@ export function BusinessCard({
       </div>
 
       {showActions && (
-        <div className="flex gap-2 pt-4 border-t border-gray-100 dark:border-gray-700">
+        <div className="flex gap-2 mt-4">
           {onEdit && !business.is_archived && (
             <button
               onClick={(e) => {
@@ -168,7 +168,7 @@ export function BusinessCard({
         </div>
       )}
 
-      <div className="text-sm text-gray-500 dark:text-gray-400 pt-4 border-t border-gray-100 dark:border-gray-700">
+      <div className="text-sm text-gray-500 dark:text-gray-400 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
         <span className="text-xs">Created by: </span>
         <span className="font-medium text-gray-700 dark:text-gray-300">
           {loading ? 'Loading...' : creatorName}
