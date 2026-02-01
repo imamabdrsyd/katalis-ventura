@@ -211,42 +211,62 @@ export function TransactionForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Line 1: Kategori + Tanggal */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="label">Kategori *</label>
+          <select
+            name="category"
+            value={formData.category}
+            onChange={handleChange}
+            className="input"
+            required
+          >
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>
+                {CATEGORY_LABELS[cat]}
+              </option>
+            ))}
+          </select>
+          {suggestedAccounts && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              💡 {suggestedAccounts.description}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className="label">Tanggal *</label>
+          <input
+            type="date"
+            name="date"
+            value={formData.date}
+            onChange={handleChange}
+            className="input"
+            required
+          />
+          {errors.date && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.date}</p>}
+        </div>
+      </div>
+
+      {/* Line 2: Jumlah */}
       <div>
-        <label className="label">Tanggal *</label>
+        <label className="label">Jumlah (Rp) *</label>
         <input
-          type="date"
-          name="date"
-          value={formData.date}
+          type="number"
+          name="amount"
+          value={formData.amount || ''}
           onChange={handleChange}
           className="input"
+          placeholder="0"
+          min="1"
+          step="any"
           required
         />
-        {errors.date && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.date}</p>}
+        {errors.amount && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.amount}</p>}
       </div>
 
-      <div>
-        <label className="label">Kategori *</label>
-        <select
-          name="category"
-          value={formData.category}
-          onChange={handleChange}
-          className="input"
-          required
-        >
-          {categories.map((cat) => (
-            <option key={cat} value={cat}>
-              {CATEGORY_LABELS[cat]}
-            </option>
-          ))}
-        </select>
-        {suggestedAccounts && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            💡 {suggestedAccounts.description}
-          </p>
-        )}
-      </div>
-
-      {/* NEW: Double-entry account fields */}
+      {/* Line 3: Debit + Credit */}
       {!loadingAccounts && accounts.length > 0 && (
         <>
           <div className="pt-2 pb-1 border-t border-gray-200 dark:border-gray-700">
@@ -258,25 +278,27 @@ export function TransactionForm({
             </p>
           </div>
 
-          <AccountDropdown
-            label="Akun Debit (Uang Keluar Dari / Beban)"
-            accounts={accounts}
-            value={formData.debit_account_id}
-            onChange={handleAccountChange('debit')}
-            placeholder="Pilih akun debit (opsional)"
-            suggestedCode={suggestedAccounts?.debit}
-            error={errors.debit_account_id}
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <AccountDropdown
+              label="Akun Debit (Uang Keluar Dari / Beban)"
+              accounts={accounts}
+              value={formData.debit_account_id}
+              onChange={handleAccountChange('debit')}
+              placeholder="Pilih akun debit (opsional)"
+              suggestedCode={suggestedAccounts?.debit}
+              error={errors.debit_account_id}
+            />
 
-          <AccountDropdown
-            label="Akun Kredit (Uang Masuk Ke / Pendapatan)"
-            accounts={accounts}
-            value={formData.credit_account_id}
-            onChange={handleAccountChange('credit')}
-            placeholder="Pilih akun kredit (opsional)"
-            suggestedCode={suggestedAccounts?.credit}
-            error={errors.credit_account_id}
-          />
+            <AccountDropdown
+              label="Akun Kredit (Uang Masuk Ke / Pendapatan)"
+              accounts={accounts}
+              value={formData.credit_account_id}
+              onChange={handleAccountChange('credit')}
+              placeholder="Pilih akun kredit (opsional)"
+              suggestedCode={suggestedAccounts?.credit}
+              error={errors.credit_account_id}
+            />
+          </div>
 
           {isDoubleEntry && (
             <div>
@@ -294,6 +316,7 @@ export function TransactionForm({
         </>
       )}
 
+      {/* Line 4: Nama Customer/Vendor */}
       <div>
         <label className="label">Nama *</label>
         <input
@@ -308,6 +331,7 @@ export function TransactionForm({
         {errors.name && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.name}</p>}
       </div>
 
+      {/* Line 5: Deskripsi */}
       <div>
         <label className="label">Deskripsi *</label>
         <textarea
@@ -324,22 +348,7 @@ export function TransactionForm({
         )}
       </div>
 
-      <div>
-        <label className="label">Jumlah (Rp) *</label>
-        <input
-          type="number"
-          name="amount"
-          value={formData.amount || ''}
-          onChange={handleChange}
-          className="input"
-          placeholder="0"
-          min="1"
-          step="any"
-          required
-        />
-        {errors.amount && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.amount}</p>}
-      </div>
-
+      {/* Line 6: Nama Akun (free text) */}
       {!isDoubleEntry && (
         <div>
           <label className="label">Akun *</label>
