@@ -78,6 +78,17 @@ export async function createBusiness(
 
   if (roleError) throw roleError;
 
+  // Create default accounts for the business
+  // Call the stored procedure after user role is assigned
+  const { error: accountsError } = await supabase.rpc('create_default_accounts', {
+    p_business_id: newBusiness.id,
+  });
+
+  if (accountsError) {
+    console.warn('Failed to create default accounts:', accountsError);
+    // Don't throw - allow business creation to succeed even if accounts fail
+  }
+
   return newBusiness;
 }
 
