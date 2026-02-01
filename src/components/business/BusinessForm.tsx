@@ -23,6 +23,7 @@ const BUSINESS_TYPES = [
   { value: 'accommodation', label: 'Accommodation' },
   { value: 'creative_agency', label: 'Creative Agency' },
   { value: 'food_and_beverage', label: 'F&B' },
+  { value: 'finance', label: 'Finance' },
   { value: 'other', label: 'Lainnya (Custom)' },
 ];
 
