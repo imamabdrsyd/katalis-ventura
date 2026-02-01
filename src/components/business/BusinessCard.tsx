@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, PackageOpen, Home, UserPlus } from 'lucide-react';
+import { MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, PackageOpen, Home, UserPlus, Coins } from 'lucide-react';
 import type { Business } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 
@@ -22,6 +22,7 @@ const BUSINESS_TYPE_LABELS: Record<string, string> = {
   accommodation: 'Accommodation',
   creative_agency: 'Creative Agency',
   food_and_beverage: 'F&B',
+  finance: 'Finance',
   // Legacy types for backward compatibility
   short_term_rental: 'Short-term Rental',
   property_management: 'Property Management',
@@ -34,6 +35,7 @@ const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
   accommodation: <Building2 className="w-6 h-6" />,
   creative_agency: <Palette className="w-6 h-6" />,
   food_and_beverage: <UtensilsCrossed className="w-6 h-6" />,
+  finance: <Coins className="w-6 h-6" />,
   short_term_rental: <Home className="w-6 h-6" />,
   property_management: <Building2 className="w-6 h-6" />,
   real_estate: <Building2 className="w-6 h-6" />,
