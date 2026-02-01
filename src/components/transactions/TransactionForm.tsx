@@ -34,6 +34,20 @@ interface TransactionFormProps {
 
 const ALL_CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
+// Helper function to format number with thousand separator
+function formatNumberWithSeparator(num: number | string): string {
+  if (!num) return '';
+  const numStr = num.toString().replace(/\D/g, ''); // Remove non-digits
+  if (!numStr) return '';
+  return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+// Helper function to parse formatted number back to number
+function parseFormattedNumber(str: string): number {
+  const cleaned = str.replace(/\./g, ''); // Remove dots
+  return parseInt(cleaned) || 0;
+}
+
 // Category-to-account suggestions mapping
 const CATEGORY_SUGGESTIONS: Record<TransactionCategory, { debit: string; credit: string; description: string }> = {
   EARN: {
@@ -97,6 +111,9 @@ export function TransactionForm({
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [displayAmount, setDisplayAmount] = useState<string>(
+    transaction?.amount ? formatNumberWithSeparator(transaction.amount) : ''
+  );
 
   // Fetch accounts on mount
   useEffect(() => {
@@ -187,6 +204,23 @@ export function TransactionForm({
     }
   };
 
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const numericValue = parseFormattedNumber(value);
+    const formatted = formatNumberWithSeparator(numericValue);
+
+    setDisplayAmount(formatted);
+    setFormData((prev) => ({ ...prev, amount: numericValue }));
+
+    if (errors.amount) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.amount;
+        return newErrors;
+      });
+    }
+  };
+
   const handleAccountChange = (field: 'debit' | 'credit') => (accountId: string, accountCode: string) => {
     if (field === 'debit') {
       setFormData((prev) => ({ ...prev, debit_account_id: accountId }));
@@ -253,14 +287,13 @@ export function TransactionForm({
       <div>
         <label className="label">Jumlah (Rp) *</label>
         <input
-          type="number"
+          type="text"
           name="amount"
-          value={formData.amount || ''}
-          onChange={handleChange}
+          value={displayAmount}
+          onChange={handleAmountChange}
           className="input"
           placeholder="0"
-          min="1"
-          step="any"
+          inputMode="numeric"
           required
         />
         {errors.amount && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.amount}</p>}
@@ -271,7 +304,7 @@ export function TransactionForm({
         <>
           <div className="pt-2 pb-1 border-t border-gray-200 dark:border-gray-700">
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Double-Entry Bookkeeping (Opsional)
+              Double-Entry Bookkeeping
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Gunakan akun debit/kredit untuk pencatatan yang lebih detail. Atau kosongkan dan gunakan field "Akun" di bawah untuk format lama.
@@ -280,21 +313,21 @@ export function TransactionForm({
 
           <div className="grid grid-cols-2 gap-4">
             <AccountDropdown
-              label="Akun Debit (Uang Keluar Dari / Beban)"
+              label="Uang Keluar Dari / Beban"
               accounts={accounts}
               value={formData.debit_account_id}
               onChange={handleAccountChange('debit')}
-              placeholder="Pilih akun debit (opsional)"
+              placeholder="Pilih akun Debit"
               suggestedCode={suggestedAccounts?.debit}
               error={errors.debit_account_id}
             />
 
             <AccountDropdown
-              label="Akun Kredit (Uang Masuk Ke / Pendapatan)"
+              label="Uang Masuk Ke / Pendapatan"
               accounts={accounts}
               value={formData.credit_account_id}
               onChange={handleAccountChange('credit')}
-              placeholder="Pilih akun kredit (opsional)"
+              placeholder="Pilih akun Kredit"
               suggestedCode={suggestedAccounts?.credit}
               error={errors.credit_account_id}
             />
