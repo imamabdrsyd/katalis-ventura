@@ -209,7 +209,7 @@ export default function LandingPage() {
                 {/* Developer Info */}
                 <div className="flex-1 text-center md:text-left">
                   <h3 className="text-2xl font-bold text-gray-900 mb-1">Imam Abdurasyid</h3>
-                  <p className="text-indigo-600 font-medium mb-4">Software Developer, Katalis Ventura</p>
+                  <p className="text-indigo-600 font-medium mb-4">Software Developer</p>
 
                   <div className="space-y-3">
                     {/* Instagram */}

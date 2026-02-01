@@ -19,7 +19,6 @@ export interface TransactionFormData {
   debit_account_id?: string;
   credit_account_id?: string;
   is_double_entry?: boolean;
-  notes?: string;
 }
 
 interface TransactionFormProps {
@@ -105,7 +104,6 @@ export function TransactionForm({
     debit_account_id: transaction?.debit_account_id,
     credit_account_id: transaction?.credit_account_id,
     is_double_entry: transaction?.is_double_entry || false,
-    notes: transaction?.notes || '',
   });
 
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -180,7 +178,6 @@ export function TransactionForm({
       } else {
         submitData.debit_account_id = undefined;
         submitData.credit_account_id = undefined;
-        submitData.notes = undefined;
       }
 
       await onSubmit(submitData);
@@ -332,20 +329,6 @@ export function TransactionForm({
               error={errors.credit_account_id}
             />
           </div>
-
-          {isDoubleEntry && (
-            <div>
-              <label className="label">Catatan (Opsional)</label>
-              <textarea
-                name="notes"
-                value={formData.notes}
-                onChange={handleChange}
-                className="input"
-                rows={2}
-                placeholder="Catatan tambahan untuk transaksi ini"
-              />
-            </div>
-          )}
         </>
       )}
 

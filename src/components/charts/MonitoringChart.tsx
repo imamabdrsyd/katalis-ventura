@@ -102,7 +102,7 @@ export default function MonitoringChart({ transactions, loading = false }: Monit
       labels,
       datasets: [
         {
-          label: 'Earnings',
+          label: 'Revenue',
           data: earningData,
           borderColor: '#3b82f6',
           backgroundColor: 'rgba(59, 130, 246, 0.1)',
