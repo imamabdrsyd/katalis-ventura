@@ -59,9 +59,10 @@ export default function BusinessesPage() {
       await refetch();
       setActiveBusiness(newBusiness.id);
       setIsFormOpen(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to create business:', err);
-      alert(`Gagal menambahkan bisnis: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      const errorMessage = err?.message || err?.error?.message || JSON.stringify(err) || 'Unknown error';
+      alert(`Gagal menambahkan bisnis: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -75,9 +76,10 @@ export default function BusinessesPage() {
       await fetchBusinesses();
       await refetch();
       setEditingBusiness(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to update business:', err);
-      alert(`Gagal mengupdate bisnis: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      const errorMessage = err?.message || err?.error?.message || JSON.stringify(err) || 'Unknown error';
+      alert(`Gagal mengupdate bisnis: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
