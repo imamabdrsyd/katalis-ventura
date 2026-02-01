@@ -179,7 +179,11 @@ export function TransactionForm({
       [name]: name === 'amount' ? parseFloat(value) || 0 : value,
     }));
     if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }));
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
     }
   };
 
@@ -187,12 +191,20 @@ export function TransactionForm({
     if (field === 'debit') {
       setFormData((prev) => ({ ...prev, debit_account_id: accountId }));
       if (errors.debit_account_id) {
-        setErrors((prev) => ({ ...prev, debit_account_id: undefined }));
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.debit_account_id;
+          return newErrors;
+        });
       }
     } else {
       setFormData((prev) => ({ ...prev, credit_account_id: accountId }));
       if (errors.credit_account_id) {
-        setErrors((prev) => ({ ...prev, credit_account_id: undefined }));
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.credit_account_id;
+          return newErrors;
+        });
       }
     }
   };
