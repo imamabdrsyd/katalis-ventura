@@ -61,6 +61,7 @@ export default function BusinessesPage() {
       setIsFormOpen(false);
     } catch (err) {
       console.error('Failed to create business:', err);
+      alert(`Gagal menambahkan bisnis: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -76,6 +77,7 @@ export default function BusinessesPage() {
       setEditingBusiness(null);
     } catch (err) {
       console.error('Failed to update business:', err);
+      alert(`Gagal mengupdate bisnis: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
