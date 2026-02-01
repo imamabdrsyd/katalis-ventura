@@ -12,7 +12,7 @@ export const CAPITAL = 350_000_000; // Default capital investment
 export const PROPERTY_VALUE = 350_000_000; // Initial property value
 
 export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
-  EARN: 'Earnings',
+  EARN: 'Revenue',
   OPEX: 'Operating Expenses',
   VAR: 'Variable Costs',
   CAPEX: 'Capital Expenditure',
