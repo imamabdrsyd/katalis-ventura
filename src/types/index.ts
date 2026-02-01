@@ -4,6 +4,33 @@ export type UserRole = 'business_manager' | 'investor' | 'both';
 
 export type TransactionCategory = 'EARN' | 'OPEX' | 'VAR' | 'CAPEX' | 'TAX' | 'FIN';
 
+// Double-entry bookkeeping types
+export type AccountType = 'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENSE';
+export type NormalBalance = 'DEBIT' | 'CREDIT';
+
+export interface Account {
+  id: string;
+  business_id: string;
+  account_code: string;
+  account_name: string;
+  account_type: AccountType;
+  parent_account_id?: string;
+  normal_balance: NormalBalance;
+  is_active: boolean;
+  is_system: boolean;
+  sort_order: number;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CategoryAccountSuggestion {
+  category: TransactionCategory;
+  defaultDebitCode: string;
+  defaultCreditCode: string;
+  description: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -57,10 +84,20 @@ export interface Transaction {
   name: string;
   description: string;
   amount: number;
-  account: string;
+  account: string; // Legacy field for backward compatibility
   created_by: string;
   created_at: string;
   updated_at: string;
+
+  // Optional double-entry fields
+  debit_account_id?: string;
+  credit_account_id?: string;
+  is_double_entry?: boolean;
+  notes?: string;
+
+  // Populated when joining with accounts table
+  debit_account?: Account;
+  credit_account?: Account;
 }
 
 export interface UserBusinessRole {

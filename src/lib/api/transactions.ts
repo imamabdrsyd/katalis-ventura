@@ -8,8 +8,14 @@ export interface TransactionInsert {
   name: string;
   description: string;
   amount: number;
-  account: string;
+  account: string; // Legacy field
   created_by: string;
+
+  // Optional double-entry fields
+  debit_account_id?: string;
+  credit_account_id?: string;
+  is_double_entry?: boolean;
+  notes?: string;
 }
 
 export interface TransactionUpdate {
@@ -19,6 +25,20 @@ export interface TransactionUpdate {
   description?: string;
   amount?: number;
   account?: string;
+
+  // Optional double-entry fields
+  debit_account_id?: string;
+  credit_account_id?: string;
+  is_double_entry?: boolean;
+  notes?: string;
+}
+
+export interface BulkImportResult {
+  success: boolean;
+  inserted: number;
+  failed: number;
+  errors: string[];
+  data?: Transaction[];
 }
 
 // Get all transactions for a business
@@ -26,7 +46,11 @@ export async function getTransactions(businessId: string): Promise<Transaction[]
   const supabase = createClient();
   const { data, error } = await supabase
     .from('transactions')
-    .select('*')
+    .select(`
+      *,
+      debit_account:accounts!transactions_debit_account_id_fkey(*),
+      credit_account:accounts!transactions_credit_account_id_fkey(*)
+    `)
     .eq('business_id', businessId)
     .order('date', { ascending: false });
 
@@ -43,7 +67,11 @@ export async function getTransactionsByDateRange(
   const supabase = createClient();
   const { data, error } = await supabase
     .from('transactions')
-    .select('*')
+    .select(`
+      *,
+      debit_account:accounts!transactions_debit_account_id_fkey(*),
+      credit_account:accounts!transactions_credit_account_id_fkey(*)
+    `)
     .eq('business_id', businessId)
     .gte('date', startDate)
     .lte('date', endDate)
@@ -64,6 +92,94 @@ export async function createTransaction(transaction: TransactionInsert): Promise
 
   if (error) throw new Error(error.message);
   return data as Transaction;
+}
+
+// Bulk import transactions
+export async function createTransactionsBulk(
+  transactions: TransactionInsert[],
+  onProgress?: (current: number, total: number) => void
+): Promise<BulkImportResult> {
+  const supabase = createClient();
+
+  // For optimal performance, we'll insert in batches
+  const BATCH_SIZE = 100;
+  const results: BulkImportResult = {
+    success: true,
+    inserted: 0,
+    failed: 0,
+    errors: [],
+    data: [],
+  };
+
+  // If less than batch size, insert all at once
+  if (transactions.length <= BATCH_SIZE) {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert(transactions)
+        .select();
+
+      if (error) {
+        return {
+          success: false,
+          inserted: 0,
+          failed: transactions.length,
+          errors: [error.message],
+        };
+      }
+
+      return {
+        success: true,
+        inserted: data.length,
+        failed: 0,
+        errors: [],
+        data: data as Transaction[],
+      };
+    } catch (err) {
+      return {
+        success: false,
+        inserted: 0,
+        failed: transactions.length,
+        errors: [err instanceof Error ? err.message : 'Unknown error'],
+      };
+    }
+  }
+
+  // For larger imports, batch the inserts
+  for (let i = 0; i < transactions.length; i += BATCH_SIZE) {
+    const batch = transactions.slice(i, i + BATCH_SIZE);
+
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert(batch)
+        .select();
+
+      if (error) {
+        results.failed += batch.length;
+        results.errors.push(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${error.message}`);
+        results.success = false;
+      } else {
+        results.inserted += data.length;
+        if (results.data) {
+          results.data.push(...(data as Transaction[]));
+        }
+      }
+
+      // Report progress
+      if (onProgress) {
+        onProgress(Math.min(i + BATCH_SIZE, transactions.length), transactions.length);
+      }
+    } catch (err) {
+      results.failed += batch.length;
+      results.errors.push(
+        `Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${err instanceof Error ? err.message : 'Unknown error'}`
+      );
+      results.success = false;
+    }
+  }
+
+  return results;
 }
 
 // Update an existing transaction
