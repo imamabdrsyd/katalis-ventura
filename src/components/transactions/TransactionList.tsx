@@ -20,6 +20,29 @@ const BADGE_CLASSES: Record<TransactionCategory, string> = {
   FIN: 'bg-pink-50 dark:bg-pink-900/50 text-pink-600 dark:text-pink-400',
 };
 
+// Helper function to format account display based on transaction type
+function getAccountDisplay(transaction: Transaction): string {
+  // For double-entry transactions
+  if (transaction.is_double_entry && (transaction.debit_account || transaction.credit_account)) {
+    if (transaction.category === 'EARN') {
+      // For earnings, money comes into the bank (debit account)
+      const accountName = transaction.debit_account?.account_name || 'Unknown';
+      return `Masuk ke ${accountName}`;
+    } else {
+      // For expenses, money goes out from the bank (credit account)
+      const accountName = transaction.credit_account?.account_name || 'Unknown';
+      return `Keluar dari ${accountName}`;
+    }
+  }
+
+  // For legacy transactions
+  if (transaction.category === 'EARN') {
+    return `Masuk ke ${transaction.account}`;
+  } else {
+    return `Keluar dari ${transaction.account}`;
+  }
+}
+
 export function TransactionList({
   transactions,
   loading,
@@ -62,7 +85,7 @@ export function TransactionList({
             <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Deskripsi</th>
             <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Tanggal</th>
             <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Jumlah</th>
-            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Akun</th>
+            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Chart of Account</th>
             {showActions && (
               <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Aksi</th>
             )}
@@ -103,7 +126,7 @@ export function TransactionList({
               }`}>
                 {formatCurrency(transaction.amount)}
               </td>
-              <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{transaction.account}</td>
+              <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{getAccountDisplay(transaction)}</td>
               {showActions && (
                 <td className="py-3 px-2 md:py-4 md:px-4">
                   <div className="flex items-center justify-start gap-1 md:gap-2">

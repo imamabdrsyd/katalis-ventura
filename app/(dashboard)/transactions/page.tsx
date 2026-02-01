@@ -7,8 +7,10 @@ import { TransactionForm, TransactionFormData } from '@/components/transactions/
 import { TransactionList } from '@/components/transactions/TransactionList';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import { DeleteConfirmModal } from '@/components/transactions/DeleteConfirmModal';
+import TransactionImportModal from '@/components/transactions/TransactionImportModal';
 import * as transactionsApi from '@/lib/api/transactions';
 import type { Transaction, TransactionCategory } from '@/types';
+import { Upload, Plus } from 'lucide-react';
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
@@ -72,6 +74,7 @@ export default function TransactionsPage() {
 
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [quickAddMode, setQuickAddMode] = useState<'earn' | 'spend' | null>(null);
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null);
@@ -201,9 +204,18 @@ export default function TransactionsPage() {
           </p> */}
         </div>
         {canManageTransactions && (
-          <button onClick={() => setShowAddModal(true)} className="btn-primary">
-            + Tambah Transaksi
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="px-4 py-2 border border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Import Excel
+            </button>
+            <button onClick={() => setShowAddModal(true)} className="btn-primary">
+              + Tambah Transaksi
+            </button>
+          </div>
         )}
       </div>
 
@@ -280,15 +292,17 @@ export default function TransactionsPage() {
               <>
                 <button
                   onClick={() => setQuickAddMode('earn')}
-                  className="px-3 py-1.5 text-sm border border-green-200 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/50 transition-colors font-medium"
+                  className="flex items-center gap-1.5 text-sm text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 transition-colors font-medium"
                 >
-                  + Earn
+                  <Plus className="w-4 h-4" />
+                  <span>Add Sales</span>
                 </button>
                 <button
                   onClick={() => setQuickAddMode('spend')}
-                  className="px-3 py-1.5 text-sm border border-red-200 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/50 transition-colors font-medium"
+                  className="flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors font-medium"
                 >
-                  + Spend
+                  <Plus className="w-4 h-4" />
+                  <span>Pay</span>
                 </button>
               </>
             )}
@@ -446,6 +460,7 @@ export default function TransactionsPage() {
           onSubmit={handleAddTransaction}
           onCancel={() => setShowAddModal(false)}
           loading={saving}
+          businessId={businessId || undefined}
         />
       </Modal>
 
@@ -461,6 +476,7 @@ export default function TransactionsPage() {
           loading={saving}
           defaultCategory="EARN"
           allowedCategories={['EARN']}
+          businessId={businessId || undefined}
         />
       </Modal>
 
@@ -476,6 +492,7 @@ export default function TransactionsPage() {
           loading={saving}
           defaultCategory="OPEX"
           allowedCategories={['OPEX', 'VAR']}
+          businessId={businessId || undefined}
         />
       </Modal>
 
@@ -490,6 +507,7 @@ export default function TransactionsPage() {
           onSubmit={handleEditTransaction}
           onCancel={() => setEditTransaction(null)}
           loading={saving}
+          businessId={businessId || undefined}
         />
       </Modal>
 
@@ -510,6 +528,17 @@ export default function TransactionsPage() {
         loading={saving}
         transactionDescription={deleteTransaction?.description || ''}
       />
+
+      {/* Import Modal */}
+      {businessId && user && (
+        <TransactionImportModal
+          isOpen={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          businessId={businessId}
+          userId={user.id}
+          onImportComplete={fetchTransactions}
+        />
+      )}
     </div>
   );
 }

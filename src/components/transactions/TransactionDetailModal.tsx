@@ -24,6 +24,29 @@ const CATEGORY_COLORS: Record<string, string> = {
   FIN: 'bg-pink-100 dark:bg-pink-900/50 text-pink-700 dark:text-pink-300',
 };
 
+// Helper function to format account display based on transaction type
+function getAccountDisplay(transaction: Transaction): string {
+  // For double-entry transactions
+  if (transaction.is_double_entry && (transaction.debit_account || transaction.credit_account)) {
+    if (transaction.category === 'EARN') {
+      // For earnings, money comes into the bank (debit account)
+      const accountName = transaction.debit_account?.account_name || 'Unknown';
+      return `Masuk ke ${accountName}`;
+    } else {
+      // For expenses, money goes out from the bank (credit account)
+      const accountName = transaction.credit_account?.account_name || 'Unknown';
+      return `Keluar dari ${accountName}`;
+    }
+  }
+
+  // For legacy transactions
+  if (transaction.category === 'EARN') {
+    return `Masuk ke ${transaction.account}`;
+  } else {
+    return `Keluar dari ${transaction.account}`;
+  }
+}
+
 export function TransactionDetailModal({
   transaction,
   isOpen,
@@ -99,10 +122,10 @@ export function TransactionDetailModal({
             </div>
             <div>
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Akun
+                Chart of Account
               </label>
               <p className="mt-1 text-gray-900 dark:text-gray-100">
-                {transaction.account}
+                {getAccountDisplay(transaction)}
               </p>
             </div>
           </div>
