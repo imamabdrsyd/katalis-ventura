@@ -2,16 +2,25 @@ import { createClient } from '@/lib/supabase';
 import type { Account } from '@/types';
 
 /**
- * Get all active accounts for a business (Chart of Accounts)
+ * Get all accounts for a business (Chart of Accounts)
+ * @param businessId - The business ID
+ * @param includeInactive - If true, includes inactive accounts (default: true for management UI)
  */
-export async function getAccounts(businessId: string): Promise<Account[]> {
+export async function getAccounts(businessId: string, includeInactive: boolean = true): Promise<Account[]> {
   const supabase = createClient();
-  const { data, error } = await supabase
+
+  let query = supabase
     .from('accounts')
     .select('*')
-    .eq('business_id', businessId)
-    .eq('is_active', true)
-    .order('sort_order', { ascending: true });
+    .eq('business_id', businessId);
+
+  if (!includeInactive) {
+    query = query.eq('is_active', true);
+  }
+
+  query = query.order('sort_order', { ascending: true });
+
+  const { data, error } = await query;
 
   if (error) throw new Error(error.message);
   return data as Account[];

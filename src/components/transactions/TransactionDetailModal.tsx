@@ -111,16 +111,37 @@ export function TransactionDetailModal({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Tanggal
-              </label>
-              <p className="mt-1 text-gray-900 dark:text-gray-100">
-                {formatDate(transaction.date)}
-              </p>
+          <div>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Tanggal
+            </label>
+            <p className="mt-1 text-gray-900 dark:text-gray-100">
+              {formatDate(transaction.date)}
+            </p>
+          </div>
+
+          {/* Chart of Account - Show both Debit and Credit for double-entry */}
+          {transaction.is_double_entry && (transaction.debit_account || transaction.credit_account) ? (
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Debit (Keluar Dari)
+                </label>
+                <p className="mt-1 text-gray-900 dark:text-gray-100">
+                  {transaction.debit_account?.account_code} - {transaction.debit_account?.account_name || 'Unknown'}
+                </p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Credit (Masuk Ke)
+                </label>
+                <p className="mt-1 text-gray-900 dark:text-gray-100">
+                  {transaction.credit_account?.account_code} - {transaction.credit_account?.account_name || 'Unknown'}
+                </p>
+              </div>
             </div>
-            <div>
+          ) : (
+            <div className="mt-4">
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Chart of Account
               </label>
@@ -128,7 +149,7 @@ export function TransactionDetailModal({
                 {getAccountDisplay(transaction)}
               </p>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Metadata Section */}

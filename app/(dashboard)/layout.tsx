@@ -29,6 +29,7 @@ import {
   Menu,
   X,
   Settings,
+  BookOpen,
 } from 'lucide-react';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -66,6 +67,7 @@ const navSections: NavSection[] = [
     items: [
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { href: '/transactions', label: 'Transactions', icon: CreditCard },
+      { href: '/accounts', label: 'Chart of Accounts', icon: BookOpen },
       { href: '/businesses', label: 'Businesses', icon: Building2 },
       { href: '/reports', label: 'Reports', icon: ClipboardList },
     ],
