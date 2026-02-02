@@ -144,7 +144,22 @@ export function TransactionForm({
 
     if (!formData.date) newErrors.date = 'Tanggal harus diisi';
     if (!formData.name.trim()) newErrors.name = 'Nama harus diisi';
-    if (!formData.description.trim()) newErrors.description = 'Deskripsi harus diisi';
+
+    // Auto-fill description if empty and using double-entry
+    if (!formData.description.trim() && isDoubleEntry) {
+      const oppositeAccount = getOppositeAccountName();
+      if (oppositeAccount) {
+        setFormData((prev) => ({
+          ...prev,
+          description: oppositeAccount,
+        }));
+      } else {
+        newErrors.description = 'Deskripsi harus diisi';
+      }
+    } else if (!formData.description.trim()) {
+      newErrors.description = 'Deskripsi harus diisi';
+    }
+
     if (formData.amount <= 0) newErrors.amount = 'Jumlah harus lebih dari 0';
 
     // Validate accounts based on format
@@ -215,6 +230,49 @@ export function TransactionForm({
         delete newErrors.amount;
         return newErrors;
       });
+    }
+  };
+
+  // Helper function to get account name by ID
+  const getAccountName = (accountId: string | undefined): string => {
+    if (!accountId) return '';
+    const account = accounts.find((acc) => acc.id === accountId);
+    return account ? account.account_name : '';
+  };
+
+  // Helper function to get the opposite account name for auto-fill description
+  const getOppositeAccountName = (): string => {
+    const category = formData.category;
+
+    // For EARN (revenue), the main account is debit (bank receiving money)
+    // So the opposite account (for description) is credit (revenue source)
+    if (category === 'EARN') {
+      return getAccountName(formData.credit_account_id);
+    }
+
+    // For expenses (OPEX, VAR, CAPEX, TAX, FIN), the main account is credit (bank paying)
+    // So the opposite account (for description) is debit (expense/asset)
+    return getAccountName(formData.debit_account_id);
+  };
+
+  // Auto-fill description when it's empty
+  const handleDescriptionBlur = () => {
+    if (!formData.description.trim() && isDoubleEntry) {
+      const oppositeAccount = getOppositeAccountName();
+      if (oppositeAccount) {
+        setFormData((prev) => ({
+          ...prev,
+          description: oppositeAccount,
+        }));
+        // Clear description error if it exists
+        if (errors.description) {
+          setErrors((prev) => {
+            const newErrors = { ...prev };
+            delete newErrors.description;
+            return newErrors;
+          });
+        }
+      }
     }
   };
 
@@ -304,7 +362,7 @@ export function TransactionForm({
               Double-Entry Bookkeeping
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Gunakan akun debit/kredit untuk pencatatan yang lebih detail. Atau kosongkan dan gunakan field "Akun" di bawah untuk format lama.
+              Gunakan akun debit/kredit untuk pencatatan yang lebih detail.
             </p>
           </div>
 
@@ -349,15 +407,19 @@ export function TransactionForm({
 
       {/* Line 5: Deskripsi */}
       <div>
-        <label className="label">Deskripsi *</label>
+        <label className="label">Deskripsi</label>
         <textarea
           name="description"
           value={formData.description}
           onChange={handleChange}
+          onBlur={handleDescriptionBlur}
           className="input"
           rows={3}
-          placeholder="Masukkan deskripsi transaksi"
-          required
+          placeholder={
+            isDoubleEntry
+              ? 'Masukkan deskripsi transaksi (kosongkan untuk auto-fill dengan nama akun)'
+              : 'Masukkan deskripsi transaksi'
+          }
         />
         {errors.description && (
           <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.description}</p>
@@ -367,7 +429,7 @@ export function TransactionForm({
       {/* Line 6: Nama Akun (free text) */}
       {!isDoubleEntry && (
         <div>
-          <label className="label">Akun *</label>
+          <label className="label">Akun</label>
           <input
             type="text"
             name="account"
@@ -378,7 +440,7 @@ export function TransactionForm({
             required={!isDoubleEntry}
           />
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Format lama (backward compatible). Gunakan akun debit/kredit di atas untuk pencatatan yang lebih baik.
+            Format lama (backward compatible)
           </p>
           {errors.account && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.account}</p>}
         </div>
