@@ -22,6 +22,7 @@ export interface Account {
   description?: string;
   created_at: string;
   updated_at: string;
+  updated_by?: string;
 }
 
 export interface CategoryAccountSuggestion {
@@ -74,6 +75,7 @@ export interface Business {
   created_at: string;
   created_by: string;
   updated_at: string;
+  updated_by?: string;
 }
 
 export interface Transaction {
@@ -94,6 +96,11 @@ export interface Transaction {
   credit_account_id?: string;
   is_double_entry?: boolean;
   notes?: string;
+
+  // Audit trail fields
+  updated_by?: string;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
 
   // Populated when joining with accounts table
   debit_account?: Account;
@@ -121,6 +128,7 @@ export interface InvestorMetric {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  updated_by?: string;
 }
 
 export interface MetricFormula {
@@ -200,4 +208,20 @@ export interface CashFlowData {
   netCashFlow: number;
   openingBalance: number;
   closingBalance: number;
+}
+
+// Audit trail types
+export interface AuditLog {
+  id: string;
+  table_name: string;
+  record_id: string;
+  operation: 'INSERT' | 'UPDATE' | 'DELETE';
+  old_values: Record<string, any> | null;
+  new_values: Record<string, any> | null;
+  changed_by: string | null;
+  changed_at: string;
+  metadata: Record<string, any>;
+  // Populated when joining with profiles table (from audit_trail_with_users view)
+  changed_by_name?: string;
+  changed_by_avatar?: string;
 }

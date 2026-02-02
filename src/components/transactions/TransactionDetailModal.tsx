@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
-import type { Transaction } from '@/types';
+import type { Transaction, AuditLog } from '@/types';
 import { CATEGORY_LABELS } from '@/lib/calculations';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import { getProfileName } from '@/lib/api/profiles';
+import { getRecordAuditHistory, getFieldChanges, formatFieldName, formatAuditValue } from '@/lib/api/audit';
 
 interface TransactionDetailModalProps {
   transaction: Transaction | null;
@@ -56,6 +57,11 @@ export function TransactionDetailModal({
 }: TransactionDetailModalProps) {
   const [creatorName, setCreatorName] = useState<string | null>(null);
   const [loadingCreator, setLoadingCreator] = useState(false);
+  const [updaterName, setUpdaterName] = useState<string | null>(null);
+  const [loadingUpdater, setLoadingUpdater] = useState(false);
+  const [auditHistory, setAuditHistory] = useState<AuditLog[]>([]);
+  const [loadingAudit, setLoadingAudit] = useState(false);
+  const [showAuditHistory, setShowAuditHistory] = useState(false);
 
   useEffect(() => {
     if (transaction?.created_by) {
@@ -65,6 +71,32 @@ export function TransactionDetailModal({
         .finally(() => setLoadingCreator(false));
     }
   }, [transaction?.created_by]);
+
+  // Fetch updated_by user name
+  useEffect(() => {
+    if (transaction?.updated_by && transaction.updated_by !== transaction.created_by) {
+      setLoadingUpdater(true);
+      getProfileName(transaction.updated_by)
+        .then((name) => setUpdaterName(name))
+        .finally(() => setLoadingUpdater(false));
+    } else {
+      setUpdaterName(null);
+    }
+  }, [transaction?.updated_by, transaction?.created_by]);
+
+  // Fetch audit history
+  useEffect(() => {
+    if (transaction?.id && showAuditHistory) {
+      setLoadingAudit(true);
+      getRecordAuditHistory('transactions', transaction.id)
+        .then((history) => setAuditHistory(history))
+        .catch((error) => {
+          console.error('Failed to load audit history:', error);
+          setAuditHistory([]);
+        })
+        .finally(() => setLoadingAudit(false));
+    }
+  }, [transaction?.id, showAuditHistory]);
 
   if (!transaction) return null;
 
@@ -188,7 +220,139 @@ export function TransactionDetailModal({
                 {formatDateTime(transaction.updated_at)}
               </span>
             </div>
+            {transaction.updated_by && (
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">Diupdate oleh</span>
+                <span className="text-gray-700 dark:text-gray-300">
+                  {loadingUpdater ? (
+                    <span className="text-gray-400 dark:text-gray-500">Memuat...</span>
+                  ) : updaterName ? (
+                    updaterName
+                  ) : (
+                    <span className="font-mono text-xs">{transaction.updated_by.slice(0, 8)}...</span>
+                  )}
+                </span>
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Audit History Section */}
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+          <button
+            onClick={() => setShowAuditHistory(!showAuditHistory)}
+            className="w-full flex items-center justify-between text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              Riwayat Perubahan
+            </span>
+            <svg
+              className={`w-5 h-5 transition-transform ${showAuditHistory ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {showAuditHistory && (
+            <div className="mt-4 space-y-3">
+              {loadingAudit ? (
+                <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                  Memuat riwayat...
+                </div>
+              ) : auditHistory.length === 0 ? (
+                <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                  Tidak ada riwayat perubahan
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {auditHistory.map((log) => {
+                    const changes = getFieldChanges(log);
+                    const operationLabel = {
+                      INSERT: 'Dibuat',
+                      UPDATE: 'Diupdate',
+                      DELETE: 'Dihapus',
+                    }[log.operation];
+                    const operationColor = {
+                      INSERT: 'text-emerald-600 dark:text-emerald-400',
+                      UPDATE: 'text-blue-600 dark:text-blue-400',
+                      DELETE: 'text-red-600 dark:text-red-400',
+                    }[log.operation];
+
+                    return (
+                      <div
+                        key={log.id}
+                        className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-800/50"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <span className={`font-semibold ${operationColor}`}>
+                              {operationLabel}
+                            </span>
+                            <span className="text-gray-500 dark:text-gray-400 text-xs ml-2">
+                              {formatDateTime(log.changed_at)}
+                            </span>
+                          </div>
+                          {log.changed_by_name && (
+                            <span className="text-xs text-gray-600 dark:text-gray-400">
+                              oleh {log.changed_by_name}
+                            </span>
+                          )}
+                        </div>
+
+                        {changes.length > 0 && (
+                          <div className="space-y-2 mt-3">
+                            {changes.map((change) => (
+                              <div
+                                key={change.field}
+                                className="text-sm border-l-2 border-gray-300 dark:border-gray-600 pl-3"
+                              >
+                                <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  {formatFieldName(change.field)}
+                                </div>
+                                <div className="flex items-start gap-2 text-xs">
+                                  {change.oldValue !== null && (
+                                    <div className="flex-1">
+                                      <span className="text-red-600 dark:text-red-400 font-semibold">
+                                        Sebelum:
+                                      </span>
+                                      <div className="mt-1 p-2 bg-red-50 dark:bg-red-900/20 rounded text-red-700 dark:text-red-300 font-mono">
+                                        {formatAuditValue(change.oldValue)}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {change.newValue !== null && (
+                                    <div className="flex-1">
+                                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                                        Sesudah:
+                                      </span>
+                                      <div className="mt-1 p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded text-emerald-700 dark:text-emerald-300 font-mono">
+                                        {formatAuditValue(change.newValue)}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}

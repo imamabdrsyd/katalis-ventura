@@ -199,13 +199,22 @@ export async function updateTransaction(
   return data as Transaction;
 }
 
-// Delete a transaction
+// Soft delete a transaction (sets deleted_at and deleted_by)
 export async function deleteTransaction(id: string): Promise<void> {
   const supabase = createClient();
-  const { error } = await supabase
-    .from('transactions')
-    .delete()
-    .eq('id', id);
+  const { error } = await supabase.rpc('soft_delete_transaction', {
+    transaction_id: id,
+  });
+
+  if (error) throw new Error(error.message);
+}
+
+// Restore a soft-deleted transaction
+export async function restoreTransaction(id: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.rpc('restore_transaction', {
+    transaction_id: id,
+  });
 
   if (error) throw new Error(error.message);
 }

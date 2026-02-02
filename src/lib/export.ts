@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import type { FinancialSummary } from '@/types';
+import type { FinancialSummary, BalanceSheetData, CashFlowData } from '@/types';
 import { formatCurrency } from './utils';
 
 // Export Income Statement to PDF
@@ -331,4 +331,171 @@ export function exportCashFlowToExcel(
 
   // Save file
   XLSX.writeFile(wb, `Cash-Flow-${businessName}-${period}.xlsx`);
+}
+
+// Export Balance Sheet to PDF
+export function exportBalanceSheetToPDF(
+  businessName: string,
+  asOfDate: string,
+  data: BalanceSheetData
+) {
+  const doc = new jsPDF();
+
+  // Title
+  doc.setFontSize(18);
+  doc.text('BALANCE SHEET', 105, 15, { align: 'center' });
+
+  // Business name
+  doc.setFontSize(12);
+  doc.text(businessName, 105, 25, { align: 'center' });
+
+  // As of date
+  doc.setFontSize(10);
+  doc.text(`As of: ${asOfDate}`, 105, 32, { align: 'center' });
+
+  // Check if balanced
+  const isBalanced = Math.abs(
+    data.assets.totalAssets - (data.liabilities.totalLiabilities + data.equity.totalEquity)
+  ) < 0.01;
+
+  // Assets table
+  const assetsData = [
+    ['ASSETS', ''],
+    ['', ''],
+    ['Current Assets', ''],
+    ['  Cash & Bank', formatCurrency(data.assets.cash)],
+    ['', ''],
+    ['Fixed Assets', ''],
+    ['  Property & Equipment', formatCurrency(data.assets.propertyValue)],
+    ['', ''],
+    ['TOTAL ASSETS', formatCurrency(data.assets.totalAssets)],
+  ];
+
+  autoTable(doc, {
+    startY: 40,
+    head: [],
+    body: assetsData,
+    theme: 'grid',
+    styles: { fontSize: 10 },
+    headStyles: { fillColor: [59, 130, 246] },
+    columnStyles: {
+      0: { cellWidth: 120 },
+      1: { cellWidth: 60, halign: 'right' },
+    },
+  });
+
+  // Liabilities & Equity table
+  const finalY = (doc as any).lastAutoTable.finalY + 10;
+
+  const liabilitiesEquityData = [
+    ['LIABILITIES & EQUITY', ''],
+    ['', ''],
+    ['Liabilities', ''],
+    ['  Loans', formatCurrency(data.liabilities.loans)],
+    ['Total Liabilities', formatCurrency(data.liabilities.totalLiabilities)],
+    ['', ''],
+    ['Equity', ''],
+    ['  Capital', formatCurrency(data.equity.capital)],
+    ['  Retained Earnings', formatCurrency(data.equity.retainedEarnings)],
+    ['Total Equity', formatCurrency(data.equity.totalEquity)],
+    ['', ''],
+    [
+      'TOTAL LIABILITIES & EQUITY',
+      formatCurrency(data.liabilities.totalLiabilities + data.equity.totalEquity),
+    ],
+    ['', ''],
+    [
+      isBalanced ? '✓ Balanced' : '⚠ Not Balanced',
+      isBalanced
+        ? 'Assets = Liabilities + Equity'
+        : 'Assets ≠ Liabilities + Equity',
+    ],
+  ];
+
+  autoTable(doc, {
+    startY: finalY,
+    head: [],
+    body: liabilitiesEquityData,
+    theme: 'grid',
+    styles: { fontSize: 10 },
+    columnStyles: {
+      0: { cellWidth: 120 },
+      1: { cellWidth: 60, halign: 'right' },
+    },
+  });
+
+  // Footer
+  const footerY = (doc as any).lastAutoTable.finalY + 10;
+  doc.setFontSize(8);
+  doc.text(`Generated on ${new Date().toLocaleDateString('id-ID')}`, 105, footerY, {
+    align: 'center',
+  });
+
+  // Save
+  doc.save(`Balance-Sheet-${businessName}-${asOfDate}.pdf`);
+}
+
+// Export Balance Sheet to Excel
+export function exportBalanceSheetToExcel(
+  businessName: string,
+  asOfDate: string,
+  data: BalanceSheetData
+) {
+  // Check if balanced
+  const isBalanced = Math.abs(
+    data.assets.totalAssets - (data.liabilities.totalLiabilities + data.equity.totalEquity)
+  ) < 0.01;
+
+  // Prepare Excel data
+  const excelData = [
+    ['BALANCE SHEET'],
+    [businessName],
+    [`As of: ${asOfDate}`],
+    [],
+    ['ASSETS', 'Amount'],
+    [],
+    ['Current Assets', ''],
+    ['Cash & Bank', data.assets.cash],
+    [],
+    ['Fixed Assets', ''],
+    ['Property & Equipment', data.assets.propertyValue],
+    [],
+    ['TOTAL ASSETS', data.assets.totalAssets],
+    [],
+    [],
+    ['LIABILITIES & EQUITY', 'Amount'],
+    [],
+    ['Liabilities', ''],
+    ['Loans', data.liabilities.loans],
+    ['Total Liabilities', data.liabilities.totalLiabilities],
+    [],
+    ['Equity', ''],
+    ['Capital', data.equity.capital],
+    ['Retained Earnings', data.equity.retainedEarnings],
+    ['Total Equity', data.equity.totalEquity],
+    [],
+    ['TOTAL LIABILITIES & EQUITY', data.liabilities.totalLiabilities + data.equity.totalEquity],
+    [],
+    [],
+    [
+      isBalanced ? '✓ Balanced' : '⚠ Not Balanced',
+      isBalanced ? 'Assets = Liabilities + Equity' : 'Assets ≠ Liabilities + Equity',
+    ],
+    [],
+    [],
+    [`Generated on ${new Date().toLocaleDateString('id-ID')}`],
+  ];
+
+  // Create workbook and worksheet
+  const ws = XLSX.utils.aoa_to_sheet(excelData);
+
+  // Set column widths
+  ws['!cols'] = [{ wch: 30 }, { wch: 20 }];
+
+  // Create workbook
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Balance Sheet');
+
+  // Save file
+  XLSX.writeFile(wb, `Balance-Sheet-${businessName}-${asOfDate}.xlsx`);
 }
