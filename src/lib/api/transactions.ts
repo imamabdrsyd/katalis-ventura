@@ -52,6 +52,7 @@ export async function getTransactions(businessId: string): Promise<Transaction[]
       credit_account:accounts!transactions_credit_account_id_fkey(*)
     `)
     .eq('business_id', businessId)
+    .is('deleted_at', null) // Only fetch non-deleted transactions
     .order('date', { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -73,6 +74,7 @@ export async function getTransactionsByDateRange(
       credit_account:accounts!transactions_credit_account_id_fkey(*)
     `)
     .eq('business_id', businessId)
+    .is('deleted_at', null) // Only fetch non-deleted transactions
     .gte('date', startDate)
     .lte('date', endDate)
     .order('date', { ascending: false });
