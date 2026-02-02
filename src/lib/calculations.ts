@@ -8,8 +8,7 @@ import type {
 } from '@/types';
 
 // Constants
-export const CAPITAL = 350_000_000; // Default capital investment
-export const PROPERTY_VALUE = 350_000_000; // Initial property value
+export const CAPITAL = 350_000_000; // Default capital investment (fallback only)
 
 export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
   EARN: 'Revenue',
@@ -145,11 +144,14 @@ export function calculateBalanceSheet(
   const summary = calculateFinancialSummary(transactions);
   const cashFlow = calculateCashFlow(transactions, capital);
 
+  // Calculate property value from CAPEX transactions (capital expenditures)
+  const propertyValue = summary.totalCapex;
+
   return {
     assets: {
       cash: cashFlow.closingBalance,
-      propertyValue: PROPERTY_VALUE,
-      totalAssets: cashFlow.closingBalance + PROPERTY_VALUE,
+      propertyValue: propertyValue,
+      totalAssets: cashFlow.closingBalance + propertyValue,
     },
     liabilities: {
       loans: Math.abs(summary.totalFin),
