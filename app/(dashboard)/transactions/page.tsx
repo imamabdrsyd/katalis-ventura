@@ -124,7 +124,7 @@ export default function TransactionsPage() {
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors flex items-center gap-2 font-medium"
             >
               <TrendingUp className="h-5 w-5" />
-              💰 Uang Masuk
+              Uang Masuk
             </button>
 
             <button
@@ -132,7 +132,7 @@ export default function TransactionsPage() {
               className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2 font-medium"
             >
               <TrendingDown className="h-5 w-5" />
-              💸 Uang Keluar
+              Uang Keluar
             </button>
 
             <button
