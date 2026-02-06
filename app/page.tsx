@@ -45,7 +45,7 @@ export default function LandingPage() {
               height={48}
               className="rounded-xl"
             />
-            <span className="text-xl font-bold bg-gradient-to-r from-violet-600 via-blue-500 to-cyan-400 text-transparent bg-clip-text">KATALIS VENTURA</span>
+            <span className="text-xl font-bold bg-gradient-to-r from-violet-600 via-blue-500 to-cyan-400 text-transparent bg-clip-text">IMAM & Partners LLC</span>
           </div>
           <div className="flex items-center gap-4">
             <Link
@@ -73,7 +73,7 @@ export default function LandingPage() {
           </div>
 
           <h1 className="text-6xl font-bold text-gray-900 mb-6 leading-tight">
-            Make Data-driven Decisions 
+            Make Data-driven Decisions
             <br />
             <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               for your Private Equity
@@ -81,7 +81,7 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-xl text-gray-600 mb-12 max-w-2xl mx-auto">
-            Multi-role finance platform build by Imam Abdurasyid for Business Managers and Investors.
+            Opportunities for Hedge Funds & Family Offices to invest as Imam's Limited Partner, acquiring stakes in profitable small businesses.
             Track transactions, analyze performance, and make data-driven decisions.
           </p>
 

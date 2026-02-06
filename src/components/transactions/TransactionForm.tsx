@@ -359,7 +359,7 @@ export function TransactionForm({
         <>
           <div className="pt-2 pb-1 border-t border-gray-200 dark:border-gray-700">
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Double-Entry Bookkeeping
+              Account 
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Gunakan akun debit/kredit untuk pencatatan yang lebih detail.
@@ -368,7 +368,7 @@ export function TransactionForm({
 
           <div className="grid grid-cols-2 gap-4">
             <AccountDropdown
-              label="Uang Keluar Dari / Beban"
+              label="Debit"
               accounts={accounts}
               value={formData.debit_account_id}
               onChange={handleAccountChange('debit')}
@@ -378,7 +378,7 @@ export function TransactionForm({
             />
 
             <AccountDropdown
-              label="Uang Masuk Ke / Pendapatan"
+              label="Kredit"
               accounts={accounts}
               value={formData.credit_account_id}
               onChange={handleAccountChange('credit')}

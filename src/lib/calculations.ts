@@ -136,31 +136,108 @@ export function groupTransactionsByMonth(
   return Array.from(monthMap.values()).sort((a, b) => a.month.localeCompare(b.month));
 }
 
-// Calculate balance sheet
+// Calculate balance sheet using double-entry bookkeeping
 export function calculateBalanceSheet(
   transactions: Transaction[],
   capital: number = CAPITAL
 ): BalanceSheetData {
-  const summary = calculateFinancialSummary(transactions);
-  const cashFlow = calculateCashFlow(transactions, capital);
+  // Separate double-entry and legacy transactions
+  const doubleEntryTransactions = transactions.filter(t => t.is_double_entry);
+  const legacyTransactions = transactions.filter(t => !t.is_double_entry);
 
-  // Calculate property value from CAPEX transactions (capital expenditures)
-  const propertyValue = summary.totalCapex;
+  // Initialize totals
+  let totalAssets = 0;
+  let totalCash = 0;
+  let totalProperty = 0;
+  let totalLiabilities = 0;
+  let totalRevenue = 0;
+  let totalExpenses = 0;
+
+  // Process double-entry transactions
+  doubleEntryTransactions.forEach(transaction => {
+    const amount = Number(transaction.amount);
+    const debitAccount = transaction.debit_account;
+    const creditAccount = transaction.credit_account;
+
+    // Process debit account
+    if (debitAccount) {
+      switch (debitAccount.account_type) {
+        case 'ASSET':
+          totalAssets += amount;
+          // Track cash separately (accounts 1110-1199)
+          if (debitAccount.account_code >= '1110' && debitAccount.account_code < '1200') {
+            totalCash += amount;
+          }
+          // Track property separately (accounts 1200-1299)
+          if (debitAccount.account_code >= '1200' && debitAccount.account_code < '1300') {
+            totalProperty += amount;
+          }
+          break;
+        case 'LIABILITY':
+          // Debit to liability decreases it
+          totalLiabilities -= amount;
+          break;
+        case 'EXPENSE':
+          totalExpenses += amount;
+          break;
+      }
+    }
+
+    // Process credit account
+    if (creditAccount) {
+      switch (creditAccount.account_type) {
+        case 'ASSET':
+          totalAssets -= amount;
+          // Track cash separately
+          if (creditAccount.account_code >= '1110' && creditAccount.account_code < '1200') {
+            totalCash -= amount;
+          }
+          // Track property separately
+          if (creditAccount.account_code >= '1200' && creditAccount.account_code < '1300') {
+            totalProperty -= amount;
+          }
+          break;
+        case 'LIABILITY':
+          // Credit to liability increases it
+          totalLiabilities += amount;
+          break;
+        case 'REVENUE':
+          totalRevenue += amount;
+          break;
+      }
+    }
+  });
+
+  // Process legacy transactions (fallback to old calculation)
+  if (legacyTransactions.length > 0) {
+    const summary = calculateFinancialSummary(legacyTransactions);
+    const cashFlow = calculateCashFlow(legacyTransactions, 0);
+
+    totalCash += cashFlow.closingBalance;
+    totalProperty += summary.totalCapex;
+    totalAssets += cashFlow.closingBalance + summary.totalCapex;
+    totalLiabilities += Math.abs(summary.totalFin);
+    totalRevenue += summary.totalEarn;
+    totalExpenses += summary.totalOpex + summary.totalVar + summary.totalTax + summary.totalCapex;
+  }
+
+  // Calculate retained earnings (revenue - expenses)
+  const retainedEarnings = totalRevenue - totalExpenses;
 
   return {
     assets: {
-      cash: cashFlow.closingBalance,
-      propertyValue: propertyValue,
-      totalAssets: cashFlow.closingBalance + propertyValue,
+      cash: totalCash,
+      propertyValue: totalProperty,
+      totalAssets: totalAssets,
     },
     liabilities: {
-      loans: Math.abs(summary.totalFin),
-      totalLiabilities: Math.abs(summary.totalFin),
+      loans: totalLiabilities,
+      totalLiabilities: totalLiabilities,
     },
     equity: {
       capital: capital,
-      retainedEarnings: summary.netProfit,
-      totalEquity: capital + summary.netProfit,
+      retainedEarnings: retainedEarnings,
+      totalEquity: capital + retainedEarnings,
     },
   };
 }
