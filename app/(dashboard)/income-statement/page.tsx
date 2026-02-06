@@ -1,94 +1,31 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useBusinessContext } from '@/context/BusinessContext';
 import { Calendar, TrendingUp, TrendingDown, Download, FileText, FileSpreadsheet } from 'lucide-react';
-import * as transactionsApi from '@/lib/api/transactions';
-import { calculateFinancialSummary, filterTransactionsByDateRange } from '@/lib/calculations';
+import { useReportData } from '@/hooks/useReportData';
+import { calculateFinancialSummary, calculateIncomeStatementMetrics } from '@/lib/calculations';
 import { formatCurrency } from '@/lib/utils';
 import { exportIncomeStatementToPDF, exportIncomeStatementToExcel } from '@/lib/export';
-import type { Transaction } from '@/types';
-
-type Period = 'month' | 'quarter' | 'year' | 'custom';
+import type { Period } from '@/hooks/useReportData';
 
 export default function IncomeStatementPage() {
-  const { activeBusiness } = useBusinessContext();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<Period>('month');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [showExportMenu, setShowExportMenu] = useState(false);
-  const exportButtonRef = useRef<HTMLDivElement>(null);
+  const {
+    activeBusiness,
+    filteredTransactions,
+    loading,
+    period,
+    startDate,
+    endDate,
+    showExportMenu,
+    exportButtonRef,
+    setPeriod,
+    setStartDate,
+    setEndDate,
+    setShowExportMenu,
+    handlePeriodChange,
+  } = useReportData();
 
-  // Initialize dates based on current month
-  useEffect(() => {
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-
-    setStartDate(firstDay.toISOString().split('T')[0]);
-    setEndDate(lastDay.toISOString().split('T')[0]);
-  }, []);
-
-  // Fetch transactions
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      if (!activeBusiness) return;
-
-      setLoading(true);
-      try {
-        const data = await transactionsApi.getTransactions(activeBusiness.id);
-        setTransactions(data);
-      } catch (error) {
-        console.error('Failed to fetch transactions:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTransactions();
-  }, [activeBusiness]);
-
-  // Filter transactions by date range
-  useEffect(() => {
-    if (startDate && endDate) {
-      const filtered = filterTransactionsByDateRange(transactions, startDate, endDate);
-      setFilteredTransactions(filtered);
-    } else {
-      setFilteredTransactions(transactions);
-    }
-  }, [transactions, startDate, endDate]);
-
-  // Handle period change
-  const handlePeriodChange = (newPeriod: Period) => {
-    setPeriod(newPeriod);
-    const now = new Date();
-    let start: Date;
-    let end: Date;
-
-    switch (newPeriod) {
-      case 'month':
-        start = new Date(now.getFullYear(), now.getMonth(), 1);
-        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        break;
-      case 'quarter':
-        const quarter = Math.floor(now.getMonth() / 3);
-        start = new Date(now.getFullYear(), quarter * 3, 1);
-        end = new Date(now.getFullYear(), (quarter + 1) * 3, 0);
-        break;
-      case 'year':
-        start = new Date(now.getFullYear(), 0, 1);
-        end = new Date(now.getFullYear(), 11, 31);
-        break;
-      default:
-        return;
-    }
-
-    setStartDate(start.toISOString().split('T')[0]);
-    setEndDate(end.toISOString().split('T')[0]);
-  };
+  const summary = calculateFinancialSummary(filteredTransactions);
+  const metrics = calculateIncomeStatementMetrics(summary);
 
   // Handle export
   const handleExportPDF = () => {
@@ -104,29 +41,6 @@ export default function IncomeStatementPage() {
     exportIncomeStatementToExcel(activeBusiness.business_name, periodLabel, summary);
     setShowExportMenu(false);
   };
-
-  // Close export menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (exportButtonRef.current && !exportButtonRef.current.contains(event.target as Node)) {
-        setShowExportMenu(false);
-      }
-    };
-
-    if (showExportMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showExportMenu]);
-
-  const summary = calculateFinancialSummary(filteredTransactions);
-
-  // Calculate additional metrics
-  const operatingIncome = summary.grossProfit - summary.totalOpex;
-  const ebit = operatingIncome - summary.totalCapex;
-  const ebt = ebit - summary.totalFin;
-  const grossMargin = summary.totalEarn > 0 ? (summary.grossProfit / summary.totalEarn) * 100 : 0;
-  const netMargin = summary.totalEarn > 0 ? (summary.netProfit / summary.totalEarn) * 100 : 0;
 
   if (loading) {
     return (
@@ -303,7 +217,7 @@ export default function IncomeStatementPage() {
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="font-bold text-indigo-900 dark:text-indigo-100 text-lg">GROSS PROFIT</h3>
-                <p className="text-sm text-indigo-600 dark:text-indigo-400">Margin: {grossMargin.toFixed(2)}%</p>
+                <p className="text-sm text-indigo-600 dark:text-indigo-400">Margin: {metrics.grossMargin.toFixed(2)}%</p>
               </div>
               <div className="text-right">
                 <span className={`text-2xl font-bold ${summary.grossProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
@@ -334,8 +248,8 @@ export default function IncomeStatementPage() {
           <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
             <div className="flex justify-between items-center">
               <h3 className="font-bold text-purple-900 dark:text-purple-100 text-lg">OPERATING INCOME (EBITDA)</h3>
-              <span className={`text-xl font-bold ${operatingIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                {formatCurrency(operatingIncome)}
+              <span className={`text-xl font-bold ${metrics.operatingIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                {formatCurrency(metrics.operatingIncome)}
               </span>
             </div>
           </div>
@@ -363,8 +277,8 @@ export default function IncomeStatementPage() {
           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
             <div className="flex justify-between items-center">
               <h3 className="font-bold text-blue-900 dark:text-blue-100 text-lg">EBIT (Earnings Before Interest & Tax)</h3>
-              <span className={`text-xl font-bold ${ebit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                {formatCurrency(ebit)}
+              <span className={`text-xl font-bold ${metrics.ebit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                {formatCurrency(metrics.ebit)}
               </span>
             </div>
           </div>
@@ -373,8 +287,8 @@ export default function IncomeStatementPage() {
           <div className="bg-cyan-50 dark:bg-cyan-900/20 rounded-lg p-4">
             <div className="flex justify-between items-center">
               <h3 className="font-bold text-cyan-900 dark:text-cyan-100 text-lg">EBT (Earnings Before Tax)</h3>
-              <span className={`text-xl font-bold ${ebt >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                {formatCurrency(ebt)}
+              <span className={`text-xl font-bold ${metrics.ebt >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                {formatCurrency(metrics.ebt)}
               </span>
             </div>
           </div>
@@ -400,7 +314,7 @@ export default function IncomeStatementPage() {
                 <h3 className="font-bold text-xl mb-1">NET INCOME</h3>
                 <p className={`text-sm ${
                   summary.netProfit >= 0 ? 'text-green-100' : 'text-red-100'
-                }`}>Net Margin: {netMargin.toFixed(2)}%</p>
+                }`}>Net Margin: {metrics.netMargin.toFixed(2)}%</p>
               </div>
               <div className="text-right">
                 <div className="flex items-center gap-2 justify-end mb-1">
@@ -423,17 +337,17 @@ export default function IncomeStatementPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
         <div className="card bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
           <h4 className="text-sm font-semibold text-green-800 dark:text-green-300 mb-2">Gross Margin</h4>
-          <p className="text-2xl font-bold text-green-600 dark:text-green-400">{grossMargin.toFixed(2)}%</p>
+          <p className="text-2xl font-bold text-green-600 dark:text-green-400">{metrics.grossMargin.toFixed(2)}%</p>
         </div>
         <div className="card bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
           <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">Operating Margin</h4>
           <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-            {summary.totalEarn > 0 ? ((operatingIncome / summary.totalEarn) * 100).toFixed(2) : 0}%
+            {metrics.operatingMargin.toFixed(2)}%
           </p>
         </div>
         <div className="card bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800">
           <h4 className="text-sm font-semibold text-purple-800 dark:text-purple-300 mb-2">Net Margin</h4>
-          <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{netMargin.toFixed(2)}%</p>
+          <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{metrics.netMargin.toFixed(2)}%</p>
         </div>
       </div>
     </div>

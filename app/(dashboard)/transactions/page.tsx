@@ -1,15 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useBusinessContext } from '@/context/BusinessContext';
+import { useTransactions } from '@/hooks/useTransactions';
 import { Modal } from '@/components/ui/Modal';
-import { TransactionForm, TransactionFormData } from '@/components/transactions/TransactionForm';
+import { TransactionForm } from '@/components/transactions/TransactionForm';
 import { TransactionList } from '@/components/transactions/TransactionList';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import { DeleteConfirmModal } from '@/components/transactions/DeleteConfirmModal';
 import TransactionImportModal from '@/components/transactions/TransactionImportModal';
-import * as transactionsApi from '@/lib/api/transactions';
-import type { Transaction, TransactionCategory } from '@/types';
+import type { TransactionCategory } from '@/types';
 import { Upload, Plus } from 'lucide-react';
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
@@ -24,144 +22,53 @@ const CATEGORY_LABELS_ID: Record<TransactionCategory, string> = {
 };
 
 export default function TransactionsPage() {
-  const { user, activeBusinessId: businessId, loading: businessLoading, error: businessError, userRole } = useBusinessContext();
-  const canManageTransactions = userRole === 'business_manager' || userRole === 'both';
-
-  // Transaction state
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Filter state
-  const [categoryFilter, setCategoryFilter] = useState<TransactionCategory | ''>('');
-
-  // Table state
-  const [rowsPerPage, setRowsPerPage] = useState<number>(10);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
-    start: '',
-    end: '',
-  });
-  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-
-  // Apply filters
-  const filteredTransactions = transactions.filter((transaction) => {
-    // Date range filter
-    if (dateRange.start && new Date(transaction.date) < new Date(dateRange.start)) {
-      return false;
-    }
-    if (dateRange.end && new Date(transaction.date) > new Date(dateRange.end)) {
-      return false;
-    }
-    return true;
-  });
-
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredTransactions.length / rowsPerPage);
-  const startIndex = (currentPage - 1) * rowsPerPage;
-  const endIndex = startIndex + rowsPerPage;
-  const visibleTransactions = filteredTransactions.slice(startIndex, endIndex);
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [categoryFilter, rowsPerPage, dateRange]);
-
-  // Handle print/export to PDF
-  const handlePrint = () => {
-    window.print();
-  };
-
-  // Modal state
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [quickAddMode, setQuickAddMode] = useState<'earn' | 'spend' | null>(null);
-  const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
-  const [editTransaction, setEditTransaction] = useState<Transaction | null>(null);
-  const [deleteTransaction, setDeleteTransaction] = useState<Transaction | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  // Fetch transactions
-  const fetchTransactions = useCallback(async () => {
-    if (!businessId) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      let data = await transactionsApi.getTransactions(businessId);
-
-      // Apply category filter
-      if (categoryFilter) {
-        data = data.filter((t) => t.category === categoryFilter);
-      }
-
-      setTransactions(data);
-    } catch (err: any) {
-      setError(err.message || 'Gagal memuat transaksi');
-    } finally {
-      setLoading(false);
-    }
-  }, [businessId, categoryFilter]);
-
-  useEffect(() => {
-    if (businessId) {
-      fetchTransactions();
-    }
-  }, [businessId, fetchTransactions]);
-
-  // Handle add transaction
-  const handleAddTransaction = async (data: TransactionFormData) => {
-    if (!businessId || !user) return;
-
-    setSaving(true);
-    try {
-      await transactionsApi.createTransaction({
-        ...data,
-        business_id: businessId,
-        created_by: user.id,
-      });
-      setShowAddModal(false);
-      setQuickAddMode(null);
-      fetchTransactions();
-    } catch (err: any) {
-      alert(err.message || 'Gagal menambahkan transaksi');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Handle edit transaction
-  const handleEditTransaction = async (data: TransactionFormData) => {
-    if (!editTransaction) return;
-
-    setSaving(true);
-    try {
-      await transactionsApi.updateTransaction(editTransaction.id, data);
-      setEditTransaction(null);
-      fetchTransactions();
-    } catch (err: any) {
-      alert(err.message || 'Gagal mengupdate transaksi');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Handle delete transaction
-  const handleDeleteTransaction = async () => {
-    if (!deleteTransaction) return;
-
-    setSaving(true);
-    try {
-      await transactionsApi.deleteTransaction(deleteTransaction.id);
-      setDeleteTransaction(null);
-      fetchTransactions();
-    } catch (err: any) {
-      alert(err.message || 'Gagal menghapus transaksi');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const {
+    // Data
+    visibleTransactions,
+    filteredTransactions,
+    transactions,
+    loading,
+    error,
+    saving,
+    // Business context
+    user,
+    businessId,
+    businessLoading,
+    businessError,
+    canManageTransactions,
+    // Filter state
+    categoryFilter,
+    setCategoryFilter,
+    dateRange,
+    setDateRange,
+    showFilterDropdown,
+    setShowFilterDropdown,
+    // Pagination
+    rowsPerPage,
+    setRowsPerPage,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    // Modal state
+    showAddModal,
+    setShowAddModal,
+    showImportModal,
+    setShowImportModal,
+    quickAddMode,
+    setQuickAddMode,
+    detailTransaction,
+    setDetailTransaction,
+    editTransaction,
+    setEditTransaction,
+    deleteTransaction,
+    setDeleteTransaction,
+    // Actions
+    fetchTransactions,
+    handleAddTransaction,
+    handleEditTransaction,
+    handleDeleteTransaction,
+    handlePrint,
+  } = useTransactions();
 
   // Loading state
   if (businessLoading) {
@@ -181,7 +88,7 @@ export default function TransactionsPage() {
       <div className="p-8">
         <div className="max-w-md mx-auto text-center">
           <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">⚠️</span>
+            <span className="text-3xl">&#9888;&#65039;</span>
           </div>
           <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">Bisnis Tidak Ditemukan</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">{businessError}</p>
@@ -199,9 +106,6 @@ export default function TransactionsPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Kelola Transaksi</h1>
-          {/* <p className="text-gray-500 mt-1">
-            {canManageTransactions ? 'Kelola transaksi keuangan bisnis Anda' : 'Lihat transaksi keuangan bisnis'}
-          </p> */}
         </div>
         {canManageTransactions && (
           <div className="flex items-center gap-3">
@@ -218,7 +122,6 @@ export default function TransactionsPage() {
           </div>
         )}
       </div>
-
 
       {/* Error */}
       {error && (
@@ -400,7 +303,6 @@ export default function TransactionsPage() {
 
             <div className="flex items-center gap-1">
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                // Show first page, last page, current page, and pages around current
                 const showPage =
                   page === 1 ||
                   page === totalPages ||

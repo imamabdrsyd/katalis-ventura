@@ -161,6 +161,16 @@ export interface InviteCode {
   created_at: string;
 }
 
+// Derived income statement metrics (single source of truth)
+export interface IncomeStatementMetrics {
+  operatingIncome: number;
+  ebit: number;
+  ebt: number;
+  grossMargin: number;
+  operatingMargin: number;
+  netMargin: number;
+}
+
 // Financial calculation types
 export interface FinancialSummary {
   totalEarn: number;

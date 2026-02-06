@@ -1,60 +1,23 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useBusinessContext } from '@/context/BusinessContext';
-import { calculateFinancialSummary, calculateROI } from '@/lib/calculations';
+import { useDashboard } from '@/hooks/useDashboard';
 import { formatCurrency, formatPercentage } from '@/lib/utils';
-import * as transactionsApi from '@/lib/api/transactions';
-import type { Transaction } from '@/types';
 import MonitoringChart from '@/components/charts/MonitoringChart';
-// import BalanceCard from '@/components/cards/BalanceCard';
 
 export default function DashboardPage() {
-  const { activeBusiness: business, activeBusinessId: businessId, loading: businessLoading, userRole, user } = useBusinessContext();
-  const canManageTransactions = userRole === 'business_manager' || userRole === 'both';
+  const {
+    business,
+    businessLoading,
+    canManageTransactions,
+    transactions,
+    transactionsLoading,
+    summary,
+    roi,
+    categoryCounts,
+  } = useDashboard();
 
-  // Get user's first name
-  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
-  const firstName = userName.split(' ')[0];
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [transactionsLoading, setTransactionsLoading] = useState(true);
   const router = useRouter();
-
-  // Fetch transactions
-  const fetchTransactions = useCallback(async () => {
-    if (!businessId) return;
-
-    setTransactionsLoading(true);
-    try {
-      const data = await transactionsApi.getTransactions(businessId);
-      setTransactions(data);
-    } catch (err) {
-      console.error('Failed to fetch transactions:', err);
-    } finally {
-      setTransactionsLoading(false);
-    }
-  }, [businessId]);
-
-  useEffect(() => {
-    if (businessId) {
-      fetchTransactions();
-    }
-  }, [businessId, fetchTransactions]);
-
-  // Calculate financial metrics
-  const summary = calculateFinancialSummary(transactions);
-  const roi = calculateROI(summary.netProfit, business?.capital_investment || 0);
-
-  // Count transactions by category
-  const categoryCounts = {
-    EARN: transactions.filter((t) => t.category === 'EARN').length,
-    OPEX: transactions.filter((t) => t.category === 'OPEX').length,
-    VAR: transactions.filter((t) => t.category === 'VAR').length,
-    CAPEX: transactions.filter((t) => t.category === 'CAPEX').length,
-    TAX: transactions.filter((t) => t.category === 'TAX').length,
-    FIN: transactions.filter((t) => t.category === 'FIN').length,
-  };
 
   if (businessLoading) {
     return (
@@ -69,15 +32,6 @@ export default function DashboardPage() {
 
   return (
     <div className="p-8">
-      {/* <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">
-          Dashboard {business?.business_name && <span className="text-indigo-600">{business.business_name}</span>}
-        </h1>
-        <p className="text-gray-500 mt-1">
-          Selamat datang, {firstName} 👋🏻
-        </p>
-      </div> */}
-
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="card">

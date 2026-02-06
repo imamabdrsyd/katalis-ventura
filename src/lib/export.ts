@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import type { FinancialSummary, BalanceSheetData, CashFlowData } from '@/types';
 import { formatCurrency } from './utils';
+import { calculateIncomeStatementMetrics } from './calculations';
 
 // Export Income Statement to PDF
 export function exportIncomeStatementToPDF(
@@ -24,15 +25,8 @@ export function exportIncomeStatementToPDF(
   doc.setFontSize(10);
   doc.text(`Period: ${period}`, 105, 32, { align: 'center' });
 
-  // Calculate metrics
-  const grossProfit = summary.totalEarn - summary.totalVar;
-  const grossMargin = summary.totalEarn > 0 ? (grossProfit / summary.totalEarn) * 100 : 0;
-  const operatingIncome = grossProfit - summary.totalOpex;
-  const ebitda = operatingIncome;
-  const ebit = ebitda; // Assuming no D&A tracked separately
-  const ebt = ebit - summary.totalFin;
-  const netIncome = summary.netProfit;
-  const netMargin = summary.totalEarn > 0 ? (netIncome / summary.totalEarn) * 100 : 0;
+  // Use consolidated calculation
+  const metrics = calculateIncomeStatementMetrics(summary);
 
   // Table data
   const tableData = [
@@ -42,26 +36,26 @@ export function exportIncomeStatementToPDF(
     ['COST OF GOODS SOLD', ''],
     ['  Variable Costs', `(${formatCurrency(summary.totalVar)})`],
     ['', ''],
-    ['GROSS PROFIT', formatCurrency(grossProfit)],
-    ['  Gross Margin', `${grossMargin.toFixed(2)}%`],
+    ['GROSS PROFIT', formatCurrency(summary.grossProfit)],
+    ['  Gross Margin', `${metrics.grossMargin.toFixed(2)}%`],
     ['', ''],
     ['OPERATING EXPENSES', ''],
     ['  Operating Expenses', `(${formatCurrency(summary.totalOpex)})`],
     ['', ''],
-    ['OPERATING INCOME (EBITDA)', formatCurrency(operatingIncome)],
+    ['OPERATING INCOME (EBITDA)', formatCurrency(metrics.operatingIncome)],
     ['', ''],
-    ['EBIT', formatCurrency(ebit)],
+    ['EBIT', formatCurrency(metrics.ebit)],
     ['', ''],
     ['FINANCING COSTS', ''],
     ['  Interest & Financing', `(${formatCurrency(Math.abs(summary.totalFin))})`],
     ['', ''],
-    ['EARNINGS BEFORE TAX (EBT)', formatCurrency(ebt)],
+    ['EARNINGS BEFORE TAX (EBT)', formatCurrency(metrics.ebt)],
     ['', ''],
     ['TAX', ''],
     ['  Tax', `(${formatCurrency(summary.totalTax)})`],
     ['', ''],
-    ['NET INCOME', formatCurrency(netIncome)],
-    ['  Net Margin', `${netMargin.toFixed(2)}%`],
+    ['NET INCOME', formatCurrency(summary.netProfit)],
+    ['  Net Margin', `${metrics.netMargin.toFixed(2)}%`],
   ];
 
   // Generate table
@@ -123,15 +117,8 @@ export function exportIncomeStatementToExcel(
   period: string,
   summary: FinancialSummary
 ) {
-  // Calculate metrics
-  const grossProfit = summary.totalEarn - summary.totalVar;
-  const grossMargin = summary.totalEarn > 0 ? (grossProfit / summary.totalEarn) * 100 : 0;
-  const operatingIncome = grossProfit - summary.totalOpex;
-  const ebitda = operatingIncome;
-  const ebit = ebitda;
-  const ebt = ebit - summary.totalFin;
-  const netIncome = summary.netProfit;
-  const netMargin = summary.totalEarn > 0 ? (netIncome / summary.totalEarn) * 100 : 0;
+  // Use consolidated calculation
+  const metrics = calculateIncomeStatementMetrics(summary);
 
   // Create worksheet data
   const data = [
@@ -146,26 +133,26 @@ export function exportIncomeStatementToExcel(
     ['COST OF GOODS SOLD', ''],
     ['Variable Costs', -summary.totalVar],
     [],
-    ['GROSS PROFIT', grossProfit],
-    ['Gross Margin (%)', grossMargin],
+    ['GROSS PROFIT', summary.grossProfit],
+    ['Gross Margin (%)', metrics.grossMargin],
     [],
     ['OPERATING EXPENSES', ''],
     ['Operating Expenses', -summary.totalOpex],
     [],
-    ['OPERATING INCOME (EBITDA)', operatingIncome],
+    ['OPERATING INCOME (EBITDA)', metrics.operatingIncome],
     [],
-    ['EBIT', ebit],
+    ['EBIT', metrics.ebit],
     [],
     ['FINANCING COSTS', ''],
     ['Interest & Financing', -Math.abs(summary.totalFin)],
     [],
-    ['EARNINGS BEFORE TAX (EBT)', ebt],
+    ['EARNINGS BEFORE TAX (EBT)', metrics.ebt],
     [],
     ['TAX', ''],
     ['Tax', -summary.totalTax],
     [],
-    ['NET INCOME', netIncome],
-    ['Net Margin (%)', netMargin],
+    ['NET INCOME', summary.netProfit],
+    ['Net Margin (%)', metrics.netMargin],
     [],
     [],
     [`Generated on ${new Date().toLocaleDateString('id-ID')}`],

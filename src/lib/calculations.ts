@@ -2,6 +2,7 @@ import type {
   Transaction,
   TransactionCategory,
   FinancialSummary,
+  IncomeStatementMetrics,
   MonthlyData,
   BalanceSheetData,
   CashFlowData,
@@ -76,6 +77,31 @@ export function calculateFinancialSummary(
     summary.totalTax;
 
   return summary;
+}
+
+// Calculate derived income statement metrics from a financial summary
+export function calculateIncomeStatementMetrics(
+  summary: FinancialSummary
+): IncomeStatementMetrics {
+  const operatingIncome = summary.grossProfit - summary.totalOpex;
+  const ebit = operatingIncome - summary.totalCapex;
+  const ebt = ebit - summary.totalFin;
+  const grossMargin = summary.totalEarn > 0 ? (summary.grossProfit / summary.totalEarn) * 100 : 0;
+  const operatingMargin = summary.totalEarn > 0 ? (operatingIncome / summary.totalEarn) * 100 : 0;
+  const netMargin = summary.totalEarn > 0 ? (summary.netProfit / summary.totalEarn) * 100 : 0;
+
+  return { operatingIncome, ebit, ebt, grossMargin, operatingMargin, netMargin };
+}
+
+// Count transactions per category
+export function calculateCategoryCounts(
+  transactions: Transaction[]
+): Record<TransactionCategory, number> {
+  const counts: Record<TransactionCategory, number> = {
+    EARN: 0, OPEX: 0, VAR: 0, CAPEX: 0, TAX: 0, FIN: 0,
+  };
+  transactions.forEach((t) => { counts[t.category]++; });
+  return counts;
 }
 
 // Group transactions by month

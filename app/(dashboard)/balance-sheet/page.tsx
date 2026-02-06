@@ -1,94 +1,27 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useBusinessContext } from '@/context/BusinessContext';
 import { Calendar, Scale, Download, FileText, FileSpreadsheet, CheckCircle, AlertCircle } from 'lucide-react';
-import * as transactionsApi from '@/lib/api/transactions';
-import { calculateBalanceSheet, filterTransactionsByDateRange } from '@/lib/calculations';
+import { useReportData } from '@/hooks/useReportData';
+import { calculateBalanceSheet } from '@/lib/calculations';
 import { formatCurrency } from '@/lib/utils';
 import { exportBalanceSheetToPDF, exportBalanceSheetToExcel } from '@/lib/export';
-import type { Transaction } from '@/types';
-
-type Period = 'month' | 'quarter' | 'year' | 'custom';
+import type { Period } from '@/hooks/useReportData';
 
 export default function BalanceSheetPage() {
-  const { activeBusiness } = useBusinessContext();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<Period>('month');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [showExportMenu, setShowExportMenu] = useState(false);
-  const exportButtonRef = useRef<HTMLDivElement>(null);
-
-  // Initialize dates based on current month
-  useEffect(() => {
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-
-    setStartDate(firstDay.toISOString().split('T')[0]);
-    setEndDate(lastDay.toISOString().split('T')[0]);
-  }, []);
-
-  // Fetch transactions
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      if (!activeBusiness) return;
-
-      setLoading(true);
-      try {
-        const data = await transactionsApi.getTransactions(activeBusiness.id);
-        setTransactions(data);
-      } catch (error) {
-        console.error('Failed to fetch transactions:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTransactions();
-  }, [activeBusiness]);
-
-  // Filter transactions by date range
-  useEffect(() => {
-    if (startDate && endDate) {
-      const filtered = filterTransactionsByDateRange(transactions, startDate, endDate);
-      setFilteredTransactions(filtered);
-    } else {
-      setFilteredTransactions(transactions);
-    }
-  }, [transactions, startDate, endDate]);
-
-  // Handle period change
-  const handlePeriodChange = (newPeriod: Period) => {
-    setPeriod(newPeriod);
-    const now = new Date();
-    let start: Date;
-    let end: Date;
-
-    switch (newPeriod) {
-      case 'month':
-        start = new Date(now.getFullYear(), now.getMonth(), 1);
-        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        break;
-      case 'quarter':
-        const quarter = Math.floor(now.getMonth() / 3);
-        start = new Date(now.getFullYear(), quarter * 3, 1);
-        end = new Date(now.getFullYear(), (quarter + 1) * 3, 0);
-        break;
-      case 'year':
-        start = new Date(now.getFullYear(), 0, 1);
-        end = new Date(now.getFullYear(), 11, 31);
-        break;
-      default:
-        return;
-    }
-
-    setStartDate(start.toISOString().split('T')[0]);
-    setEndDate(end.toISOString().split('T')[0]);
-  };
+  const {
+    activeBusiness,
+    filteredTransactions,
+    loading,
+    period,
+    startDate,
+    endDate,
+    showExportMenu,
+    exportButtonRef,
+    setStartDate,
+    setEndDate,
+    setShowExportMenu,
+    handlePeriodChange,
+  } = useReportData();
 
   // Calculate balance sheet
   const balanceSheet = calculateBalanceSheet(
@@ -100,7 +33,7 @@ export default function BalanceSheetPage() {
   const isBalanced = Math.abs(
     balanceSheet.assets.totalAssets -
     (balanceSheet.liabilities.totalLiabilities + balanceSheet.equity.totalEquity)
-  ) < 0.01; // Allow for rounding errors
+  ) < 0.01;
 
   // Handle export
   const handleExportPDF = () => {
@@ -124,26 +57,6 @@ export default function BalanceSheetPage() {
     exportBalanceSheetToExcel(activeBusiness.business_name, asOfDate, balanceSheet);
     setShowExportMenu(false);
   };
-
-  // Close export menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        exportButtonRef.current &&
-        !exportButtonRef.current.contains(event.target as Node)
-      ) {
-        setShowExportMenu(false);
-      }
-    };
-
-    if (showExportMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showExportMenu]);
 
   if (loading) {
     return (
@@ -403,7 +316,7 @@ export default function BalanceSheetPage() {
                 ? 'text-emerald-900 dark:text-emerald-100'
                 : 'text-red-900 dark:text-red-100'
             }`}>
-              {isBalanced ? '✓ Neraca Seimbang' : '⚠️ Neraca Tidak Seimbang'}
+              {isBalanced ? '\u2713 Neraca Seimbang' : '\u26A0\uFE0F Neraca Tidak Seimbang'}
             </p>
             <p className={`text-sm mt-1 ${
               isBalanced
