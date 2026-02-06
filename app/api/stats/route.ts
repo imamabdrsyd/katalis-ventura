@@ -1,14 +1,16 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { createAdminClient } from '@/lib/supabase-server';
 
-// Create a Supabase client with service role for server-side operations
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
+/**
+ * GET /api/stats
+ * Public endpoint — intentionally unauthenticated.
+ * Returns aggregate platform statistics (user count, business count)
+ * for use on the landing page. No PII is exposed.
+ */
 export async function GET() {
   try {
+    const supabaseAdmin = createAdminClient();
+
     // Get total users count from profiles table
     const { count: usersCount, error: usersError } = await supabaseAdmin
       .from('profiles')

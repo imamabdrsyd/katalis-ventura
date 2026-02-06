@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-);
+import { getAuthenticatedUser, createAdminClient } from '@/lib/supabase-server';
 
 export async function GET(request: NextRequest) {
   try {
+    // Verify the caller is authenticated
+    const caller = await getAuthenticatedUser();
+    if (!caller) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const userId = request.nextUrl.searchParams.get('userId');
 
     if (!userId) {
@@ -17,8 +21,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Validate UUID format to prevent injection
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!UUID_REGEX.test(userId)) {
+      return NextResponse.json(
+        { error: 'Invalid user ID format' },
+        { status: 400 }
+      );
+    }
+
+    // Use admin client only after auth is verified
+    const supabaseAdmin = createAdminClient();
+
     // Fetch user profile using service role (bypass RLS)
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('profiles')
       .select('full_name, id')
       .eq('id', userId)
@@ -27,7 +43,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Supabase error:', error);
       // Fallback: try to get from auth.users
-      const { data: authData } = await supabase.auth.admin.getUserById(userId);
+      const { data: authData } = await supabaseAdmin.auth.admin.getUserById(userId);
       if (authData?.user) {
         return NextResponse.json({
           full_name:
