@@ -1,16 +1,13 @@
 'use client';
 
 import { Calendar, TrendingUp, TrendingDown, Download, Wallet, FileText, FileSpreadsheet } from 'lucide-react';
-import { useReportData } from '@/hooks/useReportData';
-import { calculateCashFlow } from '@/lib/calculations';
+import { useCashFlow } from '@/hooks/useCashFlow';
 import { formatCurrency } from '@/lib/utils';
-import { exportCashFlowToPDF, exportCashFlowToExcel } from '@/lib/export';
 import type { Period } from '@/hooks/useReportData';
 
 export default function CashFlowPage() {
   const {
     activeBusiness,
-    filteredTransactions,
     loading,
     period,
     startDate,
@@ -22,25 +19,10 @@ export default function CashFlowPage() {
     setEndDate,
     setShowExportMenu,
     handlePeriodChange,
-  } = useReportData();
-
-  const capital = activeBusiness?.capital_investment || 0;
-  const cashFlow = calculateCashFlow(filteredTransactions, capital);
-
-  // Handle export
-  const handleExportPDF = () => {
-    if (!activeBusiness) return;
-    const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
-    exportCashFlowToPDF(activeBusiness.business_name, periodLabel, cashFlow);
-    setShowExportMenu(false);
-  };
-
-  const handleExportExcel = () => {
-    if (!activeBusiness) return;
-    const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
-    exportCashFlowToExcel(activeBusiness.business_name, periodLabel, cashFlow);
-    setShowExportMenu(false);
-  };
+    cashFlow,
+    handleExportPDF,
+    handleExportExcel,
+  } = useCashFlow();
 
   if (loading) {
     return (

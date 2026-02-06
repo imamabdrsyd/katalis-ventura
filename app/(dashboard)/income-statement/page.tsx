@@ -1,16 +1,13 @@
 'use client';
 
 import { Calendar, TrendingUp, TrendingDown, Download, FileText, FileSpreadsheet } from 'lucide-react';
-import { useReportData } from '@/hooks/useReportData';
-import { calculateFinancialSummary, calculateIncomeStatementMetrics } from '@/lib/calculations';
+import { useIncomeStatement } from '@/hooks/useIncomeStatement';
 import { formatCurrency } from '@/lib/utils';
-import { exportIncomeStatementToPDF, exportIncomeStatementToExcel } from '@/lib/export';
 import type { Period } from '@/hooks/useReportData';
 
 export default function IncomeStatementPage() {
   const {
     activeBusiness,
-    filteredTransactions,
     loading,
     period,
     startDate,
@@ -22,25 +19,11 @@ export default function IncomeStatementPage() {
     setEndDate,
     setShowExportMenu,
     handlePeriodChange,
-  } = useReportData();
-
-  const summary = calculateFinancialSummary(filteredTransactions);
-  const metrics = calculateIncomeStatementMetrics(summary);
-
-  // Handle export
-  const handleExportPDF = () => {
-    if (!activeBusiness) return;
-    const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
-    exportIncomeStatementToPDF(activeBusiness.business_name, periodLabel, summary);
-    setShowExportMenu(false);
-  };
-
-  const handleExportExcel = () => {
-    if (!activeBusiness) return;
-    const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
-    exportIncomeStatementToExcel(activeBusiness.business_name, periodLabel, summary);
-    setShowExportMenu(false);
-  };
+    summary,
+    metrics,
+    handleExportPDF,
+    handleExportExcel,
+  } = useIncomeStatement();
 
   if (loading) {
     return (

@@ -1,16 +1,13 @@
 'use client';
 
 import { Calendar, Scale, Download, FileText, FileSpreadsheet, CheckCircle, AlertCircle } from 'lucide-react';
-import { useReportData } from '@/hooks/useReportData';
-import { calculateBalanceSheet } from '@/lib/calculations';
+import { useBalanceSheet } from '@/hooks/useBalanceSheet';
 import { formatCurrency } from '@/lib/utils';
-import { exportBalanceSheetToPDF, exportBalanceSheetToExcel } from '@/lib/export';
 import type { Period } from '@/hooks/useReportData';
 
 export default function BalanceSheetPage() {
   const {
     activeBusiness,
-    filteredTransactions,
     loading,
     period,
     startDate,
@@ -21,42 +18,11 @@ export default function BalanceSheetPage() {
     setEndDate,
     setShowExportMenu,
     handlePeriodChange,
-  } = useReportData();
-
-  // Calculate balance sheet
-  const balanceSheet = calculateBalanceSheet(
-    filteredTransactions,
-    activeBusiness?.capital_investment
-  );
-
-  // Check if accounting equation is balanced
-  const isBalanced = Math.abs(
-    balanceSheet.assets.totalAssets -
-    (balanceSheet.liabilities.totalLiabilities + balanceSheet.equity.totalEquity)
-  ) < 0.01;
-
-  // Handle export
-  const handleExportPDF = () => {
-    if (!activeBusiness) return;
-    const asOfDate = new Date(endDate).toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-    exportBalanceSheetToPDF(activeBusiness.business_name, asOfDate, balanceSheet);
-    setShowExportMenu(false);
-  };
-
-  const handleExportExcel = () => {
-    if (!activeBusiness) return;
-    const asOfDate = new Date(endDate).toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-    exportBalanceSheetToExcel(activeBusiness.business_name, asOfDate, balanceSheet);
-    setShowExportMenu(false);
-  };
+    balanceSheet,
+    isBalanced,
+    handleExportPDF,
+    handleExportExcel,
+  } = useBalanceSheet();
 
   if (loading) {
     return (
