@@ -12,12 +12,11 @@ export interface CreateBusinessData {
   property_address?: string;
 }
 
-const supabase = createClient();
-
 export async function getUserBusinesses(
   userId: string,
   includeArchived = false
 ): Promise<Business[]> {
+  const supabase = createClient();
   let query = supabase
     .from('user_business_roles')
     .select('business_id, businesses(*)')
@@ -39,6 +38,7 @@ export async function getUserBusinesses(
 }
 
 export async function getBusinessById(businessId: string): Promise<Business | null> {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('businesses')
     .select('*')
@@ -57,6 +57,7 @@ export async function createBusiness(
   business: CreateBusinessData,
   userId: string
 ): Promise<Business> {
+  const supabase = createClient();
   // Create business
   const { data: newBusiness, error: businessError } = await supabase
     .from('businesses')
@@ -96,6 +97,7 @@ export async function updateBusiness(
   businessId: string,
   updates: BusinessUpdate
 ): Promise<Business> {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('businesses')
     .update(updates)
@@ -109,6 +111,7 @@ export async function updateBusiness(
 }
 
 export async function archiveBusiness(businessId: string): Promise<Business> {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('businesses')
     .update({ is_archived: true })
@@ -122,6 +125,7 @@ export async function archiveBusiness(businessId: string): Promise<Business> {
 }
 
 export async function restoreBusiness(businessId: string): Promise<Business> {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('businesses')
     .update({ is_archived: false })
@@ -135,6 +139,7 @@ export async function restoreBusiness(businessId: string): Promise<Business> {
 }
 
 export async function getAvailableBusinesses(userId: string): Promise<Business[]> {
+  const supabase = createClient();
   // Get businesses that user already joined
   const { data: userRoles, error: rolesError } = await supabase
     .from('user_business_roles')
@@ -168,6 +173,7 @@ export async function joinBusiness(
   userId: string,
   businessId: string
 ): Promise<void> {
+  const supabase = createClient();
   const { error } = await supabase.from('user_business_roles').insert({
     user_id: userId,
     business_id: businessId,
@@ -178,6 +184,7 @@ export async function joinBusiness(
 }
 
 export async function checkUserHasBusiness(userId: string): Promise<boolean> {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('user_business_roles')
     .select('id')
