@@ -360,8 +360,8 @@ export default function TransactionsPage() {
         isOpen={showAddModal}
         onClose={() => { setShowAddModal(false); setTransactionMode(null); }}
         title={
-          transactionMode === 'in' ? '💰 Uang Masuk' :
-          transactionMode === 'out' ? '💸 Uang Keluar' :
+          transactionMode === 'in' ? 'Uang Masuk' :
+          transactionMode === 'out' ? 'Uang Keluar' :
           'Tambah Transaksi'
         }
       >
