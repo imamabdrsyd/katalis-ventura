@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import type { Account, AccountType } from '@/types';
+import { filterAccountsByMode, filterExpensesByCategory, type FilterMode, type ExpenseFilter } from '@/lib/utils/transactionHelpers';
 
 interface AccountDropdownProps {
   label: string;
@@ -12,6 +13,8 @@ interface AccountDropdownProps {
   suggestedCode?: string;
   error?: string;
   required?: boolean;
+  filterMode?: FilterMode;
+  showQuickTabs?: boolean;
 }
 
 const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
@@ -31,9 +34,24 @@ export function AccountDropdown({
   suggestedCode,
   error,
   required = false,
+  filterMode,
+  showQuickTabs = false,
 }: AccountDropdownProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [expenseFilter, setExpenseFilter] = useState<ExpenseFilter>('ALL');
+
+  // Apply filtering based on mode
+  const filteredAccounts = useMemo(() => {
+    let filtered = filterAccountsByMode(accounts, filterMode || null);
+
+    // Further filter expenses by quick tabs if enabled
+    if (showQuickTabs && filterMode === 'out-destination' && expenseFilter !== 'ALL') {
+      filtered = filterExpensesByCategory(filtered, expenseFilter);
+    }
+
+    return filtered;
+  }, [accounts, filterMode, expenseFilter, showQuickTabs]);
 
   // Group accounts by type
   const groupedAccounts = useMemo(() => {
@@ -45,14 +63,14 @@ export function AccountDropdown({
       EXPENSE: [],
     };
 
-    accounts.forEach((account) => {
+    filteredAccounts.forEach((account) => {
       if (account.is_active) {
         groups[account.account_type].push(account);
       }
     });
 
     return groups;
-  }, [accounts]);
+  }, [filteredAccounts]);
 
   // Filter accounts based on search
   const filteredGroupedAccounts = useMemo(() => {
@@ -79,11 +97,11 @@ export function AccountDropdown({
   }, [groupedAccounts, searchTerm]);
 
   // Get selected account
-  const selectedAccount = accounts.find((acc) => acc.id === value);
+  const selectedAccount = filteredAccounts.find((acc) => acc.id === value);
 
   // Get suggested account
   const suggestedAccount = suggestedCode
-    ? accounts.find((acc) => acc.account_code === suggestedCode)
+    ? filteredAccounts.find((acc) => acc.account_code === suggestedCode)
     : undefined;
 
   const handleSelectAccount = (account: Account) => {
@@ -132,6 +150,58 @@ export function AccountDropdown({
       {/* Dropdown menu */}
       {isOpen && (
         <div className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-96 overflow-hidden">
+          {/* Quick filter tabs for expenses */}
+          {showQuickTabs && filterMode === 'out-destination' && (
+            <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setExpenseFilter('ALL')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                    expenseFilter === 'ALL'
+                      ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  Semua
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExpenseFilter('OPEX')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                    expenseFilter === 'OPEX'
+                      ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  OPEX
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExpenseFilter('VAR')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                    expenseFilter === 'VAR'
+                      ? 'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  VAR
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExpenseFilter('TAX')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                    expenseFilter === 'TAX'
+                      ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  TAX
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Search input */}
           <div className="p-2 border-b border-gray-200 dark:border-gray-700">
             <input

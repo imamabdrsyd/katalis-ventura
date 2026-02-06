@@ -28,7 +28,7 @@ export function useTransactions() {
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [quickAddMode, setQuickAddMode] = useState<'earn' | 'spend' | null>(null);
+  const [transactionMode, setTransactionMode] = useState<'in' | 'out' | null>(null);
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null);
   const [deleteTransaction, setDeleteTransaction] = useState<Transaction | null>(null);
@@ -85,7 +85,7 @@ export function useTransactions() {
         created_by: user.id,
       });
       setShowAddModal(false);
-      setQuickAddMode(null);
+      setTransactionMode(null);
       fetchTransactions();
     } catch (err: any) {
       alert(err.message || 'Gagal menambahkan transaksi');
@@ -126,6 +126,16 @@ export function useTransactions() {
     window.print();
   }, []);
 
+  const handleOpenInModal = useCallback(() => {
+    setTransactionMode('in');
+    setShowAddModal(true);
+  }, []);
+
+  const handleOpenOutModal = useCallback(() => {
+    setTransactionMode('out');
+    setShowAddModal(true);
+  }, []);
+
   return {
     // Data
     transactions,
@@ -158,8 +168,8 @@ export function useTransactions() {
     setShowAddModal,
     showImportModal,
     setShowImportModal,
-    quickAddMode,
-    setQuickAddMode,
+    transactionMode,
+    setTransactionMode,
     detailTransaction,
     setDetailTransaction,
     editTransaction,
@@ -172,5 +182,7 @@ export function useTransactions() {
     handleEditTransaction,
     handleDeleteTransaction,
     handlePrint,
+    handleOpenInModal,
+    handleOpenOutModal,
   };
 }

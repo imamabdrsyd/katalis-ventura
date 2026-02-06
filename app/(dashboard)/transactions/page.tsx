@@ -8,7 +8,7 @@ import { TransactionDetailModal } from '@/components/transactions/TransactionDet
 import { DeleteConfirmModal } from '@/components/transactions/DeleteConfirmModal';
 import TransactionImportModal from '@/components/transactions/TransactionImportModal';
 import type { TransactionCategory } from '@/types';
-import { Upload, Plus } from 'lucide-react';
+import { Upload, TrendingUp, TrendingDown } from 'lucide-react';
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
@@ -54,8 +54,8 @@ export default function TransactionsPage() {
     setShowAddModal,
     showImportModal,
     setShowImportModal,
-    quickAddMode,
-    setQuickAddMode,
+    transactionMode,
+    setTransactionMode,
     detailTransaction,
     setDetailTransaction,
     editTransaction,
@@ -68,6 +68,8 @@ export default function TransactionsPage() {
     handleEditTransaction,
     handleDeleteTransaction,
     handlePrint,
+    handleOpenInModal,
+    handleOpenOutModal,
   } = useTransactions();
 
   // Loading state
@@ -111,12 +113,32 @@ export default function TransactionsPage() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowImportModal(true)}
-              className="px-4 py-2 border border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-2"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
             >
               <Upload className="h-4 w-4" />
               Import Excel
             </button>
-            <button onClick={() => setShowAddModal(true)} className="btn-primary">
+
+            <button
+              onClick={handleOpenInModal}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors flex items-center gap-2 font-medium"
+            >
+              <TrendingUp className="h-5 w-5" />
+              💰 Uang Masuk
+            </button>
+
+            <button
+              onClick={handleOpenOutModal}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2 font-medium"
+            >
+              <TrendingDown className="h-5 w-5" />
+              💸 Uang Keluar
+            </button>
+
+            <button
+              onClick={() => { setTransactionMode(null); setShowAddModal(true); }}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm flex items-center gap-2"
+            >
               + Tambah Transaksi
             </button>
           </div>
@@ -190,25 +212,6 @@ export default function TransactionsPage() {
               </svg>
             </div>
 
-            {/* Quick Add Buttons */}
-            {canManageTransactions && (
-              <>
-                <button
-                  onClick={() => setQuickAddMode('earn')}
-                  className="flex items-center gap-1.5 text-sm text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 transition-colors font-medium"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add Sales</span>
-                </button>
-                <button
-                  onClick={() => setQuickAddMode('spend')}
-                  className="flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors font-medium"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Pay</span>
-                </button>
-              </>
-            )}
 
             {/* Filter */}
             <div className="relative">
@@ -355,45 +358,18 @@ export default function TransactionsPage() {
       {/* Add Modal */}
       <Modal
         isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        title="Tambah Transaksi"
+        onClose={() => { setShowAddModal(false); setTransactionMode(null); }}
+        title={
+          transactionMode === 'in' ? '💰 Uang Masuk' :
+          transactionMode === 'out' ? '💸 Uang Keluar' :
+          'Tambah Transaksi'
+        }
       >
         <TransactionForm
+          mode={transactionMode || 'full'}
           onSubmit={handleAddTransaction}
-          onCancel={() => setShowAddModal(false)}
+          onCancel={() => { setShowAddModal(false); setTransactionMode(null); }}
           loading={saving}
-          businessId={businessId || undefined}
-        />
-      </Modal>
-
-      {/* Quick Add Earn Modal */}
-      <Modal
-        isOpen={quickAddMode === 'earn'}
-        onClose={() => setQuickAddMode(null)}
-        title="Tambah Pemasukan"
-      >
-        <TransactionForm
-          onSubmit={handleAddTransaction}
-          onCancel={() => setQuickAddMode(null)}
-          loading={saving}
-          defaultCategory="EARN"
-          allowedCategories={['EARN']}
-          businessId={businessId || undefined}
-        />
-      </Modal>
-
-      {/* Quick Add Spend Modal */}
-      <Modal
-        isOpen={quickAddMode === 'spend'}
-        onClose={() => setQuickAddMode(null)}
-        title="Tambah Pengeluaran"
-      >
-        <TransactionForm
-          onSubmit={handleAddTransaction}
-          onCancel={() => setQuickAddMode(null)}
-          loading={saving}
-          defaultCategory="OPEX"
-          allowedCategories={['OPEX', 'VAR']}
           businessId={businessId || undefined}
         />
       </Modal>

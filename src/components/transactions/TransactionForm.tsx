@@ -6,6 +6,7 @@ import { CATEGORY_LABELS } from '@/lib/calculations';
 import { getAccounts } from '@/lib/api/accounts';
 import { AccountDropdown } from './AccountDropdown';
 import { useParams } from 'next/navigation';
+import { detectCategory } from '@/lib/utils/transactionHelpers';
 
 export interface TransactionFormData {
   date: string;
@@ -28,7 +29,8 @@ interface TransactionFormProps {
   loading?: boolean;
   defaultCategory?: TransactionCategory;
   allowedCategories?: TransactionCategory[];
-  businessId?: string; // NEW: Pass businessId as prop
+  businessId?: string;
+  mode?: 'in' | 'out' | 'full'; // NEW: mode prop
 }
 
 const ALL_CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
@@ -89,6 +91,7 @@ export function TransactionForm({
   defaultCategory,
   allowedCategories,
   businessId: businessIdProp,
+  mode = 'full', // Default to full mode for backward compatibility
 }: TransactionFormProps) {
   const params = useParams();
   const businessId = businessIdProp || (params?.businessId as string);
@@ -136,8 +139,8 @@ export function TransactionForm({
     return CATEGORY_SUGGESTIONS[formData.category];
   }, [formData.category]);
 
-  // Check if using double-entry format
-  const isDoubleEntry = !!(formData.debit_account_id || formData.credit_account_id);
+  // Check if using double-entry format (always true for 'in' and 'out' modes)
+  const isDoubleEntry = mode !== 'full' || !!(formData.debit_account_id || formData.credit_account_id);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -186,6 +189,16 @@ export function TransactionForm({
         ...formData,
         is_double_entry: isDoubleEntry,
       };
+
+      // Auto-detect category for 'in' and 'out' modes
+      if (mode !== 'full' && formData.debit_account_id && formData.credit_account_id) {
+        const debitAccount = accounts.find(acc => acc.id === formData.debit_account_id);
+        const creditAccount = accounts.find(acc => acc.id === formData.credit_account_id);
+
+        if (debitAccount && creditAccount) {
+          submitData.category = detectCategory(debitAccount.account_code, creditAccount.account_code);
+        }
+      }
 
       // Clear unused fields based on format
       if (isDoubleEntry) {
@@ -242,16 +255,12 @@ export function TransactionForm({
 
   // Helper function to get the opposite account name for auto-fill description
   const getOppositeAccountName = (): string => {
-    const category = formData.category;
-
-    // For EARN (revenue), the main account is debit (bank receiving money)
-    // So the opposite account (for description) is credit (revenue source)
-    if (category === 'EARN') {
+    // For 'in' mode or EARN: show the source (credit) account
+    if (mode === 'in' || formData.category === 'EARN') {
       return getAccountName(formData.credit_account_id);
     }
 
-    // For expenses (OPEX, VAR, CAPEX, TAX, FIN), the main account is credit (bank paying)
-    // So the opposite account (for description) is debit (expense/asset)
+    // For 'out' mode or expenses: show the destination (debit) account
     return getAccountName(formData.debit_account_id);
   };
 
@@ -298,32 +307,190 @@ export function TransactionForm({
     }
   };
 
+  // Determine border color for amount field based on mode
+  const amountBorderColor = mode === 'in'
+    ? 'border-emerald-500 dark:border-emerald-400 focus:ring-emerald-500'
+    : mode === 'out'
+    ? 'border-red-500 dark:border-red-400 focus:ring-red-500'
+    : '';
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Line 1: Kategori + Tanggal */}
-      <div className="grid grid-cols-2 gap-4">
+      {/* AMOUNT FIRST for 'in' and 'out' modes - Make it PROMINENT */}
+      {mode !== 'full' && (
         <div>
-          <label className="label">Kategori *</label>
-          <select
-            name="category"
-            value={formData.category}
-            onChange={handleChange}
-            className="input"
+          <label className="label text-base font-semibold">Jumlah (Rp) *</label>
+          <input
+            type="text"
+            name="amount"
+            value={displayAmount}
+            onChange={handleAmountChange}
+            className={`input text-2xl font-bold ${amountBorderColor}`}
+            placeholder="0"
+            inputMode="numeric"
             required
-          >
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {CATEGORY_LABELS[cat]}
-              </option>
-            ))}
-          </select>
-          {suggestedAccounts && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              💡 {suggestedAccounts.description}
-            </p>
-          )}
+          />
+          {errors.amount && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.amount}</p>}
         </div>
+      )}
 
+      {/* Category + Date for full mode only */}
+      {mode === 'full' && (
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="label">Kategori *</label>
+            <select
+              name="category"
+              value={formData.category}
+              onChange={handleChange}
+              className="input"
+              required
+            >
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {CATEGORY_LABELS[cat]}
+                </option>
+              ))}
+            </select>
+            {suggestedAccounts && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                💡 {suggestedAccounts.description}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="label">Tanggal *</label>
+            <input
+              type="date"
+              name="date"
+              value={formData.date}
+              onChange={handleChange}
+              className="input"
+              required
+            />
+            {errors.date && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.date}</p>}
+          </div>
+        </div>
+      )}
+
+      {/* Amount for full mode (normal size) */}
+      {mode === 'full' && (
+        <div>
+          <label className="label">Jumlah (Rp) *</label>
+          <input
+            type="text"
+            name="amount"
+            value={displayAmount}
+            onChange={handleAmountChange}
+            className="input"
+            placeholder="0"
+            inputMode="numeric"
+            required
+          />
+          {errors.amount && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.amount}</p>}
+        </div>
+      )}
+
+      {/* Account fields - Different labels based on mode */}
+      {!loadingAccounts && accounts.length > 0 && (
+        <>
+          {mode === 'in' && (
+            <>
+              <AccountDropdown
+                label="Uang Masuk Ke"
+                accounts={accounts}
+                value={formData.debit_account_id}
+                onChange={handleAccountChange('debit')}
+                placeholder="Pilih rekening tujuan"
+                suggestedCode={suggestedAccounts?.debit}
+                error={errors.debit_account_id}
+                filterMode="in-destination"
+                required
+              />
+
+              <AccountDropdown
+                label="Dari (Sumber)"
+                accounts={accounts}
+                value={formData.credit_account_id}
+                onChange={handleAccountChange('credit')}
+                placeholder="Pilih sumber pendapatan"
+                suggestedCode={suggestedAccounts?.credit}
+                error={errors.credit_account_id}
+                filterMode="in-source"
+                required
+              />
+            </>
+          )}
+
+          {mode === 'out' && (
+            <>
+              <AccountDropdown
+                label="Bayar Dari"
+                accounts={accounts}
+                value={formData.credit_account_id}
+                onChange={handleAccountChange('credit')}
+                placeholder="Pilih rekening sumber"
+                suggestedCode={suggestedAccounts?.credit}
+                error={errors.credit_account_id}
+                filterMode="out-source"
+                required
+              />
+
+              <AccountDropdown
+                label="Untuk (Jenis Beban)"
+                accounts={accounts}
+                value={formData.debit_account_id}
+                onChange={handleAccountChange('debit')}
+                placeholder="Pilih jenis beban"
+                suggestedCode={suggestedAccounts?.debit}
+                error={errors.debit_account_id}
+                filterMode="out-destination"
+                showQuickTabs={true}
+                required
+              />
+            </>
+          )}
+
+          {mode === 'full' && (
+            <>
+              <div className="pt-2 pb-1 border-t border-gray-200 dark:border-gray-700">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Account
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Gunakan akun debit/kredit untuk pencatatan yang lebih detail.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <AccountDropdown
+                  label="Debit"
+                  accounts={accounts}
+                  value={formData.debit_account_id}
+                  onChange={handleAccountChange('debit')}
+                  placeholder="Pilih akun Debit"
+                  suggestedCode={suggestedAccounts?.debit}
+                  error={errors.debit_account_id}
+                />
+
+                <AccountDropdown
+                  label="Kredit"
+                  accounts={accounts}
+                  value={formData.credit_account_id}
+                  onChange={handleAccountChange('credit')}
+                  placeholder="Pilih akun Kredit"
+                  suggestedCode={suggestedAccounts?.credit}
+                  error={errors.credit_account_id}
+                />
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {/* Date for 'in' and 'out' modes */}
+      {mode !== 'full' && (
         <div>
           <label className="label">Tanggal *</label>
           <input
@@ -336,78 +503,28 @@ export function TransactionForm({
           />
           {errors.date && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.date}</p>}
         </div>
-      </div>
-
-      {/* Line 2: Jumlah */}
-      <div>
-        <label className="label">Jumlah (Rp) *</label>
-        <input
-          type="text"
-          name="amount"
-          value={displayAmount}
-          onChange={handleAmountChange}
-          className="input"
-          placeholder="0"
-          inputMode="numeric"
-          required
-        />
-        {errors.amount && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.amount}</p>}
-      </div>
-
-      {/* Line 3: Debit + Credit */}
-      {!loadingAccounts && accounts.length > 0 && (
-        <>
-          <div className="pt-2 pb-1 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Account 
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Gunakan akun debit/kredit untuk pencatatan yang lebih detail.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <AccountDropdown
-              label="Debit"
-              accounts={accounts}
-              value={formData.debit_account_id}
-              onChange={handleAccountChange('debit')}
-              placeholder="Pilih akun Debit"
-              suggestedCode={suggestedAccounts?.debit}
-              error={errors.debit_account_id}
-            />
-
-            <AccountDropdown
-              label="Kredit"
-              accounts={accounts}
-              value={formData.credit_account_id}
-              onChange={handleAccountChange('credit')}
-              placeholder="Pilih akun Kredit"
-              suggestedCode={suggestedAccounts?.credit}
-              error={errors.credit_account_id}
-            />
-          </div>
-        </>
       )}
 
-      {/* Line 4: Nama Customer/Vendor */}
+      {/* Customer/Vendor Name - Different label based on mode */}
       <div>
-        <label className="label">Nama *</label>
+        <label className="label">
+          {mode === 'in' ? 'Nama Customer' : mode === 'out' ? 'Nama Vendor' : 'Nama'} *
+        </label>
         <input
           type="text"
           name="name"
           value={formData.name}
           onChange={handleChange}
           className="input"
-          placeholder="Customer atau vendor terkait"
+          placeholder={mode === 'in' ? 'Nama customer' : mode === 'out' ? 'Nama vendor/penerima' : 'Customer atau vendor terkait'}
           required
         />
         {errors.name && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.name}</p>}
       </div>
 
-      {/* Line 5: Deskripsi */}
+      {/* Description */}
       <div>
-        <label className="label">Deskripsi</label>
+        <label className="label">Deskripsi/Catatan {mode !== 'full' && '(opsional)'}</label>
         <textarea
           name="description"
           value={formData.description}
@@ -426,8 +543,8 @@ export function TransactionForm({
         )}
       </div>
 
-      {/* Line 6: Nama Akun (free text) */}
-      {!isDoubleEntry && (
+      {/* Legacy Account field (only for full mode when not using double-entry) */}
+      {mode === 'full' && !isDoubleEntry && (
         <div>
           <label className="label">Akun</label>
           <input
@@ -456,7 +573,7 @@ export function TransactionForm({
           Batal
         </button>
         <button type="submit" className="btn-primary flex-1" disabled={loading}>
-          {loading ? 'Menyimpan...' : transaction ? 'Update Transaksi' : 'Tambah Transaksi'}
+          {loading ? 'Menyimpan...' : transaction ? 'Update Transaksi' : 'Simpan'}
         </button>
       </div>
     </form>
