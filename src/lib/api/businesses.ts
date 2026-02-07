@@ -8,7 +8,7 @@ type BusinessUpdate = Database['public']['Tables']['businesses']['Update'];
 export interface CreateBusinessData {
   business_name: string;
   business_type: string;
-  capital_investment: number;
+  capital_investment?: number; // Optional for backward compatibility
   property_address?: string;
 }
 
@@ -63,6 +63,7 @@ export async function createBusiness(
     .from('businesses')
     .insert({
       ...business,
+      capital_investment: 0, // Always set to 0 for new businesses
       created_by: userId,
     })
     .select()

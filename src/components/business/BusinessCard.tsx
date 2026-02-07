@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/utils';
 
 interface BusinessCardProps {
   business: Business;
+  totalCapex: number; // NEW: Calculated business capital from MODEL layer
   isActive?: boolean;
   onSelect?: () => void;
   onEdit?: () => void;
@@ -43,6 +44,7 @@ const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
 
 export function BusinessCard({
   business,
+  totalCapex,
   isActive = false,
   onSelect,
   onEdit,
@@ -126,9 +128,9 @@ export function BusinessCard({
 
       <div className="space-y-2 mb-4">
         <div className="flex justify-between text-sm">
-          <span className="text-gray-500 dark:text-gray-400">Modal Investasi</span>
+          <span className="text-gray-500 dark:text-gray-400">Business Capital</span>
           <span className="font-semibold text-gray-800 dark:text-gray-100">
-            {formatCurrency(business.capital_investment)}
+            {formatCurrency(totalCapex)}
           </span>
         </div>
         {business.property_address && (

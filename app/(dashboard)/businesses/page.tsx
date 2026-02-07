@@ -7,7 +7,9 @@ import { BusinessCard } from '@/components/business/BusinessCard';
 import { BusinessForm, type BusinessFormData } from '@/components/business/BusinessForm';
 import { InviteCodeManager } from '@/components/business/InviteCodeManager';
 import * as businessesApi from '@/lib/api/businesses';
-import type { Business } from '@/types';
+import { calculateTotalCapex } from '@/lib/calculations';
+import { createClient } from '@/lib/supabase';
+import type { Business, Transaction } from '@/types';
 
 type TabType = 'active' | 'archived';
 
@@ -28,6 +30,7 @@ export default function BusinessesPage() {
   const [managingInviteBusiness, setManagingInviteBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
+  const [capexByBusiness, setCapexByBusiness] = useState<Map<string, number>>(new Map());
 
   const fetchBusinesses = useCallback(async () => {
     if (!user) return;
@@ -35,6 +38,33 @@ export default function BusinessesPage() {
     try {
       const data = await businessesApi.getUserBusinesses(user.id, true);
       setAllBusinesses(data);
+
+      // Fetch transactions for all businesses to calculate total CAPEX
+      if (data.length > 0) {
+        const supabase = createClient();
+        const businessIds = data.map(b => b.id);
+        const { data: allTransactions } = await supabase
+          .from('transactions')
+          .select('*')
+          .in('business_id', businessIds);
+
+        // Group transactions by business
+        const transactionsByBusiness = new Map<string, Transaction[]>();
+        allTransactions?.forEach(t => {
+          if (!transactionsByBusiness.has(t.business_id)) {
+            transactionsByBusiness.set(t.business_id, []);
+          }
+          transactionsByBusiness.get(t.business_id)!.push(t);
+        });
+
+        // Calculate total capex per business using MODEL layer
+        const capexMap = new Map<string, number>();
+        data.forEach(b => {
+          const transactions = transactionsByBusiness.get(b.id) || [];
+          capexMap.set(b.id, calculateTotalCapex(transactions));
+        });
+        setCapexByBusiness(capexMap);
+      }
     } catch (err) {
       console.error('Failed to fetch businesses:', err);
     } finally {
@@ -196,6 +226,7 @@ export default function BusinessesPage() {
             <BusinessCard
               key={business.id}
               business={business}
+              totalCapex={capexByBusiness.get(business.id) || 0}
               isActive={activeBusiness?.id === business.id}
               onSelect={() => {
                 if (!business.is_archived) {

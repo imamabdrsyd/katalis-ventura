@@ -113,7 +113,6 @@ function Header({ onMenuClick }: { onMenuClick: () => void }) {
         {
           business_name: formData.business_name,
           business_type: formData.business_type,
-          capital_investment: formData.capital_investment,
           property_address: formData.property_address,
         },
         user?.id!

@@ -16,10 +16,7 @@ export function useBalanceSheet(): UseBalanceSheetReturn {
   const reportData = useReportData();
   const { activeBusiness, filteredTransactions, endDate, setShowExportMenu } = reportData;
 
-  const balanceSheet = calculateBalanceSheet(
-    filteredTransactions,
-    activeBusiness?.capital_investment
-  );
+  const balanceSheet = calculateBalanceSheet(filteredTransactions);
 
   // Check if accounting equation is balanced
   const isBalanced = Math.abs(

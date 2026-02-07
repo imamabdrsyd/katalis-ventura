@@ -17,7 +17,6 @@ export default function SetupBusinessPage() {
   const [businessName, setBusinessName] = useState('');
   const [businessType, setBusinessType] = useState('agribusiness');
   const [customType, setCustomType] = useState('');
-  const [capitalInvestment, setCapitalInvestment] = useState('');
   const [propertyAddress, setPropertyAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +68,7 @@ export default function SetupBusinessPage() {
         .insert({
           business_name: businessName,
           business_type: finalBusinessType,
-          capital_investment: parseFloat(capitalInvestment),
+          capital_investment: 0, // Set to 0, modal akan diinput via transaksi CAPEX
           property_address: propertyAddress,
           created_by: user.id,
         })
@@ -163,23 +162,6 @@ export default function SetupBusinessPage() {
                 required
               />
             )}
-          </div>
-
-          <div>
-            <label className="label">Capital Investment (Rp) *</label>
-            <input
-              type="number"
-              value={capitalInvestment}
-              onChange={(e) => setCapitalInvestment(e.target.value)}
-              placeholder="350000000"
-              className="input"
-              required
-              min="0"
-              step="1000"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Initial capital invested in this business
-            </p>
           </div>
 
           <div>

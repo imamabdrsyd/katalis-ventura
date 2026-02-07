@@ -162,11 +162,91 @@ export function groupTransactionsByMonth(
   return Array.from(monthMap.values()).sort((a, b) => a.month.localeCompare(b.month));
 }
 
+/**
+ * Calculate initial capital from first month's CAPEX transactions
+ * Used for Balance Sheet equity calculation
+ *
+ * Logic:
+ * 1. Find earliest CAPEX transaction date
+ * 2. If no CAPEX exists, return 0
+ * 3. Get month & year from first CAPEX
+ * 4. Sum all CAPEX transactions within that same month & year
+ * 5. Return sum as modal awal
+ *
+ * @param transactions - All transactions for the business
+ * @returns Initial capital amount (sum of first month CAPEX)
+ */
+export function calculateInitialCapital(transactions: Transaction[]): number {
+  // Filter CAPEX transactions
+  // CAPEX can be identified by:
+  // 1. category === 'CAPEX'
+  // 2. OR debit_account_id points to Fixed Assets (codes 1200-1299)
+  const capexTransactions = transactions.filter(t => {
+    if (t.category === 'CAPEX') return true;
+
+    // Check if double-entry transaction debits to Fixed Assets
+    if (t.is_double_entry && t.debit_account) {
+      const accountCode = t.debit_account.account_code;
+      return accountCode >= '1200' && accountCode < '1300';
+    }
+
+    return false;
+  });
+
+  // If no CAPEX transactions, modal awal = 0
+  if (capexTransactions.length === 0) return 0;
+
+  // Find earliest CAPEX date
+  const sortedCapex = [...capexTransactions].sort((a, b) =>
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+  const firstCapex = sortedCapex[0];
+  const firstDate = new Date(firstCapex.date);
+  const firstMonth = firstDate.getMonth();
+  const firstYear = firstDate.getFullYear();
+
+  // Sum all CAPEX in the same month/year as first CAPEX
+  const initialCapital = capexTransactions
+    .filter(t => {
+      const date = new Date(t.date);
+      return date.getMonth() === firstMonth && date.getFullYear() === firstYear;
+    })
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  return initialCapital;
+}
+
+/**
+ * Calculate total CAPEX from ALL transactions
+ * Used for BusinessCard display
+ *
+ * @param transactions - All transactions for the business
+ * @returns Total CAPEX amount (sum of all CAPEX transactions)
+ */
+export function calculateTotalCapex(transactions: Transaction[]): number {
+  // Sum ALL CAPEX transactions (not just first month)
+  return transactions
+    .filter(t => {
+      if (t.category === 'CAPEX') return true;
+
+      // Check if double-entry transaction debits to Fixed Assets
+      if (t.is_double_entry && t.debit_account) {
+        const code = t.debit_account.account_code;
+        return code >= '1200' && code < '1300';
+      }
+
+      return false;
+    })
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+}
+
 // Calculate balance sheet using double-entry bookkeeping
 export function calculateBalanceSheet(
-  transactions: Transaction[],
-  capital: number = CAPITAL
+  transactions: Transaction[]
 ): BalanceSheetData {
+  // Calculate initial capital from first month CAPEX
+  const capital = calculateInitialCapital(transactions);
+
   // Separate double-entry and legacy transactions
   const doubleEntryTransactions = transactions.filter(t => t.is_double_entry);
   const legacyTransactions = transactions.filter(t => !t.is_double_entry);
@@ -237,7 +317,7 @@ export function calculateBalanceSheet(
   // Process legacy transactions (fallback to old calculation)
   if (legacyTransactions.length > 0) {
     const summary = calculateFinancialSummary(legacyTransactions);
-    const cashFlow = calculateCashFlow(legacyTransactions, 0);
+    const cashFlow = calculateCashFlow(legacyTransactions);
 
     totalCash += cashFlow.closingBalance;
     totalProperty += summary.totalCapex;
@@ -270,9 +350,11 @@ export function calculateBalanceSheet(
 
 // Calculate cash flow
 export function calculateCashFlow(
-  transactions: Transaction[],
-  capital: number = CAPITAL
+  transactions: Transaction[]
 ): CashFlowData {
+  // Calculate initial capital from first month CAPEX
+  const capital = calculateInitialCapital(transactions);
+
   const summary = calculateFinancialSummary(transactions);
 
   const operating =

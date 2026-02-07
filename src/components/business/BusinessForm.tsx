@@ -6,7 +6,6 @@ import type { Business } from '@/types';
 export interface BusinessFormData {
   business_name: string;
   business_type: string;
-  capital_investment: number;
   property_address: string;
 }
 
@@ -40,7 +39,6 @@ export function BusinessForm({
   const [formData, setFormData] = useState<BusinessFormData>({
     business_name: business?.business_name || '',
     business_type: isCustomType ? 'other' : (business?.business_type || 'agribusiness'),
-    capital_investment: business?.capital_investment || 0,
     property_address: business?.property_address || '',
   });
   const [customType, setCustomType] = useState(isCustomType ? business?.business_type || '' : '');
@@ -51,9 +49,6 @@ export function BusinessForm({
 
     if (!formData.business_name.trim()) {
       newErrors.business_name = 'Nama bisnis harus diisi';
-    }
-    if (formData.capital_investment < 0) {
-      newErrors.capital_investment = 'Modal investasi tidak boleh negatif';
     }
     if (formData.business_type === 'other' && !customType.trim()) {
       newErrors.business_type = 'Tipe bisnis harus diisi';
@@ -80,7 +75,7 @@ export function BusinessForm({
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'capital_investment' ? parseFloat(value) || 0 : value,
+      [name]: value,
     }));
     if (errors[name as keyof BusinessFormData]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
@@ -138,27 +133,6 @@ export function BusinessForm({
         {errors.business_type && (
           <p className="text-sm text-red-500 mt-1">{errors.business_type}</p>
         )}
-      </div>
-
-      {/* Modal Investasi */}
-      <div>
-        <label className="label">Modal Investasi (Rp)</label>
-        <input
-          type="number"
-          name="capital_investment"
-          value={formData.capital_investment || ''}
-          onChange={handleChange}
-          className="input"
-          placeholder="350000000"
-          min="0"
-          step="any"
-        />
-        {errors.capital_investment && (
-          <p className="text-sm text-red-500 mt-1">{errors.capital_investment}</p>
-        )}
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-          Modal awal yang diinvestasikan pada bisnis ini
-        </p>
       </div>
 
       {/* Alamat Properti */}
