@@ -419,6 +419,20 @@ export function filterTransactionsByDateRange(
   });
 }
 
+// Filter transactions up to a specific date (cumulative, for Balance Sheet)
+export function filterTransactionsUpToDate(
+  transactions: Transaction[],
+  endDate: string
+): Transaction[] {
+  const end = new Date(endDate);
+  end.setHours(23, 59, 59, 999); // Include entire day
+
+  return transactions.filter((t) => {
+    const date = new Date(t.date);
+    return date <= end;
+  });
+}
+
 // Filter transactions by category
 export function filterTransactionsByCategory(
   transactions: Transaction[],

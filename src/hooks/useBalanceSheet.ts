@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useReportData } from './useReportData';
-import { calculateBalanceSheet } from '@/lib/calculations';
+import { calculateBalanceSheet, filterTransactionsUpToDate } from '@/lib/calculations';
 import { exportBalanceSheetToPDF, exportBalanceSheetToExcel } from '@/lib/export';
 
 export interface UseBalanceSheetReturn extends ReturnType<typeof useReportData> {
@@ -14,9 +14,15 @@ export interface UseBalanceSheetReturn extends ReturnType<typeof useReportData> 
 
 export function useBalanceSheet(): UseBalanceSheetReturn {
   const reportData = useReportData();
-  const { activeBusiness, filteredTransactions, endDate, setShowExportMenu } = reportData;
+  const { activeBusiness, transactions, endDate, setShowExportMenu } = reportData;
 
-  const balanceSheet = calculateBalanceSheet(filteredTransactions);
+  // Balance Sheet uses cumulative transactions up to endDate (not just within period)
+  const cumulativeTransactions = useMemo(() => {
+    if (!endDate) return transactions;
+    return filterTransactionsUpToDate(transactions, endDate);
+  }, [transactions, endDate]);
+
+  const balanceSheet = calculateBalanceSheet(cumulativeTransactions);
 
   // Check if accounting equation is balanced
   const isBalanced = Math.abs(
