@@ -1,16 +1,26 @@
 -- Migration: Populate profiles table with user data from auth.users
 -- Created: 2026-02-08
 -- Description: Ensure all auth.users have corresponding profiles with full_name populated
+-- FIXED: Removed email column reference (doesn't exist in profiles table)
 
 -- ============================================================================
--- PART 1: INSERT MISSING PROFILES
+-- FIRST: Check profiles table structure
+-- ============================================================================
+
+-- Check what columns exist in profiles
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_name = 'profiles'
+ORDER BY ordinal_position;
+
+-- ============================================================================
+-- PART 1: INSERT MISSING PROFILES (only id and full_name)
 -- ============================================================================
 
 -- Insert profiles for all auth.users that don't have profiles yet
-INSERT INTO profiles (id, email, full_name, updated_at)
+INSERT INTO profiles (id, full_name, updated_at)
 SELECT
   id,
-  email,
   COALESCE(
     raw_user_meta_data->>'full_name',
     email,
@@ -19,15 +29,7 @@ SELECT
   NOW()
 FROM auth.users
 WHERE id NOT IN (SELECT id FROM profiles)
-ON CONFLICT (id) DO UPDATE SET
-  full_name = COALESCE(
-    EXCLUDED.full_name,
-    COALESCE(
-      excluded.raw_user_meta_data->>'full_name',
-      excluded.email,
-      'User'
-    )
-  );
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- PART 2: UPDATE EXISTING PROFILES WITH MISSING full_name
@@ -35,11 +37,13 @@ ON CONFLICT (id) DO UPDATE SET
 
 -- Update profiles where full_name is NULL using auth.users data
 UPDATE profiles p
-SET full_name = COALESCE(
-  (SELECT raw_user_meta_data->>'full_name' FROM auth.users WHERE id = p.id),
-  p.email,
-  'User'
-)
+SET
+  full_name = COALESCE(
+    (SELECT raw_user_meta_data->>'full_name' FROM auth.users WHERE id = p.id),
+    (SELECT email FROM auth.users WHERE id = p.id),
+    'User'
+  ),
+  updated_at = NOW()
 WHERE p.full_name IS NULL OR p.full_name = '';
 
 -- ============================================================================
