@@ -22,7 +22,10 @@ export function useBalanceSheet(): UseBalanceSheetReturn {
     return filterTransactionsUpToDate(transactions, endDate);
   }, [transactions, endDate]);
 
-  const balanceSheet = calculateBalanceSheet(cumulativeTransactions);
+  // Get capital from business settings
+  const capital = activeBusiness?.capital_investment ?? 0;
+
+  const balanceSheet = calculateBalanceSheet(cumulativeTransactions, capital);
 
   // Check if accounting equation is balanced
   const isBalanced = Math.abs(

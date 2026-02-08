@@ -7,6 +7,7 @@ export interface BusinessFormData {
   business_name: string;
   business_type: string;
   property_address: string;
+  capital_investment?: number;
 }
 
 interface BusinessFormProps {
@@ -40,6 +41,7 @@ export function BusinessForm({
     business_name: business?.business_name || '',
     business_type: isCustomType ? 'other' : (business?.business_type || 'agribusiness'),
     property_address: business?.property_address || '',
+    capital_investment: business?.capital_investment || 0,
   });
   const [customType, setCustomType] = useState(isCustomType ? business?.business_type || '' : '');
   const [errors, setErrors] = useState<Partial<Record<keyof BusinessFormData, string>>>({});
@@ -146,6 +148,27 @@ export function BusinessForm({
           rows={3}
           placeholder="cth: Galeri Ciumbuleuit Apartment 2, Bandung"
         />
+      </div>
+
+      {/* Modal Investasi / Capital Investment */}
+      <div>
+        <label className="label">Modal Investasi (Rp)</label>
+        <input
+          type="number"
+          name="capital_investment"
+          value={formData.capital_investment || ''}
+          onChange={(e) => {
+            const value = e.target.value ? parseInt(e.target.value) : 0;
+            setFormData((prev) => ({
+              ...prev,
+              capital_investment: value,
+            }));
+          }}
+          className="input"
+          placeholder="cth: 350000000"
+          min="0"
+        />
+        <p className="text-xs text-gray-500 mt-1">Jumlah modal yang Anda investasikan ke bisnis ini</p>
       </div>
 
       {/* Buttons */}

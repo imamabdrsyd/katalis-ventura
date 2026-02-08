@@ -63,7 +63,7 @@ export async function createBusiness(
     .from('businesses')
     .insert({
       ...business,
-      capital_investment: 0, // Always set to 0 for new businesses
+      capital_investment: business.capital_investment || 0,
       created_by: userId,
     })
     .select()

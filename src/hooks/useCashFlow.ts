@@ -15,7 +15,10 @@ export function useCashFlow(): UseCashFlowReturn {
   const reportData = useReportData();
   const { activeBusiness, filteredTransactions, startDate, endDate, setShowExportMenu } = reportData;
 
-  const cashFlow = calculateCashFlow(filteredTransactions);
+  // Get capital from business settings
+  const capital = activeBusiness?.capital_investment ?? 0;
+
+  const cashFlow = calculateCashFlow(filteredTransactions, capital);
 
   const handleExportPDF = useCallback(() => {
     if (!activeBusiness) return;

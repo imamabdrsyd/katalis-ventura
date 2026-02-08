@@ -247,11 +247,11 @@ export function calculateTotalCapex(transactions: Transaction[]): number {
 }
 
 // Calculate balance sheet using double-entry bookkeeping
+// Capital should come from business settings (capital_investment), not calculated from transactions
 export function calculateBalanceSheet(
-  transactions: Transaction[]
+  transactions: Transaction[],
+  capital: number = 0
 ): BalanceSheetData {
-  // Calculate initial capital from first month CAPEX
-  const capital = calculateInitialCapital(transactions);
 
   // Separate double-entry and legacy transactions
   const doubleEntryTransactions = transactions.filter(t => t.is_double_entry);
@@ -321,16 +321,19 @@ export function calculateBalanceSheet(
   });
 
   // Process legacy transactions (fallback to old calculation)
+  // For legacy transactions, we calculate cash flow without capital (capital is handled separately)
   if (legacyTransactions.length > 0) {
     const summary = calculateFinancialSummary(legacyTransactions);
-    const cashFlow = calculateCashFlow(legacyTransactions);
+    // Calculate cash from operations: revenue - expenses (excluding CAPEX which is investing)
+    const operatingCash = summary.totalEarn - summary.totalOpex - summary.totalVar - summary.totalTax;
 
-    totalCash += cashFlow.closingBalance;
+    // Cash from operations goes into cash balance, CAPEX becomes property
+    totalCash += operatingCash - summary.totalCapex + summary.totalFin;
     totalProperty += summary.totalCapex;
-    totalAssets += cashFlow.closingBalance + summary.totalCapex;
+    totalAssets += operatingCash - summary.totalCapex + summary.totalFin + summary.totalCapex;
     totalLiabilities += Math.abs(summary.totalFin);
     totalRevenue += summary.totalEarn;
-    totalExpenses += summary.totalOpex + summary.totalVar + summary.totalTax + summary.totalCapex;
+    totalExpenses += summary.totalOpex + summary.totalVar + summary.totalTax;
   }
 
   // Calculate retained earnings (revenue - expenses)
@@ -355,12 +358,11 @@ export function calculateBalanceSheet(
 }
 
 // Calculate cash flow
+// Capital should come from business settings (capital_investment)
 export function calculateCashFlow(
-  transactions: Transaction[]
+  transactions: Transaction[],
+  capital: number = 0
 ): CashFlowData {
-  // Calculate initial capital from first month CAPEX
-  const capital = calculateInitialCapital(transactions);
-
   const summary = calculateFinancialSummary(transactions);
 
   const operating =
