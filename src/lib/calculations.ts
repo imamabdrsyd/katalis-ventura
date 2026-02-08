@@ -321,16 +321,21 @@ export function calculateBalanceSheet(
   });
 
   // Process legacy transactions (fallback to old calculation)
-  // For legacy transactions, we calculate cash flow without capital (capital is handled separately)
+  // For legacy transactions, calculate cash flow starting from capital as opening balance
   if (legacyTransactions.length > 0) {
     const summary = calculateFinancialSummary(legacyTransactions);
-    // Calculate cash from operations: revenue - expenses (excluding CAPEX which is investing)
-    const operatingCash = summary.totalEarn - summary.totalOpex - summary.totalVar - summary.totalTax;
 
-    // Cash from operations goes into cash balance, CAPEX becomes property
-    totalCash += operatingCash - summary.totalCapex + summary.totalFin;
+    // Cash flow calculation:
+    // Opening: capital (from business settings)
+    // + Operating: earn - opex - var - tax
+    // - Investing: capex (becomes property)
+    // + Financing: financing transactions
+    const operatingCash = summary.totalEarn - summary.totalOpex - summary.totalVar - summary.totalTax;
+    const closingCash = capital + operatingCash - summary.totalCapex + summary.totalFin;
+
+    totalCash += closingCash;
     totalProperty += summary.totalCapex;
-    totalAssets += operatingCash - summary.totalCapex + summary.totalFin + summary.totalCapex;
+    totalAssets += closingCash + summary.totalCapex;
     totalLiabilities += Math.abs(summary.totalFin);
     totalRevenue += summary.totalEarn;
     totalExpenses += summary.totalOpex + summary.totalVar + summary.totalTax;
