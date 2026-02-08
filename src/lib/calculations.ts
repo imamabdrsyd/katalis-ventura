@@ -182,6 +182,9 @@ export function calculateInitialCapital(transactions: Transaction[]): number {
   // 1. category === 'CAPEX'
   // 2. OR debit_account_id points to Fixed Assets (codes 1200-1299)
   const capexTransactions = transactions.filter(t => {
+    // Skip deleted transactions
+    if (t.deleted_at) return false;
+
     if (t.category === 'CAPEX') return true;
 
     // Check if double-entry transaction debits to Fixed Assets
@@ -227,6 +230,9 @@ export function calculateTotalCapex(transactions: Transaction[]): number {
   // Sum ALL CAPEX transactions (not just first month)
   return transactions
     .filter(t => {
+      // Skip deleted transactions
+      if (t.deleted_at) return false;
+
       if (t.category === 'CAPEX') return true;
 
       // Check if double-entry transaction debits to Fixed Assets
