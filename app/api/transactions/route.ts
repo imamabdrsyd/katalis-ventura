@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid business ID format' }, { status: 400 });
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // RLS will enforce that user can only access businesses they belong to
     const { data, error } = await supabase
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Verify user has write access to this business (manager or both)
     const { data: role, error: roleError } = await supabase

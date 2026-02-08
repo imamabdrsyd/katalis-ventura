@@ -1,4 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient as createSupabaseServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
@@ -6,8 +6,25 @@ import { cookies } from 'next/headers';
  * Create an authenticated Supabase client for API route handlers.
  * Uses the user's session cookie — respects RLS policies.
  */
-export function createServerClient() {
-  return createRouteHandlerClient({ cookies });
+export async function createServerClient() {
+  const cookieStore = await cookies();
+
+  return createSupabaseServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        },
+      },
+    }
+  );
 }
 
 /**
@@ -30,7 +47,7 @@ export function createAdminClient() {
  * Returns the user object or null if not authenticated.
  */
 export async function getAuthenticatedUser() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data: { user }, error } = await supabase.auth.getUser();
 
   if (error || !user) {

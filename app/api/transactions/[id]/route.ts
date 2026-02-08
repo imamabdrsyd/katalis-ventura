@@ -41,7 +41,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Fetch the existing transaction to verify ownership
     const { data: existing, error: fetchError } = await supabase
@@ -118,7 +118,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid transaction ID format' }, { status: 400 });
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Fetch the existing transaction to verify ownership
     const { data: existing, error: fetchError } = await supabase

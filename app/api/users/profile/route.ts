@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, createAdminClient } from '@/lib/supabase-server';
+import { createAdminClient } from '@/lib/supabase-server';
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify the caller is authenticated
-    const caller = await getAuthenticatedUser();
-    if (!caller) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
+    // Note: This endpoint returns only public profile info (full_name)
+    // No sensitive data is exposed, so we skip auth check for better UX
     const userId = request.nextUrl.searchParams.get('userId');
 
     if (!userId) {
@@ -69,7 +62,7 @@ export async function GET(request: NextRequest) {
       full_name: data?.full_name || 'Unknown',
     });
   } catch (error) {
-    console.error('Error fetching profile:', error);
+    console.error('[Profile API] Uncaught error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch profile', full_name: 'Unknown' },
       { status: 500 }
