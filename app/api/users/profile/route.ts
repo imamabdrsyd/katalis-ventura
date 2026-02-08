@@ -31,7 +31,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Use admin client only after auth is verified
-    const supabaseAdmin = createAdminClient();
+    let supabaseAdmin;
+    try {
+      supabaseAdmin = createAdminClient();
+    } catch (envError) {
+      console.error('Admin client creation failed (missing env vars?):', envError);
+      return NextResponse.json({ full_name: 'Unknown' });
+    }
 
     // Fetch user profile using service role (bypass RLS)
     const { data, error } = await supabaseAdmin
@@ -41,18 +47,22 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Supabase error:', error);
+      console.error('Supabase profiles error for userId', userId, ':', error.message, error.code);
       // Fallback: try to get from auth.users
-      const { data: authData } = await supabaseAdmin.auth.admin.getUserById(userId);
-      if (authData?.user) {
-        return NextResponse.json({
-          full_name:
-            authData.user.user_metadata?.full_name ||
+      try {
+        const { data: authData } = await supabaseAdmin.auth.admin.getUserById(userId);
+        if (authData?.user) {
+          const fullName = authData.user.user_metadata?.full_name ||
             authData.user.email?.split('@')[0] ||
-            'Unknown',
-        });
+            'Unknown';
+          console.log('Fallback to auth.users success:', fullName);
+          return NextResponse.json({ full_name: fullName });
+        }
+      } catch (authError) {
+        console.error('Auth fallback error:', authError);
       }
-      throw error;
+      // Return Unknown instead of throwing - graceful degradation
+      return NextResponse.json({ full_name: 'Unknown' });
     }
 
     return NextResponse.json({
