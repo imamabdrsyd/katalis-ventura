@@ -8,7 +8,8 @@ import { TransactionDetailModal } from '@/components/transactions/TransactionDet
 import { DeleteConfirmModal } from '@/components/transactions/DeleteConfirmModal';
 import TransactionImportModal from '@/components/transactions/TransactionImportModal';
 import type { TransactionCategory } from '@/types';
-import { Upload, TrendingUp, TrendingDown } from 'lucide-react';
+import { QuickTransactionForm } from '@/components/transactions/QuickTransactionForm';
+import { Upload, TrendingUp, TrendingDown, Zap } from 'lucide-react';
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
@@ -52,6 +53,8 @@ export default function TransactionsPage() {
     // Modal state
     showAddModal,
     setShowAddModal,
+    showQuickAddModal,
+    setShowQuickAddModal,
     showImportModal,
     setShowImportModal,
     transactionMode,
@@ -65,11 +68,13 @@ export default function TransactionsPage() {
     // Actions
     fetchTransactions,
     handleAddTransaction,
+    handleQuickAddTransaction,
     handleEditTransaction,
     handleDeleteTransaction,
     handlePrint,
     handleOpenInModal,
     handleOpenOutModal,
+    handleOpenQuickAddModal,
   } = useTransactions();
 
   // Loading state
@@ -120,6 +125,14 @@ export default function TransactionsPage() {
             </button>
 
             <button
+              onClick={handleOpenQuickAddModal}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2 font-medium shadow-sm"
+            >
+              <Zap className="h-4 w-4" />
+              Tambah Transaksi
+            </button>
+
+            <button
               onClick={handleOpenInModal}
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors flex items-center gap-2 font-medium"
             >
@@ -139,7 +152,7 @@ export default function TransactionsPage() {
               onClick={() => { setTransactionMode(null); setShowAddModal(true); }}
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm flex items-center gap-2"
             >
-              + Tambah Transaksi
+              + Form Lengkap
             </button>
           </div>
         )}
@@ -355,6 +368,20 @@ export default function TransactionsPage() {
         )}
       </div>
 
+      {/* Quick Add Modal */}
+      <Modal
+        isOpen={showQuickAddModal}
+        onClose={() => setShowQuickAddModal(false)}
+        title="Tambah Transaksi"
+      >
+        <QuickTransactionForm
+          onSubmit={handleQuickAddTransaction}
+          onCancel={() => setShowQuickAddModal(false)}
+          loading={saving}
+          businessId={businessId || undefined}
+        />
+      </Modal>
+
       {/* Add Modal */}
       <Modal
         isOpen={showAddModal}
@@ -362,7 +389,7 @@ export default function TransactionsPage() {
         title={
           transactionMode === 'in' ? 'Uang Masuk' :
           transactionMode === 'out' ? 'Uang Keluar' :
-          'Tambah Transaksi'
+          'Tambah Transaksi (Form Lengkap)'
         }
       >
         <TransactionForm
