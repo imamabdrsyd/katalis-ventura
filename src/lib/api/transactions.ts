@@ -83,8 +83,31 @@ export async function getTransactionsByDateRange(
   return data as Transaction[];
 }
 
+// Validate double-entry transaction rules
+function validateDoubleEntryTransaction(transaction: TransactionInsert | TransactionUpdate): void {
+  // Skip validation for legacy transactions
+  if (!transaction.is_double_entry) return;
+
+  // Validate debit and credit accounts are different
+  if (
+    transaction.debit_account_id &&
+    transaction.credit_account_id &&
+    transaction.debit_account_id === transaction.credit_account_id
+  ) {
+    throw new Error('Akun debit dan kredit tidak boleh sama. Transaksi harus melibatkan minimal dua akun yang berbeda.');
+  }
+
+  // Validate amount is positive
+  if (transaction.amount !== undefined && transaction.amount <= 0) {
+    throw new Error('Jumlah transaksi harus lebih dari 0');
+  }
+}
+
 // Create a new transaction
 export async function createTransaction(transaction: TransactionInsert): Promise<Transaction> {
+  // Validate double-entry rules before creating
+  validateDoubleEntryTransaction(transaction);
+
   const supabase = createClient();
   const { data, error } = await supabase
     .from('transactions')
@@ -189,6 +212,9 @@ export async function updateTransaction(
   id: string,
   updates: TransactionUpdate
 ): Promise<Transaction> {
+  // Validate double-entry rules before updating
+  validateDoubleEntryTransaction(updates);
+
   const supabase = createClient();
   const { data, error } = await supabase
     .from('transactions')

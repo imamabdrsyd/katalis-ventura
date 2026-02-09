@@ -7,6 +7,8 @@ import { getAccounts } from '@/lib/api/accounts';
 import { AccountDropdown } from './AccountDropdown';
 import { useParams } from 'next/navigation';
 import { detectCategory } from '@/lib/utils/transactionHelpers';
+import { useAccountingGuidance } from '@/hooks/useAccountingGuidance';
+import { AlertCircle, Lightbulb, AlertTriangle } from 'lucide-react';
 
 export interface TransactionFormData {
   date: string;
@@ -314,6 +316,15 @@ export function TransactionForm({
     ? 'border-red-500 dark:border-red-400 focus:ring-red-500'
     : '';
 
+  // Accounting guidance and validation
+  const { guidance, validation, isValid: isAccountingValid } = useAccountingGuidance({
+    debitAccountId: formData.debit_account_id,
+    creditAccountId: formData.credit_account_id,
+    amount: formData.amount,
+    transactionName: formData.name,
+    accounts,
+  });
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* AMOUNT FIRST for 'in' and 'out' modes - Make it PROMINENT */}
@@ -452,6 +463,60 @@ export function TransactionForm({
             </>
           )}
 
+          {/* Accounting Guidance for 'in' and 'out' modes */}
+          {mode !== 'full' && (formData.debit_account_id || formData.credit_account_id) && (
+            <div className="space-y-3">
+              {/* Pattern Detection & Explanation */}
+              {guidance.pattern && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <Lightbulb className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-medium text-sm text-blue-800 dark:text-blue-200">
+                        {guidance.pattern.name}
+                      </h4>
+                      <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
+                        {guidance.pattern.description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Warnings */}
+              {guidance.warnings.length > 0 && (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      {guidance.warnings.map((warning, i) => (
+                        <p key={i} className="text-xs text-amber-700 dark:text-amber-300">
+                          {warning}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Validation Errors */}
+              {!isAccountingValid && validation.errors.length > 0 && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      {validation.errors.map((error, i) => (
+                        <p key={i} className="text-xs text-red-700 dark:text-red-300">
+                          {error.message}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {mode === 'full' && (
             <>
               <div className="pt-2 pb-1 border-t border-gray-200 dark:border-gray-700">
@@ -484,6 +549,85 @@ export function TransactionForm({
                   error={errors.credit_account_id}
                 />
               </div>
+
+              {/* Accounting Guidance Panel */}
+              {isDoubleEntry && (formData.debit_account_id || formData.credit_account_id) && (
+                <div className="space-y-3">
+                  {/* Pattern Detection & Explanation */}
+                  {guidance.pattern && (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <Lightbulb className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-blue-800 dark:text-blue-200">
+                            {guidance.pattern.name}
+                          </h4>
+                          <div className="text-sm text-blue-700 dark:text-blue-300 mt-1 whitespace-pre-line">
+                            {guidance.explanation}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Basic guidance when no pattern detected */}
+                  {!guidance.pattern && guidance.explanation && (
+                    <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
+                      <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">
+                        {guidance.explanation}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Warnings from guidance */}
+                  {guidance.warnings.length > 0 && (
+                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          {guidance.warnings.map((warning, i) => (
+                            <p key={i} className="text-sm text-amber-700 dark:text-amber-300">
+                              {warning}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Validation Errors */}
+                  {!isAccountingValid && validation.errors.length > 0 && (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          {validation.errors.map((error, i) => (
+                            <p key={i} className="text-sm text-red-700 dark:text-red-300">
+                              {error.message}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Validation Warnings */}
+                  {validation.warnings.length > 0 && (
+                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          {validation.warnings.map((warning, i) => (
+                            <p key={i} className="text-sm text-amber-700 dark:text-amber-300">
+                              {warning.message}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </>

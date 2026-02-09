@@ -45,7 +45,7 @@ export default function LandingPage() {
               height={48}
               className="rounded-xl"
             />
-            <span className="text-xl font-bold bg-gradient-to-r from-violet-600 via-blue-500 to-cyan-400 text-transparent bg-clip-text">IMAM & Partners LLC</span>
+            <span className="text-xl font-bold bg-gradient-to-r from-violet-600 via-blue-500 to-cyan-400 text-transparent bg-clip-text">Imam & Partners</span>
           </div>
           <div className="flex items-center gap-4">
             <Link
@@ -69,19 +69,19 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-semibold mb-6">
             <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
-            Private Equity Manager
+            Finance Dashboard
           </div>
 
           <h1 className="text-6xl font-bold text-gray-900 mb-6 leading-tight">
             Make Data-driven Decisions
             <br />
             <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              for your Private Equity
+              for your Asset & Business 
             </span>
           </h1>
 
           <p className="text-xl text-gray-600 mb-12 max-w-2xl mx-auto">
-            Opportunities for Hedge Funds & Family Offices to invest as Imam's Limited Partner, acquiring stakes in profitable small businesses.
+            Acquire stakes in profitable small businesses.
             Track transactions, analyze performance, and make data-driven decisions.
           </p>
 
