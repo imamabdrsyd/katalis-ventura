@@ -27,6 +27,7 @@ export function useTransactions() {
 
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [transactionMode, setTransactionMode] = useState<'in' | 'out' | null>(null);
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
@@ -136,6 +137,28 @@ export function useTransactions() {
     setShowAddModal(true);
   }, []);
 
+  const handleOpenQuickAddModal = useCallback(() => {
+    setShowQuickAddModal(true);
+  }, []);
+
+  const handleQuickAddTransaction = useCallback(async (data: TransactionFormData) => {
+    if (!businessId || !user) return;
+    setSaving(true);
+    try {
+      await transactionsApi.createTransaction({
+        ...data,
+        business_id: businessId,
+        created_by: user.id,
+      });
+      setShowQuickAddModal(false);
+      fetchTransactions();
+    } catch (err: any) {
+      alert(err.message || 'Gagal menambahkan transaksi');
+    } finally {
+      setSaving(false);
+    }
+  }, [businessId, user, fetchTransactions]);
+
   return {
     // Data
     transactions,
@@ -166,6 +189,8 @@ export function useTransactions() {
     // Modal state
     showAddModal,
     setShowAddModal,
+    showQuickAddModal,
+    setShowQuickAddModal,
     showImportModal,
     setShowImportModal,
     transactionMode,
@@ -179,10 +204,12 @@ export function useTransactions() {
     // Actions
     fetchTransactions,
     handleAddTransaction,
+    handleQuickAddTransaction,
     handleEditTransaction,
     handleDeleteTransaction,
     handlePrint,
     handleOpenInModal,
     handleOpenOutModal,
+    handleOpenQuickAddModal,
   };
 }

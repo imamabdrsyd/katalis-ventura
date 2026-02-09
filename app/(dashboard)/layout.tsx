@@ -43,6 +43,7 @@ const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
   real_estate: <Building2 className="w-4 h-4" />,
 };
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { FloatingQuickAdd } from '@/components/transactions/FloatingQuickAdd';
 
 const ROLE_LABELS: Record<string, string> = {
   business_manager: 'Business Manager',
@@ -387,6 +388,9 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       <main className="ml-0 md:ml-64 pt-16 min-h-screen overflow-auto">
         {children}
       </main>
+
+      {/* Global Floating Quick Add Button */}
+      <FloatingQuickAdd />
     </div>
   );
 }
