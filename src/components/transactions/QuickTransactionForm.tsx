@@ -136,13 +136,6 @@ export function QuickTransactionForm({
   const flowDirection = selectedAccount ? getFlowDirection(selectedAccount) : null;
   const flowLabel = selectedAccount ? getFlowLabel(selectedAccount) : null;
 
-  // Format date for display (DD/MM/YYYY)
-  const formatDateDisplay = (dateStr: string): string => {
-    if (!dateStr) return '';
-    const [y, m, d] = dateStr.split('-');
-    return `${d}/${m}/${y}`;
-  };
-
   // Handle amount input
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -238,8 +231,8 @@ export function QuickTransactionForm({
         )}
       </div>
 
-      {/* 2. KATEGORI (Account Dropdown) */}
-      <div className="relative">
+      {/* 2. KATEGORI (Account Dropdown - inline inside modal) */}
+      <div>
         <label className="label text-base font-semibold">Kategori *</label>
 
         {/* Dropdown trigger */}
@@ -248,7 +241,7 @@ export function QuickTransactionForm({
           onClick={() => setDropdownOpen(!dropdownOpen)}
           className={`input w-full text-left flex justify-between items-center ${
             errors.selectedAccountId ? 'border-red-500 dark:border-red-400' : ''
-          }`}
+          } ${dropdownOpen ? 'border-indigo-500 dark:border-indigo-400 ring-2 ring-indigo-500/20' : ''}`}
         >
           {selectedAccount ? (
             <div className="flex items-center gap-2 min-w-0">
@@ -271,93 +264,83 @@ export function QuickTransactionForm({
           />
         </button>
 
-        {errors.selectedAccountId && (
+        {errors.selectedAccountId && !dropdownOpen && (
           <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.selectedAccountId}</p>
         )}
 
-        {/* Dropdown panel */}
+        {/* Inline dropdown panel (no absolute positioning - clean in modal) */}
         {dropdownOpen && (
-          <>
-            <div
-              className="fixed inset-0 z-40"
-              onClick={() => {
-                setDropdownOpen(false);
-                setSearchTerm('');
-              }}
-            />
-            <div className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-80 overflow-hidden">
-              {/* Search */}
-              <div className="p-2 border-b border-gray-200 dark:border-gray-700">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Cari kode atau nama akun..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                    onClick={(e) => e.stopPropagation()}
-                    autoFocus
-                  />
-                </div>
-              </div>
-
-              {/* Grouped account list */}
-              <div className="overflow-y-auto max-h-64">
-                {(Object.entries(groupedAccounts) as [AccountType, Account[]][]).map(
-                  ([type, accs]) => {
-                    if (accs.length === 0) return null;
-                    return (
-                      <div key={type}>
-                        <div className="px-3 py-1.5 bg-gray-50 dark:bg-gray-700/50 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-2">
-                          <span className={ACCOUNT_TYPE_COLORS[type]}>
-                            {ACCOUNT_TYPE_LABELS[type]}
-                          </span>
-                        </div>
-                        {accs.map((account) => (
-                          <button
-                            key={account.id}
-                            type="button"
-                            onClick={() => handleSelectAccount(account)}
-                            className={`w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
-                              account.id === selectedAccountId
-                                ? 'bg-indigo-50 dark:bg-indigo-900/20'
-                                : ''
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono text-sm font-semibold text-gray-600 dark:text-gray-300">
-                                {account.account_code}
-                              </span>
-                              <span className="text-sm text-gray-900 dark:text-gray-100">
-                                {account.account_name}
-                              </span>
-                            </div>
-                            {account.description && (
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 ml-12">
-                                {account.description}
-                              </p>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    );
-                  }
-                )}
-
-                {/* No results */}
-                {Object.values(groupedAccounts).every((accs) => accs.length === 0) && (
-                  <div className="px-3 py-4 text-center text-gray-500 dark:text-gray-400 text-sm">
-                    Tidak ada akun yang cocok
-                  </div>
-                )}
+          <div className="mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm overflow-hidden">
+            {/* Search */}
+            <div className="p-2 border-b border-gray-100 dark:border-gray-700">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Cari kode atau nama akun..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:bg-white dark:focus:bg-gray-600 outline-none"
+                  autoFocus
+                />
               </div>
             </div>
-          </>
+
+            {/* Grouped account list */}
+            <div className="overflow-y-auto max-h-52">
+              {(Object.entries(groupedAccounts) as [AccountType, Account[]][]).map(
+                ([type, accs]) => {
+                  if (accs.length === 0) return null;
+                  return (
+                    <div key={type}>
+                      <div className="px-3 py-1.5 bg-gray-50 dark:bg-gray-700/50 text-xs font-semibold uppercase tracking-wide sticky top-0">
+                        <span className={ACCOUNT_TYPE_COLORS[type]}>
+                          {ACCOUNT_TYPE_LABELS[type]}
+                        </span>
+                      </div>
+                      {accs.map((account) => (
+                        <button
+                          key={account.id}
+                          type="button"
+                          onClick={() => handleSelectAccount(account)}
+                          className={`w-full text-left px-3 py-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors ${
+                            account.id === selectedAccountId
+                              ? 'bg-indigo-50 dark:bg-indigo-900/20 border-l-2 border-indigo-500'
+                              : ''
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+                              {account.account_code}
+                            </span>
+                            <span className="text-sm text-gray-900 dark:text-gray-100">
+                              {account.account_name}
+                            </span>
+                          </div>
+                          {account.description && (
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 pl-14">
+                              {account.description}
+                            </p>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                }
+              )}
+
+              {/* No results */}
+              {Object.values(groupedAccounts).every((accs) => accs.length === 0) && (
+                <div className="px-3 py-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+                  Tidak ada akun yang cocok
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {/* Flow preview badge */}
-        {selectedAccount && cashAccount && (
+        {selectedAccount && cashAccount && !dropdownOpen && (
           <div
             className={`mt-2 flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
               flowDirection === 'in'
