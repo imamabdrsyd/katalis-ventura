@@ -207,14 +207,14 @@ export function QuickTransactionForm({
       <div>
         <label className="label text-base font-semibold">Jumlah (Rp) *</label>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-lg font-medium">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-xl font-semibold pointer-events-none">
             Rp
           </span>
           <input
             type="text"
             value={displayAmount}
             onChange={handleAmountChange}
-            className={`input text-2xl font-bold pl-11 ${
+            className={`input text-2xl font-bold pl-14 ${
               flowDirection === 'in'
                 ? 'border-emerald-500 dark:border-emerald-400 focus:ring-emerald-500'
                 : flowDirection === 'out'
@@ -278,7 +278,7 @@ export function QuickTransactionForm({
                 setSearchTerm('');
               }}
             />
-            <div className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-80 overflow-hidden">
+            <div className="absolute z-50 mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-80 overflow-hidden">
               {/* Search */}
               <div className="p-2 border-b border-gray-100 dark:border-gray-700">
                 <div className="relative">
