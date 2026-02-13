@@ -129,7 +129,7 @@ export default function TransactionsPage() {
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2 font-medium shadow-sm"
             >
               <Zap className="h-4 w-4" />
-              Tambah Transaksi
+              Quick Entry
             </button>
 
             <button

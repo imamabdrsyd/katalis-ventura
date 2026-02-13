@@ -81,66 +81,54 @@ COMMENT ON COLUMN transactions.is_double_entry IS 'TRUE if transaction uses doub
 
 CREATE OR REPLACE FUNCTION create_default_accounts(p_business_id UUID)
 RETURNS VOID AS $$
+DECLARE
+    v_asset_id UUID;
+    v_liability_id UUID;
+    v_equity_id UUID;
+    v_revenue_id UUID;
+    v_expense_id UUID;
 BEGIN
-    -- ASSETS (1000-1999)
-    INSERT INTO accounts (business_id, account_code, account_name, account_type, normal_balance, is_system, sort_order, description) VALUES
-    (p_business_id, '1100', 'Current Assets', 'ASSET', 'DEBIT', TRUE, 110, 'Aset lancar'),
-    (p_business_id, '1110', 'Cash', 'ASSET', 'DEBIT', TRUE, 111, 'Kas tunai'),
-    (p_business_id, '1120', 'Bank - BCA', 'ASSET', 'DEBIT', TRUE, 112, 'Rekening Bank BCA'),
-    (p_business_id, '1121', 'Bank - Mandiri', 'ASSET', 'DEBIT', TRUE, 113, 'Rekening Bank Mandiri'),
-    (p_business_id, '1122', 'Bank - BNI', 'ASSET', 'DEBIT', TRUE, 114, 'Rekening Bank BNI'),
-    (p_business_id, '1130', 'E-Wallet - OVO', 'ASSET', 'DEBIT', TRUE, 115, 'E-wallet OVO'),
-    (p_business_id, '1131', 'E-Wallet - GoPay', 'ASSET', 'DEBIT', TRUE, 116, 'E-wallet GoPay'),
-    (p_business_id, '1132', 'E-Wallet - Dana', 'ASSET', 'DEBIT', TRUE, 117, 'E-wallet Dana'),
+    -- ========================================
+    -- 5 MAIN PARENT ACCOUNTS (System, cannot be modified)
+    -- ========================================
 
-    (p_business_id, '1200', 'Fixed Assets', 'ASSET', 'DEBIT', TRUE, 120, 'Aset tetap'),
-    (p_business_id, '1210', 'Property - Building', 'ASSET', 'DEBIT', TRUE, 121, 'Properti sewa'),
-    (p_business_id, '1220', 'Furniture & Fixtures', 'ASSET', 'DEBIT', TRUE, 122, 'Furniture dan perlengkapan'),
-    (p_business_id, '1230', 'Equipment', 'ASSET', 'DEBIT', TRUE, 123, 'Peralatan'),
-    (p_business_id, '1240', 'Accumulated Depreciation', 'ASSET', 'CREDIT', TRUE, 124, 'Akumulasi penyusutan'),
+    INSERT INTO accounts (business_id, account_code, account_name, account_type, parent_account_id, normal_balance, is_system, sort_order, description)
+    VALUES (p_business_id, '1000', 'Assets', 'ASSET', NULL, 'DEBIT', TRUE, 1000, 'Semua aset bisnis')
+    RETURNING id INTO v_asset_id;
 
-    -- LIABILITIES (2000-2999)
-    (p_business_id, '2100', 'Current Liabilities', 'LIABILITY', 'CREDIT', TRUE, 210, 'Liabilitas jangka pendek'),
-    (p_business_id, '2110', 'Accounts Payable', 'LIABILITY', 'CREDIT', TRUE, 211, 'Hutang usaha'),
-    (p_business_id, '2120', 'Utilities Payable', 'LIABILITY', 'CREDIT', TRUE, 212, 'Hutang utilitas'),
+    INSERT INTO accounts (business_id, account_code, account_name, account_type, parent_account_id, normal_balance, is_system, sort_order, description)
+    VALUES (p_business_id, '2000', 'Liabilities', 'LIABILITY', NULL, 'CREDIT', TRUE, 2000, 'Semua kewajiban bisnis')
+    RETURNING id INTO v_liability_id;
 
-    (p_business_id, '2200', 'Long-term Liabilities', 'LIABILITY', 'CREDIT', TRUE, 220, 'Liabilitas jangka panjang'),
-    (p_business_id, '2210', 'Loan Payable', 'LIABILITY', 'CREDIT', TRUE, 221, 'Pinjaman bank'),
+    INSERT INTO accounts (business_id, account_code, account_name, account_type, parent_account_id, normal_balance, is_system, sort_order, description)
+    VALUES (p_business_id, '3000', 'Equity', 'EQUITY', NULL, 'CREDIT', TRUE, 3000, 'Modal dan ekuitas pemilik')
+    RETURNING id INTO v_equity_id;
 
-    -- EQUITY (3000-3999)
-    (p_business_id, '3100', 'Capital', 'EQUITY', 'CREDIT', TRUE, 310, 'Modal pemilik'),
-    (p_business_id, '3200', 'Retained Earnings', 'EQUITY', 'CREDIT', TRUE, 320, 'Laba ditahan'),
-    (p_business_id, '3300', 'Owner Drawings', 'EQUITY', 'DEBIT', TRUE, 330, 'Penarikan pemilik'),
+    INSERT INTO accounts (business_id, account_code, account_name, account_type, parent_account_id, normal_balance, is_system, sort_order, description)
+    VALUES (p_business_id, '4000', 'Revenue', 'REVENUE', NULL, 'CREDIT', TRUE, 4000, 'Semua pendapatan bisnis')
+    RETURNING id INTO v_revenue_id;
 
-    -- REVENUE (4000-4999)
-    (p_business_id, '4100', 'Rental Income', 'REVENUE', 'CREDIT', TRUE, 410, 'Pendapatan sewa'),
-    (p_business_id, '4200', 'Service Fees', 'REVENUE', 'CREDIT', TRUE, 420, 'Biaya layanan'),
-    (p_business_id, '4300', 'Other Income', 'REVENUE', 'CREDIT', TRUE, 430, 'Pendapatan lain-lain'),
+    INSERT INTO accounts (business_id, account_code, account_name, account_type, parent_account_id, normal_balance, is_system, sort_order, description)
+    VALUES (p_business_id, '5000', 'Expenses', 'EXPENSE', NULL, 'DEBIT', TRUE, 5000, 'Semua beban bisnis')
+    RETURNING id INTO v_expense_id;
 
-    -- EXPENSES (5000-5999)
-    -- Operating Expenses (OPEX)
-    (p_business_id, '5110', 'Utilities - Electricity', 'EXPENSE', 'DEBIT', TRUE, 511, 'Listrik'),
-    (p_business_id, '5111', 'Utilities - Water', 'EXPENSE', 'DEBIT', TRUE, 512, 'Air'),
-    (p_business_id, '5112', 'Utilities - Gas', 'EXPENSE', 'DEBIT', TRUE, 513, 'Gas'),
-    (p_business_id, '5113', 'Internet & Phone', 'EXPENSE', 'DEBIT', TRUE, 514, 'Internet dan telepon'),
-    (p_business_id, '5120', 'Property Maintenance', 'EXPENSE', 'DEBIT', TRUE, 515, 'Pemeliharaan properti'),
-    (p_business_id, '5130', 'Insurance', 'EXPENSE', 'DEBIT', TRUE, 516, 'Asuransi'),
-    (p_business_id, '5140', 'Management Fees', 'EXPENSE', 'DEBIT', TRUE, 517, 'Biaya manajemen'),
-    (p_business_id, '5150', 'Marketing & Advertising', 'EXPENSE', 'DEBIT', TRUE, 518, 'Pemasaran dan iklan'),
+    -- ========================================
+    -- ESSENTIAL SUB-ACCOUNTS (for convenience)
+    -- Users can add more sub-accounts as needed
+    -- ========================================
 
-    -- Variable Costs (VAR)
-    (p_business_id, '5210', 'Cleaning Services', 'EXPENSE', 'DEBIT', TRUE, 521, 'Biaya kebersihan'),
-    (p_business_id, '5220', 'Guest Amenities', 'EXPENSE', 'DEBIT', TRUE, 522, 'Amenitas tamu'),
-    (p_business_id, '5230', 'Laundry', 'EXPENSE', 'DEBIT', TRUE, 523, 'Laundry'),
-    (p_business_id, '5240', 'Platform Commission', 'EXPENSE', 'DEBIT', TRUE, 524, 'Komisi platform'),
+    -- Asset sub-accounts
+    INSERT INTO accounts (business_id, account_code, account_name, account_type, parent_account_id, normal_balance, is_system, sort_order, description) VALUES
+    (p_business_id, '1100', 'Cash', 'ASSET', v_asset_id, 'DEBIT', TRUE, 1100, 'Kas tunai'),
+    (p_business_id, '1200', 'Bank', 'ASSET', v_asset_id, 'DEBIT', TRUE, 1200, 'Rekening bank');
 
-    -- Taxes (TAX)
-    (p_business_id, '5310', 'Income Tax', 'EXPENSE', 'DEBIT', TRUE, 531, 'Pajak penghasilan'),
-    (p_business_id, '5320', 'Property Tax', 'EXPENSE', 'DEBIT', TRUE, 532, 'Pajak bumi bangunan (PBB)'),
-    (p_business_id, '5330', 'VAT', 'EXPENSE', 'DEBIT', TRUE, 533, 'PPN'),
+    -- Revenue sub-accounts
+    INSERT INTO accounts (business_id, account_code, account_name, account_type, parent_account_id, normal_balance, is_system, sort_order, description) VALUES
+    (p_business_id, '4100', 'Sales Revenue', 'REVENUE', v_revenue_id, 'CREDIT', TRUE, 4100, 'Pendapatan penjualan');
 
-    -- Financing (FIN)
-    (p_business_id, '5410', 'Interest Expense', 'EXPENSE', 'DEBIT', TRUE, 541, 'Bunga pinjaman');
+    -- Expense sub-accounts
+    INSERT INTO accounts (business_id, account_code, account_name, account_type, parent_account_id, normal_balance, is_system, sort_order, description) VALUES
+    (p_business_id, '5100', 'Operating Expenses', 'EXPENSE', v_expense_id, 'DEBIT', TRUE, 5100, 'Beban operasional');
 
 END;
 $$ LANGUAGE plpgsql;

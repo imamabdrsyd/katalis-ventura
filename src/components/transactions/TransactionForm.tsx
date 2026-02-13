@@ -457,7 +457,6 @@ export function TransactionForm({
                 suggestedCode={suggestedAccounts?.debit}
                 error={errors.debit_account_id}
                 filterMode="out-destination"
-                showQuickTabs={true}
                 required
               />
             </>

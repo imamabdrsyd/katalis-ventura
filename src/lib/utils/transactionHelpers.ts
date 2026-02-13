@@ -1,47 +1,41 @@
 import type { TransactionCategory, Account } from '@/types';
 
 /**
+ * Get account type from code range
+ */
+function getAccountTypeFromCode(code: string): string {
+  const num = parseInt(code);
+  if (num >= 1000 && num < 2000) return 'ASSET';
+  if (num >= 2000 && num < 3000) return 'LIABILITY';
+  if (num >= 3000 && num < 4000) return 'EQUITY';
+  if (num >= 4000 && num < 5000) return 'REVENUE';
+  if (num >= 5000 && num < 6000) return 'EXPENSE';
+  return 'UNKNOWN';
+}
+
+/**
  * Auto-detect transaction category based on debit and credit account codes
- * This enables hiding the category dropdown from users while maintaining proper categorization
+ * Uses account_type-based logic for flexibility with user-created sub-accounts
  */
 export function detectCategory(
   debitAccountCode: string,
   creditAccountCode: string
 ): TransactionCategory {
-  // Money IN flow: Bank debit (asset increase), Revenue credit
-  if (debitAccountCode >= '1110' && debitAccountCode <= '1132') {
-    if (creditAccountCode >= '4000' && creditAccountCode <= '4999') {
-      return 'EARN'; // Revenue → Bank
-    }
-    if (creditAccountCode >= '2000' && creditAccountCode <= '2999') {
-      return 'FIN'; // Loan received → Bank
-    }
+  const debitType = getAccountTypeFromCode(debitAccountCode);
+  const creditType = getAccountTypeFromCode(creditAccountCode);
+
+  // Money IN flow: Asset debit (money received), Revenue credit
+  if (debitType === 'ASSET') {
+    if (creditType === 'REVENUE') return 'EARN';
+    if (creditType === 'LIABILITY') return 'FIN'; // Loan received
   }
 
   // Money OUT flow: Asset credit (paying from bank/cash)
-  if (creditAccountCode >= '1110' && creditAccountCode <= '1132') {
-    const debitPrefix = debitAccountCode.substring(0, 2);
-
-    // Expense accounts categorization by code range
-    if (debitPrefix === '51') return 'OPEX'; // 5100-5199
-    if (debitPrefix === '52') return 'VAR'; // 5200-5299
-    if (debitPrefix === '53') return 'TAX'; // 5300-5399
-    if (debitPrefix === '54') return 'FIN'; // 5400-5499
-
-    // Special: Fixed asset purchase (CAPEX)
-    if (debitAccountCode >= '1200' && debitAccountCode <= '1299') {
-      return 'CAPEX';
-    }
-
-    // Special: Owner withdrawal
-    if (debitAccountCode === '3300') {
-      return 'FIN';
-    }
-
-    // Special: Liability payment
-    if (debitAccountCode >= '2000' && debitAccountCode <= '2999') {
-      return 'FIN';
-    }
+  if (creditType === 'ASSET') {
+    if (debitType === 'EXPENSE') return 'OPEX'; // Default expense category
+    if (debitType === 'ASSET') return 'CAPEX'; // Asset purchase (e.g. equipment)
+    if (debitType === 'EQUITY') return 'FIN'; // Owner withdrawal
+    if (debitType === 'LIABILITY') return 'FIN'; // Liability payment
   }
 
   // Default fallback
@@ -50,7 +44,8 @@ export function detectCategory(
 
 /**
  * Filter accounts based on transaction mode and role
- * Reduces cognitive load by showing only relevant accounts
+ * Uses account_type for flexible filtering with any sub-account structure
+ * Only shows sub-accounts (with parent_account_id) since main accounts are categories
  */
 export type FilterMode = 'in-destination' | 'in-source' | 'out-source' | 'out-destination' | null;
 
@@ -58,33 +53,39 @@ export function filterAccountsByMode(
   accounts: Account[],
   mode: FilterMode
 ): Account[] {
-  if (!mode) return accounts; // No filter for 'full' mode
+  if (!mode) return accounts;
 
   switch (mode) {
-    case 'in-destination': // Where money goes (Uang Masuk Ke)
+    case 'in-destination': // Where money goes (Uang Masuk Ke) - Asset sub-accounts
       return accounts.filter(
         (acc) =>
-          acc.account_code >= '1110' &&
-          acc.account_code <= '1132' &&
+          acc.account_type === 'ASSET' &&
+          acc.parent_account_id != null &&
           acc.is_active
       );
 
     case 'in-source': // Where it comes from (Dari - Sumber Pendapatan)
       return accounts.filter(
-        (acc) => acc.account_type === 'REVENUE' && acc.is_active
-      );
-
-    case 'out-source': // Where money comes from (Bayar Dari)
-      return accounts.filter(
         (acc) =>
-          acc.account_code >= '1110' &&
-          acc.account_code <= '1132' &&
+          acc.account_type === 'REVENUE' &&
+          acc.parent_account_id != null &&
           acc.is_active
       );
 
-    case 'out-destination': // What you're paying for (Untuk)
+    case 'out-source': // Where money comes from (Bayar Dari) - Asset sub-accounts
       return accounts.filter(
-        (acc) => acc.account_type === 'EXPENSE' && acc.is_active
+        (acc) =>
+          acc.account_type === 'ASSET' &&
+          acc.parent_account_id != null &&
+          acc.is_active
+      );
+
+    case 'out-destination': // What you're paying for (Untuk) - Expense sub-accounts
+      return accounts.filter(
+        (acc) =>
+          acc.account_type === 'EXPENSE' &&
+          acc.parent_account_id != null &&
+          acc.is_active
       );
 
     default:
@@ -93,42 +94,24 @@ export function filterAccountsByMode(
 }
 
 /**
- * Further filter expense accounts by quick category tabs (OPEX/VAR/TAX)
+ * Expense filter - simplified since users create their own sub-accounts
  */
-export type ExpenseFilter = 'OPEX' | 'VAR' | 'TAX' | 'ALL';
+export type ExpenseFilter = 'ALL';
 
 export function filterExpensesByCategory(
   accounts: Account[],
-  category: ExpenseFilter
+  _category: ExpenseFilter
 ): Account[] {
-  if (category === 'ALL') return accounts;
-
-  return accounts.filter((acc) => {
-    const code = acc.account_code;
-    switch (category) {
-      case 'OPEX':
-        return code >= '5100' && code <= '5199';
-      case 'VAR':
-        return code >= '5200' && code <= '5299';
-      case 'TAX':
-        return code >= '5300' && code <= '5399';
-      default:
-        return true;
-    }
-  });
+  return accounts;
 }
 
 /**
  * Account code range constants for reference
  */
 export const ACCOUNT_RANGES = {
-  CASH_AND_BANK: { min: '1110', max: '1132' },
-  FIXED_ASSETS: { min: '1200', max: '1299' },
-  LIABILITIES: { min: '2000', max: '2999' },
-  OWNER_DRAWINGS: '3300',
+  ASSET: { min: '1000', max: '1999' },
+  LIABILITY: { min: '2000', max: '2999' },
+  EQUITY: { min: '3000', max: '3999' },
   REVENUE: { min: '4000', max: '4999' },
-  OPEX: { min: '5100', max: '5199' },
-  VAR: { min: '5200', max: '5299' },
-  TAX: { min: '5300', max: '5399' },
-  FIN: { min: '5400', max: '5499' },
+  EXPENSE: { min: '5000', max: '5999' },
 } as const;
