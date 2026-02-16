@@ -27,6 +27,7 @@ export default function AccountsPage() {
   const [saving, setSaving] = useState(false);
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [preselectedParentId, setPreselectedParentId] = useState<string | null>(null);
   const [editAccount, setEditAccount] = useState<Account | null>(null);
   const [deleteAccount, setDeleteAccount] = useState<Account | null>(null);
 
@@ -121,11 +122,13 @@ export default function AccountsPage() {
         is_system: false,
         sort_order: data.sort_order,
         description: data.description,
+        default_category: data.default_category,
       });
 
       const updatedAccounts = await accountsApi.getAccounts(businessId);
       setAccounts(updatedAccounts);
       setShowAddModal(false);
+      setPreselectedParentId(null);
     } catch (err) {
       console.error('Failed to create account:', err);
       alert('Gagal membuat akun. Silakan coba lagi.');
@@ -144,6 +147,7 @@ export default function AccountsPage() {
         account_name: data.account_name,
         normal_balance: data.normal_balance,
         description: data.description,
+        default_category: data.default_category,
       });
 
       const updatedAccounts = await accountsApi.getAccounts(businessId);
@@ -195,7 +199,8 @@ export default function AccountsPage() {
   };
 
   // Handle add sub-account under a specific parent
-  const handleAddSubAccount = (_parentId: string) => {
+  const handleAddSubAccount = (parentId: string) => {
+    setPreselectedParentId(parentId);
     setShowAddModal(true);
   };
 
@@ -299,15 +304,28 @@ export default function AccountsPage() {
 
       {/* Add Account Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+        <div
+          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          onClick={() => {
+            setShowAddModal(false);
+            setPreselectedParentId(null);
+          }}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
             <AccountForm
               onSubmit={handleAddAccount}
-              onCancel={() => setShowAddModal(false)}
+              onCancel={() => {
+                setShowAddModal(false);
+                setPreselectedParentId(null);
+              }}
               loading={saving}
               businessId={businessId}
               existingCodes={existingCodes}
               parentAccounts={parentAccounts}
+              parentAccountId={preselectedParentId || undefined}
             />
           </div>
         </div>
@@ -315,8 +333,14 @@ export default function AccountsPage() {
 
       {/* Edit Account Modal */}
       {editAccount && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+        <div
+          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          onClick={() => setEditAccount(null)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
             <AccountForm
               account={editAccount}
               onSubmit={handleEditAccount}

@@ -168,13 +168,19 @@ export function BusinessSwitcher() {
 
       {/* Manage Business Options Modal */}
       {showManageOptions && !isInvestor && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={(e) => {
-          if (e.target === e.currentTarget) {
-            console.log('🎯 Clicked backdrop, closing modal');
-            setShowManageOptions(false);
-          }
-        }}>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg max-w-md w-full p-6">
+        <div
+          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              console.log('🎯 Clicked backdrop, closing modal');
+              setShowManageOptions(false);
+            }
+          }}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Kelola Bisnis</h2>
             <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">
               Pilih tindakan yang ingin Anda lakukan
@@ -238,8 +244,14 @@ export function BusinessSwitcher() {
 
       {/* Add Business Modal */}
       {showAddForm && !isInvestor && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-lg max-w-md w-full">
+        <div
+          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          onClick={() => setShowAddForm(false)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
             <BusinessForm
               onSubmit={handleAddBusiness}
               onCancel={() => setShowAddForm(false)}

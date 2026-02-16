@@ -30,6 +30,7 @@ import {
   X,
   Settings,
   BookOpen,
+  Zap,
 } from 'lucide-react';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -95,7 +96,7 @@ const navSections: NavSection[] = [
   },
 ];
 
-function Header({ onMenuClick }: { onMenuClick: () => void }) {
+function Header({ onMenuClick, onQuickAddClick }: { onMenuClick: () => void; onQuickAddClick: () => void }) {
   const router = useRouter();
   const { user, businesses, activeBusiness, setActiveBusiness, userRole } = useBusinessContext();
   const supabase = createClient();
@@ -106,6 +107,7 @@ function Header({ onMenuClick }: { onMenuClick: () => void }) {
 
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
   const isInvestor = userRole === 'investor';
+  const canManage = userRole === 'business_manager' || userRole === 'both';
 
   const handleAddBusiness = async (formData: BusinessFormData) => {
     setIsSubmitting(true);
@@ -239,6 +241,17 @@ function Header({ onMenuClick }: { onMenuClick: () => void }) {
           <Search className="w-5 h-5" />
         </button>
 
+        {/* Quick Entry Button */}
+        {canManage && activeBusiness && (
+          <button
+            onClick={onQuickAddClick}
+            className="hidden md:flex px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors items-center gap-2 font-medium shadow-sm"
+          >
+            <Zap className="h-4 w-4" />
+            Quick Entry
+          </button>
+        )}
+
         {/* Theme Toggle */}
         <ThemeToggle />
 
@@ -284,8 +297,14 @@ function Header({ onMenuClick }: { onMenuClick: () => void }) {
 
     {/* Add Business Modal */}
     {showAddBusiness && !isInvestor && (
-      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+      <div
+        className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+        onClick={() => setShowAddBusiness(false)}
+      >
+        <div
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
+          onClick={(e) => e.stopPropagation()}
+        >
           <BusinessForm
             onSubmit={handleAddBusiness}
             onCancel={() => setShowAddBusiness(false)}
@@ -306,7 +325,7 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
       {/* Mobile backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/40 z-40 md:hidden backdrop-blur-sm"
           onClick={onClose}
         />
       )}
@@ -375,6 +394,7 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
 
 function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -382,15 +402,18 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Fixed Header */}
-      <Header onMenuClick={() => setSidebarOpen(true)} />
+      <Header
+        onMenuClick={() => setSidebarOpen(true)}
+        onQuickAddClick={() => setQuickAddOpen(true)}
+      />
 
       {/* Main Content - with margins for sidebar and header */}
       <main className="ml-0 md:ml-64 pt-16 min-h-screen overflow-auto">
         {children}
       </main>
 
-      {/* Global Floating Quick Add Button */}
-      <FloatingQuickAdd />
+      {/* Global Floating Quick Add Button with shared state */}
+      <FloatingQuickAdd isOpen={quickAddOpen} onOpenChange={setQuickAddOpen} />
     </div>
   );
 }
