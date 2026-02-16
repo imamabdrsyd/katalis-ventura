@@ -1,0 +1,5 @@
+# Ignore Playwright test files during Vercel build
+tests/
+playwright.config.ts
+playwright-report/
+test-results/
