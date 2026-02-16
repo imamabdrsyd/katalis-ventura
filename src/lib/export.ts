@@ -42,12 +42,11 @@ export function exportIncomeStatementToPDF(
     ['OPERATING EXPENSES', ''],
     ['  Operating Expenses', `(${formatCurrency(summary.totalOpex)})`],
     ['', ''],
-    ['OPERATING INCOME (EBITDA)', formatCurrency(metrics.operatingIncome)],
-    ['', ''],
-    ['EBIT', formatCurrency(metrics.ebit)],
+    ['OPERATING INCOME', formatCurrency(metrics.operatingIncome)],
+    ['  Operating Margin', `${metrics.operatingMargin.toFixed(2)}%`],
     ['', ''],
     ['FINANCING COSTS', ''],
-    ['  Interest & Financing', `(${formatCurrency(Math.abs(summary.totalFin))})`],
+    ['  Interest & Financing', `(${formatCurrency(summary.totalFin)})`],
     ['', ''],
     ['EARNINGS BEFORE TAX (EBT)', formatCurrency(metrics.ebt)],
     ['', ''],
@@ -82,8 +81,7 @@ export function exportIncomeStatementToPDF(
         const text = data.cell.raw as string;
         if (
           text === 'GROSS PROFIT' ||
-          text === 'OPERATING INCOME (EBITDA)' ||
-          text === 'EBIT' ||
+          text === 'OPERATING INCOME' ||
           text === 'EARNINGS BEFORE TAX (EBT)' ||
           text === 'NET INCOME'
         ) {
@@ -139,12 +137,11 @@ export function exportIncomeStatementToExcel(
     ['OPERATING EXPENSES', ''],
     ['Operating Expenses', -summary.totalOpex],
     [],
-    ['OPERATING INCOME (EBITDA)', metrics.operatingIncome],
-    [],
-    ['EBIT', metrics.ebit],
+    ['OPERATING INCOME', metrics.operatingIncome],
+    ['Operating Margin (%)', metrics.operatingMargin],
     [],
     ['FINANCING COSTS', ''],
-    ['Interest & Financing', -Math.abs(summary.totalFin)],
+    ['Interest & Financing', -summary.totalFin],
     [],
     ['EARNINGS BEFORE TAX (EBT)', metrics.ebt],
     [],

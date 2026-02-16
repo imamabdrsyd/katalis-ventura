@@ -20,6 +20,7 @@ export interface Account {
   is_system: boolean;
   sort_order: number;
   description?: string;
+  default_category?: TransactionCategory; // Optional: Auto-detected category for transactions
   created_at: string;
   updated_at: string;
   updated_by?: string;
@@ -164,7 +165,6 @@ export interface InviteCode {
 // Derived income statement metrics (single source of truth)
 export interface IncomeStatementMetrics {
   operatingIncome: number;
-  ebit: number;
   ebt: number;
   grossMargin: number;
   operatingMargin: number;

@@ -230,46 +230,33 @@ export default function IncomeStatementPage() {
           {/* OPERATING INCOME */}
           <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
             <div className="flex justify-between items-center">
-              <h3 className="font-bold text-purple-900 dark:text-purple-100 text-lg">OPERATING INCOME (EBITDA)</h3>
+              <div>
+                <h3 className="font-bold text-purple-900 dark:text-purple-100 text-lg">OPERATING INCOME</h3>
+                <p className="text-sm text-purple-600 dark:text-purple-400">Margin: {metrics.operatingMargin.toFixed(2)}%</p>
+              </div>
               <span className={`text-xl font-bold ${metrics.operatingIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 {formatCurrency(metrics.operatingIncome)}
               </span>
             </div>
           </div>
 
-          {/* OTHER EXPENSES */}
+          {/* FINANCING COSTS */}
           <div>
             <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
-              <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Other Items</h3>
+              <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Financing Costs</h3>
             </div>
             <div className="flex justify-between py-2 pl-4">
-              <span className="text-gray-700 dark:text-gray-300">Capital Expenditure</span>
-              <span className="font-semibold text-red-600 dark:text-red-400">
-                ({formatCurrency(summary.totalCapex)})
-              </span>
-            </div>
-            <div className="flex justify-between py-2 pl-4">
-              <span className="text-gray-700 dark:text-gray-300">Finance/Interest</span>
+              <span className="text-gray-700 dark:text-gray-300">Interest & Financing</span>
               <span className="font-semibold text-red-600 dark:text-red-400">
                 ({formatCurrency(summary.totalFin)})
               </span>
             </div>
           </div>
 
-          {/* EBIT */}
+          {/* EBT */}
           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
             <div className="flex justify-between items-center">
-              <h3 className="font-bold text-blue-900 dark:text-blue-100 text-lg">EBIT (Earnings Before Interest & Tax)</h3>
-              <span className={`text-xl font-bold ${metrics.ebit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                {formatCurrency(metrics.ebit)}
-              </span>
-            </div>
-          </div>
-
-          {/* EBT */}
-          <div className="bg-cyan-50 dark:bg-cyan-900/20 rounded-lg p-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-bold text-cyan-900 dark:text-cyan-100 text-lg">EBT (Earnings Before Tax)</h3>
+              <h3 className="font-bold text-blue-900 dark:text-blue-100 text-lg">EBT (Earnings Before Tax)</h3>
               <span className={`text-xl font-bold ${metrics.ebt >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 {formatCurrency(metrics.ebt)}
               </span>

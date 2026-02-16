@@ -73,8 +73,8 @@ export function calculateFinancialSummary(
     summary.totalEarn -
     summary.totalOpex -
     summary.totalVar -
-    summary.totalCapex -
-    summary.totalTax;
+    summary.totalTax -
+    summary.totalFin;
 
   return summary;
 }
@@ -84,13 +84,12 @@ export function calculateIncomeStatementMetrics(
   summary: FinancialSummary
 ): IncomeStatementMetrics {
   const operatingIncome = summary.grossProfit - summary.totalOpex;
-  const ebit = operatingIncome - summary.totalCapex;
-  const ebt = ebit - summary.totalFin;
+  const ebt = operatingIncome - summary.totalFin;
   const grossMargin = summary.totalEarn > 0 ? (summary.grossProfit / summary.totalEarn) * 100 : 0;
   const operatingMargin = summary.totalEarn > 0 ? (operatingIncome / summary.totalEarn) * 100 : 0;
   const netMargin = summary.totalEarn > 0 ? (summary.netProfit / summary.totalEarn) * 100 : 0;
 
-  return { operatingIncome, ebit, ebt, grossMargin, operatingMargin, netMargin };
+  return { operatingIncome, ebt, grossMargin, operatingMargin, netMargin };
 }
 
 // Count transactions per category
@@ -156,7 +155,7 @@ export function groupTransactionsByMonth(
     }
 
     monthData.netProfit =
-      monthData.earn - monthData.opex - monthData.var - monthData.capex - monthData.tax;
+      monthData.earn - monthData.opex - monthData.var - monthData.tax - monthData.fin;
   });
 
   return Array.from(monthMap.values()).sort((a, b) => a.month.localeCompare(b.month));
@@ -262,6 +261,7 @@ export function calculateBalanceSheet(
   let totalCash = 0;
   let totalProperty = 0;
   let totalLiabilities = 0;
+  let totalEquity = 0; // NEW: Track equity from transactions
   let totalRevenue = 0;
   let totalExpenses = 0;
 
@@ -276,18 +276,23 @@ export function calculateBalanceSheet(
       switch (debitAccount.account_type) {
         case 'ASSET':
           totalAssets += amount;
-          // Track cash separately (accounts 1110-1199)
-          if (debitAccount.account_code >= '1110' && debitAccount.account_code < '1200') {
+          // Track cash separately (Cash: 1100, Bank: 1200)
+          if (debitAccount.account_code === '1100' || debitAccount.account_code === '1200') {
             totalCash += amount;
           }
-          // Track property separately (accounts 1200-1299)
-          if (debitAccount.account_code >= '1200' && debitAccount.account_code < '1300') {
+          // Track property separately (Fixed Assets: 1200-1299 range, excluding Bank at 1200)
+          const debitCode = parseInt(debitAccount.account_code);
+          if (debitCode > 1200 && debitCode < 1300) {
             totalProperty += amount;
           }
           break;
         case 'LIABILITY':
           // Debit to liability decreases it
           totalLiabilities -= amount;
+          break;
+        case 'EQUITY':
+          // Debit to equity decreases it (withdrawals, distributions)
+          totalEquity -= amount;
           break;
         case 'EXPENSE':
           totalExpenses += amount;
@@ -301,17 +306,22 @@ export function calculateBalanceSheet(
         case 'ASSET':
           totalAssets -= amount;
           // Track cash separately
-          if (creditAccount.account_code >= '1110' && creditAccount.account_code < '1200') {
+          if (creditAccount.account_code === '1100' || creditAccount.account_code === '1200') {
             totalCash -= amount;
           }
-          // Track property separately
-          if (creditAccount.account_code >= '1200' && creditAccount.account_code < '1300') {
+          // Track property separately (Fixed Assets: 1200-1299 range, excluding Bank at 1200)
+          const creditCode = parseInt(creditAccount.account_code);
+          if (creditCode > 1200 && creditCode < 1300) {
             totalProperty -= amount;
           }
           break;
         case 'LIABILITY':
           // Credit to liability increases it
           totalLiabilities += amount;
+          break;
+        case 'EQUITY':
+          // Credit to equity increases it (capital investment, contributions)
+          totalEquity += amount;
           break;
         case 'REVENUE':
           totalRevenue += amount;
@@ -336,9 +346,22 @@ export function calculateBalanceSheet(
     totalCash += closingCash;
     totalProperty += summary.totalCapex;
     totalAssets += closingCash + summary.totalCapex;
-    totalLiabilities += Math.abs(summary.totalFin);
+    totalLiabilities += summary.totalFin;
     totalRevenue += summary.totalEarn;
     totalExpenses += summary.totalOpex + summary.totalVar + summary.totalTax;
+
+    // Add legacy capital to equity (for backward compatibility)
+    totalEquity += capital;
+  }
+
+  // If no equity was recorded from double-entry transactions,
+  // fall back to capital parameter (from businesses.capital_investment)
+  // This handles businesses created before double-entry was implemented
+  if (totalEquity === 0 && capital > 0 && legacyTransactions.length === 0) {
+    totalEquity = capital;
+    // Also add capital to assets (cash) for balance
+    totalCash += capital;
+    totalAssets += capital;
   }
 
   // Calculate retained earnings (revenue - expenses)
@@ -355,11 +378,41 @@ export function calculateBalanceSheet(
       totalLiabilities: totalLiabilities,
     },
     equity: {
-      capital: capital,
+      capital: totalEquity,
       retainedEarnings: retainedEarnings,
-      totalEquity: capital + retainedEarnings,
+      totalEquity: totalEquity + retainedEarnings,
     },
   };
+}
+
+// Cash account codes used as the basis for cash flow tracking
+const CASH_ACCOUNT_CODES = ['1100', '1200'];
+
+function isCashAccount(code: string): boolean {
+  return CASH_ACCOUNT_CODES.includes(code);
+}
+
+/**
+ * Classify a cash movement by the counter-account's type.
+ *   - Revenue / Expense counter → Operating
+ *   - Asset (non-cash) counter  → Investing
+ *   - Liability / Equity counter → Financing
+ */
+function classifyCashFlow(
+  counterAccountType: string
+): 'operating' | 'investing' | 'financing' {
+  switch (counterAccountType) {
+    case 'REVENUE':
+    case 'EXPENSE':
+      return 'operating';
+    case 'ASSET':
+      return 'investing';
+    case 'LIABILITY':
+    case 'EQUITY':
+      return 'financing';
+    default:
+      return 'operating';
+  }
 }
 
 // Calculate cash flow
@@ -368,12 +421,52 @@ export function calculateCashFlow(
   transactions: Transaction[],
   capital: number = 0
 ): CashFlowData {
-  const summary = calculateFinancialSummary(transactions);
+  const doubleEntryTxns = transactions.filter(t => t.is_double_entry);
+  const legacyTxns = transactions.filter(t => !t.is_double_entry);
 
-  const operating =
-    summary.totalEarn - summary.totalOpex - summary.totalVar - summary.totalTax;
-  const investing = -summary.totalCapex;
-  const financing = summary.totalFin;
+  let operating = 0;
+  let investing = 0;
+  let financing = 0;
+
+  // --- Double-entry: track actual cash movement ---
+  doubleEntryTxns.forEach(t => {
+    const amount = Number(t.amount);
+    const debitCode = t.debit_account?.account_code;
+    const creditCode = t.credit_account?.account_code;
+
+    if (!debitCode || !creditCode) return;
+
+    const debitIsCash = isCashAccount(debitCode);
+    const creditIsCash = isCashAccount(creditCode);
+
+    // Only process transactions that touch a cash/bank account
+    if (!debitIsCash && !creditIsCash) return;
+
+    // Both sides are cash (bank transfer) → no net cash flow impact
+    if (debitIsCash && creditIsCash) return;
+
+    if (debitIsCash) {
+      // Cash increases (debit to cash) → money IN
+      const bucket = classifyCashFlow(t.credit_account!.account_type);
+      if (bucket === 'operating') operating += amount;
+      else if (bucket === 'investing') investing += amount;
+      else financing += amount;
+    } else {
+      // Cash decreases (credit to cash) → money OUT
+      const bucket = classifyCashFlow(t.debit_account!.account_type);
+      if (bucket === 'operating') operating -= amount;
+      else if (bucket === 'investing') investing -= amount;
+      else financing -= amount;
+    }
+  });
+
+  // --- Legacy: category-based fallback ---
+  if (legacyTxns.length > 0) {
+    const summary = calculateFinancialSummary(legacyTxns);
+    operating += summary.totalEarn - summary.totalOpex - summary.totalVar - summary.totalTax;
+    investing += -summary.totalCapex;
+    financing += summary.totalFin;
+  }
 
   const netCashFlow = operating + investing + financing;
   const openingBalance = capital;
