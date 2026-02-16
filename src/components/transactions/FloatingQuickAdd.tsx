@@ -13,12 +13,22 @@ import type { TransactionFormData } from './TransactionForm';
  * Renders at the bottom-right corner on all dashboard pages.
  * Only visible to users who can manage transactions.
  */
-export function FloatingQuickAdd() {
+export function FloatingQuickAdd({
+  isOpen: controlledIsOpen,
+  onOpenChange,
+}: {
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+} = {}) {
   const { user, activeBusinessId: businessId, userRole } = useBusinessContext();
   const canManage = userRole === 'business_manager' || userRole === 'both';
 
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Use controlled state if provided, otherwise use internal state
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
+  const setIsOpen = onOpenChange || setInternalIsOpen;
 
   const handleSubmit = useCallback(
     async (data: TransactionFormData) => {

@@ -132,7 +132,8 @@ export default function TransactionsPage() {
               Quick Entry
             </button>
 
-            <button
+            {/* TEMPORARILY HIDDEN - To re-enable, uncomment this section */}
+            {/* <button
               onClick={handleOpenInModal}
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors flex items-center gap-2 font-medium"
             >
@@ -153,7 +154,7 @@ export default function TransactionsPage() {
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm flex items-center gap-2"
             >
               + Form Lengkap
-            </button>
+            </button> */}
           </div>
         )}
       </div>

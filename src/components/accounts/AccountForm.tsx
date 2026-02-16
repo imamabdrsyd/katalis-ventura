@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { Account, AccountType, NormalBalance } from '@/types';
+import type { Account, AccountType, NormalBalance, TransactionCategory } from '@/types';
 import { AlertCircle } from 'lucide-react';
 import * as accountsApi from '@/lib/api/accounts';
 
@@ -13,6 +13,7 @@ export interface AccountFormData {
   parent_account_id?: string;
   description?: string;
   sort_order: number;
+  default_category?: TransactionCategory;
 }
 
 interface AccountFormProps {
@@ -23,6 +24,7 @@ interface AccountFormProps {
   businessId: string;
   existingCodes: string[];
   parentAccounts: Account[]; // Main accounts (parent_account_id IS NULL)
+  parentAccountId?: string; // Pre-selected parent (when adding sub-account from card)
 }
 
 // Helper: suggest normal balance based on type
@@ -38,6 +40,7 @@ export function AccountForm({
   businessId,
   existingCodes,
   parentAccounts,
+  parentAccountId,
 }: AccountFormProps) {
   const isEditMode = !!account;
 
@@ -46,9 +49,10 @@ export function AccountForm({
     account_name: account?.account_name || '',
     account_type: account?.account_type || 'ASSET',
     normal_balance: account?.normal_balance || 'DEBIT',
-    parent_account_id: account?.parent_account_id || '',
+    parent_account_id: account?.parent_account_id || parentAccountId || '',
     description: account?.description || '',
     sort_order: account?.sort_order || 0,
+    default_category: account?.default_category,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -164,8 +168,8 @@ export function AccountForm({
             name="parent_account_id"
             value={formData.parent_account_id}
             onChange={handleChange}
-            className="input"
-            disabled={loading}
+            className={`input ${parentAccountId ? 'bg-gray-50 dark:bg-gray-700' : ''}`}
+            disabled={loading || !!parentAccountId}
             required
           >
             <option value="">Pilih kategori...</option>
@@ -175,6 +179,11 @@ export function AccountForm({
               </option>
             ))}
           </select>
+          {parentAccountId && selectedParent && (
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+              ✓ Sub-akun akan ditambahkan ke: {selectedParent.account_name}
+            </p>
+          )}
           {errors.parent_account_id && (
             <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.parent_account_id}</p>
           )}
@@ -252,6 +261,38 @@ export function AccountForm({
           placeholder="Catatan tambahan tentang akun ini"
           disabled={loading}
         />
+      </div>
+
+      {/* Default Category */}
+      <div>
+        <label className="label">
+          Kategori Transaksi Default
+          <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">(Opsional)</span>
+        </label>
+        <select
+          name="default_category"
+          value={formData.default_category || ''}
+          onChange={(e) => {
+            const value = e.target.value as TransactionCategory | '';
+            setFormData(prev => ({
+              ...prev,
+              default_category: value || undefined
+            }));
+          }}
+          className="input"
+          disabled={loading}
+        >
+          <option value="">Deteksi otomatis dari tipe akun</option>
+          <option value="EARN">EARN - Pendapatan/Penjualan</option>
+          <option value="OPEX">OPEX - Beban Operasional</option>
+          <option value="VAR">VAR - Biaya Variabel/COGS</option>
+          <option value="CAPEX">CAPEX - Belanja Modal</option>
+          <option value="TAX">TAX - Beban Pajak</option>
+          <option value="FIN">FIN - Aktivitas Pendanaan</option>
+        </select>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Kategori transaksi default ketika akun ini dipilih. Kosongkan untuk deteksi otomatis berdasarkan tipe akun.
+        </p>
       </div>
 
       {/* Actions */}

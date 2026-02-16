@@ -323,20 +323,23 @@ export class TransactionGuidanceService {
       );
     }
 
-    // Warning: Using Equity account code 3100 when recording revenue
+    // Warning: Using Equity type when recording revenue
     if (
       pattern.id === 'receive_revenue' &&
-      creditAccount?.account_code === '3100'
+      creditAccount?.account_type === 'EQUITY' &&
+      creditAccount.account_name.toLowerCase().includes('modal')
     ) {
       warnings.push(
-        'Akun Modal Pemilik (3100) dipilih sebagai kredit. Jika ini pembayaran dari customer, gunakan akun Pendapatan (4xxx) bukan Modal.'
+        'Akun Modal Pemilik dipilih sebagai kredit. Jika ini pembayaran dari customer, gunakan akun Pendapatan (4xxx) bukan Modal.'
       );
     }
 
-    // Warning: Using Expense when it should be Equity (owner withdrawal)
+    // Warning: Using Equity type (owner withdrawal/prive) in operating expenses
     if (
       pattern.id === 'pay_opex' &&
-      debitAccount?.account_code === '3300'
+      debitAccount?.account_type === 'EQUITY' &&
+      (debitAccount.account_name.toLowerCase().includes('prive') ||
+       debitAccount.account_name.toLowerCase().includes('drawing'))
     ) {
       warnings.push(
         'Akun Prive dipilih sebagai debit. Ini berarti penarikan oleh pemilik, bukan biaya operasional bisnis.'

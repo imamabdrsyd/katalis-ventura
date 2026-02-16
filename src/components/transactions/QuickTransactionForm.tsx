@@ -12,7 +12,7 @@ import {
   getFlowDirection,
   findDefaultCashAccount,
 } from '@/lib/utils/quickTransactionHelper';
-import { ChevronDown, StickyNote, Zap, ArrowDownLeft, ArrowUpRight, Search } from 'lucide-react';
+import { ChevronDown, StickyNote, Zap, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 
 interface QuickTransactionFormProps {
   onSubmit: (data: TransactionFormData) => Promise<void>;
@@ -205,27 +205,22 @@ export function QuickTransactionForm({
 
       {/* 1. JUMLAH (Rp) */}
       <div>
-        <label className="label text-base font-semibold">Jumlah (Rp) *</label>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-lg font-medium">
-            Rp
-          </span>
-          <input
-            type="text"
-            value={displayAmount}
-            onChange={handleAmountChange}
-            className={`input text-2xl font-bold pl-11 ${
-              flowDirection === 'in'
-                ? 'border-emerald-500 dark:border-emerald-400 focus:ring-emerald-500'
-                : flowDirection === 'out'
-                ? 'border-red-500 dark:border-red-400 focus:ring-red-500'
-                : ''
-            }`}
-            placeholder="0"
-            inputMode="numeric"
-            autoFocus
-          />
-        </div>
+        <label className="label text-base font-semibold">Jumlah (Rp)</label>
+        <input
+          type="text"
+          value={displayAmount}
+          onChange={handleAmountChange}
+          className={`input text-2xl font-bold ${
+            flowDirection === 'in'
+              ? 'border-emerald-500 dark:border-emerald-400 focus:ring-emerald-500'
+              : flowDirection === 'out'
+              ? 'border-red-500 dark:border-red-400 focus:ring-red-500'
+              : ''
+          }`}
+          placeholder="0"
+          inputMode="numeric"
+          autoFocus
+        />
         {errors.amount && (
           <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.amount}</p>
         )}
@@ -233,7 +228,7 @@ export function QuickTransactionForm({
 
       {/* 2. KATEGORI (Account Dropdown) */}
       <div className="relative">
-        <label className="label text-base font-semibold">Kategori *</label>
+        <label className="label text-base font-semibold">Kategori</label>
 
         {/* Dropdown trigger */}
         <button
@@ -281,18 +276,15 @@ export function QuickTransactionForm({
             <div className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-80 overflow-hidden">
               {/* Search */}
               <div className="p-2 border-b border-gray-100 dark:border-gray-700">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Cari kode atau nama akun..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:bg-white dark:focus:bg-gray-600 outline-none"
-                    onClick={(e) => e.stopPropagation()}
-                    autoFocus
-                  />
-                </div>
+                <input
+                  type="text"
+                  placeholder="Cari kode atau nama akun..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:bg-white dark:focus:bg-gray-600 outline-none"
+                  onClick={(e) => e.stopPropagation()}
+                  autoFocus
+                />
               </div>
 
               {/* Grouped account list */}
@@ -376,7 +368,7 @@ export function QuickTransactionForm({
       {/* 3. NAMA */}
       <div>
         <label className="label text-base font-semibold">
-          {flowDirection === 'in' ? 'Nama (Pemberi)' : flowDirection === 'out' ? 'Nama (Penerima)' : 'Nama'} *
+          {flowDirection === 'in' ? 'Nama (Pemberi)' : flowDirection === 'out' ? 'Nama (Penerima)' : 'Nama'}
         </label>
         <input
           type="text"
@@ -407,7 +399,7 @@ export function QuickTransactionForm({
 
       {/* 4. TANGGAL */}
       <div>
-        <label className="label text-base font-semibold">Tanggal *</label>
+        <label className="label text-base font-semibold">Tanggal</label>
         <input
           type="date"
           value={date}
@@ -462,7 +454,7 @@ export function QuickTransactionForm({
           className="btn-secondary flex-1"
           disabled={loading}
         >
-          Batal
+          Cancel
         </button>
         <button
           type="submit"
@@ -474,7 +466,7 @@ export function QuickTransactionForm({
           ) : (
             <>
               <Zap className="w-4 h-4" />
-              Simpan
+              Save
             </>
           )}
         </button>

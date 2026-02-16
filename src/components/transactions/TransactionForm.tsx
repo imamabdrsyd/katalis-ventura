@@ -198,7 +198,12 @@ export function TransactionForm({
         const creditAccount = accounts.find(acc => acc.id === formData.credit_account_id);
 
         if (debitAccount && creditAccount) {
-          submitData.category = detectCategory(debitAccount.account_code, creditAccount.account_code);
+          submitData.category = detectCategory(
+            debitAccount.account_code,
+            creditAccount.account_code,
+            debitAccount,
+            creditAccount
+          );
         }
       }
 

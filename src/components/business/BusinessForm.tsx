@@ -137,9 +137,9 @@ export function BusinessForm({
         )}
       </div>
 
-      {/* Alamat Properti */}
+      {/* Alamat */}
       <div>
-        <label className="label">Alamat Properti</label>
+        <label className="label">Alamat Usaha</label>
         <textarea
           name="property_address"
           value={formData.property_address}

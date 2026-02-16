@@ -57,11 +57,12 @@ export default function BusinessesPage() {
           transactionsByBusiness.get(t.business_id)!.push(t);
         });
 
-        // Calculate total capex per business using MODEL layer
+        // Calculate business capital = capital_investment + total capex
         const capexMap = new Map<string, number>();
         data.forEach(b => {
           const transactions = transactionsByBusiness.get(b.id) || [];
-          capexMap.set(b.id, calculateTotalCapex(transactions));
+          const totalCapex = calculateTotalCapex(transactions);
+          capexMap.set(b.id, (b.capital_investment || 0) + totalCapex);
         });
         setCapexByBusiness(capexMap);
       }
@@ -99,10 +100,10 @@ export default function BusinessesPage() {
   };
 
   const handleUpdateBusiness = async (data: BusinessFormData) => {
-    if (!editingBusiness) return;
+    if (!editingBusiness || !user) return;
     setLoading(true);
     try {
-      await businessesApi.updateBusiness(editingBusiness.id, data);
+      await businessesApi.updateBusiness(editingBusiness.id, data, user.id);
       await fetchBusinesses();
       await refetch();
       setEditingBusiness(null);

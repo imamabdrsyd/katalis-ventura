@@ -15,8 +15,8 @@ export const TRANSACTION_PATTERNS: TransactionPattern[] = [
     description: 'Pemilik menambah modal ke bisnis',
     debitAccountType: 'ASSET',
     creditAccountType: 'EQUITY',
-    suggestedDebitCodes: ['1110', '1120', '1121'], // Kas, Bank BCA, Bank Mandiri
-    suggestedCreditCodes: ['3100'], // Modal Pemilik
+    suggestedDebitCodes: ['1100', '1200'], // Cash, Bank
+    suggestedCreditCodes: [], // Will suggest any EQUITY sub-account
     examples: [
       'Setoran modal awal pemilik',
       'Tambahan modal untuk ekspansi',
@@ -30,8 +30,8 @@ export const TRANSACTION_PATTERNS: TransactionPattern[] = [
     description: 'Menerima pembayaran dari customer',
     debitAccountType: 'ASSET',
     creditAccountType: 'REVENUE',
-    suggestedDebitCodes: ['1110', '1120', '1130'], // Kas, Bank, Piutang
-    suggestedCreditCodes: ['4100', '4200', '4900'], // Pendapatan Sewa, Jasa, Lainnya
+    suggestedDebitCodes: ['1100', '1200'], // Cash, Bank
+    suggestedCreditCodes: ['4100'], // Sales Revenue (main revenue sub-account)
     examples: [
       'Pembayaran sewa bulanan',
       'Pendapatan jasa konsultasi',
@@ -45,8 +45,8 @@ export const TRANSACTION_PATTERNS: TransactionPattern[] = [
     description: 'Menerima dana pinjaman dari bank atau pihak lain',
     debitAccountType: 'ASSET',
     creditAccountType: 'LIABILITY',
-    suggestedDebitCodes: ['1110', '1120'], // Kas, Bank
-    suggestedCreditCodes: ['2100', '2200'], // Hutang Bank, Hutang Lainnya
+    suggestedDebitCodes: ['1100', '1200'], // Cash, Bank
+    suggestedCreditCodes: [], // Will suggest any LIABILITY sub-account
     examples: [
       'Pencairan KPR',
       'Pinjaman modal usaha',
@@ -64,8 +64,8 @@ export const TRANSACTION_PATTERNS: TransactionPattern[] = [
     description: 'Membayar biaya operasional rutin',
     debitAccountType: 'EXPENSE',
     creditAccountType: 'ASSET',
-    suggestedDebitCodes: ['5110', '5120', '5130', '5140', '5150'], // Various OPEX
-    suggestedCreditCodes: ['1110', '1120'], // Kas, Bank
+    suggestedDebitCodes: ['5100'], // Operating Expenses (main expense sub-account)
+    suggestedCreditCodes: ['1100', '1200'], // Cash, Bank
     examples: [
       'Bayar listrik bulanan',
       'Bayar gaji karyawan',
@@ -80,8 +80,8 @@ export const TRANSACTION_PATTERNS: TransactionPattern[] = [
     description: 'Membayar biaya yang berubah sesuai aktivitas',
     debitAccountType: 'EXPENSE',
     creditAccountType: 'ASSET',
-    suggestedDebitCodes: ['5210', '5220', '5230'], // Variable costs
-    suggestedCreditCodes: ['1110', '1120'], // Kas, Bank
+    suggestedDebitCodes: ['5100'], // Operating Expenses
+    suggestedCreditCodes: ['1100', '1200'], // Cash, Bank
     examples: [
       'Biaya cleaning per unit',
       'Supplies habis pakai',
@@ -94,8 +94,8 @@ export const TRANSACTION_PATTERNS: TransactionPattern[] = [
     description: 'Pembelian properti, peralatan, atau aset lainnya dengan kas',
     debitAccountType: 'ASSET',
     creditAccountType: 'ASSET',
-    suggestedDebitCodes: ['1210', '1220', '1230'], // Fixed assets
-    suggestedCreditCodes: ['1110', '1120'], // Kas, Bank
+    suggestedDebitCodes: [], // Will suggest any non-cash ASSET sub-account
+    suggestedCreditCodes: ['1100', '1200'], // Cash, Bank
     examples: [
       'Beli furniture untuk property',
       'Beli komputer untuk kantor',
@@ -110,8 +110,8 @@ export const TRANSACTION_PATTERNS: TransactionPattern[] = [
     description: 'Pembayaran cicilan atau pelunasan hutang',
     debitAccountType: 'LIABILITY',
     creditAccountType: 'ASSET',
-    suggestedDebitCodes: ['2100', '2200'], // Hutang Bank, Hutang Lainnya
-    suggestedCreditCodes: ['1110', '1120'], // Kas, Bank
+    suggestedDebitCodes: [], // Will suggest any LIABILITY sub-account
+    suggestedCreditCodes: ['1100', '1200'], // Cash, Bank
     examples: [
       'Bayar cicilan KPR',
       'Pelunasan hutang usaha',
@@ -125,8 +125,8 @@ export const TRANSACTION_PATTERNS: TransactionPattern[] = [
     description: 'Pembayaran pajak ke pemerintah',
     debitAccountType: 'EXPENSE',
     creditAccountType: 'ASSET',
-    suggestedDebitCodes: ['5310', '5320'], // Tax expenses
-    suggestedCreditCodes: ['1110', '1120'], // Kas, Bank
+    suggestedDebitCodes: ['5100'], // Operating Expenses
+    suggestedCreditCodes: ['1100', '1200'], // Cash, Bank
     examples: [
       'Bayar PPh Final',
       'Bayar PBB',
@@ -139,8 +139,8 @@ export const TRANSACTION_PATTERNS: TransactionPattern[] = [
     description: 'Pemilik menarik dana untuk keperluan pribadi',
     debitAccountType: 'EQUITY',
     creditAccountType: 'ASSET',
-    suggestedDebitCodes: ['3300'], // Prive / Owner Drawings
-    suggestedCreditCodes: ['1110', '1120'], // Kas, Bank
+    suggestedDebitCodes: [], // Will suggest EQUITY sub-accounts with "prive" or "drawing" in name
+    suggestedCreditCodes: ['1100', '1200'], // Cash, Bank
     examples: [
       'Ambil uang untuk kebutuhan pribadi',
       'Transfer ke rekening pribadi',
@@ -157,8 +157,8 @@ export const TRANSACTION_PATTERNS: TransactionPattern[] = [
     description: 'Mengurangi pendapatan karena retur atau koreksi',
     debitAccountType: 'REVENUE',
     creditAccountType: 'ASSET',
-    suggestedDebitCodes: ['4100', '4200'],
-    suggestedCreditCodes: ['1110', '1120', '1130'],
+    suggestedDebitCodes: ['4100'], // Sales Revenue
+    suggestedCreditCodes: ['1100', '1200'], // Cash, Bank
     examples: [
       'Pengembalian uang sewa',
       'Koreksi invoice lebih catat',
@@ -171,8 +171,8 @@ export const TRANSACTION_PATTERNS: TransactionPattern[] = [
     description: 'Menerima penggantian biaya yang sudah dikeluarkan',
     debitAccountType: 'ASSET',
     creditAccountType: 'EXPENSE',
-    suggestedDebitCodes: ['1110', '1120'],
-    suggestedCreditCodes: ['5110', '5120', '5210'],
+    suggestedDebitCodes: ['1100', '1200'], // Cash, Bank
+    suggestedCreditCodes: ['5100'], // Operating Expenses
     examples: [
       'Klaim asuransi diterima',
       'Penggantian dari penyewa',

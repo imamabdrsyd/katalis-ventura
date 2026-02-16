@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase';
 import type { Business, Database } from '@/types';
+import { getAccountByCode } from './accounts';
+import { createTransaction } from './transactions';
 
 type BusinessInsert = Database['public']['Tables']['businesses']['Insert'];
 type BusinessUpdate = Database['public']['Tables']['businesses']['Update'];
@@ -10,6 +12,103 @@ export interface CreateBusinessData {
   business_type: string;
   capital_investment?: number; // Optional for backward compatibility
   property_address?: string;
+}
+
+/**
+ * Create initial capital investment transaction (double-entry)
+ * Debit: Cash (1100) - Asset increases
+ * Credit: Equity (3000) - Owner's capital increases
+ */
+async function createCapitalInvestmentTransaction(
+  businessId: string,
+  amount: number,
+  userId: string
+): Promise<void> {
+  if (!amount || amount <= 0) return;
+
+  const supabase = createClient();
+
+  // Get Cash account (1100)
+  const cashAccount = await getAccountByCode(businessId, '1100');
+  if (!cashAccount) {
+    throw new Error('Cash account (1100) not found. Please ensure default accounts are created.');
+  }
+
+  // Get Equity parent account (3000)
+  const equityAccount = await getAccountByCode(businessId, '3000');
+  if (!equityAccount) {
+    throw new Error('Equity account (3000) not found. Please ensure default accounts are created.');
+  }
+
+  // Create the double-entry transaction
+  // Using 'FIN' category (Financing) as capital investment is a financing activity
+  await createTransaction({
+    business_id: businessId,
+    date: new Date().toISOString().split('T')[0], // Today's date
+    category: 'FIN',
+    name: 'Modal Investasi Awal',
+    description: 'Setoran modal investasi awal dari pemilik',
+    amount: amount,
+    account: 'Cash', // Legacy field
+    created_by: userId,
+    debit_account_id: cashAccount.id, // Debit Cash (Asset increases)
+    credit_account_id: equityAccount.id, // Credit Equity (Capital increases)
+    is_double_entry: true,
+    notes: 'Transaksi modal investasi awal dibuat otomatis saat pembuatan bisnis',
+  });
+}
+
+/**
+ * Update or create capital investment transaction when business is updated
+ */
+async function updateCapitalInvestmentTransaction(
+  businessId: string,
+  newAmount: number,
+  userId: string
+): Promise<void> {
+  const supabase = createClient();
+
+  // Find existing capital investment transaction
+  const { data: existingTx, error: findError } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('business_id', businessId)
+    .eq('category', 'FIN')
+    .eq('name', 'Modal Investasi Awal')
+    .is('deleted_at', null)
+    .single();
+
+  if (findError && findError.code !== 'PGRST116') {
+    throw findError;
+  }
+
+  // If no existing transaction and new amount > 0, create new transaction
+  if (!existingTx && newAmount > 0) {
+    await createCapitalInvestmentTransaction(businessId, newAmount, userId);
+    return;
+  }
+
+  // If existing transaction found
+  if (existingTx) {
+    // If new amount is 0, soft delete the transaction
+    if (newAmount <= 0) {
+      await supabase.rpc('soft_delete_transaction', {
+        transaction_id: existingTx.id,
+      });
+      return;
+    }
+
+    // Update existing transaction amount
+    const { error: updateError } = await supabase
+      .from('transactions')
+      .update({
+        amount: newAmount,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existingTx.id);
+
+    if (updateError) throw updateError;
+  }
 }
 
 export async function getUserBusinesses(
@@ -91,14 +190,30 @@ export async function createBusiness(
     // Don't throw - allow business creation to succeed even if accounts fail
   }
 
+  // Create capital investment transaction if amount > 0
+  // This must happen AFTER accounts are created
+  try {
+    await createCapitalInvestmentTransaction(
+      newBusiness.id,
+      business.capital_investment || 0,
+      userId
+    );
+  } catch (error) {
+    console.warn('Failed to create capital investment transaction:', error);
+    // Don't throw - allow business creation to succeed
+  }
+
   return newBusiness;
 }
 
 export async function updateBusiness(
   businessId: string,
-  updates: BusinessUpdate
+  updates: BusinessUpdate,
+  userId?: string
 ): Promise<Business> {
   const supabase = createClient();
+
+  // Update business
   const { data, error } = await supabase
     .from('businesses')
     .update(updates)
@@ -107,6 +222,20 @@ export async function updateBusiness(
     .single();
 
   if (error) throw error;
+
+  // If capital_investment was updated and userId is provided, update the transaction
+  if (updates.capital_investment !== undefined && userId) {
+    try {
+      await updateCapitalInvestmentTransaction(
+        businessId,
+        updates.capital_investment,
+        userId
+      );
+    } catch (error) {
+      console.warn('Failed to update capital investment transaction:', error);
+      // Don't throw - allow business update to succeed
+    }
+  }
 
   return data;
 }

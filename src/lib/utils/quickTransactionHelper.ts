@@ -34,34 +34,40 @@ export interface ResolvedTransaction {
 
 /**
  * Find the default cash/bank account for counter-entry.
- * Prefers 1120 (Bank BCA), falls back to first active cash/bank account.
+ * Looks for active ASSET sub-accounts (accounts with parent_account_id).
+ * Prefers 1200 (Bank), falls back to 1100 (Cash), or first available.
  */
 export function findDefaultCashAccount(accounts: Account[]): Account | null {
   const cashBankAccounts = accounts
     .filter(
       (acc) =>
         acc.is_active &&
-        acc.account_code >= '1110' &&
-        acc.account_code <= '1132'
+        acc.account_type === 'ASSET' &&
+        acc.parent_account_id != null // Only sub-accounts, not main "Assets" parent
     )
     .sort((a, b) => a.sort_order - b.sort_order);
 
-  // Prefer 1120 (Bank BCA) as default
-  const preferred = cashBankAccounts.find((acc) => acc.account_code === '1120');
-  return preferred || cashBankAccounts[0] || null;
+  // Prefer Bank (1200) over Cash (1100)
+  const bank = cashBankAccounts.find((acc) => acc.account_code === '1200');
+  if (bank) return bank;
+
+  const cash = cashBankAccounts.find((acc) => acc.account_code === '1100');
+  if (cash) return cash;
+
+  // Fallback to first available
+  return cashBankAccounts[0] || null;
 }
 
 /**
  * Determines the debit and credit side based on the selected account type.
  *
  * Rules:
- * - REVENUE (4xxx)          -> Debit: Cash, Credit: Selected  (money IN)
- * - EXPENSE (5xxx)          -> Debit: Selected, Credit: Cash  (money OUT)
- * - ASSET Fixed (12xx)      -> Debit: Selected, Credit: Cash  (buy asset)
- * - LIABILITY (2xxx)        -> Debit: Cash, Credit: Selected  (receive loan)
- * - EQUITY Capital (3100)   -> Debit: Cash, Credit: Selected  (capital injection)
- * - EQUITY Drawings (3300)  -> Debit: Selected, Credit: Cash  (owner withdrawal)
- * - EQUITY Retained (3200)  -> Debit: Cash, Credit: Selected  (retained earnings adj)
+ * - REVENUE              -> Debit: Cash, Credit: Selected  (money IN)
+ * - EXPENSE              -> Debit: Selected, Credit: Cash  (money OUT)
+ * - ASSET (non-cash)     -> Debit: Selected, Credit: Cash  (buy asset)
+ * - LIABILITY            -> Debit: Cash, Credit: Selected  (receive loan)
+ * - EQUITY (capital)     -> Debit: Cash, Credit: Selected  (capital injection)
+ * - EQUITY (drawings)    -> Debit: Selected, Credit: Cash  (owner withdrawal)
  */
 function resolveDebitCredit(
   selectedAccount: Account,
@@ -69,12 +75,15 @@ function resolveDebitCredit(
 ): { debitAccountId: string; creditAccountId: string; debitCode: string; creditCode: string } {
   const code = selectedAccount.account_code;
   const type = selectedAccount.account_type;
+  const name = selectedAccount.account_name.toLowerCase();
 
-  // EXPENSE or Owner Drawings or Fixed Assets -> money goes OUT from cash
+  // EXPENSE -> money goes OUT from cash
+  // EQUITY Drawings/Prive -> money goes OUT from cash
+  // ASSET (non-cash like fixed assets) -> money goes OUT from cash (purchase)
   if (
     type === 'EXPENSE' ||
-    code === '3300' ||
-    (type === 'ASSET' && code >= '1200' && code <= '1299')
+    (type === 'EQUITY' && (name.includes('prive') || name.includes('drawing'))) ||
+    (type === 'ASSET' && code !== '1100' && code !== '1200') // Non-cash assets
   ) {
     return {
       debitAccountId: selectedAccount.id,
@@ -84,8 +93,7 @@ function resolveDebitCredit(
     };
   }
 
-  // REVENUE, LIABILITY, EQUITY (non-drawings) -> money comes IN to cash
-  // Also ASSET cash-to-cash transfers are excluded (handled by filter)
+  // REVENUE, LIABILITY, EQUITY (capital/retained) -> money comes IN to cash
   return {
     debitAccountId: cashAccount.id,
     creditAccountId: selectedAccount.id,
@@ -98,15 +106,15 @@ function resolveDebitCredit(
  * Determine a human-readable flow label for the selected account.
  */
 export function getFlowLabel(account: Account): string {
-  const code = account.account_code;
   const type = account.account_type;
+  const name = account.account_name.toLowerCase();
 
   if (type === 'REVENUE') return 'Uang Masuk';
   if (type === 'EXPENSE') return 'Uang Keluar';
   if (type === 'LIABILITY') return 'Terima Pinjaman';
-  if (type === 'EQUITY' && code === '3300') return 'Penarikan Prive';
+  if (type === 'EQUITY' && (name.includes('prive') || name.includes('drawing'))) return 'Penarikan Prive';
   if (type === 'EQUITY') return 'Suntik Modal';
-  if (type === 'ASSET' && code >= '1200') return 'Beli Aset';
+  if (type === 'ASSET' && account.account_code !== '1100' && account.account_code !== '1200') return 'Beli Aset';
   return 'Transaksi';
 }
 
@@ -114,13 +122,13 @@ export function getFlowLabel(account: Account): string {
  * Determine whether this is a "money in" or "money out" flow.
  */
 export function getFlowDirection(account: Account): 'in' | 'out' {
-  const code = account.account_code;
   const type = account.account_type;
+  const name = account.account_name.toLowerCase();
 
   if (
     type === 'EXPENSE' ||
-    code === '3300' ||
-    (type === 'ASSET' && code >= '1200' && code <= '1299')
+    (type === 'EQUITY' && (name.includes('prive') || name.includes('drawing'))) ||
+    (type === 'ASSET' && account.account_code !== '1100' && account.account_code !== '1200')
   ) {
     return 'out';
   }
@@ -146,10 +154,8 @@ export function resolveQuickTransaction(
   }
 
   // Don't allow selecting cash/bank as the category (it would be same-account)
-  if (
-    selectedAccount.account_code >= '1110' &&
-    selectedAccount.account_code <= '1132'
-  ) {
+  // Check if it's the same as the default cash account
+  if (selectedAccount.id === cashAccount.id) {
     return { error: 'Tidak bisa memilih akun kas/bank sebagai kategori. Gunakan form lengkap untuk transfer antar rekening.' };
   }
 
@@ -158,7 +164,15 @@ export function resolveQuickTransaction(
     cashAccount
   );
 
-  const category = detectCategory(debitCode, creditCode);
+  // Find full account objects to check for default_category
+  const debitAccount = debitAccountId === selectedAccount.id
+    ? selectedAccount
+    : cashAccount;
+  const creditAccount = creditAccountId === selectedAccount.id
+    ? selectedAccount
+    : cashAccount;
+
+  const category = detectCategory(debitCode, creditCode, debitAccount, creditAccount);
 
   return {
     date: input.date,
@@ -175,13 +189,20 @@ export function resolveQuickTransaction(
 
 /**
  * Filter accounts suitable for the quick-add "Kategori" dropdown.
- * Excludes cash/bank accounts (they are the implicit counter-account).
+ * Only shows sub-accounts (with parent_account_id), excluding main parent accounts.
+ * Excludes Cash (1100) and Bank (1200) since they are used as the automatic counter-account.
  */
 export function getQuickAddAccounts(accounts: Account[]): Account[] {
+  // Find the default cash/bank account to exclude it
+  const defaultCash = findDefaultCashAccount(accounts);
+
   return accounts.filter((acc) => {
     if (!acc.is_active) return false;
-    // Exclude cash & bank accounts (1110-1132) - these are counter-accounts
-    if (acc.account_code >= '1110' && acc.account_code <= '1132') return false;
+    if (!acc.parent_account_id) return false; // Exclude main parent accounts (1000, 2000, etc.)
+    // Exclude the default counter-account (Cash/Bank) to prevent same-account transactions
+    if (defaultCash && acc.id === defaultCash.id) return false;
+    // Also exclude the other cash/bank account (both 1100 and 1200 are counter-accounts)
+    if (acc.account_code === '1100' || acc.account_code === '1200') return false;
     return true;
   });
 }
