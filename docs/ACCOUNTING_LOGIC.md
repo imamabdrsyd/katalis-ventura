@@ -30,10 +30,10 @@
 │  TransactionForm.tsx  │  QuickTransactionForm.tsx  │  Reports   │
 └──────────┬────────────┴──────────────┬─────────────┴────┬───────┘
            │                           │                  │
-┌──────────▼───────────────────────────▼──────────────────▼───────┐
+┌──────────▼───────────────────────────▼──────────────────▼────────┐
 │                     MODEL LAYER (src/lib/)                       │
 │                                                                  │
-│  ┌─────────────────────┐  ┌──────────────────────────────────┐  │
+│  ┌──────────────────────┐  ┌──────────────────────────────────┐  │
 │  │ accounting/          │  │ calculations.ts                  │  │
 │  │  ├── constants.ts    │  │  ├── calculateFinancialSummary() │  │
 │  │  ├── types.ts        │  │  ├── calculateBalanceSheet()     │  │
@@ -42,32 +42,32 @@
 │  │  └── guidance/       │  │  └── calculateROI()              │  │
 │  │      ├── patterns.ts │  └──────────────────────────────────┘  │
 │  │      └── suggest.ts  │                                        │
-│  └─────────────────────┘  ┌──────────────────────────────────┐  │
-│                            │ utils/                            │  │
-│                            │  ├── transactionHelpers.ts        │  │
-│                            │  └── quickTransactionHelper.ts    │  │
+│  └──────────────────────┘  ┌──────────────────────────────────┐  │
+│                            │ utils/                           │  │
+│                            │  ├── transactionHelpers.ts       │  │
+│                            │  └── quickTransactionHelper.ts   │  │
 │                            └──────────────────────────────────┘  │
 └──────────┬───────────────────────────────────────────────────────┘
            │
 ┌──────────▼───────────────────────────────────────────────────────┐
-│                     API LAYER (app/api/)                          │
+│                     API LAYER (app/api/)                         │
 │  ┌─────────────────────────┐  ┌───────────────────────────────┐  │
 │  │ /api/transactions       │  │ /api/transactions/[id]        │  │
 │  │  POST (create)          │  │  PUT (update)                 │  │
-│  │  GET  (list)            │  │  DELETE (soft-delete)          │  │
+│  │  GET  (list)            │  │  DELETE (soft-delete)         │  │
 │  └─────────────────────────┘  └───────────────────────────────┘  │
 └──────────┬───────────────────────────────────────────────────────┘
            │
 ┌──────────▼───────────────────────────────────────────────────────┐
-│                     DATABASE LAYER (Supabase/PostgreSQL)          │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐  │
-│  │ transactions  │  │ accounts     │  │ audit_logs             │  │
-│  │ (debit/credit │  │ (CoA per     │  │ (auto-tracked changes) │  │
-│  │  account_id)  │  │  business)   │  │                        │  │
-│  └──────────────┘  └──────────────┘  └────────────────────────┘  │
-│                                                                   │
-│  Constraints: check_different_accounts, RLS, FK to accounts       │
-└───────────────────────────────────────────────────────────────────┘
+│                     DATABASE LAYER (Supabase/PostgreSQL)         │
+│  ┌───────────────┐  ┌──────────────┐  ┌────────────────────────┐ │
+│  │ transactions  │  │ accounts     │  │ audit_logs             │ │
+│  │ (debit/credit │  │ (CoA per     │  │ (auto-tracked changes) │ │
+│  │  account_id)  │  │  business)   │  │                        │ │
+│  └───────────────┘  └──────────────┘  └────────────────────────┘ │
+│                                                                  │
+│  Constraints: check_different_accounts, RLS, FK to accounts      │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 **File Map:**
@@ -577,61 +577,33 @@ EBIT dihapus dari `IncomeStatementMetrics` dan seluruh UI. Income statement seka
 
 ---
 
-### Open Issues (Belum Diperbaiki)
+### 11.5 Issue #5: Revenue Debit Tidak Dikurangi di Balance Sheet — ✅ RESOLVED
 
-### 11.5 Issue #5: Revenue Debit Tidak Dikurangi di Balance Sheet
-
-**Severity: MEDIUM**
+**Severity: MEDIUM** → **Fixed**
 **File:** `src/lib/calculations.ts`
 
-Ketika debit account type = REVENUE (retur/koreksi), `totalRevenue` tidak dikurangi. Hanya REVENUE di credit side yang ditambahkan ke `totalRevenue`.
-
-```typescript
-// Debit side - REVENUE case MISSING:
-case 'EXPENSE':
-  totalExpenses += amount;
-  break;
-// Tidak ada case 'REVENUE': totalRevenue -= amount
-
-// Credit side - REVENUE handled:
-case 'REVENUE':
-  totalRevenue += amount;
-  break;
-```
-
-**Dampak:** Jika ada retur pendapatan (Debit Revenue, Credit Cash), retained earnings tetap terlalu tinggi → neraca bisa tidak seimbang.
+**Problem:** Debit switch tidak handle REVENUE, credit switch tidak handle EXPENSE.
+**Fix:** Ditambahkan `case 'REVENUE': totalRevenue -= amount` di debit side dan `case 'EXPENSE': totalExpenses -= amount` di credit side. Retained earnings sekarang akurat untuk retur/koreksi.
 
 ---
 
-### 11.6 Issue #6: detectCategory Priority Bisa Salah
+### 11.6 Issue #6: detectCategory Priority Bisa Salah — ✅ RESOLVED
 
-**Severity: LOW**
-**File:** `src/lib/utils/transactionHelpers.ts:33-38`
+**Severity: LOW** → **Fixed**
+**File:** `src/lib/utils/transactionHelpers.ts`
 
-```typescript
-if (debitAccount?.default_category) return debitAccount.default_category;
-if (creditAccount?.default_category) return creditAccount.default_category;
-```
-
-Jika debit account (biasanya Cash/Bank) punya `default_category`, ia akan override credit account yang lebih spesifik. Saat ini aman karena Cash/Bank tidak punya `default_category`, tapi bisa bermasalah jika user menambahkan custom ASSET account dengan `default_category`.
+**Problem:** `debitAccount.default_category` dicek duluan, bisa override akun non-cash yang lebih spesifik.
+**Fix:** Cash/Bank accounts (1100, 1200) sekarang di-skip saat priority check. Non-cash account's `default_category` selalu diprioritaskan.
 
 ---
 
-### 11.7 Issue #7: Fixed Asset Code Range Fragile
+### 11.7 Issue #7: Fixed Asset Code Range Fragile — ✅ RESOLVED
 
-**Severity: LOW**
+**Severity: LOW** → **Fixed**
 **File:** `src/lib/calculations.ts`
 
-```typescript
-const debitCode = parseInt(debitAccount.account_code);
-if (debitCode > 1200 && debitCode < 1300) {
-  totalProperty += amount;
-}
-```
-
-Hardcoded range `1201-1299` untuk fixed assets. Jika user membuat sub-account `1201` yang bukan fixed asset, akan salah di-tracking.
-
-**Rekomendasi:** Gunakan `account_type` + parent account relationship, bukan string-based code range.
+**Problem:** Hardcoded `1201-1299` range untuk fixed assets.
+**Fix:** Diganti dengan logic "any ASSET account that is not Cash (1100) or Bank (1200)". Sekarang support user-created asset accounts (1300 Fixed Assets, 1400 Vehicles, 1500 Inventory, dsb).
 
 ---
 

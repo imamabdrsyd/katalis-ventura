@@ -15,12 +15,41 @@ function getAccountTypeFromCode(code: string): string {
 
 /**
  * Auto-detect transaction category based on debit and credit account codes
+ *
+ * Priority:
+ * 1. Check if accounts have default_category set (most specific)
+ * 2. Fall back to account type + code based detection
+ *
  * Uses account_type-based logic for flexibility with user-created sub-accounts
  */
 export function detectCategory(
   debitAccountCode: string,
-  creditAccountCode: string
+  creditAccountCode: string,
+  debitAccount?: Account,  // Optional: full account object with default_category
+  creditAccount?: Account  // Optional: full account object with default_category
 ): TransactionCategory {
+  // Priority 1: Check if accounts have explicit default_category
+  // Skip cash/bank accounts (1100, 1200) - they don't determine transaction category
+  const CASH_CODES = ['1100', '1200'];
+  const debitIsCash = CASH_CODES.includes(debitAccountCode);
+  const creditIsCash = CASH_CODES.includes(creditAccountCode);
+
+  // Prefer the non-cash account's default_category
+  if (!debitIsCash && debitAccount?.default_category) {
+    return debitAccount.default_category;
+  }
+  if (!creditIsCash && creditAccount?.default_category) {
+    return creditAccount.default_category;
+  }
+  // If both are non-cash, fallback to whichever has a category
+  if (debitAccount?.default_category) {
+    return debitAccount.default_category;
+  }
+  if (creditAccount?.default_category) {
+    return creditAccount.default_category;
+  }
+
+  // Priority 2: Fall back to account type detection
   const debitType = getAccountTypeFromCode(debitAccountCode);
   const creditType = getAccountTypeFromCode(creditAccountCode);
 
@@ -28,6 +57,7 @@ export function detectCategory(
   if (debitType === 'ASSET') {
     if (creditType === 'REVENUE') return 'EARN';
     if (creditType === 'LIABILITY') return 'FIN'; // Loan received
+    if (creditType === 'EQUITY') return 'FIN'; // Capital injection
   }
 
   // Money OUT flow: Asset credit (paying from bank/cash)

@@ -40,6 +40,7 @@ export function calculateFinancialSummary(
     totalCapex: 0,
     totalTax: 0,
     totalFin: 0,
+    totalInterest: 0,
     netProfit: 0,
     grossProfit: 0,
   };
@@ -64,6 +65,16 @@ export function calculateFinancialSummary(
         break;
       case 'FIN':
         summary.totalFin += amount;
+        // Only count FIN as interest expense if it debits an EXPENSE account
+        // (interest payments). FIN that touches EQUITY/LIABILITY (capital injection,
+        // loan received, loan repayment) should NOT be in income statement.
+        if (t.is_double_entry && t.debit_account?.account_type === 'EXPENSE') {
+          summary.totalInterest += amount;
+        }
+        // For legacy transactions, include in totalInterest (backward compatibility)
+        if (!t.is_double_entry) {
+          summary.totalInterest += amount;
+        }
         break;
     }
   });
@@ -74,7 +85,7 @@ export function calculateFinancialSummary(
     summary.totalOpex -
     summary.totalVar -
     summary.totalTax -
-    summary.totalFin;
+    summary.totalInterest; // Use totalInterest instead of totalFin
 
   return summary;
 }
@@ -84,7 +95,7 @@ export function calculateIncomeStatementMetrics(
   summary: FinancialSummary
 ): IncomeStatementMetrics {
   const operatingIncome = summary.grossProfit - summary.totalOpex;
-  const ebt = operatingIncome - summary.totalFin;
+  const ebt = operatingIncome - summary.totalInterest; // Use totalInterest instead of totalFin
   const grossMargin = summary.totalEarn > 0 ? (summary.grossProfit / summary.totalEarn) * 100 : 0;
   const operatingMargin = summary.totalEarn > 0 ? (operatingIncome / summary.totalEarn) * 100 : 0;
   const netMargin = summary.totalEarn > 0 ? (summary.netProfit / summary.totalEarn) * 100 : 0;
@@ -126,6 +137,7 @@ export function groupTransactionsByMonth(
         capex: 0,
         tax: 0,
         fin: 0,
+        interest: 0,
         netProfit: 0,
       });
     }
@@ -151,11 +163,19 @@ export function groupTransactionsByMonth(
         break;
       case 'FIN':
         monthData.fin += amount;
+        // Only count FIN as interest if it debits an EXPENSE account
+        if (t.is_double_entry && t.debit_account?.account_type === 'EXPENSE') {
+          monthData.interest += amount;
+        }
+        // For legacy transactions, include in interest (backward compatibility)
+        if (!t.is_double_entry) {
+          monthData.interest += amount;
+        }
         break;
     }
 
     monthData.netProfit =
-      monthData.earn - monthData.opex - monthData.var - monthData.tax - monthData.fin;
+      monthData.earn - monthData.opex - monthData.var - monthData.tax - monthData.interest;
   });
 
   return Array.from(monthMap.values()).sort((a, b) => a.month.localeCompare(b.month));
@@ -234,10 +254,11 @@ export function calculateTotalCapex(transactions: Transaction[]): number {
 
       if (t.category === 'CAPEX') return true;
 
-      // Check if double-entry transaction debits to Fixed Assets
+      // Check if double-entry transaction debits to a non-cash ASSET (fixed asset purchase)
       if (t.is_double_entry && t.debit_account) {
-        const code = t.debit_account.account_code;
-        return code >= '1200' && code < '1300';
+        return t.debit_account.account_type === 'ASSET'
+          && t.debit_account.account_code !== '1100'
+          && t.debit_account.account_code !== '1200';
       }
 
       return false;
@@ -280,9 +301,8 @@ export function calculateBalanceSheet(
           if (debitAccount.account_code === '1100' || debitAccount.account_code === '1200') {
             totalCash += amount;
           }
-          // Track property separately (Fixed Assets: 1200-1299 range, excluding Bank at 1200)
-          const debitCode = parseInt(debitAccount.account_code);
-          if (debitCode > 1200 && debitCode < 1300) {
+          // Track property: any non-cash ASSET account (not 1100/1200)
+          if (debitAccount.account_code !== '1100' && debitAccount.account_code !== '1200') {
             totalProperty += amount;
           }
           break;
@@ -297,6 +317,10 @@ export function calculateBalanceSheet(
         case 'EXPENSE':
           totalExpenses += amount;
           break;
+        case 'REVENUE':
+          // Debit to revenue decreases it (sales returns, reversals)
+          totalRevenue -= amount;
+          break;
       }
     }
 
@@ -309,9 +333,8 @@ export function calculateBalanceSheet(
           if (creditAccount.account_code === '1100' || creditAccount.account_code === '1200') {
             totalCash -= amount;
           }
-          // Track property separately (Fixed Assets: 1200-1299 range, excluding Bank at 1200)
-          const creditCode = parseInt(creditAccount.account_code);
-          if (creditCode > 1200 && creditCode < 1300) {
+          // Track property: any non-cash ASSET account (not 1100/1200)
+          if (creditAccount.account_code !== '1100' && creditAccount.account_code !== '1200') {
             totalProperty -= amount;
           }
           break;
@@ -325,6 +348,10 @@ export function calculateBalanceSheet(
           break;
         case 'REVENUE':
           totalRevenue += amount;
+          break;
+        case 'EXPENSE':
+          // Credit to expense decreases it (refunds, reversals)
+          totalExpenses -= amount;
           break;
       }
     }

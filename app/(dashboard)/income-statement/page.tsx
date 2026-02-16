@@ -246,9 +246,9 @@ export default function IncomeStatementPage() {
               <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Financing Costs</h3>
             </div>
             <div className="flex justify-between py-2 pl-4">
-              <span className="text-gray-700 dark:text-gray-300">Interest & Financing</span>
+              <span className="text-gray-700 dark:text-gray-300">Interest & Financing Expenses</span>
               <span className="font-semibold text-red-600 dark:text-red-400">
-                ({formatCurrency(summary.totalFin)})
+                ({formatCurrency(summary.totalInterest)})
               </span>
             </div>
           </div>

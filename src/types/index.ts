@@ -178,7 +178,8 @@ export interface FinancialSummary {
   totalVar: number;
   totalCapex: number;
   totalTax: number;
-  totalFin: number;
+  totalFin: number; // All FIN transactions (for cash flow, includes equity/liability movements)
+  totalInterest: number; // Only FIN transactions that are EXPENSE type (interest/financing costs for income statement)
   netProfit: number;
   grossProfit: number;
 }
@@ -190,7 +191,8 @@ export interface MonthlyData {
   var: number;
   capex: number;
   tax: number;
-  fin: number;
+  fin: number; // All FIN transactions (for display/tracking)
+  interest: number; // Only interest expense (for net profit calculation)
   netProfit: number;
 }
 
