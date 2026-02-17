@@ -30,6 +30,7 @@ import {
   X,
   Settings,
   BookOpen,
+  BookOpenCheck,
   Zap,
 } from 'lucide-react';
 
@@ -80,6 +81,7 @@ const navSections: NavSection[] = [
       { href: '/income-statement', label: 'Income Statement', icon: DollarSign },
       { href: '/balance-sheet', label: 'Balance Sheet', icon: Scale },
       { href: '/cash-flow', label: 'Cash Flow', icon: ArrowLeftRight },
+      { href: '/general-ledger', label: 'General Ledger', icon: BookOpenCheck },
     ],
   },
   {
@@ -245,7 +247,7 @@ function Header({ onMenuClick, onQuickAddClick }: { onMenuClick: () => void; onQ
         {canManage && activeBusiness && (
           <button
             onClick={onQuickAddClick}
-            className="hidden md:flex px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors items-center gap-2 font-medium shadow-sm"
+            className="hidden md:flex px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors items-center gap-2 font-medium shadow-sm"
           >
             <Zap className="h-4 w-4" />
             Quick Entry
