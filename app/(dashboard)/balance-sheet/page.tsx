@@ -171,6 +171,36 @@ export default function BalanceSheetPage() {
                   {formatCurrency(balanceSheet.assets.cash)}
                 </span>
               </div>
+              {balanceSheet.assets.inventory !== 0 && (
+                <div className="flex justify-between py-2 pl-4">
+                  <span className="text-gray-700 dark:text-gray-300">Persediaan</span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    {formatCurrency(balanceSheet.assets.inventory)}
+                  </span>
+                </div>
+              )}
+              {balanceSheet.assets.receivables !== 0 && (
+                <div className="flex justify-between py-2 pl-4">
+                  <span className="text-gray-700 dark:text-gray-300">Piutang Usaha</span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    {formatCurrency(balanceSheet.assets.receivables)}
+                  </span>
+                </div>
+              )}
+              {balanceSheet.assets.otherCurrentAssets !== 0 && (
+                <div className="flex justify-between py-2 pl-4">
+                  <span className="text-gray-700 dark:text-gray-300">Aset Lancar Lainnya</span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    {formatCurrency(balanceSheet.assets.otherCurrentAssets)}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between py-2 pl-4 border-t border-gray-200 dark:border-gray-700 font-semibold">
+                <span className="text-gray-800 dark:text-gray-200">Total Aset Lancar</span>
+                <span className="text-gray-900 dark:text-gray-100">
+                  {formatCurrency(balanceSheet.assets.totalCurrentAssets)}
+                </span>
+              </div>
             </div>
 
             {/* Fixed Assets */}
@@ -179,7 +209,13 @@ export default function BalanceSheetPage() {
               <div className="flex justify-between py-2 pl-4">
                 <span className="text-gray-700 dark:text-gray-300">Properti & Peralatan</span>
                 <span className="font-semibold text-gray-900 dark:text-gray-100">
-                  {formatCurrency(balanceSheet.assets.propertyValue)}
+                  {formatCurrency(balanceSheet.assets.fixedAssets)}
+                </span>
+              </div>
+              <div className="flex justify-between py-2 pl-4 border-t border-gray-200 dark:border-gray-700 font-semibold">
+                <span className="text-gray-800 dark:text-gray-200">Total Aset Tetap</span>
+                <span className="text-gray-900 dark:text-gray-100">
+                  {formatCurrency(balanceSheet.assets.totalFixedAssets)}
                 </span>
               </div>
             </div>
@@ -225,11 +261,19 @@ export default function BalanceSheetPage() {
               <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Ekuitas (Modal)</h3>
               <div className="space-y-2">
                 <div className="flex justify-between py-2 pl-4">
-                  <span className="text-gray-700 dark:text-gray-300">Modal Awal</span>
+                  <span className="text-gray-700 dark:text-gray-300">Modal Disetor</span>
                   <span className="font-semibold text-gray-900 dark:text-gray-100">
                     {formatCurrency(balanceSheet.equity.capital)}
                   </span>
                 </div>
+                {balanceSheet.equity.drawings > 0 && (
+                  <div className="flex justify-between py-2 pl-4">
+                    <span className="text-gray-700 dark:text-gray-300">Prive / Dividen</span>
+                    <span className="font-semibold text-red-600 dark:text-red-400">
+                      ({formatCurrency(balanceSheet.equity.drawings)})
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between py-2 pl-4">
                   <span className="text-gray-700 dark:text-gray-300">Laba Ditahan</span>
                   <span className={`font-semibold ${
@@ -237,7 +281,9 @@ export default function BalanceSheetPage() {
                       ? 'text-emerald-600 dark:text-emerald-400'
                       : 'text-red-600 dark:text-red-400'
                   }`}>
-                    {formatCurrency(balanceSheet.equity.retainedEarnings)}
+                    {balanceSheet.equity.retainedEarnings < 0 ? '(' : ''}
+                    {formatCurrency(Math.abs(balanceSheet.equity.retainedEarnings))}
+                    {balanceSheet.equity.retainedEarnings < 0 ? ')' : ''}
                   </span>
                 </div>
               </div>

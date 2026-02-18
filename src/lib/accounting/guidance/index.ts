@@ -5,3 +5,5 @@ export {
   findMatchingPatterns,
   detectPatternFromName,
 } from './transactionPatterns';
+export { detectMatchingPrincipleWarning } from './matchingPrincipleWarning';
+export type { MatchingPrincipleWarning } from './matchingPrincipleWarning';

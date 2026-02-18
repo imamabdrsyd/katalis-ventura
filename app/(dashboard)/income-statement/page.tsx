@@ -1,9 +1,93 @@
 'use client';
 
-import { Calendar, TrendingUp, TrendingDown, Download, FileText, FileSpreadsheet } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, Download, FileText, FileSpreadsheet, Info } from 'lucide-react';
 import { useIncomeStatement } from '@/hooks/useIncomeStatement';
 import { formatCurrency } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
+import type { Transaction } from '@/types';
+
+function TransactionList({ transactions }: { transactions: Transaction[] }) {
+  const MAX_SHOWN = 5;
+  const shown = transactions.slice(0, MAX_SHOWN);
+  const remaining = transactions.length - MAX_SHOWN;
+
+  if (transactions.length === 0) {
+    return <p className="text-gray-400 italic">Tidak ada transaksi</p>;
+  }
+
+  return (
+    <div className="space-y-1.5">
+      {shown.map((t) => (
+        <div key={t.id} className="flex justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-white truncate font-medium">{t.name}</p>
+            {t.description && (
+              <p className="text-gray-400 truncate text-[10px]">{t.description}</p>
+            )}
+            <p className="text-gray-500 text-[10px]">
+              {new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </p>
+          </div>
+          <span className="shrink-0 text-right font-medium text-[11px] text-white">
+            {formatCurrency(t.amount)}
+          </span>
+        </div>
+      ))}
+      {remaining > 0 && (
+        <p className="text-gray-400 text-[10px] pt-1 border-t border-gray-700">
+          +{remaining} transaksi lainnya...
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Tooltip({ title, color, transactions, formula, breakdown }: {
+  title: string;
+  color: string;
+  transactions?: Transaction[];
+  formula?: string;
+  breakdown?: { label: string; value: number; color: 'green' | 'red' | 'white' }[];
+}) {
+  return (
+    <div className="absolute left-0 bottom-full mb-2 z-50 hidden group-hover:block w-80 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg p-3 shadow-xl pointer-events-none">
+      <p className={`font-semibold mb-2 ${color}`}>{title}</p>
+
+      {formula && (
+        <>
+          <p className="text-gray-400 mb-0.5">Formula:</p>
+          <p className="text-white font-medium mb-2">{formula}</p>
+        </>
+      )}
+
+      {breakdown && (
+        <div className="space-y-1 mb-2">
+          {breakdown.map((item, i) => (
+            <div key={i} className="flex justify-between text-[11px]">
+              <span className="text-gray-300">{item.label}</span>
+              <span className={
+                item.color === 'green' ? 'text-green-300' :
+                item.color === 'red' ? 'text-red-300' : 'text-white font-semibold'
+              }>{item.color === 'red' ? `−${formatCurrency(item.value)}` : formatCurrency(item.value)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {transactions !== undefined && (
+        <>
+          {breakdown && <div className="border-t border-gray-700 my-2" />}
+          <p className="text-gray-400 mb-1.5">
+            Dari {transactions.length} transaksi:
+          </p>
+          <TransactionList transactions={transactions} />
+        </>
+      )}
+
+      <div className="absolute left-4 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-900 dark:border-t-gray-800"></div>
+    </div>
+  );
+}
 
 export default function IncomeStatementPage() {
   const {
@@ -21,6 +105,7 @@ export default function IncomeStatementPage() {
     handlePeriodChange,
     summary,
     metrics,
+    transactionsByCategory,
     handleExportPDF,
     handleExportExcel,
   } = useIncomeStatement();
@@ -166,11 +251,19 @@ export default function IncomeStatementPage() {
             <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
               <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Revenue</h3>
             </div>
-            <div className="flex justify-between py-2 pl-4">
-              <span className="text-gray-700 dark:text-gray-300">Earnings</span>
+            <div className="relative group flex justify-between py-2 pl-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded cursor-default">
+              <span className="text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                Earnings
+                <Info className="w-3 h-3 text-gray-400 dark:text-gray-500" />
+              </span>
               <span className="font-semibold text-green-600 dark:text-green-400">
                 {formatCurrency(summary.totalEarn)}
               </span>
+              <Tooltip
+                title="Earnings / Revenue (EARN)"
+                color="text-green-300"
+                transactions={transactionsByCategory.revenue}
+              />
             </div>
             <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700">
               <span className="text-gray-800 dark:text-gray-100">Total Revenue</span>
@@ -183,11 +276,19 @@ export default function IncomeStatementPage() {
             <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
               <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Cost of Goods Sold</h3>
             </div>
-            <div className="flex justify-between py-2 pl-4">
-              <span className="text-gray-700 dark:text-gray-300">Variable Costs</span>
+            <div className="relative group flex justify-between py-2 pl-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded cursor-default">
+              <span className="text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                Variable Costs
+                <Info className="w-3 h-3 text-gray-400 dark:text-gray-500" />
+              </span>
               <span className="font-semibold text-red-600 dark:text-red-400">
                 ({formatCurrency(summary.totalVar)})
               </span>
+              <Tooltip
+                title="Variable Costs / COGS (VAR)"
+                color="text-red-300"
+                transactions={transactionsByCategory.cogs}
+              />
             </div>
             <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700">
               <span className="text-gray-800 dark:text-gray-100">Total COGS</span>
@@ -196,10 +297,13 @@ export default function IncomeStatementPage() {
           </div>
 
           {/* GROSS PROFIT */}
-          <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4">
+          <div className="relative group bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 hover:bg-indigo-100/70 dark:hover:bg-indigo-900/30 cursor-default">
             <div className="flex justify-between items-center">
               <div>
-                <h3 className="font-bold text-indigo-900 dark:text-indigo-100 text-lg">GROSS PROFIT</h3>
+                <h3 className="font-bold text-indigo-900 dark:text-indigo-100 text-lg flex items-center gap-1">
+                  GROSS PROFIT
+                  <Info className="w-3.5 h-3.5 text-indigo-400 dark:text-indigo-500" />
+                </h3>
                 <p className="text-sm text-indigo-600 dark:text-indigo-400">Margin: {metrics.grossMargin.toFixed(2)}%</p>
               </div>
               <div className="text-right">
@@ -208,6 +312,16 @@ export default function IncomeStatementPage() {
                 </span>
               </div>
             </div>
+            <Tooltip
+              title="Gross Profit"
+              color="text-indigo-300"
+              formula="Revenue − Variable Costs"
+              breakdown={[
+                { label: 'Revenue (Earnings)', value: summary.totalEarn, color: 'green' },
+                { label: 'Variable Costs (COGS)', value: summary.totalVar, color: 'red' },
+                { label: 'Gross Profit', value: summary.grossProfit, color: summary.grossProfit >= 0 ? 'green' : 'red' },
+              ]}
+            />
           </div>
 
           {/* OPERATING EXPENSES */}
@@ -215,11 +329,19 @@ export default function IncomeStatementPage() {
             <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
               <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Operating Expenses</h3>
             </div>
-            <div className="flex justify-between py-2 pl-4">
-              <span className="text-gray-700 dark:text-gray-300">Operating Expenses</span>
+            <div className="relative group flex justify-between py-2 pl-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded cursor-default">
+              <span className="text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                Operating Expenses
+                <Info className="w-3 h-3 text-gray-400 dark:text-gray-500" />
+              </span>
               <span className="font-semibold text-red-600 dark:text-red-400">
                 ({formatCurrency(summary.totalOpex)})
               </span>
+              <Tooltip
+                title="Operating Expenses (OPEX)"
+                color="text-red-300"
+                transactions={transactionsByCategory.opex}
+              />
             </div>
             <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700">
               <span className="text-gray-800 dark:text-gray-100">Total Operating Expenses</span>
@@ -228,16 +350,29 @@ export default function IncomeStatementPage() {
           </div>
 
           {/* OPERATING INCOME */}
-          <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
+          <div className="relative group bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 hover:bg-purple-100/70 dark:hover:bg-purple-900/30 cursor-default">
             <div className="flex justify-between items-center">
               <div>
-                <h3 className="font-bold text-purple-900 dark:text-purple-100 text-lg">OPERATING INCOME</h3>
+                <h3 className="font-bold text-purple-900 dark:text-purple-100 text-lg flex items-center gap-1">
+                  OPERATING INCOME
+                  <Info className="w-3.5 h-3.5 text-purple-400 dark:text-purple-500" />
+                </h3>
                 <p className="text-sm text-purple-600 dark:text-purple-400">Margin: {metrics.operatingMargin.toFixed(2)}%</p>
               </div>
               <span className={`text-xl font-bold ${metrics.operatingIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 {formatCurrency(metrics.operatingIncome)}
               </span>
             </div>
+            <Tooltip
+              title="Operating Income (EBIT)"
+              color="text-purple-300"
+              formula="Gross Profit − Operating Expenses"
+              breakdown={[
+                { label: 'Gross Profit', value: summary.grossProfit, color: summary.grossProfit >= 0 ? 'green' : 'red' },
+                { label: 'Operating Expenses', value: summary.totalOpex, color: 'red' },
+                { label: 'Operating Income', value: metrics.operatingIncome, color: metrics.operatingIncome >= 0 ? 'green' : 'red' },
+              ]}
+            />
           </div>
 
           {/* FINANCING COSTS */}
@@ -245,43 +380,75 @@ export default function IncomeStatementPage() {
             <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
               <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Financing Costs</h3>
             </div>
-            <div className="flex justify-between py-2 pl-4">
-              <span className="text-gray-700 dark:text-gray-300">Interest & Financing Expenses</span>
+            <div className="relative group flex justify-between py-2 pl-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded cursor-default">
+              <span className="text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                Interest & Financing Expenses
+                <Info className="w-3 h-3 text-gray-400 dark:text-gray-500" />
+              </span>
               <span className="font-semibold text-red-600 dark:text-red-400">
                 ({formatCurrency(summary.totalInterest)})
               </span>
+              <Tooltip
+                title="Interest & Financing Expenses (FIN)"
+                color="text-pink-300"
+                transactions={transactionsByCategory.interest}
+              />
             </div>
           </div>
 
           {/* EBT */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+          <div className="relative group bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 hover:bg-blue-100/70 dark:hover:bg-blue-900/30 cursor-default">
             <div className="flex justify-between items-center">
-              <h3 className="font-bold text-blue-900 dark:text-blue-100 text-lg">EBT (Earnings Before Tax)</h3>
+              <h3 className="font-bold text-blue-900 dark:text-blue-100 text-lg flex items-center gap-1">
+                EBT (Earnings Before Tax)
+                <Info className="w-3.5 h-3.5 text-blue-400 dark:text-blue-500" />
+              </h3>
               <span className={`text-xl font-bold ${metrics.ebt >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 {formatCurrency(metrics.ebt)}
               </span>
             </div>
+            <Tooltip
+              title="EBT (Earnings Before Tax)"
+              color="text-blue-300"
+              formula="Operating Income − Financing Costs"
+              breakdown={[
+                { label: 'Operating Income', value: metrics.operatingIncome, color: metrics.operatingIncome >= 0 ? 'green' : 'red' },
+                { label: 'Financing Costs', value: summary.totalInterest, color: 'red' },
+                { label: 'EBT', value: metrics.ebt, color: metrics.ebt >= 0 ? 'green' : 'red' },
+              ]}
+            />
           </div>
 
           {/* TAX */}
           <div>
-            <div className="flex justify-between py-2 pl-4">
-              <span className="text-gray-700 dark:text-gray-300">Tax</span>
+            <div className="relative group flex justify-between py-2 pl-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded cursor-default">
+              <span className="text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                Tax
+                <Info className="w-3 h-3 text-gray-400 dark:text-gray-500" />
+              </span>
               <span className="font-semibold text-red-600 dark:text-red-400">
                 ({formatCurrency(summary.totalTax)})
               </span>
+              <Tooltip
+                title="Tax / Pajak (TAX)"
+                color="text-purple-300"
+                transactions={transactionsByCategory.tax}
+              />
             </div>
           </div>
 
           {/* NET INCOME */}
-          <div className={`rounded-xl p-6 text-white ${
+          <div className={`relative group rounded-xl p-6 text-white cursor-default ${
             summary.netProfit >= 0
-              ? 'bg-gradient-to-r from-green-500 to-emerald-500'
-              : 'bg-gradient-to-r from-red-500 to-rose-500'
+              ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'
+              : 'bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600'
           }`}>
             <div className="flex justify-between items-center">
               <div>
-                <h3 className="font-bold text-xl mb-1">NET INCOME</h3>
+                <h3 className="font-bold text-xl mb-1 flex items-center gap-1">
+                  NET INCOME
+                  <Info className="w-4 h-4 text-white/60" />
+                </h3>
                 <p className={`text-sm ${
                   summary.netProfit >= 0 ? 'text-green-100' : 'text-red-100'
                 }`}>Net Margin: {metrics.netMargin.toFixed(2)}%</p>
@@ -298,6 +465,38 @@ export default function IncomeStatementPage() {
                   {formatCurrency(summary.netProfit)}
                 </span>
               </div>
+            </div>
+            <div className="absolute left-4 bottom-full mb-2 z-50 hidden group-hover:block w-80 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl pointer-events-none">
+              <p className="font-semibold mb-2 text-green-300">Net Income / Laba Bersih</p>
+              <p className="text-gray-400 mb-0.5">Formula:</p>
+              <p className="text-white font-medium mb-2">Revenue − COGS − OpEx − Financing − Tax</p>
+              <div className="space-y-1 text-[11px]">
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Revenue (Earnings)</span>
+                  <span className="text-green-300">{formatCurrency(summary.totalEarn)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Variable Costs (COGS)</span>
+                  <span className="text-red-300">−{formatCurrency(summary.totalVar)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Operating Expenses</span>
+                  <span className="text-red-300">−{formatCurrency(summary.totalOpex)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Financing Costs</span>
+                  <span className="text-red-300">−{formatCurrency(summary.totalInterest)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Tax</span>
+                  <span className="text-red-300">−{formatCurrency(summary.totalTax)}</span>
+                </div>
+                <div className="flex justify-between font-semibold text-white border-t border-gray-700 pt-1 mt-1">
+                  <span>Net Income</span>
+                  <span className={summary.netProfit >= 0 ? 'text-green-300' : 'text-red-300'}>{formatCurrency(summary.netProfit)}</span>
+                </div>
+              </div>
+              <div className="absolute left-4 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-900"></div>
             </div>
           </div>
         </div>

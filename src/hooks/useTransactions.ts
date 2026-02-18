@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useBusinessContext } from '@/context/BusinessContext';
 import * as transactionsApi from '@/lib/api/transactions';
-import type { Transaction, TransactionCategory } from '@/types';
+import { getAccounts } from '@/lib/api/accounts';
+import type { Transaction, TransactionCategory, Account } from '@/types';
 import type { TransactionFormData } from '@/components/transactions/TransactionForm';
 
 export function useTransactions() {
@@ -33,6 +34,12 @@ export function useTransactions() {
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null);
   const [deleteTransaction, setDeleteTransaction] = useState<Transaction | null>(null);
+
+  // Accounts state (for smart guidance in detail modal)
+  const [accounts, setAccounts] = useState<Account[]>([]);
+
+  // Follow-up prefill state (for COGS entry guidance)
+  const [followUpPrefill, setFollowUpPrefill] = useState<Partial<TransactionFormData> | null>(null);
 
   // Apply filters
   const filteredTransactions = transactions.filter((transaction) => {
@@ -69,11 +76,23 @@ export function useTransactions() {
     }
   }, [businessId, categoryFilter]);
 
+  // Fetch accounts for smart guidance
+  const fetchAccounts = useCallback(async () => {
+    if (!businessId) return;
+    try {
+      const data = await getAccounts(businessId);
+      setAccounts(data);
+    } catch (err) {
+      console.error('Failed to fetch accounts:', err);
+    }
+  }, [businessId]);
+
   useEffect(() => {
     if (businessId) {
       fetchTransactions();
+      fetchAccounts();
     }
-  }, [businessId, fetchTransactions]);
+  }, [businessId, fetchTransactions, fetchAccounts]);
 
   // CRUD handlers
   const handleAddTransaction = useCallback(async (data: TransactionFormData) => {
@@ -159,6 +178,14 @@ export function useTransactions() {
     }
   }, [businessId, user, fetchTransactions]);
 
+  // Handle COGS follow-up: close detail modal and open TransactionForm with prefill
+  const handleCreateFollowUp = useCallback((prefillData: Partial<TransactionFormData>) => {
+    setDetailTransaction(null);
+    setFollowUpPrefill(prefillData);
+    setTransactionMode(null);
+    setShowAddModal(true);
+  }, []);
+
   return {
     // Data
     transactions,
@@ -201,6 +228,12 @@ export function useTransactions() {
     setEditTransaction,
     deleteTransaction,
     setDeleteTransaction,
+    // Accounts (for smart guidance)
+    accounts,
+    // Follow-up prefill (for COGS entry)
+    followUpPrefill,
+    setFollowUpPrefill,
+    handleCreateFollowUp,
     // Actions
     fetchTransactions,
     handleAddTransaction,

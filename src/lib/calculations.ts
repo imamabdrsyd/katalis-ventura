@@ -280,11 +280,31 @@ export function calculateBalanceSheet(
   // Initialize totals
   let totalAssets = 0;
   let totalCash = 0;
-  let totalProperty = 0;
+  let totalInventory = 0;
+  let totalReceivables = 0;
+  let totalOtherCurrentAssets = 0;
+  let totalFixedAssets = 0;
   let totalLiabilities = 0;
-  let totalEquity = 0; // NEW: Track equity from transactions
+  let totalEquityCredit = 0; // Credits to EQUITY = suntik modal masuk
+  let totalEquityDebit = 0;  // Debits to EQUITY = prive/dividen keluar
   let totalRevenue = 0;
   let totalExpenses = 0;
+
+  // Classify an ASSET account into current vs fixed based on default_category
+  function classifyAsset(account: { account_code: string; default_category?: TransactionCategory }, amount: number) {
+    const code = account.account_code;
+    if (code === '1100' || code === '1200') {
+      totalCash += amount;
+    } else if (account.default_category === 'CAPEX') {
+      totalFixedAssets += amount;
+    } else if (account.default_category === 'VAR') {
+      totalInventory += amount;
+    } else if (account.default_category === 'EARN') {
+      totalReceivables += amount;
+    } else {
+      totalOtherCurrentAssets += amount;
+    }
+  }
 
   // Process double-entry transactions
   doubleEntryTransactions.forEach(transaction => {
@@ -297,28 +317,19 @@ export function calculateBalanceSheet(
       switch (debitAccount.account_type) {
         case 'ASSET':
           totalAssets += amount;
-          // Track cash separately (Cash: 1100, Bank: 1200)
-          if (debitAccount.account_code === '1100' || debitAccount.account_code === '1200') {
-            totalCash += amount;
-          }
-          // Track property: any non-cash ASSET account (not 1100/1200)
-          if (debitAccount.account_code !== '1100' && debitAccount.account_code !== '1200') {
-            totalProperty += amount;
-          }
+          classifyAsset(debitAccount, amount);
           break;
         case 'LIABILITY':
-          // Debit to liability decreases it
           totalLiabilities -= amount;
           break;
         case 'EQUITY':
-          // Debit to equity decreases it (withdrawals, distributions)
-          totalEquity -= amount;
+          // Debit to EQUITY = prive / dividen / owner withdrawal
+          totalEquityDebit += amount;
           break;
         case 'EXPENSE':
           totalExpenses += amount;
           break;
         case 'REVENUE':
-          // Debit to revenue decreases it (sales returns, reversals)
           totalRevenue -= amount;
           break;
       }
@@ -329,28 +340,19 @@ export function calculateBalanceSheet(
       switch (creditAccount.account_type) {
         case 'ASSET':
           totalAssets -= amount;
-          // Track cash separately
-          if (creditAccount.account_code === '1100' || creditAccount.account_code === '1200') {
-            totalCash -= amount;
-          }
-          // Track property: any non-cash ASSET account (not 1100/1200)
-          if (creditAccount.account_code !== '1100' && creditAccount.account_code !== '1200') {
-            totalProperty -= amount;
-          }
+          classifyAsset(creditAccount, -amount);
           break;
         case 'LIABILITY':
-          // Credit to liability increases it
           totalLiabilities += amount;
           break;
         case 'EQUITY':
-          // Credit to equity increases it (capital investment, contributions)
-          totalEquity += amount;
+          // Credit to EQUITY = suntik modal / capital injection
+          totalEquityCredit += amount;
           break;
         case 'REVENUE':
           totalRevenue += amount;
           break;
         case 'EXPENSE':
-          // Credit to expense decreases it (refunds, reversals)
           totalExpenses -= amount;
           break;
       }
@@ -358,35 +360,27 @@ export function calculateBalanceSheet(
   });
 
   // Process legacy transactions (fallback to old calculation)
-  // For legacy transactions, calculate cash flow starting from capital as opening balance
   if (legacyTransactions.length > 0) {
     const summary = calculateFinancialSummary(legacyTransactions);
 
-    // Cash flow calculation:
-    // Opening: capital (from business settings)
-    // + Operating: earn - opex - var - tax
-    // - Investing: capex (becomes property)
-    // + Financing: financing transactions
     const operatingCash = summary.totalEarn - summary.totalOpex - summary.totalVar - summary.totalTax;
     const closingCash = capital + operatingCash - summary.totalCapex + summary.totalFin;
 
     totalCash += closingCash;
-    totalProperty += summary.totalCapex;
+    totalFixedAssets += summary.totalCapex;
     totalAssets += closingCash + summary.totalCapex;
     totalLiabilities += summary.totalFin;
     totalRevenue += summary.totalEarn;
     totalExpenses += summary.totalOpex + summary.totalVar + summary.totalTax;
 
-    // Add legacy capital to equity (for backward compatibility)
-    totalEquity += capital;
+    // Legacy: lump capital into equity credit (no drawings distinction possible)
+    totalEquityCredit += capital;
   }
 
   // If no equity was recorded from double-entry transactions,
   // fall back to capital parameter (from businesses.capital_investment)
-  // This handles businesses created before double-entry was implemented
-  if (totalEquity === 0 && capital > 0 && legacyTransactions.length === 0) {
-    totalEquity = capital;
-    // Also add capital to assets (cash) for balance
+  if (totalEquityCredit === 0 && totalEquityDebit === 0 && capital > 0 && legacyTransactions.length === 0) {
+    totalEquityCredit = capital;
     totalCash += capital;
     totalAssets += capital;
   }
@@ -394,20 +388,31 @@ export function calculateBalanceSheet(
   // Calculate retained earnings (revenue - expenses)
   const retainedEarnings = totalRevenue - totalExpenses;
 
+  // Net equity from movements: capital injections minus withdrawals
+  const netEquityMovements = totalEquityCredit - totalEquityDebit;
+
+  const totalCurrentAssets = totalCash + totalInventory + totalReceivables + totalOtherCurrentAssets;
+
   return {
     assets: {
       cash: totalCash,
-      propertyValue: totalProperty,
-      totalAssets: totalAssets,
+      inventory: totalInventory,
+      receivables: totalReceivables,
+      otherCurrentAssets: totalOtherCurrentAssets,
+      totalCurrentAssets,
+      fixedAssets: totalFixedAssets,
+      totalFixedAssets: totalFixedAssets,
+      totalAssets,
     },
     liabilities: {
       loans: totalLiabilities,
       totalLiabilities: totalLiabilities,
     },
     equity: {
-      capital: totalEquity,
+      capital: totalEquityCredit,           // Total modal disetor (suntik modal)
+      drawings: totalEquityDebit,           // Total prive/dividen (ambil dana)
       retainedEarnings: retainedEarnings,
-      totalEquity: totalEquity + retainedEarnings,
+      totalEquity: netEquityMovements + retainedEarnings,
     },
   };
 }

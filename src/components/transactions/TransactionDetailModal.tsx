@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Modal } from '@/components/ui/Modal';
-import type { Transaction, AuditLog } from '@/types';
+import type { Transaction, Account, AuditLog } from '@/types';
+import type { TransactionFormData } from '@/components/transactions/TransactionForm';
 import { CATEGORY_LABELS } from '@/lib/calculations';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import { getProfileName } from '@/lib/api/profiles';
 import { getRecordAuditHistory, getFieldChanges, formatFieldName, formatAuditValue } from '@/lib/api/audit';
+import { detectMatchingPrincipleWarning } from '@/lib/accounting/guidance';
+import { AlertTriangle, X } from 'lucide-react';
 
 interface TransactionDetailModalProps {
   transaction: Transaction | null;
@@ -14,6 +17,8 @@ interface TransactionDetailModalProps {
   onClose: () => void;
   onEdit?: (transaction: Transaction) => void;
   onDelete?: (transaction: Transaction) => void;
+  accounts?: Account[];
+  onCreateFollowUp?: (prefillData: Partial<TransactionFormData>) => void;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -54,6 +59,8 @@ export function TransactionDetailModal({
   onClose,
   onEdit,
   onDelete,
+  accounts,
+  onCreateFollowUp,
 }: TransactionDetailModalProps) {
   const [creatorName, setCreatorName] = useState<string | null>(null);
   const [loadingCreator, setLoadingCreator] = useState(false);
@@ -62,6 +69,38 @@ export function TransactionDetailModal({
   const [auditHistory, setAuditHistory] = useState<AuditLog[]>([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [showAuditHistory, setShowAuditHistory] = useState(false);
+  const [warningDismissed, setWarningDismissed] = useState(false);
+
+  // Reset dismiss state when transaction changes
+  useEffect(() => {
+    setWarningDismissed(false);
+  }, [transaction?.id]);
+
+  // Matching Principle warning detection
+  const matchingWarning = useMemo(() => {
+    if (!transaction || !accounts || accounts.length === 0) return null;
+    return detectMatchingPrincipleWarning(transaction, accounts);
+  }, [transaction, accounts]);
+
+  const showWarning = matchingWarning && !warningDismissed && !!onCreateFollowUp;
+
+  const handleCreateCOGSEntry = useCallback(() => {
+    if (!matchingWarning || !transaction || !onCreateFollowUp) return;
+
+    const prefillData: Partial<TransactionFormData> = {
+      category: 'VAR' as const,
+      date: transaction.date,
+      name: `COGS untuk: ${transaction.name}`,
+      description: `HPP untuk transaksi: ${transaction.name}`,
+      debit_account_id: matchingWarning.cogsAccount?.id,
+      credit_account_id: matchingWarning.inventoryAccount.id,
+      is_double_entry: true,
+      amount: 0,
+      account: '',
+    };
+
+    onCreateFollowUp(prefillData);
+  }, [matchingWarning, transaction, onCreateFollowUp]);
 
   useEffect(() => {
     if (transaction?.created_by) {
@@ -105,6 +144,44 @@ export function TransactionDetailModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Detail Transaksi">
       <div className="space-y-6">
+        {/* Matching Principle Warning Banner */}
+        {showWarning && matchingWarning && (
+          <div className="rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3 flex-1 min-w-0">
+                <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                    {matchingWarning.title}
+                  </p>
+                  <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+                    {matchingWarning.body}
+                  </p>
+                  <div className="mt-2 px-3 py-2 bg-amber-100 dark:bg-amber-900/40 rounded-md font-mono text-xs text-amber-800 dark:text-amber-200">
+                    {matchingWarning.journalHint}
+                  </div>
+                  <p className="mt-2 text-xs text-amber-600 dark:text-amber-400 italic">
+                    Jumlah HPP mungkin berbeda dari nilai penjualan. Isi jumlah yang tepat pada form berikutnya.
+                  </p>
+                  <button
+                    onClick={handleCreateCOGSEntry}
+                    className="mt-3 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-colors"
+                  >
+                    Buat Entry COGS
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={() => setWarningDismissed(true)}
+                className="p-1 rounded hover:bg-amber-100 dark:hover:bg-amber-800 transition-colors flex-shrink-0"
+                aria-label="Abaikan peringatan ini"
+              >
+                <X className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Header with Category Badge and Amount */}
         <div className="flex items-start justify-between">
           <span
@@ -157,7 +234,7 @@ export function TransactionDetailModal({
             <div className="grid grid-cols-2 gap-4 mt-4">
               <div>
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Debit (Keluar Dari)
+                  Debit 
                 </label>
                 <p className="mt-1 text-gray-900 dark:text-gray-100">
                   {transaction.debit_account?.account_code} - {transaction.debit_account?.account_name || 'Unknown'}
@@ -165,7 +242,7 @@ export function TransactionDetailModal({
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Credit (Masuk Ke)
+                  Credit
                 </label>
                 <p className="mt-1 text-gray-900 dark:text-gray-100">
                   {transaction.credit_account?.account_code} - {transaction.credit_account?.account_name || 'Unknown'}

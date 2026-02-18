@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 16 Februari 2026
+> Terakhir diaudit: 19 Februari 2026
 
 ---
 
@@ -15,10 +15,14 @@
 6. [Balance Sheet Logic](#6-balance-sheet-logic)
 7. [Income Statement Logic](#7-income-statement-logic)
 8. [Cash Flow Logic](#8-cash-flow-logic)
-9. [Quick Transaction Resolver](#9-quick-transaction-resolver)
-10. [Validation Layers](#10-validation-layers)
-11. [Audit Findings & Known Issues](#11-audit-findings--known-issues)
-12. [Data Flow Diagrams](#12-data-flow-diagrams)
+9. [General Ledger Logic](#9-general-ledger-logic)
+10. [Trial Balance Logic](#10-trial-balance-logic)
+11. [Scenario Modeling Logic](#11-scenario-modeling-logic)
+12. [Quick Transaction Resolver](#12-quick-transaction-resolver)
+13. [Matching Principle Warning](#13-matching-principle-warning)
+14. [Validation Layers](#14-validation-layers)
+15. [Audit Findings & Known Issues](#15-audit-findings--known-issues)
+16. [Data Flow Diagrams](#16-data-flow-diagrams)
 
 ---
 
@@ -31,6 +35,20 @@
 └──────────┬────────────┴──────────────┬─────────────┴────┬───────┘
            │                           │                  │
 ┌──────────▼───────────────────────────▼──────────────────▼────────┐
+│                     HOOKS LAYER (src/hooks/)                     │
+│                                                                  │
+│  ┌────────────────────┐  ┌───────────────────────────────────┐   │
+│  │ useReportData.ts   │  │ Specialized Hooks:                │   │
+│  │ (base: period,     │  │  ├── useIncomeStatement.ts        │   │
+│  │  dates, txns)      │  │  ├── useBalanceSheet.ts           │   │
+│  └────────────────────┘  │  ├── useCashFlow.ts               │   │
+│                           │  ├── useGeneralLedger.ts          │   │
+│                           │  ├── useTrialBalance.ts           │   │
+│                           │  └── useScenarioModeling.ts       │   │
+│                           └───────────────────────────────────┘   │
+└──────────┬───────────────────────────────────────────────────────┘
+           │
+┌──────────▼───────────────────────────────────────────────────────┐
 │                     MODEL LAYER (src/lib/)                       │
 │                                                                  │
 │  ┌──────────────────────┐  ┌──────────────────────────────────┐  │
@@ -39,23 +57,27 @@
 │  │  ├── types.ts        │  │  ├── calculateBalanceSheet()     │  │
 │  │  ├── validators/     │  │  ├── calculateCashFlow()         │  │
 │  │  │   └── tx.ts       │  │  ├── calculateIncomeStatement()  │  │
-│  │  └── guidance/       │  │  └── calculateROI()              │  │
-│  │      ├── patterns.ts │  └──────────────────────────────────┘  │
-│  │      └── suggest.ts  │                                        │
-│  └──────────────────────┘  ┌──────────────────────────────────┐  │
-│                            │ utils/                           │  │
+│  │  └── guidance/       │  │  ├── calculateROI()              │  │
+│  │      ├── patterns.ts │  │  └── groupTransactionsByMonth()  │  │
+│  │      ├── suggest.ts  │  └──────────────────────────────────┘  │
+│  │      └── matching    │                                        │
+│  │          Warning.ts  │  ┌──────────────────────────────────┐  │
+│  └──────────────────────┘  │ utils/                           │  │
 │                            │  ├── transactionHelpers.ts       │  │
 │                            │  └── quickTransactionHelper.ts   │  │
 │                            └──────────────────────────────────┘  │
 └──────────┬───────────────────────────────────────────────────────┘
            │
 ┌──────────▼───────────────────────────────────────────────────────┐
-│                     API LAYER (app/api/)                         │
+│                     API LAYER (src/lib/api/)                     │
 │  ┌─────────────────────────┐  ┌───────────────────────────────┐  │
-│  │ /api/transactions       │  │ /api/transactions/[id]        │  │
-│  │  POST (create)          │  │  PUT (update)                 │  │
-│  │  GET  (list)            │  │  DELETE (soft-delete)         │  │
-│  └─────────────────────────┘  └───────────────────────────────┘  │
+│  │ transactions.ts         │  │ accounts.ts                   │  │
+│  │  getTransactions()      │  │  getAccounts()                │  │
+│  │  createTransaction()    │  │  createAccount()              │  │
+│  │  updateTransaction()    │  │  updateAccount()              │  │
+│  │  deleteTransaction()    │  │  deleteAccount()              │  │
+│  │  createTransactionsBulk │  └───────────────────────────────┘  │
+│  └─────────────────────────┘                                     │
 └──────────┬───────────────────────────────────────────────────────┘
            │
 ┌──────────▼───────────────────────────────────────────────────────┐
@@ -79,11 +101,19 @@
 | `src/lib/accounting/validators/transactionValidator.ts` | Double-entry validation engine |
 | `src/lib/accounting/guidance/transactionPatterns.ts` | 11 pola transaksi + keyword detection |
 | `src/lib/accounting/guidance/suggestions.ts` | Smart account suggestion service |
+| `src/lib/accounting/guidance/matchingPrincipleWarning.ts` | Matching principle (EARN → HPP) warning |
 | `src/lib/calculations.ts` | Semua financial calculations |
 | `src/lib/utils/transactionHelpers.ts` | Category detection, account filtering |
 | `src/lib/utils/quickTransactionHelper.ts` | Single-account to double-entry resolver |
-| `src/lib/validations.ts` | Zod schemas untuk API validation |
+| `src/lib/export.ts` | PDF & Excel export (jsPDF, xlsx) |
 | `src/types/index.ts` | Core TypeScript types |
+| `src/hooks/useReportData.ts` | Base hook: period, dates, transaction fetching |
+| `src/hooks/useIncomeStatement.ts` | Income statement calculations + export |
+| `src/hooks/useBalanceSheet.ts` | Balance sheet calculations + export |
+| `src/hooks/useCashFlow.ts` | Cash flow calculations + export |
+| `src/hooks/useGeneralLedger.ts` | Per-account ledger with running balance |
+| `src/hooks/useTrialBalance.ts` | Trial balance (all accounts, debit/credit columns) |
+| `src/hooks/useScenarioModeling.ts` | Scenario analysis & financial projections |
 
 ---
 
@@ -256,10 +286,10 @@ ResolvedTransaction {
               └────────────┬────────────┘
                            │
               ┌────────────▼────────────┐
-              │  API: POST /transactions │
-              │  • Zod schema validation │
+              │  API: createTransaction  │
+              │  (src/lib/api/)         │
+              │  • Double-entry rules    │
               │  • Auth check            │
-              │  • Role check (manager)  │
               │  • Account ownership     │
               └────────────┬────────────┘
                            │
@@ -298,13 +328,14 @@ Setiap transaksi punya `category` field:
 Logic di `transactionHelpers.ts` → `detectCategory()`:
 
 ```
-Priority 1: debitAccount.default_category (jika ada)
-Priority 2: creditAccount.default_category (jika ada)
+Priority 1: Non-cash account's default_category (skip 1100/1200)
+Priority 2: Other account's default_category (fallback)
 Priority 3: Account type-based detection:
   ASSET←REVENUE    = EARN
   ASSET←LIABILITY  = FIN  (loan received)
+  ASSET←EQUITY     = FIN  (capital injection)
   EXPENSE→ASSET    = OPEX (default expense)
-  ASSET→ASSET      = CAPEX (asset purchase)
+  ASSET→ASSET      = CAPEX (asset purchase, unless default_category set)
   EQUITY→ASSET     = FIN  (owner withdrawal)
   LIABILITY→ASSET  = FIN  (loan payment)
   Fallback         = OPEX
@@ -312,14 +343,27 @@ Priority 3: Account type-based detection:
 
 ### 5.3 Financial Summary
 
-`calculateFinancialSummary()` menjumlah per category:
+`calculateFinancialSummary()` di `calculations.ts`:
 
 ```
-grossProfit = totalEarn - totalVar
-netProfit   = totalEarn - totalOpex - totalVar - totalTax - totalFin
+grossProfit    = totalEarn - totalVar
+netProfit      = totalEarn - totalOpex - totalVar - totalTax - totalInterest
 ```
+
+**PENTING — FIN vs Interest distinction:**
+- `totalFin`: Semua transaksi FIN (termasuk equity/liability movements). Digunakan di Cash Flow.
+- `totalInterest`: Hanya FIN yang debit ke EXPENSE account (bunga/biaya keuangan). Digunakan di Income Statement & Net Profit.
+  - Double-entry: FIN di mana `debit_account.account_type === 'EXPENSE'`
+  - Legacy: Semua FIN (backward compatibility)
 
 CAPEX tidak masuk net profit karena bukan expense (beli aset). CAPEX hanya muncul di Cash Flow Statement (investing activities).
+
+### 5.4 Monthly Grouping
+
+`groupTransactionsByMonth()` mengelompokkan transaksi per bulan dan menghitung per-month:
+- earn, opex, var, capex, tax, fin, interest, netProfit
+- Interest mengikuti logic yang sama (hanya FIN expense)
+- Digunakan oleh Scenario Modeling untuk proyeksi
 
 ---
 
@@ -333,16 +377,18 @@ CAPEX tidak masuk net profit karena bukan expense (beli aset). CAPEX hanya muncu
 ```
 Untuk setiap transaksi:
   Debit side:
-    ASSET    → totalAssets += amount
+    ASSET    → totalAssets += amount, classify into cash/inventory/receivables/fixed
     LIABILITY → totalLiabilities -= amount  (mengurangi hutang)
-    EQUITY   → totalEquity -= amount        (withdrawal)
+    EQUITY   → totalEquityDebit += amount   (withdrawal/prive)
     EXPENSE  → totalExpenses += amount
+    REVENUE  → totalRevenue -= amount       (retur pendapatan)
 
   Credit side:
-    ASSET    → totalAssets -= amount
+    ASSET    → totalAssets -= amount, classify into cash/inventory/receivables/fixed
     LIABILITY → totalLiabilities += amount  (menambah hutang)
-    EQUITY   → totalEquity += amount        (capital injection)
+    EQUITY   → totalEquityCredit += amount  (capital injection)
     REVENUE  → totalRevenue += amount
+    EXPENSE  → totalExpenses -= amount      (koreksi beban)
 ```
 
 **B. Legacy Transactions** (is_double_entry = false)
@@ -354,24 +400,36 @@ closingCash = capital + operatingCash - CAPEX + FIN
 totalCash     = closingCash
 totalProperty = CAPEX
 totalAssets   = closingCash + CAPEX
-totalLiabilities = |FIN|
+totalLiabilities = FIN
 ```
 
-### 6.2 Cash vs Property Tracking
+### 6.2 Asset Classification (Double-Entry)
 
-Untuk double-entry transactions:
+Untuk double-entry transactions, asset di-classify berdasarkan:
 - **Cash**: Account codes `1100` (Cash) dan `1200` (Bank)
-- **Property**: Account codes `1201`-`1299` (Fixed Assets range, Bank `1200` excluded)
-- **Total Assets**: Sum of all ASSET debit - all ASSET credit
+- **Fixed Assets**: `default_category === 'CAPEX'`
+- **Inventory**: `default_category === 'VAR'`
+- **Receivables**: `default_category === 'EARN'`
+- **Other Current Assets**: Semua ASSET lainnya
 
-### 6.3 Retained Earnings
+### 6.3 Equity Tracking
+
+```
+totalEquityCredit = sum of credit movements to EQUITY accounts (suntik modal)
+totalEquityDebit  = sum of debit movements from EQUITY accounts (prive/dividen)
+netEquityMovements = totalEquityCredit - totalEquityDebit
+```
+
+Fallback: Jika tidak ada equity transactions dari double-entry DAN `capital_investment > 0`, gunakan `capital_investment` dari business settings.
+
+### 6.4 Retained Earnings
 
 ```
 retainedEarnings = totalRevenue - totalExpenses
-totalEquity = equity (dari transaksi) + retainedEarnings
+totalEquity = netEquityMovements + retainedEarnings
 ```
 
-### 6.4 Balance Check
+### 6.5 Balance Check
 
 ```typescript
 // Di useBalanceSheet.ts
@@ -392,7 +450,7 @@ Revenue (EARN)
 ─ Operating Expenses (OPEX)
 ─────────────────────────
 = Operating Income
-─ Financing Costs (FIN)
+─ Financing Costs (totalInterest, bukan totalFin)
 ─────────────────────────
 = EBT (Earnings Before Tax)
 ─ Tax (TAX)
@@ -400,7 +458,9 @@ Revenue (EARN)
 = Net Income
 ```
 
-CAPEX tidak muncul di income statement. CAPEX hanya ada di Cash Flow Statement (investing activities). Sistem ini tidak menerapkan depreciation, sehingga tidak ada line item EBIT.
+**PENTING:** Financing Costs hanya menampilkan `totalInterest` (FIN yang debit EXPENSE account), bukan semua FIN. FIN yang menyentuh LIABILITY/EQUITY (loan received, capital injection, loan repayment) TIDAK masuk income statement.
+
+CAPEX tidak muncul di income statement. CAPEX hanya ada di Cash Flow Statement (investing activities). Sistem ini tidak menerapkan depreciation.
 
 ### 7.2 Margin Calculations
 
@@ -414,6 +474,11 @@ Net Margin       = (netProfit / totalEarn) × 100
 
 Income Statement menggunakan `filterTransactionsByDateRange()` → menunjukkan transaksi **dalam** periode tertentu (bukan kumulatif).
 
+### 7.4 Export
+
+- PDF via `jsPDF` + `jspdf-autotable`
+- Excel via `xlsx` library
+
 ---
 
 ## 8. Cash Flow Logic
@@ -424,7 +489,9 @@ Cash flow menggunakan dual-mode: double-entry aware untuk transaksi baru, catego
 
 **A. Double-Entry Transactions** — Track actual cash movement:
 ```
-Untuk setiap transaksi yang menyentuh Cash (1100) atau Bank (1200):
+Cash account codes: 1100 (Cash), 1200 (Bank)
+
+Untuk setiap transaksi yang menyentuh Cash/Bank:
 
 Cash MASUK (debit cash):
   Counter = REVENUE/EXPENSE → Operating  (+amount)
@@ -456,9 +523,166 @@ Closing Balance = Opening + Net Cash Flow
 
 ---
 
-## 9. Quick Transaction Resolver
+## 9. General Ledger Logic
 
-### 9.1 Bagaimana Sistem Menentukan Debit/Credit
+### 9.1 Overview
+
+File: `src/hooks/useGeneralLedger.ts`
+
+General Ledger (Buku Besar) menampilkan per-account ledger dengan running balance. Hanya memproses double-entry transactions.
+
+### 9.2 Account Ledger Calculation
+
+`calculateAccountLedger(account, transactions)`:
+
+```
+1. Filter transaksi yang menyentuh account ini
+   (debit_account_id === account.id ATAU credit_account_id === account.id)
+
+2. Sort ascending by date, then by created_at
+
+3. Untuk setiap transaksi:
+   - Tentukan apakah account ini di sisi debit atau credit
+   - Hitung running balance berdasarkan normal balance rule:
+     DEBIT-normal (ASSET, EXPENSE):  balance += debit - credit
+     CREDIT-normal (LIABILITY, EQUITY, REVENUE): balance += credit - debit
+
+4. Return: entries[], totalDebits, totalCredits, closingBalance, legacyCount
+```
+
+### 9.3 Account Filtering
+
+- Hanya sub-accounts (parent_account_id != null) yang ditampilkan
+- Filter berdasarkan account type: ALL, ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE
+- allLedgers: Summary semua accounts yang di-filter
+
+### 9.4 Legacy Transaction Handling
+
+Legacy transactions (is_double_entry = false) tidak memiliki account links, jadi mereka dicatat sebagai `legacyCount` tapi tidak muncul di ledger entries. UI menampilkan warning jika ada legacy transactions.
+
+---
+
+## 10. Trial Balance Logic
+
+### 10.1 Overview
+
+File: `src/hooks/useTrialBalance.ts`
+
+Trial Balance (Neraca Saldo) menampilkan semua accounts dengan saldo debit/credit. Menggunakan `calculateAccountLedger()` dari General Ledger.
+
+### 10.2 Calculation
+
+```
+Untuk setiap active sub-account:
+  1. Hitung ledger via calculateAccountLedger()
+  2. Skip jika tidak ada entries (account tidak aktif dalam periode)
+  3. Tempatkan closing balance di kolom yang sesuai:
+
+     Normal Balance = DEBIT:
+       closingBalance ≥ 0 → debitBalance = closingBalance
+       closingBalance < 0 → creditBalance = |closingBalance|  (contra account)
+
+     Normal Balance = CREDIT:
+       closingBalance ≥ 0 → creditBalance = closingBalance
+       closingBalance < 0 → debitBalance = |closingBalance|  (contra account)
+
+  4. totalDebits = sum of all debitBalance
+     totalCredits = sum of all creditBalance
+     isBalanced = |totalDebits - totalCredits| < 0.01
+```
+
+### 10.3 Sorting
+
+Rows di-sort berdasarkan account_code secara ascending (1100, 1200, ..., 5100, 5200, ...).
+
+---
+
+## 11. Scenario Modeling Logic
+
+### 11.1 Overview
+
+File: `src/hooks/useScenarioModeling.ts`
+
+Scenario Modeling memungkinkan simulasi perubahan asumsi keuangan terhadap baseline aktual.
+
+### 11.2 Baseline
+
+Baseline dihitung dari transaksi aktual dalam periode yang dipilih:
+
+```
+baseline = {
+  revenue:         calculateFinancialSummary().totalEarn,
+  cogs:            calculateFinancialSummary().totalVar,
+  grossProfit:     grossProfit,
+  opex:            totalOpex,
+  operatingIncome: calculateIncomeStatementMetrics().operatingIncome,
+  interest:        totalInterest,
+  ebt:             ebt,
+  tax:             totalTax,
+  netIncome:       netProfit,
+  + margins (gross, operating, net)
+}
+```
+
+### 11.3 Scenario Assumptions
+
+Setiap skenario memiliki 5 parameter asumsi:
+
+| Parameter | Deskripsi | Satuan |
+|-----------|-----------|--------|
+| revenueGrowth | Perubahan revenue | % |
+| cogsGrowth | Perubahan COGS | % |
+| opexGrowth | Perubahan OpEx | % |
+| taxRate | Tax rate sebagai % dari EBT | % (0 = gunakan aktual) |
+| interestGrowth | Perubahan interest | % |
+
+### 11.4 Scenario Calculation
+
+```
+applyScenario(baseline, assumptions):
+  revenue         = baseline.revenue × (1 + revenueGrowth/100)
+  cogs            = baseline.cogs × (1 + cogsGrowth/100)
+  grossProfit     = revenue - cogs
+  opex            = baseline.opex × (1 + opexGrowth/100)
+  operatingIncome = grossProfit - opex
+  interest        = baseline.interest × (1 + interestGrowth/100)
+  ebt             = operatingIncome - interest
+  tax             = taxRate > 0 ? max(0, ebt × taxRate/100) : baseline.tax
+  netIncome       = ebt - tax
+```
+
+### 11.5 Pre-configured Scenarios
+
+| Skenario | Revenue | COGS | OpEx | Tax | Interest |
+|----------|---------|------|------|-----|----------|
+| **Optimistic** | +20% | +10% | +5% | 0% | 0% |
+| **Pessimistic** | -10% | +15% | +10% | 0% | +5% |
+| **Custom** | User-defined | User-defined | User-defined | User-defined | User-defined |
+
+Semua parameter dapat di-adjust via slider (-50% to +50%).
+
+### 11.6 Financial Projections
+
+Proyeksi bulanan berdasarkan rata-rata performa historis:
+
+```
+avgRevenue = sum(monthly revenue) / jumlah bulan
+avgNet     = sum(monthly net profit) / jumlah bulan
+
+Untuk setiap bulan proyeksi (i = 1..N):
+  growthFactor     = (1 + revenueGrowth/100/12)^i
+  projectedRevenue = avgRevenue × growthFactor
+  projectedNet     = avgNet × growthFactor
+  cumulativeNet   += projectedNet
+```
+
+Periode proyeksi: 3, 6, atau 12 bulan ke depan.
+
+---
+
+## 12. Quick Transaction Resolver
+
+### 12.1 Bagaimana Sistem Menentukan Debit/Credit
 
 File: `src/lib/utils/quickTransactionHelper.ts`
 
@@ -476,13 +700,13 @@ Money IN (Debit Cash, Credit Selected):
   • EQUITY (non-prive)        → Suntik modal
 ```
 
-### 9.2 Default Cash Account Selection
+### 12.2 Default Cash Account Selection
 
 ```
 Priority: Bank (1200) → Cash (1100) → first active ASSET sub-account
 ```
 
-### 9.3 Account Filtering untuk Quick Add
+### 12.3 Account Filtering untuk Quick Add
 
 `getQuickAddAccounts()` mengecualikan:
 - Parent accounts (tanpa parent_account_id)
@@ -491,9 +715,49 @@ Priority: Bank (1200) → Cash (1100) → first active ASSET sub-account
 
 ---
 
-## 10. Validation Layers
+## 13. Matching Principle Warning
 
-### 10.1 Three-Layer Validation
+### 13.1 Overview
+
+File: `src/lib/accounting/guidance/matchingPrincipleWarning.ts`
+
+Setelah user mencatat transaksi EARN (penjualan), sistem mendeteksi apakah perlu entry tambahan untuk HPP (Harga Pokok Penjualan) sesuai Matching Principle.
+
+### 13.2 Trigger Conditions
+
+Warning ditampilkan jika **semua** kondisi terpenuhi:
+1. Transaksi kategori `EARN`
+2. Transaksi double-entry dengan credit account = REVENUE
+3. Credit account bukan inventory account
+4. Business memiliki inventory account di CoA (menunjukkan bukan service business)
+
+### 13.3 Detection Logic
+
+```
+isInventoryAccount(account):
+  - account_type === 'ASSET'
+  - default_category === 'VAR'
+  - ATAU nama mengandung: persediaan, inventory, stok, barang, bahan
+
+detectMatchingPrincipleWarning(transaction, allAccounts):
+  → Cek trigger conditions
+  → Cari inventory account di CoA
+  → Cari COGS/expense account (keyword: cogs, hpp, harga pokok, cost of, biaya pokok)
+  → Return warning dengan journal hint: "Debit: HPP | Credit: Persediaan"
+```
+
+### 13.4 Kapan TIDAK Ditampilkan
+
+- Bukan transaksi EARN
+- Bukan double-entry
+- Credit account adalah inventory (sudah handle inventory)
+- Tidak ada inventory account di CoA (service business)
+
+---
+
+## 14. Validation Layers
+
+### 14.1 Three-Layer Validation
 
 ```
 Layer 1: Client-side (TransactionValidator)
@@ -501,10 +765,9 @@ Layer 1: Client-side (TransactionValidator)
   → Indonesian language messages
   → Warnings untuk unusual patterns
 
-Layer 2: API-side (Zod Schemas)
-  → Server-side enforcement
+Layer 2: API-side (src/lib/api/transactions.ts)
   → Double-entry account pair validation
-  → Amount limits (max 100B IDR)
+  → Auth check & role check
 
 Layer 3: Database (PostgreSQL Constraints)
   → check_different_accounts: debit ≠ credit
@@ -512,7 +775,7 @@ Layer 3: Database (PostgreSQL Constraints)
   → RLS policies per business
 ```
 
-### 10.2 Client Validation Details
+### 14.2 Client Validation Details
 
 `TransactionValidator.validate()`:
 
@@ -524,14 +787,14 @@ Layer 3: Database (PostgreSQL Constraints)
 | Revenue di debit | Warning | "Mendebit pendapatan akan mengurangi..." |
 | Expense di credit | Warning | "Mengkredit beban akan mengurangi..." |
 
-### 10.3 Smart Warnings
+### 14.3 Smart Warnings
 
 Sistem memberikan warning kontekstual:
 - **Capital sebagai Revenue**: "Jika ini setoran modal, gunakan akun Ekuitas"
 - **Withdrawal sebagai Expense**: "Jika ini penarikan pribadi, gunakan akun Prive"
 - **Revenue di-debit**: "Ini biasanya untuk koreksi atau retur penjualan"
 
-### 10.4 Transaction Pattern Detection
+### 14.4 Transaction Pattern Detection
 
 11 pola transaksi yang dikenali dari keyword di nama transaksi:
 
@@ -551,74 +814,35 @@ Sistem memberikan warning kontekstual:
 
 ---
 
-## 11. Audit Findings & Known Issues
+## 15. Audit Findings & Known Issues
 
-### RESOLVED Issues (Fixed 16 Feb 2026)
+### All Previously Reported Issues — RESOLVED
 
-#### ~~Issue #1: CAPEX dalam Net Profit~~ → RESOLVED
-
-CAPEX telah dihapus dari formula net profit. Formula sekarang: `netProfit = EARN - OPEX - VAR - TAX - FIN`. CAPEX hanya muncul di Cash Flow Statement (investing activities). Income statement sekarang mengikuti struktur PSAK/IFRS.
-
-#### ~~Issue #2: Label EBITDA Misleading~~ → RESOLVED
-
-Label "OPERATING INCOME (EBITDA)" diganti menjadi "OPERATING INCOME". EBIT line dihapus karena tidak relevan (tidak ada depreciation).
-
-#### ~~Issue #3: EBIT Includes CAPEX~~ → RESOLVED
-
-EBIT dihapus dari `IncomeStatementMetrics` dan seluruh UI. Income statement sekarang: Operating Income → EBT (setelah financing) → Net Income (setelah tax).
-
-#### ~~Issue #4: Legacy FIN Math.abs~~ → RESOLVED
-
-`Math.abs(summary.totalFin)` diganti dengan `summary.totalFin`. FIN positif = loan received (liability naik), FIN negatif = loan payment (liability turun).
-
-#### ~~Issue #8: Cash Flow Tidak Double-Entry Aware~~ → RESOLVED
-
-`calculateCashFlow()` sekarang dual-mode: double-entry transactions di-classify berdasarkan actual cash movement melalui accounts Cash (1100) / Bank (1200), legacy transactions tetap category-based fallback.
+| Issue | Description | Status | Fixed |
+|-------|-------------|--------|-------|
+| #1 | CAPEX dalam Net Profit | RESOLVED | Net profit formula: `EARN - OPEX - VAR - TAX - totalInterest` |
+| #2 | Label EBITDA Misleading | RESOLVED | Label diganti "OPERATING INCOME" |
+| #3 | EBIT Includes CAPEX | RESOLVED | EBIT dihapus, Operating Income → EBT → Net Income |
+| #4 | Legacy FIN Math.abs | RESOLVED | Menggunakan raw value, bukan Math.abs |
+| #5 | Revenue Debit di Balance Sheet | RESOLVED | Handle REVENUE debit dan EXPENSE credit |
+| #6 | detectCategory Priority Salah | RESOLVED | Cash/Bank accounts di-skip saat priority check |
+| #7 | Fixed Asset Code Range Fragile | RESOLVED | Logic berbasis account_type, bukan hardcoded range |
+| #8 | Cash Flow Tidak Double-Entry Aware | RESOLVED | Dual-mode: double-entry + category fallback |
 
 ---
 
-### 11.5 Issue #5: Revenue Debit Tidak Dikurangi di Balance Sheet — ✅ RESOLVED
+## 16. Data Flow Diagrams
 
-**Severity: MEDIUM** → **Fixed**
-**File:** `src/lib/calculations.ts`
-
-**Problem:** Debit switch tidak handle REVENUE, credit switch tidak handle EXPENSE.
-**Fix:** Ditambahkan `case 'REVENUE': totalRevenue -= amount` di debit side dan `case 'EXPENSE': totalExpenses -= amount` di credit side. Retained earnings sekarang akurat untuk retur/koreksi.
-
----
-
-### 11.6 Issue #6: detectCategory Priority Bisa Salah — ✅ RESOLVED
-
-**Severity: LOW** → **Fixed**
-**File:** `src/lib/utils/transactionHelpers.ts`
-
-**Problem:** `debitAccount.default_category` dicek duluan, bisa override akun non-cash yang lebih spesifik.
-**Fix:** Cash/Bank accounts (1100, 1200) sekarang di-skip saat priority check. Non-cash account's `default_category` selalu diprioritaskan.
-
----
-
-### 11.7 Issue #7: Fixed Asset Code Range Fragile — ✅ RESOLVED
-
-**Severity: LOW** → **Fixed**
-**File:** `src/lib/calculations.ts`
-
-**Problem:** Hardcoded `1201-1299` range untuk fixed assets.
-**Fix:** Diganti dengan logic "any ASSET account that is not Cash (1100) or Bank (1200)". Sekarang support user-created asset accounts (1300 Fixed Assets, 1400 Vehicles, 1500 Inventory, dsb).
-
----
-
-## 12. Data Flow Diagrams
-
-### 12.1 Transaction Input to Financial Reports
+### 16.1 Transaction Input to Financial Reports
 
 ```
 ┌────────────────┐     ┌──────────────────┐     ┌───────────────────┐
 │ Quick Form     │────→│ resolveQuick     │────→│                   │
 │ (1 account)    │     │ Transaction()    │     │                   │
-└────────────────┘     └──────────────────┘     │  POST /api/       │
-                                                 │  transactions     │
+└────────────────┘     └──────────────────┘     │  createTransaction│
+                                                 │  (src/lib/api/)  │
 ┌────────────────┐                               │                   │
-│ Full Form      │──────────────────────────────→│  • Zod validate   │
+│ Full Form      │──────────────────────────────→│  • Validate       │
 │ (2 accounts)   │                               │  • Role check     │
 └────────────────┘                               │  • Account verify │
                                                  └────────┬──────────┘
@@ -629,17 +853,23 @@ EBIT dihapus dari `IncomeStatementMetrics` dan seluruh UI. Income statement seka
                                                  │   accounts join)  │
                                                  └────────┬──────────┘
                                                           │
-                                          ┌───────────────┼───────────────┐
-                                          │               │               │
-                                 ┌────────▼──────┐ ┌──────▼──────┐ ┌─────▼──────┐
-                                 │ Balance Sheet  │ │ Income      │ │ Cash Flow  │
-                                 │               │ │ Statement   │ │            │
-                                 │ cumulative    │ │ period-     │ │ category-  │
-                                 │ up to date    │ │ filtered    │ │ based      │
-                                 └───────────────┘ └─────────────┘ └────────────┘
+                              ┌────────────┬──────────────┼───────────────┬────────────┐
+                              │            │              │               │            │
+                     ┌────────▼──────┐ ┌───▼───────┐ ┌───▼────────┐ ┌───▼──────┐ ┌───▼────────┐
+                     │ Balance Sheet │ │ Income    │ │ Cash Flow  │ │ General  │ │ Trial      │
+                     │              │ │ Statement │ │            │ │ Ledger   │ │ Balance    │
+                     │ cumulative   │ │ period-   │ │ cash-      │ │ per-acct │ │ all-accts  │
+                     │ up to date   │ │ filtered  │ │ based      │ │ filtered │ │ debit/cred │
+                     └──────────────┘ └───────────┘ └────────────┘ └──────────┘ └────────────┘
+                                                                                      │
+                                                                              ┌───────▼────────┐
+                                                                              │ Scenario       │
+                                                                              │ Modeling       │
+                                                                              │ (what-if)      │
+                                                                              └────────────────┘
 ```
 
-### 12.2 Balance Sheet Calculation Flow
+### 16.2 Balance Sheet Calculation Flow
 
 ```
 All Transactions
@@ -652,26 +882,51 @@ Process per account type    calculateFinancialSummary()
       │                          │
       │  Debit:                  │  Cash = capital + operating - CAPEX + FIN
       │   ASSET    +amount       │  Property = CAPEX
-      │   LIABILITY -amount      │  Liability = |FIN|
-      │   EQUITY   -amount       │  Equity = capital
+      │   LIABILITY -amount      │  Liability = FIN
+      │   EQUITY   +equityDebit  │  Equity = capital
       │   EXPENSE  +amount       │
+      │   REVENUE  -amount       │
       │                          │
       │  Credit:                 │
       │   ASSET    -amount       │
       │   LIABILITY +amount      │
-      │   EQUITY   +amount       │
+      │   EQUITY   +equityCredit │
       │   REVENUE  +amount       │
+      │   EXPENSE  -amount       │
       │                          │
       └──────────┬───────────────┘
                  │
                  ▼
       retainedEarnings = revenue - expenses
-      totalEquity = equity + retainedEarnings
+      totalEquity = (equityCredit - equityDebit) + retainedEarnings
 
       CHECK: |assets - (liabilities + equity)| < 0.01
 ```
 
-### 12.3 Quick Transaction Resolution
+### 16.3 General Ledger & Trial Balance Flow
+
+```
+All Accounts (sub-accounts only)
+      │
+      ├── For each account ──────────────────────────────────┐
+      │                                                       │
+      ▼                                                       ▼
+calculateAccountLedger()                              Trial Balance
+      │                                                       │
+      │  Filter: txns where                                   │  For each account:
+      │    debit_account_id = this                            │    ledger = calculateAccountLedger()
+      │    OR credit_account_id = this                        │    closingBalance → debit/credit column
+      │                                                       │    (based on normal_balance)
+      │  Running balance:                                     │
+      │    DEBIT-normal: bal += debit - credit                │  totalDebits = sum(all debit columns)
+      │    CREDIT-normal: bal += credit - debit               │  totalCredits = sum(all credit columns)
+      │                                                       │  isBalanced = |diff| < 0.01
+      ▼                                                       ▼
+General Ledger UI                                    Trial Balance UI
+(per-account view)                                  (all-accounts table)
+```
+
+### 16.4 Quick Transaction Resolution
 
 ```
 Selected Account Type?
@@ -716,6 +971,10 @@ credit_account_id UUID REFERENCES accounts(id),
 is_double_entry BOOLEAN DEFAULT FALSE,
 category TEXT NOT NULL,                 -- EARN|OPEX|VAR|CAPEX|TAX|FIN
 
+-- Soft delete:
+deleted_at TIMESTAMPTZ,
+deleted_by UUID,
+
 -- Constraint:
 CHECK (debit_account_id IS NULL OR credit_account_id IS NULL
        OR debit_account_id != credit_account_id)
@@ -723,16 +982,51 @@ CHECK (debit_account_id IS NULL OR credit_account_id IS NULL
 
 ---
 
-## Appendix B: Glossary
+## Appendix B: Hooks Architecture
+
+### Base Hook: useReportData
+
+Semua report hooks extend `useReportData()`:
+
+```
+useReportData
+├── activeBusiness (dari BusinessContext)
+├── transactions[] (all txns for business)
+├── filteredTransactions[] (by date range)
+├── period: 'month' | 'quarter' | 'year' | 'custom'
+├── startDate, endDate
+├── handlePeriodChange()
+└── showExportMenu, exportButtonRef
+```
+
+### Specialized Hooks
+
+| Hook | Extends | Adds |
+|------|---------|------|
+| `useIncomeStatement` | useReportData | summary, metrics, transactionsByCategory, export |
+| `useBalanceSheet` | useReportData | balanceSheet, isBalanced, export |
+| `useCashFlow` | useReportData | cashFlow, export |
+| `useGeneralLedger` | useReportData | accounts, selectedAccount, ledger, allLedgers |
+| `useTrialBalance` | useReportData | accounts, trialBalance |
+| `useScenarioModeling` | useReportData | baseline, optimistic, pessimistic, custom, projections |
+| `useDashboard` | BusinessContext | summary, roi, categoryCounts (independent) |
+
+---
+
+## Appendix C: Glossary
 
 | Term | Arti |
 |------|------|
 | Normal Balance | Sisi yang menambah saldo akun (DEBIT untuk Asset/Expense, CREDIT untuk Liability/Equity/Revenue) |
 | Double-Entry | Setiap transaksi dicatat di minimal 2 akun: satu debit, satu credit |
 | Chart of Accounts (CoA) | Daftar semua akun yang digunakan untuk mencatat transaksi |
-| Retained Earnings | Akumulasi laba/rugi yang belum dibagikan |
+| Retained Earnings | Akumulasi laba/rugi yang belum dibagikan (Revenue - Expenses) |
 | CAPEX | Capital Expenditure - pengeluaran untuk membeli aset tetap |
 | OPEX | Operating Expense - biaya operasional rutin |
 | COGS / VAR | Cost of Goods Sold / Variable Cost - biaya yang berubah sesuai volume |
 | Prive | Penarikan modal oleh pemilik untuk keperluan pribadi |
 | RLS | Row Level Security - PostgreSQL feature untuk access control per-row |
+| totalInterest | Subset dari FIN: hanya yang debit ke EXPENSE (bunga/biaya keuangan) |
+| totalFin | Semua transaksi FIN termasuk equity/liability movements |
+| Matching Principle | Prinsip akuntansi: beban dicatat pada periode yang sama dengan pendapatan terkait |
+| Contra Account | Account dengan saldo berlawanan dari normal balance-nya |

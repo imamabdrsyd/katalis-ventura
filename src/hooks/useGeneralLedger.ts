@@ -27,7 +27,7 @@ export interface AccountLedger {
 
 export type AccountTypeFilter = AccountType | 'ALL';
 
-function calculateAccountLedger(
+export function calculateAccountLedger(
   account: Account,
   transactions: Transaction[]
 ): AccountLedger {

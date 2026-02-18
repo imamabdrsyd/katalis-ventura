@@ -199,7 +199,12 @@ export interface MonthlyData {
 export interface BalanceSheetData {
   assets: {
     cash: number;
-    propertyValue: number;
+    inventory: number;
+    receivables: number;
+    otherCurrentAssets: number;
+    totalCurrentAssets: number;
+    fixedAssets: number;
+    totalFixedAssets: number;
     totalAssets: number;
   };
   liabilities: {
@@ -207,7 +212,8 @@ export interface BalanceSheetData {
     totalLiabilities: number;
   };
   equity: {
-    capital: number;
+    capital: number;          // Credit movements to EQUITY accounts (suntik modal)
+    drawings: number;         // Debit movements from EQUITY accounts (prive/dividen) — positive value, subtracted
     retainedEarnings: number;
     totalEquity: number;
   };

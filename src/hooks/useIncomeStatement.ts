@@ -4,10 +4,20 @@ import { useCallback } from 'react';
 import { useReportData } from './useReportData';
 import { calculateFinancialSummary, calculateIncomeStatementMetrics } from '@/lib/calculations';
 import { exportIncomeStatementToPDF, exportIncomeStatementToExcel } from '@/lib/export';
+import type { Transaction } from '@/types';
+
+export interface TransactionsByCategory {
+  revenue: Transaction[];
+  cogs: Transaction[];
+  opex: Transaction[];
+  tax: Transaction[];
+  interest: Transaction[];
+}
 
 export interface UseIncomeStatementReturn extends ReturnType<typeof useReportData> {
   summary: ReturnType<typeof calculateFinancialSummary>;
   metrics: ReturnType<typeof calculateIncomeStatementMetrics>;
+  transactionsByCategory: TransactionsByCategory;
   handleExportPDF: () => void;
   handleExportExcel: () => void;
 }
@@ -18,6 +28,19 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
 
   const summary = calculateFinancialSummary(filteredTransactions);
   const metrics = calculateIncomeStatementMetrics(summary);
+
+  const transactionsByCategory: TransactionsByCategory = {
+    revenue: filteredTransactions.filter(t => t.category === 'EARN'),
+    cogs: filteredTransactions.filter(t => t.category === 'VAR'),
+    opex: filteredTransactions.filter(t => t.category === 'OPEX'),
+    tax: filteredTransactions.filter(t => t.category === 'TAX'),
+    interest: filteredTransactions.filter(t =>
+      t.category === 'FIN' && (
+        (t.is_double_entry && t.debit_account?.account_type === 'EXPENSE') ||
+        !t.is_double_entry
+      )
+    ),
+  };
 
   const handleExportPDF = useCallback(() => {
     if (!activeBusiness) return;
@@ -37,6 +60,7 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
     ...reportData,
     summary,
     metrics,
+    transactionsByCategory,
     handleExportPDF,
     handleExportExcel,
   };

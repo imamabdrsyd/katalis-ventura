@@ -26,6 +26,7 @@ export interface TransactionFormData {
 
 interface TransactionFormProps {
   transaction?: Transaction | null;
+  initialValues?: Partial<TransactionFormData>;
   onSubmit: (data: TransactionFormData) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
@@ -87,6 +88,7 @@ const CATEGORY_SUGGESTIONS: Record<TransactionCategory, { debit: string; credit:
 
 export function TransactionForm({
   transaction,
+  initialValues,
   onSubmit,
   onCancel,
   loading = false,
@@ -100,22 +102,26 @@ export function TransactionForm({
 
   const categories = allowedCategories || ALL_CATEGORIES;
   const [formData, setFormData] = useState<TransactionFormData>({
-    date: transaction?.date || new Date().toISOString().split('T')[0],
-    category: transaction?.category || defaultCategory || categories[0],
-    name: transaction?.name || '',
-    description: transaction?.description || '',
-    amount: transaction?.amount || 0,
-    account: transaction?.account || '',
-    debit_account_id: transaction?.debit_account_id,
-    credit_account_id: transaction?.credit_account_id,
-    is_double_entry: transaction?.is_double_entry || false,
+    date: transaction?.date || initialValues?.date || new Date().toISOString().split('T')[0],
+    category: transaction?.category || initialValues?.category || defaultCategory || categories[0],
+    name: transaction?.name || initialValues?.name || '',
+    description: transaction?.description || initialValues?.description || '',
+    amount: transaction?.amount || initialValues?.amount || 0,
+    account: transaction?.account || initialValues?.account || '',
+    debit_account_id: transaction?.debit_account_id || initialValues?.debit_account_id,
+    credit_account_id: transaction?.credit_account_id || initialValues?.credit_account_id,
+    is_double_entry: transaction?.is_double_entry || initialValues?.is_double_entry || false,
   });
 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [displayAmount, setDisplayAmount] = useState<string>(
-    transaction?.amount ? formatNumberWithSeparator(transaction.amount) : ''
+    transaction?.amount
+      ? formatNumberWithSeparator(transaction.amount)
+      : initialValues?.amount
+        ? formatNumberWithSeparator(initialValues.amount)
+        : ''
   );
 
   // Fetch accounts on mount

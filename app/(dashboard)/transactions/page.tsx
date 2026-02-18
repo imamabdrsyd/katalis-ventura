@@ -65,6 +65,12 @@ export default function TransactionsPage() {
     setEditTransaction,
     deleteTransaction,
     setDeleteTransaction,
+    // Accounts (for smart guidance)
+    accounts,
+    // Follow-up prefill (for COGS entry)
+    followUpPrefill,
+    setFollowUpPrefill,
+    handleCreateFollowUp,
     // Actions
     fetchTransactions,
     handleAddTransaction,
@@ -126,7 +132,7 @@ export default function TransactionsPage() {
 
             <button
               onClick={handleOpenQuickAddModal}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2 font-medium shadow-sm"
+              className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors flex items-center gap-2 font-medium shadow-sm"
             >
               <Zap className="h-4 w-4" />
               Quick Entry
@@ -386,8 +392,9 @@ export default function TransactionsPage() {
       {/* Add Modal */}
       <Modal
         isOpen={showAddModal}
-        onClose={() => { setShowAddModal(false); setTransactionMode(null); }}
+        onClose={() => { setShowAddModal(false); setTransactionMode(null); setFollowUpPrefill(null); }}
         title={
+          followUpPrefill ? 'Buat Entry COGS' :
           transactionMode === 'in' ? 'Uang Masuk' :
           transactionMode === 'out' ? 'Uang Keluar' :
           'Tambah Transaksi (Form Lengkap)'
@@ -395,8 +402,12 @@ export default function TransactionsPage() {
       >
         <TransactionForm
           mode={transactionMode || 'full'}
-          onSubmit={handleAddTransaction}
-          onCancel={() => { setShowAddModal(false); setTransactionMode(null); }}
+          initialValues={followUpPrefill ?? undefined}
+          onSubmit={async (data) => {
+            await handleAddTransaction(data);
+            setFollowUpPrefill(null);
+          }}
+          onCancel={() => { setShowAddModal(false); setTransactionMode(null); setFollowUpPrefill(null); }}
           loading={saving}
           businessId={businessId || undefined}
         />
@@ -424,6 +435,8 @@ export default function TransactionsPage() {
         onClose={() => setDetailTransaction(null)}
         onEdit={canManageTransactions ? setEditTransaction : undefined}
         onDelete={canManageTransactions ? setDeleteTransaction : undefined}
+        accounts={accounts}
+        onCreateFollowUp={canManageTransactions ? handleCreateFollowUp : undefined}
       />
 
       {/* Delete Confirmation */}

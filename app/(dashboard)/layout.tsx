@@ -12,11 +12,9 @@ import {
   LayoutDashboard,
   CreditCard,
   Building2,
-  ClipboardList,
   DollarSign,
   Scale,
   ArrowLeftRight,
-  TrendingUp,
   LogOut,
   Search,
   ChevronDown,
@@ -31,7 +29,9 @@ import {
   Settings,
   BookOpen,
   BookOpenCheck,
+  ClipboardCheck,
   Zap,
+  FlaskConical,
 } from 'lucide-react';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -69,10 +69,16 @@ const navSections: NavSection[] = [
     label: 'OVERVIEW',
     items: [
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/businesses', label: 'Business', icon: Building2 },
+    ],
+  },
+  {
+    label: 'ACCOUNTING',
+    items: [
       { href: '/transactions', label: 'Transactions', icon: CreditCard },
       { href: '/accounts', label: 'Chart of Accounts', icon: BookOpen },
-      { href: '/businesses', label: 'Businesses', icon: Building2 },
-      { href: '/reports', label: 'Reports', icon: ClipboardList },
+      { href: '/general-ledger', label: 'General Ledger', icon: BookOpenCheck },
+      { href: '/trial-balance', label: 'Trial Balance', icon: ClipboardCheck },
     ],
   },
   {
@@ -81,19 +87,12 @@ const navSections: NavSection[] = [
       { href: '/income-statement', label: 'Income Statement', icon: DollarSign },
       { href: '/balance-sheet', label: 'Balance Sheet', icon: Scale },
       { href: '/cash-flow', label: 'Cash Flow', icon: ArrowLeftRight },
-      { href: '/general-ledger', label: 'General Ledger', icon: BookOpenCheck },
     ],
   },
   {
-    label: 'ANALYSIS',
+    label: 'ANALYTICS',
     items: [
-      { href: '/roi-forecast', label: 'ROI & Forecast', icon: TrendingUp },
-    ],
-  },
-  {
-    label: 'ACCOUNT',
-    items: [
-      { href: '/settings', label: 'Settings', icon: Settings },
+      { href: '/scenario-modeling', label: 'Scenario Modeling', icon: FlaskConical },
     ],
   },
 ];
@@ -103,9 +102,11 @@ function Header({ onMenuClick, onQuickAddClick }: { onMenuClick: () => void; onQ
   const { user, businesses, activeBusiness, setActiveBusiness, userRole } = useBusinessContext();
   const supabase = createClient();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [showAddBusiness, setShowAddBusiness] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
 
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
   const isInvestor = userRole === 'investor';
@@ -141,6 +142,9 @@ function Header({ onMenuClick, onQuickAddClick }: { onMenuClick: () => void; onQ
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
+      }
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setIsProfileDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -257,43 +261,64 @@ function Header({ onMenuClick, onQuickAddClick }: { onMenuClick: () => void; onQ
         {/* Theme Toggle */}
         <ThemeToggle />
 
-        {/* Profile */}
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
-            {user?.user_metadata?.avatar_url ? (
-              <Image
-                src={user.user_metadata.avatar_url}
-                alt={userName}
-                width={36}
-                height={36}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span>{userName.charAt(0).toUpperCase()}</span>
-            )}
-          </div>
-          <div className="hidden md:block">
-            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{userName}</p>
-            {userRole && (
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                userRole === 'investor'
-                  ? 'bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 ring-1 ring-sky-500/20'
-                  : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-500/20'
-              }`}>
-                {ROLE_LABELS[userRole]}
-              </span>
-            )}
-          </div>
-        </div>
+        {/* Profile Dropdown */}
+        <div className="relative" ref={profileDropdownRef}>
+          <button
+            onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+            className="flex items-center gap-3 p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+          >
+            <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
+              {user?.user_metadata?.avatar_url ? (
+                <Image
+                  src={user.user_metadata.avatar_url}
+                  alt={userName}
+                  width={36}
+                  height={36}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span>{userName.charAt(0).toUpperCase()}</span>
+              )}
+            </div>
+            <div className="hidden md:block text-left">
+              <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{userName}</p>
+              {userRole && (
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  userRole === 'investor'
+                    ? 'bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 ring-1 ring-sky-500/20'
+                    : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-500/20'
+                }`}>
+                  {ROLE_LABELS[userRole]}
+                </span>
+              )}
+            </div>
+            <ChevronDown className={`w-4 h-4 text-gray-400 dark:text-gray-500 transition-transform ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
 
-        {/* Logout */}
-        <button
-          onClick={handleLogout}
-          className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-          title="Logout"
-        >
-          <LogOut className="w-5 h-5" />
-        </button>
+          {isProfileDropdownOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setIsProfileDropdownOpen(false)} />
+              <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden py-1">
+                <Link
+                  href="/settings"
+                  onClick={() => setIsProfileDropdownOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <Settings className="w-4 h-4" />
+                  Settings
+                </Link>
+                <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </header>
 

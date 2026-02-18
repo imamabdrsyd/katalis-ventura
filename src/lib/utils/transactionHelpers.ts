@@ -63,7 +63,11 @@ export function detectCategory(
   // Money OUT flow: Asset credit (paying from bank/cash)
   if (creditType === 'ASSET') {
     if (debitType === 'EXPENSE') return 'OPEX'; // Default expense category
-    if (debitType === 'ASSET') return 'CAPEX'; // Asset purchase (e.g. equipment)
+    if (debitType === 'ASSET') {
+      // Use debit account's default_category if set (inventory=VAR, equipment=CAPEX)
+      if (debitAccount?.default_category) return debitAccount.default_category;
+      return 'CAPEX'; // Default for ASSET→ASSET without explicit category
+    }
     if (debitType === 'EQUITY') return 'FIN'; // Owner withdrawal
     if (debitType === 'LIABILITY') return 'FIN'; // Liability payment
   }

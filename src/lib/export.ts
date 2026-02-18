@@ -343,17 +343,31 @@ export function exportBalanceSheetToPDF(
   ) < 0.01;
 
   // Assets table
-  const assetsData = [
+  const assetsRows: string[][] = [
     ['ASSETS', ''],
     ['', ''],
     ['Current Assets', ''],
     ['  Cash & Bank', formatCurrency(data.assets.cash)],
+  ];
+  if (data.assets.inventory !== 0) {
+    assetsRows.push(['  Inventory', formatCurrency(data.assets.inventory)]);
+  }
+  if (data.assets.receivables !== 0) {
+    assetsRows.push(['  Receivables', formatCurrency(data.assets.receivables)]);
+  }
+  if (data.assets.otherCurrentAssets !== 0) {
+    assetsRows.push(['  Other Current Assets', formatCurrency(data.assets.otherCurrentAssets)]);
+  }
+  assetsRows.push(
+    ['Total Current Assets', formatCurrency(data.assets.totalCurrentAssets)],
     ['', ''],
     ['Fixed Assets', ''],
-    ['  Property & Equipment', formatCurrency(data.assets.propertyValue)],
+    ['  Property & Equipment', formatCurrency(data.assets.fixedAssets)],
+    ['Total Fixed Assets', formatCurrency(data.assets.totalFixedAssets)],
     ['', ''],
     ['TOTAL ASSETS', formatCurrency(data.assets.totalAssets)],
-  ];
+  );
+  const assetsData = assetsRows;
 
   autoTable(doc, {
     startY: 40,
@@ -379,7 +393,8 @@ export function exportBalanceSheetToPDF(
     ['Total Liabilities', formatCurrency(data.liabilities.totalLiabilities)],
     ['', ''],
     ['Equity', ''],
-    ['  Capital', formatCurrency(data.equity.capital)],
+    ['  Modal Disetor', formatCurrency(data.equity.capital)],
+    ...(data.equity.drawings > 0 ? [['  Prive / Dividen', `(${formatCurrency(data.equity.drawings)})`]] : []),
     ['  Retained Earnings', formatCurrency(data.equity.retainedEarnings)],
     ['Total Equity', formatCurrency(data.equity.totalEquity)],
     ['', ''],
@@ -440,9 +455,14 @@ export function exportBalanceSheetToExcel(
     [],
     ['Current Assets', ''],
     ['Cash & Bank', data.assets.cash],
+    ...(data.assets.inventory !== 0 ? [['Inventory', data.assets.inventory]] : []),
+    ...(data.assets.receivables !== 0 ? [['Receivables', data.assets.receivables]] : []),
+    ...(data.assets.otherCurrentAssets !== 0 ? [['Other Current Assets', data.assets.otherCurrentAssets]] : []),
+    ['Total Current Assets', data.assets.totalCurrentAssets],
     [],
     ['Fixed Assets', ''],
-    ['Property & Equipment', data.assets.propertyValue],
+    ['Property & Equipment', data.assets.fixedAssets],
+    ['Total Fixed Assets', data.assets.totalFixedAssets],
     [],
     ['TOTAL ASSETS', data.assets.totalAssets],
     [],
@@ -454,7 +474,8 @@ export function exportBalanceSheetToExcel(
     ['Total Liabilities', data.liabilities.totalLiabilities],
     [],
     ['Equity', ''],
-    ['Capital', data.equity.capital],
+    ['Modal Disetor', data.equity.capital],
+    ...(data.equity.drawings > 0 ? [['Prive / Dividen', -data.equity.drawings]] : []),
     ['Retained Earnings', data.equity.retainedEarnings],
     ['Total Equity', data.equity.totalEquity],
     [],

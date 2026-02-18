@@ -139,6 +139,22 @@ export function AccountForm({
         return newErrors;
       });
     }
+
+    // Auto-suggest default_category for ASSET sub-accounts based on account name
+    if (name === 'account_name' && selectedParent?.account_type === 'ASSET' && !isEditMode) {
+      const lower = value.toLowerCase();
+      let suggested: TransactionCategory | undefined;
+      if (/persediaan|inventory|stok|bahan|barang/.test(lower)) {
+        suggested = 'VAR';
+      } else if (/piutang|receivable/.test(lower)) {
+        suggested = 'EARN';
+      } else if (/peralatan|equipment|kendaraan|vehicle|properti|property|gedung|mesin|furniture|tanah/.test(lower)) {
+        suggested = 'CAPEX';
+      }
+      if (suggested) {
+        setFormData(prev => ({ ...prev, default_category: suggested }));
+      }
+    }
   };
 
   // Get the selected parent for display
@@ -187,6 +203,26 @@ export function AccountForm({
           {errors.parent_account_id && (
             <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.parent_account_id}</p>
           )}
+        </div>
+      )}
+
+      {/* Asset Account Guidance */}
+      {selectedParent?.account_type === 'ASSET' && !isEditMode && (
+        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-xs space-y-2">
+          <p className="font-semibold text-blue-800 dark:text-blue-200">Panduan Pembuatan Akun Aset</p>
+          <div className="space-y-1.5 text-blue-700 dark:text-blue-300">
+            <p><strong>Aset Lancar</strong> (bisa dicairkan &lt;12 bulan):</p>
+            <ul className="list-disc list-inside pl-2 space-y-0.5">
+              <li>Persediaan / Inventory &rarr; kategori default: <strong>VAR</strong></li>
+              <li>Piutang Usaha &rarr; kategori default: <strong>EARN</strong></li>
+              <li>Uang Muka, Sewa Dibayar di Muka &rarr; kosongkan kategori</li>
+            </ul>
+            <p><strong>Aset Tetap</strong> (digunakan &gt;12 bulan):</p>
+            <ul className="list-disc list-inside pl-2 space-y-0.5">
+              <li>Peralatan, Kendaraan, Properti &rarr; kategori default: <strong>CAPEX</strong></li>
+            </ul>
+          </div>
+          <p className="text-blue-600 dark:text-blue-400 italic">Kategori akan terdeteksi otomatis dari nama akun.</p>
         </div>
       )}
 
