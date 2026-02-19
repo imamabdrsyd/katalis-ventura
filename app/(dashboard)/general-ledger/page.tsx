@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { BookOpenCheck, AlertCircle, FileText } from 'lucide-react';
 import { useGeneralLedger, type AccountTypeFilter } from '@/hooks/useGeneralLedger';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
@@ -17,18 +18,18 @@ const ACCOUNT_TYPE_LABELS: Record<AccountTypeFilter, string> = {
 
 const ACCOUNT_TYPE_COLORS: Record<AccountType, string> = {
   ASSET: 'text-blue-600 dark:text-blue-400',
-  LIABILITY: 'text-red-600 dark:text-red-400',
+  LIABILITY: 'text-amber-600 dark:text-amber-400',
   EQUITY: 'text-purple-600 dark:text-purple-400',
   REVENUE: 'text-green-600 dark:text-green-400',
-  EXPENSE: 'text-amber-600 dark:text-amber-400',
+  EXPENSE: 'text-red-600 dark:text-red-400',
 };
 
 const ACCOUNT_TYPE_BG: Record<AccountType, string> = {
   ASSET: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300',
-  LIABILITY: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300',
+  LIABILITY: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300',
   EQUITY: 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300',
   REVENUE: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300',
-  EXPENSE: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300',
+  EXPENSE: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300',
 };
 
 const PERIOD_LABELS: Record<Period, string> = {
@@ -48,6 +49,7 @@ export default function GeneralLedgerPage() {
     endDate,
     setStartDate,
     setEndDate,
+    setPeriod,
     handlePeriodChange,
     accounts,
     selectedAccountId,
@@ -58,6 +60,21 @@ export default function GeneralLedgerPage() {
     ledger,
     allLedgers,
   } = useGeneralLedger();
+
+  // "All Time" = custom period with no date bounds
+  const isAllTime = period === 'custom' && !startDate && !endDate;
+
+  const handleAllTime = () => {
+    setPeriod('custom');
+    setStartDate('');
+    setEndDate('');
+  };
+
+  // Default to All Time on mount
+  useEffect(() => {
+    handleAllTime();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!activeBusiness && !loading) {
     return (
@@ -97,12 +114,22 @@ export default function GeneralLedgerPage() {
               Periode
             </label>
             <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={handleAllTime}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isAllTime
+                    ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                All Time
+              </button>
               {(['month', 'quarter', 'year', 'custom'] as Period[]).map((p) => (
                 <button
                   key={p}
                   onClick={() => handlePeriodChange(p)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    period === p
+                    period === p && !isAllTime
                       ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}

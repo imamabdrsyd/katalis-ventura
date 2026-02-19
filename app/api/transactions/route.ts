@@ -35,7 +35,8 @@ export async function GET(request: NextRequest) {
       `)
       .eq('business_id', parsed.data)
       .is('deleted_at', null)
-      .order('date', { ascending: false });
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching transactions:', error);

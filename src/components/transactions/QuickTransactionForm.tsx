@@ -53,7 +53,7 @@ const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
 
 const ACCOUNT_TYPE_COLORS: Record<AccountType, string> = {
   ASSET: 'text-blue-600 dark:text-blue-400',
-  LIABILITY: 'text-orange-600 dark:text-orange-400',
+  LIABILITY: 'text-amber-600 dark:text-amber-400',
   EQUITY: 'text-purple-600 dark:text-purple-400',
   REVENUE: 'text-emerald-600 dark:text-emerald-400',
   EXPENSE: 'text-red-600 dark:text-red-400',

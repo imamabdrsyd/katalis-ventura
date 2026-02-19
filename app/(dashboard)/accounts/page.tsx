@@ -11,10 +11,10 @@ import { Plus, Search, ChevronDown, ChevronRight, Lock, Pencil, XCircle, CheckCi
 
 const TYPE_COLORS: Record<AccountType, string> = {
   ASSET: 'from-blue-500 to-blue-600',
-  LIABILITY: 'from-red-500 to-red-600',
+  LIABILITY: 'from-amber-500 to-amber-600',
   EQUITY: 'from-purple-500 to-purple-600',
   REVENUE: 'from-green-500 to-green-600',
-  EXPENSE: 'from-amber-500 to-amber-600',
+  EXPENSE: 'from-red-500 to-red-600',
 };
 
 export default function AccountsPage() {

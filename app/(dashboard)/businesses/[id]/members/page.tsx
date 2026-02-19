@@ -6,7 +6,83 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import { MemberList } from '@/components/business/MemberList';
 import { InviteCodeManager } from '@/components/business/InviteCodeManager';
 import { getBusinessMembers, type BusinessMember } from '@/lib/api/members';
-import { ArrowLeft, UserPlus, Users } from 'lucide-react';
+import { ArrowLeft, UserPlus, Users, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote } from 'lucide-react';
+import { formatCurrency } from '@/lib/utils';
+import type { Business } from '@/types';
+
+const BUSINESS_TYPE_LABELS: Record<string, string> = {
+  agribusiness: 'Agribusiness',
+  personal_care: 'Personal Care',
+  accommodation: 'Accommodation',
+  creative_agency: 'Creative Agency',
+  food_and_beverage: 'F&B',
+  finance: 'Finance',
+  short_term_rental: 'Short-term Rental',
+  property_management: 'Property Management',
+  real_estate: 'Real Estate',
+};
+
+const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
+  agribusiness: <Wheat className="w-6 h-6" />,
+  personal_care: <Heart className="w-6 h-6" />,
+  accommodation: <Building2 className="w-6 h-6" />,
+  creative_agency: <Palette className="w-6 h-6" />,
+  food_and_beverage: <UtensilsCrossed className="w-6 h-6" />,
+  finance: <Coins className="w-6 h-6" />,
+  short_term_rental: <Home className="w-6 h-6" />,
+  property_management: <Building2 className="w-6 h-6" />,
+  real_estate: <Building2 className="w-6 h-6" />,
+};
+
+function BusinessDetailCard({ business }: { business: Business }) {
+  const icon = BUSINESS_TYPE_ICONS[business.business_type] || <Building2 className="w-6 h-6" />;
+  const typeLabel = BUSINESS_TYPE_LABELS[business.business_type] || business.business_type;
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 flex-1 self-stretch">
+      {/* Business icon */}
+      <div className="text-indigo-500 dark:text-indigo-400 mb-4">
+        {icon}
+      </div>
+
+      {/* Business name */}
+      <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
+        {business.business_name}
+      </h2>
+
+      {/* Business type */}
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 mb-4">
+        {typeLabel}
+      </span>
+
+      <div className="space-y-3 mt-2">
+        {/* Capital */}
+        <div className="flex items-start gap-3">
+          <Banknote className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Modal Bisnis</p>
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+              {formatCurrency(business.capital_investment)}
+            </p>
+          </div>
+        </div>
+
+        {/* Address */}
+        {business.property_address && (
+          <div className="flex items-start gap-3">
+            <MapPin className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Alamat</p>
+              <p className="text-sm text-gray-800 dark:text-gray-200 leading-snug">
+                {business.property_address}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function BusinessMembersPage() {
   const params = useParams();
@@ -83,9 +159,12 @@ export default function BusinessMembersPage() {
         )}
       </div>
 
-      {/* Members List */}
-      <div className="max-w-2xl">
-        <MemberList members={members} loading={loading} />
+      {/* Members List + Business Detail */}
+      <div className="flex items-stretch gap-8">
+        <div className="max-w-2xl w-full">
+          <MemberList members={members} loading={loading} />
+        </div>
+        {business && <BusinessDetailCard business={business} />}
       </div>
 
       {/* Invite Code Manager Modal */}

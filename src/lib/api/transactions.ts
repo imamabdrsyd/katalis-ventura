@@ -55,6 +55,7 @@ export async function getTransactions(businessId: string): Promise<Transaction[]
     `)
     .eq('business_id', businessId)
     .is('deleted_at', null) // Only fetch non-deleted transactions
+    .order('date', { ascending: false })
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);

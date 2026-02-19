@@ -15,10 +15,10 @@ interface AccountListProps {
 
 const TYPE_BADGES: Record<AccountType, string> = {
   ASSET: 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300',
-  LIABILITY: 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300',
+  LIABILITY: 'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300',
   EQUITY: 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300',
   REVENUE: 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300',
-  EXPENSE: 'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300',
+  EXPENSE: 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300',
 };
 
 const TYPE_LABELS: Record<AccountType, string> = {

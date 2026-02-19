@@ -9,7 +9,8 @@ import { DeleteConfirmModal } from '@/components/transactions/DeleteConfirmModal
 import TransactionImportModal from '@/components/transactions/TransactionImportModal';
 import type { TransactionCategory } from '@/types';
 import { QuickTransactionForm } from '@/components/transactions/QuickTransactionForm';
-import { Upload, TrendingUp, TrendingDown, Zap, BookOpen, CheckSquare, X, Trash2, MoreVertical } from 'lucide-react';
+import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
@@ -23,6 +24,7 @@ const CATEGORY_LABELS_ID: Record<TransactionCategory, string> = {
 };
 
 export default function TransactionsPage() {
+  const router = useRouter();
   const {
     // Data
     visibleTransactions,
@@ -91,7 +93,6 @@ export default function TransactionsPage() {
     handlePrint,
     handleOpenInModal,
     handleOpenOutModal,
-    handleOpenQuickAddModal,
   } = useTransactions();
 
   // Loading state
@@ -142,11 +143,11 @@ export default function TransactionsPage() {
             </button>
 
             <button
-              onClick={handleOpenQuickAddModal}
+              onClick={() => router.push('/transactions/journal-entry')}
               className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors flex items-center gap-2 font-medium shadow-sm"
             >
-              <Zap className="h-4 w-4" />
-              Quick Entry
+              <BookOpen className="h-4 w-4" />
+              Journal Entry
             </button>
 
             {/* TEMPORARILY HIDDEN - To re-enable, uncomment this section */}
