@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Calendar, TrendingUp, TrendingDown, Download, FileText, FileSpreadsheet, Info } from 'lucide-react';
 import { useIncomeStatement } from '@/hooks/useIncomeStatement';
@@ -91,7 +91,7 @@ function Tooltip({ title, color, transactions, formula, breakdown }: {
   );
 }
 
-export default function IncomeStatementPage() {
+function IncomeStatementPageInner() {
   const {
     activeBusiness,
     loading,
@@ -536,5 +536,13 @@ export default function IncomeStatementPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function IncomeStatementPage() {
+  return (
+    <Suspense fallback={<div className="p-8 flex items-center justify-center min-h-[50vh]"><div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+      <IncomeStatementPageInner />
+    </Suspense>
   );
 }

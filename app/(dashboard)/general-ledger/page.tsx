@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { BookOpenCheck, AlertCircle, FileText } from 'lucide-react';
 import { useGeneralLedger, type AccountTypeFilter } from '@/hooks/useGeneralLedger';
@@ -40,7 +40,7 @@ const PERIOD_LABELS: Record<Period, string> = {
   custom: 'Kustom',
 };
 
-export default function GeneralLedgerPage() {
+function GeneralLedgerPageInner() {
   const {
     activeBusiness,
     loading,
@@ -470,5 +470,14 @@ export default function GeneralLedgerPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+
+export default function GeneralLedgerPage() {
+  return (
+    <Suspense fallback={<div className="p-8 flex items-center justify-center min-h-[50vh]"><div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+      <GeneralLedgerPageInner />
+    </Suspense>
   );
 }
