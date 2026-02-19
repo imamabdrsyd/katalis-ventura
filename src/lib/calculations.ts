@@ -55,6 +55,12 @@ export function calculateFinancialSummary(
         summary.totalOpex += amount;
         break;
       case 'VAR':
+        // For double-entry: only count as COGS if debit account is EXPENSE type
+        // If debit is ASSET (inventory purchase), it's not COGS yet — still on balance sheet
+        if (t.is_double_entry && t.debit_account?.account_type === 'ASSET') {
+          // Inventory purchase — skip from income statement COGS
+          break;
+        }
         summary.totalVar += amount;
         break;
       case 'CAPEX':
@@ -153,6 +159,11 @@ export function groupTransactionsByMonth(
         monthData.opex += amount;
         break;
       case 'VAR':
+        // For double-entry: only count as COGS if debit account is EXPENSE type
+        // If debit is ASSET (inventory purchase), skip from income statement
+        if (t.is_double_entry && t.debit_account?.account_type === 'ASSET') {
+          break;
+        }
         monthData.var += amount;
         break;
       case 'CAPEX':

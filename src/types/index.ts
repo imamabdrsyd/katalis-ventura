@@ -8,6 +8,12 @@ export type TransactionCategory = 'EARN' | 'OPEX' | 'VAR' | 'CAPEX' | 'TAX' | 'F
 export type AccountType = 'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENSE';
 export type NormalBalance = 'DEBIT' | 'CREDIT';
 
+// Transaction metadata (stored as jsonb in DB)
+export interface TransactionMeta {
+  /** IDs of stock transactions that were sold/converted to COGS alongside this sale */
+  sold_stock_ids?: string[];
+}
+
 export interface Account {
   id: string;
   business_id: string;
@@ -97,6 +103,7 @@ export interface Transaction {
   credit_account_id?: string;
   is_double_entry?: boolean;
   notes?: string;
+  meta?: TransactionMeta | null;
 
   // Audit trail fields
   updated_by?: string;

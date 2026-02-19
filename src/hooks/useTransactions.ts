@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useBusinessContext } from '@/context/BusinessContext';
 import * as transactionsApi from '@/lib/api/transactions';
 import { getAccounts } from '@/lib/api/accounts';
+import { findCogsAccount } from '@/lib/utils/inventoryHelper';
 import type { Transaction, TransactionCategory, Account } from '@/types';
 import type { TransactionFormData } from '@/components/transactions/TransactionForm';
 
@@ -40,6 +41,11 @@ export function useTransactions() {
 
   // Follow-up prefill state (for COGS entry guidance)
   const [followUpPrefill, setFollowUpPrefill] = useState<Partial<TransactionFormData> | null>(null);
+
+  // Kebab menu & select mode state
+  const [showKebabMenu, setShowKebabMenu] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Apply filters
   const filteredTransactions = transactions.filter((transaction) => {
@@ -178,6 +184,66 @@ export function useTransactions() {
     }
   }, [businessId, user, fetchTransactions]);
 
+  // Convert stock transactions to COGS: change debit from Inventory to COGS account
+  const handleConvertStockToCOGS = useCallback(async (transactionIds: string[]) => {
+    if (transactionIds.length === 0) return;
+
+    const cogsAccount = findCogsAccount(accounts);
+    if (!cogsAccount) {
+      throw new Error('Tidak ada akun HPP/Beban yang aktif. Silakan buat akun beban terlebih dahulu.');
+    }
+
+    for (const txId of transactionIds) {
+      await transactionsApi.updateTransaction(txId, {
+        debit_account_id: cogsAccount.id,
+      });
+    }
+  }, [accounts]);
+
+  // Toggle select for a single transaction
+  const handleToggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  // Select all visible transactions
+  const handleSelectAll = useCallback(() => {
+    const allVisible = new Set(visibleTransactions.map((t) => t.id));
+    setSelectedIds((prev) => {
+      const allSelected = visibleTransactions.every((t) => prev.has(t.id));
+      if (allSelected) return new Set(); // deselect all
+      return allVisible;
+    });
+  }, [visibleTransactions]);
+
+  // Exit select mode
+  const handleExitSelectMode = useCallback(() => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }, []);
+
+  // Bulk delete selected transactions
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    setSaving(true);
+    try {
+      for (const id of selectedIds) {
+        await transactionsApi.deleteTransaction(id);
+      }
+      setSelectedIds(new Set());
+      setSelectMode(false);
+      fetchTransactions();
+    } catch (err: any) {
+      alert(err.message || 'Gagal menghapus transaksi');
+    } finally {
+      setSaving(false);
+    }
+  }, [selectedIds, fetchTransactions]);
+
   // Handle COGS follow-up: close detail modal and open TransactionForm with prefill
   const handleCreateFollowUp = useCallback((prefillData: Partial<TransactionFormData>) => {
     setDetailTransaction(null);
@@ -234,6 +300,17 @@ export function useTransactions() {
     followUpPrefill,
     setFollowUpPrefill,
     handleCreateFollowUp,
+    handleConvertStockToCOGS,
+    // Kebab menu & select mode
+    showKebabMenu,
+    setShowKebabMenu,
+    selectMode,
+    setSelectMode,
+    selectedIds,
+    handleToggleSelect,
+    handleSelectAll,
+    handleExitSelectMode,
+    handleBulkDelete,
     // Actions
     fetchTransactions,
     handleAddTransaction,

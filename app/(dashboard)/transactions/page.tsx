@@ -9,7 +9,7 @@ import { DeleteConfirmModal } from '@/components/transactions/DeleteConfirmModal
 import TransactionImportModal from '@/components/transactions/TransactionImportModal';
 import type { TransactionCategory } from '@/types';
 import { QuickTransactionForm } from '@/components/transactions/QuickTransactionForm';
-import { Upload, TrendingUp, TrendingDown, Zap } from 'lucide-react';
+import { Upload, TrendingUp, TrendingDown, Zap, BookOpen, CheckSquare, X, Trash2, MoreVertical } from 'lucide-react';
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
@@ -71,6 +71,17 @@ export default function TransactionsPage() {
     followUpPrefill,
     setFollowUpPrefill,
     handleCreateFollowUp,
+    handleConvertStockToCOGS,
+    // Kebab menu & select mode
+    showKebabMenu,
+    setShowKebabMenu,
+    selectMode,
+    setSelectMode,
+    selectedIds,
+    handleToggleSelect,
+    handleSelectAll,
+    handleExitSelectMode,
+    handleBulkDelete,
     // Actions
     fetchTransactions,
     handleAddTransaction,
@@ -293,21 +304,96 @@ export default function TransactionsPage() {
               )}
             </div>
 
-            {/* More options */}
-            <button className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-              <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-              </svg>
-            </button>
+            {/* More options (kebab menu) */}
+            <div className="relative">
+              <button
+                onClick={() => setShowKebabMenu(!showKebabMenu)}
+                className={`p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                  showKebabMenu ? 'bg-gray-50 dark:bg-gray-700' : ''
+                }`}
+              >
+                <MoreVertical className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              </button>
+
+              {showKebabMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowKebabMenu(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20">
+                    <div className="py-1">
+                      {canManageTransactions && (
+                        <button
+                          onClick={() => {
+                            setShowKebabMenu(false);
+                            setTransactionMode(null);
+                            setShowAddModal(true);
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
+                        >
+                          <BookOpen className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                          Journal Entry
+                        </button>
+                      )}
+                      {canManageTransactions && (
+                        <button
+                          onClick={() => {
+                            setShowKebabMenu(false);
+                            setSelectMode(true);
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
+                        >
+                          <CheckSquare className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                          Select List
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Select Mode Action Bar */}
+        {selectMode && (
+          <div className="flex items-center justify-between mb-4 px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-lg">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+                {selectedIds.size} transaksi dipilih
+              </span>
+              {selectedIds.size > 0 && (
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={saving}
+                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Hapus ({selectedIds.size})
+                </button>
+              )}
+            </div>
+            <button
+              onClick={handleExitSelectMode}
+              className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+              title="Batal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        )}
 
         <TransactionList
           transactions={visibleTransactions}
           loading={loading}
-          onRowClick={setDetailTransaction}
-          onEdit={canManageTransactions ? setEditTransaction : undefined}
-          onDelete={canManageTransactions ? setDeleteTransaction : undefined}
+          onRowClick={selectMode ? undefined : setDetailTransaction}
+          onEdit={canManageTransactions && !selectMode ? setEditTransaction : undefined}
+          onDelete={canManageTransactions && !selectMode ? setDeleteTransaction : undefined}
+          selectMode={selectMode}
+          selectedIds={selectedIds}
+          onToggleSelect={handleToggleSelect}
+          onSelectAll={handleSelectAll}
         />
 
         {/* Pagination */}
@@ -386,6 +472,8 @@ export default function TransactionsPage() {
           onCancel={() => setShowQuickAddModal(false)}
           loading={saving}
           businessId={businessId || undefined}
+          transactions={transactions}
+          onConvertStockToCOGS={handleConvertStockToCOGS}
         />
       </Modal>
 
@@ -436,6 +524,7 @@ export default function TransactionsPage() {
         onEdit={canManageTransactions ? setEditTransaction : undefined}
         onDelete={canManageTransactions ? setDeleteTransaction : undefined}
         accounts={accounts}
+        allTransactions={transactions}
         onCreateFollowUp={canManageTransactions ? handleCreateFollowUp : undefined}
       />
 

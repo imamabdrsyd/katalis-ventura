@@ -18,6 +18,7 @@ interface TransactionDetailModalProps {
   onEdit?: (transaction: Transaction) => void;
   onDelete?: (transaction: Transaction) => void;
   accounts?: Account[];
+  allTransactions?: Transaction[];
   onCreateFollowUp?: (prefillData: Partial<TransactionFormData>) => void;
 }
 
@@ -29,6 +30,18 @@ const CATEGORY_COLORS: Record<string, string> = {
   TAX: 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300',
   FIN: 'bg-pink-100 dark:bg-pink-900/50 text-pink-700 dark:text-pink-300',
 };
+
+const STOCK_COLOR = 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300';
+
+function isInventoryTransaction(transaction: Transaction): boolean {
+  const debitCode = transaction.debit_account?.account_code || '';
+  const debitName = transaction.debit_account?.account_name?.toLowerCase() || '';
+  return transaction.category === 'VAR' && (
+    debitCode.startsWith('13') ||
+    debitName.includes('inventory') ||
+    debitName.includes('persediaan')
+  );
+}
 
 // Helper function to format account display based on transaction type
 function getAccountDisplay(transaction: Transaction): string {
@@ -60,6 +73,7 @@ export function TransactionDetailModal({
   onEdit,
   onDelete,
   accounts,
+  allTransactions,
   onCreateFollowUp,
 }: TransactionDetailModalProps) {
   const [creatorName, setCreatorName] = useState<string | null>(null);
@@ -82,7 +96,16 @@ export function TransactionDetailModal({
     return detectMatchingPrincipleWarning(transaction, accounts);
   }, [transaction, accounts]);
 
-  const showWarning = matchingWarning && !warningDismissed && !!onCreateFollowUp;
+  // Look up sold stock transactions from meta.sold_stock_ids
+  const soldStockTransactions = useMemo(() => {
+    if (!transaction?.meta?.sold_stock_ids || !allTransactions) return [];
+    const soldIds = new Set(transaction.meta.sold_stock_ids);
+    return allTransactions.filter((t) => soldIds.has(t.id));
+  }, [transaction?.meta?.sold_stock_ids, allTransactions]);
+
+  // Only show warning if EARN transaction has no sold stock linked (user skipped InventoryPicker)
+  const showWarning = matchingWarning && !warningDismissed && !!onCreateFollowUp
+    && (!transaction?.meta?.sold_stock_ids || transaction.meta.sold_stock_ids.length === 0);
 
   const handleCreateCOGSEntry = useCallback(() => {
     if (!matchingWarning || !transaction || !onCreateFollowUp) return;
@@ -184,11 +207,17 @@ export function TransactionDetailModal({
 
         {/* Header with Category Badge and Amount */}
         <div className="flex items-start justify-between">
-          <span
-            className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${CATEGORY_COLORS[transaction.category]}`}
-          >
-            {CATEGORY_LABELS[transaction.category]}
-          </span>
+          {isInventoryTransaction(transaction) ? (
+            <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${STOCK_COLOR}`}>
+              Stock
+            </span>
+          ) : (
+            <span
+              className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${CATEGORY_COLORS[transaction.category]}`}
+            >
+              {CATEGORY_LABELS[transaction.category]}
+            </span>
+          )}
           <div className="text-left">
             <p className={`text-2xl font-bold ${
               transaction.category === 'EARN'
@@ -260,6 +289,40 @@ export function TransactionDetailModal({
             </div>
           )}
         </div>
+
+        {/* Sold Stock Info */}
+        {soldStockTransactions.length > 0 && (
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+              Persediaan yang Terjual
+            </h4>
+            <div className="space-y-2">
+              {soldStockTransactions.map((stock) => (
+                <div
+                  key={stock.id}
+                  className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                      {stock.name}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {formatDate(stock.date)}
+                      {stock.debit_account && (
+                        <span className="ml-2">
+                          {stock.debit_account.account_code} - {stock.debit_account.account_name}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-300 ml-3 flex-shrink-0">
+                    {formatCurrency(stock.amount)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Metadata Section */}
         <div className="border-t border-gray-200 dark:border-gray-700 pt-4">

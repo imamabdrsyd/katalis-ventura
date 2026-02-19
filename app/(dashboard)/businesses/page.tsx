@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { Modal } from '@/components/ui/Modal';
 import { BusinessCard } from '@/components/business/BusinessCard';
@@ -139,6 +140,8 @@ export default function BusinessesPage() {
     }
   };
 
+  const router = useRouter();
+
   const handleRestoreBusiness = async (business: Business) => {
     setLoading(true);
     try {
@@ -234,6 +237,11 @@ export default function BusinessesPage() {
                   setActiveBusiness(business.id);
                 }
               }}
+              onDoubleClick={() => {
+                if (!business.is_archived) {
+                  router.push(`/businesses/${business.id}/members`);
+                }
+              }}
               onEdit={isInvestor ? undefined : () => setEditingBusiness(business)}
               onArchive={isInvestor ? undefined : () => {
                 setArchivingBusiness(business);
@@ -323,6 +331,7 @@ export default function BusinessesPage() {
           </div>
         </div>
       </Modal>
+
     </div>
   );
 }

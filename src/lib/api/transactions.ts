@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase';
-import type { Transaction, TransactionCategory } from '@/types';
+import type { Transaction, TransactionCategory, TransactionMeta } from '@/types';
 
 export interface TransactionInsert {
   business_id: string;
@@ -16,6 +16,7 @@ export interface TransactionInsert {
   credit_account_id?: string;
   is_double_entry?: boolean;
   notes?: string;
+  meta?: TransactionMeta | null;
 }
 
 export interface TransactionUpdate {
@@ -31,6 +32,7 @@ export interface TransactionUpdate {
   credit_account_id?: string;
   is_double_entry?: boolean;
   notes?: string;
+  meta?: TransactionMeta | null;
 }
 
 export interface BulkImportResult {
@@ -53,7 +55,7 @@ export async function getTransactions(businessId: string): Promise<Transaction[]
     `)
     .eq('business_id', businessId)
     .is('deleted_at', null) // Only fetch non-deleted transactions
-    .order('date', { ascending: false });
+    .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);
   return data as Transaction[];

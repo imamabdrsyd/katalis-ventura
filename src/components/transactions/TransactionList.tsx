@@ -9,6 +9,10 @@ interface TransactionListProps {
   onRowClick?: (transaction: Transaction) => void;
   onEdit?: (transaction: Transaction) => void;
   onDelete?: (transaction: Transaction) => void;
+  selectMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
+  onSelectAll?: () => void;
 }
 
 const BADGE_CLASSES: Record<TransactionCategory, string> = {
@@ -19,6 +23,18 @@ const BADGE_CLASSES: Record<TransactionCategory, string> = {
   TAX: 'bg-purple-50 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400',
   FIN: 'bg-pink-50 dark:bg-pink-900/50 text-pink-600 dark:text-pink-400',
 };
+
+const STOCK_BADGE_CLASS = 'bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400';
+
+function isInventoryTransaction(transaction: Transaction): boolean {
+  const debitCode = transaction.debit_account?.account_code || '';
+  const debitName = transaction.debit_account?.account_name?.toLowerCase() || '';
+  return transaction.category === 'VAR' && (
+    debitCode.startsWith('13') ||
+    debitName.includes('inventory') ||
+    debitName.includes('persediaan')
+  );
+}
 
 // Helper function to format account display based on transaction type
 function getAccountDisplay(transaction: Transaction): string {
@@ -49,8 +65,13 @@ export function TransactionList({
   onRowClick,
   onEdit,
   onDelete,
+  selectMode,
+  selectedIds,
+  onToggleSelect,
+  onSelectAll,
 }: TransactionListProps) {
-  const showActions = onEdit || onDelete;
+  const showActions = (onEdit || onDelete) && !selectMode;
+  const allSelected = selectMode && transactions.length > 0 && transactions.every((t) => selectedIds?.has(t.id));
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -79,6 +100,16 @@ export function TransactionList({
       <table className="w-full min-w-[700px]">
         <thead>
           <tr className="border-b border-gray-200 dark:border-gray-700">
+            {selectMode && (
+              <th className="py-3 px-2 md:py-4 w-1">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={() => onSelectAll?.()}
+                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                />
+              </th>
+            )}
             <th className="text-left py-3 px-2 md:py-4 text-sm font-normal text-gray-500 dark:text-gray-400 w-1 whitespace-nowrap">No</th>
             <th className="text-left py-3 pl-1 pr-2 md:py-4 md:pl-2 md:pr-4 text-sm font-normal text-gray-500 dark:text-gray-400">Kategori</th>
             <th className="text-left py-3 px-2 md:py-4 text-sm font-normal text-gray-500 dark:text-gray-400">Nama</th>
@@ -95,18 +126,42 @@ export function TransactionList({
           {transactions.map((transaction, index) => (
             <tr
               key={transaction.id}
-              onClick={() => onRowClick?.(transaction)}
-              className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
+              onClick={() => selectMode ? onToggleSelect?.(transaction.id) : onRowClick?.(transaction)}
+              className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
+                selectMode
+                  ? `cursor-pointer ${selectedIds?.has(transaction.id) ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`
+                  : onRowClick ? 'cursor-pointer' : ''
+              }`}
             >
+              {selectMode && (
+                <td className="py-3 px-2 md:py-4 w-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds?.has(transaction.id) ?? false}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      onToggleSelect?.(transaction.id);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                  />
+                </td>
+              )}
               <td className="py-3 px-2 md:py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap w-1">
                 {index + 1}
               </td>
               <td className="py-3 pl-1 pr-2 md:py-4 md:pl-2 md:pr-4">
-                <span
-                  className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${BADGE_CLASSES[transaction.category]}`}
-                >
-                  {transaction.category}
-                </span>
+                {isInventoryTransaction(transaction) ? (
+                  <span className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${STOCK_BADGE_CLASS}`}>
+                    STOCK
+                  </span>
+                ) : (
+                  <span
+                    className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${BADGE_CLASSES[transaction.category]}`}
+                  >
+                    {transaction.category}
+                  </span>
+                )}
               </td>
               <td className="py-3 px-2 md:py-4 text-sm font-medium text-gray-800 dark:text-gray-200">
                 {transaction.name}

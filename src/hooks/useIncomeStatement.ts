@@ -31,7 +31,11 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
 
   const transactionsByCategory: TransactionsByCategory = {
     revenue: filteredTransactions.filter(t => t.category === 'EARN'),
-    cogs: filteredTransactions.filter(t => t.category === 'VAR'),
+    cogs: filteredTransactions.filter(t =>
+      t.category === 'VAR' &&
+      // Exclude inventory purchases (debit to ASSET) — not COGS until sold
+      !(t.is_double_entry && t.debit_account?.account_type === 'ASSET')
+    ),
     opex: filteredTransactions.filter(t => t.category === 'OPEX'),
     tax: filteredTransactions.filter(t => t.category === 'TAX'),
     interest: filteredTransactions.filter(t =>

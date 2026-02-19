@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Zap } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { QuickTransactionForm } from './QuickTransactionForm';
 import { useBusinessContext } from '@/context/BusinessContext';
 import * as transactionsApi from '@/lib/api/transactions';
+import { getAccounts } from '@/lib/api/accounts';
+import { findCogsAccount } from '@/lib/utils/inventoryHelper';
+import type { Transaction, Account } from '@/types';
 import type { TransactionFormData } from './TransactionForm';
 
 /**
@@ -25,10 +28,20 @@ export function FloatingQuickAdd({
 
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
 
   // Use controlled state if provided, otherwise use internal state
   const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
   const setIsOpen = onOpenChange || setInternalIsOpen;
+
+  // Fetch transactions and accounts when modal opens
+  useEffect(() => {
+    if (isOpen && businessId) {
+      transactionsApi.getTransactions(businessId).then(setTransactions).catch(() => {});
+      getAccounts(businessId).then(setAccounts).catch(() => {});
+    }
+  }, [isOpen, businessId]);
 
   const handleSubmit = useCallback(
     async (data: TransactionFormData) => {
@@ -48,6 +61,22 @@ export function FloatingQuickAdd({
       }
     },
     [businessId, user]
+  );
+
+  const handleConvertStockToCOGS = useCallback(
+    async (transactionIds: string[]) => {
+      if (transactionIds.length === 0) return;
+      const cogsAccount = findCogsAccount(accounts);
+      if (!cogsAccount) {
+        throw new Error('Tidak ada akun HPP/Beban yang aktif.');
+      }
+      for (const txId of transactionIds) {
+        await transactionsApi.updateTransaction(txId, {
+          debit_account_id: cogsAccount.id,
+        });
+      }
+    },
+    [accounts]
   );
 
   if (!canManage || !businessId) return null;
@@ -75,6 +104,8 @@ export function FloatingQuickAdd({
           onCancel={() => setIsOpen(false)}
           loading={saving}
           businessId={businessId}
+          transactions={transactions}
+          onConvertStockToCOGS={handleConvertStockToCOGS}
         />
       </Modal>
     </>

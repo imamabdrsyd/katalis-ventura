@@ -10,6 +10,7 @@ interface BusinessCardProps {
   totalCapex: number; // NEW: Calculated business capital from MODEL layer
   isActive?: boolean;
   onSelect?: () => void;
+  onDoubleClick?: () => void;
   onEdit?: () => void;
   onArchive?: () => void;
   onRestore?: () => void;
@@ -47,6 +48,7 @@ export function BusinessCard({
   totalCapex,
   isActive = false,
   onSelect,
+  onDoubleClick,
   onEdit,
   onArchive,
   onRestore,
@@ -92,6 +94,7 @@ export function BusinessCard({
           : 'hover:shadow-md hover:border-gray-200 dark:hover:border-gray-600'
       } ${business.is_archived ? 'opacity-60' : ''}`}
       onClick={onSelect}
+      onDoubleClick={onDoubleClick}
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">

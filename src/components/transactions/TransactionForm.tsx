@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import type { Transaction, TransactionCategory, Account } from '@/types';
+import type { Transaction, TransactionCategory, TransactionMeta, Account } from '@/types';
 import { CATEGORY_LABELS } from '@/lib/calculations';
 import { getAccounts } from '@/lib/api/accounts';
 import { AccountDropdown } from './AccountDropdown';
@@ -22,6 +22,9 @@ export interface TransactionFormData {
   debit_account_id?: string;
   credit_account_id?: string;
   is_double_entry?: boolean;
+
+  // Metadata
+  meta?: TransactionMeta | null;
 }
 
 interface TransactionFormProps {

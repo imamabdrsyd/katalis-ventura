@@ -12,13 +12,21 @@ import {
   getFlowDirection,
   findDefaultCashAccount,
 } from '@/lib/utils/quickTransactionHelper';
+import { getStockTransactions } from '@/lib/utils/inventoryHelper';
+import { InventoryPicker } from './InventoryPicker';
 import { ChevronDown, StickyNote, Zap, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+
+import type { Transaction } from '@/types';
 
 interface QuickTransactionFormProps {
   onSubmit: (data: TransactionFormData) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
   businessId?: string;
+  /** All transactions for detecting stock items */
+  transactions?: Transaction[];
+  /** Callback to convert stock transactions to COGS */
+  onConvertStockToCOGS?: (transactionIds: string[]) => Promise<void>;
 }
 
 // Helper: format number with thousand separator (dots)
@@ -56,6 +64,8 @@ export function QuickTransactionForm({
   onCancel,
   loading = false,
   businessId: businessIdProp,
+  transactions: allTransactions = [],
+  onConvertStockToCOGS,
 }: QuickTransactionFormProps) {
   const params = useParams();
   const businessId = businessIdProp || (params?.businessId as string);
@@ -72,6 +82,9 @@ export function QuickTransactionForm({
   // Dropdown state
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Inventory selection state
+  const [selectedStockIds, setSelectedStockIds] = useState<string[]>([]);
 
   // Data state
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -136,6 +149,22 @@ export function QuickTransactionForm({
   const flowDirection = selectedAccount ? getFlowDirection(selectedAccount) : null;
   const flowLabel = selectedAccount ? getFlowLabel(selectedAccount) : null;
 
+  // Detect if this is a revenue/sales transaction and show inventory picker
+  const isRevenueSelected = selectedAccount?.account_type === 'REVENUE';
+  const stockTransactions = useMemo(
+    () => (isRevenueSelected ? getStockTransactions(allTransactions) : []),
+    [isRevenueSelected, allTransactions]
+  );
+  const showInventoryPicker = isRevenueSelected && stockTransactions.length > 0 && !!onConvertStockToCOGS;
+
+  const handleToggleStock = (transactionId: string) => {
+    setSelectedStockIds((prev) =>
+      prev.includes(transactionId)
+        ? prev.filter((id) => id !== transactionId)
+        : [...prev, transactionId]
+    );
+  };
+
   // Handle amount input
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -154,6 +183,7 @@ export function QuickTransactionForm({
   // Handle account selection
   const handleSelectAccount = (account: Account) => {
     setSelectedAccountId(account.id);
+    setSelectedStockIds([]); // Reset inventory selection when account changes
     setDropdownOpen(false);
     setSearchTerm('');
     if (errors.selectedAccountId) {
@@ -191,7 +221,23 @@ export function QuickTransactionForm({
       return;
     }
 
-    await onSubmit(result as TransactionFormData);
+    // Convert selected stock transactions to COGS
+    if (selectedStockIds.length > 0 && onConvertStockToCOGS) {
+      try {
+        await onConvertStockToCOGS(selectedStockIds);
+      } catch (err: any) {
+        setErrors({ submit: err.message || 'Gagal mengkonversi persediaan ke HPP' });
+        return;
+      }
+    }
+
+    // Attach sold stock IDs to meta if any were selected
+    const formData = result as TransactionFormData;
+    if (selectedStockIds.length > 0) {
+      formData.meta = { sold_stock_ids: selectedStockIds };
+    }
+
+    await onSubmit(formData);
   };
 
   return (
@@ -364,6 +410,15 @@ export function QuickTransactionForm({
           </div>
         )}
       </div>
+
+      {/* Inventory Picker - shown when revenue account selected and stock exists */}
+      {showInventoryPicker && (
+        <InventoryPicker
+          stockTransactions={stockTransactions}
+          selectedIds={selectedStockIds}
+          onToggle={handleToggleStock}
+        />
+      )}
 
       {/* 3. NAMA */}
       <div>
