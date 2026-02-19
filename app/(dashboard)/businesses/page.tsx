@@ -242,12 +242,12 @@ export default function BusinessesPage() {
                   router.push(`/businesses/${business.id}/members`);
                 }
               }}
-              onEdit={isInvestor ? undefined : () => setEditingBusiness(business)}
-              onArchive={isInvestor ? undefined : () => {
+              onEdit={(!isInvestor && business.created_by === user?.id) ? () => setEditingBusiness(business) : undefined}
+              onArchive={(!isInvestor && business.created_by === user?.id) ? () => {
                 setArchivingBusiness(business);
                 setIsArchiveConfirmOpen(true);
-              }}
-              onRestore={isInvestor ? undefined : () => handleRestoreBusiness(business)}
+              } : undefined}
+              onRestore={(!isInvestor && business.created_by === user?.id) ? () => handleRestoreBusiness(business) : undefined}
               onInvite={isInvestor ? undefined : () => setManagingInviteBusiness(business)}
               showActions={!isInvestor}
             />
