@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 19 Februari 2026
+> Terakhir diaudit: 19 Februari 2026 | Terakhir diupdate: 19 Februari 2026
 
 ---
 
@@ -19,10 +19,11 @@
 10. [Trial Balance Logic](#10-trial-balance-logic)
 11. [Scenario Modeling Logic](#11-scenario-modeling-logic)
 12. [Quick Transaction Resolver](#12-quick-transaction-resolver)
-13. [Matching Principle Warning](#13-matching-principle-warning)
+13. [Matching Principle & Inventory (COGS)](#13-matching-principle--inventory-cogs)
 14. [Validation Layers](#14-validation-layers)
 15. [Audit Findings & Known Issues](#15-audit-findings--known-issues)
 16. [Data Flow Diagrams](#16-data-flow-diagrams)
+17. [Business Members & Access Control](#17-business-members--access-control)
 
 ---
 
@@ -172,7 +173,39 @@ Ini sesuai dengan standar akuntansi (PSAK/IFRS).
 
 ### 2.4 Auto-Provisioning
 
-Setiap business baru otomatis mendapat Chart of Accounts lengkap via PostgreSQL trigger `business_create_accounts`. Lihat `database/migrations/001_add_double_entry_bookkeeping.sql`.
+Setiap business baru otomatis mendapat Chart of Accounts lengkap. Flow:
+1. Business dibuat → INSERT ke `businesses`
+2. User diberi role `business_manager` → INSERT ke `user_business_roles`
+3. `create_default_accounts(business_id)` dipanggil via `supabase.rpc()` — function berjalan sebagai `SECURITY DEFINER` (bypass RLS) sehingga dapat INSERT ke `accounts` meski RLS aktif
+
+Lihat `database/migrations/001_add_double_entry_bookkeeping.sql` dan `012_fix_accounts_rls_and_function.sql`.
+
+### 2.5 Account Code Generation (Smart Auto-Code)
+
+File: `src/lib/api/accounts.ts` → `getNextAccountCode()`
+
+Saat user menambah sub-akun, kode di-generate otomatis dengan strategi bertingkat:
+
+```
+Strategy 1: Coba kelipatan 100 dalam range parent
+  5000 → cek 5100, 5200, 5300, ... 5900
+  → Pakai yang pertama belum ada
+
+Strategy 2: Jika semua kelipatan 100 penuh, coba kelipatan 10
+  → 5110, 5120, 5130, ...
+
+Strategy 3: Jika semua kelipatan 10 penuh, coba step 1
+  → 5111, 5112, 5113, ...
+
+Error: Hanya jika seluruh range 5001-5999 benar-benar penuh
+```
+
+**Aturan utama:** Kode sub-akun **harus** berada dalam range 1000-range parent-nya:
+- Sub-akun dari `5000 Expenses` → hanya boleh `5001–5999`
+- Sub-akun dari `1000 Assets` → hanya boleh `1001–1999`
+- dst.
+
+Kapasitas: hingga **999 sub-akun** per parent account.
 
 ---
 
@@ -715,13 +748,34 @@ Priority: Bank (1200) → Cash (1100) → first active ASSET sub-account
 
 ---
 
-## 13. Matching Principle Warning
+## 13. Matching Principle & Inventory (COGS)
 
 ### 13.1 Overview
 
 File: `src/lib/accounting/guidance/matchingPrincipleWarning.ts`
 
 Setelah user mencatat transaksi EARN (penjualan), sistem mendeteksi apakah perlu entry tambahan untuk HPP (Harga Pokok Penjualan) sesuai Matching Principle.
+
+### 13.0 InventoryPicker — Link Penjualan ke Stok
+
+Saat mencatat transaksi EARN, user dapat memilih stok/inventory yang terjual via `InventoryPicker` component. Stok yang dipilih disimpan di `meta.sold_stock_ids` (JSONB) pada transaksi EARN.
+
+```
+TransactionDetailModal:
+  → Baca meta.sold_stock_ids
+  → Tampilkan "Persediaan yang Terjual" — daftar transaksi stok terkait
+  → Jika sold_stock_ids ada dan terisi: banner matching principle TIDAK ditampilkan
+  → Jika sold_stock_ids kosong/tidak ada: banner warning ditampilkan
+```
+
+**COGS vs Inventory di Income Statement:**
+
+| Kondisi transaksi VAR | Perlakuan |
+|----------------------|-----------|
+| `debit_account.account_type === 'ASSET'` | **Inventory purchase** — TIDAK masuk COGS, TIDAK masuk Income Statement |
+| `debit_account.account_type === 'EXPENSE'` | **COGS** — masuk VAR di Income Statement |
+
+Logic ini diterapkan di `calculations.ts` (`calculateFinancialSummary`, `groupTransactionsByMonth`) dan `useIncomeStatement.ts`.
 
 ### 13.2 Trigger Conditions
 
@@ -828,6 +882,11 @@ Sistem memberikan warning kontekstual:
 | #6 | detectCategory Priority Salah | RESOLVED | Cash/Bank accounts di-skip saat priority check |
 | #7 | Fixed Asset Code Range Fragile | RESOLVED | Logic berbasis account_type, bukan hardcoded range |
 | #8 | Cash Flow Tidak Double-Entry Aware | RESOLVED | Dual-mode: double-entry + category fallback |
+| #9 | Inventory Purchase Masuk COGS | RESOLVED | VAR + debit ASSET = inventory, di-skip dari Income Statement |
+| #10 | Account Code Keluar Range (e.g. 6000) | RESOLVED | Smart auto-code generation: selalu dalam range parent |
+| #11 | RLS Infinite Recursion | RESOLVED | SECURITY DEFINER functions: `get_my_business_ids()`, `is_business_manager()` |
+| #12 | Creator Bisnis Tidak Terlihat di Members | RESOLVED | `getBusinessMembers()` fetch `created_by` dari tabel `businesses` jika tidak ada di `user_business_roles` |
+| #13 | Non-Creator Bisa Klik Edit Bisnis | RESOLVED | Tombol Edit/Archive/Restore hanya muncul jika `created_by === user.id` |
 
 ---
 
@@ -938,6 +997,65 @@ Selected Account Type?
        ├── EXPENSE ─────────→ Debit: Selected, Credit: Cash   (OUT)
        └── ASSET (non-cash) → Debit: Selected, Credit: Cash   (OUT)
 ```
+
+---
+
+## 17. Business Members & Access Control
+
+### 17.1 Tabel & Relasi
+
+```
+businesses          user_business_roles       profiles
+─────────────       ───────────────────       ────────
+id                  id                        id (= auth.users.id)
+created_by ──┐      user_id ──────────────→  full_name
+             │      business_id              avatar_url
+             │      role: business_manager
+             │             investor
+             │             both
+             │      joined_at
+             └────→ (creator mungkin tidak ada di sini)
+```
+
+### 17.2 Member Visibility Rules
+
+`getBusinessMembers(businessId)` di `src/lib/api/members.ts`:
+
+```
+1. Fetch semua rows dari user_business_roles WHERE business_id = X
+2. Fetch created_by dari businesses WHERE id = X
+3. Jika created_by TIDAK ada di user_business_roles:
+   → Inject sebagai member virtual dengan role: business_manager + is_creator: true
+4. Fetch profiles untuk semua user_ids
+5. Return merged list
+```
+
+### 17.3 UX Flow
+
+| Aksi | Behaviour |
+|------|-----------|
+| Single click BusinessCard | Set bisnis sebagai active |
+| Double click BusinessCard | Navigate ke `/businesses/{id}/members` |
+| Tombol Edit/Archive/Restore | Hanya tampil jika `created_by === user.id` |
+| Tombol Undang Anggota | Hanya tampil untuk non-investor |
+
+### 17.4 RLS Policy (Migration 011)
+
+Menggunakan `SECURITY DEFINER` functions untuk menghindari infinite recursion:
+
+```sql
+-- Returns semua business_ids yang dimiliki current user
+get_my_business_ids() → SETOF UUID
+
+-- Returns true jika current user adalah manager/creator dari bisnis
+is_business_manager(bid UUID) → BOOLEAN
+```
+
+Policy `user_business_roles FOR SELECT`:
+```sql
+USING (business_id IN (SELECT get_my_business_ids()))
+```
+→ Semua member dalam bisnis yang sama dapat saling melihat.
 
 ---
 
