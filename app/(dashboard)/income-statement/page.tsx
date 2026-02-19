@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Calendar, TrendingUp, TrendingDown, Download, FileText, FileSpreadsheet, Info } from 'lucide-react';
 import { useIncomeStatement } from '@/hooks/useIncomeStatement';
 import { formatCurrency } from '@/lib/utils';
@@ -109,6 +111,20 @@ export default function IncomeStatementPage() {
     handleExportPDF,
     handleExportExcel,
   } = useIncomeStatement();
+
+  // Scroll to section from URL param (e.g., /income-statement?scrollTo=net-income)
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const scrollTo = searchParams.get('scrollTo');
+    if (scrollTo && !loading) {
+      const el = document.getElementById(scrollTo);
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+      }
+    }
+  }, [searchParams, loading]);
 
   if (loading) {
     return (
@@ -438,7 +454,7 @@ export default function IncomeStatementPage() {
           </div>
 
           {/* NET INCOME */}
-          <div className={`relative group rounded-xl p-6 text-white cursor-default ${
+          <div id="net-income" className={`relative group rounded-xl p-6 text-white cursor-default ${
             summary.netProfit >= 0
               ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'
               : 'bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600'

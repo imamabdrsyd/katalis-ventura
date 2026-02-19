@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useBusinessContext } from '@/context/BusinessContext';
-import { calculateFinancialSummary, calculateROI, calculateCategoryCounts, calculateInitialCapital } from '@/lib/calculations';
+import { calculateFinancialSummary, calculateROI, calculateCategoryCounts, calculateInitialCapital, calculateBalanceSheet } from '@/lib/calculations';
 import * as transactionsApi from '@/lib/api/transactions';
 import type { Transaction, TransactionCategory, FinancialSummary } from '@/types';
 
@@ -40,6 +40,7 @@ export function useDashboard() {
   const initialCapital = calculateInitialCapital(transactions);
   const roi = calculateROI(summary.netProfit, initialCapital);
   const categoryCounts: Record<TransactionCategory, number> = calculateCategoryCounts(transactions);
+  const balanceSheet = calculateBalanceSheet(transactions, business?.capital_investment || 0);
 
   return {
     business,
@@ -53,5 +54,6 @@ export function useDashboard() {
     summary,
     roi,
     categoryCounts,
+    balanceSheet,
   };
 }

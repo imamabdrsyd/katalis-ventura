@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { BookOpenCheck, AlertCircle, FileText } from 'lucide-react';
 import { useGeneralLedger, type AccountTypeFilter } from '@/hooks/useGeneralLedger';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
@@ -75,6 +76,16 @@ export default function GeneralLedgerPage() {
     handleAllTime();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Read filterType from URL search params (e.g., /general-ledger?filterType=ASSET)
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const type = searchParams.get('filterType');
+    const validTypes: AccountTypeFilter[] = ['ALL', 'ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE'];
+    if (type && validTypes.includes(type as AccountTypeFilter)) {
+      setFilterType(type as AccountTypeFilter);
+    }
+  }, [searchParams, setFilterType]);
 
   if (!activeBusiness && !loading) {
     return (

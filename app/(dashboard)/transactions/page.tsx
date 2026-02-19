@@ -10,7 +10,8 @@ import TransactionImportModal from '@/components/transactions/TransactionImportM
 import type { TransactionCategory } from '@/types';
 import { QuickTransactionForm } from '@/components/transactions/QuickTransactionForm';
 import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
@@ -94,6 +95,15 @@ export default function TransactionsPage() {
     handleOpenInModal,
     handleOpenOutModal,
   } = useTransactions();
+
+  // Read category filter from URL search params (e.g., /transactions?category=EARN)
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const category = searchParams.get('category');
+    if (category && CATEGORIES.includes(category as TransactionCategory)) {
+      setCategoryFilter(category as TransactionCategory);
+    }
+  }, [searchParams, setCategoryFilter]);
 
   // Loading state
   if (businessLoading) {
