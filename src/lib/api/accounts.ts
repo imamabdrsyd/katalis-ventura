@@ -138,33 +138,35 @@ export async function getNextAccountCode(
   if (sibError) throw new Error(sibError.message);
 
   const baseCode = parseInt(parent.account_code);
-  // Max allowed code stays within the same 1000-range block (e.g. 5000 → max 5999)
+  // All sub-accounts must stay within the same 1000-range block (e.g. 5000 → 5001–5999)
+  const minCode = baseCode + 1;
   const maxCode = baseCode + 999;
 
-  if (!siblings || siblings.length === 0) {
-    return (baseCode + 100).toString();
+  const existingCodeSet = new Set(
+    (siblings || [])
+      .map(acc => parseInt(acc.account_code))
+      .filter(code => !isNaN(code))
+  );
+
+  // Strategy 1: try multiples of 100 (5100, 5200, ... 5900) — preferred convention
+  for (let step = 100; step <= 900; step += 100) {
+    const candidate = baseCode + step;
+    if (!existingCodeSet.has(candidate)) return candidate.toString();
   }
 
-  // Find the highest existing sub-account code within the valid range
-  const existingCodes = siblings
-    .map(acc => parseInt(acc.account_code))
-    .filter(code => !isNaN(code) && code >= baseCode && code <= maxCode)
-    .sort((a, b) => b - a);
-
-  if (existingCodes.length === 0) {
-    return (baseCode + 100).toString();
+  // Strategy 2: multiples-of-100 all taken — find first available by step of 10
+  for (let candidate = minCode; candidate <= maxCode; candidate += 10) {
+    if (!existingCodeSet.has(candidate)) return candidate.toString();
   }
 
-  const lastCode = existingCodes[0];
-  const nextCode = lastCode + 100;
-
-  if (nextCode > maxCode) {
-    throw new Error(
-      `Tidak bisa menambah sub-akun lagi. Range kode ${baseCode}–${maxCode} sudah penuh (maksimal ${Math.floor((maxCode - baseCode) / 100)} sub-akun).`
-    );
+  // Strategy 3: multiples-of-10 all taken — find first available by step of 1
+  for (let candidate = minCode; candidate <= maxCode; candidate++) {
+    if (!existingCodeSet.has(candidate)) return candidate.toString();
   }
 
-  return nextCode.toString();
+  throw new Error(
+    `Range kode ${baseCode}–${maxCode} sudah penuh. Tidak ada kode tersedia.`
+  );
 }
 
 /**
