@@ -138,19 +138,33 @@ export async function getNextAccountCode(
   if (sibError) throw new Error(sibError.message);
 
   const baseCode = parseInt(parent.account_code);
+  // Max allowed code stays within the same 1000-range block (e.g. 5000 → max 5999)
+  const maxCode = baseCode + 999;
 
   if (!siblings || siblings.length === 0) {
     return (baseCode + 100).toString();
   }
 
-  // Find the highest existing sub-account code
+  // Find the highest existing sub-account code within the valid range
   const existingCodes = siblings
     .map(acc => parseInt(acc.account_code))
-    .filter(code => !isNaN(code))
+    .filter(code => !isNaN(code) && code >= baseCode && code <= maxCode)
     .sort((a, b) => b - a);
 
+  if (existingCodes.length === 0) {
+    return (baseCode + 100).toString();
+  }
+
   const lastCode = existingCodes[0];
-  return (lastCode + 100).toString();
+  const nextCode = lastCode + 100;
+
+  if (nextCode > maxCode) {
+    throw new Error(
+      `Tidak bisa menambah sub-akun lagi. Range kode ${baseCode}–${maxCode} sudah penuh (maksimal ${Math.floor((maxCode - baseCode) / 100)} sub-akun).`
+    );
+  }
+
+  return nextCode.toString();
 }
 
 /**

@@ -57,6 +57,7 @@ export function AccountForm({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loadingCode, setLoadingCode] = useState(false);
+  const [codeRangeError, setCodeRangeError] = useState<string | null>(null);
 
   // Auto-generate code when parent changes (create mode only)
   useEffect(() => {
@@ -64,6 +65,7 @@ export function AccountForm({
 
     async function generateCode() {
       setLoadingCode(true);
+      setCodeRangeError(null);
       try {
         const nextCode = await accountsApi.getNextAccountCode(businessId, formData.parent_account_id!);
         setFormData(prev => ({
@@ -71,8 +73,9 @@ export function AccountForm({
           account_code: nextCode,
           sort_order: parseInt(nextCode) || 0,
         }));
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to generate code:', err);
+        setCodeRangeError(err?.message || 'Gagal membuat kode akun');
       } finally {
         setLoadingCode(false);
       }
@@ -238,10 +241,13 @@ export function AccountForm({
             disabled
             readOnly
           />
-          {!isEditMode && formData.account_code && (
+          {!isEditMode && formData.account_code && !codeRangeError && (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Kode otomatis berdasarkan kategori
             </p>
+          )}
+          {codeRangeError && (
+            <p className="text-sm text-red-500 dark:text-red-400 mt-1">{codeRangeError}</p>
           )}
           {errors.account_code && (
             <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.account_code}</p>
@@ -344,7 +350,7 @@ export function AccountForm({
         <button
           type="submit"
           className="btn-primary flex-1"
-          disabled={loading || loadingCode || (!isEditMode && !formData.parent_account_id)}
+          disabled={loading || loadingCode || !!codeRangeError || (!isEditMode && !formData.parent_account_id)}
         >
           {loading ? 'Menyimpan...' : isEditMode ? 'Simpan Perubahan' : 'Buat Akun'}
         </button>
