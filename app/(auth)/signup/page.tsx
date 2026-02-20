@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Briefcase, TrendingUp, User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
 
@@ -83,15 +82,8 @@ export default function SignUpPage() {
   return (
     <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8">
       <div className="text-center mb-8">
-        <Image
-          src="/images/axion.png"
-          alt="Axion Logo"
-          width={64}
-          height={64}
-          className="mx-auto mb-4 rounded-xl"
-        />
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Create Account</h1>
-        <p className="text-sm mt-2 text-gray-500 dark:text-gray-400">Join <span className="font-bold bg-gradient-to-r from-violet-600 via-blue-500 to-cyan-400 text-transparent bg-clip-text">KATALIS VENTURA</span></p>
+        <p className="text-sm mt-2 text-gray-500 dark:text-gray-400">Join <span className="font-bold bg-gradient-to-r from-violet-600 via-blue-500 to-cyan-400 text-transparent bg-clip-text">AXION</span></p>
       </div>
 
       {error && (

@@ -10,9 +10,9 @@ export default function AuthLayout({
       <Image
         src="/images/axion.png"
         alt="Axion Logo"
-        width={72}
-        height={72}
-        className="rounded-2xl"
+        width={120}
+        height={40}
+        className="object-contain"
       />
       {children}
       <p className="text-xs text-gray-400 dark:text-gray-600">
