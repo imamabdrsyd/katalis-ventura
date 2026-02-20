@@ -75,6 +75,7 @@ export interface Business {
   id: string;
   business_name: string;
   business_type: string;
+  business_category?: string;
   capital_investment: number;
   property_address?: string;
   property_details?: Record<string, any>;

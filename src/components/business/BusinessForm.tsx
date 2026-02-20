@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { Business } from '@/types';
 
 export interface BusinessFormData {
   business_name: string;
   business_type: string;
+  business_category: string;
   property_address: string;
   capital_investment?: number;
 }
@@ -17,7 +18,7 @@ interface BusinessFormProps {
   loading?: boolean;
 }
 
-const BUSINESS_TYPES = [
+const BUSINESS_SECTORS = [
   { value: 'agribusiness', label: 'Agribusiness' },
   { value: 'personal_care', label: 'Personal Care' },
   { value: 'accommodation', label: 'Accommodation' },
@@ -27,23 +28,30 @@ const BUSINESS_TYPES = [
   { value: 'other', label: 'Lainnya (Custom)' },
 ];
 
+const BUSINESS_CATEGORIES = [
+  { value: 'jasa', label: 'Jasa' },
+  { value: 'produk', label: 'Produk' },
+  { value: 'dagang', label: 'Dagang' },
+];
+
 export function BusinessForm({
   business,
   onSubmit,
   onCancel,
   loading = false,
 }: BusinessFormProps) {
-  // Check if existing business type is custom (not in predefined list)
-  const isCustomType = business?.business_type &&
-    !BUSINESS_TYPES.some(t => t.value === business.business_type);
+  // Check if existing business_type (sector) is custom (not in predefined list)
+  const isCustomSector = business?.business_type &&
+    !BUSINESS_SECTORS.some(s => s.value === business.business_type);
 
   const [formData, setFormData] = useState<BusinessFormData>({
     business_name: business?.business_name || '',
-    business_type: isCustomType ? 'other' : (business?.business_type || 'agribusiness'),
+    business_type: isCustomSector ? 'other' : (business?.business_type || 'agribusiness'),
+    business_category: business?.business_category || 'jasa',
     property_address: business?.property_address || '',
     capital_investment: business?.capital_investment || 0,
   });
-  const [customType, setCustomType] = useState(isCustomType ? business?.business_type || '' : '');
+  const [customSector, setCustomSector] = useState(isCustomSector ? business?.business_type || '' : '');
   const [errors, setErrors] = useState<Partial<Record<keyof BusinessFormData, string>>>({});
 
   const validate = (): boolean => {
@@ -52,8 +60,8 @@ export function BusinessForm({
     if (!formData.business_name.trim()) {
       newErrors.business_name = 'Nama bisnis harus diisi';
     }
-    if (formData.business_type === 'other' && !customType.trim()) {
-      newErrors.business_type = 'Tipe bisnis harus diisi';
+    if (formData.business_type === 'other' && !customSector.trim()) {
+      newErrors.business_type = 'Sektor bisnis harus diisi';
     }
 
     setErrors(newErrors);
@@ -65,7 +73,7 @@ export function BusinessForm({
     if (validate()) {
       const submitData = {
         ...formData,
-        business_type: formData.business_type === 'other' ? customType.trim() : formData.business_type,
+        business_type: formData.business_type === 'other' ? customSector.trim() : formData.business_type,
       };
       await onSubmit(submitData);
     }
@@ -107,29 +115,46 @@ export function BusinessForm({
       <div>
         <label className="label">Tipe Bisnis</label>
         <select
+          name="business_category"
+          value={formData.business_category}
+          onChange={handleChange}
+          className="input"
+        >
+          {BUSINESS_CATEGORIES.map((cat) => (
+            <option key={cat.value} value={cat.value}>
+              {cat.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Sektor */}
+      <div>
+        <label className="label">Sektor</label>
+        <select
           name="business_type"
           value={formData.business_type}
           onChange={handleChange}
           className="input"
         >
-          {BUSINESS_TYPES.map((type) => (
-            <option key={type.value} value={type.value}>
-              {type.label}
+          {BUSINESS_SECTORS.map((sector) => (
+            <option key={sector.value} value={sector.value}>
+              {sector.label}
             </option>
           ))}
         </select>
         {formData.business_type === 'other' && (
           <input
             type="text"
-            value={customType}
+            value={customSector}
             onChange={(e) => {
-              setCustomType(e.target.value);
+              setCustomSector(e.target.value);
               if (errors.business_type) {
                 setErrors((prev) => ({ ...prev, business_type: undefined }));
               }
             }}
             className="input mt-3"
-            placeholder="Masukkan tipe bisnis custom"
+            placeholder="Masukkan sektor bisnis"
           />
         )}
         {errors.business_type && (

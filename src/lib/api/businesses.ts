@@ -10,6 +10,7 @@ type BusinessUpdate = Database['public']['Tables']['businesses']['Update'];
 export interface CreateBusinessData {
   business_name: string;
   business_type: string;
+  business_category?: string;
   capital_investment?: number; // Optional for backward compatibility
   property_address?: string;
 }
