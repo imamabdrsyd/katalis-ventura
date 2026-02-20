@@ -379,13 +379,12 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
         {/* Logo */}
         <div className="flex items-center gap-3 mb-8">
         <Image
-          src="/images/AX.png"
+          src="/images/logo-axion.png"
           alt="Axion Logo"
           width={40}
           height={40}
           className="rounded-xl"
         />
-        <h1 className="text-base font-bold bg-gradient-to-r from-violet-600 via-blue-500 to-cyan-400 text-transparent bg-clip-text">ACCOUNTING</h1>
       </div>
 
       {/* Navigation */}

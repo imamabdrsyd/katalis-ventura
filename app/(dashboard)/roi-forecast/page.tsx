@@ -7,8 +7,8 @@ export default function RoiForecastPage() {
     <div className="flex items-center justify-center min-h-[80vh]">
       <div className="text-center">
         <Image
-          src="/images/KV.png"
-          alt="Katalis Ventura Logo"
+          src="/images/logo-axion.png"
+          alt="Axion Logo"
           width={80}
           height={80}
           className="mx-auto mb-6 rounded-xl"

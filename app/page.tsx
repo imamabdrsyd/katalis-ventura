@@ -39,13 +39,12 @@ export default function LandingPage() {
         <nav className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Image
-              src="/images/AX.png"
+              src="/images/logo-axion.png"
               alt="Axion Logo"
               width={48}
               height={48}
               className="rounded-xl"
             />
-            <span className="text-xl font-bold bg-gradient-to-r from-violet-600 via-blue-500 to-cyan-400 text-transparent bg-clip-text">AXION</span>
           </div>
           <div className="flex items-center gap-4">
             <Link
