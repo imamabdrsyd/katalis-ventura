@@ -63,13 +63,6 @@ export default function LoginPage() {
   return (
     <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8">
       <div className="text-center mb-8">
-        <Image
-          src="/images/AX.png"
-          alt="Katalis Ventura Logo"
-          width={64}
-          height={64}
-          className="mx-auto mb-4 rounded-xl"
-        />
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Welcome Back</h1>
         <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">Sign in to your account</p>
       </div>
