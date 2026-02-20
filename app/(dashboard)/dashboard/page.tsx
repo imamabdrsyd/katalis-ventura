@@ -173,12 +173,7 @@ export default function DashboardPage() {
           <div className={`text-xl md:text-2xl font-bold ${roi >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
             {transactionsLoading ? '...' : formatPercentage(roi)}
           </div>
-          <div className="flex items-center justify-between mt-2">
-            <div className="text-sm text-gray-500 dark:text-gray-400">Return on Investment</div>
-            {!transactionsLoading && initialCapital !== null && (
-              <div className={`text-xs font-semibold ${roiLabelColor}`}>{roiLabel}</div>
-            )}
-          </div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">Year to date</div>
         </div>
 
         <div
@@ -189,22 +184,7 @@ export default function DashboardPage() {
           <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 break-all">
             {transactionsLoading ? '...' : formatCurrency(balanceSheet.assets.cash)}
           </div>
-          <div className="flex items-center justify-between mt-2">
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              {transactionsLoading
-                ? '...'
-                : cashRunwayMonths !== null
-                  ? `Cukup ~${cashRunwayMonths} bln ke depan`
-                  : avgMonthlyExpense === 0
-                    ? 'Belum ada pengeluaran'
-                    : 'Kas tidak mencukupi'}
-            </div>
-            {!transactionsLoading && cashVsRevenue !== null && (
-              <div className={`text-xs font-semibold ${cashVsRevenue >= 50 ? 'text-emerald-600 dark:text-emerald-400' : cashVsRevenue >= 20 ? 'text-amber-500 dark:text-amber-400' : 'text-red-500 dark:text-red-400'}`}>
-                {cashVsRevenue.toFixed(0)}% dari revenue
-              </div>
-            )}
-          </div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">Cash & Bank</div>
         </div>
       </div>
 

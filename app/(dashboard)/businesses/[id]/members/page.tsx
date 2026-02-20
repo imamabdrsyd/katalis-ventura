@@ -61,7 +61,7 @@ function BusinessDetailCard({ business, onLeave }: { business: Business; onLeave
       <div className="space-y-3 mt-2">
         {/* Capital */}
         <div className="flex items-start gap-3">
-          <Banknote className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+          <Banknote className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-xs text-gray-500 dark:text-gray-400">Modal Bisnis</p>
             <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
@@ -73,7 +73,7 @@ function BusinessDetailCard({ business, onLeave }: { business: Business; onLeave
         {/* Address */}
         {business.property_address && (
           <div className="flex items-start gap-3">
-            <MapPin className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-xs text-gray-500 dark:text-gray-400">Alamat</p>
               <p className="text-sm text-gray-800 dark:text-gray-200 leading-snug">
