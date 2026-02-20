@@ -17,7 +17,7 @@ const PROTECTED_PATHS = [
   '/settings',
 ];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Always refresh the session so cookies stay valid for all routes including API routes.
