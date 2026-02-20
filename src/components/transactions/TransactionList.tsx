@@ -1,7 +1,7 @@
 'use client';
 
 import type { Transaction, TransactionCategory } from '@/types';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDateShort } from '@/lib/utils';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -104,12 +104,12 @@ export function TransactionList({
           <col className="w-20" />
           <col className="w-36" />
           <col className="w-48" />
-          <col className="w-28" />
+          <col className="w-24" />
           <col className="w-32" />
           <col className="w-40" />
           {(onEdit || onDelete) && !selectMode && <col className="w-20" />}
         </colgroup>
-        <thead>
+        <thead className="sticky top-0 z-10 bg-white dark:bg-gray-800">
           <tr className="border-b border-gray-200 dark:border-gray-700">
             {selectMode && (
               <th className="py-3 px-2 md:py-4">
@@ -181,7 +181,7 @@ export function TransactionList({
                 {transaction.description}
               </td>
               <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                {formatDate(transaction.date)}
+                {formatDateShort(transaction.date)}
               </td>
               <td className={`py-3 px-2 md:py-4 md:px-4 text-sm font-medium whitespace-nowrap ${
                 transaction.category === 'EARN'
