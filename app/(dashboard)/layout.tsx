@@ -69,7 +69,7 @@ const navSections: NavSection[] = [
     label: 'OVERVIEW',
     items: [
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/businesses', label: 'Business', icon: Building2 },
+      { href: '/businesses', label: 'Manage Business', icon: Building2 },
     ],
   },
   {

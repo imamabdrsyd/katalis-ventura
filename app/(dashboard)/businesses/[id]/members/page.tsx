@@ -6,8 +6,11 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import { MemberList } from '@/components/business/MemberList';
 import { InviteCodeManager } from '@/components/business/InviteCodeManager';
 import { getBusinessMembers, type BusinessMember } from '@/lib/api/members';
-import { ArrowLeft, UserPlus, Users, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote } from 'lucide-react';
+import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import { Modal } from '@/components/ui/Modal';
+import { OmniChannelManager } from '@/components/business/OmniChannelManager';
+import * as businessesApi from '@/lib/api/businesses';
 import type { Business } from '@/types';
 
 const BUSINESS_TYPE_LABELS: Record<string, string> = {
@@ -34,7 +37,7 @@ const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
   real_estate: <Building2 className="w-6 h-6" />,
 };
 
-function BusinessDetailCard({ business }: { business: Business }) {
+function BusinessDetailCard({ business, onLeave }: { business: Business; onLeave?: () => void }) {
   const icon = BUSINESS_TYPE_ICONS[business.business_type] || <Building2 className="w-6 h-6" />;
   const typeLabel = BUSINESS_TYPE_LABELS[business.business_type] || business.business_type;
 
@@ -80,6 +83,18 @@ function BusinessDetailCard({ business }: { business: Business }) {
           </div>
         )}
       </div>
+
+      {onLeave && (
+        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button
+            onClick={onLeave}
+            className="w-full px-4 py-2.5 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors flex items-center justify-center gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            Keluar dari Bisnis
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -89,14 +104,18 @@ export default function BusinessMembersPage() {
   const router = useRouter();
   const businessId = params.id as string;
 
-  const { user, userRole, businesses } = useBusinessContext();
+  const { user, userRole, businesses, activeBusiness, setActiveBusiness, refetch } = useBusinessContext();
   const isInvestor = userRole === 'investor';
 
   const business = businesses.find((b) => b.id === businessId);
+  const isCreator = business?.created_by === user?.id;
 
+  const [activeTab, setActiveTab] = useState<'members' | 'omni-channel'>('members');
   const [members, setMembers] = useState<BusinessMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInviteManager, setShowInviteManager] = useState(false);
+  const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
+  const [leaveLoading, setLeaveLoading] = useState(false);
 
   const fetchMembers = useCallback(async () => {
     if (!businessId) return;
@@ -116,6 +135,28 @@ export default function BusinessMembersPage() {
     fetchMembers();
   }, [fetchMembers]);
 
+  const handleLeaveBusiness = async () => {
+    if (!user || !business) return;
+    setLeaveLoading(true);
+    try {
+      await businessesApi.leaveBusiness(user.id, business.id);
+      await refetch();
+      // Switch active business if leaving the active one
+      if (activeBusiness?.id === business.id) {
+        const remaining = businesses.filter((b) => b.id !== business.id && !b.is_archived);
+        if (remaining.length > 0) {
+          setActiveBusiness(remaining[0].id);
+        }
+      }
+      router.push('/businesses');
+    } catch (err) {
+      console.error('Failed to leave business:', err);
+      alert('Gagal keluar dari bisnis. Silakan coba lagi.');
+    } finally {
+      setLeaveLoading(false);
+    }
+  };
+
   return (
     <div className="p-8">
       {/* Back nav */}
@@ -128,27 +169,17 @@ export default function BusinessMembersPage() {
       </button>
 
       {/* Header row */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex items-start justify-between mb-6">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
-              <Users className="w-5 h-5 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
-              Anggota Bisnis
-            </h1>
-          </div>
-          <p className="text-gray-500 dark:text-gray-400 text-sm ml-[52px]">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1">
             {business?.business_name || '—'}
-            {!loading && (
-              <span className="ml-2 px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full text-xs font-medium">
-                {members.length} anggota
-              </span>
-            )}
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
+            Kelola anggota dan halaman publik bisnis
           </p>
         </div>
 
-        {!isInvestor && (
+        {activeTab === 'members' && !isInvestor && (
           <button
             onClick={() => setShowInviteManager(true)}
             className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors font-medium text-sm shadow-sm"
@@ -159,13 +190,61 @@ export default function BusinessMembersPage() {
         )}
       </div>
 
-      {/* Members List + Business Detail */}
-      <div className="flex items-stretch gap-8">
-        <div className="max-w-2xl w-full">
-          <MemberList members={members} loading={loading} />
-        </div>
-        {business && <BusinessDetailCard business={business} />}
+      {/* Tab Switcher */}
+      <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 w-fit">
+        <button
+          onClick={() => setActiveTab('members')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === 'members'
+              ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          Anggota
+          {!loading && (
+            <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300 rounded-full text-xs">
+              {members.length}
+            </span>
+          )}
+        </button>
+        {!isInvestor && (
+          <button
+            onClick={() => setActiveTab('omni-channel')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'omni-channel'
+                ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <Globe className="w-4 h-4" />
+            Halaman Publik
+          </button>
+        )}
       </div>
+
+      {/* Tab Content */}
+      {activeTab === 'members' ? (
+        <div className="flex items-stretch gap-8">
+          <div className="max-w-2xl w-full">
+            <MemberList members={members} loading={loading} />
+          </div>
+          {business && (
+            <BusinessDetailCard
+              business={business}
+              onLeave={!isCreator ? () => setIsLeaveConfirmOpen(true) : undefined}
+            />
+          )}
+        </div>
+      ) : (
+        user && business && (
+          <OmniChannelManager
+            businessId={business.id}
+            businessName={business.business_name}
+            userId={user.id}
+          />
+        )
+      )}
 
       {/* Invite Code Manager Modal */}
       {showInviteManager && user && business && (
@@ -176,6 +255,39 @@ export default function BusinessMembersPage() {
           onClose={() => setShowInviteManager(false)}
         />
       )}
+
+      {/* Leave Business Confirm Modal */}
+      <Modal
+        isOpen={isLeaveConfirmOpen}
+        onClose={() => setIsLeaveConfirmOpen(false)}
+        title="Keluar dari Bisnis"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600 dark:text-gray-300">
+            Apakah Anda yakin ingin keluar dari bisnis{' '}
+            <strong>{business?.business_name}</strong>?
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Anda tidak akan bisa mengakses data bisnis ini lagi. Untuk bergabung kembali, Anda memerlukan undangan baru dari pemilik bisnis.
+          </p>
+          <div className="flex gap-3 pt-4">
+            <button
+              onClick={() => setIsLeaveConfirmOpen(false)}
+              className="btn-secondary flex-1"
+              disabled={leaveLoading}
+            >
+              Batal
+            </button>
+            <button
+              onClick={handleLeaveBusiness}
+              className="btn-danger flex-1"
+              disabled={leaveLoading}
+            >
+              {leaveLoading ? 'Keluar...' : 'Keluar'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

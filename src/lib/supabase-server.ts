@@ -44,15 +44,52 @@ export function createAdminClient() {
 
 /**
  * Extract and verify the authenticated user from an API route request.
+ * Reads the access token from cookies (set by @supabase/auth-helpers-nextjs)
+ * and verifies it using the admin client.
  * Returns the user object or null if not authenticated.
  */
 export async function getAuthenticatedUser() {
-  const supabase = await createServerClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const cookieStore = await cookies();
 
-  if (error || !user) {
+  // @supabase/auth-helpers-nextjs stores the session as JSON in a cookie named
+  // "sb-<project-ref>-auth-token" (may be chunked as "...-auth-token.0", "...-auth-token.1", etc.)
+  const allCookies = cookieStore.getAll();
+
+  // Find the auth token cookie (supports chunked cookies like key.0, key.1, ...)
+  const authCookies = allCookies
+    .filter((c) => c.name.includes('-auth-token'))
+    .sort((a, b) => {
+      const numA = parseInt(a.name.split('.').pop() ?? '0', 10) || 0;
+      const numB = parseInt(b.name.split('.').pop() ?? '0', 10) || 0;
+      return numA - numB;
+    });
+
+  if (authCookies.length === 0) return null;
+
+  // Reassemble chunked value if needed
+  const rawValue = authCookies.map((c) => c.value).join('');
+
+  let accessToken: string | null = null;
+  try {
+    // Value is a JSON array: [access_token, refresh_token, ...]
+    // or a base64url encoded JSON string
+    let parsed = rawValue;
+    // Some versions store as base64url
+    if (!parsed.startsWith('[') && !parsed.startsWith('{')) {
+      parsed = Buffer.from(rawValue, 'base64').toString('utf-8');
+    }
+    const arr = JSON.parse(parsed);
+    accessToken = Array.isArray(arr) ? arr[0] : arr.access_token ?? null;
+  } catch {
     return null;
   }
 
+  if (!accessToken) return null;
+
+  // Verify the token using the admin client (getUser validates JWT server-side)
+  const admin = createAdminClient();
+  const { data: { user }, error } = await admin.auth.getUser(accessToken);
+
+  if (error || !user) return null;
   return user;
 }

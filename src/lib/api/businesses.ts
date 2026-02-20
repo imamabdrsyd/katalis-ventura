@@ -26,18 +26,16 @@ async function createCapitalInvestmentTransaction(
 ): Promise<void> {
   if (!amount || amount <= 0) return;
 
-  const supabase = createClient();
-
   // Get Cash account (1100)
   const cashAccount = await getAccountByCode(businessId, '1100');
   if (!cashAccount) {
     throw new Error('Cash account (1100) not found. Please ensure default accounts are created.');
   }
 
-  // Get Equity parent account (3000)
-  const equityAccount = await getAccountByCode(businessId, '3000');
-  if (!equityAccount) {
-    throw new Error('Equity account (3000) not found. Please ensure default accounts are created.');
+  // Get Owner's Capital sub-account (3100)
+  const capitalAccount = await getAccountByCode(businessId, '3100');
+  if (!capitalAccount) {
+    throw new Error("Owner's Capital account (3100) not found. Please ensure default accounts are created.");
   }
 
   // Create the double-entry transaction
@@ -52,7 +50,7 @@ async function createCapitalInvestmentTransaction(
     account: 'Cash', // Legacy field
     created_by: userId,
     debit_account_id: cashAccount.id, // Debit Cash (Asset increases)
-    credit_account_id: equityAccount.id, // Credit Equity (Capital increases)
+    credit_account_id: capitalAccount.id, // Credit Owner's Capital (Capital increases)
     is_double_entry: true,
     notes: 'Transaksi modal investasi awal dibuat otomatis saat pembuatan bisnis',
   });
@@ -309,6 +307,20 @@ export async function joinBusiness(
     business_id: businessId,
     role: 'investor',
   });
+
+  if (error) throw error;
+}
+
+export async function leaveBusiness(
+  userId: string,
+  businessId: string
+): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('user_business_roles')
+    .delete()
+    .eq('user_id', userId)
+    .eq('business_id', businessId);
 
   if (error) throw error;
 }

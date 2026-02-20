@@ -332,6 +332,7 @@ export default function BusinessesPage() {
         </div>
       </Modal>
 
+
     </div>
   );
 }

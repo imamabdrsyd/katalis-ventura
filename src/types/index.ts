@@ -235,6 +235,58 @@ export interface CashFlowData {
   closingBalance: number;
 }
 
+// Omni-Channel types
+export type OmniChannelType =
+  | 'instagram' | 'facebook' | 'tiktok' | 'twitter' | 'youtube' | 'linkedin'
+  | 'shopee' | 'tokopedia' | 'lazada' | 'bukalapak' | 'blibli'
+  | 'whatsapp' | 'telegram' | 'line'
+  | 'custom';
+
+export interface OmniChannelLink {
+  id: string;
+  omni_channel_id: string;
+  channel_type: OmniChannelType;
+  label: string;
+  url: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BusinessOmniChannel {
+  id: string;
+  business_id: string;
+  slug: string;
+  is_published: boolean;
+  title: string;
+  tagline?: string;
+  bio?: string;
+  logo_url?: string;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  updated_by?: string;
+  links?: OmniChannelLink[];
+}
+
+export interface UpsertOmniChannelData {
+  slug: string;
+  is_published: boolean;
+  title: string;
+  tagline?: string;
+  bio?: string;
+  logo_url?: string | null;
+}
+
+export interface UpsertOmniChannelLinkData {
+  channel_type: OmniChannelType;
+  label: string;
+  url: string;
+  is_active: boolean;
+  sort_order: number;
+}
+
 // Audit trail types
 export interface AuditLog {
   id: string;
