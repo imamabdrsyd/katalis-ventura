@@ -84,7 +84,7 @@ export default function SignUpPage() {
     <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8">
       <div className="text-center mb-8">
         <Image
-          src="/images/logo-axion.png"
+          src="/images/AX.png"
           alt="Katalis Ventura Logo"
           width={64}
           height={64}
