@@ -263,19 +263,29 @@ export function TransactionDetailModal({
             <div className="grid grid-cols-2 gap-4 mt-4">
               <div>
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Debit 
+                  Debit
                 </label>
-                <p className="mt-1 text-gray-900 dark:text-gray-100">
+                <p className="mt-1 text-gray-900 dark:text-gray-100 font-medium">
                   {transaction.debit_account?.account_code} - {transaction.debit_account?.account_name || 'Unknown'}
                 </p>
+                {transaction.debit_account?.account_type && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                    {transaction.debit_account.account_type}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Credit
                 </label>
-                <p className="mt-1 text-gray-900 dark:text-gray-100">
+                <p className="mt-1 text-gray-900 dark:text-gray-100 font-medium">
                   {transaction.credit_account?.account_code} - {transaction.credit_account?.account_name || 'Unknown'}
                 </p>
+                {transaction.credit_account?.account_type && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                    {transaction.credit_account.account_type}
+                  </p>
+                )}
               </div>
             </div>
           ) : (

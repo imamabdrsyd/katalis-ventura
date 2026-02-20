@@ -97,11 +97,22 @@ export function TransactionList({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[700px]">
+      <table className="w-full table-fixed min-w-[800px]">
+        <colgroup>
+          {selectMode && <col className="w-8" />}
+          <col className="w-10" />
+          <col className="w-20" />
+          <col className="w-36" />
+          <col className="w-48" />
+          <col className="w-28" />
+          <col className="w-32" />
+          <col className="w-40" />
+          {(onEdit || onDelete) && !selectMode && <col className="w-20" />}
+        </colgroup>
         <thead>
           <tr className="border-b border-gray-200 dark:border-gray-700">
             {selectMode && (
-              <th className="py-3 px-2 md:py-4 w-1">
+              <th className="py-3 px-2 md:py-4">
                 <input
                   type="checkbox"
                   checked={allSelected}
@@ -110,7 +121,7 @@ export function TransactionList({
                 />
               </th>
             )}
-            <th className="text-left py-3 px-2 md:py-4 text-sm font-normal text-gray-500 dark:text-gray-400 w-1 whitespace-nowrap">No</th>
+            <th className="text-left py-3 px-2 md:py-4 text-sm font-normal text-gray-500 dark:text-gray-400">No</th>
             <th className="text-left py-3 pl-1 pr-2 md:py-4 md:pl-2 md:pr-4 text-sm font-normal text-gray-500 dark:text-gray-400">Kategori</th>
             <th className="text-left py-3 px-2 md:py-4 text-sm font-normal text-gray-500 dark:text-gray-400">Nama</th>
             <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Deskripsi</th>
@@ -134,7 +145,7 @@ export function TransactionList({
               }`}
             >
               {selectMode && (
-                <td className="py-3 px-2 md:py-4 w-1">
+                <td className="py-3 px-2 md:py-4">
                   <input
                     type="checkbox"
                     checked={selectedIds?.has(transaction.id) ?? false}
@@ -147,7 +158,7 @@ export function TransactionList({
                   />
                 </td>
               )}
-              <td className="py-3 px-2 md:py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap w-1">
+              <td className="py-3 px-2 md:py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                 {index + 1}
               </td>
               <td className="py-3 pl-1 pr-2 md:py-4 md:pl-2 md:pr-4">
@@ -163,10 +174,10 @@ export function TransactionList({
                   </span>
                 )}
               </td>
-              <td className="py-3 px-2 md:py-4 text-sm font-medium text-gray-800 dark:text-gray-200">
+              <td className="py-3 px-2 md:py-4 text-sm font-medium text-gray-800 dark:text-gray-200 break-words">
                 {transaction.name}
               </td>
-              <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300">
+              <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 break-words">
                 {transaction.description}
               </td>
               <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
@@ -181,7 +192,7 @@ export function TransactionList({
               }`}>
                 {formatCurrency(transaction.amount)}
               </td>
-              <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{getAccountDisplay(transaction)}</td>
+              <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 break-words">{getAccountDisplay(transaction)}</td>
               {showActions && (
                 <td className="py-3 px-2 md:py-4 md:px-4">
                   <div className="flex items-center justify-start gap-1 md:gap-2">
