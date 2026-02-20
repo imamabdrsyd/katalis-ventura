@@ -7,7 +7,7 @@ export default function RoiForecastPage() {
     <div className="flex items-center justify-center min-h-[80vh]">
       <div className="text-center">
         <Image
-          src="/images/logo-axion.png"
+          src="/images/axion.png"
           alt="Axion Logo"
           width={80}
           height={80}

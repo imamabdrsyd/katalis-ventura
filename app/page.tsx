@@ -39,11 +39,11 @@ export default function LandingPage() {
         <nav className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Image
-              src="/images/logo-axion.png"
+              src="/images/axion.png"
               alt="Axion Logo"
-              width={48}
-              height={48}
-              className="rounded-xl"
+              width={120}
+              height={40}
+              className="object-contain"
             />
           </div>
           <div className="flex items-center gap-4">

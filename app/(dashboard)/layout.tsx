@@ -379,11 +379,11 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
         {/* Logo */}
         <div className="flex items-center gap-3 mb-8">
         <Image
-          src="/images/logo-axion.png"
+          src="/images/axion.png"
           alt="Axion Logo"
-          width={40}
-          height={40}
-          className="rounded-xl"
+          width={110}
+          height={36}
+          className="object-contain"
         />
       </div>
 

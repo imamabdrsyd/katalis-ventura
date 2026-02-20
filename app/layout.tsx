@@ -9,8 +9,8 @@ export const metadata: Metadata = {
   title: 'Katalis Ventura - Private Equity Manager',
   description: 'Multi-role finance management platform for business managers and investors',
   icons: {
-    icon: '/images/logo-axion.png',
-    apple: '/images/logo-axion.png',
+    icon: '/images/axion.png',
+    apple: '/images/axion.png',
   },
 };
 
