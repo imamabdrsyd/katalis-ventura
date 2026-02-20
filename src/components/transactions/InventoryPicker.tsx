@@ -28,7 +28,7 @@ export function InventoryPicker({
   if (stockTransactions.length === 0) return null;
 
   return (
-    <div className="rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 overflow-hidden">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 overflow-hidden">
       {/* Header */}
       <button
         type="button"
@@ -37,25 +37,25 @@ export function InventoryPicker({
       >
         <div className="flex items-center gap-2">
           <Package className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-          <span className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
             Persediaan yang Terjual
           </span>
           {selectedIds.length > 0 && (
-            <span className="text-xs bg-amber-200 dark:bg-amber-700 text-amber-800 dark:text-amber-200 px-2 py-0.5 rounded-full">
+            <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full">
               {selectedIds.length} dipilih
             </span>
           )}
         </div>
         {expanded ? (
-          <ChevronUp className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+          <ChevronUp className="w-4 h-4 text-gray-400 dark:text-gray-500" />
         ) : (
-          <ChevronDown className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+          <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
         )}
       </button>
 
       {expanded && (
         <div className="px-4 pb-3">
-          <p className="text-xs text-amber-700 dark:text-amber-300 mb-3">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
             Pilih persediaan yang habis terjual. Persediaan yang dipilih akan otomatis dikonversi menjadi HPP (Harga Pokok Penjualan).
           </p>
 
@@ -69,15 +69,15 @@ export function InventoryPicker({
                   onClick={() => onToggle(tx.id)}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
                     isSelected
-                      ? 'bg-amber-200 dark:bg-amber-800/60 border border-amber-400 dark:border-amber-600'
-                      : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-amber-300 dark:hover:border-amber-600'
+                      ? 'bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-300 dark:border-indigo-600'
+                      : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-indigo-200 dark:hover:border-indigo-700'
                   }`}
                 >
                   {/* Checkbox */}
                   <div
                     className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 ${
                       isSelected
-                        ? 'bg-amber-600 dark:bg-amber-500'
+                        ? 'bg-indigo-500 dark:bg-indigo-500'
                         : 'border-2 border-gray-300 dark:border-gray-600'
                     }`}
                   >
