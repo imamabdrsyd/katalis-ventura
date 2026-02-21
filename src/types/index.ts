@@ -9,9 +9,17 @@ export type AccountType = 'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENS
 export type NormalBalance = 'DEBIT' | 'CREDIT';
 
 // Transaction metadata (stored as jsonb in DB)
+export interface UnitBreakdown {
+  price_per_unit: number;
+  quantity: number;
+  unit: string; // e.g. 'pcs', 'gram', 'galon', 'ikat', 'orang', 'trip', or custom
+}
+
 export interface TransactionMeta {
   /** IDs of stock transactions that were sold/converted to COGS alongside this sale */
   sold_stock_ids?: string[];
+  /** Unit breakdown when amount is calculated via multiplication */
+  unit_breakdown?: UnitBreakdown;
 }
 
 export interface Account {

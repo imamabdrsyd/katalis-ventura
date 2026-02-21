@@ -9,7 +9,8 @@ import { useParams } from 'next/navigation';
 import { detectCategory } from '@/lib/utils/transactionHelpers';
 import { useAccountingGuidance } from '@/hooks/useAccountingGuidance';
 import { AlertCircle, Lightbulb, AlertTriangle } from 'lucide-react';
-import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
+import { CurrencyInputWithCalculator, CalcMultiplicationInfo } from '@/components/ui/CurrencyInputWithCalculator';
+import type { UnitBreakdown } from '@/types';
 
 export interface TransactionFormData {
   date: string;
@@ -41,6 +42,8 @@ interface TransactionFormProps {
 }
 
 const ALL_CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
+
+const UNIT_OPTIONS = ['pcs', 'gram', 'galon', 'ikat', 'orang', 'trip'] as const;
 
 // Helper function to format number with thousand separator
 function formatNumberWithSeparator(num: number | string): string {
@@ -84,6 +87,63 @@ const CATEGORY_SUGGESTIONS: Record<TransactionCategory, { debit: string; credit:
   },
 };
 
+// ─── Unit Breakdown Row ─────────────────────────────────────────────────────
+
+function UnitBreakdownRow({
+  unitBreakdown,
+  showCustomUnit,
+  customUnitValue,
+  onUnitChange,
+  onCustomUnitInput,
+}: {
+  unitBreakdown: UnitBreakdown;
+  showCustomUnit: boolean;
+  customUnitValue: string;
+  onUnitChange: (value: string) => void;
+  onCustomUnitInput: (value: string) => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 px-3 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg text-sm animate-in fade-in slide-in-from-top-1 duration-200">
+      <div className="flex items-center gap-1.5">
+        <span className="text-gray-500 dark:text-gray-400">Harga/unit:</span>
+        <span className="font-semibold text-gray-800 dark:text-gray-100">
+          {formatNumberWithSeparator(unitBreakdown.price_per_unit)}
+        </span>
+      </div>
+      <span className="text-gray-300 dark:text-gray-600">×</span>
+      <div className="flex items-center gap-1.5">
+        <span className="text-gray-500 dark:text-gray-400">Qty:</span>
+        <span className="font-semibold text-gray-800 dark:text-gray-100">
+          {formatNumberWithSeparator(unitBreakdown.quantity)}
+        </span>
+      </div>
+      <div className="flex items-center gap-1.5 ml-auto">
+        {showCustomUnit ? (
+          <input
+            type="text"
+            value={customUnitValue}
+            onChange={(e) => onCustomUnitInput(e.target.value)}
+            placeholder="Satuan..."
+            className="w-20 px-2 py-1 text-xs border border-indigo-300 dark:border-indigo-600 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            autoFocus
+          />
+        ) : (
+          <select
+            value={UNIT_OPTIONS.includes(unitBreakdown.unit as typeof UNIT_OPTIONS[number]) ? unitBreakdown.unit : '__custom__'}
+            onChange={(e) => onUnitChange(e.target.value)}
+            className="px-2 py-1 text-xs border border-indigo-300 dark:border-indigo-600 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          >
+            {UNIT_OPTIONS.map((u) => (
+              <option key={u} value={u}>{u}</option>
+            ))}
+            <option value="__custom__">Lainnya...</option>
+          </select>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function TransactionForm({
   transaction,
   initialValues,
@@ -121,6 +181,13 @@ export function TransactionForm({
         ? formatNumberWithSeparator(initialValues.amount)
         : ''
   );
+
+  // Unit breakdown state (shown after calculator multiplication)
+  const [unitBreakdown, setUnitBreakdown] = useState<UnitBreakdown | null>(
+    transaction?.meta?.unit_breakdown || null
+  );
+  const [showCustomUnit, setShowCustomUnit] = useState(false);
+  const [customUnitValue, setCustomUnitValue] = useState('');
 
   // Fetch accounts on mount
   useEffect(() => {
@@ -194,6 +261,10 @@ export function TransactionForm({
       const submitData: TransactionFormData = {
         ...formData,
         is_double_entry: isDoubleEntry,
+        meta: {
+          ...formData.meta,
+          unit_breakdown: unitBreakdown && unitBreakdown.unit ? unitBreakdown : undefined,
+        },
       };
 
       // Auto-detect category for 'in' and 'out' modes
@@ -301,6 +372,40 @@ export function TransactionForm({
     }
   };
 
+  // Handle calculator multiplication result
+  const handleMultiplicationResult = (info: CalcMultiplicationInfo | null) => {
+    if (info) {
+      setUnitBreakdown({
+        price_per_unit: info.operandA,
+        quantity: info.operandB,
+        unit: 'pcs',
+      });
+      setShowCustomUnit(false);
+      setCustomUnitValue('');
+    } else {
+      setUnitBreakdown(null);
+      setShowCustomUnit(false);
+      setCustomUnitValue('');
+    }
+  };
+
+  const handleUnitChange = (value: string) => {
+    if (value === '__custom__') {
+      setShowCustomUnit(true);
+      setCustomUnitValue('');
+      setUnitBreakdown(prev => prev ? { ...prev, unit: '' } : null);
+    } else {
+      setShowCustomUnit(false);
+      setCustomUnitValue('');
+      setUnitBreakdown(prev => prev ? { ...prev, unit: value } : null);
+    }
+  };
+
+  const handleCustomUnitInput = (value: string) => {
+    setCustomUnitValue(value);
+    setUnitBreakdown(prev => prev ? { ...prev, unit: value } : null);
+  };
+
   const [guidanceOpen, setGuidanceOpen] = useState(false);
 
   const renderBold = (text: string) =>
@@ -323,20 +428,24 @@ export function TransactionForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* AMOUNT FIRST for 'in' and 'out' modes - Make it PROMINENT */}
       {mode !== 'full' && (
-        <CurrencyInputWithCalculator
-          label="Jumlah (Rp)"
-          value={formData.amount}
-          displayValue={displayAmount}
-          onChange={(numeric, formatted) => {
-            setDisplayAmount(formatted);
-            setFormData(prev => ({ ...prev, amount: numeric }));
-            if (errors.amount) setErrors(prev => { const n = { ...prev }; delete n.amount; return n; });
-          }}
-          inputClassName="text-2xl font-bold"
-          colorVariant={mode === 'in' ? 'green' : 'red'}
-          error={errors.amount}
-          required
-        />
+        <>
+          <CurrencyInputWithCalculator
+            label="Jumlah (Rp)"
+            value={formData.amount}
+            displayValue={displayAmount}
+            onChange={(numeric, formatted) => {
+              setDisplayAmount(formatted);
+              setFormData(prev => ({ ...prev, amount: numeric }));
+              if (errors.amount) setErrors(prev => { const n = { ...prev }; delete n.amount; return n; });
+            }}
+            onMultiplicationResult={handleMultiplicationResult}
+            inputClassName="text-2xl font-bold"
+            colorVariant={mode === 'in' ? 'green' : 'red'}
+            error={errors.amount}
+            required
+          />
+          {unitBreakdown && <UnitBreakdownRow unitBreakdown={unitBreakdown} showCustomUnit={showCustomUnit} customUnitValue={customUnitValue} onUnitChange={handleUnitChange} onCustomUnitInput={handleCustomUnitInput} />}
+        </>
       )}
 
       {/* Category + Date for full mode only */}
@@ -381,6 +490,7 @@ export function TransactionForm({
 
       {/* Amount for full mode (normal size) */}
       {mode === 'full' && (
+        <>
         <CurrencyInputWithCalculator
           label="Jumlah (Rp)"
           value={formData.amount}
@@ -390,9 +500,12 @@ export function TransactionForm({
             setFormData(prev => ({ ...prev, amount: numeric }));
             if (errors.amount) setErrors(prev => { const n = { ...prev }; delete n.amount; return n; });
           }}
+          onMultiplicationResult={handleMultiplicationResult}
           error={errors.amount}
           required
         />
+        {unitBreakdown && <UnitBreakdownRow unitBreakdown={unitBreakdown} showCustomUnit={showCustomUnit} customUnitValue={customUnitValue} onUnitChange={handleUnitChange} onCustomUnitInput={handleCustomUnitInput} />}
+        </>
       )}
 
       {/* Account fields - Different labels based on mode */}

@@ -19,10 +19,16 @@ function parseFormattedNumber(str: string): number {
 
 // ─── types ─────────────────────────────────────────────────────────────────
 
+export interface CalcMultiplicationInfo {
+  operandA: number;
+  operandB: number;
+}
+
 interface CurrencyInputWithCalculatorProps {
   value: number;
   displayValue: string;
   onChange: (numericValue: number, displayValue: string) => void;
+  onMultiplicationResult?: (info: CalcMultiplicationInfo | null) => void;
   className?: string;
   inputClassName?: string;
   placeholder?: string;
@@ -51,6 +57,7 @@ export function CurrencyInputWithCalculator({
   value,
   displayValue,
   onChange,
+  onMultiplicationResult,
   className = '',
   inputClassName = '',
   placeholder = '0',
@@ -94,6 +101,7 @@ export function CurrencyInputWithCalculator({
     const numeric = parseFormattedNumber(e.target.value);
     const formatted = formatNumberWithSeparator(numeric);
     onChange(numeric, formatted);
+    if (onMultiplicationResult) onMultiplicationResult(null);
   };
 
   const borderColorClass =
@@ -140,6 +148,16 @@ export function CurrencyInputWithCalculator({
     const result = Math.round(evalCalc(calcPrev, calcOp, current));
     const formatted = formatNumberWithSeparator(result) || '0';
     setCalcDisplay(formatted);
+
+    // Notify parent about multiplication operands
+    if (onMultiplicationResult) {
+      if (calcOp === '×') {
+        onMultiplicationResult({ operandA: calcPrev, operandB: current });
+      } else {
+        onMultiplicationResult(null);
+      }
+    }
+
     setCalcPrev(null);
     setCalcOp(null);
     setCalcWaiting(false);
