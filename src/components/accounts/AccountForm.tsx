@@ -58,6 +58,7 @@ export function AccountForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loadingCode, setLoadingCode] = useState(false);
   const [codeRangeError, setCodeRangeError] = useState<string | null>(null);
+  const [guideOpen, setGuideOpen] = useState(true);
 
   // Auto-generate code when parent changes (create mode only)
   useEffect(() => {
@@ -211,21 +212,30 @@ export function AccountForm({
 
       {/* Asset Account Guidance */}
       {selectedParent?.account_type === 'ASSET' && !isEditMode && (
-        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-xs space-y-2">
-          <p className="font-semibold text-blue-800 dark:text-blue-200">Panduan Pembuatan Akun Aset</p>
-          <div className="space-y-1.5 text-blue-700 dark:text-blue-300">
-            <p><strong>Aset Lancar</strong> (bisa dicairkan &lt;12 bulan):</p>
-            <ul className="list-disc list-inside pl-2 space-y-0.5">
-              <li>Persediaan / Inventory &rarr; kategori default: <strong>VAR</strong></li>
-              <li>Piutang Usaha &rarr; kategori default: <strong>EARN</strong></li>
-              <li>Uang Muka, Sewa Dibayar di Muka &rarr; kosongkan kategori</li>
-            </ul>
-            <p><strong>Aset Tetap</strong> (digunakan &gt;12 bulan):</p>
-            <ul className="list-disc list-inside pl-2 space-y-0.5">
-              <li>Peralatan, Kendaraan, Properti &rarr; kategori default: <strong>CAPEX</strong></li>
-            </ul>
-          </div>
-          <p className="text-blue-600 dark:text-blue-400 italic">Kategori akan terdeteksi otomatis dari nama akun.</p>
+        <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden text-xs">
+          <button
+            type="button"
+            onClick={() => setGuideOpen((v) => !v)}
+            className="w-full flex items-center justify-between px-3 py-2.5 text-left"
+          >
+            <span className="font-semibold text-blue-700 dark:text-blue-400">Panduan Pembuatan Akun Aset</span>
+            <span className="text-gray-400 dark:text-gray-500">{guideOpen ? '▲' : '▼'}</span>
+          </button>
+          {guideOpen && (
+            <div className="px-3 pb-3 space-y-1.5 text-gray-700 dark:text-gray-300">
+              <p><strong>Aset Lancar</strong> (bisa dicairkan &lt;12 bulan):</p>
+              <ul className="list-disc list-inside pl-2 space-y-0.5">
+                <li>Persediaan / Inventory &rarr; kategori default: <strong>VAR</strong></li>
+                <li>Piutang Usaha &rarr; kategori default: <strong>EARN</strong></li>
+                <li>Uang Muka, Sewa Dibayar di Muka &rarr; kosongkan kategori</li>
+              </ul>
+              <p><strong>Aset Tetap</strong> (digunakan &gt;12 bulan):</p>
+              <ul className="list-disc list-inside pl-2 space-y-0.5">
+                <li>Peralatan, Kendaraan, Properti &rarr; kategori default: <strong>CAPEX</strong></li>
+              </ul>
+              <p className="text-gray-500 dark:text-gray-400 italic">Kategori akan terdeteksi otomatis dari nama akun.</p>
+            </div>
+          )}
         </div>
       )}
 

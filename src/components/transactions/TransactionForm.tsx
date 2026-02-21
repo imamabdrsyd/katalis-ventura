@@ -301,6 +301,8 @@ export function TransactionForm({
     }
   };
 
+  const [guidanceOpen, setGuidanceOpen] = useState(true);
+
   // Accounting guidance and validation
   const { guidance, validation, isValid: isAccountingValid } = useAccountingGuidance({
     debitAccountId: formData.debit_account_id,
@@ -450,18 +452,25 @@ export function TransactionForm({
             <div className="space-y-3">
               {/* Pattern Detection & Explanation */}
               {guidance.pattern && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3 rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <Lightbulb className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm text-blue-800 dark:text-blue-200">
-                        {guidance.pattern.name}
-                      </h4>
-                      <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
+                <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setGuidanceOpen((v) => !v)}
+                    className="w-full flex items-center gap-2 p-3 text-left"
+                  >
+                    <Lightbulb className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                    <h4 className="font-medium text-sm text-blue-700 dark:text-blue-400 flex-1">
+                      {guidance.pattern.name}
+                    </h4>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">{guidanceOpen ? '▲' : '▼'}</span>
+                  </button>
+                  {guidanceOpen && (
+                    <div className="px-3 pb-3">
+                      <p className="text-xs text-gray-700 dark:text-gray-300">
                         {guidance.pattern.description}
                       </p>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
@@ -537,18 +546,25 @@ export function TransactionForm({
                 <div className="space-y-3">
                   {/* Pattern Detection & Explanation */}
                   {guidance.pattern && (
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
-                      <div className="flex items-start gap-2">
-                        <Lightbulb className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-blue-800 dark:text-blue-200">
-                            {guidance.pattern.name}
-                          </h4>
-                          <div className="text-sm text-blue-700 dark:text-blue-300 mt-1 whitespace-pre-line">
+                    <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setGuidanceOpen((v) => !v)}
+                        className="w-full flex items-center gap-2 p-4 text-left"
+                      >
+                        <Lightbulb className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                        <h4 className="font-semibold text-blue-700 dark:text-blue-400 flex-1">
+                          {guidance.pattern.name}
+                        </h4>
+                        <span className="text-xs text-gray-400 dark:text-gray-500">{guidanceOpen ? '▲' : '▼'}</span>
+                      </button>
+                      {guidanceOpen && (
+                        <div className="px-4 pb-4">
+                          <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">
                             {guidance.explanation}
                           </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   )}
 
