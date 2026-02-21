@@ -9,6 +9,7 @@ import { useParams } from 'next/navigation';
 import { detectCategory } from '@/lib/utils/transactionHelpers';
 import { useAccountingGuidance } from '@/hooks/useAccountingGuidance';
 import { AlertCircle, Lightbulb, AlertTriangle } from 'lucide-react';
+import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 
 export interface TransactionFormData {
   date: string;
@@ -44,15 +45,9 @@ const ALL_CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', '
 // Helper function to format number with thousand separator
 function formatNumberWithSeparator(num: number | string): string {
   if (!num) return '';
-  const numStr = num.toString().replace(/\D/g, ''); // Remove non-digits
+  const numStr = num.toString().replace(/\D/g, '');
   if (!numStr) return '';
   return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-}
-
-// Helper function to parse formatted number back to number
-function parseFormattedNumber(str: string): number {
-  const cleaned = str.replace(/\./g, ''); // Remove dots
-  return parseInt(cleaned) || 0;
 }
 
 // Category-to-account suggestions mapping
@@ -245,23 +240,6 @@ export function TransactionForm({
     }
   };
 
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    const numericValue = parseFormattedNumber(value);
-    const formatted = formatNumberWithSeparator(numericValue);
-
-    setDisplayAmount(formatted);
-    setFormData((prev) => ({ ...prev, amount: numericValue }));
-
-    if (errors.amount) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors.amount;
-        return newErrors;
-      });
-    }
-  };
-
   // Helper function to get account name by ID
   const getAccountName = (accountId: string | undefined): string => {
     if (!accountId) return '';
@@ -323,13 +301,6 @@ export function TransactionForm({
     }
   };
 
-  // Determine border color for amount field based on mode
-  const amountBorderColor = mode === 'in'
-    ? 'border-emerald-500 dark:border-emerald-400 focus:ring-emerald-500'
-    : mode === 'out'
-    ? 'border-red-500 dark:border-red-400 focus:ring-red-500'
-    : '';
-
   // Accounting guidance and validation
   const { guidance, validation, isValid: isAccountingValid } = useAccountingGuidance({
     debitAccountId: formData.debit_account_id,
@@ -343,20 +314,20 @@ export function TransactionForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* AMOUNT FIRST for 'in' and 'out' modes - Make it PROMINENT */}
       {mode !== 'full' && (
-        <div>
-          <label className="label text-base font-semibold">Jumlah (Rp) *</label>
-          <input
-            type="text"
-            name="amount"
-            value={displayAmount}
-            onChange={handleAmountChange}
-            className={`input text-2xl font-bold ${amountBorderColor}`}
-            placeholder="0"
-            inputMode="numeric"
-            required
-          />
-          {errors.amount && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.amount}</p>}
-        </div>
+        <CurrencyInputWithCalculator
+          label="Jumlah (Rp)"
+          value={formData.amount}
+          displayValue={displayAmount}
+          onChange={(numeric, formatted) => {
+            setDisplayAmount(formatted);
+            setFormData(prev => ({ ...prev, amount: numeric }));
+            if (errors.amount) setErrors(prev => { const n = { ...prev }; delete n.amount; return n; });
+          }}
+          inputClassName="text-2xl font-bold"
+          colorVariant={mode === 'in' ? 'green' : 'red'}
+          error={errors.amount}
+          required
+        />
       )}
 
       {/* Category + Date for full mode only */}
@@ -401,20 +372,18 @@ export function TransactionForm({
 
       {/* Amount for full mode (normal size) */}
       {mode === 'full' && (
-        <div>
-          <label className="label">Jumlah (Rp) *</label>
-          <input
-            type="text"
-            name="amount"
-            value={displayAmount}
-            onChange={handleAmountChange}
-            className="input"
-            placeholder="0"
-            inputMode="numeric"
-            required
-          />
-          {errors.amount && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.amount}</p>}
-        </div>
+        <CurrencyInputWithCalculator
+          label="Jumlah (Rp)"
+          value={formData.amount}
+          displayValue={displayAmount}
+          onChange={(numeric, formatted) => {
+            setDisplayAmount(formatted);
+            setFormData(prev => ({ ...prev, amount: numeric }));
+            if (errors.amount) setErrors(prev => { const n = { ...prev }; delete n.amount; return n; });
+          }}
+          error={errors.amount}
+          required
+        />
       )}
 
       {/* Account fields - Different labels based on mode */}

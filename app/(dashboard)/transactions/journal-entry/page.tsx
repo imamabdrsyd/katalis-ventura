@@ -26,6 +26,7 @@ import {
   PiggyBank,
   CheckCircle2,
 } from 'lucide-react';
+import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 
 // ─── entry types ───────────────────────────────────────────────────────────
 
@@ -187,20 +188,6 @@ const CATEGORY_LABELS: Record<TransactionCategory, string> = {
 
 const ALL_CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
-// ─── helpers ───────────────────────────────────────────────────────────────
-
-function formatNumberWithSeparator(num: number | string): string {
-  if (!num) return '';
-  const numStr = num.toString().replace(/\D/g, '');
-  if (!numStr) return '';
-  return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-}
-
-function parseFormattedNumber(str: string): number {
-  const cleaned = str.replace(/\./g, '');
-  return parseInt(cleaned) || 0;
-}
-
 // ─── page ──────────────────────────────────────────────────────────────────
 
 export default function JournalEntryPage() {
@@ -305,13 +292,6 @@ export default function JournalEntryPage() {
   };
 
   // handlers
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const numericValue = parseFormattedNumber(e.target.value);
-    setDisplayAmount(formatNumberWithSeparator(numericValue));
-    setAmount(numericValue);
-    if (errors.amount) setErrors(p => { const n = { ...p }; delete n.amount; return n; });
-  };
-
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
     if (amount <= 0) newErrors.amount = 'Jumlah harus lebih dari 0';
@@ -465,23 +445,24 @@ export default function JournalEntryPage() {
             {/* Row 1: Amount + Date */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="label text-base font-semibold">Jumlah (Rp)</label>
-                <input
-                  type="text"
-                  value={displayAmount}
-                  onChange={handleAmountChange}
-                  className={`input text-2xl font-bold ${
+                <CurrencyInputWithCalculator
+                  label="Jumlah (Rp)"
+                  value={amount}
+                  displayValue={displayAmount}
+                  onChange={(numeric, formatted) => {
+                    setDisplayAmount(formatted);
+                    setAmount(numeric);
+                    if (errors.amount) setErrors(p => { const n = { ...p }; delete n.amount; return n; });
+                  }}
+                  inputClassName="text-2xl font-bold"
+                  colorVariant={
                     selectedEntryType.id === 'penjualan' || selectedEntryType.id === 'pinjaman' || selectedEntryType.id === 'suntik_modal'
-                      ? 'border-emerald-400 dark:border-emerald-500 focus:ring-emerald-500'
-                      : 'border-red-400 dark:border-red-500 focus:ring-red-500'
-                  }`}
-                  placeholder="0"
-                  inputMode="numeric"
+                      ? 'green'
+                      : 'red'
+                  }
+                  error={errors.amount}
                   autoFocus
                 />
-                {errors.amount && (
-                  <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.amount}</p>
-                )}
               </div>
 
               <div>

@@ -15,6 +15,7 @@ import {
 import { getStockTransactions } from '@/lib/utils/inventoryHelper';
 import { InventoryPicker } from './InventoryPicker';
 import { ChevronDown, StickyNote, Zap, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 
 import type { Transaction } from '@/types';
 
@@ -27,20 +28,6 @@ interface QuickTransactionFormProps {
   transactions?: Transaction[];
   /** Callback to convert stock transactions to COGS */
   onConvertStockToCOGS?: (transactionIds: string[]) => Promise<void>;
-}
-
-// Helper: format number with thousand separator (dots)
-function formatNumberWithSeparator(num: number | string): string {
-  if (!num) return '';
-  const numStr = num.toString().replace(/\D/g, '');
-  if (!numStr) return '';
-  return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-}
-
-// Helper: parse formatted number back to integer
-function parseFormattedNumber(str: string): number {
-  const cleaned = str.replace(/\./g, '');
-  return parseInt(cleaned) || 0;
 }
 
 const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
@@ -165,21 +152,6 @@ export function QuickTransactionForm({
     );
   };
 
-  // Handle amount input
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    const numericValue = parseFormattedNumber(value);
-    setDisplayAmount(formatNumberWithSeparator(numericValue));
-    setAmount(numericValue);
-    if (errors.amount) {
-      setErrors((prev) => {
-        const next = { ...prev };
-        delete next.amount;
-        return next;
-      });
-    }
-  };
-
   // Handle account selection
   const handleSelectAccount = (account: Account) => {
     setSelectedAccountId(account.id);
@@ -250,27 +222,20 @@ export function QuickTransactionForm({
       )}
 
       {/* 1. JUMLAH (Rp) */}
-      <div>
-        <label className="label text-base font-semibold">Jumlah (Rp)</label>
-        <input
-          type="text"
-          value={displayAmount}
-          onChange={handleAmountChange}
-          className={`input text-2xl font-bold ${
-            flowDirection === 'in'
-              ? 'border-emerald-500 dark:border-emerald-400 focus:ring-emerald-500'
-              : flowDirection === 'out'
-              ? 'border-red-500 dark:border-red-400 focus:ring-red-500'
-              : ''
-          }`}
-          placeholder="0"
-          inputMode="numeric"
-          autoFocus
-        />
-        {errors.amount && (
-          <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.amount}</p>
-        )}
-      </div>
+      <CurrencyInputWithCalculator
+        label="Jumlah (Rp)"
+        value={amount}
+        displayValue={displayAmount}
+        onChange={(numeric, formatted) => {
+          setDisplayAmount(formatted);
+          setAmount(numeric);
+          if (errors.amount) setErrors(prev => { const n = { ...prev }; delete n.amount; return n; });
+        }}
+        inputClassName="text-2xl font-bold"
+        colorVariant={flowDirection === 'in' ? 'green' : flowDirection === 'out' ? 'red' : 'default'}
+        error={errors.amount}
+        autoFocus
+      />
 
       {/* 2. KATEGORI (Account Dropdown) */}
       <div className="relative">
