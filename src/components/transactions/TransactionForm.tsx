@@ -372,21 +372,15 @@ export function TransactionForm({
     }
   };
 
-  // Handle calculator multiplication result
-  const handleMultiplicationResult = (info: CalcMultiplicationInfo | null) => {
-    if (info) {
-      setUnitBreakdown({
-        price_per_unit: info.operandA,
-        quantity: info.operandB,
-        unit: 'pcs',
-      });
-      setShowCustomUnit(false);
-      setCustomUnitValue('');
-    } else {
-      setUnitBreakdown(null);
-      setShowCustomUnit(false);
-      setCustomUnitValue('');
-    }
+  // Handle calculator multiplication result (called only when user clicks "Gunakan & Breakdown Unit")
+  const handleMultiplicationResult = (info: CalcMultiplicationInfo) => {
+    setUnitBreakdown({
+      price_per_unit: info.operandA,
+      quantity: info.operandB,
+      unit: 'pcs',
+    });
+    setShowCustomUnit(false);
+    setCustomUnitValue('');
   };
 
   const handleUnitChange = (value: string) => {

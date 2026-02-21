@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Calculator, Delete, X } from 'lucide-react';
+import { Calculator, Delete, X, Layers } from 'lucide-react';
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -28,7 +28,7 @@ interface CurrencyInputWithCalculatorProps {
   value: number;
   displayValue: string;
   onChange: (numericValue: number, displayValue: string) => void;
-  onMultiplicationResult?: (info: CalcMultiplicationInfo | null) => void;
+  onMultiplicationResult?: (info: CalcMultiplicationInfo) => void;
   className?: string;
   inputClassName?: string;
   placeholder?: string;
@@ -72,6 +72,8 @@ export function CurrencyInputWithCalculator({
   const [calcPrev, setCalcPrev] = useState<number | null>(null);
   const [calcOp, setCalcOp] = useState<CalcOp>(null);
   const [calcWaiting, setCalcWaiting] = useState(false);
+  // Stores last multiplication operands after = is pressed
+  const [lastMultiply, setLastMultiply] = useState<CalcMultiplicationInfo | null>(null);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -82,6 +84,7 @@ export function CurrencyInputWithCalculator({
       setCalcPrev(null);
       setCalcOp(null);
       setCalcWaiting(false);
+      setLastMultiply(null);
     }
   }, [showCalc]);
 
@@ -101,7 +104,6 @@ export function CurrencyInputWithCalculator({
     const numeric = parseFormattedNumber(e.target.value);
     const formatted = formatNumberWithSeparator(numeric);
     onChange(numeric, formatted);
-    if (onMultiplicationResult) onMultiplicationResult(null);
   };
 
   const borderColorClass =
@@ -116,6 +118,8 @@ export function CurrencyInputWithCalculator({
   const calcNum = () => parseFormattedNumber(calcDisplay);
 
   const pressDigit = (d: string) => {
+    // Reset breakdown suggestion when user continues typing
+    setLastMultiply(null);
     if (calcWaiting) {
       setCalcDisplay(d);
       setCalcWaiting(false);
@@ -130,6 +134,7 @@ export function CurrencyInputWithCalculator({
   };
 
   const pressOperator = (op: CalcOp) => {
+    setLastMultiply(null);
     const current = calcNum();
     if (calcOp && !calcWaiting && calcPrev !== null) {
       const result = Math.round(evalCalc(calcPrev, calcOp, current));
@@ -145,23 +150,22 @@ export function CurrencyInputWithCalculator({
   const pressEquals = () => {
     if (calcOp === null || calcPrev === null) return;
     const current = calcNum();
-    const result = Math.round(evalCalc(calcPrev, calcOp, current));
+    const op = calcOp;
+    const prev = calcPrev;
+    const result = Math.round(evalCalc(prev, op, current));
     const formatted = formatNumberWithSeparator(result) || '0';
     setCalcDisplay(formatted);
-
-    // Notify parent about multiplication operands
-    if (onMultiplicationResult) {
-      if (calcOp === '×') {
-        onMultiplicationResult({ operandA: calcPrev, operandB: current });
-      } else {
-        onMultiplicationResult(null);
-      }
-    }
-
     setCalcPrev(null);
     setCalcOp(null);
     setCalcWaiting(false);
     onChange(result, formatted);
+
+    // If multiplication, store operands so breakdown button can appear
+    if (op === '×' && onMultiplicationResult) {
+      setLastMultiply({ operandA: prev, operandB: current });
+    } else {
+      setLastMultiply(null);
+    }
   };
 
   const pressClear = () => {
@@ -169,9 +173,11 @@ export function CurrencyInputWithCalculator({
     setCalcPrev(null);
     setCalcOp(null);
     setCalcWaiting(false);
+    setLastMultiply(null);
   };
 
   const pressBackspace = () => {
+    setLastMultiply(null);
     const raw = calcDisplay.replace(/\./g, '');
     if (raw.length <= 1) {
       setCalcDisplay('0');
@@ -184,6 +190,15 @@ export function CurrencyInputWithCalculator({
     const num = calcNum();
     const formatted = formatNumberWithSeparator(num);
     onChange(num, formatted);
+    setShowCalc(false);
+  };
+
+  const useResultWithBreakdown = () => {
+    if (!lastMultiply || !onMultiplicationResult) return;
+    const num = calcNum();
+    const formatted = formatNumberWithSeparator(num);
+    onChange(num, formatted);
+    onMultiplicationResult(lastMultiply);
     setShowCalc(false);
   };
 
@@ -254,6 +269,12 @@ export function CurrencyInputWithCalculator({
             <div className="text-right text-3xl font-bold text-gray-800 dark:text-gray-100 truncate">
               {calcDisplay}
             </div>
+            {/* Breakdown hint */}
+            {lastMultiply && (
+              <div className="text-right text-xs text-indigo-500 dark:text-indigo-400 mt-1">
+                {formatNumberWithSeparator(lastMultiply.operandA)} × {formatNumberWithSeparator(lastMultiply.operandB)}
+              </div>
+            )}
           </div>
 
           {/* Buttons - explicit 4-column grid */}
@@ -287,8 +308,19 @@ export function CurrencyInputWithCalculator({
             <button type="button" onClick={() => pressDigit('0')} className={btnDigit}>0</button>
           </div>
 
-          {/* Use result */}
-          <div className="px-2.5 pb-2.5">
+          {/* Action buttons */}
+          <div className="px-2.5 pb-2.5 flex flex-col gap-2">
+            {/* Breakdown button — only shown after multiplication = */}
+            {lastMultiply && onMultiplicationResult && (
+              <button
+                type="button"
+                onClick={useResultWithBreakdown}
+                className="w-full py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+              >
+                <Layers className="w-4 h-4" />
+                Gunakan & Breakdown Unit
+              </button>
+            )}
             <button
               type="button"
               onClick={useResult}
