@@ -383,7 +383,14 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
           alt="Axion Logo"
           width={110}
           height={36}
-          className="object-contain"
+          className="object-contain dark:hidden"
+        />
+        <Image
+          src="/images/axion-dark.png"
+          alt="Axion Logo"
+          width={110}
+          height={36}
+          className="object-contain hidden dark:block"
         />
       </div>
 

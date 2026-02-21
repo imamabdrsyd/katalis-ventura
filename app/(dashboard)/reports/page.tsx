@@ -11,7 +11,14 @@ export default function ReportsPage() {
           alt="Axion Logo"
           width={80}
           height={80}
-          className="mx-auto mb-6 rounded-xl"
+          className="mx-auto mb-6 rounded-xl dark:hidden"
+        />
+        <Image
+          src="/images/axion-dark.png"
+          alt="Axion Logo"
+          width={80}
+          height={80}
+          className="mx-auto mb-6 rounded-xl hidden dark:block"
         />
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">Under Construction</h1>
         <p className="text-gray-500 dark:text-gray-400">Imam sedang mengembangkan fitur Reports</p>

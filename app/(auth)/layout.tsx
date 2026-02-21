@@ -12,7 +12,14 @@ export default function AuthLayout({
         alt="Axion Logo"
         width={120}
         height={40}
-        className="object-contain"
+        className="object-contain dark:hidden"
+      />
+      <Image
+        src="/images/axion-dark.png"
+        alt="Axion Logo"
+        width={120}
+        height={40}
+        className="object-contain hidden dark:block"
       />
       {children}
       <p className="text-xs text-gray-400 dark:text-gray-600">

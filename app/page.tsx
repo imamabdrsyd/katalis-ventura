@@ -43,7 +43,14 @@ export default function LandingPage() {
               alt="Axion Logo"
               width={120}
               height={40}
-              className="object-contain"
+              className="object-contain dark:hidden"
+            />
+            <Image
+              src="/images/axion-dark.png"
+              alt="Axion Logo"
+              width={120}
+              height={40}
+              className="object-contain hidden dark:block"
             />
           </div>
           <div className="flex items-center gap-4">
