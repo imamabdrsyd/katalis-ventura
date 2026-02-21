@@ -301,7 +301,14 @@ export function TransactionForm({
     }
   };
 
-  const [guidanceOpen, setGuidanceOpen] = useState(true);
+  const [guidanceOpen, setGuidanceOpen] = useState(false);
+
+  const renderBold = (text: string) =>
+    text.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
+      part.startsWith('**') && part.endsWith('**')
+        ? <strong key={i}>{part.slice(2, -2)}</strong>
+        : part
+    );
 
   // Accounting guidance and validation
   const { guidance, validation, isValid: isAccountingValid } = useAccountingGuidance({
@@ -560,8 +567,10 @@ export function TransactionForm({
                       </button>
                       {guidanceOpen && (
                         <div className="px-4 pb-4">
-                          <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">
-                            {guidance.explanation}
+                          <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                            {guidance.explanation.split('\n').map((line, i) => (
+                              <p key={i}>{renderBold(line)}</p>
+                            ))}
                           </div>
                         </div>
                       )}
@@ -570,9 +579,11 @@ export function TransactionForm({
 
                   {/* Basic guidance when no pattern detected */}
                   {!guidance.pattern && guidance.explanation && (
-                    <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
-                      <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">
-                        {guidance.explanation}
+                    <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
+                      <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                        {guidance.explanation.split('\n').map((line, i) => (
+                          <p key={i}>{renderBold(line)}</p>
+                        ))}
                       </div>
                     </div>
                   )}
