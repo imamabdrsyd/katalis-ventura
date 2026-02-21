@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Calculator, Delete, X, Layers } from 'lucide-react';
 
@@ -74,39 +74,49 @@ export function CurrencyInputWithCalculator({
   const [calcOp, setCalcOp] = useState<CalcOp>(null);
   const [calcWaiting, setCalcWaiting] = useState(false);
   const [lastMultiply, setLastMultiply] = useState<CalcMultiplicationInfo | null>(null);
-  // Portal panel position
-  const [panelStyle, setPanelStyle] = useState<React.CSSProperties>({});
+  const [mounted, setMounted] = useState(false);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
-  // Compute panel position relative to viewport (for portal rendering)
-  const updatePanelPosition = () => {
-    if (!wrapperRef.current) return;
+  // Ensure portal only renders on client
+  useEffect(() => { setMounted(true); }, []);
+
+  // Position the panel relative to the input
+  const updatePanelPosition = useCallback(() => {
+    if (!wrapperRef.current || !panelRef.current) return;
     const rect = wrapperRef.current.getBoundingClientRect();
+    const panel = panelRef.current;
     const panelWidth = Math.max(rect.width, 280);
-    // Try to position below; if it would go off screen, position above
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const estimatedPanelHeight = 380;
+    const panelHeight = panel.offsetHeight;
+
+    // Prefer below, flip to above if not enough space
+    const spaceBelow = window.innerHeight - rect.bottom - 8;
+    const spaceAbove = rect.top - 8;
     let top: number;
-    if (spaceBelow < estimatedPanelHeight && rect.top > estimatedPanelHeight) {
-      // Position above
-      top = rect.top - estimatedPanelHeight - 8;
-    } else {
+    if (spaceBelow >= panelHeight) {
       top = rect.bottom + 8;
+    } else if (spaceAbove >= panelHeight) {
+      top = rect.top - panelHeight - 8;
+    } else {
+      // Not enough space either way — pin to bottom of viewport
+      top = Math.max(8, window.innerHeight - panelHeight - 8);
     }
-    // Clamp left so it doesn't go off screen
+
     let left = rect.left;
     if (left + panelWidth > window.innerWidth - 8) {
       left = window.innerWidth - panelWidth - 8;
     }
-    setPanelStyle({
-      position: 'fixed',
-      top,
-      left,
-      width: panelWidth,
-      zIndex: 9999,
-    });
-  };
+    if (left < 8) left = 8;
+
+    panel.style.position = 'fixed';
+    panel.style.top = `${top}px`;
+    panel.style.left = `${left}px`;
+    panel.style.width = `${panelWidth}px`;
+    panel.style.zIndex = '99999';
+    panel.style.maxHeight = `${window.innerHeight - 16}px`;
+    panel.style.overflowY = 'auto';
+  }, []);
 
   // Sync calc display when toggled open
   useEffect(() => {
@@ -116,32 +126,31 @@ export function CurrencyInputWithCalculator({
       setCalcOp(null);
       setCalcWaiting(false);
       setLastMultiply(null);
-      updatePanelPosition();
     }
   }, [showCalc]);
 
-  // Update position on scroll/resize while open
+  // Position on open and on scroll/resize
   useEffect(() => {
     if (!showCalc) return;
+    // Small delay to allow panel to render and measure
+    const raf = requestAnimationFrame(() => updatePanelPosition());
     const onScrollResize = () => updatePanelPosition();
     window.addEventListener('scroll', onScrollResize, true);
     window.addEventListener('resize', onScrollResize);
     return () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener('scroll', onScrollResize, true);
       window.removeEventListener('resize', onScrollResize);
     };
-  }, [showCalc]);
+  }, [showCalc, lastMultiply, updatePanelPosition]);
 
   // Close on outside click
   useEffect(() => {
     if (!showCalc) return;
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
-      // Check wrapper
       if (wrapperRef.current?.contains(target)) return;
-      // Check portal panel (data attribute)
-      const panel = document.getElementById('calc-portal-panel');
-      if (panel?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
       setShowCalc(false);
     };
     document.addEventListener('mousedown', handler);
@@ -257,91 +266,6 @@ export function CurrencyInputWithCalculator({
     : `${btnBase} bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50`;
   const btnAction = `${btnBase} bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500`;
 
-  const calcPanel = showCalc ? (
-    <div
-      id="calc-portal-panel"
-      style={panelStyle}
-      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl"
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 dark:border-gray-700">
-        <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-          <Calculator className="w-3.5 h-3.5" />
-          Kalkulator
-        </span>
-        <button
-          type="button"
-          onClick={() => setShowCalc(false)}
-          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* Display */}
-      <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50">
-        <div className="text-xs text-right text-gray-400 dark:text-gray-500 h-4">
-          {calcPrev !== null && calcOp ? `${formatNumberWithSeparator(calcPrev)} ${calcOp}` : '\u00A0'}
-        </div>
-        <div className="text-right text-3xl font-bold text-gray-800 dark:text-gray-100 truncate">
-          {calcDisplay}
-        </div>
-        {lastMultiply && (
-          <div className="text-right text-xs text-indigo-500 dark:text-indigo-400 mt-1">
-            {formatNumberWithSeparator(lastMultiply.operandA)} × {formatNumberWithSeparator(lastMultiply.operandB)}
-          </div>
-        )}
-      </div>
-
-      {/* Buttons */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', padding: '10px' }}>
-        <button type="button" onClick={pressClear} className={btnAction}>C</button>
-        <button type="button" onClick={pressBackspace} className={btnAction}><Delete className="w-4 h-4 mx-auto" /></button>
-        <button type="button" onClick={() => pressOperator('÷')} className={btnOp(calcOp === '÷')}>÷</button>
-        <button type="button" onClick={() => pressOperator('×')} className={btnOp(calcOp === '×')}>×</button>
-
-        <button type="button" onClick={() => pressDigit('7')} className={btnDigit}>7</button>
-        <button type="button" onClick={() => pressDigit('8')} className={btnDigit}>8</button>
-        <button type="button" onClick={() => pressDigit('9')} className={btnDigit}>9</button>
-        <button type="button" onClick={() => pressOperator('-')} className={btnOp(calcOp === '-')}>−</button>
-
-        <button type="button" onClick={() => pressDigit('4')} className={btnDigit}>4</button>
-        <button type="button" onClick={() => pressDigit('5')} className={btnDigit}>5</button>
-        <button type="button" onClick={() => pressDigit('6')} className={btnDigit}>6</button>
-        <button type="button" onClick={() => pressOperator('+')} className={btnOp(calcOp === '+')}>+</button>
-
-        <button type="button" onClick={() => pressDigit('1')} className={btnDigit}>1</button>
-        <button type="button" onClick={() => pressDigit('2')} className={btnDigit}>2</button>
-        <button type="button" onClick={() => pressDigit('3')} className={btnDigit}>3</button>
-        <button type="button" onClick={pressEquals} style={{ gridRow: 'span 2' }} className={`${btnBase} bg-indigo-500 hover:bg-indigo-600 text-white text-lg`}>=</button>
-
-        <button type="button" onClick={() => { pressDigit('0'); pressDigit('0'); pressDigit('0'); }} style={{ gridColumn: 'span 2' }} className={btnDigit}>000</button>
-        <button type="button" onClick={() => pressDigit('0')} className={btnDigit}>0</button>
-      </div>
-
-      {/* Action buttons */}
-      <div className="px-2.5 pb-2.5 flex flex-col gap-2">
-        {lastMultiply && onMultiplicationResult && (
-          <button
-            type="button"
-            onClick={useResultWithBreakdown}
-            className="w-full py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2"
-          >
-            <Layers className="w-4 h-4" />
-            Gunakan &amp; Breakdown Unit
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={useResult}
-          className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold transition-colors"
-        >
-          Gunakan Hasil
-        </button>
-      </div>
-    </div>
-  ) : null;
-
   return (
     <div className={`relative ${className}`} ref={wrapperRef}>
       {label && (
@@ -374,8 +298,92 @@ export function CurrencyInputWithCalculator({
 
       {error && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{error}</p>}
 
-      {/* Calculator panel rendered in portal to escape overflow clipping */}
-      {typeof document !== 'undefined' && calcPanel && createPortal(calcPanel, document.body)}
+      {/* Calculator panel — rendered via portal to document.body to escape modal overflow clipping */}
+      {mounted && showCalc && createPortal(
+        <div
+          ref={panelRef}
+          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl"
+          style={{ position: 'fixed', zIndex: 99999 }}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 dark:border-gray-700">
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+              <Calculator className="w-3.5 h-3.5" />
+              Kalkulator
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowCalc(false)}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Display */}
+          <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50">
+            <div className="text-xs text-right text-gray-400 dark:text-gray-500 h-4">
+              {calcPrev !== null && calcOp ? `${formatNumberWithSeparator(calcPrev)} ${calcOp}` : '\u00A0'}
+            </div>
+            <div className="text-right text-3xl font-bold text-gray-800 dark:text-gray-100 truncate">
+              {calcDisplay}
+            </div>
+            {lastMultiply && (
+              <div className="text-right text-xs text-indigo-500 dark:text-indigo-400 mt-1">
+                {formatNumberWithSeparator(lastMultiply.operandA)} × {formatNumberWithSeparator(lastMultiply.operandB)}
+              </div>
+            )}
+          </div>
+
+          {/* Buttons */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', padding: '10px' }}>
+            <button type="button" onClick={pressClear} className={btnAction}>C</button>
+            <button type="button" onClick={pressBackspace} className={btnAction}><Delete className="w-4 h-4 mx-auto" /></button>
+            <button type="button" onClick={() => pressOperator('÷')} className={btnOp(calcOp === '÷')}>÷</button>
+            <button type="button" onClick={() => pressOperator('×')} className={btnOp(calcOp === '×')}>×</button>
+
+            <button type="button" onClick={() => pressDigit('7')} className={btnDigit}>7</button>
+            <button type="button" onClick={() => pressDigit('8')} className={btnDigit}>8</button>
+            <button type="button" onClick={() => pressDigit('9')} className={btnDigit}>9</button>
+            <button type="button" onClick={() => pressOperator('-')} className={btnOp(calcOp === '-')}>−</button>
+
+            <button type="button" onClick={() => pressDigit('4')} className={btnDigit}>4</button>
+            <button type="button" onClick={() => pressDigit('5')} className={btnDigit}>5</button>
+            <button type="button" onClick={() => pressDigit('6')} className={btnDigit}>6</button>
+            <button type="button" onClick={() => pressOperator('+')} className={btnOp(calcOp === '+')}>+</button>
+
+            <button type="button" onClick={() => pressDigit('1')} className={btnDigit}>1</button>
+            <button type="button" onClick={() => pressDigit('2')} className={btnDigit}>2</button>
+            <button type="button" onClick={() => pressDigit('3')} className={btnDigit}>3</button>
+            <button type="button" onClick={pressEquals} style={{ gridRow: 'span 2' }} className={`${btnBase} bg-indigo-500 hover:bg-indigo-600 text-white text-lg`}>=</button>
+
+            <button type="button" onClick={() => { pressDigit('0'); pressDigit('0'); pressDigit('0'); }} style={{ gridColumn: 'span 2' }} className={btnDigit}>000</button>
+            <button type="button" onClick={() => pressDigit('0')} className={btnDigit}>0</button>
+          </div>
+
+          {/* Action buttons */}
+          <div className="px-2.5 pb-2.5 flex flex-col gap-2">
+            {lastMultiply && onMultiplicationResult && (
+              <button
+                type="button"
+                onClick={useResultWithBreakdown}
+                className="w-full py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+              >
+                <Layers className="w-4 h-4" />
+                Gunakan &amp; Breakdown Unit
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={useResult}
+              className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold transition-colors"
+            >
+              Gunakan Hasil
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
