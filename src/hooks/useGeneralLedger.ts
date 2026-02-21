@@ -72,7 +72,7 @@ export function calculateAccountLedger(
     return {
       transactionId: t.id,
       date: t.date,
-      description: t.name,
+      description: t.description,
       counterAccountName: counterAccount?.account_name ?? '-',
       counterAccountCode: counterAccount?.account_code ?? '-',
       debitAmount,
