@@ -257,7 +257,7 @@ export function TransactionDetailModal({
         <div className="space-y-4">
           <div>
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Nama
+              Subjek
             </label>
             <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
               {transaction.name}

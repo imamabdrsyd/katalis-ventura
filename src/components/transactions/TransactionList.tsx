@@ -123,7 +123,7 @@ export function TransactionList({
             )}
             <th className="text-left py-3 px-2 md:py-4 text-sm font-normal text-gray-500 dark:text-gray-400">No</th>
             <th className="text-left py-3 pl-1 pr-2 md:py-4 md:pl-2 md:pr-4 text-sm font-normal text-gray-500 dark:text-gray-400">Kategori</th>
-            <th className="text-left py-3 px-2 md:py-4 text-sm font-normal text-gray-500 dark:text-gray-400">Nama</th>
+            <th className="text-left py-3 px-2 md:py-4 text-sm font-normal text-gray-500 dark:text-gray-400">Subjek</th>
             <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Deskripsi</th>
             <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Tanggal</th>
             <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Jumlah</th>

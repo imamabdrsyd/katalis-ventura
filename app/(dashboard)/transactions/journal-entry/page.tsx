@@ -12,7 +12,7 @@ import { getStockTransactions, findCogsAccount } from '@/lib/utils/inventoryHelp
 import { updateTransaction } from '@/lib/api/transactions';
 import { InventoryPicker } from '@/components/transactions/InventoryPicker';
 import { AccountDropdown } from '@/components/transactions/AccountDropdown';
-import type { Account, AccountType, TransactionCategory, Transaction } from '@/types';
+import type { Account, AccountType, TransactionCategory, Transaction, UnitBreakdown } from '@/types';
 import {
   ArrowLeft,
   BookOpen,
@@ -27,6 +27,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
+import { UnitBreakdownSection } from '@/components/transactions/UnitBreakdownSection';
 
 // ─── entry types ───────────────────────────────────────────────────────────
 
@@ -207,6 +208,10 @@ export default function JournalEntryPage() {
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
+  // unit breakdown state
+  const [unitBreakdown, setUnitBreakdown] = useState<UnitBreakdown | null>(null);
+  const [showBreakdown, setShowBreakdown] = useState(false);
+
   // inventory state
   const [selectedStockIds, setSelectedStockIds] = useState<string[]>([]);
 
@@ -291,6 +296,47 @@ export default function JournalEntryPage() {
     );
   };
 
+  // unit breakdown handlers
+  const handleToggleBreakdown = () => {
+    if (!showBreakdown && !unitBreakdown) {
+      setUnitBreakdown({ price_per_unit: 0, quantity: 0, unit: 'pcs' });
+    }
+    setShowBreakdown(prev => !prev);
+  };
+
+  const handleBreakdownPriceChange = (price: number) => {
+    setUnitBreakdown(prev => {
+      const updated = { ...(prev || { price_per_unit: 0, quantity: 0, unit: 'pcs' }), price_per_unit: price };
+      const total = updated.price_per_unit * updated.quantity;
+      if (total > 0) {
+        setAmount(total);
+        setDisplayAmount(total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'));
+      }
+      return updated;
+    });
+  };
+
+  const handleBreakdownQtyChange = (qty: number) => {
+    setUnitBreakdown(prev => {
+      const updated = { ...(prev || { price_per_unit: 0, quantity: 0, unit: 'pcs' }), quantity: qty };
+      const total = updated.price_per_unit * updated.quantity;
+      if (total > 0) {
+        setAmount(total);
+        setDisplayAmount(total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'));
+      }
+      return updated;
+    });
+  };
+
+  const handleBreakdownUnitChange = (unit: string) => {
+    setUnitBreakdown(prev => prev ? { ...prev, unit } : null);
+  };
+
+  const handleRemoveBreakdown = () => {
+    setUnitBreakdown(null);
+    setShowBreakdown(false);
+  };
+
   // handlers
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -321,9 +367,13 @@ export default function JournalEntryPage() {
         }
       }
 
-      const meta = selectedStockIds.length > 0
-        ? { sold_stock_ids: selectedStockIds }
-        : undefined;
+      const meta: Record<string, unknown> = {};
+      if (selectedStockIds.length > 0) {
+        meta.sold_stock_ids = selectedStockIds;
+      }
+      if (unitBreakdown && unitBreakdown.unit) {
+        meta.unit_breakdown = unitBreakdown;
+      }
 
       await createTransaction({
         business_id: businessId,
@@ -338,7 +388,7 @@ export default function JournalEntryPage() {
         credit_account_id: creditAccountId,
         is_double_entry: true,
         notes: description || undefined,
-        meta,
+        meta: Object.keys(meta).length > 0 ? meta : undefined,
       });
 
       // Reset form (keep entry type selected for quick multi-entry)
@@ -348,6 +398,8 @@ export default function JournalEntryPage() {
       setDescription('');
       setDate(new Date().toISOString().split('T')[0]);
       setSelectedStockIds([]);
+      setUnitBreakdown(null);
+      setShowBreakdown(false);
       setErrors({});
       setSuccessMessage('Transaksi berhasil disimpan!');
       setTimeout(() => setSuccessMessage(''), 3000);
@@ -481,6 +533,17 @@ export default function JournalEntryPage() {
                 )}
               </div>
             </div>
+
+            {/* Unit Breakdown */}
+            <UnitBreakdownSection
+              unitBreakdown={unitBreakdown}
+              showBreakdown={showBreakdown}
+              onToggle={handleToggleBreakdown}
+              onPriceChange={handleBreakdownPriceChange}
+              onQuantityChange={handleBreakdownQtyChange}
+              onUnitChange={handleBreakdownUnitChange}
+              onRemove={handleRemoveBreakdown}
+            />
 
             {/* Row 2: Debit + Credit */}
             <div className="grid grid-cols-2 gap-4">
