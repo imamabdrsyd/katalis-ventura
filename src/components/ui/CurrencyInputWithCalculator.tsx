@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Calculator, Delete, X, Layers } from 'lucide-react';
+import { Calculator, Delete, X } from 'lucide-react';
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -20,16 +20,10 @@ function parseFormattedNumber(str: string): number {
 
 // ─── types ─────────────────────────────────────────────────────────────────
 
-export interface CalcMultiplicationInfo {
-  operandA: number;
-  operandB: number;
-}
-
 interface CurrencyInputWithCalculatorProps {
   value: number;
   displayValue: string;
   onChange: (numericValue: number, displayValue: string) => void;
-  onMultiplicationResult?: (info: CalcMultiplicationInfo) => void;
   className?: string;
   inputClassName?: string;
   placeholder?: string;
@@ -58,7 +52,6 @@ export function CurrencyInputWithCalculator({
   value,
   displayValue,
   onChange,
-  onMultiplicationResult,
   className = '',
   inputClassName = '',
   placeholder = '0',
@@ -73,7 +66,6 @@ export function CurrencyInputWithCalculator({
   const [calcPrev, setCalcPrev] = useState<number | null>(null);
   const [calcOp, setCalcOp] = useState<CalcOp>(null);
   const [calcWaiting, setCalcWaiting] = useState(false);
-  const [lastMultiply, setLastMultiply] = useState<CalcMultiplicationInfo | null>(null);
   const [mounted, setMounted] = useState(false);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -90,7 +82,6 @@ export function CurrencyInputWithCalculator({
     const panelWidth = Math.max(rect.width, 280);
     const panelHeight = panel.offsetHeight;
 
-    // Prefer below, flip to above if not enough space
     const spaceBelow = window.innerHeight - rect.bottom - 8;
     const spaceAbove = rect.top - 8;
     let top: number;
@@ -99,7 +90,6 @@ export function CurrencyInputWithCalculator({
     } else if (spaceAbove >= panelHeight) {
       top = rect.top - panelHeight - 8;
     } else {
-      // Not enough space either way — pin to bottom of viewport
       top = Math.max(8, window.innerHeight - panelHeight - 8);
     }
 
@@ -125,14 +115,12 @@ export function CurrencyInputWithCalculator({
       setCalcPrev(null);
       setCalcOp(null);
       setCalcWaiting(false);
-      setLastMultiply(null);
     }
   }, [showCalc]);
 
   // Position on open and on scroll/resize
   useEffect(() => {
     if (!showCalc) return;
-    // Small delay to allow panel to render and measure
     const raf = requestAnimationFrame(() => updatePanelPosition());
     const onScrollResize = () => updatePanelPosition();
     window.addEventListener('scroll', onScrollResize, true);
@@ -142,7 +130,7 @@ export function CurrencyInputWithCalculator({
       window.removeEventListener('scroll', onScrollResize, true);
       window.removeEventListener('resize', onScrollResize);
     };
-  }, [showCalc, lastMultiply, updatePanelPosition]);
+  }, [showCalc, updatePanelPosition]);
 
   // Close on outside click
   useEffect(() => {
@@ -175,7 +163,6 @@ export function CurrencyInputWithCalculator({
   const calcNum = () => parseFormattedNumber(calcDisplay);
 
   const pressDigit = (d: string) => {
-    setLastMultiply(null);
     if (calcWaiting) {
       setCalcDisplay(d);
       setCalcWaiting(false);
@@ -190,7 +177,6 @@ export function CurrencyInputWithCalculator({
   };
 
   const pressOperator = (op: CalcOp) => {
-    setLastMultiply(null);
     const current = calcNum();
     if (calcOp && !calcWaiting && calcPrev !== null) {
       const result = Math.round(evalCalc(calcPrev, calcOp, current));
@@ -206,21 +192,13 @@ export function CurrencyInputWithCalculator({
   const pressEquals = () => {
     if (calcOp === null || calcPrev === null) return;
     const current = calcNum();
-    const op = calcOp;
-    const prev = calcPrev;
-    const result = Math.round(evalCalc(prev, op, current));
+    const result = Math.round(evalCalc(calcPrev, calcOp, current));
     const formatted = formatNumberWithSeparator(result) || '0';
     setCalcDisplay(formatted);
     setCalcPrev(null);
     setCalcOp(null);
     setCalcWaiting(false);
     onChange(result, formatted);
-
-    if (op === '×' && onMultiplicationResult) {
-      setLastMultiply({ operandA: prev, operandB: current });
-    } else {
-      setLastMultiply(null);
-    }
   };
 
   const pressClear = () => {
@@ -228,11 +206,9 @@ export function CurrencyInputWithCalculator({
     setCalcPrev(null);
     setCalcOp(null);
     setCalcWaiting(false);
-    setLastMultiply(null);
   };
 
   const pressBackspace = () => {
-    setLastMultiply(null);
     const raw = calcDisplay.replace(/\./g, '');
     if (raw.length <= 1) {
       setCalcDisplay('0');
@@ -245,15 +221,6 @@ export function CurrencyInputWithCalculator({
     const num = calcNum();
     const formatted = formatNumberWithSeparator(num);
     onChange(num, formatted);
-    setShowCalc(false);
-  };
-
-  const useResultWithBreakdown = () => {
-    if (!lastMultiply || !onMultiplicationResult) return;
-    const num = calcNum();
-    const formatted = formatNumberWithSeparator(num);
-    onChange(num, formatted);
-    onMultiplicationResult(lastMultiply);
     setShowCalc(false);
   };
 
@@ -298,7 +265,7 @@ export function CurrencyInputWithCalculator({
 
       {error && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{error}</p>}
 
-      {/* Calculator panel — rendered via portal to document.body to escape modal overflow clipping */}
+      {/* Calculator panel — rendered via portal */}
       {mounted && showCalc && createPortal(
         <div
           ref={panelRef}
@@ -328,11 +295,6 @@ export function CurrencyInputWithCalculator({
             <div className="text-right text-3xl font-bold text-gray-800 dark:text-gray-100 truncate">
               {calcDisplay}
             </div>
-            {lastMultiply && (
-              <div className="text-right text-xs text-indigo-500 dark:text-indigo-400 mt-1">
-                {formatNumberWithSeparator(lastMultiply.operandA)} × {formatNumberWithSeparator(lastMultiply.operandB)}
-              </div>
-            )}
           </div>
 
           {/* Buttons */}
@@ -361,18 +323,8 @@ export function CurrencyInputWithCalculator({
             <button type="button" onClick={() => pressDigit('0')} className={btnDigit}>0</button>
           </div>
 
-          {/* Action buttons */}
-          <div className="px-2.5 pb-2.5 flex flex-col gap-2">
-            {lastMultiply && onMultiplicationResult && (
-              <button
-                type="button"
-                onClick={useResultWithBreakdown}
-                className="w-full py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2"
-              >
-                <Layers className="w-4 h-4" />
-                Gunakan &amp; Breakdown Unit
-              </button>
-            )}
+          {/* Use result button */}
+          <div className="px-2.5 pb-2.5">
             <button
               type="button"
               onClick={useResult}

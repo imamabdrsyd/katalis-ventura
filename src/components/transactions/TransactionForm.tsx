@@ -9,7 +9,8 @@ import { useParams } from 'next/navigation';
 import { detectCategory } from '@/lib/utils/transactionHelpers';
 import { useAccountingGuidance } from '@/hooks/useAccountingGuidance';
 import { AlertCircle, Lightbulb, AlertTriangle } from 'lucide-react';
-import { CurrencyInputWithCalculator, CalcMultiplicationInfo } from '@/components/ui/CurrencyInputWithCalculator';
+import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
+import { Package, X, ChevronDown, ChevronUp } from 'lucide-react';
 import type { UnitBreakdown } from '@/types';
 
 export interface TransactionFormData {
@@ -87,59 +88,185 @@ const CATEGORY_SUGGESTIONS: Record<TransactionCategory, { debit: string; credit:
   },
 };
 
-// ─── Unit Breakdown Row ─────────────────────────────────────────────────────
+// ─── Standalone Unit Breakdown Section ──────────────────────────────────────
 
-function UnitBreakdownRow({
+function UnitBreakdownSection({
   unitBreakdown,
-  showCustomUnit,
-  customUnitValue,
+  showBreakdown,
+  onToggle,
+  onPriceChange,
+  onQuantityChange,
   onUnitChange,
-  onCustomUnitInput,
+  onRemove,
 }: {
-  unitBreakdown: UnitBreakdown;
-  showCustomUnit: boolean;
-  customUnitValue: string;
+  unitBreakdown: UnitBreakdown | null;
+  showBreakdown: boolean;
+  onToggle: () => void;
+  onPriceChange: (value: number) => void;
+  onQuantityChange: (value: number) => void;
   onUnitChange: (value: string) => void;
-  onCustomUnitInput: (value: string) => void;
+  onRemove: () => void;
 }) {
+  const [priceDisplay, setPriceDisplay] = useState(
+    unitBreakdown?.price_per_unit ? formatNumberWithSeparator(unitBreakdown.price_per_unit) : ''
+  );
+  const [qtyDisplay, setQtyDisplay] = useState(
+    unitBreakdown?.quantity ? formatNumberWithSeparator(unitBreakdown.quantity) : ''
+  );
+  const [showCustomUnit, setShowCustomUnit] = useState(
+    unitBreakdown?.unit ? !UNIT_OPTIONS.includes(unitBreakdown.unit as typeof UNIT_OPTIONS[number]) : false
+  );
+  const [customUnitValue, setCustomUnitValue] = useState(
+    unitBreakdown?.unit && !UNIT_OPTIONS.includes(unitBreakdown.unit as typeof UNIT_OPTIONS[number])
+      ? unitBreakdown.unit
+      : ''
+  );
+
+  // Sync displays when unitBreakdown changes externally (e.g. loading from saved data)
+  useEffect(() => {
+    if (unitBreakdown) {
+      setPriceDisplay(unitBreakdown.price_per_unit ? formatNumberWithSeparator(unitBreakdown.price_per_unit) : '');
+      setQtyDisplay(unitBreakdown.quantity ? formatNumberWithSeparator(unitBreakdown.quantity) : '');
+    }
+  }, [unitBreakdown?.price_per_unit, unitBreakdown?.quantity]);
+
+  if (!showBreakdown) {
+    return (
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors mt-1"
+      >
+        <Package className="w-3.5 h-3.5" />
+        <span>Breakdown Unit</span>
+        <ChevronDown className="w-3 h-3" />
+      </button>
+    );
+  }
+
+  const handlePriceInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\./g, '');
+    const num = parseInt(raw) || 0;
+    setPriceDisplay(num ? formatNumberWithSeparator(num) : '');
+    onPriceChange(num);
+  };
+
+  const handleQtyInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\./g, '');
+    const num = parseInt(raw) || 0;
+    setQtyDisplay(num ? formatNumberWithSeparator(num) : '');
+    onQuantityChange(num);
+  };
+
+  const handleUnitSelect = (value: string) => {
+    if (value === '__custom__') {
+      setShowCustomUnit(true);
+      setCustomUnitValue('');
+      onUnitChange('');
+    } else {
+      setShowCustomUnit(false);
+      setCustomUnitValue('');
+      onUnitChange(value);
+    }
+  };
+
+  const handleCustomUnit = (value: string) => {
+    setCustomUnitValue(value);
+    onUnitChange(value);
+  };
+
+  const total = (unitBreakdown?.price_per_unit || 0) * (unitBreakdown?.quantity || 0);
+
   return (
-    <div className="flex items-center gap-3 px-3 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg text-sm animate-in fade-in slide-in-from-top-1 duration-200">
-      <div className="flex items-center gap-1.5">
-        <span className="text-gray-500 dark:text-gray-400">Harga/unit:</span>
-        <span className="font-semibold text-gray-800 dark:text-gray-100">
-          {formatNumberWithSeparator(unitBreakdown.price_per_unit)}
-        </span>
+    <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-3 space-y-2.5">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400"
+        >
+          <Package className="w-3.5 h-3.5" />
+          <span>Breakdown Unit</span>
+          <ChevronUp className="w-3 h-3" />
+        </button>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+          title="Hapus breakdown"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
       </div>
-      <span className="text-gray-300 dark:text-gray-600">×</span>
-      <div className="flex items-center gap-1.5">
-        <span className="text-gray-500 dark:text-gray-400">Qty:</span>
-        <span className="font-semibold text-gray-800 dark:text-gray-100">
-          {formatNumberWithSeparator(unitBreakdown.quantity)}
-        </span>
-      </div>
-      <div className="flex items-center gap-1.5 ml-auto">
-        {showCustomUnit ? (
+
+      {/* Input fields */}
+      <div className="grid grid-cols-3 gap-2">
+        {/* Price per unit */}
+        <div>
+          <label className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            Harga/Unit
+          </label>
           <input
             type="text"
-            value={customUnitValue}
-            onChange={(e) => onCustomUnitInput(e.target.value)}
-            placeholder="Satuan..."
-            className="w-20 px-2 py-1 text-xs border border-indigo-300 dark:border-indigo-600 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            autoFocus
+            value={priceDisplay}
+            onChange={handlePriceInput}
+            placeholder="0"
+            inputMode="numeric"
+            className="w-full mt-0.5 px-2.5 py-1.5 text-sm border border-indigo-300 dark:border-indigo-600 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
-        ) : (
-          <select
-            value={UNIT_OPTIONS.includes(unitBreakdown.unit as typeof UNIT_OPTIONS[number]) ? unitBreakdown.unit : '__custom__'}
-            onChange={(e) => onUnitChange(e.target.value)}
-            className="px-2 py-1 text-xs border border-indigo-300 dark:border-indigo-600 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          >
-            {UNIT_OPTIONS.map((u) => (
-              <option key={u} value={u}>{u}</option>
-            ))}
-            <option value="__custom__">Lainnya...</option>
-          </select>
-        )}
+        </div>
+
+        {/* Quantity */}
+        <div>
+          <label className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            Jumlah Unit
+          </label>
+          <input
+            type="text"
+            value={qtyDisplay}
+            onChange={handleQtyInput}
+            placeholder="0"
+            inputMode="numeric"
+            className="w-full mt-0.5 px-2.5 py-1.5 text-sm border border-indigo-300 dark:border-indigo-600 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+        </div>
+
+        {/* Unit selector */}
+        <div>
+          <label className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            Satuan
+          </label>
+          {showCustomUnit ? (
+            <input
+              type="text"
+              value={customUnitValue}
+              onChange={(e) => handleCustomUnit(e.target.value)}
+              placeholder="Satuan..."
+              className="w-full mt-0.5 px-2.5 py-1.5 text-sm border border-indigo-300 dark:border-indigo-600 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              autoFocus
+            />
+          ) : (
+            <select
+              value={unitBreakdown?.unit && UNIT_OPTIONS.includes(unitBreakdown.unit as typeof UNIT_OPTIONS[number]) ? unitBreakdown.unit : '__custom__'}
+              onChange={(e) => handleUnitSelect(e.target.value)}
+              className="w-full mt-0.5 px-2.5 py-1.5 text-sm border border-indigo-300 dark:border-indigo-600 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+              {UNIT_OPTIONS.map((u) => (
+                <option key={u} value={u}>{u}</option>
+              ))}
+              <option value="__custom__">Lainnya...</option>
+            </select>
+          )}
+        </div>
       </div>
+
+      {/* Total display */}
+      {total > 0 && (
+        <div className="text-xs text-right text-indigo-600 dark:text-indigo-400 font-medium">
+          Total: {formatNumberWithSeparator(total)}
+        </div>
+      )}
     </div>
   );
 }
@@ -183,12 +310,11 @@ export function TransactionForm({
         : ''
   );
 
-  // Unit breakdown state (shown after calculator multiplication)
+  // Unit breakdown state
   const [unitBreakdown, setUnitBreakdown] = useState<UnitBreakdown | null>(
     transaction?.meta?.unit_breakdown || null
   );
-  const [showCustomUnit, setShowCustomUnit] = useState(false);
-  const [customUnitValue, setCustomUnitValue] = useState('');
+  const [showBreakdown, setShowBreakdown] = useState(!!transaction?.meta?.unit_breakdown);
 
   // Fetch accounts on mount
   useEffect(() => {
@@ -373,32 +499,52 @@ export function TransactionForm({
     }
   };
 
-  // Handle calculator multiplication result (called only when user clicks "Gunakan & Breakdown Unit")
-  const handleMultiplicationResult = (info: CalcMultiplicationInfo) => {
-    setUnitBreakdown({
-      price_per_unit: info.operandA,
-      quantity: info.operandB,
-      unit: 'pcs',
-    });
-    setShowCustomUnit(false);
-    setCustomUnitValue('');
-  };
-
-  const handleUnitChange = (value: string) => {
-    if (value === '__custom__') {
-      setShowCustomUnit(true);
-      setCustomUnitValue('');
-      setUnitBreakdown(prev => prev ? { ...prev, unit: '' } : null);
-    } else {
-      setShowCustomUnit(false);
-      setCustomUnitValue('');
-      setUnitBreakdown(prev => prev ? { ...prev, unit: value } : null);
+  // Unit breakdown handlers
+  const handleToggleBreakdown = () => {
+    if (!showBreakdown) {
+      // Opening: initialize with defaults if no existing data
+      if (!unitBreakdown) {
+        setUnitBreakdown({ price_per_unit: 0, quantity: 0, unit: 'pcs' });
+      }
     }
+    setShowBreakdown(prev => !prev);
   };
 
-  const handleCustomUnitInput = (value: string) => {
-    setCustomUnitValue(value);
-    setUnitBreakdown(prev => prev ? { ...prev, unit: value } : null);
+  const handleBreakdownPriceChange = (price: number) => {
+    setUnitBreakdown(prev => {
+      const updated = { ...(prev || { price_per_unit: 0, quantity: 0, unit: 'pcs' }), price_per_unit: price };
+      // Auto-calculate amount
+      const total = updated.price_per_unit * updated.quantity;
+      if (total > 0) {
+        const formatted = formatNumberWithSeparator(total);
+        setDisplayAmount(formatted);
+        setFormData(f => ({ ...f, amount: total }));
+      }
+      return updated;
+    });
+  };
+
+  const handleBreakdownQtyChange = (qty: number) => {
+    setUnitBreakdown(prev => {
+      const updated = { ...(prev || { price_per_unit: 0, quantity: 0, unit: 'pcs' }), quantity: qty };
+      // Auto-calculate amount
+      const total = updated.price_per_unit * updated.quantity;
+      if (total > 0) {
+        const formatted = formatNumberWithSeparator(total);
+        setDisplayAmount(formatted);
+        setFormData(f => ({ ...f, amount: total }));
+      }
+      return updated;
+    });
+  };
+
+  const handleBreakdownUnitChange = (unit: string) => {
+    setUnitBreakdown(prev => prev ? { ...prev, unit } : null);
+  };
+
+  const handleRemoveBreakdown = () => {
+    setUnitBreakdown(null);
+    setShowBreakdown(false);
   };
 
   const [guidanceOpen, setGuidanceOpen] = useState(false);
@@ -433,13 +579,20 @@ export function TransactionForm({
               setFormData(prev => ({ ...prev, amount: numeric }));
               if (errors.amount) setErrors(prev => { const n = { ...prev }; delete n.amount; return n; });
             }}
-            onMultiplicationResult={handleMultiplicationResult}
             inputClassName="text-2xl font-bold"
             colorVariant={mode === 'in' ? 'green' : 'red'}
             error={errors.amount}
             required
           />
-          {unitBreakdown && <UnitBreakdownRow unitBreakdown={unitBreakdown} showCustomUnit={showCustomUnit} customUnitValue={customUnitValue} onUnitChange={handleUnitChange} onCustomUnitInput={handleCustomUnitInput} />}
+          <UnitBreakdownSection
+            unitBreakdown={unitBreakdown}
+            showBreakdown={showBreakdown}
+            onToggle={handleToggleBreakdown}
+            onPriceChange={handleBreakdownPriceChange}
+            onQuantityChange={handleBreakdownQtyChange}
+            onUnitChange={handleBreakdownUnitChange}
+            onRemove={handleRemoveBreakdown}
+          />
         </>
       )}
 
@@ -495,11 +648,18 @@ export function TransactionForm({
             setFormData(prev => ({ ...prev, amount: numeric }));
             if (errors.amount) setErrors(prev => { const n = { ...prev }; delete n.amount; return n; });
           }}
-          onMultiplicationResult={handleMultiplicationResult}
           error={errors.amount}
           required
         />
-        {unitBreakdown && <UnitBreakdownRow unitBreakdown={unitBreakdown} showCustomUnit={showCustomUnit} customUnitValue={customUnitValue} onUnitChange={handleUnitChange} onCustomUnitInput={handleCustomUnitInput} />}
+        <UnitBreakdownSection
+          unitBreakdown={unitBreakdown}
+          showBreakdown={showBreakdown}
+          onToggle={handleToggleBreakdown}
+          onPriceChange={handleBreakdownPriceChange}
+          onQuantityChange={handleBreakdownQtyChange}
+          onUnitChange={handleBreakdownUnitChange}
+          onRemove={handleRemoveBreakdown}
+        />
         </>
       )}
 

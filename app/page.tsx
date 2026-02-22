@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Briefcase, TrendingUp, Shield } from 'lucide-react';
+import { Inter } from 'next/font/google';
+
+const inter = Inter({ subsets: ['latin'] });
 
 interface Stats {
   users: number;
@@ -33,7 +36,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+    <div className={`${inter.className} min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50`}>
       {/* Header */}
       <header className="container mx-auto px-6 py-6">
         <nav className="flex items-center justify-between">
