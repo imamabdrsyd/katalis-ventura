@@ -229,6 +229,30 @@ export function TransactionDetailModal({
           </div>
         </div>
 
+        {/* Unit Breakdown */}
+        {transaction.meta?.unit_breakdown && (
+          <div className="flex items-center gap-3 px-3 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg text-sm">
+            <div className="flex items-center gap-1.5">
+              <span className="text-gray-500 dark:text-gray-400">Harga/unit:</span>
+              <span className="font-semibold text-gray-800 dark:text-gray-100">
+                {transaction.meta.unit_breakdown.price_per_unit.toLocaleString('id-ID')}
+              </span>
+            </div>
+            <span className="text-gray-300 dark:text-gray-600">&times;</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-gray-500 dark:text-gray-400">Qty:</span>
+              <span className="font-semibold text-gray-800 dark:text-gray-100">
+                {transaction.meta.unit_breakdown.quantity.toLocaleString('id-ID')}
+              </span>
+            </div>
+            {transaction.meta.unit_breakdown.unit && (
+              <span className="ml-auto px-2 py-0.5 bg-indigo-100 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-300 rounded text-xs font-medium">
+                {transaction.meta.unit_breakdown.unit}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Main Info */}
         <div className="space-y-4">
           <div>

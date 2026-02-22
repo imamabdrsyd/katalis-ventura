@@ -169,6 +169,7 @@ export function TransactionForm({
     debit_account_id: transaction?.debit_account_id || initialValues?.debit_account_id,
     credit_account_id: transaction?.credit_account_id || initialValues?.credit_account_id,
     is_double_entry: transaction?.is_double_entry || initialValues?.is_double_entry || false,
+    meta: transaction?.meta || initialValues?.meta || null,
   });
 
   const [accounts, setAccounts] = useState<Account[]>([]);
