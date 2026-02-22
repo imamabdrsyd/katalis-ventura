@@ -26,9 +26,10 @@ const EXPENSE_COLORS = [
 interface ExpenseBreakdownChartProps {
   transactions: Transaction[];
   loading?: boolean;
+  selectedYear: number;
 }
 
-export default function ExpenseBreakdownChart({ transactions, loading = false }: ExpenseBreakdownChartProps) {
+export default function ExpenseBreakdownChart({ transactions, loading = false, selectedYear }: ExpenseBreakdownChartProps) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -42,11 +43,10 @@ export default function ExpenseBreakdownChart({ transactions, loading = false }:
     const expenseMap = new Map<string, number>();
 
     transactions.forEach((t) => {
-      // Only count expense categories
       if (t.category !== 'OPEX' && t.category !== 'VAR' && t.category !== 'TAX') return;
+      if (new Date(t.date).getFullYear() !== selectedYear) return;
 
       const amount = Number(t.amount);
-      // Use debit account name if available (sub-account), otherwise use description
       const accountName = t.debit_account?.account_name || t.description || t.category;
 
       expenseMap.set(accountName, (expenseMap.get(accountName) || 0) + amount);
@@ -65,7 +65,7 @@ export default function ExpenseBreakdownChart({ transactions, loading = false }:
     }
 
     return top5;
-  }, [transactions]);
+  }, [transactions, selectedYear]);
 
   const totalExpense = useMemo(() => {
     return expenseData.reduce((sum, [, amount]) => sum + amount, 0);

@@ -33,6 +33,7 @@ type PeriodType = 'monthly' | 'yearly';
 interface MonitoringChartProps {
   transactions: Transaction[];
   loading?: boolean;
+  selectedYear: number;
 }
 
 interface ChartDataPoint {
@@ -41,7 +42,9 @@ interface ChartDataPoint {
   expense: number;
 }
 
-export default function MonitoringChart({ transactions, loading = false }: MonitoringChartProps) {
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+export default function MonitoringChart({ transactions, loading = false, selectedYear }: MonitoringChartProps) {
   const [period, setPeriod] = useState<PeriodType>('monthly');
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -53,45 +56,49 @@ export default function MonitoringChart({ transactions, loading = false }: Monit
   const isDark = mounted && resolvedTheme === 'dark';
 
   const chartDataPoints = useMemo(() => {
-    const dataMap = new Map<string, ChartDataPoint>();
+    if (period === 'monthly') {
+      const monthData: ChartDataPoint[] = MONTH_NAMES.map((label) => ({ label, earning: 0, expense: 0 }));
 
-    transactions.forEach((t) => {
-      const date = new Date(t.date);
-      let key: string;
-      let label: string;
+      transactions.forEach((t) => {
+        const date = new Date(t.date);
+        if (date.getFullYear() !== selectedYear) return;
+        const idx = date.getMonth();
+        const amount = Number(t.amount);
+        if (t.category === 'EARN') {
+          monthData[idx].earning += amount;
+        } else if (t.category === 'OPEX' || t.category === 'VAR') {
+          monthData[idx].expense += amount;
+        }
+      });
 
-      if (period === 'monthly') {
-        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        label = monthNames[date.getMonth()];
-      } else {
-        key = `${date.getFullYear()}`;
-        label = `${date.getFullYear()}`;
-      }
+      return monthData;
+    } else {
+      const dataMap = new Map<string, ChartDataPoint>();
 
-      if (!dataMap.has(key)) {
-        dataMap.set(key, {
-          label,
-          earning: 0,
-          expense: 0,
-        });
-      }
+      transactions.forEach((t) => {
+        const date = new Date(t.date);
+        const key = `${date.getFullYear()}`;
+        const label = `${date.getFullYear()}`;
 
-      const point = dataMap.get(key)!;
-      const amount = Number(t.amount);
+        if (!dataMap.has(key)) {
+          dataMap.set(key, { label, earning: 0, expense: 0 });
+        }
 
-      if (t.category === 'EARN') {
-        point.earning += amount;
-      } else if (t.category === 'OPEX' || t.category === 'VAR') {
-        point.expense += amount;
-      }
-    });
+        const point = dataMap.get(key)!;
+        const amount = Number(t.amount);
 
-    // Sort by key and return values
-    return Array.from(dataMap.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([, value]) => value);
-  }, [transactions, period]);
+        if (t.category === 'EARN') {
+          point.earning += amount;
+        } else if (t.category === 'OPEX' || t.category === 'VAR') {
+          point.expense += amount;
+        }
+      });
+
+      return Array.from(dataMap.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([, value]) => value);
+    }
+  }, [transactions, period, selectedYear]);
 
   const chartData = useMemo(() => {
     const labels = chartDataPoints.length > 0 ? chartDataPoints.map((d) => d.label) : [];
@@ -234,6 +241,8 @@ export default function MonitoringChart({ transactions, loading = false }: Monit
     },
   }), [isDark, maxValue]);
 
+  const hasData = chartDataPoints.some((d) => d.earning > 0 || d.expense > 0);
+
   if (loading) {
     return (
       <div className="animate-pulse">
@@ -246,33 +255,31 @@ export default function MonitoringChart({ transactions, loading = false }: Monit
     <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Monitoring Overview</h3>
-        <div className="flex p-1.5 rounded-full" style={{ backgroundColor: '#818cf8' }}>
+        <div className="flex p-1 bg-gray-100 dark:bg-gray-700 rounded-full">
           <button
             onClick={() => setPeriod('monthly')}
-            className={`px-5 py-2 text-sm rounded-full transition-all ${
+            className={`px-4 py-1.5 text-sm rounded-full transition-all ${
               period === 'monthly'
-                ? 'bg-white text-gray-900 font-semibold shadow-md'
-                : 'bg-transparent text-white font-normal hover:text-white/80'
+                ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 font-semibold shadow-sm'
+                : 'bg-transparent text-gray-500 dark:text-gray-400 font-normal hover:text-gray-700 dark:hover:text-gray-200'
             }`}
-            style={period === 'monthly' ? { boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' } : {}}
           >
             Monthly
           </button>
           <button
             onClick={() => setPeriod('yearly')}
-            className={`px-5 py-2 text-sm rounded-full transition-all ${
+            className={`px-4 py-1.5 text-sm rounded-full transition-all ${
               period === 'yearly'
-                ? 'bg-white text-gray-900 font-semibold shadow-md'
-                : 'bg-transparent text-white font-normal hover:text-white/80'
+                ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 font-semibold shadow-sm'
+                : 'bg-transparent text-gray-500 dark:text-gray-400 font-normal hover:text-gray-700 dark:hover:text-gray-200'
             }`}
-            style={period === 'yearly' ? { boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' } : {}}
           >
             Yearly
           </button>
         </div>
       </div>
 
-      {chartDataPoints.length === 0 ? (
+      {!hasData ? (
         <div className="h-80 flex items-center justify-center text-gray-400 dark:text-gray-500">
           <p>Belum ada data untuk ditampilkan</p>
         </div>

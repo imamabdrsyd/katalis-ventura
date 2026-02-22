@@ -1,7 +1,10 @@
 'use client';
 
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet } from 'lucide-react';
 import { useDashboard } from '@/hooks/useDashboard';
+import { calculateFinancialSummary, calculateCategoryCounts } from '@/lib/calculations';
 import { formatCurrency, formatPercentage, formatDateShort } from '@/lib/utils';
 import MonitoringChart from '@/components/charts/MonitoringChart';
 import ExpenseBreakdownChart from '@/components/charts/ExpenseBreakdownChart';
@@ -12,13 +15,34 @@ export default function DashboardPage() {
     canManageTransactions,
     transactions,
     transactionsLoading,
-    summary,
     roi,
-    categoryCounts,
     balanceSheet,
   } = useDashboard();
 
   const router = useRouter();
+
+  // --- Global year filter ---
+  const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
+
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    transactions.forEach((t) => years.add(new Date(t.date).getFullYear()));
+    const sorted = Array.from(years).sort();
+    if (sorted.length === 0) sorted.push(new Date().getFullYear());
+    return sorted;
+  }, [transactions]);
+
+  const minYear = availableYears[0];
+  const maxYear = availableYears[availableYears.length - 1];
+
+  const yearTransactions = useMemo(
+    () => transactions.filter((t) => new Date(t.date).getFullYear() === selectedYear),
+    [transactions, selectedYear]
+  );
+
+  const summary = useMemo(() => calculateFinancialSummary(yearTransactions), [yearTransactions]);
+  const categoryCounts = useMemo(() => calculateCategoryCounts(yearTransactions), [yearTransactions]);
+  const allTimeExpenses = useMemo(() => calculateFinancialSummary(transactions), [transactions]);
 
   if (businessLoading) {
     return (
@@ -33,7 +57,7 @@ export default function DashboardPage() {
 
   const recentTransactions = transactions.slice(0, 10);
 
-  // --- Revenue: growth vs last month ---
+  // --- Revenue: growth vs last month (only for current year) ---
   const now = new Date();
   const thisMonth = now.getMonth();
   const thisYear = now.getFullYear();
@@ -41,22 +65,26 @@ export default function DashboardPage() {
   const lastMonth = lastMonthDate.getMonth();
   const lastMonthYear = lastMonthDate.getFullYear();
 
-  const revenueThisMonth = transactions
-    .filter((t) => {
-      const d = new Date(t.date);
-      return t.category === 'EARN' && d.getMonth() === thisMonth && d.getFullYear() === thisYear;
-    })
-    .reduce((s, t) => s + Number(t.amount), 0);
+  const revenueThisMonth = selectedYear === thisYear
+    ? yearTransactions
+        .filter((t) => {
+          const d = new Date(t.date);
+          return t.category === 'EARN' && d.getMonth() === thisMonth;
+        })
+        .reduce((s, t) => s + Number(t.amount), 0)
+    : 0;
 
-  const revenueLastMonth = transactions
-    .filter((t) => {
-      const d = new Date(t.date);
-      return t.category === 'EARN' && d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear;
-    })
-    .reduce((s, t) => s + Number(t.amount), 0);
+  const revenueLastMonth = selectedYear === thisYear
+    ? transactions
+        .filter((t) => {
+          const d = new Date(t.date);
+          return t.category === 'EARN' && d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear;
+        })
+        .reduce((s, t) => s + Number(t.amount), 0)
+    : 0;
 
   const revenueGrowth =
-    revenueLastMonth > 0
+    selectedYear === thisYear && revenueLastMonth > 0
       ? ((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100
       : null;
 
@@ -83,9 +111,10 @@ export default function DashboardPage() {
   const roiLabelColor =
     roi > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400';
 
-  // --- Cash Balance: runway in months ---
+  // --- Cash Balance: runway in months (uses all-time data, not year-filtered) ---
+  const totalAllTimeExpenses = allTimeExpenses.totalOpex + allTimeExpenses.totalVar + allTimeExpenses.totalTax + allTimeExpenses.totalInterest;
   const avgMonthlyExpense = (() => {
-    if (totalExpenses === 0) return 0;
+    if (totalAllTimeExpenses === 0) return 0;
     const expenseMonths = new Set(
       transactions
         .filter((t) => t.category === 'OPEX' || t.category === 'VAR' || t.category === 'TAX')
@@ -94,7 +123,7 @@ export default function DashboardPage() {
           return `${d.getFullYear()}-${d.getMonth()}`;
         })
     ).size;
-    return expenseMonths > 0 ? totalExpenses / expenseMonths : totalExpenses;
+    return expenseMonths > 0 ? totalAllTimeExpenses / expenseMonths : totalAllTimeExpenses;
   })();
 
   const cashRunwayMonths =
@@ -118,13 +147,41 @@ export default function DashboardPage() {
 
   return (
     <div className="p-8">
+      {/* Global Year Filter */}
+      <div className="flex items-center gap-2 mb-6">
+        <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Tahun:</span>
+        <div className="flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 shadow-sm">
+          <button
+            onClick={() => setSelectedYear((y) => y - 1)}
+            disabled={selectedYear <= minYear}
+            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+          </button>
+          <span className="text-sm font-bold text-gray-800 dark:text-gray-200 min-w-[3rem] text-center">
+            {selectedYear}
+          </span>
+          <button
+            onClick={() => setSelectedYear((y) => y + 1)}
+            disabled={selectedYear >= maxYear}
+            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+          </button>
+        </div>
+        <span className="text-xs text-gray-400 dark:text-gray-500">Memfilter Revenue, Profit/Loss, Ringkasan Keuangan, dan Chart</span>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div
           className="card cursor-pointer"
           onClick={() => router.push('/transactions?category=EARN')}
         >
-          <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Revenue</div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Revenue</div>
+            <TrendingUp className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+          </div>
           <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 break-all">
             {transactionsLoading ? '...' : formatCurrency(summary.totalEarn)}
           </div>
@@ -148,7 +205,10 @@ export default function DashboardPage() {
           className="card cursor-pointer"
           onClick={() => router.push('/income-statement?scrollTo=net-income')}
         >
-          <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Profit/Loss</div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Profit/Loss</div>
+            <BarChart3 className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+          </div>
           <div className={`text-xl md:text-2xl font-bold break-all ${summary.netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
             {transactionsLoading ? '...' : formatCurrency(summary.netProfit)}
           </div>
@@ -169,7 +229,10 @@ export default function DashboardPage() {
         </div>
 
         <div className="card">
-          <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">ROI</div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">ROI</div>
+            <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+          </div>
           <div className={`text-xl md:text-2xl font-bold ${roi >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
             {transactionsLoading ? '...' : formatPercentage(roi)}
           </div>
@@ -180,7 +243,10 @@ export default function DashboardPage() {
           className="card cursor-pointer"
           onClick={() => router.push('/general-ledger?filterType=ASSET')}
         >
-          <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Cash Balance</div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Cash Balance</div>
+            <Wallet className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+          </div>
           <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 break-all">
             {transactionsLoading ? '...' : formatCurrency(balanceSheet.assets.cash)}
           </div>
@@ -191,10 +257,10 @@ export default function DashboardPage() {
       {/* Monitoring Chart + Expense Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="lg:col-span-2">
-          <MonitoringChart transactions={transactions} loading={transactionsLoading} />
+          <MonitoringChart transactions={transactions} loading={transactionsLoading} selectedYear={selectedYear} />
         </div>
         <div className="lg:col-span-1">
-          <ExpenseBreakdownChart transactions={transactions} loading={transactionsLoading} />
+          <ExpenseBreakdownChart transactions={transactions} loading={transactionsLoading} selectedYear={selectedYear} />
         </div>
       </div>
 
