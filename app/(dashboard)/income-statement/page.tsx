@@ -2,7 +2,7 @@
 
 import { useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Calendar, TrendingUp, TrendingDown, Download, FileText, FileSpreadsheet, Info } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, Download, FileText, FileSpreadsheet, Info, DollarSign } from 'lucide-react';
 import { useIncomeStatement } from '@/hooks/useIncomeStatement';
 import { formatCurrency } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
@@ -157,7 +157,10 @@ function IncomeStatementPageInner() {
     <div className="p-8 max-w-6xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Income Statement</h1>
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
+          <DollarSign className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+          Income Statement
+        </h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
           Laporan Laba Rugi - {activeBusiness.business_name}
         </p>

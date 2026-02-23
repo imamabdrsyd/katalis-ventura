@@ -6,6 +6,7 @@ import type {
   MonthlyData,
   BalanceSheetData,
   CashFlowData,
+  CashFlowTransaction,
 } from '@/types';
 
 // Constants
@@ -471,6 +472,10 @@ export function calculateCashFlow(
   let investing = 0;
   let financing = 0;
 
+  const operatingTransactions: CashFlowTransaction[] = [];
+  const investingTransactions: CashFlowTransaction[] = [];
+  const financingTransactions: CashFlowTransaction[] = [];
+
   // --- Double-entry: track actual cash movement ---
   doubleEntryTxns.forEach(t => {
     const amount = Number(t.amount);
@@ -488,27 +493,84 @@ export function calculateCashFlow(
     // Both sides are cash (bank transfer) → no net cash flow impact
     if (debitIsCash && creditIsCash) return;
 
+    let cashAmount: number;
+    let bucket: 'operating' | 'investing' | 'financing';
+
     if (debitIsCash) {
       // Cash increases (debit to cash) → money IN
-      const bucket = classifyCashFlow(t.credit_account!.account_type);
-      if (bucket === 'operating') operating += amount;
-      else if (bucket === 'investing') investing += amount;
-      else financing += amount;
+      bucket = classifyCashFlow(t.credit_account!.account_type);
+      cashAmount = amount;
     } else {
       // Cash decreases (credit to cash) → money OUT
-      const bucket = classifyCashFlow(t.debit_account!.account_type);
-      if (bucket === 'operating') operating -= amount;
-      else if (bucket === 'investing') investing -= amount;
-      else financing -= amount;
+      bucket = classifyCashFlow(t.debit_account!.account_type);
+      cashAmount = -amount;
+    }
+
+    const entry: CashFlowTransaction = {
+      id: t.id,
+      date: t.date,
+      name: t.name,
+      description: t.description,
+      amount: cashAmount,
+      category: t.category,
+      debitAccount: t.debit_account ? `${t.debit_account.account_code} - ${t.debit_account.account_name}` : undefined,
+      creditAccount: t.credit_account ? `${t.credit_account.account_code} - ${t.credit_account.account_name}` : undefined,
+    };
+
+    if (bucket === 'operating') {
+      operating += cashAmount;
+      operatingTransactions.push(entry);
+    } else if (bucket === 'investing') {
+      investing += cashAmount;
+      investingTransactions.push(entry);
+    } else {
+      financing += cashAmount;
+      financingTransactions.push(entry);
     }
   });
 
   // --- Legacy: category-based fallback ---
   if (legacyTxns.length > 0) {
-    const summary = calculateFinancialSummary(legacyTxns);
-    operating += summary.totalEarn - summary.totalOpex - summary.totalVar - summary.totalTax;
-    investing += -summary.totalCapex;
-    financing += summary.totalFin;
+    legacyTxns.forEach(t => {
+      const amount = Number(t.amount);
+      let bucket: 'operating' | 'investing' | 'financing';
+      let cashAmount: number;
+
+      switch (t.category) {
+        case 'EARN':
+          bucket = 'operating'; cashAmount = amount; break;
+        case 'OPEX':
+        case 'VAR':
+        case 'TAX':
+          bucket = 'operating'; cashAmount = -amount; break;
+        case 'CAPEX':
+          bucket = 'investing'; cashAmount = -amount; break;
+        case 'FIN':
+          bucket = 'financing'; cashAmount = amount; break;
+        default:
+          bucket = 'operating'; cashAmount = amount;
+      }
+
+      const entry: CashFlowTransaction = {
+        id: t.id,
+        date: t.date,
+        name: t.name,
+        description: t.description,
+        amount: cashAmount,
+        category: t.category,
+      };
+
+      if (bucket === 'operating') {
+        operating += cashAmount;
+        operatingTransactions.push(entry);
+      } else if (bucket === 'investing') {
+        investing += cashAmount;
+        investingTransactions.push(entry);
+      } else {
+        financing += cashAmount;
+        financingTransactions.push(entry);
+      }
+    });
   }
 
   const netCashFlow = operating + investing + financing;
@@ -522,6 +584,9 @@ export function calculateCashFlow(
     netCashFlow,
     openingBalance,
     closingBalance,
+    operatingTransactions,
+    investingTransactions,
+    financingTransactions,
   };
 }
 

@@ -235,6 +235,17 @@ export interface BalanceSheetData {
   };
 }
 
+export interface CashFlowTransaction {
+  id: string;
+  date: string;
+  name: string;
+  description: string;
+  amount: number; // positive = cash in, negative = cash out
+  category: TransactionCategory;
+  debitAccount?: string;
+  creditAccount?: string;
+}
+
 export interface CashFlowData {
   operating: number;
   investing: number;
@@ -242,6 +253,9 @@ export interface CashFlowData {
   netCashFlow: number;
   openingBalance: number;
   closingBalance: number;
+  operatingTransactions: CashFlowTransaction[];
+  investingTransactions: CashFlowTransaction[];
+  financingTransactions: CashFlowTransaction[];
 }
 
 // Omni-Channel types

@@ -1,9 +1,115 @@
 'use client';
 
-import { Calendar, TrendingUp, TrendingDown, Download, Wallet, FileText, FileSpreadsheet } from 'lucide-react';
+import { useState } from 'react';
+import { Calendar, TrendingUp, TrendingDown, Download, Wallet, FileText, FileSpreadsheet, ChevronDown, ChevronRight, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight } from 'lucide-react';
 import { useCashFlow } from '@/hooks/useCashFlow';
 import { formatCurrency } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
+import type { CashFlowTransaction } from '@/types';
+
+function TransactionRow({ tx }: { tx: CashFlowTransaction }) {
+  const isIn = tx.amount >= 0;
+  return (
+    <div className="flex items-start gap-3 py-2.5 px-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg transition-colors">
+      <div className="mt-0.5 flex-shrink-0">
+        {isIn ? (
+          <ArrowUpCircle className="w-4 h-4 text-green-500" />
+        ) : (
+          <ArrowDownCircle className="w-4 h-4 text-red-500" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex justify-between items-start gap-2">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{tx.name}</p>
+            {tx.description && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{tx.description}</p>
+            )}
+            {(tx.debitAccount || tx.creditAccount) && (
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                Dr: {tx.debitAccount ?? '-'} / Cr: {tx.creditAccount ?? '-'}
+              </p>
+            )}
+          </div>
+          <div className="text-right flex-shrink-0">
+            <p className={`text-sm font-semibold ${isIn ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+              {isIn ? '+' : ''}{formatCurrency(tx.amount)}
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              {new Date(tx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface ActivitySectionProps {
+  title: string;
+  subtitle: string;
+  total: number;
+  totalLabel: string;
+  transactions: CashFlowTransaction[];
+}
+
+function ActivitySection({ title, subtitle, total, totalLabel, transactions }: ActivitySectionProps) {
+  const [open, setOpen] = useState(false);
+  const sorted = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  return (
+    <div>
+      <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
+        <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">{title}</h3>
+      </div>
+      <div className="flex justify-between py-3 pl-4">
+        <span className="text-gray-700 dark:text-gray-300">
+          {subtitle}
+        </span>
+        <span className={`font-semibold text-xl ${
+          total >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+        }`}>
+          {formatCurrency(total)}
+        </span>
+      </div>
+
+      {/* Collapsible transactions */}
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+        <button
+          onClick={() => setOpen(!open)}
+          className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm"
+        >
+          <span className="text-gray-600 dark:text-gray-400 font-medium">
+            {transactions.length} transaksi
+          </span>
+          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+            <span className="text-xs">{open ? 'Sembunyikan' : 'Lihat detail'}</span>
+            {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          </div>
+        </button>
+
+        {open && (
+          <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
+            {sorted.length === 0 ? (
+              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+                Tidak ada transaksi
+              </p>
+            ) : (
+              sorted.map(tx => <TransactionRow key={tx.id} tx={tx} />)
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
+        <span className="text-gray-800 dark:text-gray-100">{totalLabel}</span>
+        <span className={total >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+          {formatCurrency(total)}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export default function CashFlowPage() {
   const {
@@ -55,7 +161,10 @@ export default function CashFlowPage() {
     <div className="p-8 max-w-6xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Cash Flow Statement</h1>
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
+          <ArrowLeftRight className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+          Cash Flow Statement
+        </h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
           Laporan Arus Kas - {activeBusiness.business_name}
         </p>
@@ -174,94 +283,31 @@ export default function CashFlowPage() {
           </div>
 
           {/* CASH FLOW FROM OPERATING ACTIVITIES */}
-          <div>
-            <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
-              <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">
-                Cash Flow from Operating Activities
-              </h3>
-            </div>
-            <div className="flex justify-between py-3 pl-4">
-              <span className="text-gray-700 dark:text-gray-300">
-                Net Cash from Operations
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Revenue - Operating Expenses - Variable Costs - Tax
-                </p>
-              </span>
-              <span className={`font-semibold text-xl ${
-                cashFlow.operating >= 0
-                  ? 'text-green-600 dark:text-green-400'
-                  : 'text-red-600 dark:text-red-400'
-              }`}>
-                {formatCurrency(cashFlow.operating)}
-              </span>
-            </div>
-            <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700">
-              <span className="text-gray-800 dark:text-gray-100">Total Operating Cash Flow</span>
-              <span className={cashFlow.operating >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                {formatCurrency(cashFlow.operating)}
-              </span>
-            </div>
-          </div>
+          <ActivitySection
+            title="Cash Flow from Operating Activities"
+            subtitle="Net Cash from Operations"
+            total={cashFlow.operating}
+            totalLabel="Total Operating Cash Flow"
+            transactions={cashFlow.operatingTransactions}
+          />
 
           {/* CASH FLOW FROM INVESTING ACTIVITIES */}
-          <div>
-            <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
-              <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">
-                Cash Flow from Investing Activities
-              </h3>
-            </div>
-            <div className="flex justify-between py-3 pl-4">
-              <span className="text-gray-700 dark:text-gray-300">
-                Capital Expenditure
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Purchase of fixed assets and equipment
-                </p>
-              </span>
-              <span className={`font-semibold text-xl ${
-                cashFlow.investing >= 0
-                  ? 'text-green-600 dark:text-green-400'
-                  : 'text-red-600 dark:text-red-400'
-              }`}>
-                {formatCurrency(cashFlow.investing)}
-              </span>
-            </div>
-            <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700">
-              <span className="text-gray-800 dark:text-gray-100">Total Investing Cash Flow</span>
-              <span className={cashFlow.investing >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                {formatCurrency(cashFlow.investing)}
-              </span>
-            </div>
-          </div>
+          <ActivitySection
+            title="Cash Flow from Investing Activities"
+            subtitle="Capital Expenditure"
+            total={cashFlow.investing}
+            totalLabel="Total Investing Cash Flow"
+            transactions={cashFlow.investingTransactions}
+          />
 
           {/* CASH FLOW FROM FINANCING ACTIVITIES */}
-          <div>
-            <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
-              <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">
-                Cash Flow from Financing Activities
-              </h3>
-            </div>
-            <div className="flex justify-between py-3 pl-4">
-              <span className="text-gray-700 dark:text-gray-300">
-                Finance/Interest & Loans
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Borrowings, repayments, and interest payments
-                </p>
-              </span>
-              <span className={`font-semibold text-xl ${
-                cashFlow.financing >= 0
-                  ? 'text-green-600 dark:text-green-400'
-                  : 'text-red-600 dark:text-red-400'
-              }`}>
-                {formatCurrency(cashFlow.financing)}
-              </span>
-            </div>
-            <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700">
-              <span className="text-gray-800 dark:text-gray-100">Total Financing Cash Flow</span>
-              <span className={cashFlow.financing >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                {formatCurrency(cashFlow.financing)}
-              </span>
-            </div>
-          </div>
+          <ActivitySection
+            title="Cash Flow from Financing Activities"
+            subtitle="Finance/Interest & Loans"
+            total={cashFlow.financing}
+            totalLabel="Total Financing Cash Flow"
+            transactions={cashFlow.financingTransactions}
+          />
 
           {/* NET CASH FLOW */}
           <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl p-6 text-white">
@@ -369,6 +415,9 @@ export default function CashFlowPage() {
           }`}>
             {formatCurrency(cashFlow.operating)}
           </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {cashFlow.operatingTransactions.length} transaksi
+          </p>
         </div>
         <div className={`card ${
           cashFlow.investing >= 0
@@ -389,6 +438,9 @@ export default function CashFlowPage() {
           }`}>
             {formatCurrency(cashFlow.investing)}
           </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {cashFlow.investingTransactions.length} transaksi
+          </p>
         </div>
         <div className={`card ${
           cashFlow.financing >= 0
@@ -408,6 +460,9 @@ export default function CashFlowPage() {
               : 'text-red-600 dark:text-red-400'
           }`}>
             {formatCurrency(cashFlow.financing)}
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {cashFlow.financingTransactions.length} transaksi
           </p>
         </div>
       </div>

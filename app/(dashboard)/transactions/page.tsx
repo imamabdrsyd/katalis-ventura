@@ -9,7 +9,7 @@ import { DeleteConfirmModal } from '@/components/transactions/DeleteConfirmModal
 import TransactionImportModal from '@/components/transactions/TransactionImportModal';
 import type { TransactionCategory } from '@/types';
 import { QuickTransactionForm } from '@/components/transactions/QuickTransactionForm';
-import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical } from 'lucide-react';
+import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical, CreditCard } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, Suspense } from 'react';
 
@@ -140,7 +140,10 @@ function TransactionsPageInner() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Kelola Transaksi</h1>
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
+              <CreditCard className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+              Kelola Transaksi
+            </h1>
         </div>
         {canManageTransactions && (
           <div className="flex items-center gap-3">

@@ -7,7 +7,7 @@ import * as accountsApi from '@/lib/api/accounts';
 import type { AccountTreeNode } from '@/lib/api/accounts';
 import { AccountForm, type AccountFormData } from '@/components/accounts/AccountForm';
 import { AccountDeleteModal } from '@/components/accounts/AccountDeleteModal';
-import { Plus, Search, ChevronDown, ChevronRight, Lock, Pencil, XCircle, CheckCircle2 } from 'lucide-react';
+import { Plus, Search, ChevronDown, ChevronRight, Lock, Pencil, XCircle, CheckCircle2, BookOpen as BookOpenIcon } from 'lucide-react';
 
 const TYPE_COLORS: Record<AccountType, string> = {
   ASSET: 'from-blue-500 to-blue-600',
@@ -220,7 +220,8 @@ export default function AccountsPage() {
       <div className="mb-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
+              <BookOpenIcon className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
               Chart of Accounts
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
