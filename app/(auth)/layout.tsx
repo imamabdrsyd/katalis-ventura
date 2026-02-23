@@ -23,7 +23,7 @@ export default function AuthLayout({
       />
       {children}
       <p className="text-xs text-gray-400 dark:text-gray-600">
-        © 2026 Imam Abdurasyid. All rights reserved.
+        ©  2026 AXION Accounting Engine. Developed by Imam Abdurasyid 
       </p>
     </div>
   );

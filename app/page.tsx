@@ -257,7 +257,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="container mx-auto px-6 py-12 mt-32 border-t border-gray-200">
         <div className="text-center text-gray-600">
-          <p>&copy; 2025 Katalis Ventura. All rights reserved.</p>
+          <p>&copy; 2026 AXION. All rights reserved.</p>
           <p className="text-sm mt-2">Developed with ❤️ by Imam Abdurasyid</p>
         </div>
       </footer>

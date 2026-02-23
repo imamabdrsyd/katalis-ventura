@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { Account, AccountType } from '@/types';
 import type { TransactionFormData } from './TransactionForm';
 import { getAccounts } from '@/lib/api/accounts';
@@ -14,10 +15,11 @@ import {
 } from '@/lib/utils/quickTransactionHelper';
 import { getStockTransactions } from '@/lib/utils/inventoryHelper';
 import { InventoryPicker } from './InventoryPicker';
+import { UnitBreakdownSection } from './UnitBreakdownSection';
 import { ChevronDown, StickyNote, Zap, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 
-import type { Transaction } from '@/types';
+import type { Transaction, UnitBreakdown } from '@/types';
 
 interface QuickTransactionFormProps {
   onSubmit: (data: TransactionFormData) => Promise<void>;
@@ -66,9 +68,38 @@ export function QuickTransactionForm({
   const [notes, setNotes] = useState('');
   const [showNotes, setShowNotes] = useState(false);
 
+  // Unit breakdown state
+  const [unitBreakdown, setUnitBreakdown] = useState<UnitBreakdown | null>(null);
+  const [showBreakdown, setShowBreakdown] = useState(false);
+
   // Dropdown state
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const portalRef = useRef<HTMLDivElement | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [portalReady, setPortalReady] = useState(false);
+
+  // Create a dedicated portal container AFTER mount (ensures it's after the modal in DOM)
+  useEffect(() => {
+    const el = document.createElement('div');
+    el.setAttribute('data-dropdown-portal', '');
+    el.style.position = 'relative';
+    el.style.zIndex = '99999';
+    document.body.appendChild(el);
+    portalRef.current = el;
+    setPortalReady(true);
+    return () => el.remove();
+  }, []);
+
+  const openDropdown = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setDropdownPosition({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    }
+    setDropdownOpen(true);
+    setSearchTerm('');
+  };
 
   // Inventory selection state
   const [selectedStockIds, setSelectedStockIds] = useState<string[]>([]);
@@ -152,10 +183,11 @@ export function QuickTransactionForm({
     );
   };
 
-  // Handle account selection
+  // Handle account selection — auto-fill name from account name
   const handleSelectAccount = (account: Account) => {
     setSelectedAccountId(account.id);
-    setSelectedStockIds([]); // Reset inventory selection when account changes
+    setName(account.account_name); // auto-fill
+    setSelectedStockIds([]);
     setDropdownOpen(false);
     setSearchTerm('');
     if (errors.selectedAccountId) {
@@ -167,12 +199,54 @@ export function QuickTransactionForm({
     }
   };
 
+  // Unit breakdown handlers
+  const formatNum = (n: number) => n ? n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
+
+  const handleToggleBreakdown = () => {
+    if (!showBreakdown) {
+      setUnitBreakdown({ price_per_unit: 0, quantity: 0, unit: 'pcs' });
+    }
+    setShowBreakdown((prev) => !prev);
+  };
+
+  const handleBreakdownPriceChange = (price: number) => {
+    setUnitBreakdown(prev => {
+      const updated = { ...(prev || { price_per_unit: 0, quantity: 0, unit: 'pcs' }), price_per_unit: price };
+      const total = updated.price_per_unit * updated.quantity;
+      if (total > 0) {
+        setAmount(total);
+        setDisplayAmount(formatNum(total));
+      }
+      return updated;
+    });
+  };
+
+  const handleBreakdownQtyChange = (qty: number) => {
+    setUnitBreakdown(prev => {
+      const updated = { ...(prev || { price_per_unit: 0, quantity: 0, unit: 'pcs' }), quantity: qty };
+      const total = updated.price_per_unit * updated.quantity;
+      if (total > 0) {
+        setAmount(total);
+        setDisplayAmount(formatNum(total));
+      }
+      return updated;
+    });
+  };
+
+  const handleBreakdownUnitChange = (unit: string) => {
+    setUnitBreakdown(prev => prev ? { ...prev, unit } : null);
+  };
+
+  const handleRemoveBreakdown = () => {
+    setUnitBreakdown(null);
+    setShowBreakdown(false);
+  };
+
   // Validate
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
     if (amount <= 0) newErrors.amount = 'Jumlah harus lebih dari 0';
     if (!selectedAccountId) newErrors.selectedAccountId = 'Kategori harus dipilih';
-    if (!name.trim()) newErrors.name = 'Nama harus diisi';
     if (!date) newErrors.date = 'Tanggal harus diisi';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -183,8 +257,10 @@ export function QuickTransactionForm({
     e.preventDefault();
     if (!validate()) return;
 
+    const resolvedName = name.trim() || (selectedAccount?.account_name ?? '');
+
     const result = resolveQuickTransaction(
-      { amount, selectedAccountId, name, date, notes },
+      { amount, selectedAccountId, name: resolvedName, date, notes },
       accounts
     );
 
@@ -203,17 +279,18 @@ export function QuickTransactionForm({
       }
     }
 
-    // Attach sold stock IDs to meta if any were selected
+    // Attach meta: sold_stock_ids + unit_breakdown
     const formData = result as TransactionFormData;
-    if (selectedStockIds.length > 0) {
-      formData.meta = { sold_stock_ids: selectedStockIds };
-    }
+    formData.meta = {
+      ...(selectedStockIds.length > 0 ? { sold_stock_ids: selectedStockIds } : {}),
+      unit_breakdown: unitBreakdown && unitBreakdown.unit ? unitBreakdown : undefined,
+    };
 
     await onSubmit(formData);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Submit error */}
       {errors.submit && (
         <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -221,35 +298,56 @@ export function QuickTransactionForm({
         </div>
       )}
 
-      {/* 1. JUMLAH (Rp) */}
-      <CurrencyInputWithCalculator
-        label="Jumlah (Rp)"
-        value={amount}
-        displayValue={displayAmount}
-        onChange={(numeric, formatted) => {
-          setDisplayAmount(formatted);
-          setAmount(numeric);
-          if (errors.amount) setErrors(prev => { const n = { ...prev }; delete n.amount; return n; });
-        }}
-        inputClassName="text-2xl font-bold"
-        colorVariant={flowDirection === 'in' ? 'green' : flowDirection === 'out' ? 'red' : 'default'}
-        error={errors.amount}
-        autoFocus
-      />
+      {/* 1. JUMLAH (Rp) + UNIT BREAKDOWN */}
+      <div className="space-y-2">
+        <CurrencyInputWithCalculator
+          label="Jumlah (Rp)"
+          value={amount}
+          displayValue={displayAmount}
+          onChange={(numeric, formatted) => {
+            setDisplayAmount(formatted);
+            setAmount(numeric);
+            if (errors.amount) setErrors(prev => { const n = { ...prev }; delete n.amount; return n; });
+          }}
+          inputClassName="text-2xl font-bold"
+          colorVariant={flowDirection === 'in' ? 'green' : flowDirection === 'out' ? 'red' : 'default'}
+          error={errors.amount}
+          autoFocus
+        />
+        <UnitBreakdownSection
+          unitBreakdown={unitBreakdown}
+          showBreakdown={showBreakdown}
+          onToggle={handleToggleBreakdown}
+          onPriceChange={handleBreakdownPriceChange}
+          onQuantityChange={handleBreakdownQtyChange}
+          onUnitChange={handleBreakdownUnitChange}
+          onRemove={handleRemoveBreakdown}
+        />
+      </div>
 
       {/* 2. KATEGORI (Account Dropdown) */}
-      <div className="relative">
+      <div>
         <label className="label text-base font-semibold">Kategori</label>
 
-        {/* Dropdown trigger */}
-        <button
-          type="button"
-          onClick={() => setDropdownOpen(!dropdownOpen)}
-          className={`input w-full text-left flex justify-between items-center ${
+        {/* Combobox trigger — search happens inline */}
+        <div
+          ref={triggerRef}
+          onClick={() => !dropdownOpen && openDropdown()}
+          className={`input w-full flex justify-between items-center cursor-pointer focus:ring-0 ${
             errors.selectedAccountId ? 'border-red-500 dark:border-red-400' : ''
-          } ${dropdownOpen ? 'border-indigo-500 dark:border-indigo-400 ring-2 ring-indigo-500/20' : ''}`}
+          } ${dropdownOpen ? 'ring-2 ring-indigo-500/20 border-indigo-500 dark:border-indigo-400' : ''}`}
         >
-          {selectedAccount ? (
+          {dropdownOpen ? (
+            <input
+              type="text"
+              placeholder={selectedAccount ? selectedAccount.account_name : 'Cari kode atau nama akun...'}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1 bg-transparent outline-none ring-0 focus:ring-0 focus:outline-none border-none text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+              autoFocus
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : selectedAccount ? (
             <div className="flex items-center gap-2 min-w-0">
               <span
                 className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
@@ -264,42 +362,38 @@ export function QuickTransactionForm({
             <span className="text-gray-400 dark:text-gray-500">Pilih kategori akun...</span>
           )}
           <ChevronDown
-            className={`w-5 h-5 flex-shrink-0 transition-transform ${
+            className={`w-5 h-5 flex-shrink-0 ml-2 transition-transform ${
               dropdownOpen ? 'rotate-180' : ''
             }`}
           />
-        </button>
+        </div>
 
         {errors.selectedAccountId && !dropdownOpen && (
           <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.selectedAccountId}</p>
         )}
 
-        {/* Absolute dropdown panel */}
-        {dropdownOpen && (
+        {/* Portal dropdown — escapes modal overflow */}
+        {dropdownOpen && portalReady && portalRef.current && createPortal(
           <>
             <div
-              className="fixed inset-0 z-40"
+              className="fixed inset-0"
+              style={{ zIndex: 99999 }}
               onClick={() => {
                 setDropdownOpen(false);
                 setSearchTerm('');
               }}
             />
-            <div className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-80 overflow-hidden">
-              {/* Search */}
-              <div className="p-2 border-b border-gray-100 dark:border-gray-700">
-                <input
-                  type="text"
-                  placeholder="Cari kode atau nama akun..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:bg-white dark:focus:bg-gray-600 outline-none"
-                  onClick={(e) => e.stopPropagation()}
-                  autoFocus
-                />
-              </div>
-
-              {/* Grouped account list */}
-              <div className="overflow-y-auto max-h-64">
+            <div
+              className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl overflow-hidden"
+              style={{
+                zIndex: 100000,
+                top: dropdownPosition.top,
+                left: dropdownPosition.left,
+                width: dropdownPosition.width,
+                maxHeight: '320px',
+              }}
+            >
+              <div className="overflow-y-auto max-h-80">
                 {(Object.entries(groupedAccounts) as [AccountType, Account[]][]).map(
                   ([type, accs]) => {
                     if (accs.length === 0) return null;
@@ -341,7 +435,6 @@ export function QuickTransactionForm({
                   }
                 )}
 
-                {/* No results */}
                 {Object.values(groupedAccounts).every((accs) => accs.length === 0) && (
                   <div className="px-3 py-4 text-center text-gray-500 dark:text-gray-400 text-sm">
                     Tidak ada akun yang cocok
@@ -349,7 +442,8 @@ export function QuickTransactionForm({
                 )}
               </div>
             </div>
-          </>
+          </>,
+          portalRef.current
         )}
 
         {/* Flow preview badge */}
@@ -385,39 +479,7 @@ export function QuickTransactionForm({
         />
       )}
 
-      {/* 3. NAMA */}
-      <div>
-        <label className="label text-base font-semibold">
-          {flowDirection === 'in' ? 'Nama (Pemberi)' : flowDirection === 'out' ? 'Nama (Penerima)' : 'Nama'}
-        </label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value);
-            if (errors.name) {
-              setErrors((prev) => {
-                const next = { ...prev };
-                delete next.name;
-                return next;
-              });
-            }
-          }}
-          className="input"
-          placeholder={
-            flowDirection === 'in'
-              ? 'Siapa yang membayar? (Customer)'
-              : flowDirection === 'out'
-              ? 'Dibayar ke siapa? (Vendor)'
-              : 'Customer / Vendor'
-          }
-        />
-        {errors.name && (
-          <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.name}</p>
-        )}
-      </div>
-
-      {/* 4. TANGGAL */}
+      {/* 3. TANGGAL */}
       <div>
         <label className="label text-base font-semibold">Tanggal</label>
         <input
