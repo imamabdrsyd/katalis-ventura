@@ -27,9 +27,10 @@ interface ExpenseBreakdownChartProps {
   transactions: Transaction[];
   loading?: boolean;
   selectedYear: number;
+  selectedMonth?: number | null;
 }
 
-export default function ExpenseBreakdownChart({ transactions, loading = false, selectedYear }: ExpenseBreakdownChartProps) {
+export default function ExpenseBreakdownChart({ transactions, loading = false, selectedYear, selectedMonth = null }: ExpenseBreakdownChartProps) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -44,7 +45,9 @@ export default function ExpenseBreakdownChart({ transactions, loading = false, s
 
     transactions.forEach((t) => {
       if (t.category !== 'OPEX' && t.category !== 'VAR' && t.category !== 'TAX') return;
-      if (new Date(t.date).getFullYear() !== selectedYear) return;
+      const d = new Date(t.date);
+      if (d.getFullYear() !== selectedYear) return;
+      if (selectedMonth !== null && d.getMonth() !== selectedMonth) return;
 
       const amount = Number(t.amount);
       const accountName = t.debit_account?.account_name || t.description || t.category;
@@ -65,7 +68,7 @@ export default function ExpenseBreakdownChart({ transactions, loading = false, s
     }
 
     return top5;
-  }, [transactions, selectedYear]);
+  }, [transactions, selectedYear, selectedMonth]);
 
   const totalExpense = useMemo(() => {
     return expenseData.reduce((sum, [, amount]) => sum + amount, 0);

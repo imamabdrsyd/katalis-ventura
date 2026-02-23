@@ -21,8 +21,11 @@ export default function DashboardPage() {
 
   const router = useRouter();
 
-  // --- Global year filter ---
+  // --- Global year + month filter ---
   const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null); // null = Yearly, 0-11 = specific month
+
+  const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
   const availableYears = useMemo(() => {
     const years = new Set<number>();
@@ -40,9 +43,60 @@ export default function DashboardPage() {
     [transactions, selectedYear]
   );
 
-  const summary = useMemo(() => calculateFinancialSummary(yearTransactions), [yearTransactions]);
-  const categoryCounts = useMemo(() => calculateCategoryCounts(yearTransactions), [yearTransactions]);
+  const filteredTransactions = useMemo(
+    () => selectedMonth === null
+      ? yearTransactions
+      : yearTransactions.filter((t) => new Date(t.date).getMonth() === selectedMonth),
+    [yearTransactions, selectedMonth]
+  );
+
+  const summary = useMemo(() => calculateFinancialSummary(filteredTransactions), [filteredTransactions]);
+  const categoryCounts = useMemo(() => calculateCategoryCounts(filteredTransactions), [filteredTransactions]);
   const allTimeExpenses = useMemo(() => calculateFinancialSummary(transactions), [transactions]);
+
+  // --- Revenue: growth comparison ---
+  // Monthly filter: compare vs previous month
+  // Yearly filter: compare total revenue this year vs total revenue last year
+  const revenueGrowthData = useMemo(() => {
+    const currentRevenue = summary.totalEarn;
+
+    if (selectedMonth !== null) {
+      // Monthly: compare with previous month
+      const prevMonthDate = new Date(selectedYear, selectedMonth - 1, 1);
+      const prevMonth = prevMonthDate.getMonth();
+      const prevMonthYear = prevMonthDate.getFullYear();
+      const prevRevenue = transactions
+        .filter((t) => {
+          const d = new Date(t.date);
+          return t.category === 'EARN' && d.getMonth() === prevMonth && d.getFullYear() === prevMonthYear;
+        })
+        .reduce((s, t) => s + Number(t.amount), 0);
+
+      if (prevRevenue > 0) {
+        return {
+          growth: ((currentRevenue - prevRevenue) / prevRevenue) * 100,
+          label: `vs ${MONTH_LABELS[prevMonth]}`,
+        };
+      }
+      return { growth: null, label: null, isNew: currentRevenue > 0 };
+    } else {
+      // Yearly: compare total revenue this year vs total revenue last year
+      const lastYearRevenue = transactions
+        .filter((t) => {
+          const d = new Date(t.date);
+          return t.category === 'EARN' && d.getFullYear() === selectedYear - 1;
+        })
+        .reduce((s, t) => s + Number(t.amount), 0);
+
+      if (lastYearRevenue > 0) {
+        return {
+          growth: ((currentRevenue - lastYearRevenue) / lastYearRevenue) * 100,
+          label: `vs ${selectedYear - 1}`,
+        };
+      }
+      return { growth: null, label: null, isNew: currentRevenue > 0 };
+    }
+  }, [transactions, summary.totalEarn, selectedYear, selectedMonth, MONTH_LABELS]);
 
   if (businessLoading) {
     return (
@@ -56,37 +110,6 @@ export default function DashboardPage() {
   }
 
   const recentTransactions = transactions.slice(0, 10);
-
-  // --- Revenue: growth vs last month (only for current year) ---
-  const now = new Date();
-  const thisMonth = now.getMonth();
-  const thisYear = now.getFullYear();
-  const lastMonthDate = new Date(thisYear, thisMonth - 1, 1);
-  const lastMonth = lastMonthDate.getMonth();
-  const lastMonthYear = lastMonthDate.getFullYear();
-
-  const revenueThisMonth = selectedYear === thisYear
-    ? yearTransactions
-        .filter((t) => {
-          const d = new Date(t.date);
-          return t.category === 'EARN' && d.getMonth() === thisMonth;
-        })
-        .reduce((s, t) => s + Number(t.amount), 0)
-    : 0;
-
-  const revenueLastMonth = selectedYear === thisYear
-    ? transactions
-        .filter((t) => {
-          const d = new Date(t.date);
-          return t.category === 'EARN' && d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear;
-        })
-        .reduce((s, t) => s + Number(t.amount), 0)
-    : 0;
-
-  const revenueGrowth =
-    selectedYear === thisYear && revenueLastMonth > 0
-      ? ((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100
-      : null;
 
   // --- Profit/Loss: net margin & expense ratio ---
   const netMargin =
@@ -147,9 +170,8 @@ export default function DashboardPage() {
 
   return (
     <div className="p-8">
-      {/* Global Year Filter */}
-      <div className="flex items-center gap-2 mb-6">
-        <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Tahun:</span>
+      {/* Global Year + Month Filter */}
+      <div className="flex items-center gap-1.5 mb-6 flex-wrap">
         <div className="flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 shadow-sm">
           <button
             onClick={() => setSelectedYear((y) => y - 1)}
@@ -169,7 +191,30 @@ export default function DashboardPage() {
             <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
           </button>
         </div>
-        <span className="text-xs text-gray-400 dark:text-gray-500">Memfilter Revenue, Profit/Loss, Ringkasan Keuangan, dan Chart</span>
+        <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+        <button
+          onClick={() => setSelectedMonth(null)}
+          className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
+            selectedMonth === null
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+          }`}
+        >
+          Yearly
+        </button>
+        {MONTH_LABELS.map((label, i) => (
+          <button
+            key={i}
+            onClick={() => setSelectedMonth(i)}
+            className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
+              selectedMonth === i
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Stats Cards */}
@@ -189,14 +234,14 @@ export default function DashboardPage() {
             <div className="text-sm text-gray-500 dark:text-gray-400">
               {transactionsLoading ? '...' : `${categoryCounts.EARN} transaksi masuk`}
             </div>
-            {!transactionsLoading && revenueGrowth !== null && (
-              <div className={`flex items-center gap-0.5 text-xs font-semibold ${revenueGrowth >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
-                <span>{revenueGrowth >= 0 ? '▲' : '▼'}</span>
-                <span>{Math.abs(revenueGrowth).toFixed(1)}% vs bln lalu</span>
+            {!transactionsLoading && revenueGrowthData.growth !== null && (
+              <div className={`flex items-center gap-0.5 text-xs font-semibold ${revenueGrowthData.growth >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+                <span>{revenueGrowthData.growth >= 0 ? '▲' : '▼'}</span>
+                <span>{Math.abs(revenueGrowthData.growth).toFixed(1)}% {revenueGrowthData.label}</span>
               </div>
             )}
-            {!transactionsLoading && revenueGrowth === null && revenueLastMonth === 0 && revenueThisMonth > 0 && (
-              <div className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">Baru bulan ini</div>
+            {!transactionsLoading && revenueGrowthData.growth === null && revenueGrowthData.isNew && (
+              <div className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">Belum ada data pembanding</div>
             )}
           </div>
         </div>
@@ -260,7 +305,7 @@ export default function DashboardPage() {
           <MonitoringChart transactions={transactions} loading={transactionsLoading} selectedYear={selectedYear} />
         </div>
         <div className="lg:col-span-1">
-          <ExpenseBreakdownChart transactions={transactions} loading={transactionsLoading} selectedYear={selectedYear} />
+          <ExpenseBreakdownChart transactions={transactions} loading={transactionsLoading} selectedYear={selectedYear} selectedMonth={selectedMonth} />
         </div>
       </div>
 
