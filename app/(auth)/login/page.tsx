@@ -61,7 +61,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8">
+    <>
+      <Image src="/images/axion.png" alt="AXION" width={120} height={40} className="object-contain dark:hidden" />
+      <Image src="/images/axion-dark.png" alt="AXION" width={120} height={40} className="object-contain hidden dark:block" />
+      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8">
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Welcome Back</h1>
         <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">Sign in to manage, structure, and scale</p>
@@ -126,7 +129,7 @@ export default function LoginPage() {
         </div>
 
         <button type="submit" disabled={loading} className="btn-primary w-full py-3">
-          {loading ? 'Signing in...' : 'Sign In'}
+          {loading ? 'Enter AXION...' : 'Sign In'}
         </button>
       </form>
 
@@ -137,5 +140,6 @@ export default function LoginPage() {
         </Link>
       </p>
     </div>
+    </>
   );
 }

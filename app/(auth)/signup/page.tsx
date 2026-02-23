@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Briefcase, TrendingUp, User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
 
@@ -80,10 +81,17 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8">
+    <>
+      <Image src="/images/favicon.png" alt="AXION" width={60} height={60} className="object-contain dark:hidden" />
+      <Image src="/images/favicon-dark.png" alt="AXION" width={60} height={60} className="object-contain hidden dark:block" />
+      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8">
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Create Account</h1>
-        <p className="text-sm mt-2 text-gray-500 dark:text-gray-400">Join <span className="font-bold bg-gradient-to-r from-violet-600 via-blue-500 to-cyan-400 text-transparent bg-clip-text">AXION</span></p>
+        <p className="text-sm mt-2 text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1">
+          Enter
+          <Image src="/images/axion.png" alt="AXION" width={60} height={20} className="object-contain dark:hidden" />
+          <Image src="/images/axion-dark.png" alt="AXION" width={60} height={20} className="object-contain hidden dark:block" />
+        </p>
       </div>
 
       {error && (
@@ -206,5 +214,6 @@ export default function SignUpPage() {
         </Link>
       </p>
     </div>
+    </>
   );
 }
