@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet } from 'lucide-react';
 import { useDashboard } from '@/hooks/useDashboard';
-import { calculateFinancialSummary, calculateCategoryCounts } from '@/lib/calculations';
+import { calculateFinancialSummary, calculateCategoryCounts, calculateROI } from '@/lib/calculations';
 import { formatCurrency, formatPercentage, formatDateShort } from '@/lib/utils';
 import MonitoringChart from '@/components/charts/MonitoringChart';
 import ExpenseBreakdownChart from '@/components/charts/ExpenseBreakdownChart';
@@ -15,7 +15,6 @@ export default function DashboardPage() {
     canManageTransactions,
     transactions,
     transactionsLoading,
-    roi,
     balanceSheet,
   } = useDashboard();
 
@@ -123,11 +122,12 @@ export default function DashboardPage() {
       ? (totalExpenses / summary.totalEarn) * 100
       : null;
 
-  // --- ROI: breakeven status ---
-  const initialCapital = balanceSheet.equity.capital > 0 ? balanceSheet.equity.capital : null;
+  // --- ROI: all-time Net Profit / all-time CAPEX (not year-filtered) ---
+  const allTimeSummary = allTimeExpenses; // already calculateFinancialSummary(transactions)
+  const roi = calculateROI(allTimeSummary.netProfit, allTimeSummary.totalCapex);
   const roiLabel =
-    roi === 0 || initialCapital === null
-      ? 'Modal belum tercatat'
+    allTimeSummary.totalCapex === 0
+      ? 'Belum ada investasi'
       : roi > 0
         ? 'Modal sudah balik'
         : 'Modal belum balik';

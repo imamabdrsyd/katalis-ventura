@@ -463,11 +463,11 @@ export default function JournalEntryPage() {
                 onClick={() => handleSelectEntryType(et)}
                 className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center ${
                   isSelected
-                    ? `${et.bgColor} ${et.borderColor} ${et.color}`
+                    ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
                     : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
               >
-                <span className={isSelected ? et.color : 'text-gray-400 dark:text-gray-500'}>
+                <span className={isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}>
                   {et.icon}
                 </span>
                 <span className="text-xs font-semibold leading-tight">{et.label}</span>

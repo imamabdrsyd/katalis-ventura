@@ -428,7 +428,7 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
 
       {/* Footer */}
       <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-        <p className="text-xs text-gray-400 dark:text-gray-500 text-left">Created by @imamabdrsyd</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 text-left">Engine by Imam Abdurasyid</p>
       </div>
     </aside>
     </>
