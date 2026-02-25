@@ -66,6 +66,25 @@ function getAccountDisplay(transaction: Transaction): string {
   }
 }
 
+// Smart label for the "Nama" field based on transaction category
+function getNameLabel(category: string): string {
+  switch (category) {
+    case 'EARN':
+      return 'Customer';
+    case 'OPEX':
+    case 'VAR':
+    case 'CAPEX':
+      return 'Vendor';
+    case 'TAX':
+      return 'Instansi Pajak';
+    case 'FIN':
+      return 'Pihak Terkait';
+    default:
+      return 'Nama';
+  }
+}
+
+
 export function TransactionDetailModal({
   transaction,
   isOpen,
@@ -255,9 +274,10 @@ export function TransactionDetailModal({
 
         {/* Main Info */}
         <div className="space-y-4">
+          {/* Nama Customer/Vendor */}
           <div>
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Subjek
+              {getNameLabel(transaction.category)}
             </label>
             <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
               {transaction.name}
@@ -266,7 +286,7 @@ export function TransactionDetailModal({
 
           <div>
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Deskripsi
+              Keterangan
             </label>
             <p className="mt-1 text-gray-700 dark:text-gray-300">
               {transaction.description}

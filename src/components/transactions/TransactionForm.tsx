@@ -382,7 +382,7 @@ export function TransactionForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* AMOUNT FIRST for 'in' and 'out' modes - Make it PROMINENT */}
+      {/* 1. AMOUNT — prominent for in/out mode */}
       {mode !== 'full' && (
         <>
           <CurrencyInputWithCalculator
@@ -411,74 +411,111 @@ export function TransactionForm({
         </>
       )}
 
-      {/* Category + Date for full mode only */}
+      {/* 1. KATEGORI — full mode only */}
       {mode === 'full' && (
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="label">Kategori *</label>
-            <select
-              name="category"
-              value={formData.category}
-              onChange={handleChange}
-              className="input"
-              required
-            >
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {CATEGORY_LABELS[cat]}
-                </option>
-              ))}
-            </select>
-            {suggestedAccounts && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                💡 {suggestedAccounts.description}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="label">Tanggal *</label>
-            <input
-              type="date"
-              name="date"
-              value={formData.date}
-              onChange={handleChange}
-              className="input"
-              required
-            />
-            {errors.date && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.date}</p>}
-          </div>
+        <div>
+          <label className="label">Kategori *</label>
+          <select
+            name="category"
+            value={formData.category}
+            onChange={handleChange}
+            className="input"
+            required
+          >
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>
+                {CATEGORY_LABELS[cat]}
+              </option>
+            ))}
+          </select>
+          {suggestedAccounts && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              💡 {suggestedAccounts.description}
+            </p>
+          )}
         </div>
       )}
 
-      {/* Amount for full mode (normal size) */}
+      {/* 2. AMOUNT — normal size for full mode */}
       {mode === 'full' && (
         <>
-        <CurrencyInputWithCalculator
-          label="Jumlah (Rp)"
-          value={formData.amount}
-          displayValue={displayAmount}
-          onChange={(numeric, formatted) => {
-            setDisplayAmount(formatted);
-            setFormData(prev => ({ ...prev, amount: numeric }));
-            if (errors.amount) setErrors(prev => { const n = { ...prev }; delete n.amount; return n; });
-          }}
-          error={errors.amount}
-          required
-        />
-        <UnitBreakdownSection
-          unitBreakdown={unitBreakdown}
-          showBreakdown={showBreakdown}
-          onToggle={handleToggleBreakdown}
-          onPriceChange={handleBreakdownPriceChange}
-          onQuantityChange={handleBreakdownQtyChange}
-          onUnitChange={handleBreakdownUnitChange}
-          onRemove={handleRemoveBreakdown}
-        />
+          <CurrencyInputWithCalculator
+            label="Jumlah (Rp)"
+            value={formData.amount}
+            displayValue={displayAmount}
+            onChange={(numeric, formatted) => {
+              setDisplayAmount(formatted);
+              setFormData(prev => ({ ...prev, amount: numeric }));
+              if (errors.amount) setErrors(prev => { const n = { ...prev }; delete n.amount; return n; });
+            }}
+            error={errors.amount}
+            required
+          />
+          <UnitBreakdownSection
+            unitBreakdown={unitBreakdown}
+            showBreakdown={showBreakdown}
+            onToggle={handleToggleBreakdown}
+            onPriceChange={handleBreakdownPriceChange}
+            onQuantityChange={handleBreakdownQtyChange}
+            onUnitChange={handleBreakdownUnitChange}
+            onRemove={handleRemoveBreakdown}
+          />
         </>
       )}
 
-      {/* Account fields - Different labels based on mode */}
+      {/* 3. NAMA Customer/Vendor */}
+      <div>
+        <label className="label">
+          {mode === 'in' ? 'Nama Customer' : mode === 'out' ? 'Nama Vendor' : 'Nama'} *
+        </label>
+        <input
+          type="text"
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
+          className="input"
+          placeholder={mode === 'in' ? 'Nama customer' : mode === 'out' ? 'Nama vendor/penerima' : 'Customer atau vendor terkait'}
+          required
+        />
+        {errors.name && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.name}</p>}
+      </div>
+
+      {/* 4. KETERANGAN */}
+      <div>
+        <label className="label">Keterangan {mode !== 'full' && '(opsional)'}</label>
+        <textarea
+          name="description"
+          value={formData.description}
+          onChange={handleChange}
+          onBlur={handleDescriptionBlur}
+          className="input"
+          rows={3}
+          placeholder={
+            isDoubleEntry
+              ? 'Masukkan keterangan transaksi (kosongkan untuk auto-fill dengan nama akun)'
+              : 'Masukkan keterangan transaksi'
+          }
+        />
+        {errors.description && (
+          <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.description}</p>
+        )}
+      </div>
+
+      {/* 5. TANGGAL */}
+      <div>
+        <label className="label">Tanggal *</label>
+        <input
+          type="date"
+          name="date"
+          value={formData.date}
+          onChange={handleChange}
+          className="input"
+          required
+        />
+        {errors.date && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.date}</p>}
+      </div>
+
+      {/* 6. ACCOUNT FIELDS */}
       {!loadingAccounts && accounts.length > 0 && (
         <>
           {mode === 'in' && (
@@ -494,7 +531,6 @@ export function TransactionForm({
                 filterMode="in-destination"
                 required
               />
-
               <AccountDropdown
                 label="Dari (Sumber)"
                 accounts={accounts}
@@ -522,7 +558,6 @@ export function TransactionForm({
                 filterMode="out-source"
                 required
               />
-
               <AccountDropdown
                 label="Untuk (Jenis Beban)"
                 accounts={accounts}
@@ -540,7 +575,6 @@ export function TransactionForm({
           {/* Accounting Guidance for 'in' and 'out' modes */}
           {mode !== 'full' && (formData.debit_account_id || formData.credit_account_id) && (
             <div className="space-y-3">
-              {/* Pattern Detection & Explanation */}
               {guidance.pattern && (
                 <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                   <button
@@ -563,33 +597,25 @@ export function TransactionForm({
                   )}
                 </div>
               )}
-
-              {/* Warnings */}
               {guidance.warnings.length > 0 && (
                 <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 rounded-lg">
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
                       {guidance.warnings.map((warning, i) => (
-                        <p key={i} className="text-xs text-amber-700 dark:text-amber-300">
-                          {warning}
-                        </p>
+                        <p key={i} className="text-xs text-amber-700 dark:text-amber-300">{warning}</p>
                       ))}
                     </div>
                   </div>
                 </div>
               )}
-
-              {/* Validation Errors */}
               {!isAccountingValid && validation.errors.length > 0 && (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3 rounded-lg">
                   <div className="flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
                       {validation.errors.map((error, i) => (
-                        <p key={i} className="text-xs text-red-700 dark:text-red-300">
-                          {error.message}
-                        </p>
+                        <p key={i} className="text-xs text-red-700 dark:text-red-300">{error.message}</p>
                       ))}
                     </div>
                   </div>
@@ -601,9 +627,7 @@ export function TransactionForm({
           {mode === 'full' && (
             <>
               <div className="pt-2 pb-1 border-t border-gray-200 dark:border-gray-700">
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Account
-                </p>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Account</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   Gunakan akun debit/kredit untuk pencatatan yang lebih detail.
                 </p>
@@ -619,7 +643,6 @@ export function TransactionForm({
                   suggestedCode={suggestedAccounts?.debit}
                   error={errors.debit_account_id}
                 />
-
                 <AccountDropdown
                   label="Kredit"
                   accounts={accounts}
@@ -634,7 +657,6 @@ export function TransactionForm({
               {/* Accounting Guidance Panel */}
               {isDoubleEntry && (formData.debit_account_id || formData.credit_account_id) && (
                 <div className="space-y-3">
-                  {/* Pattern Detection & Explanation */}
                   {guidance.pattern && (
                     <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                       <button
@@ -659,8 +681,6 @@ export function TransactionForm({
                       )}
                     </div>
                   )}
-
-                  {/* Basic guidance when no pattern detected */}
                   {!guidance.pattern && guidance.explanation && (
                     <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
                       <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
@@ -670,49 +690,37 @@ export function TransactionForm({
                       </div>
                     </div>
                   )}
-
-                  {/* Warnings from guidance */}
                   {guidance.warnings.length > 0 && (
                     <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-lg">
                       <div className="flex items-start gap-2">
                         <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                         <div className="flex-1">
                           {guidance.warnings.map((warning, i) => (
-                            <p key={i} className="text-sm text-amber-700 dark:text-amber-300">
-                              {warning}
-                            </p>
+                            <p key={i} className="text-sm text-amber-700 dark:text-amber-300">{warning}</p>
                           ))}
                         </div>
                       </div>
                     </div>
                   )}
-
-                  {/* Validation Errors */}
                   {!isAccountingValid && validation.errors.length > 0 && (
                     <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-lg">
                       <div className="flex items-start gap-2">
                         <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                         <div className="flex-1">
                           {validation.errors.map((error, i) => (
-                            <p key={i} className="text-sm text-red-700 dark:text-red-300">
-                              {error.message}
-                            </p>
+                            <p key={i} className="text-sm text-red-700 dark:text-red-300">{error.message}</p>
                           ))}
                         </div>
                       </div>
                     </div>
                   )}
-
-                  {/* Validation Warnings */}
                   {validation.warnings.length > 0 && (
                     <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-lg">
                       <div className="flex items-start gap-2">
                         <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                         <div className="flex-1">
                           {validation.warnings.map((warning, i) => (
-                            <p key={i} className="text-sm text-amber-700 dark:text-amber-300">
-                              {warning.message}
-                            </p>
+                            <p key={i} className="text-sm text-amber-700 dark:text-amber-300">{warning.message}</p>
                           ))}
                         </div>
                       </div>
@@ -724,60 +732,6 @@ export function TransactionForm({
           )}
         </>
       )}
-
-      {/* Date for 'in' and 'out' modes */}
-      {mode !== 'full' && (
-        <div>
-          <label className="label">Tanggal *</label>
-          <input
-            type="date"
-            name="date"
-            value={formData.date}
-            onChange={handleChange}
-            className="input"
-            required
-          />
-          {errors.date && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.date}</p>}
-        </div>
-      )}
-
-      {/* Customer/Vendor Name - Different label based on mode */}
-      <div>
-        <label className="label">
-          {mode === 'in' ? 'Nama Customer' : mode === 'out' ? 'Nama Vendor' : 'Nama'} *
-        </label>
-        <input
-          type="text"
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
-          className="input"
-          placeholder={mode === 'in' ? 'Nama customer' : mode === 'out' ? 'Nama vendor/penerima' : 'Customer atau vendor terkait'}
-          required
-        />
-        {errors.name && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.name}</p>}
-      </div>
-
-      {/* Description */}
-      <div>
-        <label className="label">Deskripsi/Catatan {mode !== 'full' && '(opsional)'}</label>
-        <textarea
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          onBlur={handleDescriptionBlur}
-          className="input"
-          rows={3}
-          placeholder={
-            isDoubleEntry
-              ? 'Masukkan deskripsi transaksi (kosongkan untuk auto-fill dengan nama akun)'
-              : 'Masukkan deskripsi transaksi'
-          }
-        />
-        {errors.description && (
-          <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.description}</p>
-        )}
-      </div>
 
       {/* Legacy Account field (only for full mode when not using double-entry) */}
       {mode === 'full' && !isDoubleEntry && (

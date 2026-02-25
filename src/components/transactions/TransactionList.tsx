@@ -36,6 +36,19 @@ function isInventoryTransaction(transaction: Transaction): boolean {
   );
 }
 
+// Get the "Subjek" to display in the list row
+// EARN → customer name (transaction.name)
+// Expenses → sub-account name (debit account) if double-entry, else transaction.name
+function getRowSubject(transaction: Transaction): string {
+  if (transaction.category === 'EARN' || transaction.category === 'FIN') {
+    return transaction.name;
+  }
+  if (transaction.is_double_entry && transaction.debit_account) {
+    return transaction.debit_account.account_name;
+  }
+  return transaction.name;
+}
+
 // Helper function to format account display based on transaction type
 function getAccountDisplay(transaction: Transaction): string {
   // For double-entry transactions
@@ -124,7 +137,7 @@ export function TransactionList({
             <th className="text-left py-3 px-2 md:py-4 text-sm font-normal text-gray-500 dark:text-gray-400">No</th>
             <th className="text-left py-3 pl-1 pr-2 md:py-4 md:pl-2 md:pr-4 text-sm font-normal text-gray-500 dark:text-gray-400">Kategori</th>
             <th className="text-left py-3 px-2 md:py-4 text-sm font-normal text-gray-500 dark:text-gray-400">Subjek</th>
-            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Deskripsi</th>
+            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Keterangan</th>
             <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Tanggal</th>
             <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Jumlah</th>
             <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Chart of Account</th>
@@ -175,7 +188,7 @@ export function TransactionList({
                 )}
               </td>
               <td className="py-3 px-2 md:py-4 text-sm font-medium text-gray-800 dark:text-gray-200 break-words">
-                {transaction.name}
+                {getRowSubject(transaction)}
               </td>
               <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 break-words">
                 {transaction.description}

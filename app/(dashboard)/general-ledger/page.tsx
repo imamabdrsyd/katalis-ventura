@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { BookOpenCheck, AlertCircle, FileText } from 'lucide-react';
 import { useGeneralLedger, type AccountTypeFilter } from '@/hooks/useGeneralLedger';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
-import type { AccountType } from '@/types';
+import type { AccountType, Transaction } from '@/types';
+import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 
 const ACCOUNT_TYPE_LABELS: Record<AccountTypeFilter, string> = {
   ALL: 'Semua',
@@ -60,7 +61,10 @@ function GeneralLedgerPageInner() {
     selectedAccount,
     ledger,
     allLedgers,
+    filteredTransactions,
   } = useGeneralLedger();
+
+  const [viewTransaction, setViewTransaction] = useState<Transaction | null>(null);
 
   // "All Time" = custom period with no date bounds
   const isAllTime = period === 'custom' && !startDate && !endDate;
@@ -301,23 +305,19 @@ function GeneralLedgerPageInner() {
 
                   {/* Summary Cards */}
                   <div className="flex gap-3">
-                    <div className="text-center px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <div className="text-center px-3 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
                       <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Total Debit</p>
                       <p className="text-sm font-bold text-blue-700 dark:text-blue-300">
                         {formatCurrency(ledger.totalDebits)}
                       </p>
                     </div>
-                    <div className="text-center px-3 py-2 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                    <div className="text-center px-3 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
                       <p className="text-xs text-red-600 dark:text-red-400 font-medium">Total Kredit</p>
                       <p className="text-sm font-bold text-red-700 dark:text-red-300">
                         {formatCurrency(ledger.totalCredits)}
                       </p>
                     </div>
-                    <div className={`text-center px-3 py-2 rounded-lg ${
-                      ledger.closingBalance >= 0
-                        ? 'bg-emerald-50 dark:bg-emerald-900/20'
-                        : 'bg-orange-50 dark:bg-orange-900/20'
-                    }`}>
+                    <div className="text-center px-3 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
                       <p className={`text-xs font-medium ${
                         ledger.closingBalance >= 0
                           ? 'text-emerald-600 dark:text-emerald-400'
@@ -395,7 +395,11 @@ function GeneralLedgerPageInner() {
                         {ledger.entries.map((entry, idx) => (
                           <tr
                             key={entry.transactionId + idx}
-                            className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                            onClick={() => {
+                              const tx = filteredTransactions.find((t) => t.id === entry.transactionId);
+                              if (tx) setViewTransaction(tx);
+                            }}
+                            className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer"
                           >
                             <td className="py-2.5 px-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                               {formatDateShort(entry.date)}
@@ -469,6 +473,15 @@ function GeneralLedgerPageInner() {
           )}
         </div>
       </div>
+
+      {viewTransaction && (
+        <TransactionDetailModal
+          isOpen={true}
+          onClose={() => setViewTransaction(null)}
+          transaction={viewTransaction}
+          accounts={accounts}
+        />
+      )}
     </div>
   );
 }

@@ -24,7 +24,7 @@ export default function DashboardPage() {
   const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null); // null = Yearly, 0-11 = specific month
 
-  const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  const MONTH_LABELS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
   const availableYears = useMemo(() => {
     const years = new Set<number>();
@@ -171,7 +171,8 @@ export default function DashboardPage() {
   return (
     <div className="p-8">
       {/* Global Year + Month Filter */}
-      <div className="flex items-center gap-1.5 mb-6 flex-wrap">
+      <div className="w-full overflow-x-auto mb-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div className="flex items-center gap-1.5 min-w-max">
         <div className="flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 shadow-sm">
           <button
             onClick={() => setSelectedYear((y) => y - 1)}
@@ -215,6 +216,7 @@ export default function DashboardPage() {
             {label}
           </button>
         ))}
+      </div>
       </div>
 
       {/* Stats Cards */}

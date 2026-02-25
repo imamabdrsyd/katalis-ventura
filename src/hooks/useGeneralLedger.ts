@@ -69,10 +69,15 @@ export function calculateAccountLedger(
     totalDebits += debitAmount;
     totalCredits += creditAmount;
 
+    // EARN/FIN → customer/pihak terkait name, expenses → keterangan (description)
+    const keterangan = (t.category === 'EARN' || t.category === 'FIN')
+      ? t.name
+      : (t.description || t.debit_account?.account_name || t.name);
+
     return {
       transactionId: t.id,
       date: t.date,
-      description: t.description,
+      description: keterangan,
       counterAccountName: counterAccount?.account_name ?? '-',
       counterAccountCode: counterAccount?.account_code ?? '-',
       debitAmount,
