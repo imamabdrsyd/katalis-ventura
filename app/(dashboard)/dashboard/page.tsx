@@ -8,6 +8,24 @@ import { calculateFinancialSummary, calculateCategoryCounts, calculateROI } from
 import { formatCurrency, formatPercentage, formatDateShort } from '@/lib/utils';
 import MonitoringChart from '@/components/charts/MonitoringChart';
 import ExpenseBreakdownChart from '@/components/charts/ExpenseBreakdownChart';
+import type { Transaction } from '@/types';
+
+function isInventoryTransaction(t: Transaction): boolean {
+  const debitCode = t.debit_account?.account_code || '';
+  const debitName = t.debit_account?.account_name?.toLowerCase() || '';
+  return t.category === 'VAR' && (
+    debitCode.startsWith('13') ||
+    debitName.includes('inventory') ||
+    debitName.includes('persediaan')
+  );
+}
+
+function getRowSubject(t: Transaction): string {
+  if (t.category === 'EARN' || t.category === 'FIN') return t.name;
+  if (isInventoryTransaction(t)) return t.description || '';
+  if (t.is_double_entry && t.debit_account) return t.debit_account.account_name;
+  return t.name;
+}
 
 export default function DashboardPage() {
   const {
@@ -391,7 +409,7 @@ export default function DashboardPage() {
                       {formatDateShort(t.date)}
                     </td>
                     <td className="py-3 pr-4 text-sm text-gray-800 dark:text-gray-200 font-medium truncate max-w-[200px]">
-                      {t.name || t.description}
+                      {getRowSubject(t)}
                     </td>
                     <td className="py-3 pr-4">
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${categoryBadgeStyles[t.category] || ''}`}>

@@ -37,11 +37,15 @@ function isInventoryTransaction(transaction: Transaction): boolean {
 }
 
 // Get the "Subjek" to display in the list row
-// EARN → customer name (transaction.name)
+// EARN/FIN → customer/partner name (transaction.name)
+// STOCK → description (keterangan input)
 // Expenses → sub-account name (debit account) if double-entry, else transaction.name
 function getRowSubject(transaction: Transaction): string {
   if (transaction.category === 'EARN' || transaction.category === 'FIN') {
     return transaction.name;
+  }
+  if (isInventoryTransaction(transaction)) {
+    return transaction.description || '';
   }
   if (transaction.is_double_entry && transaction.debit_account) {
     return transaction.debit_account.account_name;
@@ -191,7 +195,7 @@ export function TransactionList({
                 {getRowSubject(transaction)}
               </td>
               <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 break-words">
-                {transaction.description}
+                {isInventoryTransaction(transaction) ? transaction.name : transaction.description}
               </td>
               <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
                 {formatDateShort(transaction.date)}
