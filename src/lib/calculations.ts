@@ -459,11 +459,54 @@ function classifyCashFlow(
   }
 }
 
+/**
+ * Calculate opening balance from equity transactions (Dr Cash / Cr EQUITY)
+ * that occurred strictly before the given startDate.
+ * Falls back to capital_investment if no equity transactions exist at all.
+ */
+function calculateOpeningBalance(
+  allTransactions: Transaction[],
+  startDate: string,
+  fallbackCapital: number
+): number {
+  const equityTxnsBefore = allTransactions.filter(t => {
+    if (!t.is_double_entry) return false;
+    if (t.date >= startDate) return false;
+    const debitCode = t.debit_account?.account_code;
+    const creditCode = t.credit_account?.account_code;
+    if (!debitCode || !creditCode) return false;
+    // Dr Cash / Cr EQUITY → capital injection (money IN)
+    if (isCashAccount(debitCode) && t.credit_account?.account_type === 'EQUITY') return true;
+    // Dr EQUITY / Cr Cash → owner withdrawal (money OUT)
+    if (isCashAccount(creditCode) && t.debit_account?.account_type === 'EQUITY') return true;
+    return false;
+  });
+
+  // If no equity transactions exist at all (all-time), fall back to capital_investment
+  const hasAnyEquityTxn = allTransactions.some(
+    t => t.is_double_entry && (
+      (t.credit_account?.account_type === 'EQUITY' && isCashAccount(t.debit_account?.account_code ?? '')) ||
+      (t.debit_account?.account_type === 'EQUITY' && isCashAccount(t.credit_account?.account_code ?? ''))
+    )
+  );
+  if (!hasAnyEquityTxn) return fallbackCapital;
+
+  return equityTxnsBefore.reduce((sum, t) => {
+    const amount = Number(t.amount);
+    const debitCode = t.debit_account?.account_code ?? '';
+    // Dr Cash / Cr EQUITY → cash in (+)
+    if (isCashAccount(debitCode)) return sum + amount;
+    // Dr EQUITY / Cr Cash → cash out (-)
+    return sum - amount;
+  }, 0);
+}
+
 // Calculate cash flow
-// Capital should come from business settings (capital_investment)
 export function calculateCashFlow(
   transactions: Transaction[],
-  capital: number = 0
+  capital: number = 0,
+  allTransactions?: Transaction[],
+  startDate?: string,
 ): CashFlowData {
   const doubleEntryTxns = transactions.filter(t => t.is_double_entry);
   const legacyTxns = transactions.filter(t => !t.is_double_entry);
@@ -574,7 +617,9 @@ export function calculateCashFlow(
   }
 
   const netCashFlow = operating + investing + financing;
-  const openingBalance = capital;
+  const openingBalance = (allTransactions && startDate)
+    ? calculateOpeningBalance(allTransactions, startDate, capital)
+    : capital;
   const closingBalance = openingBalance + netCashFlow;
 
   return {

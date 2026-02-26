@@ -1,53 +1,83 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Calendar, TrendingUp, TrendingDown, Download, FileText, FileSpreadsheet, Info, DollarSign } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, Download, FileText, FileSpreadsheet, Info, DollarSign, ArrowUpCircle, ArrowDownCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import { useIncomeStatement } from '@/hooks/useIncomeStatement';
 import { formatCurrency } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
 import type { Transaction } from '@/types';
 
-function TransactionList({ transactions }: { transactions: Transaction[] }) {
-  const MAX_SHOWN = 5;
-  const shown = transactions.slice(0, MAX_SHOWN);
-  const remaining = transactions.length - MAX_SHOWN;
-
-  if (transactions.length === 0) {
-    return <p className="text-gray-400 italic">Tidak ada transaksi</p>;
-  }
-
+function TransactionRow({ tx }: { tx: Transaction }) {
   return (
-    <div className="space-y-1.5">
-      {shown.map((t) => (
-        <div key={t.id} className="flex justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-white truncate font-medium">{t.name}</p>
-            {t.description && (
-              <p className="text-gray-400 truncate text-[10px]">{t.description}</p>
+    <div className="flex items-start gap-3 py-2.5 px-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+      <div className="mt-0.5 flex-shrink-0">
+        {tx.amount >= 0 ? (
+          <ArrowUpCircle className="w-4 h-4 text-green-500" />
+        ) : (
+          <ArrowDownCircle className="w-4 h-4 text-red-500" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex justify-between items-start gap-2">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{tx.name}</p>
+            {tx.description && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{tx.description}</p>
             )}
-            <p className="text-gray-500 text-[10px]">
-              {new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </div>
+          <div className="text-right flex-shrink-0">
+            <p className={`text-sm font-semibold ${tx.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+              {tx.amount >= 0 ? '+' : ''}{formatCurrency(tx.amount)}
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              {new Date(tx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
             </p>
           </div>
-          <span className="shrink-0 text-right font-medium text-[11px] text-white">
-            {formatCurrency(t.amount)}
-          </span>
         </div>
-      ))}
-      {remaining > 0 && (
-        <p className="text-gray-400 text-[10px] pt-1 border-t border-gray-700">
-          +{remaining} transaksi lainnya...
-        </p>
+      </div>
+    </div>
+  );
+}
+
+function TransactionSection({ title, transactions }: { title: string; transactions: Transaction[] }) {
+  const [open, setOpen] = useState(false);
+  const sorted = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  return (
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm"
+      >
+        <span className="text-gray-800 dark:text-gray-200 font-medium">
+          {title}
+        </span>
+        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+          <span className="text-xs text-gray-400 dark:text-gray-500">{transactions.length} transaksi</span>
+          <span className="text-xs">{open ? 'Sembunyikan' : 'Lihat detail'}</span>
+          {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        </div>
+      </button>
+
+      {open && (
+        <div className="divide-y divide-gray-100 dark:divide-gray-700/50 max-h-[400px] overflow-y-auto">
+          {sorted.length === 0 ? (
+            <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+              Tidak ada transaksi
+            </p>
+          ) : (
+            sorted.map(tx => <TransactionRow key={tx.id} tx={tx} />)
+          )}
+        </div>
       )}
     </div>
   );
 }
 
-function Tooltip({ title, color, transactions, formula, breakdown }: {
+function Tooltip({ title, color, formula, breakdown }: {
   title: string;
   color: string;
-  transactions?: Transaction[];
   formula?: string;
   breakdown?: { label: string; value: number; color: 'green' | 'red' | 'white' }[];
 }) {
@@ -63,7 +93,7 @@ function Tooltip({ title, color, transactions, formula, breakdown }: {
       )}
 
       {breakdown && (
-        <div className="space-y-1 mb-2">
+        <div className="space-y-1">
           {breakdown.map((item, i) => (
             <div key={i} className="flex justify-between text-[11px]">
               <span className="text-gray-300">{item.label}</span>
@@ -74,16 +104,6 @@ function Tooltip({ title, color, transactions, formula, breakdown }: {
             </div>
           ))}
         </div>
-      )}
-
-      {transactions !== undefined && (
-        <>
-          {breakdown && <div className="border-t border-gray-700 my-2" />}
-          <p className="text-gray-400 mb-1.5">
-            Dari {transactions.length} transaksi:
-          </p>
-          <TransactionList transactions={transactions} />
-        </>
       )}
 
       <div className="absolute left-4 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-900 dark:border-t-gray-800"></div>
@@ -270,23 +290,10 @@ function IncomeStatementPageInner() {
             <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
               <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Revenue</h3>
             </div>
-            <div className="relative group flex justify-between py-2 pl-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded cursor-default">
-              <span className="text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                Earnings
-                <Info className="w-3 h-3 text-gray-400 dark:text-gray-500" />
-              </span>
-              <span className="font-semibold text-green-600 dark:text-green-400">
-                {formatCurrency(summary.totalEarn)}
-              </span>
-              <Tooltip
-                title="Earnings / Revenue (EARN)"
-                color="text-green-300"
-                transactions={transactionsByCategory.revenue}
-              />
-            </div>
-            <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700">
+            <TransactionSection title="Earnings" transactions={transactionsByCategory.revenue} />
+            <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
               <span className="text-gray-800 dark:text-gray-100">Total Revenue</span>
-              <span className="text-gray-800 dark:text-gray-100">{formatCurrency(summary.totalEarn)}</span>
+              <span className="text-green-600 dark:text-green-400">{formatCurrency(summary.totalEarn)}</span>
             </div>
           </div>
 
@@ -295,21 +302,8 @@ function IncomeStatementPageInner() {
             <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
               <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Cost of Goods Sold</h3>
             </div>
-            <div className="relative group flex justify-between py-2 pl-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded cursor-default">
-              <span className="text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                Variable Costs
-                <Info className="w-3 h-3 text-gray-400 dark:text-gray-500" />
-              </span>
-              <span className="font-semibold text-red-600 dark:text-red-400">
-                ({formatCurrency(summary.totalVar)})
-              </span>
-              <Tooltip
-                title="Variable Costs / COGS (VAR)"
-                color="text-red-300"
-                transactions={transactionsByCategory.cogs}
-              />
-            </div>
-            <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700">
+            <TransactionSection title="Variable Costs" transactions={transactionsByCategory.cogs} />
+            <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
               <span className="text-gray-800 dark:text-gray-100">Total COGS</span>
               <span className="text-red-600 dark:text-red-400">({formatCurrency(summary.totalVar)})</span>
             </div>
@@ -348,21 +342,8 @@ function IncomeStatementPageInner() {
             <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
               <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Operating Expenses</h3>
             </div>
-            <div className="relative group flex justify-between py-2 pl-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded cursor-default">
-              <span className="text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                Operating Expenses
-                <Info className="w-3 h-3 text-gray-400 dark:text-gray-500" />
-              </span>
-              <span className="font-semibold text-red-600 dark:text-red-400">
-                ({formatCurrency(summary.totalOpex)})
-              </span>
-              <Tooltip
-                title="Operating Expenses (OPEX)"
-                color="text-red-300"
-                transactions={transactionsByCategory.opex}
-              />
-            </div>
-            <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700">
+            <TransactionSection title="Operating Expenses" transactions={transactionsByCategory.opex} />
+            <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
               <span className="text-gray-800 dark:text-gray-100">Total Operating Expenses</span>
               <span className="text-red-600 dark:text-red-400">({formatCurrency(summary.totalOpex)})</span>
             </div>
@@ -399,20 +380,7 @@ function IncomeStatementPageInner() {
             <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
               <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Financing Costs</h3>
             </div>
-            <div className="relative group flex justify-between py-2 pl-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded cursor-default">
-              <span className="text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                Interest & Financing Expenses
-                <Info className="w-3 h-3 text-gray-400 dark:text-gray-500" />
-              </span>
-              <span className="font-semibold text-red-600 dark:text-red-400">
-                ({formatCurrency(summary.totalInterest)})
-              </span>
-              <Tooltip
-                title="Interest & Financing Expenses (FIN)"
-                color="text-pink-300"
-                transactions={transactionsByCategory.interest}
-              />
-            </div>
+            <TransactionSection title="Interest & Financing Expenses" transactions={transactionsByCategory.interest} />
           </div>
 
           {/* EBT */}
@@ -440,20 +408,7 @@ function IncomeStatementPageInner() {
 
           {/* TAX */}
           <div>
-            <div className="relative group flex justify-between py-2 pl-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded cursor-default">
-              <span className="text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                Tax
-                <Info className="w-3 h-3 text-gray-400 dark:text-gray-500" />
-              </span>
-              <span className="font-semibold text-red-600 dark:text-red-400">
-                ({formatCurrency(summary.totalTax)})
-              </span>
-              <Tooltip
-                title="Tax / Pajak (TAX)"
-                color="text-purple-300"
-                transactions={transactionsByCategory.tax}
-              />
-            </div>
+            <TransactionSection title="Tax" transactions={transactionsByCategory.tax} />
           </div>
 
           {/* NET INCOME */}

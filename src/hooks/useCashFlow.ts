@@ -13,12 +13,12 @@ export interface UseCashFlowReturn extends ReturnType<typeof useReportData> {
 
 export function useCashFlow(): UseCashFlowReturn {
   const reportData = useReportData();
-  const { activeBusiness, filteredTransactions, startDate, endDate, setShowExportMenu } = reportData;
+  const { activeBusiness, transactions, filteredTransactions, startDate, endDate, setShowExportMenu } = reportData;
 
-  // Get capital from business settings
+  // Get capital from business settings (used as fallback if no equity transactions exist)
   const capital = activeBusiness?.capital_investment ?? 0;
 
-  const cashFlow = calculateCashFlow(filteredTransactions, capital);
+  const cashFlow = calculateCashFlow(filteredTransactions, capital, transactions, startDate);
 
   const handleExportPDF = useCallback(() => {
     if (!activeBusiness) return;
