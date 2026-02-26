@@ -20,6 +20,12 @@ export interface TransactionMeta {
   sold_stock_ids?: string[];
   /** Unit breakdown when amount is calculated via multiplication */
   unit_breakdown?: UnitBreakdown;
+  /** Journal entry type selected when creating the transaction */
+  entry_type?: {
+    id: string;
+    label: string;
+    description: string;
+  };
 }
 
 export interface Account {

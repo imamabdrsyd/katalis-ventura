@@ -149,6 +149,66 @@ export const TRANSACTION_PATTERNS: TransactionPattern[] = [
   },
 
   // ============================================
+  // Accrual & Deferred Patterns
+  // ============================================
+  {
+    id: 'accrued_expense',
+    name: 'Beban Terutang (Accrued Expense)',
+    description: 'Mencatat beban yang sudah terjadi tapi belum dibayar',
+    debitAccountType: 'EXPENSE',
+    creditAccountType: 'LIABILITY',
+    suggestedDebitCodes: ['5100'], // Operating Expenses
+    suggestedCreditCodes: [], // Will suggest any LIABILITY sub-account
+    examples: [
+      'Beban listrik bulan ini belum dibayar',
+      'Gaji karyawan belum dibayar',
+      'Beban bunga pinjaman terutang',
+      'Beban sewa terutang',
+    ],
+  },
+  {
+    id: 'unearned_revenue_recognized',
+    name: 'Realisasi Pendapatan Diterima Dimuka',
+    description: 'Mengakui pendapatan dari uang muka yang sudah diterima sebelumnya',
+    debitAccountType: 'LIABILITY',
+    creditAccountType: 'REVENUE',
+    suggestedDebitCodes: [], // Will suggest any LIABILITY sub-account
+    suggestedCreditCodes: ['4100'], // Sales Revenue
+    examples: [
+      'Realisasi sewa diterima dimuka',
+      'Pengakuan pendapatan jasa bertahap',
+      'Pendapatan dari deposit pelanggan',
+    ],
+  },
+  {
+    id: 'unearned_revenue_received',
+    name: 'Pendapatan Diterima Dimuka',
+    description: 'Menerima uang di muka sebelum jasa/barang diserahkan',
+    debitAccountType: 'ASSET',
+    creditAccountType: 'LIABILITY',
+    suggestedDebitCodes: ['1100', '1200'], // Cash, Bank
+    suggestedCreditCodes: [], // Will suggest any LIABILITY sub-account
+    examples: [
+      'Terima deposit sewa di muka',
+      'Uang muka dari pelanggan',
+      'Pembayaran di muka untuk jasa',
+    ],
+  },
+  {
+    id: 'liability_reclassification',
+    name: 'Reklasifikasi Hutang',
+    description: 'Memindahkan saldo antar akun hutang',
+    debitAccountType: 'LIABILITY',
+    creditAccountType: 'LIABILITY',
+    suggestedDebitCodes: [], // Will suggest any LIABILITY sub-account
+    suggestedCreditCodes: [], // Will suggest any LIABILITY sub-account
+    examples: [
+      'Reklasifikasi hutang jangka panjang ke jangka pendek',
+      'Transfer saldo antar akun hutang',
+    ],
+  },
+
+  // ============================================
   // Adjustment Patterns
   // ============================================
   {
@@ -296,6 +356,29 @@ export function detectPatternFromName(name: string): TransactionPattern | null {
     nameLower.includes('penarikan')
   ) {
     return getPatternById('owner_withdrawal') || null;
+  }
+
+  // Accrued expense keywords
+  if (
+    nameLower.includes('terutang') ||
+    nameLower.includes('accrued') ||
+    nameLower.includes('belum dibayar')
+  ) {
+    return getPatternById('accrued_expense') || null;
+  }
+
+  // Unearned/deferred revenue keywords
+  if (
+    nameLower.includes('diterima dimuka') ||
+    nameLower.includes('deposit') ||
+    nameLower.includes('uang muka')
+  ) {
+    return getPatternById('unearned_revenue_received') || null;
+  }
+
+  // Reclassification keywords
+  if (nameLower.includes('reklasifikasi') || nameLower.includes('reclassif')) {
+    return getPatternById('liability_reclassification') || null;
   }
 
   return null;

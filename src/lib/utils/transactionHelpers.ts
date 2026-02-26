@@ -72,6 +72,18 @@ export function detectCategory(
     if (debitType === 'LIABILITY') return 'FIN'; // Liability payment
   }
 
+  // Accrued expense: EXPENSE → LIABILITY
+  if (debitType === 'EXPENSE' && creditType === 'LIABILITY') return 'OPEX';
+
+  // Unearned revenue recognized: LIABILITY → REVENUE
+  if (debitType === 'LIABILITY' && creditType === 'REVENUE') return 'EARN';
+
+  // Deferred revenue received: REVENUE → LIABILITY
+  if (debitType === 'REVENUE' && creditType === 'LIABILITY') return 'EARN';
+
+  // Reclassification: LIABILITY → LIABILITY
+  if (debitType === 'LIABILITY' && creditType === 'LIABILITY') return 'FIN';
+
   // Default fallback
   return 'OPEX';
 }

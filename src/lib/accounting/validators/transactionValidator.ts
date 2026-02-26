@@ -3,7 +3,7 @@
  * Validates transactions against double-entry bookkeeping rules
  */
 
-import type { Account } from '@/types';
+import type { Account, AccountType, TransactionCategory } from '@/types';
 import type {
   ValidationResult,
   ValidationError,
@@ -191,3 +191,86 @@ export class TransactionValidator {
  * Create a singleton validator instance
  */
 export const transactionValidator = new TransactionValidator();
+
+/**
+ * Validate category consistency with account types.
+ * Returns warning messages (in Indonesian) when the selected category
+ * doesn't match the typical category for the given account type pair.
+ */
+export function validateCategoryConsistency(
+  category: TransactionCategory,
+  debitType: AccountType,
+  creditType: AccountType
+): string[] {
+  const warnings: string[] = [];
+
+  // Loan received (ASSET ← LIABILITY) should be FIN
+  if (debitType === 'ASSET' && creditType === 'LIABILITY' && category !== 'FIN') {
+    warnings.push(
+      'Transaksi pinjaman biasanya menggunakan kategori FIN (Financing), bukan ' + category + '.'
+    );
+  }
+
+  // Capital injection (ASSET ← EQUITY) should be FIN
+  if (debitType === 'ASSET' && creditType === 'EQUITY' && category !== 'FIN') {
+    warnings.push(
+      'Setoran modal biasanya menggunakan kategori FIN (Financing), bukan ' + category + '.'
+    );
+  }
+
+  // Revenue received (ASSET ← REVENUE) should be EARN
+  if (debitType === 'ASSET' && creditType === 'REVENUE' && category !== 'EARN') {
+    warnings.push(
+      'Pendapatan biasanya menggunakan kategori EARN (Revenue), bukan ' + category + '.'
+    );
+  }
+
+  // Expense paid (EXPENSE → ASSET) should be OPEX/VAR/TAX
+  if (
+    debitType === 'EXPENSE' &&
+    creditType === 'ASSET' &&
+    !['OPEX', 'VAR', 'TAX'].includes(category)
+  ) {
+    warnings.push(
+      'Pembayaran beban biasanya menggunakan kategori OPEX, VAR, atau TAX, bukan ' + category + '.'
+    );
+  }
+
+  // Accrued expense (EXPENSE → LIABILITY) should be OPEX/VAR/TAX
+  if (
+    debitType === 'EXPENSE' &&
+    creditType === 'LIABILITY' &&
+    !['OPEX', 'VAR', 'TAX'].includes(category)
+  ) {
+    warnings.push(
+      'Beban terutang biasanya menggunakan kategori OPEX, VAR, atau TAX, bukan ' + category + '.'
+    );
+  }
+
+  // Loan repayment (LIABILITY → ASSET) should be FIN
+  if (debitType === 'LIABILITY' && creditType === 'ASSET' && category !== 'FIN') {
+    warnings.push(
+      'Pembayaran hutang biasanya menggunakan kategori FIN (Financing), bukan ' + category + '.'
+    );
+  }
+
+  // Owner withdrawal (EQUITY → ASSET) should be FIN
+  if (debitType === 'EQUITY' && creditType === 'ASSET' && category !== 'FIN') {
+    warnings.push(
+      'Penarikan modal biasanya menggunakan kategori FIN (Financing), bukan ' + category + '.'
+    );
+  }
+
+  // Asset purchase (ASSET → ASSET) should be CAPEX
+  if (
+    debitType === 'ASSET' &&
+    creditType === 'ASSET' &&
+    !['CAPEX', 'VAR'].includes(category)
+  ) {
+    warnings.push(
+      'Pembelian aset biasanya menggunakan kategori CAPEX atau VAR, bukan ' + category + '.'
+    );
+  }
+
+  return warnings;
+}

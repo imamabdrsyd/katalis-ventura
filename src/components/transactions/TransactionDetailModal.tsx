@@ -9,7 +9,7 @@ import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import { getProfileName } from '@/lib/api/profiles';
 import { getRecordAuditHistory, getFieldChanges, formatFieldName, formatAuditValue } from '@/lib/api/audit';
 import { detectMatchingPrincipleWarning } from '@/lib/accounting/guidance';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, Info, X } from 'lucide-react';
 
 interface TransactionDetailModalProps {
   transaction: Transaction | null;
@@ -231,11 +231,24 @@ export function TransactionDetailModal({
               Stock
             </span>
           ) : (
-            <span
-              className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${CATEGORY_COLORS[transaction.category]}`}
-            >
-              {CATEGORY_LABELS[transaction.category]}
-            </span>
+            <div className="relative group inline-flex items-center gap-1.5">
+              <span
+                className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${CATEGORY_COLORS[transaction.category]}`}
+              >
+                {CATEGORY_LABELS[transaction.category]}
+              </span>
+              {transaction.meta?.entry_type && (
+                <>
+                  <Info className="w-4 h-4 text-gray-400 dark:text-gray-500 cursor-help" />
+                  <div className="absolute left-0 top-full mt-1.5 z-50 hidden group-hover:block">
+                    <div className="bg-gray-900 dark:bg-gray-700 text-white rounded-lg px-3 py-2 shadow-lg whitespace-nowrap">
+                      <p className="text-sm font-semibold">{transaction.meta.entry_type.label}</p>
+                      <p className="text-xs text-gray-300 dark:text-gray-400">{transaction.meta.entry_type.description}</p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           )}
           <div className="text-left">
             <p className={`text-2xl font-bold ${

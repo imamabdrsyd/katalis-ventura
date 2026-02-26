@@ -12,6 +12,7 @@ import { getStockTransactions, findCogsAccount } from '@/lib/utils/inventoryHelp
 import { updateTransaction } from '@/lib/api/transactions';
 import { InventoryPicker } from '@/components/transactions/InventoryPicker';
 import { AccountDropdown } from '@/components/transactions/AccountDropdown';
+import { validateCategoryConsistency } from '@/lib/accounting/validators/transactionValidator';
 import type { Account, AccountType, TransactionCategory, Transaction, UnitBreakdown } from '@/types';
 import {
   ArrowLeft,
@@ -25,6 +26,10 @@ import {
   ArrowRightLeft,
   PiggyBank,
   CheckCircle2,
+  Clock,
+  AlertTriangle,
+  RotateCcw,
+  Repeat,
 } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { UnitBreakdownSection } from '@/components/transactions/UnitBreakdownSection';
@@ -38,7 +43,11 @@ type EntryTypeId =
   | 'bayar_hutang'
   | 'cicil_hutang'
   | 'suntik_modal'
-  | 'tarik_dividen';
+  | 'tarik_dividen'
+  | 'beban_terutang'
+  | 'realisasi_pendapatan_dimuka'
+  | 'reklasifikasi_hutang'
+  | 'pendapatan_dimuka';
 
 interface EntryType {
   id: EntryTypeId;
@@ -176,6 +185,70 @@ const ENTRY_TYPES: EntryType[] = [
     nameLabel: 'Nama Penerima',
     namePlaceholder: 'Nama pemilik / investor',
   },
+  {
+    id: 'beban_terutang',
+    label: 'Beban Terutang',
+    description: 'Catat beban yang belum dibayar (accrued expense)',
+    icon: <AlertTriangle className="w-5 h-5" />,
+    color: 'text-rose-600 dark:text-rose-400',
+    bgColor: 'bg-rose-50 dark:bg-rose-900/20',
+    borderColor: 'border-rose-500',
+    debitFilter: 'EXPENSE',
+    creditFilter: 'LIABILITY',
+    defaultDebitType: 'EXPENSE',
+    defaultCreditType: 'LIABILITY',
+    suggestedCategory: 'OPEX',
+    nameLabel: 'Nama Beban / Vendor',
+    namePlaceholder: 'Contoh: PLN, Telkom, Gaji karyawan',
+  },
+  {
+    id: 'realisasi_pendapatan_dimuka',
+    label: 'Realisasi Pendapatan',
+    description: 'Akui pendapatan dari uang muka yang sudah diterima',
+    icon: <RotateCcw className="w-5 h-5" />,
+    color: 'text-teal-600 dark:text-teal-400',
+    bgColor: 'bg-teal-50 dark:bg-teal-900/20',
+    borderColor: 'border-teal-500',
+    debitFilter: 'LIABILITY',
+    creditFilter: 'REVENUE',
+    defaultDebitType: 'LIABILITY',
+    defaultCreditType: 'REVENUE',
+    suggestedCategory: 'EARN',
+    nameLabel: 'Nama Pelanggan',
+    namePlaceholder: 'Pelanggan yang sudah bayar di muka',
+  },
+  {
+    id: 'reklasifikasi_hutang',
+    label: 'Reklasifikasi Hutang',
+    description: 'Pindahkan saldo antar akun hutang',
+    icon: <Repeat className="w-5 h-5" />,
+    color: 'text-slate-600 dark:text-slate-400',
+    bgColor: 'bg-slate-50 dark:bg-slate-900/20',
+    borderColor: 'border-slate-500',
+    debitFilter: 'LIABILITY',
+    creditFilter: 'LIABILITY',
+    defaultDebitType: 'LIABILITY',
+    defaultCreditType: 'LIABILITY',
+    suggestedCategory: 'FIN',
+    nameLabel: 'Keterangan',
+    namePlaceholder: 'Reklasifikasi dari ... ke ...',
+  },
+  {
+    id: 'pendapatan_dimuka',
+    label: 'Pendapatan Dimuka',
+    description: 'Terima uang sebelum jasa/barang diserahkan',
+    icon: <Clock className="w-5 h-5" />,
+    color: 'text-cyan-600 dark:text-cyan-400',
+    bgColor: 'bg-cyan-50 dark:bg-cyan-900/20',
+    borderColor: 'border-cyan-500',
+    debitFilter: 'ASSET',
+    creditFilter: 'LIABILITY',
+    defaultDebitType: 'ASSET',
+    defaultCreditType: 'LIABILITY',
+    suggestedCategory: 'FIN',
+    nameLabel: 'Nama Pelanggan',
+    namePlaceholder: 'Pelanggan yang membayar di muka',
+  },
 ];
 
 const CATEGORY_LABELS: Record<TransactionCategory, string> = {
@@ -288,6 +361,16 @@ export default function JournalEntryPage() {
   );
   const showInventoryPicker = isRevenueCredit && stockTransactions.length > 0;
 
+  // Category consistency warnings
+  const categoryWarnings = useMemo(() => {
+    if (!debitAccount || !creditAccount) return [];
+    return validateCategoryConsistency(
+      category,
+      debitAccount.account_type,
+      creditAccount.account_type
+    );
+  }, [category, debitAccount, creditAccount]);
+
   const handleToggleStock = (transactionId: string) => {
     setSelectedStockIds(prev =>
       prev.includes(transactionId)
@@ -374,6 +457,13 @@ export default function JournalEntryPage() {
       if (unitBreakdown && unitBreakdown.unit) {
         meta.unit_breakdown = unitBreakdown;
       }
+      if (selectedEntryType) {
+        meta.entry_type = {
+          id: selectedEntryType.id,
+          label: selectedEntryType.label,
+          description: selectedEntryType.description,
+        };
+      }
 
       await createTransaction({
         business_id: businessId,
@@ -453,7 +543,7 @@ export default function JournalEntryPage() {
         <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
           Jenis Transaksi
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
           {ENTRY_TYPES.map((et) => {
             const isSelected = selectedEntryType?.id === et.id;
             return (
@@ -650,6 +740,20 @@ export default function JournalEntryPage() {
                 </select>
               </div>
             </div>
+
+            {/* Category consistency warnings */}
+            {categoryWarnings.length > 0 && (
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                  <div className="space-y-1">
+                    {categoryWarnings.map((warning, i) => (
+                      <p key={i} className="text-sm text-amber-700 dark:text-amber-300">{warning}</p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Description */}
             <div>

@@ -103,6 +103,30 @@ export const VALID_COMBINATIONS: AccountCombination[] = [
     credit: ['EQUITY'],
     description: 'Konversi hutang menjadi modal',
   },
+  // Accrued expenses (beban yang belum dibayar)
+  {
+    debit: ['EXPENSE'],
+    credit: ['LIABILITY'],
+    description: 'Beban yang belum dibayar (accrued expense)',
+  },
+  // Unearned revenue recognized
+  {
+    debit: ['LIABILITY'],
+    credit: ['REVENUE'],
+    description: 'Realisasi pendapatan diterima dimuka',
+  },
+  // Reclassification within same type
+  {
+    debit: ['LIABILITY'],
+    credit: ['LIABILITY'],
+    description: 'Reklasifikasi / transfer antar hutang',
+  },
+  // Deferred revenue received
+  {
+    debit: ['REVENUE'],
+    credit: ['LIABILITY'],
+    description: 'Pendapatan diterima dimuka (unearned revenue)',
+  },
 ];
 
 // ============================================

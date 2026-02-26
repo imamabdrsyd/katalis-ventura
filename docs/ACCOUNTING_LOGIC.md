@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 19 Februari 2026 | Terakhir diupdate: 19 Februari 2026
+> Terakhir diaudit: 19 Februari 2026 | Terakhir diupdate: 26 Februari 2026
 
 ---
 
@@ -227,6 +227,10 @@ Didefinisikan di `constants.ts` → `VALID_COMBINATIONS`:
 | 8 | REVENUE | ASSET | Retur pendapatan | Kembalikan uang sewa |
 | 9 | ASSET | EXPENSE | Penggantian biaya | Terima klaim asuransi |
 | 10 | LIABILITY | EQUITY | Konversi hutang | Hutang jadi modal |
+| 11 | EXPENSE | LIABILITY | Beban terutang (accrued expense) | Beban listrik belum dibayar |
+| 12 | LIABILITY | REVENUE | Realisasi pendapatan dimuka | Pengakuan sewa diterima dimuka |
+| 13 | LIABILITY | LIABILITY | Reklasifikasi hutang | Hutang jk. panjang → jk. pendek |
+| 14 | REVENUE | LIABILITY | Pendapatan diterima dimuka | Terima deposit sewa di muka |
 
 ### 3.2 Prinsip Accounting Equation
 
@@ -240,11 +244,11 @@ Sistem memvalidasi ini di `useBalanceSheet.ts` dengan tolerance `< 0.01`.
 
 ### 3.3 Kombinasi yang DITOLAK
 
-Semua kombinasi di luar 10 valid combinations akan ditolak oleh `TransactionValidator`. Contoh yang tidak valid:
+Semua kombinasi di luar 14 valid combinations akan ditolak oleh `TransactionValidator`. Contoh yang tidak valid:
 - `EXPENSE → REVENUE` (tidak ada artinya secara akuntansi)
-- `REVENUE → LIABILITY` (tidak ada artinya)
-- `EXPENSE → LIABILITY` (seharusnya lewat asset dulu)
 - `EXPENSE → EQUITY` (tidak ada artinya)
+- `REVENUE → EQUITY` (closing entry — belum didukung)
+- `EQUITY → EXPENSE` (closing entry — belum didukung)
 
 ---
 
@@ -364,14 +368,18 @@ Logic di `transactionHelpers.ts` → `detectCategory()`:
 Priority 1: Non-cash account's default_category (skip 1100/1200)
 Priority 2: Other account's default_category (fallback)
 Priority 3: Account type-based detection:
-  ASSET←REVENUE    = EARN
-  ASSET←LIABILITY  = FIN  (loan received)
-  ASSET←EQUITY     = FIN  (capital injection)
-  EXPENSE→ASSET    = OPEX (default expense)
-  ASSET→ASSET      = CAPEX (asset purchase, unless default_category set)
-  EQUITY→ASSET     = FIN  (owner withdrawal)
-  LIABILITY→ASSET  = FIN  (loan payment)
-  Fallback         = OPEX
+  ASSET←REVENUE      = EARN
+  ASSET←LIABILITY    = FIN  (loan received)
+  ASSET←EQUITY       = FIN  (capital injection)
+  EXPENSE→ASSET      = OPEX (default expense)
+  ASSET→ASSET        = CAPEX (asset purchase, unless default_category set)
+  EQUITY→ASSET       = FIN  (owner withdrawal)
+  LIABILITY→ASSET    = FIN  (loan payment)
+  EXPENSE→LIABILITY  = OPEX (accrued expense)
+  LIABILITY→REVENUE  = EARN (unearned revenue recognized)
+  REVENUE→LIABILITY  = EARN (deferred revenue received)
+  LIABILITY→LIABILITY = FIN  (liability reclassification)
+  Fallback           = OPEX
 ```
 
 ### 5.3 Financial Summary
@@ -848,9 +856,26 @@ Sistem memberikan warning kontekstual:
 - **Withdrawal sebagai Expense**: "Jika ini penarikan pribadi, gunakan akun Prive"
 - **Revenue di-debit**: "Ini biasanya untuk koreksi atau retur penjualan"
 
-### 14.4 Transaction Pattern Detection
+### 14.4 Category Consistency Warnings
 
-11 pola transaksi yang dikenali dari keyword di nama transaksi:
+`validateCategoryConsistency()` di `transactionValidator.ts` mendeteksi ketidakcocokan antara category yang dipilih user dengan account type pair. Warning ditampilkan di UI journal entry (amber banner) tapi **tidak memblokir** transaksi.
+
+| Account Type Pair | Expected Category | Warning jika salah |
+|---|---|---|
+| ASSET ← LIABILITY | FIN | "Transaksi pinjaman biasanya menggunakan FIN" |
+| ASSET ← EQUITY | FIN | "Setoran modal biasanya menggunakan FIN" |
+| ASSET ← REVENUE | EARN | "Pendapatan biasanya menggunakan EARN" |
+| EXPENSE → ASSET | OPEX/VAR/TAX | "Pembayaran beban biasanya OPEX, VAR, atau TAX" |
+| EXPENSE → LIABILITY | OPEX/VAR/TAX | "Beban terutang biasanya OPEX, VAR, atau TAX" |
+| LIABILITY → ASSET | FIN | "Pembayaran hutang biasanya FIN" |
+| EQUITY → ASSET | FIN | "Penarikan modal biasanya FIN" |
+| ASSET → ASSET | CAPEX/VAR | "Pembelian aset biasanya CAPEX atau VAR" |
+
+**PENTING**: Ini hanya warning, bukan error. Income statement tetap mengandalkan category as-is. Jika user mengabaikan warning dan salah pilih category, income statement akan terdampak tapi balance sheet tetap benar (karena balance sheet menggunakan account types, bukan categories).
+
+### 14.5 Transaction Pattern Detection
+
+15 pola transaksi yang dikenali dari keyword di nama transaksi:
 
 | Pattern | Keywords | Debit | Credit |
 |---------|----------|-------|--------|
@@ -865,6 +890,10 @@ Sistem memberikan warning kontekstual:
 | Penarikan Prive | prive, pribadi, penarikan | EQUITY | ASSET |
 | Retur Pendapatan | (via account type match) | REVENUE | ASSET |
 | Penggantian Biaya | (via account type match) | ASSET | EXPENSE |
+| Beban Terutang | terutang, accrued, belum dibayar | EXPENSE | LIABILITY |
+| Realisasi Pendapatan Dimuka | (via entry type selection) | LIABILITY | REVENUE |
+| Pendapatan Diterima Dimuka | diterima dimuka, deposit, uang muka | ASSET | LIABILITY |
+| Reklasifikasi Hutang | reklasifikasi, reclassif | LIABILITY | LIABILITY |
 
 ---
 
