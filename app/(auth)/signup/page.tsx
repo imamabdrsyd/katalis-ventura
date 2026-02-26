@@ -21,26 +21,19 @@ export default function SignUpPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  // Clear invalid session on mount to prevent refresh token errors
+  // Redirect to dashboard if already logged in
   useEffect(() => {
-    const clearInvalidSession = async () => {
-      try {
-        const { error: sessionError } = await supabase.auth.getSession();
-
-        // If there's a session error (like invalid refresh token), sign out
-        if (sessionError) {
-          await supabase.auth.signOut();
-        }
-      } catch (err) {
-        // Silently handle any errors during session check
-        console.error('Session check error:', err);
-        // Sign out to clear any corrupted session data
+    const checkSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
         await supabase.auth.signOut();
+      } else if (session) {
+        router.push('/dashboard');
       }
     };
 
-    clearInvalidSession();
-  }, [supabase]);
+    checkSession();
+  }, [supabase, router]);
 
   const handleGoogleSignUp = async () => {
     setError(null);
