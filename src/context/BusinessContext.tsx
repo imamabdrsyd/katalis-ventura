@@ -86,7 +86,10 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
         // Check profile first, then fallback to user metadata
         const defaultRole = profile?.default_role || user.user_metadata?.default_role;
 
-        if (defaultRole === 'investor') {
+        if (!defaultRole) {
+          // User baru via Google OAuth — belum pilih role
+          router.push('/select-role');
+        } else if (defaultRole === 'investor') {
           router.push('/join-business');
         } else {
           router.push('/setup-business');
