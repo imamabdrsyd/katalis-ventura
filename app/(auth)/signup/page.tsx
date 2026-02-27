@@ -24,10 +24,8 @@ export default function SignUpPage() {
   // Redirect to dashboard if already logged in
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        await supabase.auth.signOut();
-      } else if (session) {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (user && !error) {
         router.push('/dashboard');
       }
     };

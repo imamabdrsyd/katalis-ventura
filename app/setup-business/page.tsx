@@ -88,6 +88,7 @@ export default function SetupBusinessPage() {
 
       // Redirect to dashboard
       router.push('/dashboard');
+      router.refresh();
     } catch (err: any) {
       setError(err.message || 'An error occurred during business setup');
     } finally {

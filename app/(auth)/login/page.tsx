@@ -20,11 +20,8 @@ export default function LoginPage() {
   // Redirect to dashboard if already logged in
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        // Only sign out if there's an actual error (e.g. invalid refresh token)
-        await supabase.auth.signOut();
-      } else if (session) {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (user && !error) {
         router.push('/dashboard');
       }
     };
