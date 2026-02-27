@@ -47,20 +47,12 @@ export default function LandingPage() {
             height={36}
             className="object-contain"
           />
-          <div className="flex items-center gap-3">
-            <Link
-              href="/login"
-              className="px-4 py-2 text-gray-700 font-semibold hover:text-indigo-600 transition-colors text-sm"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/signup"
-              className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-600 transition-colors text-sm"
-            >
-              Get Started
-            </Link>
-          </div>
+          <Link
+            href="/signup"
+            className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-600 transition-colors text-sm"
+          >
+            Get Started
+          </Link>
         </nav>
       </header>
 
