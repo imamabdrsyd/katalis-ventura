@@ -153,7 +153,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
 
   return (
     <>
-      <header className={`fixed top-0 left-0 right-0 h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-30 flex items-center justify-between px-4 md:px-6 transition-[left] duration-300 ease-in-out ${isCollapsed ? 'md:left-16' : 'md:left-64'}`}>
+      <header className={`fixed top-0 left-0 right-0 h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-30 flex items-center justify-between px-4 md:px-6 transition-[left] duration-300 ease-in-out ${isCollapsed ? 'md:left-16' : 'md:left-52'}`}>
       {/* Mobile Menu Button */}
       <button
         onClick={onMenuClick}
@@ -378,12 +378,12 @@ function Sidebar({
       )}
 
       <aside
-        className={`fixed top-0 left-0 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col z-50 transform transition-all duration-300 ease-in-out
+        className={`fixed top-0 left-0 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col z-50 transform transition-all duration-300 ease-in-out overflow-visible
           ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
-          ${isCollapsed ? 'w-16' : 'w-64'}`}
+          ${isCollapsed ? 'w-16' : 'w-52'}`}
       >
         {/* Logo + Hamburger row */}
-        <div className={`flex items-center border-b border-gray-200 dark:border-gray-700 h-16 flex-shrink-0 ${isCollapsed ? 'justify-center px-2' : 'justify-between px-4'}`}>
+        <div className={`flex items-center border-b border-gray-200 dark:border-gray-700 h-16 flex-shrink-0 ${isCollapsed ? 'justify-center px-2' : 'gap-2 px-3'}`}>
           {isCollapsed ? (
             /* Favicon sebagai tombol expand */
             <button
@@ -408,7 +408,17 @@ function Sidebar({
             </button>
           ) : (
             <>
-              <div className="flex items-center">
+              {/* Hamburger collapse — desktop only */}
+              <button
+                onClick={onToggleCollapse}
+                className="hidden md:flex p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0"
+                title="Collapse sidebar"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+
+              {/* Logo — fade out saat collapsed */}
+              <div className="flex items-center overflow-hidden">
                 <Image
                   src="/images/axion.png"
                   alt="Axion Logo"
@@ -424,37 +434,29 @@ function Sidebar({
                   className="object-contain hidden dark:block"
                 />
               </div>
-
-              {/* Hamburger collapse — desktop only */}
-              <button
-                onClick={onToggleCollapse}
-                className="hidden md:flex p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                title="Collapse sidebar"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
             </>
           )}
 
           {/* Mobile close button */}
           <button
             onClick={onClose}
-            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 md:hidden"
+            className="ml-auto p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 md:hidden"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className={`flex-1 py-4 ${isCollapsed ? 'px-2 overflow-visible' : 'px-3 overflow-y-auto'}`}>
+        <nav className="flex-1 py-4 px-2 overflow-visible">
           {navSections.map((section, sectionIndex) => (
             <div key={section.label} className={sectionIndex > 0 ? 'mt-5' : ''}>
-              {/* Section label */}
-              {!isCollapsed && (
-                <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-3 mb-2">
+              {/* Section label — fade out saat collapsed */}
+              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'h-0 opacity-0 mb-0' : 'h-5 opacity-100 mb-2'}`}>
+                <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-3 whitespace-nowrap">
                   {section.label}
                 </div>
-              )}
+              </div>
+              {/* Divider antar section saat collapsed */}
               {isCollapsed && sectionIndex > 0 && (
                 <div className="border-t border-gray-200 dark:border-gray-700 mb-3" />
               )}
@@ -467,16 +469,19 @@ function Sidebar({
                       <Link
                         href={item.href}
                         onClick={onClose}
-                        className={`flex items-center rounded-xl text-sm font-medium transition-colors
-                          ${isCollapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5'}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors
                           ${isActive
                             ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'
                             : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                           }`}
                       >
                         <Icon className="w-5 h-5 flex-shrink-0" />
-                        {!isCollapsed && <span>{item.label}</span>}
+                        {/* Label — fade out saat collapsed */}
+                        <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+                          {item.label}
+                        </span>
                       </Link>
+                      {/* Tooltip saat collapsed */}
                       {isCollapsed && (
                         <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 pointer-events-none z-[60]">
                           {item.label}
@@ -492,10 +497,10 @@ function Sidebar({
         </nav>
 
         {/* Footer */}
-        <div className={`pt-4 pb-4 border-t border-gray-200 dark:border-gray-700 ${isCollapsed ? 'px-2' : 'px-4'}`}>
-          {!isCollapsed && (
-            <p className="text-xs text-gray-400 dark:text-gray-500">Engine by Imam Abdurasyid</p>
-          )}
+        <div className="pt-4 pb-4 px-4 border-t border-gray-200 dark:border-gray-700">
+          <p className={`text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+            Engine by Imam Abdurasyid
+          </p>
         </div>
       </aside>
     </>
@@ -525,7 +530,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       />
 
       {/* Main Content - with margins for sidebar and header */}
-      <main className={`ml-0 pt-16 min-h-screen overflow-auto transition-[margin] duration-300 ease-in-out ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
+      <main className={`ml-0 pt-16 min-h-screen overflow-auto transition-[margin] duration-300 ease-in-out ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-52'}`}>
         {children}
       </main>
 
