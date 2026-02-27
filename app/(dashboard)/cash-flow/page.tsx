@@ -69,14 +69,11 @@ function ActivitySection({ title, subtitle, total, totalLabel, transactions }: A
           onClick={() => setOpen(!open)}
           className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm"
         >
-          <span className="text-gray-800 dark:text-gray-200 font-medium">
-            {subtitle}
-          </span>
-          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-            <span className="text-xs text-gray-400 dark:text-gray-500">{transactions.length} transaksi</span>
-            <span className="text-xs">{open ? 'Sembunyikan' : 'Lihat detail'}</span>
-            {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          <div className="flex items-center gap-2">
+            {open ? <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
+            <span className="text-gray-800 dark:text-gray-200 font-medium">{subtitle}</span>
           </div>
+          <span className="text-xs text-gray-400 dark:text-gray-500">{transactions.length} transaksi</span>
         </button>
 
         {open && (

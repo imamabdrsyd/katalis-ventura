@@ -26,6 +26,12 @@ const BADGE_CLASSES: Record<TransactionCategory, string> = {
 
 const STOCK_BADGE_CLASS = 'bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400';
 
+function getMonthKey(date: string) {
+  const d = new Date(date);
+  return `${d.getFullYear()}-${d.getMonth()}`;
+}
+
+
 function isInventoryTransaction(transaction: Transaction): boolean {
   const debitCode = transaction.debit_account?.account_code || '';
   const debitName = transaction.debit_account?.account_name?.toLowerCase() || '';
@@ -151,16 +157,20 @@ export function TransactionList({
           </tr>
         </thead>
         <tbody>
-          {transactions.map((transaction, index) => (
-            <tr
-              key={transaction.id}
-              onClick={() => selectMode ? onToggleSelect?.(transaction.id) : onRowClick?.(transaction)}
-              className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
-                selectMode
-                  ? `cursor-pointer ${selectedIds?.has(transaction.id) ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`
-                  : onRowClick ? 'cursor-pointer' : ''
-              }`}
-            >
+          {transactions.map((transaction, index) => {
+            const isNewMonth = index > 0 && getMonthKey(transaction.date) !== getMonthKey(transactions[index - 1].date);
+            return (
+              <tr
+                key={transaction.id}
+                onClick={() => selectMode ? onToggleSelect?.(transaction.id) : onRowClick?.(transaction)}
+                className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
+                  isNewMonth ? 'border-t-2 border-t-gray-300 dark:border-t-gray-500' : ''
+                } ${
+                  selectMode
+                    ? `cursor-pointer ${selectedIds?.has(transaction.id) ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`
+                    : onRowClick ? 'cursor-pointer' : ''
+                }`}
+              >
               {selectMode && (
                 <td className="py-3 px-2 md:py-4">
                   <input
@@ -254,8 +264,9 @@ export function TransactionList({
                   </div>
                 </td>
               )}
-            </tr>
-          ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
