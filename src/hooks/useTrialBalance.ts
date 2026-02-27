@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useReportData } from './useReportData';
-import { calculateAccountLedger } from './useGeneralLedger';
+import { calculateAccountLedger, buildTransactionIndex } from './useGeneralLedger';
 import * as accountsApi from '@/lib/api/accounts';
 import type { Account } from '@/types';
 
@@ -47,13 +47,19 @@ export function useTrialBalance(): UseTrialBalanceReturn {
       .finally(() => setAccountsLoading(false));
   }, [activeBusiness]);
 
+  // Pre-build transaction index sekali — O(n) single pass
+  const txIndex = useMemo(
+    () => buildTransactionIndex(filteredTransactions),
+    [filteredTransactions]
+  );
+
   const trialBalance = useMemo((): TrialBalanceData => {
     const rows: TrialBalanceRow[] = [];
     let totalDebits = 0;
     let totalCredits = 0;
 
     accounts.forEach((account) => {
-      const ledger = calculateAccountLedger(account, filteredTransactions);
+      const ledger = calculateAccountLedger(account, filteredTransactions, txIndex);
 
       // Skip accounts with no activity
       if (ledger.entries.length === 0) return;
@@ -90,7 +96,7 @@ export function useTrialBalance(): UseTrialBalanceReturn {
     const isBalanced = difference < 0.01;
 
     return { rows, totalDebits, totalCredits, isBalanced, difference };
-  }, [accounts, filteredTransactions]);
+  }, [accounts, filteredTransactions, txIndex]);
 
   return {
     ...reportData,

@@ -285,9 +285,13 @@ export function calculateBalanceSheet(
   capital: number = 0
 ): BalanceSheetData {
 
-  // Separate double-entry and legacy transactions
-  const doubleEntryTransactions = transactions.filter(t => t.is_double_entry);
-  const legacyTransactions = transactions.filter(t => !t.is_double_entry);
+  // Single-pass partition: O(n) bukan 2x O(n)
+  const doubleEntryTransactions: Transaction[] = [];
+  const legacyTransactions: Transaction[] = [];
+  for (const t of transactions) {
+    if (t.is_double_entry) doubleEntryTransactions.push(t);
+    else legacyTransactions.push(t);
+  }
 
   // Initialize totals
   let totalAssets = 0;

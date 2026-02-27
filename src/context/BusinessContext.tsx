@@ -6,6 +6,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode,
 } from 'react';
 import { useRouter } from 'next/navigation';
@@ -160,20 +161,20 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     await fetchData();
   }, [fetchData]);
 
+  const contextValue = useMemo(() => ({
+    user,
+    userRole,
+    businesses,
+    activeBusiness,
+    activeBusinessId,
+    setActiveBusiness,
+    loading,
+    error,
+    refetch,
+  }), [user, userRole, businesses, activeBusiness, activeBusinessId, setActiveBusiness, loading, error, refetch]);
+
   return (
-    <BusinessContext.Provider
-      value={{
-        user,
-        userRole,
-        businesses,
-        activeBusiness,
-        activeBusinessId,
-        setActiveBusiness,
-        loading,
-        error,
-        refetch,
-      }}
-    >
+    <BusinessContext.Provider value={contextValue}>
       {children}
     </BusinessContext.Provider>
   );

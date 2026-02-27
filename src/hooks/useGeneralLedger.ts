@@ -27,18 +27,70 @@ export interface AccountLedger {
 
 export type AccountTypeFilter = AccountType | 'ALL';
 
+/**
+ * Pre-index transaksi per account ID untuk menghindari O(n) filter berulang.
+ * Return Map<accountId, Transaction[]> — single pass O(n).
+ */
+export function buildTransactionIndex(transactions: Transaction[]): {
+  index: Map<string, Transaction[]>;
+  legacyCount: number;
+} {
+  const index = new Map<string, Transaction[]>();
+  let legacyCount = 0;
+
+  for (const t of transactions) {
+    if (!t.is_double_entry) {
+      legacyCount++;
+      continue;
+    }
+    if (t.debit_account_id) {
+      const arr = index.get(t.debit_account_id);
+      if (arr) arr.push(t);
+      else index.set(t.debit_account_id, [t]);
+    }
+    if (t.credit_account_id) {
+      const arr = index.get(t.credit_account_id);
+      if (arr) arr.push(t);
+      else index.set(t.credit_account_id, [t]);
+    }
+  }
+
+  return { index, legacyCount };
+}
+
+/**
+ * Hitung ledger untuk satu akun. Jika txIndex diberikan, gunakan indexed lookup O(1).
+ * Fallback ke filter O(n) jika txIndex tidak ada (backward compat).
+ */
 export function calculateAccountLedger(
   account: Account,
-  transactions: Transaction[]
+  transactions: Transaction[],
+  txIndex?: { index: Map<string, Transaction[]>; legacyCount: number }
 ): AccountLedger {
-  // Only double-entry transactions have per-account links
-  const relevant = transactions.filter(
-    (t) =>
-      t.is_double_entry &&
-      (t.debit_account_id === account.id || t.credit_account_id === account.id)
-  );
+  let relevant: Transaction[];
+  let legacyCount: number;
 
-  const legacyCount = transactions.filter((t) => !t.is_double_entry).length;
+  if (txIndex) {
+    // O(1) lookup dari pre-built index
+    const indexed = txIndex.index.get(account.id) || [];
+    // Deduplicate: transaksi yang debit DAN credit ke akun yang sama muncul 2x di index
+    const seen = new Set<string>();
+    relevant = [];
+    for (const t of indexed) {
+      if (!seen.has(t.id)) {
+        seen.add(t.id);
+        relevant.push(t);
+      }
+    }
+    legacyCount = txIndex.legacyCount;
+  } else {
+    relevant = transactions.filter(
+      (t) =>
+        t.is_double_entry &&
+        (t.debit_account_id === account.id || t.credit_account_id === account.id)
+    );
+    legacyCount = transactions.filter((t) => !t.is_double_entry).length;
+  }
 
   // Sort ascending by date for running balance
   const sorted = [...relevant].sort((a, b) => {
@@ -135,24 +187,33 @@ export function useGeneralLedger(): UseGeneralLedgerReturn {
       .finally(() => setAccountsLoading(false));
   }, [activeBusiness]);
 
-  const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
+  const selectedAccount = useMemo(
+    () => accounts.find((a) => a.id === selectedAccountId),
+    [accounts, selectedAccountId]
+  );
 
-  // Calculate ledger for the currently selected account
+  // Pre-build transaction index sekali — O(n) single pass
+  const txIndex = useMemo(
+    () => buildTransactionIndex(filteredTransactions),
+    [filteredTransactions]
+  );
+
+  // Calculate ledger for the currently selected account — O(1) lookup
   const ledger = useMemo(() => {
     if (!selectedAccount) return null;
-    return calculateAccountLedger(selectedAccount, filteredTransactions);
-  }, [selectedAccount, filteredTransactions]);
+    return calculateAccountLedger(selectedAccount, filteredTransactions, txIndex);
+  }, [selectedAccount, filteredTransactions, txIndex]);
 
-  // Calculate summary for all accounts (for the accounts list panel)
+  // Calculate summary for all accounts — O(accounts) instead of O(accounts × transactions)
   const allLedgers = useMemo(() => {
     const filtered =
       filterType === 'ALL'
         ? accounts
         : accounts.filter((a) => a.account_type === filterType);
     return filtered.map((acc) =>
-      calculateAccountLedger(acc, filteredTransactions)
+      calculateAccountLedger(acc, filteredTransactions, txIndex)
     );
-  }, [accounts, filteredTransactions, filterType]);
+  }, [accounts, filteredTransactions, filterType, txIndex]);
 
   return {
     ...reportData,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useBusinessContext } from '@/context/BusinessContext';
 import * as transactionsApi from '@/lib/api/transactions';
@@ -102,12 +102,16 @@ export function useTransactions() {
     }
   }, [businessId, fetchTransactions, fetchAccounts]);
 
+  // Ref stabil agar event listener tidak di-attach/detach tiap categoryFilter berubah
+  const fetchTransactionsRef = useRef(fetchTransactions);
+  fetchTransactionsRef.current = fetchTransactions;
+
   // Refetch ketika FloatingQuickAdd berhasil menyimpan transaksi
   useEffect(() => {
-    const handler = () => fetchTransactions();
+    const handler = () => fetchTransactionsRef.current();
     window.addEventListener('transaction-saved', handler);
     return () => window.removeEventListener('transaction-saved', handler);
-  }, [fetchTransactions]);
+  }, []);
 
   // CRUD handlers
   const handleAddTransaction = useCallback(async (data: TransactionFormData) => {

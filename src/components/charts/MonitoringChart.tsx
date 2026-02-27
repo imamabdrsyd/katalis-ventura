@@ -100,53 +100,57 @@ export default function MonitoringChart({ transactions, loading = false, selecte
     }
   }, [transactions, period, selectedYear]);
 
-  const chartData = useMemo(() => {
-    const labels = chartDataPoints.length > 0 ? chartDataPoints.map((d) => d.label) : [];
-    const earningData = chartDataPoints.length > 0 ? chartDataPoints.map((d) => d.earning) : [];
-    const expenseData = chartDataPoints.length > 0 ? chartDataPoints.map((d) => d.expense) : [];
+  const { chartData, maxValue } = useMemo(() => {
+    const labels: string[] = [];
+    const earningData: number[] = [];
+    const expenseData: number[] = [];
+    let max = 0;
+
+    for (const d of chartDataPoints) {
+      labels.push(d.label);
+      earningData.push(d.earning);
+      expenseData.push(d.expense);
+      if (d.earning > max) max = d.earning;
+      if (d.expense > max) max = d.expense;
+    }
 
     return {
-      labels,
-      datasets: [
-        {
-          label: 'Revenue',
-          data: earningData,
-          borderColor: '#3b82f6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          borderWidth: 3,
-          fill: true,
-          tension: 0.4,
-          pointRadius: 6,
-          pointBackgroundColor: '#3b82f6',
-          pointBorderColor: '#ffffff',
-          pointBorderWidth: 2,
-          pointHoverRadius: 8,
-        },
-        {
-          label: 'Expenses',
-          data: expenseData,
-          borderColor: '#f87171',
-          backgroundColor: 'rgba(248, 113, 113, 0.1)',
-          borderWidth: 3,
-          borderDash: [5, 5],
-          fill: true,
-          tension: 0.4,
-          pointRadius: 6,
-          pointBackgroundColor: '#f87171',
-          pointBorderColor: '#ffffff',
-          pointBorderWidth: 2,
-          pointHoverRadius: 8,
-        },
-      ],
+      chartData: {
+        labels,
+        datasets: [
+          {
+            label: 'Revenue',
+            data: earningData,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 6,
+            pointBackgroundColor: '#3b82f6',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2,
+            pointHoverRadius: 8,
+          },
+          {
+            label: 'Expenses',
+            data: expenseData,
+            borderColor: '#f87171',
+            backgroundColor: 'rgba(248, 113, 113, 0.1)',
+            borderWidth: 3,
+            borderDash: [5, 5],
+            fill: true,
+            tension: 0.4,
+            pointRadius: 6,
+            pointBackgroundColor: '#f87171',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2,
+            pointHoverRadius: 8,
+          },
+        ],
+      },
+      maxValue: max * 1.1 || 100000,
     };
-  }, [chartDataPoints]);
-
-  const maxValue = useMemo(() => {
-    const allValues = [
-      ...chartDataPoints.map((d) => d.earning),
-      ...chartDataPoints.map((d) => d.expense),
-    ];
-    return Math.max(...allValues, 0) * 1.1 || 100000;
   }, [chartDataPoints]);
 
   const options = useMemo(() => ({

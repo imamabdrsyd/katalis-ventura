@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet } from 'lucide-react';
 import { useDashboard } from '@/hooks/useDashboard';
-import { calculateFinancialSummary, calculateCategoryCounts, calculateROI } from '@/lib/calculations';
+import { calculateFinancialSummary, calculateCategoryCounts } from '@/lib/calculations';
 import { formatCurrency, formatPercentage, formatDateShort } from '@/lib/utils';
 import MonitoringChart from '@/components/charts/MonitoringChart';
 import ExpenseBreakdownChart from '@/components/charts/ExpenseBreakdownChart';
@@ -34,6 +34,7 @@ export default function DashboardPage() {
     transactions,
     transactionsLoading,
     balanceSheet,
+    summary: allTimeSummary,
   } = useDashboard();
 
   const router = useRouter();
@@ -69,8 +70,6 @@ export default function DashboardPage() {
 
   const summary = useMemo(() => calculateFinancialSummary(filteredTransactions), [filteredTransactions]);
   const categoryCounts = useMemo(() => calculateCategoryCounts(filteredTransactions), [filteredTransactions]);
-  const allTimeExpenses = useMemo(() => calculateFinancialSummary(transactions), [transactions]);
-
   // --- Revenue: growth comparison ---
   // Monthly filter: compare vs previous month
   // Yearly filter: compare total revenue this year vs total revenue last year
@@ -140,9 +139,10 @@ export default function DashboardPage() {
       ? (totalExpenses / summary.totalEarn) * 100
       : null;
 
-  // --- ROI: all-time Net Profit / all-time CAPEX (not year-filtered) ---
-  const allTimeSummary = allTimeExpenses; // already calculateFinancialSummary(transactions)
-  const roi = calculateROI(allTimeSummary.netProfit, allTimeSummary.totalCapex);
+  // --- ROI: all-time Net Profit / all-time CAPEX ---
+  const roi = allTimeSummary.totalCapex > 0
+    ? (allTimeSummary.netProfit / allTimeSummary.totalCapex) * 100
+    : 0;
   const roiLabel =
     allTimeSummary.totalCapex === 0
       ? 'Belum ada investasi'
@@ -153,7 +153,7 @@ export default function DashboardPage() {
     roi > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400';
 
   // --- Cash Balance: runway in months (uses all-time data, not year-filtered) ---
-  const totalAllTimeExpenses = allTimeExpenses.totalOpex + allTimeExpenses.totalVar + allTimeExpenses.totalTax + allTimeExpenses.totalInterest;
+  const totalAllTimeExpenses = allTimeSummary.totalOpex + allTimeSummary.totalVar + allTimeSummary.totalTax + allTimeSummary.totalInterest;
   const avgMonthlyExpense = (() => {
     if (totalAllTimeExpenses === 0) return 0;
     const expenseMonths = new Set(

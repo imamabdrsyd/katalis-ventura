@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { calculateFinancialSummary, calculateROI, calculateCategoryCounts, calculateInitialCapital, calculateBalanceSheet } from '@/lib/calculations';
 import * as transactionsApi from '@/lib/api/transactions';
@@ -35,12 +35,11 @@ export function useDashboard() {
     }
   }, [businessId, fetchTransactions]);
 
-  const summary: FinancialSummary = calculateFinancialSummary(transactions);
-  // Calculate initial capital from transactions for ROI
-  const initialCapital = calculateInitialCapital(transactions);
-  const roi = calculateROI(summary.netProfit, initialCapital);
-  const categoryCounts: Record<TransactionCategory, number> = calculateCategoryCounts(transactions);
-  const balanceSheet = calculateBalanceSheet(transactions, business?.capital_investment || 0);
+  const summary = useMemo<FinancialSummary>(() => calculateFinancialSummary(transactions), [transactions]);
+  const initialCapital = useMemo(() => calculateInitialCapital(transactions), [transactions]);
+  const roi = useMemo(() => calculateROI(summary.netProfit, initialCapital), [summary.netProfit, initialCapital]);
+  const categoryCounts = useMemo<Record<TransactionCategory, number>>(() => calculateCategoryCounts(transactions), [transactions]);
+  const balanceSheet = useMemo(() => calculateBalanceSheet(transactions, business?.capital_investment || 0), [transactions, business?.capital_investment]);
 
   return {
     business,
