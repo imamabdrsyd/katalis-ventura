@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useReportData } from './useReportData';
 import { calculateCashFlow } from '@/lib/calculations';
 import { exportCashFlowToPDF, exportCashFlowToExcel } from '@/lib/export';
@@ -18,7 +18,10 @@ export function useCashFlow(): UseCashFlowReturn {
   // Get capital from business settings (used as fallback if no equity transactions exist)
   const capital = activeBusiness?.capital_investment ?? 0;
 
-  const cashFlow = calculateCashFlow(filteredTransactions, capital, transactions, startDate);
+  const cashFlow = useMemo(
+    () => calculateCashFlow(filteredTransactions, capital, transactions, startDate),
+    [filteredTransactions, capital, transactions, startDate]
+  );
 
   const handleExportPDF = useCallback(() => {
     if (!activeBusiness) return;

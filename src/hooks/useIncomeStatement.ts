@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useReportData } from './useReportData';
 import { calculateFinancialSummary, calculateIncomeStatementMetrics } from '@/lib/calculations';
 import { exportIncomeStatementToPDF, exportIncomeStatementToExcel } from '@/lib/export';
@@ -26,10 +26,17 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
   const reportData = useReportData();
   const { activeBusiness, filteredTransactions, startDate, endDate, setShowExportMenu } = reportData;
 
-  const summary = calculateFinancialSummary(filteredTransactions);
-  const metrics = calculateIncomeStatementMetrics(summary);
+  const summary = useMemo(
+    () => calculateFinancialSummary(filteredTransactions),
+    [filteredTransactions]
+  );
 
-  const transactionsByCategory: TransactionsByCategory = {
+  const metrics = useMemo(
+    () => calculateIncomeStatementMetrics(summary),
+    [summary]
+  );
+
+  const transactionsByCategory: TransactionsByCategory = useMemo(() => ({
     revenue: filteredTransactions.filter(t => t.category === 'EARN'),
     cogs: filteredTransactions.filter(t =>
       t.category === 'VAR' &&
@@ -44,7 +51,7 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
         !t.is_double_entry
       )
     ),
-  };
+  }), [filteredTransactions]);
 
   const handleExportPDF = useCallback(() => {
     if (!activeBusiness) return;

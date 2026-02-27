@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useBusinessContext } from '@/context/BusinessContext';
 import * as transactionsApi from '@/lib/api/transactions';
 import { getAccounts } from '@/lib/api/accounts';
@@ -11,6 +12,7 @@ import type { TransactionFormData } from '@/components/transactions/TransactionF
 export function useTransactions() {
   const { user, activeBusinessId: businessId, loading: businessLoading, error: businessError, userRole } = useBusinessContext();
   const canManageTransactions = userRole === 'business_manager' || userRole === 'both';
+  const queryClient = useQueryClient();
 
   // Transaction state
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -119,6 +121,7 @@ export function useTransactions() {
       });
       setShowAddModal(false);
       setTransactionMode(null);
+      queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
       fetchTransactions();
     } catch (err: any) {
       alert(err.message || 'Gagal menambahkan transaksi');
@@ -133,6 +136,7 @@ export function useTransactions() {
     try {
       await transactionsApi.updateTransaction(editTransaction.id, data);
       setEditTransaction(null);
+      queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
       fetchTransactions();
     } catch (err: any) {
       alert(err.message || 'Gagal mengupdate transaksi');
@@ -147,6 +151,7 @@ export function useTransactions() {
     try {
       await transactionsApi.deleteTransaction(deleteTransaction.id);
       setDeleteTransaction(null);
+      queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
       fetchTransactions();
     } catch (err: any) {
       alert(err.message || 'Gagal menghapus transaksi');
@@ -183,6 +188,7 @@ export function useTransactions() {
         created_by: user.id,
       });
       setShowQuickAddModal(false);
+      queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
       fetchTransactions();
     } catch (err: any) {
       alert(err.message || 'Gagal menambahkan transaksi');
@@ -243,6 +249,7 @@ export function useTransactions() {
       }
       setSelectedIds(new Set());
       setSelectMode(false);
+      queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
       fetchTransactions();
     } catch (err: any) {
       alert(err.message || 'Gagal menghapus transaksi');
