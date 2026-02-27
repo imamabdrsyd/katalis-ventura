@@ -100,6 +100,13 @@ export function useTransactions() {
     }
   }, [businessId, fetchTransactions, fetchAccounts]);
 
+  // Refetch ketika FloatingQuickAdd berhasil menyimpan transaksi
+  useEffect(() => {
+    const handler = () => fetchTransactions();
+    window.addEventListener('transaction-saved', handler);
+    return () => window.removeEventListener('transaction-saved', handler);
+  }, [fetchTransactions]);
+
   // CRUD handlers
   const handleAddTransaction = useCallback(async (data: TransactionFormData) => {
     if (!businessId || !user) return;

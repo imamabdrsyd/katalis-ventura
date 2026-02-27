@@ -54,6 +54,7 @@ export function FloatingQuickAdd({
           created_by: user.id,
         });
         setIsOpen(false);
+        window.dispatchEvent(new CustomEvent('transaction-saved'));
       } catch (err: any) {
         alert(err.message || 'Gagal menambahkan transaksi');
       } finally {

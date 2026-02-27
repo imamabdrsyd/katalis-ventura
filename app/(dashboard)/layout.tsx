@@ -97,7 +97,7 @@ const navSections: NavSection[] = [
   },
 ];
 
-function Header({ onMenuClick, onQuickAddClick }: { onMenuClick: () => void; onQuickAddClick: () => void }) {
+function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: () => void; onQuickAddClick: () => void; isCollapsed: boolean }) {
   const router = useRouter();
   const { user, businesses, activeBusiness, setActiveBusiness, userRole } = useBusinessContext();
   const supabase = createClient();
@@ -153,7 +153,7 @@ function Header({ onMenuClick, onQuickAddClick }: { onMenuClick: () => void; onQ
 
   return (
     <>
-      <header className="fixed top-0 left-0 md:left-64 right-0 h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-30 flex items-center justify-between px-4 md:px-6">
+      <header className={`fixed top-0 left-0 right-0 h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-30 flex items-center justify-between px-4 md:px-6 transition-[left] duration-300 ease-in-out ${isCollapsed ? 'md:left-16' : 'md:left-64'}`}>
       {/* Mobile Menu Button */}
       <button
         onClick={onMenuClick}
@@ -354,7 +354,17 @@ function Header({ onMenuClick, onQuickAddClick }: { onMenuClick: () => void; onQ
   );
 }
 
-function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+function Sidebar({
+  isOpen,
+  onClose,
+  isCollapsed,
+  onToggleCollapse,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
+}) {
   const pathname = usePathname();
 
   return (
@@ -367,70 +377,127 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
         />
       )}
 
-      <aside className={`fixed top-0 left-0 w-64 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-5 flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
-        {/* Mobile close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 md:hidden"
-        >
-          <X className="w-5 h-5" />
-        </button>
+      <aside
+        className={`fixed top-0 left-0 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col z-50 transform transition-all duration-300 ease-in-out
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
+          ${isCollapsed ? 'w-16' : 'w-64'}`}
+      >
+        {/* Logo + Hamburger row */}
+        <div className={`flex items-center border-b border-gray-200 dark:border-gray-700 h-16 flex-shrink-0 ${isCollapsed ? 'justify-center px-2' : 'justify-between px-4'}`}>
+          {isCollapsed ? (
+            /* Favicon sebagai tombol expand */
+            <button
+              onClick={onToggleCollapse}
+              className="hidden md:flex p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              title="Expand sidebar"
+            >
+              <Image
+                src="/images/favicon.png"
+                alt="Expand sidebar"
+                width={28}
+                height={28}
+                className="object-contain dark:hidden"
+              />
+              <Image
+                src="/images/favicon-dark.png"
+                alt="Expand sidebar"
+                width={28}
+                height={28}
+                className="object-contain hidden dark:block"
+              />
+            </button>
+          ) : (
+            <>
+              <div className="flex items-center">
+                <Image
+                  src="/images/axion.png"
+                  alt="Axion Logo"
+                  width={100}
+                  height={32}
+                  className="object-contain dark:hidden"
+                />
+                <Image
+                  src="/images/axion-dark.png"
+                  alt="Axion Logo"
+                  width={100}
+                  height={32}
+                  className="object-contain hidden dark:block"
+                />
+              </div>
 
-        {/* Logo */}
-        <div className="flex items-center gap-3 mb-8">
-        <Image
-          src="/images/axion.png"
-          alt="Axion Logo"
-          width={110}
-          height={36}
-          className="object-contain dark:hidden"
-        />
-        <Image
-          src="/images/axion-dark.png"
-          alt="Axion Logo"
-          width={110}
-          height={36}
-          className="object-contain hidden dark:block"
-        />
-      </div>
+              {/* Hamburger collapse — desktop only */}
+              <button
+                onClick={onToggleCollapse}
+                className="hidden md:flex p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                title="Collapse sidebar"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+            </>
+          )}
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto">
-        {navSections.map((section, sectionIndex) => (
-          <div key={section.label} className={sectionIndex > 0 ? 'mt-6' : ''}>
-            <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-3 mb-2">
-              {section.label}
+          {/* Mobile close button */}
+          <button
+            onClick={onClose}
+            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 md:hidden"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <nav className={`flex-1 py-4 ${isCollapsed ? 'px-2 overflow-visible' : 'px-3 overflow-y-auto'}`}>
+          {navSections.map((section, sectionIndex) => (
+            <div key={section.label} className={sectionIndex > 0 ? 'mt-5' : ''}>
+              {/* Section label */}
+              {!isCollapsed && (
+                <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-3 mb-2">
+                  {section.label}
+                </div>
+              )}
+              {isCollapsed && sectionIndex > 0 && (
+                <div className="border-t border-gray-200 dark:border-gray-700 mb-3" />
+              )}
+              <div className="space-y-1">
+                {section.items.map((item) => {
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                  const Icon = item.icon;
+                  return (
+                    <div key={item.href} className="relative group">
+                      <Link
+                        href={item.href}
+                        onClick={onClose}
+                        className={`flex items-center rounded-xl text-sm font-medium transition-colors
+                          ${isCollapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5'}
+                          ${isActive
+                            ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'
+                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                      >
+                        <Icon className="w-5 h-5 flex-shrink-0" />
+                        {!isCollapsed && <span>{item.label}</span>}
+                      </Link>
+                      {isCollapsed && (
+                        <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 pointer-events-none z-[60]">
+                          {item.label}
+                          <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            <div className="space-y-1">
-              {section.items.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onClose}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                      isActive
-                        ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'
-                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </nav>
+          ))}
+        </nav>
 
-      {/* Footer */}
-      <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-        <p className="text-xs text-gray-400 dark:text-gray-500 text-left">Engine by Imam Abdurasyid</p>
-      </div>
-    </aside>
+        {/* Footer */}
+        <div className={`pt-4 pb-4 border-t border-gray-200 dark:border-gray-700 ${isCollapsed ? 'px-2' : 'px-4'}`}>
+          {!isCollapsed && (
+            <p className="text-xs text-gray-400 dark:text-gray-500">Engine by Imam Abdurasyid</p>
+          )}
+        </div>
+      </aside>
     </>
   );
 }
@@ -438,20 +505,27 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
 function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Fixed Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        isCollapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
+      />
 
       {/* Fixed Header */}
       <Header
         onMenuClick={() => setSidebarOpen(true)}
         onQuickAddClick={() => setQuickAddOpen(true)}
+        isCollapsed={sidebarCollapsed}
       />
 
       {/* Main Content - with margins for sidebar and header */}
-      <main className="ml-0 md:ml-64 pt-16 min-h-screen overflow-auto">
+      <main className={`ml-0 pt-16 min-h-screen overflow-auto transition-[margin] duration-300 ease-in-out ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
         {children}
       </main>
 
