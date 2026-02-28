@@ -5,7 +5,6 @@ import { Check, X, Loader2, Eye, EyeOff, Camera, ImageIcon } from 'lucide-react'
 import type { BusinessOmniChannel } from '@/types';
 import { upsertOmniChannel, checkSlugAvailability, fetchAvailableSlugSuggestions } from '@/lib/api/omniChannel';
 import { generateSlugFromName, isValidSlugFormat, isReservedSlug, generateSlugSuggestions } from '@/lib/utils/slugUtils';
-import { createClient } from '@/lib/supabase';
 
 interface Props {
   businessId: string;
@@ -106,15 +105,15 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
     setUploading(true);
     setUploadError('');
     try {
-      const supabase = createClient();
-      const ext = file.name.split('.').pop();
-      const filePath = `business-logos/${businessId}/${Date.now()}.${ext}`;
-      const { error: uploadErr } = await supabase.storage
-        .from('profiles')
-        .upload(filePath, file, { cacheControl: '3600', upsert: true });
-      if (uploadErr) throw uploadErr;
-      const { data } = supabase.storage.from('profiles').getPublicUrl(filePath);
-      setLogoUrl(data.publicUrl);
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`/api/omni-channel/${businessId}/logo`, {
+        method: 'POST',
+        body: formData,
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Gagal upload foto');
+      setLogoUrl(json.url);
     } catch (err: any) {
       setUploadError(err.message || 'Gagal upload foto');
     } finally {
