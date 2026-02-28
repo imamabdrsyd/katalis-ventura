@@ -19,8 +19,8 @@ const linkSchema = z.object({
 async function verifyManager(userId: string, businessId: string): Promise<boolean> {
   const supabase = createAdminClient();
   const [{ data: role }, { data: business }] = await Promise.all([
-    supabase.from('user_business_roles').select('role').eq('user_id', userId).eq('business_id', businessId).single(),
-    supabase.from('businesses').select('created_by').eq('id', businessId).single(),
+    supabase.from('user_business_roles').select('role').eq('user_id', userId).eq('business_id', businessId).maybeSingle(),
+    supabase.from('businesses').select('created_by').eq('id', businessId).maybeSingle(),
   ]);
   return role?.role === 'business_manager' || role?.role === 'both' || business?.created_by === userId;
 }

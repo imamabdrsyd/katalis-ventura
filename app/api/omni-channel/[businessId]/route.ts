@@ -59,19 +59,20 @@ export async function PUT(
   // Use admin client to bypass RLS — auth is already verified above via getAuthenticatedUser
   const supabase = createAdminClient();
 
-  // Verify user is a member of this business
-  const { data: role } = await supabase
-    .from('user_business_roles')
-    .select('role')
-    .eq('user_id', user.id)
-    .eq('business_id', businessId)
-    .single();
-
-  const { data: business } = await supabase
-    .from('businesses')
-    .select('created_by')
-    .eq('id', businessId)
-    .single();
+  // Verify user is a manager of this business
+  const [{ data: role }, { data: business }] = await Promise.all([
+    supabase
+      .from('user_business_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('business_id', businessId)
+      .maybeSingle(),
+    supabase
+      .from('businesses')
+      .select('created_by')
+      .eq('id', businessId)
+      .maybeSingle(),
+  ]);
 
   const isManager =
     role?.role === 'business_manager' ||
