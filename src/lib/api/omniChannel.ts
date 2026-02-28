@@ -31,7 +31,13 @@ export async function upsertOmniChannel(
     body: JSON.stringify(payload),
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json.error || 'Gagal menyimpan halaman publik');
+  if (!res.ok) {
+    let msg = json.error || 'Gagal menyimpan halaman publik';
+    if (json.debug) {
+      msg += ` (role: ${json.debug.roleValue}, isCreator: ${json.debug.isCreator})`;
+    }
+    throw new Error(msg);
+  }
   return json.data;
 }
 

@@ -9,7 +9,10 @@ const upsertSchema = z.object({
   title: z.string().min(1).max(200),
   tagline: z.string().max(300).optional().nullable(),
   bio: z.string().max(1000).optional().nullable(),
-  logo_url: z.string().url().optional().nullable(),
+  logo_url: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim() === '' ? null : val),
+    z.string().url().nullable().optional()
+  ),
 });
 
 export async function GET(
@@ -60,7 +63,7 @@ export async function PUT(
   const supabase = createAdminClient();
 
   // Verify user is a manager of this business
-  const [{ data: role }, { data: business }] = await Promise.all([
+  const [roleResult, businessResult] = await Promise.all([
     supabase
       .from('user_business_roles')
       .select('role')
@@ -74,13 +77,32 @@ export async function PUT(
       .maybeSingle(),
   ]);
 
+  const role = roleResult.data;
+  const business = businessResult.data;
+
   const isManager =
     role?.role === 'business_manager' ||
     role?.role === 'both' ||
     business?.created_by === user.id;
 
   if (!isManager) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    console.error('[omni-channel] Forbidden debug:', {
+      userId: user.id,
+      businessId,
+      role: role?.role ?? null,
+      roleError: roleResult.error?.message ?? null,
+      businessCreatedBy: business?.created_by ?? null,
+      businessError: businessResult.error?.message ?? null,
+    });
+    return NextResponse.json({
+      error: 'Forbidden',
+      debug: {
+        hasRole: !!role,
+        roleValue: role?.role ?? null,
+        hasBusiness: !!business,
+        isCreator: business?.created_by === user.id,
+      },
+    }, { status: 403 });
   }
 
   const { data, error } = await supabase
