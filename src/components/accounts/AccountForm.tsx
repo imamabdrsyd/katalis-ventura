@@ -173,7 +173,7 @@ export function AccountForm({
       {/* Warning for edit mode */}
       {isEditMode && (
         <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg">
-          <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-5 h-5 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-amber-800 dark:text-amber-200">
             Kode dan tipe akun tidak dapat diubah.
           </p>
@@ -200,7 +200,7 @@ export function AccountForm({
             ))}
           </select>
           {parentAccountId && selectedParent && (
-            <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+            <p className="text-xs text-emerald-500 dark:text-emerald-400 mt-1">
               ✓ Sub-akun akan ditambahkan ke: {selectedParent.account_name}
             </p>
           )}

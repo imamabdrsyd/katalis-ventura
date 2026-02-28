@@ -68,26 +68,59 @@
   }
 
   .badge-earn {
-    @apply bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400;
+    @apply bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400;
   }
 
   .badge-opex {
-    @apply bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400;
+    @apply bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400;
   }
 
   .badge-var {
-    @apply bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400;
+    @apply bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400;
   }
 
   .badge-capex {
-    @apply bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400;
+    @apply bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400;
   }
 
   .badge-tax {
-    @apply bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-400;
+    @apply bg-purple-50 dark:bg-purple-900/30 text-purple-500 dark:text-purple-400;
   }
 
   .badge-fin {
-    @apply bg-pink-100 dark:bg-pink-900/50 text-pink-700 dark:text-pink-400;
+    @apply bg-pink-50 dark:bg-pink-900/30 text-pink-500 dark:text-pink-400;
+  }
+}
+
+/* Import highlight animation */
+@keyframes import-highlight {
+  0% {
+    background-color: rgb(238 242 255); /* indigo-50 */
+  }
+  50% {
+    background-color: rgb(224 231 255); /* indigo-100 */
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.dark .animate-import-highlight {
+  animation: import-highlight-dark 3s ease-out forwards;
+}
+
+.animate-import-highlight {
+  animation: import-highlight 3s ease-out forwards;
+}
+
+@keyframes import-highlight-dark {
+  0% {
+    background-color: rgb(49 46 129 / 0.3); /* indigo-900/30 */
+  }
+  50% {
+    background-color: rgb(49 46 129 / 0.2);
+  }
+  100% {
+    background-color: transparent;
   }
 }

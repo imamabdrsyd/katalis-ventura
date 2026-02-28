@@ -9,10 +9,10 @@ import type { AccountType } from '@/types';
 
 const ACCOUNT_TYPE_BG: Record<AccountType, string> = {
   ASSET: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300',
-  LIABILITY: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300',
-  EQUITY: 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300',
+  LIABILITY: 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-300',
+  EQUITY: 'bg-purple-50 dark:bg-purple-900/20 text-purple-500 dark:text-purple-300',
   REVENUE: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300',
-  EXPENSE: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300',
+  EXPENSE: 'bg-amber-50 dark:bg-amber-900/20 text-amber-500 dark:text-amber-300',
 };
 
 const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
@@ -82,7 +82,7 @@ export default function TrialBalancePage() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
-          <ClipboardCheck className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+          <ClipboardCheck className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
           Trial Balance
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -91,7 +91,7 @@ export default function TrialBalancePage() {
       </div>
 
       {/* Period Filter */}
-      <div className="card mb-6">
+      <div className="card-static mb-6">
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
           <div className="flex-1">
             <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
@@ -104,7 +104,7 @@ export default function TrialBalancePage() {
                   onClick={() => handlePeriodChange(p)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     period === p
-                      ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
+                      ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-300'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
@@ -146,7 +146,7 @@ export default function TrialBalancePage() {
       </div>
 
       {/* Trial Balance Table */}
-      <div className="card p-0 overflow-hidden">
+      <div className="card-static p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[540px]">
             <thead>
@@ -160,7 +160,7 @@ export default function TrialBalancePage() {
                 <th className="text-right py-3 px-4 text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider w-36">
                   Debit
                 </th>
-                <th className="text-right py-3 px-4 text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wider w-36">
+                <th className="text-right py-3 px-4 text-xs font-semibold text-red-500 dark:text-red-400 uppercase tracking-wider w-36">
                   Kredit
                 </th>
               </tr>
@@ -206,7 +206,7 @@ export default function TrialBalancePage() {
                         </td>
                         <td className="py-2.5 px-4 text-right text-sm font-medium">
                           {row.creditBalance > 0 ? (
-                            <span className="text-red-600 dark:text-red-400">
+                            <span className="text-red-500 dark:text-red-400">
                               {formatCurrency(row.creditBalance)}
                             </span>
                           ) : (
@@ -230,7 +230,7 @@ export default function TrialBalancePage() {
                   <td className="py-3 px-4 text-right text-sm font-bold text-blue-700 dark:text-blue-300">
                     {formatCurrency(trialBalance.totalDebits)}
                   </td>
-                  <td className="py-3 px-4 text-right text-sm font-bold text-red-700 dark:text-red-300">
+                  <td className="py-3 px-4 text-right text-sm font-bold text-red-500 dark:text-red-300">
                     {formatCurrency(trialBalance.totalCredits)}
                   </td>
                 </tr>
@@ -249,9 +249,9 @@ export default function TrialBalancePage() {
         }`}>
           <div className="flex items-center gap-3">
             {trialBalance.isBalanced ? (
-              <CheckCircle className="w-6 h-6 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+              <CheckCircle className="w-6 h-6 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
             ) : (
-              <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0" />
+              <AlertCircle className="w-6 h-6 text-red-500 dark:text-red-400 flex-shrink-0" />
             )}
             <div className="flex-1">
               <p className={`font-semibold ${
@@ -263,8 +263,8 @@ export default function TrialBalancePage() {
               </p>
               <p className={`text-sm mt-1 ${
                 trialBalance.isBalanced
-                  ? 'text-emerald-700 dark:text-emerald-300'
-                  : 'text-red-700 dark:text-red-300'
+                  ? 'text-emerald-500 dark:text-emerald-300'
+                  : 'text-red-500 dark:text-red-300'
               }`}>
                 Total Debit ({formatCurrency(trialBalance.totalDebits)})
                 {trialBalance.isBalanced ? ' = ' : ' \u2260 '}

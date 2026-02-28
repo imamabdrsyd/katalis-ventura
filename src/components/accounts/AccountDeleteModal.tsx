@@ -35,9 +35,9 @@ export function AccountDeleteModal({
           {/* Icon */}
           <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-amber-100 dark:bg-amber-900/30">
             {isSystemAccount ? (
-              <Lock className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              <Lock className="w-6 h-6 text-amber-500 dark:text-amber-400" />
             ) : (
-              <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              <AlertTriangle className="w-6 h-6 text-amber-500 dark:text-amber-400" />
             )}
           </div>
 
@@ -107,7 +107,7 @@ export function AccountDeleteModal({
                 </button>
                 <button
                   onClick={onConfirm}
-                  className="flex-1 px-4 py-2 bg-red-600 dark:bg-red-700 text-white font-medium rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2 bg-red-500 dark:bg-red-600 text-white font-medium rounded-lg hover:bg-red-600 dark:hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={loading}
                 >
                   {loading ? 'Deactivating...' : 'Deactivate'}

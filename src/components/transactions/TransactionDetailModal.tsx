@@ -23,12 +23,12 @@ interface TransactionDetailModalProps {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  EARN: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300',
-  OPEX: 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300',
-  VAR: 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300',
+  EARN: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-500 dark:text-emerald-300',
+  OPEX: 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-300',
+  VAR: 'bg-amber-50 dark:bg-amber-900/30 text-amber-500 dark:text-amber-300',
   CAPEX: 'bg-blue-100 dark:bg-blue-900/100 text-blue-700 dark:text-blue-700',
-  TAX: 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300',
-  FIN: 'bg-pink-100 dark:bg-pink-900/50 text-pink-700 dark:text-pink-300',
+  TAX: 'bg-purple-50 dark:bg-purple-900/30 text-purple-500 dark:text-purple-300',
+  FIN: 'bg-pink-50 dark:bg-pink-900/30 text-pink-500 dark:text-pink-300',
 };
 
 const STOCK_COLOR = 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300';
@@ -188,26 +188,26 @@ export function TransactionDetailModal({
       <div className="space-y-6">
         {/* Matching Principle Warning Banner */}
         {showWarning && matchingWarning && (
-          <div className="rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4">
+          <div className="rounded-lg border border-amber-200 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3 flex-1 min-w-0">
-                <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <AlertTriangle className="w-5 h-5 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
                     {matchingWarning.title}
                   </p>
-                  <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+                  <p className="mt-1 text-sm text-amber-500 dark:text-amber-300">
                     {matchingWarning.body}
                   </p>
-                  <div className="mt-2 px-3 py-2 bg-amber-100 dark:bg-amber-900/40 rounded-md font-mono text-xs text-amber-800 dark:text-amber-200">
+                  <div className="mt-2 px-3 py-2 bg-amber-50 dark:bg-amber-900/40 rounded-md font-mono text-xs text-amber-800 dark:text-amber-200">
                     {matchingWarning.journalHint}
                   </div>
-                  <p className="mt-2 text-xs text-amber-600 dark:text-amber-400 italic">
+                  <p className="mt-2 text-xs text-amber-500 dark:text-amber-400 italic">
                     Jumlah HPP mungkin berbeda dari nilai penjualan. Isi jumlah yang tepat pada form berikutnya.
                   </p>
                   <button
                     onClick={handleCreateCOGSEntry}
-                    className="mt-3 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-colors"
+                    className="mt-3 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 dark:bg-amber-500 dark:hover:bg-amber-500 text-white text-sm font-medium rounded-lg transition-colors"
                   >
                     Buat Entry COGS
                   </button>
@@ -215,7 +215,7 @@ export function TransactionDetailModal({
               </div>
               <button
                 onClick={() => setWarningDismissed(true)}
-                className="p-1 rounded hover:bg-amber-100 dark:hover:bg-amber-800 transition-colors flex-shrink-0"
+                className="p-1 rounded hover:bg-amber-50 dark:hover:bg-amber-800 transition-colors flex-shrink-0"
                 aria-label="Abaikan peringatan ini"
               >
                 <X className="w-4 h-4 text-amber-500 dark:text-amber-400" />
@@ -253,7 +253,7 @@ export function TransactionDetailModal({
           <div className="text-left">
             <p className={`text-2xl font-bold ${
               transaction.category === 'EARN'
-                ? 'text-emerald-600 dark:text-emerald-400'
+                ? 'text-emerald-500 dark:text-emerald-400'
                 : 'text-gray-900 dark:text-gray-100'
             }`}>
               {formatCurrency(transaction.amount)}
@@ -278,7 +278,7 @@ export function TransactionDetailModal({
               </span>
             </div>
             {transaction.meta.unit_breakdown.unit && (
-              <span className="ml-auto px-2 py-0.5 bg-indigo-100 dark:bg-indigo-100 text-indigo-700 dark:text-indigo-700 rounded text-xs font-medium">
+              <span className="ml-auto px-2 py-0.5 bg-indigo-50 dark:bg-indigo-50 text-indigo-500 dark:text-indigo-500 rounded text-xs font-medium">
                 {transaction.meta.unit_breakdown.unit}
               </span>
             )}
@@ -367,7 +367,7 @@ export function TransactionDetailModal({
               {soldStockTransactions.map((stock) => (
                 <div
                   key={stock.id}
-                  className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg"
+                  className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-600 rounded-lg"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
@@ -382,7 +382,7 @@ export function TransactionDetailModal({
                       )}
                     </p>
                   </div>
-                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-300 ml-3 flex-shrink-0">
+                  <p className="text-sm font-semibold text-amber-500 dark:text-amber-300 ml-3 flex-shrink-0">
                     {formatCurrency(stock.amount)}
                   </p>
                 </div>
@@ -491,9 +491,9 @@ export function TransactionDetailModal({
                       DELETE: 'Dihapus',
                     }[log.operation];
                     const operationColor = {
-                      INSERT: 'text-emerald-600 dark:text-emerald-400',
+                      INSERT: 'text-emerald-500 dark:text-emerald-400',
                       UPDATE: 'text-blue-600 dark:text-blue-400',
-                      DELETE: 'text-red-600 dark:text-red-400',
+                      DELETE: 'text-red-500 dark:text-red-400',
                     }[log.operation];
 
                     return (
@@ -530,20 +530,20 @@ export function TransactionDetailModal({
                                 <div className="flex items-start gap-2 text-xs">
                                   {change.oldValue !== null && (
                                     <div className="flex-1">
-                                      <span className="text-red-600 dark:text-red-400 font-semibold">
+                                      <span className="text-red-500 dark:text-red-400 font-semibold">
                                         Sebelum:
                                       </span>
-                                      <div className="mt-1 p-2 bg-red-50 dark:bg-red-900/20 rounded text-red-700 dark:text-red-300 font-mono">
+                                      <div className="mt-1 p-2 bg-red-50 dark:bg-red-900/20 rounded text-red-500 dark:text-red-300 font-mono">
                                         {formatAuditValue(change.oldValue)}
                                       </div>
                                     </div>
                                   )}
                                   {change.newValue !== null && (
                                     <div className="flex-1">
-                                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                                      <span className="text-emerald-500 dark:text-emerald-400 font-semibold">
                                         Sesudah:
                                       </span>
-                                      <div className="mt-1 p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded text-emerald-700 dark:text-emerald-300 font-mono">
+                                      <div className="mt-1 p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded text-emerald-500 dark:text-emerald-300 font-mono">
                                         {formatAuditValue(change.newValue)}
                                       </div>
                                     </div>

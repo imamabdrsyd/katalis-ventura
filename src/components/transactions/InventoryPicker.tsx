@@ -36,7 +36,7 @@ export function InventoryPicker({
         className="w-full flex items-center justify-between px-4 py-3 text-left"
       >
         <div className="flex items-center gap-2">
-          <Package className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+          <Package className="w-4 h-4 text-amber-500 dark:text-amber-400" />
           <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
             Persediaan yang Terjual
           </span>
@@ -69,8 +69,8 @@ export function InventoryPicker({
                   onClick={() => onToggle(tx.id)}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
                     isSelected
-                      ? 'bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-300 dark:border-indigo-600'
-                      : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-indigo-200 dark:hover:border-indigo-700'
+                      ? 'bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-300 dark:border-indigo-500'
+                      : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-indigo-200 dark:hover:border-indigo-600'
                   }`}
                 >
                   {/* Checkbox */}

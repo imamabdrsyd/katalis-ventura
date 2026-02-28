@@ -264,7 +264,7 @@ export default function MonitoringChart({ transactions, loading = false, selecte
             onClick={() => setPeriod('monthly')}
             className={`px-4 py-1.5 text-sm rounded-full transition-all ${
               period === 'monthly'
-                ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 font-semibold shadow-sm'
+                ? 'bg-white dark:bg-gray-600 text-indigo-500 dark:text-indigo-400 font-semibold shadow-sm'
                 : 'bg-transparent text-gray-500 dark:text-gray-400 font-normal hover:text-gray-700 dark:hover:text-gray-200'
             }`}
           >
@@ -274,7 +274,7 @@ export default function MonitoringChart({ transactions, loading = false, selecte
             onClick={() => setPeriod('yearly')}
             className={`px-4 py-1.5 text-sm rounded-full transition-all ${
               period === 'yearly'
-                ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 font-semibold shadow-sm'
+                ? 'bg-white dark:bg-gray-600 text-indigo-500 dark:text-indigo-400 font-semibold shadow-sm'
                 : 'bg-transparent text-gray-500 dark:text-gray-400 font-normal hover:text-gray-700 dark:hover:text-gray-200'
             }`}
           >

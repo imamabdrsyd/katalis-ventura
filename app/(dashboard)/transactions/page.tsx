@@ -11,7 +11,7 @@ import type { TransactionCategory } from '@/types';
 import { QuickTransactionForm } from '@/components/transactions/QuickTransactionForm';
 import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical, CreditCard } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
@@ -96,6 +96,23 @@ function TransactionsPageInner() {
     handleOpenOutModal,
   } = useTransactions();
 
+  // Highlight recently imported transactions
+  const [highlightAfter, setHighlightAfter] = useState<string | null>(null);
+
+  const handleImportComplete = useCallback((importedAt?: string) => {
+    fetchTransactions();
+    if (importedAt) {
+      setHighlightAfter(importedAt);
+    }
+  }, [fetchTransactions]);
+
+  // Auto-clear highlight after 8 seconds
+  useEffect(() => {
+    if (!highlightAfter) return;
+    const timer = setTimeout(() => setHighlightAfter(null), 8000);
+    return () => clearTimeout(timer);
+  }, [highlightAfter]);
+
   // Read category filter from URL search params (e.g., /transactions?category=EARN)
   const searchParams = useSearchParams();
   useEffect(() => {
@@ -122,7 +139,7 @@ function TransactionsPageInner() {
     return (
       <div className="p-8">
         <div className="max-w-md mx-auto text-center">
-          <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-amber-50 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-3xl">&#9888;&#65039;</span>
           </div>
           <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">Bisnis Tidak Ditemukan</h2>
@@ -141,7 +158,7 @@ function TransactionsPageInner() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
-              <CreditCard className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+              <CreditCard className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
               Kelola Transaksi
             </h1>
         </div>
@@ -166,7 +183,7 @@ function TransactionsPageInner() {
             {/* TEMPORARILY HIDDEN - To re-enable, uncomment this section */}
             {/* <button
               onClick={handleOpenInModal}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors flex items-center gap-2 font-medium"
+              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors flex items-center gap-2 font-medium"
             >
               <TrendingUp className="h-5 w-5" />
               Uang Masuk
@@ -174,7 +191,7 @@ function TransactionsPageInner() {
 
             <button
               onClick={handleOpenOutModal}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2 font-medium"
+              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors flex items-center gap-2 font-medium"
             >
               <TrendingDown className="h-5 w-5" />
               Uang Keluar
@@ -193,8 +210,8 @@ function TransactionsPageInner() {
       {/* Error */}
       {error && (
         <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl">
-          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-          <button onClick={fetchTransactions} className="text-red-600 dark:text-red-400 underline text-sm mt-2">
+          <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
+          <button onClick={fetchTransactions} className="text-red-500 dark:text-red-400 underline text-sm mt-2">
             Coba lagi
           </button>
         </div>
@@ -289,7 +306,7 @@ function TransactionsPageInner() {
                           }}
                           className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
                             categoryFilter === ''
-                              ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium'
+                              ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 font-medium'
                               : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                           }`}
                         >
@@ -304,7 +321,7 @@ function TransactionsPageInner() {
                             }}
                             className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
                               categoryFilter === cat
-                                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium'
+                                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 font-medium'
                                 : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                             }`}
                           >
@@ -372,16 +389,16 @@ function TransactionsPageInner() {
 
         {/* Select Mode Action Bar */}
         {selectMode && (
-          <div className="flex items-center justify-between mb-4 px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-lg">
+          <div className="flex items-center justify-between mb-4 px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-600 rounded-lg">
             <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+              <span className="text-sm font-medium text-indigo-500 dark:text-indigo-300">
                 {selectedIds.size} transaksi dipilih
               </span>
               {selectedIds.size > 0 && (
                 <button
                   onClick={handleBulkDelete}
                   disabled={saving}
-                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   Hapus ({selectedIds.size})
@@ -408,6 +425,7 @@ function TransactionsPageInner() {
           selectedIds={selectedIds}
           onToggleSelect={handleToggleSelect}
           onSelectAll={handleSelectAll}
+          highlightAfter={highlightAfter}
         />
 
         {/* Pagination */}
@@ -451,7 +469,7 @@ function TransactionsPageInner() {
                     onClick={() => setCurrentPage(page)}
                     className={`min-w-[40px] h-[40px] rounded-lg text-sm font-medium transition-colors ${
                       currentPage === page
-                        ? 'bg-indigo-600 text-white dark:bg-indigo-500'
+                        ? 'bg-indigo-500 text-white dark:bg-indigo-500'
                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                     }`}
                   >
@@ -558,7 +576,7 @@ function TransactionsPageInner() {
           onClose={() => setShowImportModal(false)}
           businessId={businessId}
           userId={user.id}
-          onImportComplete={fetchTransactions}
+          onImportComplete={handleImportComplete}
         />
       )}
     </div>

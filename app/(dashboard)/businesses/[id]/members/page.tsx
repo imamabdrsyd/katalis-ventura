@@ -54,7 +54,7 @@ function BusinessDetailCard({ business, onLeave }: { business: Business; onLeave
       </h2>
 
       {/* Business type */}
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 mb-4">
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 mb-4">
         {typeLabel}
       </span>
 
@@ -88,7 +88,7 @@ function BusinessDetailCard({ business, onLeave }: { business: Business; onLeave
         <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={onLeave}
-            className="w-full px-4 py-2.5 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors flex items-center justify-center gap-2"
+            className="w-full px-4 py-2.5 text-sm font-medium text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors flex items-center justify-center gap-2"
           >
             <LogOut className="w-4 h-4" />
             Keluar dari Bisnis
@@ -182,7 +182,7 @@ export default function BusinessMembersPage() {
         {activeTab === 'members' && !isInvestor && (
           <button
             onClick={() => setShowInviteManager(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors font-medium text-sm shadow-sm"
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl transition-colors font-medium text-sm shadow-sm"
           >
             <UserPlus className="h-4 w-4" />
             Undang Anggota

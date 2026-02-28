@@ -50,7 +50,7 @@ export default function CashFlowHeader({
           </span>
           <span
             className={`text-lg font-semibold flex items-center gap-1 ${
-              percentageChange >= 0 ? 'text-emerald-600' : 'text-red-600'
+              percentageChange >= 0 ? 'text-emerald-500' : 'text-red-500'
             }`}
           >
             {percentageChange >= 0 ? '📈' : '📉'} {percentageChange >= 0 ? '+' : ''}

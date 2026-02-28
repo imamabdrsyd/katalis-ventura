@@ -60,7 +60,7 @@ export function UnitBreakdownSection({
       <button
         type="button"
         onClick={onToggle}
-        className="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+        className="flex items-center gap-1.5 text-xs text-indigo-500 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors"
       >
         <Package className="w-3.5 h-3.5" />
         <span>Breakdown Unit</span>
@@ -109,7 +109,7 @@ export function UnitBreakdownSection({
         <button
           type="button"
           onClick={onToggle}
-          className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400"
+          className="flex items-center gap-1.5 text-xs font-semibold text-indigo-500 dark:text-indigo-400"
         >
           <Package className="w-3.5 h-3.5" />
           <span>Breakdown Unit</span>
@@ -138,7 +138,7 @@ export function UnitBreakdownSection({
             onChange={handlePriceInput}
             placeholder="0"
             inputMode="numeric"
-            className="w-full mt-0.5 px-2.5 py-1.5 text-sm border border-indigo-300 dark:border-indigo-600 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full mt-0.5 px-2.5 py-1.5 text-sm border border-indigo-300 dark:border-indigo-500 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
 
@@ -153,7 +153,7 @@ export function UnitBreakdownSection({
             onChange={handleQtyInput}
             placeholder="0"
             inputMode="numeric"
-            className="w-full mt-0.5 px-2.5 py-1.5 text-sm border border-indigo-300 dark:border-indigo-600 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full mt-0.5 px-2.5 py-1.5 text-sm border border-indigo-300 dark:border-indigo-500 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
 
@@ -168,14 +168,14 @@ export function UnitBreakdownSection({
               value={customUnitValue}
               onChange={(e) => handleCustomUnit(e.target.value)}
               placeholder="Satuan..."
-              className="w-full mt-0.5 px-2.5 py-1.5 text-sm border border-indigo-300 dark:border-indigo-600 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full mt-0.5 px-2.5 py-1.5 text-sm border border-indigo-300 dark:border-indigo-500 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               autoFocus
             />
           ) : (
             <select
               value={unitBreakdown?.unit && UNIT_OPTIONS.includes(unitBreakdown.unit as typeof UNIT_OPTIONS[number]) ? unitBreakdown.unit : '__custom__'}
               onChange={(e) => handleUnitSelect(e.target.value)}
-              className="w-full mt-0.5 px-2.5 py-1.5 text-sm border border-indigo-300 dark:border-indigo-600 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full mt-0.5 px-2.5 py-1.5 text-sm border border-indigo-300 dark:border-indigo-500 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
               {UNIT_OPTIONS.map((u) => (
                 <option key={u} value={u}>{u}</option>
@@ -188,7 +188,7 @@ export function UnitBreakdownSection({
 
       {/* Total display */}
       {total > 0 && (
-        <div className="text-xs text-right text-indigo-600 dark:text-indigo-400 font-medium">
+        <div className="text-xs text-right text-indigo-500 dark:text-indigo-400 font-medium">
           Total: {formatNumberWithSeparator(total)}
         </div>
       )}

@@ -15,10 +15,10 @@ interface AccountListProps {
 
 const TYPE_BADGES: Record<AccountType, string> = {
   ASSET: 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300',
-  LIABILITY: 'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300',
-  EQUITY: 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300',
+  LIABILITY: 'bg-amber-50 dark:bg-amber-900 text-amber-500 dark:text-amber-300',
+  EQUITY: 'bg-purple-50 dark:bg-purple-900 text-purple-500 dark:text-purple-300',
   REVENUE: 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300',
-  EXPENSE: 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300',
+  EXPENSE: 'bg-red-50 dark:bg-red-900 text-red-500 dark:text-red-300',
 };
 
 const TYPE_LABELS: Record<AccountType, string> = {
@@ -157,8 +157,8 @@ export function AccountList({
                   <span
                     className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded ${
                       account.normal_balance === 'DEBIT'
-                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
-                        : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-300'
+                        : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-500 dark:text-emerald-300'
                     }`}
                   >
                     {account.normal_balance}
@@ -182,7 +182,7 @@ export function AccountList({
                     {canEdit && (
                       <button
                         onClick={() => onEdit(account)}
-                        className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition-colors"
+                        className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition-colors"
                         title="Edit account"
                       >
                         <Pencil className="w-4 h-4" />
@@ -191,7 +191,7 @@ export function AccountList({
                     {canToggle && account.is_active && onDeactivate && (
                       <button
                         onClick={() => onDeactivate(account)}
-                        className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                        className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
                         title="Deactivate account"
                       >
                         <XCircle className="w-4 h-4" />

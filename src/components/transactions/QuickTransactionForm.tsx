@@ -42,10 +42,10 @@ const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
 
 const ACCOUNT_TYPE_COLORS: Record<AccountType, string> = {
   ASSET: 'text-blue-600 dark:text-blue-400',
-  LIABILITY: 'text-amber-600 dark:text-amber-400',
-  EQUITY: 'text-purple-600 dark:text-purple-400',
-  REVENUE: 'text-emerald-600 dark:text-emerald-400',
-  EXPENSE: 'text-red-600 dark:text-red-400',
+  LIABILITY: 'text-amber-500 dark:text-amber-400',
+  EQUITY: 'text-purple-500 dark:text-purple-400',
+  REVENUE: 'text-emerald-500 dark:text-emerald-400',
+  EXPENSE: 'text-red-500 dark:text-red-400',
 };
 
 export function QuickTransactionForm({
@@ -294,7 +294,7 @@ export function QuickTransactionForm({
       {/* Submit error */}
       {errors.submit && (
         <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <p className="text-sm text-red-700 dark:text-red-300">{errors.submit}</p>
+          <p className="text-sm text-red-500 dark:text-red-300">{errors.submit}</p>
         </div>
       )}
 
@@ -451,8 +451,8 @@ export function QuickTransactionForm({
           <div
             className={`mt-2 flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
               flowDirection === 'in'
-                ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
-                : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
+                ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 dark:text-emerald-300'
+                : 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-300'
             }`}
           >
             {flowDirection === 'in' ? (
@@ -508,7 +508,7 @@ export function QuickTransactionForm({
           <button
             type="button"
             onClick={() => setShowNotes(true)}
-            className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+            className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
           >
             <StickyNote className="w-4 h-4" />
             <span>+ Tambah catatan</span>

@@ -138,7 +138,7 @@ export default function SettingsPage() {
 
       {error && (
         <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl">
-          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+          <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
         </div>
       )}
 
@@ -184,7 +184,7 @@ export default function SettingsPage() {
               Click pada foto untuk mengubah
             </p>
             {uploading && (
-              <p className="text-sm text-indigo-600 dark:text-indigo-400 mt-2">Uploading...</p>
+              <p className="text-sm text-indigo-500 dark:text-indigo-400 mt-2">Uploading...</p>
             )}
           </div>
         </div>

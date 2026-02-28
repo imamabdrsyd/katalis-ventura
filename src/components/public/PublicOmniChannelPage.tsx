@@ -28,7 +28,7 @@ export function PublicOmniChannelPage({ channel, links }: Props) {
               className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-gray-800 shadow-lg"
             />
           ) : (
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center border-4 border-white dark:border-gray-800 shadow-lg">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center border-4 border-white dark:border-gray-800 shadow-lg">
               <span className="text-2xl font-bold text-white">{initials}</span>
             </div>
           )}

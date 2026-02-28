@@ -179,7 +179,7 @@ export default function BusinessesPage() {
           onClick={() => setActiveTab('active')}
           className={`px-4 py-2 rounded-lg font-medium transition-colors ${
             activeTab === 'active'
-              ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400'
+              ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
               : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >
@@ -189,7 +189,7 @@ export default function BusinessesPage() {
           onClick={() => setActiveTab('archived')}
           className={`px-4 py-2 rounded-lg font-medium transition-colors ${
             activeTab === 'archived'
-              ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400'
+              ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
               : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >

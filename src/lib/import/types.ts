@@ -37,6 +37,17 @@ export interface ValidationResult {
   errorCount: number;
 }
 
+export interface SmartResolvedRow extends ParsedRow {
+  _smart: {
+    confidence: 'high' | 'medium' | 'low';
+    pattern_id: string | null;
+    resolve_source: string;
+    user_edited: boolean;
+  };
+}
+
+export type ImportMode = 'full' | 'smart';
+
 export interface BulkImportResult {
   success: boolean;
   inserted: number;

@@ -230,7 +230,7 @@ export function CurrencyInputWithCalculator({
   const btnDigit = `${btnBase} bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600`;
   const btnOp = (active: boolean) => active
     ? `${btnBase} bg-indigo-500 text-white`
-    : `${btnBase} bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50`;
+    : `${btnBase} bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50`;
   const btnAction = `${btnBase} bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500`;
 
   return (
@@ -255,7 +255,7 @@ export function CurrencyInputWithCalculator({
         <button
           type="button"
           onClick={() => setShowCalc(!showCalc)}
-          className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md transition-colors ${showCalc ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300'}`}
+          className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md transition-colors ${showCalc ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300'}`}
           tabIndex={-1}
           title="Kalkulator"
         >
@@ -317,7 +317,7 @@ export function CurrencyInputWithCalculator({
             <button type="button" onClick={() => pressDigit('1')} className={btnDigit}>1</button>
             <button type="button" onClick={() => pressDigit('2')} className={btnDigit}>2</button>
             <button type="button" onClick={() => pressDigit('3')} className={btnDigit}>3</button>
-            <button type="button" onClick={pressEquals} style={{ gridRow: 'span 2' }} className={`${btnBase} bg-indigo-500 hover:bg-indigo-600 text-white text-lg`}>=</button>
+            <button type="button" onClick={pressEquals} style={{ gridRow: 'span 2' }} className={`${btnBase} bg-indigo-500 hover:bg-indigo-500 text-white text-lg`}>=</button>
 
             <button type="button" onClick={() => { pressDigit('0'); pressDigit('0'); pressDigit('0'); }} style={{ gridColumn: 'span 2' }} className={btnDigit}>000</button>
             <button type="button" onClick={() => pressDigit('0')} className={btnDigit}>0</button>
@@ -328,7 +328,7 @@ export function CurrencyInputWithCalculator({
             <button
               type="button"
               onClick={useResult}
-              className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold transition-colors"
+              className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-500 text-white text-sm font-semibold transition-colors"
             >
               Gunakan Hasil
             </button>

@@ -27,7 +27,7 @@ export default function BalanceCard({ summary, loading = false }: BalanceCardPro
   }
 
   return (
-    <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl p-6 text-white shadow-lg">
+    <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-indigo-200">Balance (Saldo)</h3>
         <div className="p-2 bg-white/10 rounded-lg">

@@ -20,18 +20,18 @@ const ACCOUNT_TYPE_LABELS: Record<AccountTypeFilter, string> = {
 
 const ACCOUNT_TYPE_COLORS: Record<AccountType, string> = {
   ASSET: 'text-blue-600 dark:text-blue-400',
-  LIABILITY: 'text-amber-600 dark:text-amber-400',
-  EQUITY: 'text-purple-600 dark:text-purple-400',
+  LIABILITY: 'text-amber-500 dark:text-amber-400',
+  EQUITY: 'text-purple-500 dark:text-purple-400',
   REVENUE: 'text-green-600 dark:text-green-400',
-  EXPENSE: 'text-red-600 dark:text-red-400',
+  EXPENSE: 'text-red-500 dark:text-red-400',
 };
 
 const ACCOUNT_TYPE_BG: Record<AccountType, string> = {
   ASSET: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300',
-  LIABILITY: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300',
-  EQUITY: 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300',
+  LIABILITY: 'bg-amber-50 dark:bg-amber-900/20 text-amber-500 dark:text-amber-300',
+  EQUITY: 'bg-purple-50 dark:bg-purple-900/20 text-purple-500 dark:text-purple-300',
   REVENUE: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300',
-  EXPENSE: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300',
+  EXPENSE: 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-300',
 };
 
 const PERIOD_LABELS: Record<Period, string> = {
@@ -94,7 +94,7 @@ function GeneralLedgerPageInner() {
   if (!activeBusiness && !loading) {
     return (
       <div className="p-8 max-w-7xl mx-auto">
-        <div className="card text-center py-12">
+        <div className="card-static text-center py-12">
           <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500 dark:text-gray-400">
             Pilih bisnis terlebih dahulu untuk melihat General Ledger.
@@ -113,7 +113,7 @@ function GeneralLedgerPageInner() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
-          <BookOpenCheck className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+          <BookOpenCheck className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
           General Ledger
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -122,7 +122,7 @@ function GeneralLedgerPageInner() {
       </div>
 
       {/* Period Filter */}
-      <div className="card mb-6">
+      <div className="card-static mb-6">
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
           <div className="flex-1">
             <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
@@ -133,7 +133,7 @@ function GeneralLedgerPageInner() {
                 onClick={handleAllTime}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isAllTime
-                    ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
+                    ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-300'
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
@@ -145,7 +145,7 @@ function GeneralLedgerPageInner() {
                   onClick={() => handlePeriodChange(p)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     period === p && !isAllTime
-                      ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
+                      ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-300'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
@@ -184,7 +184,7 @@ function GeneralLedgerPageInner() {
       <div className="flex flex-col lg:flex-row gap-4">
         {/* LEFT PANEL: Account List */}
         <div className="lg:w-72 xl:w-80 flex-shrink-0">
-          <div className="card p-0 overflow-hidden">
+          <div className="card-static p-0 overflow-hidden">
             {/* Account Type Filter Tabs */}
             <div className="p-3 border-b border-gray-200 dark:border-gray-700">
               <div className="flex flex-wrap gap-1">
@@ -194,7 +194,7 @@ function GeneralLedgerPageInner() {
                     onClick={() => setFilterType(type)}
                     className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
                       filterType === type
-                        ? 'bg-indigo-600 text-white'
+                        ? 'bg-indigo-500 text-white'
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                     }`}
                   >
@@ -208,7 +208,7 @@ function GeneralLedgerPageInner() {
             <div className="overflow-y-auto max-h-[600px]">
               {loading || accountsLoading ? (
                 <div className="p-6 text-center">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600 mx-auto"></div>
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500 mx-auto"></div>
                 </div>
               ) : allLedgers.length === 0 ? (
                 <div className="p-6 text-center text-sm text-gray-500 dark:text-gray-400">
@@ -240,7 +240,7 @@ function GeneralLedgerPageInner() {
                           </div>
                           <p className={`text-sm font-medium truncate ${
                             isSelected
-                              ? 'text-indigo-700 dark:text-indigo-300'
+                              ? 'text-indigo-500 dark:text-indigo-300'
                               : 'text-gray-800 dark:text-gray-200'
                           }`}>
                             {al.account.account_name}
@@ -250,7 +250,7 @@ function GeneralLedgerPageInner() {
                           <p className={`text-xs font-semibold ${
                             isPositive
                               ? 'text-gray-700 dark:text-gray-300'
-                              : 'text-red-600 dark:text-red-400'
+                              : 'text-red-500 dark:text-red-400'
                           }`}>
                             {isPositive ? '' : '('}
                             {formatCurrency(Math.abs(al.closingBalance))}
@@ -272,14 +272,14 @@ function GeneralLedgerPageInner() {
         {/* RIGHT PANEL: Ledger Detail */}
         <div className="flex-1 min-w-0">
           {!selectedAccount || !ledger ? (
-            <div className="card flex flex-col items-center justify-center py-16 text-center">
+            <div className="card-static flex flex-col items-center justify-center py-16 text-center">
               <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
               <p className="text-gray-500 dark:text-gray-400">
                 Pilih akun dari panel kiri untuk melihat detail ledger
               </p>
             </div>
           ) : (
-            <div className="card p-0 overflow-hidden">
+            <div className="card-static p-0 overflow-hidden">
               {/* Ledger Header */}
               <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -312,20 +312,20 @@ function GeneralLedgerPageInner() {
                       </p>
                     </div>
                     <div className="text-center px-3 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
-                      <p className="text-xs text-red-600 dark:text-red-400 font-medium">Total Kredit</p>
-                      <p className="text-sm font-bold text-red-700 dark:text-red-300">
+                      <p className="text-xs text-red-500 dark:text-red-400 font-medium">Total Kredit</p>
+                      <p className="text-sm font-bold text-red-500 dark:text-red-300">
                         {formatCurrency(ledger.totalCredits)}
                       </p>
                     </div>
                     <div className="text-center px-3 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
                       <p className={`text-xs font-medium ${
                         ledger.closingBalance >= 0
-                          ? 'text-emerald-600 dark:text-emerald-400'
+                          ? 'text-emerald-500 dark:text-emerald-400'
                           : 'text-orange-600 dark:text-orange-400'
                       }`}>Saldo Akhir</p>
                       <p className={`text-sm font-bold ${
                         ledger.closingBalance >= 0
-                          ? 'text-emerald-700 dark:text-emerald-300'
+                          ? 'text-emerald-500 dark:text-emerald-300'
                           : 'text-orange-700 dark:text-orange-300'
                       }`}>
                         {ledger.closingBalance < 0 ? '(' : ''}
@@ -339,9 +339,9 @@ function GeneralLedgerPageInner() {
 
               {/* Legacy Transactions Notice */}
               {ledger.legacyCount > 0 && (
-                <div className="mx-4 md:mx-6 mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                <div className="mx-4 md:mx-6 mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-600 rounded-lg flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-500 dark:text-amber-300">
                     <strong>{ledger.legacyCount} transaksi lama</strong> tidak ditampilkan di sini karena tidak menggunakan sistem double-entry. Transaksi tersebut tetap dihitung di laporan keuangan.
                   </p>
                 </div>
@@ -426,7 +426,7 @@ function GeneralLedgerPageInner() {
                             </td>
                             <td className="py-2.5 px-3 text-right text-sm font-medium">
                               {entry.creditAmount > 0 ? (
-                                <span className="text-red-600 dark:text-red-400">
+                                <span className="text-red-500 dark:text-red-400">
                                   {formatCurrency(entry.creditAmount)}
                                 </span>
                               ) : (
@@ -434,7 +434,7 @@ function GeneralLedgerPageInner() {
                               )}
                             </td>
                             <td className="py-2.5 px-3 text-right text-sm font-semibold">
-                              <span className={entry.balance >= 0 ? 'text-gray-800 dark:text-gray-200' : 'text-red-600 dark:text-red-400'}>
+                              <span className={entry.balance >= 0 ? 'text-gray-800 dark:text-gray-200' : 'text-red-500 dark:text-red-400'}>
                                 {entry.balance < 0 ? '(' : ''}
                                 {formatCurrency(Math.abs(entry.balance))}
                                 {entry.balance < 0 ? ')' : ''}
@@ -453,11 +453,11 @@ function GeneralLedgerPageInner() {
                           <td className="py-3 px-3 text-right text-sm font-bold text-blue-700 dark:text-blue-300">
                             {formatCurrency(ledger.totalDebits)}
                           </td>
-                          <td className="py-3 px-3 text-right text-sm font-bold text-red-700 dark:text-red-300">
+                          <td className="py-3 px-3 text-right text-sm font-bold text-red-500 dark:text-red-300">
                             {formatCurrency(ledger.totalCredits)}
                           </td>
                           <td className="py-3 px-3 text-right text-sm font-bold">
-                            <span className={ledger.closingBalance >= 0 ? 'text-gray-800 dark:text-gray-200' : 'text-red-600 dark:text-red-400'}>
+                            <span className={ledger.closingBalance >= 0 ? 'text-gray-800 dark:text-gray-200' : 'text-red-500 dark:text-red-400'}>
                               {ledger.closingBalance < 0 ? '(' : ''}
                               {formatCurrency(Math.abs(ledger.closingBalance))}
                               {ledger.closingBalance < 0 ? ')' : ''}

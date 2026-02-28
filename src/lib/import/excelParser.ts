@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { ParsedRow } from './types';
+import { ParsedRow, ImportMode } from './types';
 
 /**
  * Parse Excel file to JSON array
@@ -81,6 +81,34 @@ function normalizeRow(row: any): ParsedRow {
   }
 
   return normalized as ParsedRow;
+}
+
+/**
+ * Detect import mode from parsed data.
+ * Smart mode: has description + date + amount but missing category AND name.
+ */
+export function detectImportMode(rows: ParsedRow[]): ImportMode {
+  if (rows.length === 0) return 'full';
+
+  // Check first few rows to determine mode
+  const sampleSize = Math.min(rows.length, 3);
+  let smartCount = 0;
+
+  for (let i = 0; i < sampleSize; i++) {
+    const row = rows[i];
+    const hasDescription = row.description && String(row.description).trim() !== '';
+    const hasDate = row.date && String(row.date).trim() !== '';
+    const hasAmount = row.amount !== '' && row.amount !== null && row.amount !== undefined;
+    const missingCategory = !row.category || String(row.category).trim() === '';
+    const missingName = !row.name || String(row.name).trim() === '';
+
+    if (hasDescription && hasDate && hasAmount && missingCategory && missingName) {
+      smartCount++;
+    }
+  }
+
+  // If majority of sample rows match smart pattern
+  return smartCount >= Math.ceil(sampleSize / 2) ? 'smart' : 'full';
 }
 
 /**

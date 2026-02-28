@@ -104,7 +104,7 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
                         onClick={() => handleTypeChange(type)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                           channelType === type
-                            ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-300 dark:ring-indigo-600'
+                            ? 'bg-indigo-50 dark:bg-indigo-900/25 text-indigo-500 dark:text-indigo-300 ring-1 ring-indigo-300 dark:ring-indigo-500'
                             : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                         }`}
                       >
@@ -181,7 +181,7 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
           <button
             onClick={handleSave}
             disabled={saving || !url.trim() || !label.trim()}
-            className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-xl transition-colors text-sm font-medium flex items-center justify-center gap-2"
+            className="flex-1 px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-xl transition-colors text-sm font-medium flex items-center justify-center gap-2"
           >
             {saving ? (
               <>

@@ -219,7 +219,7 @@ export function InviteCodeManager({
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <code className="text-lg font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                          <code className="text-lg font-mono font-bold text-indigo-500 dark:text-indigo-400">
                             {code.code}
                           </code>
                           <button
@@ -240,7 +240,7 @@ export function InviteCodeManager({
                             className={`inline-flex items-center px-2 py-1 rounded-full font-medium ${
                               code.role === 'investor'
                                 ? 'bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400'
-                                : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
+                                : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
                             }`}
                           >
                             {code.role === 'investor' ? 'Investor' : 'Business Manager'}
@@ -254,7 +254,7 @@ export function InviteCodeManager({
                           {code.expires_at && (
                             <span className={`inline-flex items-center gap-1 ${
                               isExpired(code.expires_at)
-                                ? 'text-red-600 dark:text-red-400'
+                                ? 'text-red-500 dark:text-red-400'
                                 : 'text-gray-600 dark:text-gray-400'
                             }`}>
                               <Clock className="w-3 h-3" />
@@ -279,7 +279,7 @@ export function InviteCodeManager({
                           </button>
                           <button
                             onClick={() => handleDelete(code.id)}
-                            className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                            className="p-1.5 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
                             title="Hapus"
                           >
                             <X className="w-4 h-4" />

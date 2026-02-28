@@ -13,15 +13,16 @@ interface TransactionListProps {
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
   onSelectAll?: () => void;
+  highlightAfter?: string | null;
 }
 
 const BADGE_CLASSES: Record<TransactionCategory, string> = {
-  EARN: 'bg-emerald-50 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400',
-  OPEX: 'bg-red-50 dark:bg-red-900/50 text-red-600 dark:text-red-400',
-  VAR: 'bg-amber-50 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400',
+  EARN: 'bg-emerald-50 dark:bg-emerald-900/50 text-emerald-500 dark:text-emerald-400',
+  OPEX: 'bg-red-50 dark:bg-red-900/50 text-red-500 dark:text-red-400',
+  VAR: 'bg-amber-50 dark:bg-amber-900/50 text-amber-500 dark:text-amber-400',
   CAPEX: 'bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/20',
-  TAX: 'bg-purple-50 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400',
-  FIN: 'bg-pink-50 dark:bg-pink-900/50 text-pink-600 dark:text-pink-400',
+  TAX: 'bg-purple-50 dark:bg-purple-900/50 text-purple-500 dark:text-purple-400',
+  FIN: 'bg-pink-50 dark:bg-pink-900/50 text-pink-500 dark:text-pink-400',
 };
 
 const STOCK_BADGE_CLASS = 'bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400';
@@ -92,6 +93,7 @@ export function TransactionList({
   selectedIds,
   onToggleSelect,
   onSelectAll,
+  highlightAfter,
 }: TransactionListProps) {
   const showActions = (onEdit || onDelete) && !selectMode;
   const allSelected = selectMode && transactions.length > 0 && transactions.every((t) => selectedIds?.has(t.id));
@@ -140,7 +142,7 @@ export function TransactionList({
                   type="checkbox"
                   checked={allSelected}
                   onChange={() => onSelectAll?.()}
-                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-500 focus:ring-indigo-500"
                 />
               </th>
             )}
@@ -159,6 +161,7 @@ export function TransactionList({
         <tbody>
           {transactions.map((transaction, index) => {
             const isNewMonth = index > 0 && getMonthKey(transaction.date) !== getMonthKey(transactions[index - 1].date);
+            const isHighlighted = highlightAfter && transaction.created_at && transaction.created_at >= highlightAfter;
             return (
               <tr
                 key={transaction.id}
@@ -169,6 +172,8 @@ export function TransactionList({
                   selectMode
                     ? `cursor-pointer ${selectedIds?.has(transaction.id) ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`
                     : onRowClick ? 'cursor-pointer' : ''
+                } ${
+                  isHighlighted ? 'animate-import-highlight' : ''
                 }`}
               >
               {selectMode && (
@@ -181,7 +186,7 @@ export function TransactionList({
                       onToggleSelect?.(transaction.id);
                     }}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                    className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-500 focus:ring-indigo-500"
                   />
                 </td>
               )}
@@ -212,9 +217,9 @@ export function TransactionList({
               </td>
               <td className={`py-3 px-2 md:py-4 md:px-4 text-sm font-medium whitespace-nowrap ${
                 transaction.category === 'EARN'
-                  ? 'text-emerald-600 dark:text-emerald-400'
+                  ? 'text-emerald-500 dark:text-emerald-400'
                   : transaction.category === 'OPEX' || transaction.category === 'VAR' || transaction.category === 'TAX'
-                  ? 'text-red-600 dark:text-red-400'
+                  ? 'text-red-500 dark:text-red-400'
                   : 'text-gray-900 dark:text-gray-300'
               }`}>
                 {formatCurrency(transaction.amount)}

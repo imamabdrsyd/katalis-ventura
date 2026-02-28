@@ -600,10 +600,10 @@ export function TransactionForm({
               {guidance.warnings.length > 0 && (
                 <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 rounded-lg">
                   <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                    <AlertTriangle className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
                       {guidance.warnings.map((warning, i) => (
-                        <p key={i} className="text-xs text-amber-700 dark:text-amber-300">{warning}</p>
+                        <p key={i} className="text-xs text-amber-500 dark:text-amber-300">{warning}</p>
                       ))}
                     </div>
                   </div>
@@ -612,10 +612,10 @@ export function TransactionForm({
               {!isAccountingValid && validation.errors.length > 0 && (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3 rounded-lg">
                   <div className="flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
                       {validation.errors.map((error, i) => (
-                        <p key={i} className="text-xs text-red-700 dark:text-red-300">{error.message}</p>
+                        <p key={i} className="text-xs text-red-500 dark:text-red-300">{error.message}</p>
                       ))}
                     </div>
                   </div>
@@ -693,10 +693,10 @@ export function TransactionForm({
                   {guidance.warnings.length > 0 && (
                     <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-lg">
                       <div className="flex items-start gap-2">
-                        <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                        <AlertTriangle className="w-5 h-5 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                         <div className="flex-1">
                           {guidance.warnings.map((warning, i) => (
-                            <p key={i} className="text-sm text-amber-700 dark:text-amber-300">{warning}</p>
+                            <p key={i} className="text-sm text-amber-500 dark:text-amber-300">{warning}</p>
                           ))}
                         </div>
                       </div>
@@ -705,10 +705,10 @@ export function TransactionForm({
                   {!isAccountingValid && validation.errors.length > 0 && (
                     <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-lg">
                       <div className="flex items-start gap-2">
-                        <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                        <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
                         <div className="flex-1">
                           {validation.errors.map((error, i) => (
-                            <p key={i} className="text-sm text-red-700 dark:text-red-300">{error.message}</p>
+                            <p key={i} className="text-sm text-red-500 dark:text-red-300">{error.message}</p>
                           ))}
                         </div>
                       </div>
@@ -717,10 +717,10 @@ export function TransactionForm({
                   {validation.warnings.length > 0 && (
                     <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-lg">
                       <div className="flex items-start gap-2">
-                        <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                        <AlertTriangle className="w-5 h-5 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                         <div className="flex-1">
                           {validation.warnings.map((warning, i) => (
-                            <p key={i} className="text-sm text-amber-700 dark:text-amber-300">{warning.message}</p>
+                            <p key={i} className="text-sm text-amber-500 dark:text-amber-300">{warning.message}</p>
                           ))}
                         </div>
                       </div>

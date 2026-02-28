@@ -311,7 +311,7 @@ function validateFieldLengths(row: ParsedRow, rowNumber: number): ValidationErro
 /**
  * Suggest category correction based on common variations
  */
-function suggestCategory(input: string): string | undefined {
+export function suggestCategory(input: string): string | undefined {
   const suggestions: Record<string, TransactionCategory> = {
     earning: 'EARN',
     earnings: 'EARN',
@@ -450,6 +450,65 @@ export function validateDebitCreditDifferent(
   }
 
   return null;
+}
+
+/**
+ * Validate rows for smart import mode (only date, description, amount required)
+ */
+export function validateRowsSmart(rows: ParsedRow[]): ValidationResult {
+  if (rows.length === 0) {
+    return { isValid: false, validRows: [], invalidRows: [], totalRows: 0, validCount: 0, errorCount: 0 };
+  }
+
+  if (rows.length > MAX_ROWS) {
+    return { isValid: false, validRows: [], invalidRows: [], totalRows: rows.length, validCount: 0, errorCount: 1 };
+  }
+
+  const validRows: RowValidation[] = [];
+  const invalidRows: RowValidation[] = [];
+
+  rows.forEach((row, index) => {
+    const errors: ValidationError[] = [];
+    const warnings: ValidationError[] = [];
+    const rowNumber = index + 2;
+
+    // Validate Date (required)
+    const dateValidation = validateDateField(row.date, rowNumber);
+    if (dateValidation) errors.push(dateValidation);
+
+    // Validate Description (required)
+    const descValidation = validateRequiredField(row.description, 'description', rowNumber);
+    if (descValidation) errors.push(descValidation);
+
+    // Validate Amount (required)
+    const amountValidation = validateAmountField(row.amount, rowNumber);
+    if (amountValidation) errors.push(amountValidation);
+
+    // Field length warnings
+    if (row.description && String(row.description).length > MAX_FIELD_LENGTH) {
+      warnings.push({
+        row: rowNumber, column: 'description',
+        message: `Description is too long (max ${MAX_FIELD_LENGTH} characters). It will be truncated.`,
+        severity: 'warning', originalValue: row.description,
+      });
+    }
+
+    const validation: RowValidation = { row: rowNumber, valid: errors.length === 0, errors, warnings, data: row };
+
+    if (validation.valid) {
+      validRows.push(validation);
+    } else {
+      invalidRows.push(validation);
+    }
+  });
+
+  return {
+    isValid: invalidRows.length === 0,
+    validRows, invalidRows,
+    totalRows: rows.length,
+    validCount: validRows.length,
+    errorCount: invalidRows.length,
+  };
 }
 
 /**

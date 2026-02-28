@@ -29,7 +29,7 @@ function AssumptionSlider({
         <label className="text-sm text-gray-600 dark:text-gray-400">{label}</label>
         <span className={`text-sm font-semibold tabular-nums ${
           value > 0 ? 'text-green-600 dark:text-green-400' :
-          value < 0 ? 'text-red-600 dark:text-red-400' :
+          value < 0 ? 'text-red-500 dark:text-red-400' :
           'text-gray-600 dark:text-gray-400'
         }`}>
           {value > 0 ? '+' : ''}{value}{suffix}
@@ -64,15 +64,15 @@ function ScenarioCard({
       bg: 'bg-emerald-50 dark:bg-emerald-900/20',
       border: 'border-emerald-200 dark:border-emerald-800',
       title: 'text-emerald-800 dark:text-emerald-300',
-      accent: 'text-emerald-600 dark:text-emerald-400',
-      iconBg: 'bg-emerald-100 dark:bg-emerald-900/40',
+      accent: 'text-emerald-500 dark:text-emerald-400',
+      iconBg: 'bg-emerald-50 dark:bg-emerald-900/40',
     },
     red: {
       bg: 'bg-red-50 dark:bg-red-900/20',
       border: 'border-red-200 dark:border-red-800',
       title: 'text-red-800 dark:text-red-300',
-      accent: 'text-red-600 dark:text-red-400',
-      iconBg: 'bg-red-100 dark:bg-red-900/40',
+      accent: 'text-red-500 dark:text-red-400',
+      iconBg: 'bg-red-50 dark:bg-red-900/40',
     },
     blue: {
       bg: 'bg-blue-50 dark:bg-blue-900/20',
@@ -103,7 +103,7 @@ function ScenarioCard({
         <div>
           <h3 className={`font-bold ${c.title}`}>{scenario.label}</h3>
           {color !== 'gray' && (
-            <span className={`text-xs font-medium ${netDiff >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+            <span className={`text-xs font-medium ${netDiff >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
               {netDiff >= 0 ? '+' : ''}{formatCurrency(netDiff)} ({netDiffPct >= 0 ? '+' : ''}{netDiffPct.toFixed(1)}%)
             </span>
           )}
@@ -124,7 +124,7 @@ function ScenarioCard({
         <div className={`flex justify-between items-center pt-1 ${
           scenario.netIncome >= 0
             ? 'text-green-700 dark:text-green-400'
-            : 'text-red-700 dark:text-red-400'
+            : 'text-red-500 dark:text-red-400'
         }`}>
           <span className="font-bold">Net Income</span>
           <span className="font-bold text-lg">{formatCurrency(scenario.netIncome)}</span>
@@ -146,7 +146,7 @@ function Row({ label, value, bold, negative }: { label: string; value: number; b
       <span className={`text-gray-600 dark:text-gray-400 ${bold ? 'font-semibold text-gray-800 dark:text-gray-200' : ''}`}>{label}</span>
       <span className={`tabular-nums ${
         bold ? 'font-semibold text-gray-800 dark:text-gray-200' :
-        negative ? 'text-red-600 dark:text-red-400' :
+        negative ? 'text-red-500 dark:text-red-400' :
         'text-gray-800 dark:text-gray-200'
       }`}>
         {negative && value < 0 ? `(${formatCurrency(Math.abs(value))})` : formatCurrency(value)}
@@ -164,7 +164,7 @@ function MarginBadge({ label, value }: { label: string; value: number }) {
     <div className="text-center">
       <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">{label}</p>
       <p className={`text-sm font-bold ${
-        value >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+        value >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'
       }`}>
         {value.toFixed(1)}%
       </p>
@@ -194,7 +194,7 @@ function ProjectionBar({ projections }: { projections: { month: string; revenue:
             <span className="text-gray-600 dark:text-gray-400 font-medium w-20">{p.month}</span>
             <div className="flex gap-4 text-[11px]">
               <span className="text-blue-600 dark:text-blue-400">Rev: {formatCurrency(p.revenue)}</span>
-              <span className={p.netIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+              <span className={p.netIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}>
                 Net: {formatCurrency(p.netIncome)}
               </span>
             </div>
@@ -285,8 +285,8 @@ export default function ScenarioModelingPage() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
-            <FlaskConical className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+          <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/40 flex items-center justify-center">
+            <FlaskConical className="w-5 h-5 text-purple-500 dark:text-purple-400" />
           </div>
           <div>
             <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Scenario Modeling</h1>
@@ -309,7 +309,7 @@ export default function ScenarioModelingPage() {
                   onClick={() => handlePeriodChange(p)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     period === p
-                      ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400'
+                      ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
@@ -357,7 +357,7 @@ export default function ScenarioModelingPage() {
           onClick={() => setActiveTab('comparison')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
             activeTab === 'comparison'
-              ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400'
+              ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
               : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
           }`}
         >
@@ -368,7 +368,7 @@ export default function ScenarioModelingPage() {
           onClick={() => setActiveTab('custom')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
             activeTab === 'custom'
-              ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400'
+              ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
               : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
           }`}
         >
@@ -543,26 +543,26 @@ export default function ScenarioModelingPage() {
                   }`}>
                     <p className={`text-xs mb-1 ${
                       projections[projections.length - 1]?.cumulativeNetIncome >= 0
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : 'text-red-600 dark:text-red-400'
+                        ? 'text-emerald-500 dark:text-emerald-400'
+                        : 'text-red-500 dark:text-red-400'
                     }`}>Kumulatif Net Income</p>
                     <p className={`text-lg font-bold ${
                       projections[projections.length - 1]?.cumulativeNetIncome >= 0
-                        ? 'text-emerald-700 dark:text-emerald-300'
-                        : 'text-red-700 dark:text-red-300'
+                        ? 'text-emerald-500 dark:text-emerald-300'
+                        : 'text-red-500 dark:text-red-300'
                     }`}>
                       {formatCurrency(projections[projections.length - 1]?.cumulativeNetIncome ?? 0)}
                     </p>
                   </div>
                   <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4">
-                    <p className="text-xs text-purple-600 dark:text-purple-400 mb-1">Avg Monthly Revenue</p>
-                    <p className="text-lg font-bold text-purple-700 dark:text-purple-300">
+                    <p className="text-xs text-purple-500 dark:text-purple-400 mb-1">Avg Monthly Revenue</p>
+                    <p className="text-lg font-bold text-purple-500 dark:text-purple-300">
                       {formatCurrency(projections.reduce((s, p) => s + p.revenue, 0) / projections.length)}
                     </p>
                   </div>
                   <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4">
-                    <p className="text-xs text-amber-600 dark:text-amber-400 mb-1">Avg Monthly Net Income</p>
-                    <p className="text-lg font-bold text-amber-700 dark:text-amber-300">
+                    <p className="text-xs text-amber-500 dark:text-amber-400 mb-1">Avg Monthly Net Income</p>
+                    <p className="text-lg font-bold text-amber-500 dark:text-amber-300">
                       {formatCurrency(projections.reduce((s, p) => s + p.netIncome, 0) / projections.length)}
                     </p>
                   </div>
@@ -582,8 +582,8 @@ export default function ScenarioModelingPage() {
               <tr className="border-b-2 border-gray-200 dark:border-gray-700">
                 <th className="text-left py-3 px-3 text-gray-500 dark:text-gray-400 font-semibold">Metrik</th>
                 <th className="text-right py-3 px-3 text-gray-500 dark:text-gray-400 font-semibold">Baseline</th>
-                <th className="text-right py-3 px-3 text-emerald-600 dark:text-emerald-400 font-semibold">Optimistic</th>
-                <th className="text-right py-3 px-3 text-red-600 dark:text-red-400 font-semibold">Pessimistic</th>
+                <th className="text-right py-3 px-3 text-emerald-500 dark:text-emerald-400 font-semibold">Optimistic</th>
+                <th className="text-right py-3 px-3 text-red-500 dark:text-red-400 font-semibold">Pessimistic</th>
                 <th className="text-right py-3 px-3 text-blue-600 dark:text-blue-400 font-semibold">Custom</th>
               </tr>
             </thead>
@@ -624,7 +624,7 @@ export default function ScenarioModelingPage() {
               <tr>
                 <td className="py-2.5 px-3 text-gray-600 dark:text-gray-400">Net Margin</td>
                 {[baseline, optimistic, pessimistic, custom].map((s, i) => (
-                  <td key={i} className={`py-2.5 px-3 text-right tabular-nums font-semibold ${s.netMargin >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  <td key={i} className={`py-2.5 px-3 text-right tabular-nums font-semibold ${s.netMargin >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                     {s.netMargin.toFixed(1)}%
                   </td>
                 ))}

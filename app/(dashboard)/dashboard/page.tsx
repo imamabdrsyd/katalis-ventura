@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet, Calendar } from 'lucide-react';
 import { useDashboard } from '@/hooks/useDashboard';
 import { calculateFinancialSummary, calculateCategoryCounts } from '@/lib/calculations';
 import { formatCurrency, formatPercentage, formatDateShort } from '@/lib/utils';
@@ -150,7 +150,7 @@ export default function DashboardPage() {
         ? 'Modal sudah balik'
         : 'Modal belum balik';
   const roiLabelColor =
-    roi > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400';
+    roi > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400';
 
   // --- Cash Balance: runway in months (uses all-time data, not year-filtered) ---
   const totalAllTimeExpenses = allTimeSummary.totalOpex + allTimeSummary.totalVar + allTimeSummary.totalTax + allTimeSummary.totalInterest;
@@ -178,12 +178,12 @@ export default function DashboardPage() {
       : null;
 
   const categoryBadgeStyles: Record<string, string> = {
-    EARN: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300',
-    OPEX: 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300',
-    VAR: 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300',
-    CAPEX: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300',
-    TAX: 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300',
-    FIN: 'bg-pink-100 dark:bg-pink-900/50 text-pink-700 dark:text-pink-300',
+    EARN: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-500 dark:text-emerald-300',
+    OPEX: 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-300',
+    VAR: 'bg-amber-50 dark:bg-amber-900/30 text-amber-500 dark:text-amber-300',
+    CAPEX: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-300',
+    TAX: 'bg-purple-50 dark:bg-purple-900/30 text-purple-500 dark:text-purple-300',
+    FIN: 'bg-pink-50 dark:bg-pink-900/30 text-pink-500 dark:text-pink-300',
   };
 
   return (
@@ -211,11 +211,12 @@ export default function DashboardPage() {
           </button>
         </div>
         <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+        <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
         <button
           onClick={() => setSelectedMonth(null)}
           className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
             selectedMonth === null
-              ? 'bg-indigo-600 text-white shadow-sm'
+              ? 'bg-indigo-500 text-white shadow-sm'
               : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
           }`}
         >
@@ -227,7 +228,7 @@ export default function DashboardPage() {
             onClick={() => setSelectedMonth(i)}
             className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
               selectedMonth === i
-                ? 'bg-indigo-600 text-white shadow-sm'
+                ? 'bg-indigo-500 text-white shadow-sm'
                 : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
             }`}
           >
@@ -240,7 +241,7 @@ export default function DashboardPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div
-          className="card cursor-pointer"
+          className="card cursor-pointer flex flex-col"
           onClick={() => router.push('/transactions?category=EARN')}
         >
           <div className="flex items-center justify-between mb-2">
@@ -250,34 +251,34 @@ export default function DashboardPage() {
           <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 break-all">
             {transactionsLoading ? '...' : formatCurrency(summary.totalEarn)}
           </div>
-          <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center justify-between mt-2 min-h-[2.5rem]">
             <div className="text-sm text-gray-500 dark:text-gray-400">
               {transactionsLoading ? '...' : `${categoryCounts.EARN} transaksi masuk`}
             </div>
             {!transactionsLoading && revenueGrowthData.growth !== null && (
-              <div className={`flex items-center gap-0.5 text-xs font-semibold ${revenueGrowthData.growth >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+              <div className={`flex items-center gap-0.5 text-xs font-semibold ${revenueGrowthData.growth >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
                 <span>{revenueGrowthData.growth >= 0 ? '▲' : '▼'}</span>
                 <span>{Math.abs(revenueGrowthData.growth).toFixed(1)}% {revenueGrowthData.label}</span>
               </div>
             )}
             {!transactionsLoading && revenueGrowthData.growth === null && revenueGrowthData.isNew && (
-              <div className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">Belum ada data pembanding</div>
+              <div className="text-xs text-emerald-500 dark:text-emerald-400 font-semibold">Belum ada data pembanding</div>
             )}
           </div>
         </div>
 
         <div
-          className="card cursor-pointer"
+          className="card cursor-pointer flex flex-col"
           onClick={() => router.push('/income-statement?scrollTo=net-income')}
         >
           <div className="flex items-center justify-between mb-2">
             <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Profit/Loss</div>
             <BarChart3 className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           </div>
-          <div className={`text-xl md:text-2xl font-bold break-all ${summary.netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+          <div className={`text-xl md:text-2xl font-bold break-all ${summary.netProfit >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
             {transactionsLoading ? '...' : formatCurrency(summary.netProfit)}
           </div>
-          <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center justify-between mt-2 min-h-[2.5rem]">
             <div className="text-sm text-gray-500 dark:text-gray-400">
               {transactionsLoading
                 ? '...'
@@ -286,26 +287,28 @@ export default function DashboardPage() {
                   : 'Belum ada pemasukan'}
             </div>
             {!transactionsLoading && netMargin !== null && (
-              <div className={`text-xs font-semibold ${netMargin >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+              <div className={`text-xs font-semibold ${netMargin >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
                 Margin {netMargin.toFixed(1)}%
               </div>
             )}
           </div>
         </div>
 
-        <div className="card">
+        <div className="card flex flex-col">
           <div className="flex items-center justify-between mb-2">
             <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">ROI</div>
             <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           </div>
-          <div className={`text-xl md:text-2xl font-bold ${roi >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+          <div className={`text-xl md:text-2xl font-bold ${roi >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
             {transactionsLoading ? '...' : formatPercentage(roi)}
           </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">Year to date</div>
+          <div className="mt-2 min-h-[2.5rem] flex flex-col justify-center">
+            <div className="text-sm text-gray-500 dark:text-gray-400">Year to date</div>
+          </div>
         </div>
 
         <div
-          className="card cursor-pointer"
+          className="card cursor-pointer flex flex-col"
           onClick={() => router.push('/general-ledger?filterType=ASSET')}
         >
           <div className="flex items-center justify-between mb-2">
@@ -315,7 +318,9 @@ export default function DashboardPage() {
           <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 break-all">
             {transactionsLoading ? '...' : formatCurrency(balanceSheet.assets.cash)}
           </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">Cash & Bank</div>
+          <div className="mt-2 min-h-[2.5rem] flex flex-col justify-center">
+            <div className="text-sm text-gray-500 dark:text-gray-400">Cash & Bank</div>
+          </div>
         </div>
       </div>
 
@@ -336,42 +341,42 @@ export default function DashboardPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-emerald-600 dark:text-emerald-400 font-semibold">Earnings</div>
+                <div className="text-sm text-emerald-500 dark:text-emerald-400 font-semibold">Earnings</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600/50 px-2 py-0.5 rounded-full">{categoryCounts.EARN} record</div>
               </div>
               <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(summary.totalEarn)}</div>
             </div>
             <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-red-600 dark:text-red-400 font-semibold">OPEX</div>
+                <div className="text-sm text-red-500 dark:text-red-400 font-semibold">OPEX</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600/50 px-2 py-0.5 rounded-full">{categoryCounts.OPEX} record</div>
               </div>
               <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(summary.totalOpex)}</div>
             </div>
             <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-amber-600 dark:text-amber-400 font-semibold">Variable</div>
+                <div className="text-sm text-amber-500 dark:text-amber-400 font-semibold">Variable</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600/50 px-2 py-0.5 rounded-full">{categoryCounts.VAR} record</div>
               </div>
               <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(summary.totalVar)}</div>
             </div>
             <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-indigo-600 dark:text-indigo-400 font-semibold">CAPEX</div>
+                <div className="text-sm text-indigo-500 dark:text-indigo-400 font-semibold">CAPEX</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600/50 px-2 py-0.5 rounded-full">{categoryCounts.CAPEX} record</div>
               </div>
               <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(summary.totalCapex)}</div>
             </div>
             <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-purple-600 dark:text-purple-400 font-semibold">Taxes</div>
+                <div className="text-sm text-purple-500 dark:text-purple-400 font-semibold">Taxes</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600/50 px-2 py-0.5 rounded-full">{categoryCounts.TAX} record</div>
               </div>
               <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(summary.totalTax)}</div>
             </div>
             <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-pink-600 dark:text-pink-400 font-semibold">Financing</div>
+                <div className="text-sm text-pink-500 dark:text-pink-400 font-semibold">Financing</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600/50 px-2 py-0.5 rounded-full">{categoryCounts.FIN} record</div>
               </div>
               <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(summary.totalFin)}</div>
@@ -387,7 +392,7 @@ export default function DashboardPage() {
             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Recent Transactions</h2>
             <button
               onClick={() => router.push('/transactions')}
-              className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium"
+              className="text-sm text-indigo-500 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-medium"
             >
               View all
             </button>
@@ -417,7 +422,7 @@ export default function DashboardPage() {
                       </span>
                     </td>
                     <td className={`py-3 text-sm font-semibold text-right whitespace-nowrap ${
-                      t.category === 'EARN' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                      t.category === 'EARN' ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
                     }`}>
                       {t.category === 'EARN' ? '+' : '-'}{formatCurrency(t.amount)}
                     </td>
@@ -434,7 +439,7 @@ export default function DashboardPage() {
         <div className="mt-8 p-6 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-xl text-center">
           <div className="text-4xl mb-4">📋</div>
           <h3 className="font-semibold text-indigo-900 dark:text-indigo-300 mb-2">Belum ada transaksi</h3>
-          <p className="text-sm text-indigo-700 dark:text-indigo-400 mb-4">
+          <p className="text-sm text-indigo-500 dark:text-indigo-400 mb-4">
             {canManageTransactions
               ? 'Mulai dengan menambahkan transaksi pertama Anda untuk melihat statistik keuangan.'
               : 'Belum ada transaksi yang tercatat untuk bisnis ini.'}

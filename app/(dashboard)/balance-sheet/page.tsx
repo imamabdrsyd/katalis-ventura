@@ -60,7 +60,7 @@ export default function BalanceSheetPage() {
       </div>
 
       {/* Filters */}
-      <div className="card mb-6">
+      <div className="card-static mb-6">
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-end justify-between">
           {/* Period Selector */}
           <div className="flex-1">
@@ -72,7 +72,7 @@ export default function BalanceSheetPage() {
                   onClick={() => handlePeriodChange(p)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     period === p
-                      ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400'
+                      ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
@@ -154,7 +154,7 @@ export default function BalanceSheetPage() {
       {/* Balance Sheet Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* ASSETS */}
-        <div className="card">
+        <div className="card-static">
           <div className="border-b-2 border-gray-300 dark:border-gray-600 pb-3 mb-6">
             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">
               ASET (Assets)
@@ -231,7 +231,7 @@ export default function BalanceSheetPage() {
         </div>
 
         {/* LIABILITIES & EQUITY */}
-        <div className="card">
+        <div className="card-static">
           <div className="border-b-2 border-gray-300 dark:border-gray-600 pb-3 mb-6">
             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">
               LIABILITAS & EKUITAS
@@ -269,7 +269,7 @@ export default function BalanceSheetPage() {
                 {balanceSheet.equity.drawings > 0 && (
                   <div className="flex justify-between py-2 pl-4">
                     <span className="text-gray-700 dark:text-gray-300">Prive / Dividen</span>
-                    <span className="font-semibold text-red-600 dark:text-red-400">
+                    <span className="font-semibold text-red-500 dark:text-red-400">
                       ({formatCurrency(balanceSheet.equity.drawings)})
                     </span>
                   </div>
@@ -278,8 +278,8 @@ export default function BalanceSheetPage() {
                   <span className="text-gray-700 dark:text-gray-300">Laba Ditahan</span>
                   <span className={`font-semibold ${
                     balanceSheet.equity.retainedEarnings >= 0
-                      ? 'text-emerald-600 dark:text-emerald-400'
-                      : 'text-red-600 dark:text-red-400'
+                      ? 'text-emerald-500 dark:text-emerald-400'
+                      : 'text-red-500 dark:text-red-400'
                   }`}>
                     {balanceSheet.equity.retainedEarnings < 0 ? '(' : ''}
                     {formatCurrency(Math.abs(balanceSheet.equity.retainedEarnings))}
@@ -318,9 +318,9 @@ export default function BalanceSheetPage() {
       }`}>
         <div className="flex items-center gap-3">
           {isBalanced ? (
-            <CheckCircle className="w-6 h-6 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+            <CheckCircle className="w-6 h-6 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
           ) : (
-            <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0" />
+            <AlertCircle className="w-6 h-6 text-red-500 dark:text-red-400 flex-shrink-0" />
           )}
           <div className="flex-1">
             <p className={`font-semibold ${
@@ -332,8 +332,8 @@ export default function BalanceSheetPage() {
             </p>
             <p className={`text-sm mt-1 ${
               isBalanced
-                ? 'text-emerald-700 dark:text-emerald-300'
-                : 'text-red-700 dark:text-red-300'
+                ? 'text-emerald-500 dark:text-emerald-300'
+                : 'text-red-500 dark:text-red-300'
             }`}>
               Aset ({formatCurrency(balanceSheet.assets.totalAssets)}) = Liabilitas ({formatCurrency(balanceSheet.liabilities.totalLiabilities)}) + Ekuitas ({formatCurrency(balanceSheet.equity.totalEquity)})
             </p>

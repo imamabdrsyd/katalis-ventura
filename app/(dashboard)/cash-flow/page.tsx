@@ -32,7 +32,7 @@ function TransactionRow({ tx }: { tx: CashFlowTransaction }) {
             )}
           </div>
           <div className="text-right flex-shrink-0">
-            <p className={`text-sm font-semibold ${isIn ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+            <p className={`text-sm font-semibold ${isIn ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
               {isIn ? '+' : ''}{formatCurrency(tx.amount)}
             </p>
             <p className="text-xs text-gray-400 dark:text-gray-500">
@@ -91,7 +91,7 @@ function ActivitySection({ title, subtitle, total, totalLabel, transactions }: A
 
       <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
         <span className="text-gray-800 dark:text-gray-100">{totalLabel}</span>
-        <span className={total >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+        <span className={total >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}>
           {formatCurrency(total)}
         </span>
       </div>
@@ -150,7 +150,7 @@ export default function CashFlowPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
-          <ArrowLeftRight className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+          <ArrowLeftRight className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
           Cash Flow Statement
         </h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
@@ -163,7 +163,7 @@ export default function CashFlowPage() {
         {/* LEFT COLUMN — Filters + Summary */}
         <div className="w-full lg:w-80 xl:w-96 flex-shrink-0 space-y-6">
           {/* Filters */}
-          <div className="card">
+          <div className="card-static">
             <div className="space-y-4">
               {/* Period Selector */}
               <div>
@@ -175,7 +175,7 @@ export default function CashFlowPage() {
                       onClick={() => handlePeriodChange(p)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                         period === p
-                          ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400'
+                          ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                       }`}
                     >
@@ -249,7 +249,7 @@ export default function CashFlowPage() {
           </div>
 
           {/* Summary */}
-          <div className="card space-y-4">
+          <div className="card-static space-y-4">
             <h4 className="font-semibold text-gray-700 dark:text-gray-300 text-sm uppercase">
               Cash Flow Summary
             </h4>
@@ -262,25 +262,25 @@ export default function CashFlowPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-400 pl-2">+ Operating:</span>
-                <span className={`font-medium ${cashFlow.operating >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                <span className={`font-medium ${cashFlow.operating >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                   {formatCurrency(cashFlow.operating)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-400 pl-2">+ Investing:</span>
-                <span className={`font-medium ${cashFlow.investing >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                <span className={`font-medium ${cashFlow.investing >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                   {formatCurrency(cashFlow.investing)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-400 pl-2">+ Financing:</span>
-                <span className={`font-medium ${cashFlow.financing >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                <span className={`font-medium ${cashFlow.financing >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                   {formatCurrency(cashFlow.financing)}
                 </span>
               </div>
               <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-600">
                 <span className="font-semibold text-gray-800 dark:text-gray-200">Ending Cash:</span>
-                <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                <span className="font-bold text-indigo-500 dark:text-indigo-400">
                   {formatCurrency(cashFlow.closingBalance)}
                 </span>
               </div>
@@ -306,7 +306,7 @@ export default function CashFlowPage() {
                       <p className="text-[10px] text-gray-500 dark:text-gray-400">{item.count} transaksi</p>
                     </div>
                     <p className={`text-sm font-bold ${
-                      item.value >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                      item.value >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'
                     }`}>
                       {formatCurrency(item.value)}
                     </p>
@@ -319,7 +319,7 @@ export default function CashFlowPage() {
 
         {/* RIGHT COLUMN — Main Content */}
         <div className="flex-1 min-w-0">
-          <div className="card">
+          <div className="card-static">
             <div className="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
               <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
                 Cash Flow Statement
@@ -374,7 +374,7 @@ export default function CashFlowPage() {
               <div className={`bg-white dark:bg-gray-800 rounded-xl p-6 border-2 ${cashFlow.netCashFlow >= 0 ? 'border-green-400 dark:border-green-500' : 'border-red-400 dark:border-red-500'}`}>
                 <div className="flex justify-between items-center">
                   <div>
-                    <h3 className={`font-bold text-xl mb-1 ${cashFlow.netCashFlow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>NET CASH FLOW</h3>
+                    <h3 className={`font-bold text-xl mb-1 ${cashFlow.netCashFlow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>NET CASH FLOW</h3>
                     <p className="text-gray-500 dark:text-gray-400 text-sm">
                       Operating + Investing + Financing
                     </p>
@@ -387,7 +387,7 @@ export default function CashFlowPage() {
                         <TrendingDown className="w-6 h-6" />
                       )}
                     </div>
-                    <span className={`text-3xl font-bold ${cashFlow.netCashFlow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                    <span className={`text-3xl font-bold ${cashFlow.netCashFlow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                       {formatCurrency(cashFlow.netCashFlow)}
                     </span>
                   </div>

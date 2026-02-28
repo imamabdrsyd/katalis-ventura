@@ -6,7 +6,7 @@ import { formatDate } from '@/lib/utils';
 const ROLE_BADGE: Record<string, { label: string; className: string }> = {
   business_manager: {
     label: 'Business Manager',
-    className: 'bg-purple-50 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400',
+    className: 'bg-purple-50 dark:bg-purple-900/50 text-purple-500 dark:text-purple-400',
   },
   investor: {
     label: 'Investor',
@@ -14,7 +14,7 @@ const ROLE_BADGE: Record<string, { label: string; className: string }> = {
   },
   both: {
     label: 'Manager & Investor',
-    className: 'bg-indigo-50 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400',
+    className: 'bg-indigo-50 dark:bg-indigo-900/50 text-indigo-500 dark:text-indigo-400',
   },
 };
 
@@ -81,7 +81,7 @@ export function MemberList({ members, loading }: MemberListProps) {
               />
             ) : (
               <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center">
-                <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                <span className="text-sm font-semibold text-indigo-500 dark:text-indigo-400">
                   {getInitials(name)}
                 </span>
               </div>
@@ -100,7 +100,7 @@ export function MemberList({ members, loading }: MemberListProps) {
             {/* Badges */}
             <div className="flex items-center gap-1.5">
               {member.is_creator && (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-900/50 text-amber-500 dark:text-amber-400">
                   Creator
                 </span>
               )}

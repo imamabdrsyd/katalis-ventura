@@ -78,7 +78,7 @@ const ENTRY_TYPES: EntryType[] = [
     label: 'Penjualan',
     description: 'Terima uang dari pelanggan',
     icon: <TrendingUp className="w-5 h-5" />,
-    color: 'text-emerald-600 dark:text-emerald-400',
+    color: 'text-emerald-500 dark:text-emerald-400',
     bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
     borderColor: 'border-emerald-500',
     debitFilter: 'ASSET',
@@ -94,7 +94,7 @@ const ENTRY_TYPES: EntryType[] = [
     label: 'Pengeluaran',
     description: 'Bayar beban operasional',
     icon: <TrendingDown className="w-5 h-5" />,
-    color: 'text-red-600 dark:text-red-400',
+    color: 'text-red-500 dark:text-red-400',
     bgColor: 'bg-red-50 dark:bg-red-900/20',
     borderColor: 'border-red-500',
     debitFilter: 'EXPENSE',
@@ -110,7 +110,7 @@ const ENTRY_TYPES: EntryType[] = [
     label: 'Terima Pinjaman',
     description: 'Uang masuk dari pinjaman',
     icon: <Landmark className="w-5 h-5" />,
-    color: 'text-amber-600 dark:text-amber-400',
+    color: 'text-amber-500 dark:text-amber-400',
     bgColor: 'bg-amber-50 dark:bg-amber-900/20',
     borderColor: 'border-amber-500',
     debitFilter: 'ASSET',
@@ -158,7 +158,7 @@ const ENTRY_TYPES: EntryType[] = [
     label: 'Suntik Modal',
     description: 'Pemilik menambah modal bisnis',
     icon: <PiggyBank className="w-5 h-5" />,
-    color: 'text-purple-600 dark:text-purple-400',
+    color: 'text-purple-500 dark:text-purple-400',
     bgColor: 'bg-purple-50 dark:bg-purple-900/20',
     borderColor: 'border-purple-500',
     debitFilter: 'ASSET',
@@ -174,7 +174,7 @@ const ENTRY_TYPES: EntryType[] = [
     label: 'Tarik Dividen',
     description: 'Pemilik mengambil keuntungan',
     icon: <Wallet className="w-5 h-5" />,
-    color: 'text-indigo-600 dark:text-indigo-400',
+    color: 'text-indigo-500 dark:text-indigo-400',
     bgColor: 'bg-indigo-50 dark:bg-indigo-900/20',
     borderColor: 'border-indigo-500',
     debitFilter: 'EQUITY',
@@ -533,8 +533,8 @@ export default function JournalEntryPage() {
       {/* Success message */}
       {successMessage && (
         <div className="mb-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center gap-3">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-          <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">{successMessage}</p>
+          <CheckCircle2 className="w-5 h-5 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
+          <p className="text-sm text-emerald-500 dark:text-emerald-300 font-medium">{successMessage}</p>
         </div>
       )}
 
@@ -553,11 +553,11 @@ export default function JournalEntryPage() {
                 onClick={() => handleSelectEntryType(et)}
                 className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center ${
                   isSelected
-                    ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 dark:border-indigo-400 text-indigo-500 dark:text-indigo-400'
                     : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
               >
-                <span className={isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}>
+                <span className={isSelected ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}>
                   {et.icon}
                 </span>
                 <span className="text-xs font-semibold leading-tight">{et.label}</span>
@@ -580,7 +580,7 @@ export default function JournalEntryPage() {
             {/* Submit error */}
             {errors.submit && (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-sm text-red-700 dark:text-red-300">{errors.submit}</p>
+                <p className="text-sm text-red-500 dark:text-red-300">{errors.submit}</p>
               </div>
             )}
 
@@ -685,7 +685,7 @@ export default function JournalEntryPage() {
                   {debitAccount.account_code} {debitAccount.account_name}
                 </span>
                 <span className="text-gray-400 dark:text-gray-500 mx-1">→</span>
-                <span className="px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs font-semibold">
+                <span className="px-2 py-1 rounded bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-300 text-xs font-semibold">
                   Kredit
                 </span>
                 <span className="font-medium text-gray-700 dark:text-gray-300">
@@ -745,10 +745,10 @@ export default function JournalEntryPage() {
             {categoryWarnings.length > 0 && (
               <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                  <AlertTriangle className="w-4 h-4 text-amber-500 dark:text-amber-400 mt-0.5 flex-shrink-0" />
                   <div className="space-y-1">
                     {categoryWarnings.map((warning, i) => (
-                      <p key={i} className="text-sm text-amber-700 dark:text-amber-300">{warning}</p>
+                      <p key={i} className="text-sm text-amber-500 dark:text-amber-300">{warning}</p>
                     ))}
                   </div>
                 </div>

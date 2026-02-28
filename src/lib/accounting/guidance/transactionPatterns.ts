@@ -282,7 +282,12 @@ export function detectPatternFromName(name: string): TransactionPattern | null {
     nameLower.includes('sewa') ||
     nameLower.includes('rental') ||
     nameLower.includes('pendapatan') ||
-    nameLower.includes('pembayaran dari')
+    nameLower.includes('pembayaran dari') ||
+    nameLower.includes('penjualan') ||
+    nameLower.includes('jual') ||
+    nameLower.includes('pemasukan') ||
+    nameLower.includes('fee') ||
+    nameLower.includes('terima pembayaran')
   ) {
     return getPatternById('receive_revenue') || null;
   }
@@ -299,11 +304,17 @@ export function detectPatternFromName(name: string): TransactionPattern | null {
   // OPEX keywords
   if (
     nameLower.includes('listrik') ||
-    nameLower.includes('air') ||
+    nameLower.includes('air pdam') ||
     nameLower.includes('internet') ||
     nameLower.includes('gaji') ||
     nameLower.includes('asuransi') ||
-    nameLower.includes('maintenance')
+    nameLower.includes('maintenance') ||
+    nameLower.includes('bayar biaya') ||
+    nameLower.includes('telepon') ||
+    nameLower.includes('wifi') ||
+    nameLower.includes('keamanan') ||
+    nameLower.includes('kebersihan') ||
+    nameLower.includes('sewa kantor')
   ) {
     return getPatternById('pay_opex') || null;
   }
@@ -312,21 +323,27 @@ export function detectPatternFromName(name: string): TransactionPattern | null {
   if (
     nameLower.includes('cleaning') ||
     nameLower.includes('supplies') ||
-    nameLower.includes('komisi')
+    nameLower.includes('komisi') ||
+    nameLower.includes('bahan baku') ||
+    nameLower.includes('persediaan') ||
+    nameLower.includes('stok') ||
+    nameLower.includes('packaging')
   ) {
     return getPatternById('pay_variable_cost') || null;
   }
 
   // Asset purchase keywords
   if (
-    nameLower.includes('beli') &&
-    (nameLower.includes('furniture') ||
-      nameLower.includes('komputer') ||
-      nameLower.includes('ac') ||
-      nameLower.includes('peralatan') ||
-      nameLower.includes('kendaraan') ||
-      nameLower.includes('motor') ||
-      nameLower.includes('mobil'))
+    (nameLower.includes('beli') &&
+      (nameLower.includes('furniture') ||
+        nameLower.includes('komputer') ||
+        nameLower.includes('ac') ||
+        nameLower.includes('peralatan') ||
+        nameLower.includes('kendaraan') ||
+        nameLower.includes('motor') ||
+        nameLower.includes('mobil'))) ||
+    nameLower.includes('renovasi') ||
+    nameLower.includes('perbaikan besar')
   ) {
     return getPatternById('buy_asset') || null;
   }
@@ -335,7 +352,9 @@ export function detectPatternFromName(name: string): TransactionPattern | null {
   if (
     nameLower.includes('cicilan') ||
     nameLower.includes('pelunasan') ||
-    nameLower.includes('bayar hutang')
+    nameLower.includes('bayar hutang') ||
+    nameLower.includes('angsuran') ||
+    nameLower.includes('bunga bank')
   ) {
     return getPatternById('pay_loan') || null;
   }
@@ -344,7 +363,9 @@ export function detectPatternFromName(name: string): TransactionPattern | null {
   if (
     nameLower.includes('pajak') ||
     nameLower.includes('pph') ||
-    nameLower.includes('pbb')
+    nameLower.includes('pbb') ||
+    nameLower.includes('ppn') ||
+    nameLower.includes('retribusi')
   ) {
     return getPatternById('pay_tax') || null;
   }

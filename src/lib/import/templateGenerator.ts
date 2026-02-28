@@ -274,6 +274,91 @@ export function downloadTemplate(): void {
 }
 
 /**
+ * Generate Smart Import Excel template (3 columns only)
+ */
+export function generateSmartTemplate(): Blob {
+  const workbook = XLSX.utils.book_new();
+
+  // Sheet 1: Template with 3 columns
+  const templateData = [
+    ['Deskripsi', 'Tanggal', 'Nominal'],
+    ['Bayar listrik PLN bulan Januari', '2026-01-15', 500000],
+    ['Pendapatan sewa unit A lantai 2', '2026-01-20', 3000000],
+    ['Beli AC untuk kantor baru', '2026-01-25', 5000000],
+    ['Gaji karyawan bulan Januari', '2026-01-31', 4500000],
+    ['Penjualan produk online', '2026-02-01', 1200000],
+    ['Bayar pajak PPh Final', '2026-02-10', 250000],
+    ['', '', ''],
+    ['', '', ''],
+    ['', '', ''],
+  ];
+
+  const templateSheet = XLSX.utils.aoa_to_sheet(templateData);
+  templateSheet['!cols'] = [
+    { wch: 45 }, // Deskripsi
+    { wch: 14 }, // Tanggal
+    { wch: 15 }, // Nominal
+  ];
+
+  XLSX.utils.book_append_sheet(workbook, templateSheet, 'Template');
+
+  // Sheet 2: Instructions
+  const instructionsData = [
+    ['SMART IMPORT - Instruksi'],
+    [''],
+    ['Cukup isi 3 kolom saja, sistem akan otomatis mendeteksi:'],
+    ['  - Kategori transaksi (EARN/OPEX/VAR/CAPEX/TAX/FIN)'],
+    ['  - Nama customer/vendor'],
+    ['  - Akun debit & kredit (double-entry)'],
+    [''],
+    ['KOLOM:'],
+    ['  Deskripsi  : Tulis deskripsi lengkap transaksi (wajib)'],
+    ['  Tanggal    : Format YYYY-MM-DD, misal 2026-01-15 (wajib)'],
+    ['  Nominal    : Jumlah dalam Rupiah, tanpa simbol (wajib)'],
+    [''],
+    ['TIPS AGAR AUTO-DETECT AKURAT:'],
+    ['  - Tulis deskripsi yang jelas, misal "Bayar listrik PLN" bukan hanya "PLN"'],
+    ['  - Gunakan kata kunci umum seperti:'],
+    ['    Pendapatan: "pendapatan", "sewa", "penjualan", "fee"'],
+    ['    Operasional: "bayar", "listrik", "gaji", "internet", "asuransi"'],
+    ['    Variabel: "cleaning", "supplies", "komisi", "bahan baku"'],
+    ['    Aset: "beli furniture", "beli komputer", "renovasi"'],
+    ['    Pajak: "pajak", "pph", "pbb", "ppn"'],
+    ['    Modal/Pinjaman: "modal", "cicilan", "prive", "pinjaman"'],
+    [''],
+    ['CATATAN:'],
+    ['  - Setelah upload, Anda bisa review & edit hasil auto-detect sebelum import'],
+    ['  - Baris dengan confidence rendah akan ditandai untuk direview'],
+    ['  - Maksimal 5000 baris per file, ukuran maks 5MB'],
+  ];
+
+  const instructionsSheet = XLSX.utils.aoa_to_sheet(instructionsData);
+  instructionsSheet['!cols'] = [{ wch: 80 }];
+
+  XLSX.utils.book_append_sheet(workbook, instructionsSheet, 'Instruksi');
+
+  const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  return new Blob([excelBuffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+}
+
+/**
+ * Download the Smart Import template
+ */
+export function downloadSmartTemplate(): void {
+  const blob = generateSmartTemplate();
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `Smart_Import_Template_${new Date().toISOString().split('T')[0]}.xlsx`;
+  link.click();
+
+  URL.revokeObjectURL(url);
+}
+
+/**
  * Generate error report CSV
  */
 export function generateErrorReport(errors: Array<{ row: number; column: string; message: string; originalValue?: any; suggestion?: string }>): Blob {

@@ -27,7 +27,7 @@ function TransactionRow({ tx }: { tx: Transaction }) {
             )}
           </div>
           <div className="text-right flex-shrink-0">
-            <p className={`text-sm font-semibold ${tx.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+            <p className={`text-sm font-semibold ${tx.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
               {tx.amount >= 0 ? '+' : ''}{formatCurrency(tx.amount)}
             </p>
             <p className="text-xs text-gray-400 dark:text-gray-500">
@@ -175,7 +175,7 @@ function IncomeStatementPageInner() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
-          <DollarSign className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+          <DollarSign className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
           Income Statement
         </h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
@@ -188,7 +188,7 @@ function IncomeStatementPageInner() {
         {/* LEFT COLUMN — Filters + Summary */}
         <div className="w-full lg:w-80 xl:w-96 flex-shrink-0 space-y-6">
           {/* Filters */}
-          <div className="card">
+          <div className="card-static">
             <div className="space-y-4">
               {/* Period Selector */}
               <div>
@@ -200,7 +200,7 @@ function IncomeStatementPageInner() {
                       onClick={() => handlePeriodChange(p)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                         period === p
-                          ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400'
+                          ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                       }`}
                     >
@@ -274,7 +274,7 @@ function IncomeStatementPageInner() {
           </div>
 
           {/* Summary — Waterfall breakdown */}
-          <div className="card space-y-3">
+          <div className="card-static space-y-3">
             <h4 className="font-semibold text-gray-700 dark:text-gray-300 text-sm uppercase">
               Income Summary
             </h4>
@@ -285,35 +285,35 @@ function IncomeStatementPageInner() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-400 pl-2">- COGS:</span>
-                <span className="font-medium text-red-600 dark:text-red-400">({formatCurrency(summary.totalVar)})</span>
+                <span className="font-medium text-red-500 dark:text-red-400">({formatCurrency(summary.totalVar)})</span>
               </div>
               <div className="flex justify-between pt-1 border-t border-gray-200 dark:border-gray-600">
                 <span className="font-medium text-gray-700 dark:text-gray-300">Gross Profit:</span>
-                <span className={`font-semibold ${summary.grossProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                <span className={`font-semibold ${summary.grossProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                   {formatCurrency(summary.grossProfit)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-400 pl-2">- OPEX:</span>
-                <span className="font-medium text-red-600 dark:text-red-400">({formatCurrency(summary.totalOpex)})</span>
+                <span className="font-medium text-red-500 dark:text-red-400">({formatCurrency(summary.totalOpex)})</span>
               </div>
               <div className="flex justify-between pt-1 border-t border-gray-200 dark:border-gray-600">
                 <span className="font-medium text-gray-700 dark:text-gray-300">Operating Income:</span>
-                <span className={`font-semibold ${metrics.operatingIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                <span className={`font-semibold ${metrics.operatingIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                   {formatCurrency(metrics.operatingIncome)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-400 pl-2">- Financing:</span>
-                <span className="font-medium text-red-600 dark:text-red-400">({formatCurrency(summary.totalInterest)})</span>
+                <span className="font-medium text-red-500 dark:text-red-400">({formatCurrency(summary.totalInterest)})</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-400 pl-2">- Tax:</span>
-                <span className="font-medium text-red-600 dark:text-red-400">({formatCurrency(summary.totalTax)})</span>
+                <span className="font-medium text-red-500 dark:text-red-400">({formatCurrency(summary.totalTax)})</span>
               </div>
               <div className="flex justify-between pt-2 border-t-2 border-gray-300 dark:border-gray-600">
                 <span className="font-semibold text-gray-800 dark:text-gray-200">Net Income:</span>
-                <span className={`font-bold ${summary.netProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                <span className={`font-bold ${summary.netProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                   {formatCurrency(summary.netProfit)}
                 </span>
               </div>
@@ -336,7 +336,7 @@ function IncomeStatementPageInner() {
               <div className="rounded-lg p-3 bg-purple-50 dark:bg-purple-900/20">
                 <div className="flex justify-between items-center">
                   <p className="text-xs font-semibold text-purple-800 dark:text-purple-300">Net Margin</p>
-                  <p className="text-sm font-bold text-purple-600 dark:text-purple-400">{metrics.netMargin.toFixed(2)}%</p>
+                  <p className="text-sm font-bold text-purple-500 dark:text-purple-400">{metrics.netMargin.toFixed(2)}%</p>
                 </div>
               </div>
             </div>
@@ -345,7 +345,7 @@ function IncomeStatementPageInner() {
 
         {/* RIGHT COLUMN — Main Content */}
         <div className="flex-1 min-w-0">
-          <div className="card">
+          <div className="card-static">
             <div className="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
               <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
                 Income Statement
@@ -376,22 +376,22 @@ function IncomeStatementPageInner() {
                 <TransactionSection title="Variable Costs" transactions={transactionsByCategory.cogs} />
                 <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
                   <span className="text-gray-800 dark:text-gray-100">Total COGS</span>
-                  <span className="text-red-600 dark:text-red-400">({formatCurrency(summary.totalVar)})</span>
+                  <span className="text-red-500 dark:text-red-400">({formatCurrency(summary.totalVar)})</span>
                 </div>
               </div>
 
               {/* GROSS PROFIT */}
-              <div className="relative group bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 hover:bg-indigo-100/70 dark:hover:bg-indigo-900/30 cursor-default">
+              <div className="relative group bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 hover:bg-indigo-50/70 dark:hover:bg-indigo-900/30 cursor-default">
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="font-bold text-indigo-900 dark:text-indigo-100 text-lg flex items-center gap-1">
                       GROSS PROFIT
                       <Info className="w-3.5 h-3.5 text-indigo-400 dark:text-indigo-500" />
                     </h3>
-                    <p className="text-sm text-indigo-600 dark:text-indigo-400">Margin: {metrics.grossMargin.toFixed(2)}%</p>
+                    <p className="text-sm text-indigo-500 dark:text-indigo-400">Margin: {metrics.grossMargin.toFixed(2)}%</p>
                   </div>
                   <div className="text-right">
-                    <span className={`text-2xl font-bold ${summary.grossProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                    <span className={`text-2xl font-bold ${summary.grossProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                       {formatCurrency(summary.grossProfit)}
                     </span>
                   </div>
@@ -416,21 +416,21 @@ function IncomeStatementPageInner() {
                 <TransactionSection title="Operating Expenses" transactions={transactionsByCategory.opex} />
                 <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
                   <span className="text-gray-800 dark:text-gray-100">Total Operating Expenses</span>
-                  <span className="text-red-600 dark:text-red-400">({formatCurrency(summary.totalOpex)})</span>
+                  <span className="text-red-500 dark:text-red-400">({formatCurrency(summary.totalOpex)})</span>
                 </div>
               </div>
 
               {/* OPERATING INCOME */}
-              <div className="relative group bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 hover:bg-purple-100/70 dark:hover:bg-purple-900/30 cursor-default">
+              <div className="relative group bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 hover:bg-purple-50/70 dark:hover:bg-purple-900/30 cursor-default">
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="font-bold text-purple-900 dark:text-purple-100 text-lg flex items-center gap-1">
                       OPERATING INCOME
                       <Info className="w-3.5 h-3.5 text-purple-400 dark:text-purple-500" />
                     </h3>
-                    <p className="text-sm text-purple-600 dark:text-purple-400">Margin: {metrics.operatingMargin.toFixed(2)}%</p>
+                    <p className="text-sm text-purple-500 dark:text-purple-400">Margin: {metrics.operatingMargin.toFixed(2)}%</p>
                   </div>
-                  <span className={`text-xl font-bold ${metrics.operatingIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  <span className={`text-xl font-bold ${metrics.operatingIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                     {formatCurrency(metrics.operatingIncome)}
                   </span>
                 </div>
@@ -461,7 +461,7 @@ function IncomeStatementPageInner() {
                     EBT (Earnings Before Tax)
                     <Info className="w-3.5 h-3.5 text-blue-400 dark:text-blue-500" />
                   </h3>
-                  <span className={`text-xl font-bold ${metrics.ebt >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  <span className={`text-xl font-bold ${metrics.ebt >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                     {formatCurrency(metrics.ebt)}
                   </span>
                 </div>
@@ -485,8 +485,8 @@ function IncomeStatementPageInner() {
               {/* NET INCOME */}
               <div id="net-income" className={`relative group rounded-xl p-6 text-white cursor-default ${
                 summary.netProfit >= 0
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'
-                  : 'bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600'
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-500'
+                  : 'bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-500 hover:to-rose-600'
               }`}>
                 <div className="flex justify-between items-center">
                   <div>

@@ -11,10 +11,10 @@ import { Plus, Search, ChevronDown, ChevronRight, Lock, Pencil, XCircle, CheckCi
 
 const TYPE_COLORS: Record<AccountType, string> = {
   ASSET: 'from-blue-500 to-blue-600',
-  LIABILITY: 'from-amber-500 to-amber-600',
-  EQUITY: 'from-purple-500 to-purple-600',
+  LIABILITY: 'from-amber-500 to-amber-500',
+  EQUITY: 'from-purple-500 to-purple-500',
   REVENUE: 'from-green-500 to-green-600',
-  EXPENSE: 'from-red-500 to-red-600',
+  EXPENSE: 'from-red-500 to-red-500',
 };
 
 export default function AccountsPage() {
@@ -221,7 +221,7 @@ export default function AccountsPage() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
-              <BookOpenIcon className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+              <BookOpenIcon className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
               Chart of Accounts
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -258,7 +258,7 @@ export default function AccountsPage() {
               type="checkbox"
               checked={showInactive}
               onChange={e => setShowInactive(e.target.checked)}
-              className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+              className="rounded border-gray-300 dark:border-gray-600 text-indigo-500 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400"
             />
             <span className="text-sm text-gray-700 dark:text-gray-300">Tampilkan nonaktif</span>
           </label>
@@ -267,7 +267,7 @@ export default function AccountsPage() {
 
       {/* Error State */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg mb-6">
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-500 dark:text-red-300 px-4 py-3 rounded-lg mb-6">
           {error}
         </div>
       )}
@@ -452,7 +452,7 @@ function ParentAccountCard({
                   e.stopPropagation();
                   onAddSub();
                 }}
-                className="flex items-center gap-2 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors"
+                className="flex items-center gap-2 text-sm text-indigo-500 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 Tambah sub-akun di {parent.account_name}
@@ -506,8 +506,8 @@ function SubAccountRow({
         {/* Normal Balance Badge */}
         <span className={`text-xs px-2 py-0.5 rounded ${
           account.normal_balance === 'DEBIT'
-            ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
-            : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+            ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
+            : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-500 dark:text-emerald-400'
         }`}>
           {account.normal_balance}
         </span>
@@ -515,7 +515,7 @@ function SubAccountRow({
         {canEdit && (
           <button
             onClick={() => onEdit(account)}
-            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition-colors"
+            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition-colors"
             title="Edit"
           >
             <Pencil className="w-4 h-4" />
@@ -524,7 +524,7 @@ function SubAccountRow({
         {canToggle && account.is_active && onDeactivate && (
           <button
             onClick={() => onDeactivate(account)}
-            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
             title="Nonaktifkan"
           >
             <XCircle className="w-4 h-4" />

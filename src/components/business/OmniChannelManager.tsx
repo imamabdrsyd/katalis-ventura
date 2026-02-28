@@ -63,7 +63,7 @@ export function OmniChannelManager({ businessId, businessName, userId }: Props) 
             href={`/${channel.slug}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
           >
             <ExternalLink className="w-4 h-4" />
             Lihat Halaman

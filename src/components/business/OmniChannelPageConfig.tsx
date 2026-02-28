@@ -198,9 +198,9 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
             placeholder="nama-bisnis"
             className={`flex-1 px-3 py-2 rounded-xl border text-sm text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${
               slugStatus === 'unavailable'
-                ? 'border-red-300 dark:border-red-600'
+                ? 'border-red-300 dark:border-red-500'
                 : slugStatus === 'available'
-                ? 'border-emerald-300 dark:border-emerald-600'
+                ? 'border-emerald-300 dark:border-emerald-500'
                 : 'border-gray-200 dark:border-gray-600'
             }`}
           />
@@ -222,7 +222,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
                   <button
                     key={s}
                     onClick={() => setSlug(s)}
-                    className="px-2.5 py-1 text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors border border-indigo-200 dark:border-indigo-700"
+                    className="px-2.5 py-1 text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors border border-indigo-200 dark:border-indigo-600"
                   >
                     /{s}
                   </button>
@@ -320,7 +320,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
               <button
                 type="button"
                 onClick={() => { setLogoUrl(''); setUploadError(''); }}
-                className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors"
+                className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-colors"
                 title="Hapus logo"
               >
                 <X className="w-3 h-3" />
@@ -351,7 +351,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
       <button
         onClick={handleSave}
         disabled={saving || !hasChanges || slugStatus === 'unavailable' || slugStatus === 'checking' || !title || !slug}
-        className="w-full px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2"
+        className="w-full px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2"
       >
         {saving ? (
           <>
