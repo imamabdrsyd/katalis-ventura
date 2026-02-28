@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Check, X, Loader2, Eye, EyeOff } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Check, X, Loader2, Eye, EyeOff, Camera, ImageIcon } from 'lucide-react';
 import type { BusinessOmniChannel } from '@/types';
 import { upsertOmniChannel, checkSlugAvailability, fetchAvailableSlugSuggestions } from '@/lib/api/omniChannel';
 import { generateSlugFromName, isValidSlugFormat, isReservedSlug, generateSlugSuggestions } from '@/lib/utils/slugUtils';
+import { createClient } from '@/lib/supabase';
 
 interface Props {
   businessId: string;
@@ -27,6 +28,9 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Debounced slug check
   useEffect(() => {
@@ -85,6 +89,40 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
 
     return () => clearTimeout(timer);
   }, [slug, channel?.slug, businessId]);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Hanya file gambar yang diperbolehkan');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setUploadError('Ukuran file maksimal 2MB');
+      return;
+    }
+
+    setUploading(true);
+    setUploadError('');
+    try {
+      const supabase = createClient();
+      const ext = file.name.split('.').pop();
+      const filePath = `business-logos/${businessId}/${Date.now()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage
+        .from('profiles')
+        .upload(filePath, file, { cacheControl: '3600', upsert: true });
+      if (uploadErr) throw uploadErr;
+      const { data } = supabase.storage.from('profiles').getPublicUrl(filePath);
+      setLogoUrl(data.publicUrl);
+    } catch (err: any) {
+      setUploadError(err.message || 'Gagal upload foto');
+    } finally {
+      setUploading(false);
+      // Reset input so same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const handleSave = async () => {
     if (slugStatus === 'unavailable' || slugStatus === 'checking') return;
@@ -247,18 +285,63 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
         />
       </div>
 
-      {/* Logo URL */}
+      {/* Logo Upload */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          URL Logo <span className="text-gray-400 font-normal">(opsional)</span>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Logo / Foto Profil <span className="text-gray-400 font-normal">(opsional)</span>
         </label>
-        <input
-          type="url"
-          value={logoUrl}
-          onChange={(e) => setLogoUrl(e.target.value)}
-          placeholder="https://example.com/logo.png"
-          className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
+        <div className="flex items-center gap-4">
+          {/* Preview + upload trigger */}
+          <div className="relative group shrink-0">
+            <div className="w-20 h-20 rounded-full overflow-hidden bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-2xl font-bold border-2 border-gray-200 dark:border-gray-600">
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
+              ) : (
+                <ImageIcon className="w-8 h-8 text-white/70" />
+              )}
+            </div>
+            {/* Hover overlay */}
+            <label className={`absolute inset-0 flex items-center justify-center bg-black/50 rounded-full cursor-pointer transition-opacity ${uploading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+              {uploading ? (
+                <Loader2 className="w-5 h-5 text-white animate-spin" />
+              ) : (
+                <Camera className="w-5 h-5 text-white" />
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleLogoUpload}
+                disabled={uploading}
+                className="hidden"
+              />
+            </label>
+            {/* Clear button */}
+            {logoUrl && !uploading && (
+              <button
+                type="button"
+                onClick={() => { setLogoUrl(''); setUploadError(''); }}
+                className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors"
+                title="Hapus logo"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Info teks */}
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Klik foto untuk upload gambar dari device kamu.
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+              Format: JPG, PNG, WebP · Maks. 2MB
+            </p>
+            {uploadError && (
+              <p className="text-xs text-red-500 mt-1">{uploadError}</p>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Save */}
