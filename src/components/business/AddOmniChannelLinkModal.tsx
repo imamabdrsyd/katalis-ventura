@@ -42,6 +42,9 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
       return;
     }
 
+    // Ensure URL has protocol prefix
+    const normalizedUrl = /^https?:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
+
     setSaving(true);
     setError('');
 
@@ -50,14 +53,14 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
         await updateOmniChannelLink(editingLink.id, {
           channel_type: channelType,
           label: label.trim(),
-          url: url.trim(),
+          url: normalizedUrl,
           is_active: isActive,
         });
       } else {
         await addOmniChannelLink('', {
           channel_type: channelType,
           label: label.trim(),
-          url: url.trim(),
+          url: normalizedUrl,
           is_active: isActive,
           sort_order: nextSortOrder,
           businessId,

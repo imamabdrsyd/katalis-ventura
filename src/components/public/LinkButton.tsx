@@ -7,12 +7,17 @@ interface Props {
   link: OmniChannelLink;
 }
 
+function ensureAbsoluteUrl(url: string): string {
+  if (/^https?:\/\//i.test(url)) return url;
+  return `https://${url}`;
+}
+
 export function LinkButton({ link }: Props) {
   const meta = CHANNEL_META[link.channel_type];
 
   return (
     <a
-      href={link.url}
+      href={ensureAbsoluteUrl(link.url)}
       target="_blank"
       rel="noopener noreferrer"
       className={`flex items-center gap-3 w-full px-5 py-3.5 rounded-xl ${meta.bgColor} ${meta.textColor} font-medium text-sm transition-all hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] shadow-md`}
