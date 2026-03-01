@@ -26,7 +26,7 @@ export function useTransactions() {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
   // Pagination
-  const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(50);
   const [currentPage, setCurrentPage] = useState<number>(1);
 
   // Modal state
