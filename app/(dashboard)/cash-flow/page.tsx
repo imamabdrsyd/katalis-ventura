@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar, TrendingUp, TrendingDown, Download, Wallet, FileText, FileSpreadsheet, ChevronDown, ChevronRight, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Info } from 'lucide-react';
+import Link from 'next/link';
+import { Calendar, TrendingUp, TrendingDown, Download, Wallet, FileText, FileSpreadsheet, ChevronDown, ChevronRight, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Info, ExternalLink } from 'lucide-react';
 import { useCashFlow } from '@/hooks/useCashFlow';
 import { formatCurrency } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
@@ -51,9 +52,10 @@ interface ActivitySectionProps {
   total: number;
   totalLabel: string;
   transactions: CashFlowTransaction[];
+  transactionLink?: string;
 }
 
-function ActivitySection({ title, subtitle, total, totalLabel, transactions }: ActivitySectionProps) {
+function ActivitySection({ title, subtitle, total, totalLabel, transactions, transactionLink }: ActivitySectionProps) {
   const [open, setOpen] = useState(false);
   const sorted = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -91,9 +93,19 @@ function ActivitySection({ title, subtitle, total, totalLabel, transactions }: A
 
       <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
         <span className="text-gray-800 dark:text-gray-100">{totalLabel}</span>
-        <span className={total >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}>
-          {formatCurrency(total)}
-        </span>
+        {transactionLink ? (
+          <Link
+            href={transactionLink}
+            className={`flex items-center gap-1 hover:underline underline-offset-2 ${total >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}
+          >
+            {formatCurrency(total)}
+            <ExternalLink className="w-3 h-3 opacity-60" />
+          </Link>
+        ) : (
+          <span className={total >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}>
+            {formatCurrency(total)}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -117,6 +129,25 @@ export default function CashFlowPage() {
     handleExportPDF,
     handleExportExcel,
   } = useCashFlow();
+
+  // Pre-compute safe date labels and URLs — guard against invalid dates
+  const safeFormat = (dateStr: string) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  const startDateLabel = safeFormat(startDate);
+  const endDateLabel = safeFormat(endDate);
+
+  const openingBalanceLink = (() => {
+    if (!startDate) return '/transactions';
+    const d = new Date(startDate);
+    if (isNaN(d.getTime())) return '/transactions';
+    d.setDate(d.getDate() - 1);
+    return `/transactions?end=${d.toISOString().split('T')[0]}&highlight=equity`;
+  })();
 
   if (loading) {
     return (
@@ -293,7 +324,7 @@ export default function CashFlowPage() {
                 Cash Flow Statement
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Period: {new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - {new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                Period: {startDateLabel} - {endDateLabel}
               </p>
             </div>
 
@@ -308,21 +339,35 @@ export default function CashFlowPage() {
                       <Info className="w-3.5 h-3.5 text-blue-400 dark:text-blue-500" />
                     </h3>
                   </div>
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  <Link
+                    href={openingBalanceLink}
+                    className="text-2xl font-bold text-blue-600 dark:text-blue-400 hover:underline underline-offset-2 flex items-center gap-1.5"
+                  >
                     {formatCurrency(cashFlow.openingBalance)}
-                  </span>
+                    <ExternalLink className="w-4 h-4 opacity-60" />
+                  </Link>
                 </div>
                 {/* Tooltip */}
-                <div className="absolute left-4 bottom-full mb-2 z-50 hidden group-hover:block w-80 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg p-3 shadow-xl pointer-events-none">
-                  <p className="font-semibold mb-2 text-blue-300">Opening Balance</p>
-                  <p className="text-gray-300 mb-2 leading-relaxed">
-                    Saldo awal kas sebelum periode yang dipilih, dihitung dari akumulasi seluruh transaksi yang menyentuh akun kas (Kas Tunai 1100 / Bank 1200) sebelum tanggal mulai periode.
+                <div className="absolute left-4 bottom-full mb-2 z-50 hidden group-hover:block w-96 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg p-3 shadow-xl pointer-events-none">
+                  <p className="font-semibold mb-2 text-blue-300">Opening Balance — Cara Hitung</p>
+                  <p className="text-gray-300 mb-3 leading-relaxed">
+                    Saldo kas pada awal periode, dihitung dari transaksi double-entry sebelum <span className="text-blue-300 font-medium">{startDateLabel}</span>. Klik nominal untuk melihat transaksinya.
                   </p>
-                  <div className="space-y-1 text-[11px] border-t border-gray-700 pt-2">
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Sumber data:</span>
+                  <div className="space-y-2 text-[11px] border-t border-gray-700 pt-2">
+                    <p className="text-gray-400 font-semibold uppercase tracking-wide">Transaksi yang dihitung:</p>
+                    <div className="space-y-1.5">
+                      <div className="flex gap-2">
+                        <span className="text-green-400 flex-shrink-0">+</span>
+                        <span className="text-gray-300"><span className="text-white font-medium">Injeksi modal</span> — Dr Kas (1100/1200) / Cr Ekuitas (3xxx)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <span className="text-red-400 flex-shrink-0">−</span>
+                        <span className="text-gray-300"><span className="text-white font-medium">Prive / penarikan</span> — Dr Ekuitas (3xxx) / Cr Kas (1100/1200)</span>
+                      </div>
                     </div>
-                    <p className="text-gray-300">Injeksi modal (FIN ke Ekuitas/Liabilitas) + semua arus kas masuk/keluar sebelum <span className="text-blue-300 font-medium">{new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span></p>
+                    <div className="border-t border-gray-700 pt-2 text-gray-400 leading-relaxed">
+                      Jika belum ada transaksi ekuitas sama sekali, nilai fallback ke <span className="text-yellow-300 font-medium">Modal Awal Bisnis</span> yang diisi saat setup bisnis.
+                    </div>
                   </div>
                   <div className="absolute left-4 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-900 dark:border-t-gray-800"></div>
                 </div>
@@ -335,6 +380,7 @@ export default function CashFlowPage() {
                 total={cashFlow.operating}
                 totalLabel="Total Operating Cash Flow"
                 transactions={cashFlow.operatingTransactions}
+                transactionLink={`/transactions?start=${startDate}&end=${endDate}&category=EARN`}
               />
 
               {/* CASH FLOW FROM INVESTING ACTIVITIES */}
@@ -344,6 +390,7 @@ export default function CashFlowPage() {
                 total={cashFlow.investing}
                 totalLabel="Total Investing Cash Flow"
                 transactions={cashFlow.investingTransactions}
+                transactionLink={`/transactions?start=${startDate}&end=${endDate}&category=CAPEX`}
               />
 
               {/* CASH FLOW FROM FINANCING ACTIVITIES */}
@@ -353,6 +400,7 @@ export default function CashFlowPage() {
                 total={cashFlow.financing}
                 totalLabel="Total Financing Cash Flow"
                 transactions={cashFlow.financingTransactions}
+                transactionLink={`/transactions?start=${startDate}&end=${endDate}&category=FIN`}
               />
 
               {/* NET CASH FLOW */}

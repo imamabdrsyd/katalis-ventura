@@ -14,6 +14,7 @@ interface TransactionListProps {
   onToggleSelect?: (id: string) => void;
   onSelectAll?: () => void;
   highlightAfter?: string | null;
+  highlightIds?: Set<string>;
 }
 
 const BADGE_CLASSES: Record<TransactionCategory, string> = {
@@ -94,6 +95,7 @@ export function TransactionList({
   onToggleSelect,
   onSelectAll,
   highlightAfter,
+  highlightIds,
 }: TransactionListProps) {
   const showActions = (onEdit || onDelete) && !selectMode;
   const allSelected = selectMode && transactions.length > 0 && transactions.every((t) => selectedIds?.has(t.id));
@@ -162,6 +164,7 @@ export function TransactionList({
           {transactions.map((transaction, index) => {
             const isNewMonth = index > 0 && getMonthKey(transaction.date) !== getMonthKey(transactions[index - 1].date);
             const isHighlighted = highlightAfter && transaction.created_at && transaction.created_at >= highlightAfter;
+            const isIdHighlighted = highlightIds?.has(transaction.id);
             return (
               <tr
                 key={transaction.id}
@@ -174,6 +177,8 @@ export function TransactionList({
                     : onRowClick ? 'cursor-pointer' : ''
                 } ${
                   isHighlighted ? 'animate-import-highlight' : ''
+                } ${
+                  isIdHighlighted ? 'bg-blue-50 dark:bg-blue-900/20 border-l-2 border-l-blue-400 dark:border-l-blue-500' : ''
                 }`}
               >
               {selectMode && (

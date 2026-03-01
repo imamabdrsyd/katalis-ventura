@@ -113,14 +113,41 @@ function TransactionsPageInner() {
     return () => clearTimeout(timer);
   }, [highlightAfter]);
 
-  // Read category filter from URL search params (e.g., /transactions?category=EARN)
+  // Read filters from URL search params (e.g., /transactions?category=EARN&start=2026-01-01&end=2026-01-31)
   const searchParams = useSearchParams();
   useEffect(() => {
     const category = searchParams.get('category');
     if (category && CATEGORIES.includes(category as TransactionCategory)) {
       setCategoryFilter(category as TransactionCategory);
     }
-  }, [searchParams, setCategoryFilter]);
+    const start = searchParams.get('start');
+    const end = searchParams.get('end');
+    if (start || end) {
+      setDateRange({ start: start ?? '', end: end ?? '' });
+    }
+  }, [searchParams, setCategoryFilter, setDateRange]);
+
+  // Compute highlighted transaction IDs based on ?highlight param
+  const highlightParam = searchParams.get('highlight');
+  const highlightIds = (() => {
+    if (!highlightParam) return undefined;
+    const endParam = searchParams.get('end');
+    if (highlightParam === 'equity' && endParam) {
+      // Highlight transaksi ekuitas ↔ kas (Dr Kas/Cr Ekuitas atau Dr Ekuitas/Cr Kas)
+      const ids = new Set<string>();
+      transactions.forEach(t => {
+        if (!t.is_double_entry) return;
+        const debitCode = t.debit_account?.account_code ?? '';
+        const creditCode = t.credit_account?.account_code ?? '';
+        const isCash = (code: string) => code === '1100' || code === '1200';
+        const isEquity = (type?: string) => type === 'EQUITY';
+        if (isCash(debitCode) && isEquity(t.credit_account?.account_type)) ids.add(t.id);
+        if (isCash(creditCode) && isEquity(t.debit_account?.account_type)) ids.add(t.id);
+      });
+      return ids.size > 0 ? ids : undefined;
+    }
+    return undefined;
+  })();
 
   // Loading state
   if (businessLoading) {
@@ -426,6 +453,7 @@ function TransactionsPageInner() {
           onToggleSelect={handleToggleSelect}
           onSelectAll={handleSelectAll}
           highlightAfter={highlightAfter}
+          highlightIds={highlightIds}
         />
 
         {/* Pagination */}

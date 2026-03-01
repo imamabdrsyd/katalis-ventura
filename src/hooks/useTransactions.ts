@@ -51,6 +51,7 @@ export function useTransactions() {
 
   // Apply filters
   const filteredTransactions = transactions.filter((transaction) => {
+    if (categoryFilter && transaction.category !== categoryFilter) return false;
     if (dateRange.start && new Date(transaction.date) < new Date(dateRange.start)) return false;
     if (dateRange.end && new Date(transaction.date) > new Date(dateRange.end)) return false;
     return true;
@@ -72,17 +73,14 @@ export function useTransactions() {
     setLoading(true);
     setError(null);
     try {
-      let data = await transactionsApi.getTransactions(businessId);
-      if (categoryFilter) {
-        data = data.filter((t) => t.category === categoryFilter);
-      }
+      const data = await transactionsApi.getTransactions(businessId);
       setTransactions(data);
     } catch (err: any) {
       setError(err.message || 'Gagal memuat transaksi');
     } finally {
       setLoading(false);
     }
-  }, [businessId, categoryFilter]);
+  }, [businessId]);
 
   // Fetch accounts for smart guidance
   const fetchAccounts = useCallback(async () => {

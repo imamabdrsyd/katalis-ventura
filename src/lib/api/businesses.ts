@@ -20,6 +20,52 @@ export interface CreateBusinessData {
  * Debit: Cash (1100) - Asset increases
  * Credit: Equity (3000) - Owner's capital increases
  */
+async function ensureAccountExists(
+  businessId: string,
+  code: string,
+  defaults: {
+    account_name: string;
+    account_type: 'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENSE';
+    normal_balance: 'DEBIT' | 'CREDIT';
+    parent_code: string;
+    is_system: boolean;
+    sort_order: number;
+    description: string;
+    default_category?: string;
+  }
+) {
+  let account = await getAccountByCode(businessId, code);
+  if (account) return account;
+
+  // Find parent account
+  const parent = await getAccountByCode(businessId, defaults.parent_code);
+  if (!parent) return null;
+
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('accounts')
+    .insert({
+      business_id: businessId,
+      account_code: code,
+      account_name: defaults.account_name,
+      account_type: defaults.account_type,
+      parent_account_id: parent.id,
+      normal_balance: defaults.normal_balance,
+      is_system: defaults.is_system,
+      sort_order: defaults.sort_order,
+      description: defaults.description,
+      default_category: defaults.default_category ?? null,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.warn(`Failed to create account ${code}:`, error);
+    return null;
+  }
+  return data;
+}
+
 async function createCapitalInvestmentTransaction(
   businessId: string,
   amount: number,
@@ -33,10 +79,19 @@ async function createCapitalInvestmentTransaction(
     throw new Error('Cash account (1100) not found. Please ensure default accounts are created.');
   }
 
-  // Get Owner's Capital sub-account (3100)
-  const capitalAccount = await getAccountByCode(businessId, '3100');
+  // Get or create Owner's Capital sub-account (3100)
+  const capitalAccount = await ensureAccountExists(businessId, '3100', {
+    account_name: "Owner's Capital",
+    account_type: 'EQUITY',
+    normal_balance: 'CREDIT',
+    parent_code: '3000',
+    is_system: true,
+    sort_order: 3100,
+    description: 'Modal pemilik',
+    default_category: 'FIN',
+  });
   if (!capitalAccount) {
-    throw new Error("Owner's Capital account (3100) not found. Please ensure default accounts are created.");
+    throw new Error("Owner's Capital account (3100) could not be found or created.");
   }
 
   // Create the double-entry transaction
@@ -187,6 +242,22 @@ export async function createBusiness(
   if (accountsError) {
     console.warn('Failed to create default accounts:', accountsError);
     // Don't throw - allow business creation to succeed even if accounts fail
+  }
+
+  // Ensure essential sub-accounts exist (in case stored procedure is outdated)
+  try {
+    await ensureAccountExists(newBusiness.id, '3100', {
+      account_name: "Owner's Capital",
+      account_type: 'EQUITY',
+      normal_balance: 'CREDIT',
+      parent_code: '3000',
+      is_system: true,
+      sort_order: 3100,
+      description: 'Modal pemilik',
+      default_category: 'FIN',
+    });
+  } catch (err) {
+    console.warn('Failed to ensure account 3100:', err);
   }
 
   // Create capital investment transaction if amount > 0

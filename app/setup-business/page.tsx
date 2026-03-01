@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
+import { createBusiness } from '@/lib/api/businesses';
 
 const BUSINESS_TYPES = [
   { value: 'agribusiness', label: 'Agribusiness' },
@@ -18,6 +19,7 @@ export default function SetupBusinessPage() {
   const [businessType, setBusinessType] = useState('agribusiness');
   const [customType, setCustomType] = useState('');
   const [propertyAddress, setPropertyAddress] = useState('');
+  const [capitalInvestment, setCapitalInvestment] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -62,29 +64,16 @@ export default function SetupBusinessPage() {
       // Determine final business type
       const finalBusinessType = businessType === 'other' ? customType.trim() : businessType;
 
-      // Create business
-      const { data: business, error: businessError } = await supabase
-        .from('businesses')
-        .insert({
+      // Create business via API (handles default accounts + capital investment transaction)
+      await createBusiness(
+        {
           business_name: businessName,
           business_type: finalBusinessType,
-          capital_investment: 0, // Set to 0, modal akan diinput via transaksi CAPEX
+          capital_investment: capitalInvestment,
           property_address: propertyAddress,
-          created_by: user.id,
-        })
-        .select()
-        .single();
-
-      if (businessError) throw businessError;
-
-      // Assign user as business manager
-      const { error: roleError } = await supabase.from('user_business_roles').insert({
-        user_id: user.id,
-        business_id: business.id,
-        role: 'business_manager',
-      });
-
-      if (roleError) throw roleError;
+        },
+        user.id
+      );
 
       // Redirect to dashboard
       router.push('/dashboard');
@@ -174,6 +163,21 @@ export default function SetupBusinessPage() {
               rows={3}
               className="input"
             />
+          </div>
+
+          <div>
+            <label className="label">Modal Investasi Awal (Rp)</label>
+            <input
+              type="number"
+              value={capitalInvestment || ''}
+              onChange={(e) => setCapitalInvestment(e.target.value ? parseInt(e.target.value) : 0)}
+              placeholder="cth: 350000000"
+              className="input"
+              min="0"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Modal ini akan otomatis tercatat sebagai transaksi di jurnal keuangan
+            </p>
           </div>
 
           <div className="flex gap-3">
