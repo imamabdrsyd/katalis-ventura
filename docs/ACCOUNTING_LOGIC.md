@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 19 Februari 2026 | Terakhir diupdate: 26 Februari 2026
+> Terakhir diaudit: 19 Februari 2026 | Terakhir diupdate: 2 Maret 2026
 
 ---
 
@@ -732,7 +732,7 @@ User memilih SATU akun, system menentukan sisi:
 
 Money OUT (Debit Selected, Credit Cash):
   • EXPENSE accounts          → Bayar beban
-  • EQUITY "prive"/"drawing"  → Penarikan pemilik
+  • EQUITY "prive"/"drawing"/"dividen" → Penarikan pemilik
   • ASSET non-cash (≠1100/1200) → Beli aset
 
 Money IN (Debit Cash, Credit Selected):
@@ -887,7 +887,7 @@ Sistem memberikan warning kontekstual:
 | Beli Aset | beli + furniture/komputer/ac/kendaraan | ASSET | ASSET |
 | Bayar Hutang | cicilan, pelunasan, bayar hutang | LIABILITY | ASSET |
 | Bayar Pajak | pajak, pph, pbb | EXPENSE | ASSET |
-| Penarikan Prive | prive, pribadi, penarikan | EQUITY | ASSET |
+| Penarikan Prive/Dividen | prive, dividen, dividend, pribadi, penarikan | EQUITY | ASSET |
 | Retur Pendapatan | (via account type match) | REVENUE | ASSET |
 | Penggantian Biaya | (via account type match) | ASSET | EXPENSE |
 | Beban Terutang | terutang, accrued, belum dibayar | EXPENSE | LIABILITY |

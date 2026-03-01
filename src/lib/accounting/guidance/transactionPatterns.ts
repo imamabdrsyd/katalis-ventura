@@ -373,6 +373,8 @@ export function detectPatternFromName(name: string): TransactionPattern | null {
   // Owner withdrawal keywords
   if (
     nameLower.includes('prive') ||
+    nameLower.includes('dividen') ||
+    nameLower.includes('dividend') ||
     nameLower.includes('pribadi') ||
     nameLower.includes('penarikan')
   ) {
