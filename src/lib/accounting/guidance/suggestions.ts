@@ -339,7 +339,9 @@ export class TransactionGuidanceService {
       pattern.id === 'pay_opex' &&
       debitAccount?.account_type === 'EQUITY' &&
       (debitAccount.account_name.toLowerCase().includes('prive') ||
-       debitAccount.account_name.toLowerCase().includes('drawing'))
+       debitAccount.account_name.toLowerCase().includes('drawing') ||
+       debitAccount.account_name.toLowerCase().includes('dividen') ||
+       debitAccount.account_name.toLowerCase().includes('dividend'))
     ) {
       warnings.push(
         'Akun Prive dipilih sebagai debit. Ini berarti penarikan oleh pemilik, bukan biaya operasional bisnis.'

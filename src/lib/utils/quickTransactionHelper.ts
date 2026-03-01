@@ -82,7 +82,7 @@ function resolveDebitCredit(
   // ASSET (non-cash like fixed assets) -> money goes OUT from cash (purchase)
   if (
     type === 'EXPENSE' ||
-    (type === 'EQUITY' && (name.includes('prive') || name.includes('drawing'))) ||
+    (type === 'EQUITY' && (name.includes('prive') || name.includes('drawing') || name.includes('dividen') || name.includes('dividend'))) ||
     (type === 'ASSET' && code !== '1100' && code !== '1200') // Non-cash assets
   ) {
     return {
@@ -112,7 +112,7 @@ export function getFlowLabel(account: Account): string {
   if (type === 'REVENUE') return 'Uang Masuk';
   if (type === 'EXPENSE') return 'Uang Keluar';
   if (type === 'LIABILITY') return 'Terima Pinjaman';
-  if (type === 'EQUITY' && (name.includes('prive') || name.includes('drawing'))) return 'Penarikan Prive';
+  if (type === 'EQUITY' && (name.includes('prive') || name.includes('drawing') || name.includes('dividen') || name.includes('dividend'))) return 'Penarikan Prive';
   if (type === 'EQUITY') return 'Suntik Modal';
   if (type === 'ASSET' && account.account_code !== '1100' && account.account_code !== '1200') return 'Beli Aset';
   return 'Transaksi';
@@ -127,7 +127,7 @@ export function getFlowDirection(account: Account): 'in' | 'out' {
 
   if (
     type === 'EXPENSE' ||
-    (type === 'EQUITY' && (name.includes('prive') || name.includes('drawing'))) ||
+    (type === 'EQUITY' && (name.includes('prive') || name.includes('drawing') || name.includes('dividen') || name.includes('dividend'))) ||
     (type === 'ASSET' && account.account_code !== '1100' && account.account_code !== '1200')
   ) {
     return 'out';
