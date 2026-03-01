@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar, TrendingUp, TrendingDown, Download, Wallet, FileText, FileSpreadsheet, ChevronDown, ChevronRight, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, Download, Wallet, FileText, FileSpreadsheet, ChevronDown, ChevronRight, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Info } from 'lucide-react';
 import { useCashFlow } from '@/hooks/useCashFlow';
 import { formatCurrency } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
@@ -260,59 +260,27 @@ export default function CashFlowPage() {
                   {formatCurrency(cashFlow.openingBalance)}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400 pl-2">+ Operating:</span>
-                <span className={`font-medium ${cashFlow.operating >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
-                  {formatCurrency(cashFlow.operating)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400 pl-2">+ Investing:</span>
-                <span className={`font-medium ${cashFlow.investing >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
-                  {formatCurrency(cashFlow.investing)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400 pl-2">+ Financing:</span>
-                <span className={`font-medium ${cashFlow.financing >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
-                  {formatCurrency(cashFlow.financing)}
-                </span>
-              </div>
-              <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-600">
-                <span className="font-semibold text-gray-800 dark:text-gray-200">Ending Cash:</span>
-                <span className="font-bold text-indigo-500 dark:text-indigo-400">
-                  {formatCurrency(cashFlow.closingBalance)}
-                </span>
-              </div>
-            </div>
-
-            {/* Activity mini cards */}
-            <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-gray-700">
               {[
                 { label: 'Operating', value: cashFlow.operating, count: cashFlow.operatingTransactions.length },
                 { label: 'Investing', value: cashFlow.investing, count: cashFlow.investingTransactions.length },
                 { label: 'Financing', value: cashFlow.financing, count: cashFlow.financingTransactions.length },
               ].map((item) => (
-                <div key={item.label} className={`rounded-lg p-3 ${
-                  item.value >= 0
-                    ? 'bg-green-50 dark:bg-green-900/20'
-                    : 'bg-red-50 dark:bg-red-900/20'
-                }`}>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className={`text-xs font-semibold ${
-                        item.value >= 0 ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'
-                      }`}>{item.label}</p>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400">{item.count} transaksi</p>
-                    </div>
-                    <p className={`text-sm font-bold ${
-                      item.value >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'
-                    }`}>
-                      {formatCurrency(item.value)}
-                    </p>
+                <div key={item.label} className="flex justify-between items-center pl-2">
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400">+ {item.label}:</span>
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-1">({item.count} tx)</span>
                   </div>
+                  <span className={`font-medium ${item.value >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                    {formatCurrency(item.value)}
+                  </span>
                 </div>
               ))}
+              <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-600">
+                <span className="font-semibold text-gray-800 dark:text-gray-200">Ending Cash:</span>
+                <span className="font-bold text-gray-800 dark:text-gray-100">
+                  {formatCurrency(cashFlow.closingBalance)}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -331,15 +299,32 @@ export default function CashFlowPage() {
 
             <div className="space-y-6">
               {/* Opening Balance */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+              <div className="relative group bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 cursor-default">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <Wallet className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    <h3 className="font-bold text-blue-900 dark:text-blue-100 text-lg">Opening Balance</h3>
+                    <h3 className="font-bold text-blue-900 dark:text-blue-100 text-lg flex items-center gap-1">
+                      Opening Balance
+                      <Info className="w-3.5 h-3.5 text-blue-400 dark:text-blue-500" />
+                    </h3>
                   </div>
                   <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                     {formatCurrency(cashFlow.openingBalance)}
                   </span>
+                </div>
+                {/* Tooltip */}
+                <div className="absolute left-4 bottom-full mb-2 z-50 hidden group-hover:block w-80 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg p-3 shadow-xl pointer-events-none">
+                  <p className="font-semibold mb-2 text-blue-300">Opening Balance</p>
+                  <p className="text-gray-300 mb-2 leading-relaxed">
+                    Saldo awal kas sebelum periode yang dipilih, dihitung dari akumulasi seluruh transaksi yang menyentuh akun kas (Kas Tunai 1100 / Bank 1200) sebelum tanggal mulai periode.
+                  </p>
+                  <div className="space-y-1 text-[11px] border-t border-gray-700 pt-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Sumber data:</span>
+                    </div>
+                    <p className="text-gray-300">Injeksi modal (FIN ke Ekuitas/Liabilitas) + semua arus kas masuk/keluar sebelum <span className="text-blue-300 font-medium">{new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span></p>
+                  </div>
+                  <div className="absolute left-4 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-900 dark:border-t-gray-800"></div>
                 </div>
               </div>
 
@@ -395,19 +380,19 @@ export default function CashFlowPage() {
               </div>
 
               {/* Closing Balance */}
-              <div className="bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl p-6 text-white">
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h3 className="font-bold text-xl mb-1">CLOSING BALANCE</h3>
-                    <p className="text-indigo-100 text-sm">
+                    <h3 className="font-bold text-xl mb-1 text-blue-900 dark:text-blue-100">CLOSING BALANCE</h3>
+                    <p className="text-blue-500 dark:text-blue-400 text-sm">
                       Opening Balance + Net Cash Flow
                     </p>
                   </div>
                   <div className="text-right">
-                    <div className="flex items-center gap-2 justify-end mb-1">
+                    <div className="flex items-center gap-2 justify-end mb-1 text-blue-600 dark:text-blue-400">
                       <Wallet className="w-6 h-6" />
                     </div>
-                    <span className="text-3xl font-bold">
+                    <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">
                       {formatCurrency(cashFlow.closingBalance)}
                     </span>
                   </div>

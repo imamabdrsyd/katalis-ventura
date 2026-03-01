@@ -321,22 +321,22 @@ function IncomeStatementPageInner() {
 
             {/* Margin cards */}
             <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+              <div className="rounded-lg p-3 bg-gray-100 dark:bg-gray-700/50">
+                <div className="flex justify-between items-center">
+                  <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">Gross Margin</p>
+                  <p className="text-sm font-bold text-gray-700 dark:text-gray-200">{metrics.grossMargin.toFixed(2)}%</p>
+                </div>
+              </div>
+              <div className="rounded-lg p-3 bg-gray-100 dark:bg-gray-700/50">
+                <div className="flex justify-between items-center">
+                  <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">Operating Margin</p>
+                  <p className="text-sm font-bold text-gray-700 dark:text-gray-200">{metrics.operatingMargin.toFixed(2)}%</p>
+                </div>
+              </div>
               <div className="rounded-lg p-3 bg-green-50 dark:bg-green-900/20">
                 <div className="flex justify-between items-center">
-                  <p className="text-xs font-semibold text-green-800 dark:text-green-300">Gross Margin</p>
-                  <p className="text-sm font-bold text-green-600 dark:text-green-400">{metrics.grossMargin.toFixed(2)}%</p>
-                </div>
-              </div>
-              <div className="rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20">
-                <div className="flex justify-between items-center">
-                  <p className="text-xs font-semibold text-blue-800 dark:text-blue-300">Operating Margin</p>
-                  <p className="text-sm font-bold text-blue-600 dark:text-blue-400">{metrics.operatingMargin.toFixed(2)}%</p>
-                </div>
-              </div>
-              <div className="rounded-lg p-3 bg-purple-50 dark:bg-purple-900/20">
-                <div className="flex justify-between items-center">
-                  <p className="text-xs font-semibold text-purple-800 dark:text-purple-300">Net Margin</p>
-                  <p className="text-sm font-bold text-purple-500 dark:text-purple-400">{metrics.netMargin.toFixed(2)}%</p>
+                  <p className="text-xs font-semibold text-green-800 dark:text-green-300">Net Margin</p>
+                  <p className="text-sm font-bold text-green-600 dark:text-green-400">{metrics.netMargin.toFixed(2)}%</p>
                 </div>
               </div>
             </div>
@@ -381,14 +381,14 @@ function IncomeStatementPageInner() {
               </div>
 
               {/* GROSS PROFIT */}
-              <div className="relative group bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 hover:bg-indigo-50/70 dark:hover:bg-indigo-900/30 cursor-default">
+              <div className="relative group bg-gray-100 dark:bg-gray-700/50 rounded-lg p-4 hover:bg-gray-100/70 dark:hover:bg-gray-700/70 cursor-default">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h3 className="font-bold text-indigo-900 dark:text-indigo-100 text-lg flex items-center gap-1">
+                    <h3 className="font-bold text-gray-800 dark:text-gray-100 text-lg flex items-center gap-1">
                       GROSS PROFIT
-                      <Info className="w-3.5 h-3.5 text-indigo-400 dark:text-indigo-500" />
+                      <Info className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
                     </h3>
-                    <p className="text-sm text-indigo-500 dark:text-indigo-400">Margin: {metrics.grossMargin.toFixed(2)}%</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Margin: {metrics.grossMargin.toFixed(2)}%</p>
                   </div>
                   <div className="text-right">
                     <span className={`text-2xl font-bold ${summary.grossProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
@@ -421,14 +421,14 @@ function IncomeStatementPageInner() {
               </div>
 
               {/* OPERATING INCOME */}
-              <div className="relative group bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 hover:bg-purple-50/70 dark:hover:bg-purple-900/30 cursor-default">
+              <div className="relative group bg-gray-100 dark:bg-gray-700/50 rounded-lg p-4 hover:bg-gray-100/70 dark:hover:bg-gray-700/70 cursor-default">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h3 className="font-bold text-purple-900 dark:text-purple-100 text-lg flex items-center gap-1">
+                    <h3 className="font-bold text-gray-800 dark:text-gray-100 text-lg flex items-center gap-1">
                       OPERATING INCOME
-                      <Info className="w-3.5 h-3.5 text-purple-400 dark:text-purple-500" />
+                      <Info className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
                     </h3>
-                    <p className="text-sm text-purple-500 dark:text-purple-400">Margin: {metrics.operatingMargin.toFixed(2)}%</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Margin: {metrics.operatingMargin.toFixed(2)}%</p>
                   </div>
                   <span className={`text-xl font-bold ${metrics.operatingIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                     {formatCurrency(metrics.operatingIncome)}
