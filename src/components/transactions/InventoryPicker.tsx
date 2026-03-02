@@ -88,7 +88,7 @@ export function InventoryPicker({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                        {tx.name}
+                        {tx.description || tx.name}
                       </span>
                       <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex-shrink-0">
                         {formatCurrency(tx.amount)}
