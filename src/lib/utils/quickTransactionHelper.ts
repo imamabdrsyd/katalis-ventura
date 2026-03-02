@@ -178,7 +178,7 @@ export function resolveQuickTransaction(
     date: input.date,
     category,
     name: input.name,
-    description: input.notes || selectedAccount.account_name,
+    description: input.notes || selectedAccount.description || selectedAccount.account_name,
     amount: input.amount,
     account: 'Double-entry transaction',
     debit_account_id: debitAccountId,

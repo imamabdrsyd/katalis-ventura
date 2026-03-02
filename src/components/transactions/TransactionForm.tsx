@@ -165,7 +165,7 @@ export function TransactionForm({
 
     // Auto-fill description if empty and using double-entry
     if (!formData.description.trim() && isDoubleEntry) {
-      const oppositeAccount = getOppositeAccountName();
+      const oppositeAccount = getOppositeAccountDescription();
       if (oppositeAccount) {
         setFormData((prev) => ({
           ...prev,
@@ -260,21 +260,28 @@ export function TransactionForm({
     return account ? account.account_name : '';
   };
 
-  // Helper function to get the opposite account name for auto-fill description
-  const getOppositeAccountName = (): string => {
+  // Helper function to get account description (or fallback to name) for auto-fill
+  const getAccountDescription = (accountId: string | undefined): string => {
+    if (!accountId) return '';
+    const account = accounts.find((acc) => acc.id === accountId);
+    return account ? (account.description || account.account_name) : '';
+  };
+
+  // Helper function to get the opposite account description for auto-fill description
+  const getOppositeAccountDescription = (): string => {
     // For 'in' mode or EARN: show the source (credit) account
     if (mode === 'in' || formData.category === 'EARN') {
-      return getAccountName(formData.credit_account_id);
+      return getAccountDescription(formData.credit_account_id);
     }
 
     // For 'out' mode or expenses: show the destination (debit) account
-    return getAccountName(formData.debit_account_id);
+    return getAccountDescription(formData.debit_account_id);
   };
 
   // Auto-fill description when it's empty
   const handleDescriptionBlur = () => {
     if (!formData.description.trim() && isDoubleEntry) {
-      const oppositeAccount = getOppositeAccountName();
+      const oppositeAccount = getOppositeAccountDescription();
       if (oppositeAccount) {
         setFormData((prev) => ({
           ...prev,
@@ -492,7 +499,7 @@ export function TransactionForm({
           rows={3}
           placeholder={
             isDoubleEntry
-              ? 'Masukkan keterangan transaksi (kosongkan untuk auto-fill dengan nama akun)'
+              ? 'Masukkan keterangan transaksi (kosongkan untuk auto-fill dengan deskripsi akun)'
               : 'Masukkan keterangan transaksi'
           }
         />

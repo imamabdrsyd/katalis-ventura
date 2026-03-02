@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 19 Februari 2026 | Terakhir diupdate: 2 Maret 2026
+> Terakhir diaudit: 19 Februari 2026 | Terakhir diupdate: 3 Maret 2026
 
 ---
 
@@ -21,9 +21,10 @@
 12. [Quick Transaction Resolver](#12-quick-transaction-resolver)
 13. [Matching Principle & Inventory (COGS)](#13-matching-principle--inventory-cogs)
 14. [Validation Layers](#14-validation-layers)
-15. [Audit Findings & Known Issues](#15-audit-findings--known-issues)
-16. [Data Flow Diagrams](#16-data-flow-diagrams)
-17. [Business Members & Access Control](#17-business-members--access-control)
+15. [Category-to-Report Matrix (Cross-Category Summary)](#15-category-to-report-matrix-cross-category-summary)
+16. [Audit Findings & Known Issues](#16-audit-findings--known-issues)
+17. [Data Flow Diagrams](#17-data-flow-diagrams)
+18. [Business Members & Access Control](#18-business-members--access-control)
 
 ---
 
@@ -897,7 +898,169 @@ Sistem memberikan warning kontekstual:
 
 ---
 
-## 15. Audit Findings & Known Issues
+## 15. Category-to-Report Matrix (Cross-Category Summary)
+
+Tabel ini memetakan setiap kategori transaksi — **termasuk sub-tipe** — ke dampaknya di setiap laporan keuangan. Informasi ini sebelumnya tersebar di Section 5-8 dan 12-13. Section ini menjadi referensi cepat satu halaman.
+
+### 15.1 Master Matrix
+
+| Kategori | Sub-tipe | Debit | Credit | Income Statement | Balance Sheet | Cash Flow |
+|----------|----------|-------|--------|------------------|---------------|-----------|
+| **EARN** | Pendapatan tunai | ASSET (Kas/Bank) | REVENUE | `totalEarn` → Revenue (top line) | +Cash, +Revenue → Retained Earnings | Operating (+) |
+| **EARN** | Realisasi pendapatan dimuka | LIABILITY | REVENUE | `totalEarn` → Revenue | -Liability, +Revenue → Retained Earnings | Tidak ada cash movement |
+| **EARN** | Retur pendapatan | REVENUE | ASSET (Kas/Bank) | Mengurangi `totalEarn` | -Cash, -Revenue → Retained Earnings | Operating (-) |
+| **OPEX** | Bayar tunai | EXPENSE | ASSET (Kas/Bank) | `totalOpex` → Operating Expenses | -Cash, +Expenses → kurangi Retained Earnings | Operating (-) |
+| **OPEX** | Beban akrual | EXPENSE | LIABILITY | `totalOpex` → Operating Expenses | +Liability, +Expenses → kurangi Retained Earnings | **Tidak masuk** (non-cash) |
+| **VAR** | **HPP / COGS** (Dr EXPENSE) | EXPENSE | ASSET (Kas/Bank) | `totalVar` → Cost of Goods Sold | -Cash, +Expenses → kurangi Retained Earnings | Operating (-) |
+| **VAR** | **Beli Persediaan** (Dr ASSET) | ASSET (Inventory) | ASSET (Kas/Bank) | **TIDAK MASUK** (tetap di neraca) | -Cash, +Inventory | Investing (-) |
+| **CAPEX** | Beli aset tetap | ASSET (Fixed) | ASSET (Kas/Bank) | **TIDAK MASUK** | -Cash, +Fixed Assets (tukar aset, total sama) | Investing (-) |
+| **TAX** | Bayar pajak | EXPENSE | ASSET (Kas/Bank) | `totalTax` → Tax Expense | -Cash, +Expenses → kurangi Retained Earnings | Operating (-) |
+| **FIN** | **Suntik Modal** (Cr EQUITY) | ASSET (Kas/Bank) | EQUITY | **TIDAK MASUK** | +Cash, +Equity (modal disetor) | Financing (+) |
+| **FIN** | **Prive / Dividen** (Dr EQUITY) | EQUITY | ASSET (Kas/Bank) | **TIDAK MASUK** | -Cash, -Equity (penarikan pemilik) | Financing (-) |
+| **FIN** | **Terima Pinjaman** (Cr LIABILITY) | ASSET (Kas/Bank) | LIABILITY | **TIDAK MASUK** | +Cash, +Liability | Financing (+) |
+| **FIN** | **Bayar Pinjaman** (Dr LIABILITY) | LIABILITY | ASSET (Kas/Bank) | **TIDAK MASUK** | -Cash, -Liability | Financing (-) |
+| **FIN** | **Beban Bunga** (Dr EXPENSE) | EXPENSE | ASSET / LIABILITY | `totalInterest` → Financing Costs | +Expenses → kurangi Retained Earnings | Operating (-) |
+| **FIN** | Reklasifikasi hutang | LIABILITY | LIABILITY | **TIDAK MASUK** | Net zero (pindah antar liability) | **Tidak masuk** (non-cash) |
+
+### 15.2 Kategori dengan Split (Sub-tipe)
+
+Tiga kategori memiliki perilaku berbeda tergantung **tipe akun** yang di-debit/credit:
+
+#### VAR Split — Inventory vs COGS
+
+```
+VAR + Dr ASSET (Persediaan)  → Pembelian stok → TIDAK masuk Income Statement
+VAR + Dr EXPENSE (HPP)       → Harga Pokok Penjualan → MASUK Income Statement
+
+Konversi: Saat penjualan (EARN), stok yang dipilih via InventoryPicker
+          diubah dari Dr Persediaan (ASSET) → Dr HPP (EXPENSE)
+          Dilacak via meta.sold_stock_ids
+```
+
+Deteksi di `calculateFinancialSummary()`:
+```typescript
+case 'VAR':
+  if (t.is_double_entry && t.debit_account?.account_type === 'ASSET') {
+    break; // Inventory purchase — skip from income statement
+  }
+  summary.totalVar += amount; // COGS — masuk income statement
+```
+
+#### FIN Split — Interest vs Non-Interest
+
+```
+FIN + Dr EXPENSE  → Beban bunga → MASUK Income Statement (totalInterest)
+FIN + Dr/Cr lain  → Modal/Hutang/Prive → TIDAK masuk Income Statement
+```
+
+Deteksi di `calculateFinancialSummary()`:
+```typescript
+case 'FIN':
+  summary.totalFin += amount; // Semua FIN → untuk Cash Flow
+  if (t.is_double_entry && t.debit_account?.account_type === 'EXPENSE') {
+    summary.totalInterest += amount; // Hanya bunga → untuk Income Statement
+  }
+```
+
+**Dampak ke formula:**
+```
+netProfit = totalEarn - totalOpex - totalVar - totalTax - totalInterest
+                                                          ↑ bukan totalFin
+```
+
+#### EQUITY Split — Modal vs Prive/Dividen
+
+Di **Balance Sheet**, EQUITY di-track terpisah:
+
+```
+Cr EQUITY → totalEquityCredit (suntik modal masuk)
+Dr EQUITY → totalEquityDebit  (prive/dividen keluar)
+
+totalEquity = (totalEquityCredit - totalEquityDebit) + retainedEarnings
+            = netEquityMovements + (totalRevenue - totalExpenses)
+```
+
+Di **Quick Entry**, arah transaksi ditentukan dari **keyword nama akun**:
+
+```
+EQUITY + nama mengandung "prive" / "drawing" / "dividen" / "dividend"
+  → Dr EQUITY / Cr Kas  → Uang KELUAR (penarikan pemilik)
+
+EQUITY lainnya (modal, setoran, investasi, dsb)
+  → Dr Kas / Cr EQUITY  → Uang MASUK (suntik modal)
+```
+
+Di **Cash Flow**, keduanya masuk bucket **Financing**:
+```
+Dr Kas / Cr EQUITY  → Financing (+)  — modal masuk
+Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
+```
+
+### 15.3 Quick Entry — Perilaku Per Tipe Akun
+
+| Tipe Akun Dipilih | Keyword Khusus | Resolusi | Label UI | Arah Kas | Kategori |
+|---|---|---|---|---|---|
+| REVENUE | — | Dr Kas / Cr Revenue | "Uang Masuk" | IN | EARN |
+| EXPENSE | — | Dr Expense / Cr Kas | "Uang Keluar" | OUT | OPEX* |
+| EXPENSE | `default_category='VAR'` | Dr Expense / Cr Kas | "Uang Keluar" | OUT | VAR |
+| EXPENSE | `default_category='TAX'` | Dr Expense / Cr Kas | "Uang Keluar" | OUT | TAX |
+| ASSET (non-kas) | — | Dr Asset / Cr Kas | "Beli Aset" | OUT | CAPEX |
+| ASSET (non-kas) | `default_category='VAR'` | Dr Asset / Cr Kas | "Beli Aset" | OUT | VAR |
+| LIABILITY | — | Dr Kas / Cr Liability | "Terima Pinjaman" | IN | FIN |
+| EQUITY | `prive/drawing/dividen` | Dr Equity / Cr Kas | "Penarikan Prive" | OUT | FIN |
+| EQUITY | lainnya | Dr Kas / Cr Equity | "Suntik Modal" | IN | FIN |
+
+*\*EXPENSE tanpa `default_category` = OPEX (fallback default)*
+
+### 15.4 Formula Ringkasan
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   INCOME STATEMENT                       │
+│                                                         │
+│  Revenue (EARN)                                         │
+│  - COGS (VAR, dr EXPENSE only)                          │
+│  ─────────────────────────────                          │
+│  = Gross Profit                                         │
+│  - Operating Expenses (OPEX)                            │
+│  ─────────────────────────────                          │
+│  = Operating Income                                     │
+│  - Interest (FIN, dr EXPENSE only)                      │
+│  ─────────────────────────────                          │
+│  = EBT (Earnings Before Tax)                            │
+│  - Tax (TAX)                                            │
+│  ─────────────────────────────                          │
+│  = Net Income                                           │
+│                                                         │
+│  TIDAK MASUK: CAPEX, VAR(inventory), FIN(modal/hutang)  │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│                    BALANCE SHEET                          │
+│                                                         │
+│  Assets = Cash + Inventory + Fixed Assets + Other        │
+│  Liabilities = Hutang                                    │
+│  Equity = (Modal - Prive) + Retained Earnings            │
+│         = (ΣCr EQUITY - ΣDr EQUITY) + (Revenue - Exp.)  │
+│                                                         │
+│  CHECK: |Assets - (Liabilities + Equity)| < 0.01        │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│                    CASH FLOW                              │
+│                                                         │
+│  Operating  = EARN - OPEX - VAR(cogs) - TAX - Interest   │
+│  Investing  = -CAPEX - VAR(inventory)                    │
+│  Financing  = +Modal + Pinjaman - Bayar Hutang - Prive   │
+│  ─────────────────────────────                          │
+│  Net Cash Flow = Operating + Investing + Financing       │
+│  Closing = Opening + Net Cash Flow                       │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 16. Audit Findings & Known Issues
 
 ### All Previously Reported Issues — RESOLVED
 
@@ -919,9 +1082,9 @@ Sistem memberikan warning kontekstual:
 
 ---
 
-## 16. Data Flow Diagrams
+## 17. Data Flow Diagrams
 
-### 16.1 Transaction Input to Financial Reports
+### 17.1 Transaction Input to Financial Reports
 
 ```
 ┌────────────────┐     ┌──────────────────┐     ┌───────────────────┐
@@ -957,7 +1120,7 @@ Sistem memberikan warning kontekstual:
                                                                               └────────────────┘
 ```
 
-### 16.2 Balance Sheet Calculation Flow
+### 17.2 Balance Sheet Calculation Flow
 
 ```
 All Transactions
@@ -991,7 +1154,7 @@ Process per account type    calculateFinancialSummary()
       CHECK: |assets - (liabilities + equity)| < 0.01
 ```
 
-### 16.3 General Ledger & Trial Balance Flow
+### 17.3 General Ledger & Trial Balance Flow
 
 ```
 All Accounts (sub-accounts only)
@@ -1014,7 +1177,7 @@ General Ledger UI                                    Trial Balance UI
 (per-account view)                                  (all-accounts table)
 ```
 
-### 16.4 Quick Transaction Resolution
+### 17.4 Quick Transaction Resolution
 
 ```
 Selected Account Type?
@@ -1029,9 +1192,9 @@ Selected Account Type?
 
 ---
 
-## 17. Business Members & Access Control
+## 18. Business Members & Access Control
 
-### 17.1 Tabel & Relasi
+### 18.1 Tabel & Relasi
 
 ```
 businesses          user_business_roles       profiles
@@ -1046,7 +1209,7 @@ created_by ──┐      user_id ──────────────→ 
              └────→ (creator mungkin tidak ada di sini)
 ```
 
-### 17.2 Member Visibility Rules
+### 18.2 Member Visibility Rules
 
 `getBusinessMembers(businessId)` di `src/lib/api/members.ts`:
 
@@ -1059,7 +1222,7 @@ created_by ──┐      user_id ──────────────→ 
 5. Return merged list
 ```
 
-### 17.3 UX Flow
+### 18.3 UX Flow
 
 | Aksi | Behaviour |
 |------|-----------|
@@ -1068,7 +1231,7 @@ created_by ──┐      user_id ──────────────→ 
 | Tombol Edit/Archive/Restore | Hanya tampil jika `created_by === user.id` |
 | Tombol Undang Anggota | Hanya tampil untuk non-investor |
 
-### 17.4 RLS Policy (Migration 011)
+### 18.4 RLS Policy (Migration 011)
 
 Menggunakan `SECURITY DEFINER` functions untuk menghindari infinite recursion:
 

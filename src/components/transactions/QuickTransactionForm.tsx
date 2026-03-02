@@ -183,10 +183,10 @@ export function QuickTransactionForm({
     );
   };
 
-  // Handle account selection — auto-fill name from account name
+  // Handle account selection — auto-fill name from account description
   const handleSelectAccount = (account: Account) => {
     setSelectedAccountId(account.id);
-    setName(account.account_name); // auto-fill
+    setName(account.description || account.account_name); // auto-fill with description
     setSelectedStockIds([]);
     setDropdownOpen(false);
     setSearchTerm('');
@@ -257,7 +257,7 @@ export function QuickTransactionForm({
     e.preventDefault();
     if (!validate()) return;
 
-    const resolvedName = name.trim() || (selectedAccount?.account_name ?? '');
+    const resolvedName = name.trim() || selectedAccount?.description || selectedAccount?.account_name || '';
 
     const result = resolveQuickTransaction(
       { amount, selectedAccountId, name: resolvedName, date, notes },
