@@ -80,7 +80,7 @@ export const TRANSACTION_PATTERNS: TransactionPattern[] = [
     description: 'Membayar biaya yang berubah sesuai aktivitas',
     debitAccountType: 'EXPENSE',
     creditAccountType: 'ASSET',
-    suggestedDebitCodes: ['5100'], // Operating Expenses
+    suggestedDebitCodes: ['5200'], // HPP/COGS
     suggestedCreditCodes: ['1100', '1200'], // Cash, Bank
     examples: [
       'Biaya cleaning per unit',
@@ -125,7 +125,7 @@ export const TRANSACTION_PATTERNS: TransactionPattern[] = [
     description: 'Pembayaran pajak ke pemerintah',
     debitAccountType: 'EXPENSE',
     creditAccountType: 'ASSET',
-    suggestedDebitCodes: ['5100'], // Operating Expenses
+    suggestedDebitCodes: ['5300'], // Beban Pajak
     suggestedCreditCodes: ['1100', '1200'], // Cash, Bank
     examples: [
       'Bayar PPh Final',
@@ -277,6 +277,27 @@ export function detectPatternFromName(name: string): TransactionPattern | null {
     return getPatternById('capital_injection') || null;
   }
 
+  // OPEX keywords (checked BEFORE revenue to catch compound "sewa" keywords like "sewa kantor")
+  if (
+    nameLower.includes('listrik') ||
+    nameLower.includes('air pdam') ||
+    nameLower.includes('internet') ||
+    nameLower.includes('gaji') ||
+    nameLower.includes('asuransi') ||
+    nameLower.includes('maintenance') ||
+    nameLower.includes('bayar biaya') ||
+    nameLower.includes('telepon') ||
+    nameLower.includes('wifi') ||
+    nameLower.includes('keamanan') ||
+    nameLower.includes('kebersihan') ||
+    nameLower.includes('sewa kantor') ||
+    nameLower.includes('sewa gedung') ||
+    nameLower.includes('sewa ruang') ||
+    nameLower.includes('bayar sewa')
+  ) {
+    return getPatternById('pay_opex') || null;
+  }
+
   // Revenue keywords
   if (
     nameLower.includes('sewa') ||
@@ -299,24 +320,6 @@ export function detectPatternFromName(name: string): TransactionPattern | null {
     nameLower.includes('kpr')
   ) {
     return getPatternById('receive_loan') || null;
-  }
-
-  // OPEX keywords
-  if (
-    nameLower.includes('listrik') ||
-    nameLower.includes('air pdam') ||
-    nameLower.includes('internet') ||
-    nameLower.includes('gaji') ||
-    nameLower.includes('asuransi') ||
-    nameLower.includes('maintenance') ||
-    nameLower.includes('bayar biaya') ||
-    nameLower.includes('telepon') ||
-    nameLower.includes('wifi') ||
-    nameLower.includes('keamanan') ||
-    nameLower.includes('kebersihan') ||
-    nameLower.includes('sewa kantor')
-  ) {
-    return getPatternById('pay_opex') || null;
   }
 
   // Variable cost keywords

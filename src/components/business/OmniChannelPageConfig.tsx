@@ -320,10 +320,10 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
               <button
                 type="button"
                 onClick={() => { setLogoUrl(''); setUploadError(''); }}
-                className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-colors"
+                className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors"
                 title="Hapus logo"
               >
-                <X className="w-3 h-3" />
+                <X className="w-4 h-4" />
               </button>
             )}
           </div>

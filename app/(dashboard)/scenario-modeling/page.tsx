@@ -380,14 +380,14 @@ export default function ScenarioModelingPage() {
       {activeTab === 'comparison' && (
         <>
           {/* Scenario Comparison Cards */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
             <ScenarioCard scenario={baseline} baseline={baseline} color="gray" icon={Minus} />
             <ScenarioCard scenario={optimistic} baseline={baseline} color="green" icon={TrendingUp} />
             <ScenarioCard scenario={pessimistic} baseline={baseline} color="red" icon={TrendingDown} />
           </div>
 
           {/* Assumption Editors */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {/* Optimistic Assumptions */}
             <div className="card">
               <div className="flex items-center gap-2 mb-4">
@@ -456,7 +456,7 @@ export default function ScenarioModelingPage() {
       )}
 
       {activeTab === 'custom' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* Custom Assumptions */}
           <div className="space-y-6">
             <div className="card">

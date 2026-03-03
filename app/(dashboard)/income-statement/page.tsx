@@ -79,7 +79,7 @@ function Tooltip({ title, color, formula, breakdown }: {
   breakdown?: { label: string; value: number; color: 'green' | 'red' | 'white' }[];
 }) {
   return (
-    <div className="absolute left-0 bottom-full mb-2 z-50 hidden group-hover:block w-80 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg p-3 shadow-xl pointer-events-none">
+    <div className="absolute left-0 bottom-full mb-2 z-50 hidden group-hover:block max-w-[calc(100vw-2rem)] sm:w-80 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg p-3 shadow-xl pointer-events-none">
       <p className={`font-semibold mb-2 ${color}`}>{title}</p>
 
       {formula && (

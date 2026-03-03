@@ -348,7 +348,7 @@ export default function CashFlowPage() {
                   </Link>
                 </div>
                 {/* Tooltip */}
-                <div className="absolute left-4 bottom-full mb-2 z-50 hidden group-hover:block w-96 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg p-3 shadow-xl pointer-events-none">
+                <div className="absolute left-0 right-0 sm:left-4 sm:right-auto bottom-full mb-2 z-50 hidden group-hover:block max-w-[calc(100vw-2rem)] sm:w-96 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg p-3 shadow-xl pointer-events-none">
                   <p className="font-semibold mb-2 text-blue-300">Opening Balance — Cara Hitung</p>
                   <p className="text-gray-300 mb-3 leading-relaxed">
                     Saldo kas pada awal periode, dihitung dari transaksi double-entry sebelum <span className="text-blue-300 font-medium">{startDateLabel}</span>. Klik nominal untuk melihat transaksinya.

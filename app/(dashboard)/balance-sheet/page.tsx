@@ -61,7 +61,7 @@ export default function BalanceSheetPage() {
 
       {/* Filters */}
       <div className="card-static mb-6">
-        <div className="flex flex-col md:flex-row gap-4 items-start md:items-end justify-between">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end justify-between">
           {/* Period Selector */}
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Periode</label>

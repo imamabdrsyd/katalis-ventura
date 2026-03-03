@@ -543,7 +543,7 @@ export default function JournalEntryPage() {
         <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
           Jenis Transaksi
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
           {ENTRY_TYPES.map((et) => {
             const isSelected = selectedEntryType?.id === et.id;
             return (

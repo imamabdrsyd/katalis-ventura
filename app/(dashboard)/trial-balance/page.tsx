@@ -147,7 +147,7 @@ export default function TrialBalancePage() {
 
       {/* Trial Balance Table */}
       <div className="card-static p-0 overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <table className="w-full min-w-[540px]">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-800/50 border-b-2 border-gray-200 dark:border-gray-600">

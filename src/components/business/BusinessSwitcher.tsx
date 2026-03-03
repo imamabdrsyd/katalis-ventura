@@ -92,7 +92,7 @@ export function BusinessSwitcher() {
       )}
       {isOpen && (
         <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150">
-          <div className="max-h-64 overflow-y-auto py-1">
+          <div className="max-h-[60vh] overflow-y-auto py-1">
             {businesses.map((business) => (
               <button
                 key={business.id}

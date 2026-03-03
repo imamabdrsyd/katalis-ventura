@@ -338,7 +338,7 @@ export default function DashboardPage() {
       {transactions.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Ringkasan Keuangan</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
               <div className="flex items-center justify-between">
                 <div className="text-sm text-emerald-500 dark:text-emerald-400 font-semibold">Earnings</div>

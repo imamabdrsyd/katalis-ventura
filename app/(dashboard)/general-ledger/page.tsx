@@ -357,7 +357,7 @@ function GeneralLedgerPageInner() {
                     </p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
                     <table className="w-full min-w-[640px]">
                       <thead>
                         <tr className="border-b-2 border-gray-200 dark:border-gray-600">

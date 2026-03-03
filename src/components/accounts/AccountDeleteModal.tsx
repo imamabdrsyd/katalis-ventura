@@ -87,7 +87,7 @@ export function AccountDeleteModal({
           )}
 
           {/* Actions */}
-          <div className="flex gap-3">
+          <div className="flex flex-col-reverse sm:flex-row gap-3">
             {isSystemAccount ? (
               <button
                 onClick={onClose}

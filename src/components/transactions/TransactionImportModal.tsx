@@ -722,7 +722,7 @@ export default function TransactionImportModal({
                       <tr>
                         <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400 w-8">#</th>
                         <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">Tanggal</th>
-                        <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400 min-w-[200px]">Deskripsi</th>
+                        <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400 min-w-[120px] sm:min-w-[200px]">Deskripsi</th>
                         <th className="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Nominal</th>
                         <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">
                           <span className="flex items-center gap-1">

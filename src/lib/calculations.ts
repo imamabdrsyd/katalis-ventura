@@ -409,6 +409,13 @@ export function calculateBalanceSheet(
 
   const totalCurrentAssets = totalCash + totalInventory + totalReceivables + totalOtherCurrentAssets;
 
+  // Runtime balance sheet equation assertion: Assets = Liabilities + Equity
+  const finalTotalEquity = netEquityMovements + retainedEarnings;
+  const imbalance = Math.abs(totalAssets - (totalLiabilities + finalTotalEquity));
+  if (imbalance > 0.01) {
+    console.warn(`[Accounting] Balance sheet imbalance detected: ${imbalance.toFixed(2)} (A=${totalAssets.toFixed(2)}, L=${totalLiabilities.toFixed(2)}, E=${finalTotalEquity.toFixed(2)})`);
+  }
+
   return {
     assets: {
       cash: totalCash,

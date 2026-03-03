@@ -78,8 +78,8 @@ export function detectCategory(
   // Unearned revenue recognized: LIABILITY → REVENUE
   if (debitType === 'LIABILITY' && creditType === 'REVENUE') return 'EARN';
 
-  // Deferred revenue received: REVENUE → LIABILITY
-  if (debitType === 'REVENUE' && creditType === 'LIABILITY') return 'EARN';
+  // Deferred revenue received: REVENUE → LIABILITY (reclassification, not actual earnings)
+  if (debitType === 'REVENUE' && creditType === 'LIABILITY') return 'FIN';
 
   // Reclassification: LIABILITY → LIABILITY
   if (debitType === 'LIABILITY' && creditType === 'LIABILITY') return 'FIN';
