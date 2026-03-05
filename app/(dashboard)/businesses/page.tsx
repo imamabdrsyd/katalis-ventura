@@ -82,11 +82,31 @@ export default function BusinessesPage() {
   const archivedBusinesses = allBusinesses.filter((b) => b.is_archived);
   const displayedBusinesses = activeTab === 'active' ? activeBusinesses : archivedBusinesses;
 
+  const uploadLogoFile = async (businessId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`/api/businesses/${businessId}/logo`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!res.ok) {
+      const json = await res.json();
+      console.warn('Failed to upload logo:', json.error);
+    }
+  };
+
   const handleCreateBusiness = async (data: BusinessFormData) => {
     if (!user) return;
     setLoading(true);
     try {
-      const newBusiness = await businessesApi.createBusiness(data, user.id);
+      const { _logoFile, ...businessData } = data;
+      const newBusiness = await businessesApi.createBusiness(businessData, user.id);
+
+      // Upload logo if a file was selected
+      if (_logoFile) {
+        await uploadLogoFile(newBusiness.id, _logoFile);
+      }
+
       await fetchBusinesses();
       await refetch();
       setActiveBusiness(newBusiness.id);

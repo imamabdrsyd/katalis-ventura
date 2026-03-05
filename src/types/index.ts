@@ -93,6 +93,7 @@ export interface Business {
   capital_investment: number;
   property_address?: string;
   property_details?: Record<string, any>;
+  logo_url?: string;
   is_archived: boolean;
   created_at: string;
   created_by: string;

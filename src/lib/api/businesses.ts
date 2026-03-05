@@ -13,6 +13,7 @@ export interface CreateBusinessData {
   business_category?: string;
   capital_investment?: number; // Optional for backward compatibility
   property_address?: string;
+  logo_url?: string;
 }
 
 /**

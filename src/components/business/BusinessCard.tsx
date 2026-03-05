@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, PackageOpen, Home, UserPlus, Coins } from 'lucide-react';
 import type { Business } from '@/types';
 import { formatCurrency } from '@/lib/utils';
@@ -99,13 +100,28 @@ export function BusinessCard({
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div
-            className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+            className={`w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden ${
               business.is_archived
                 ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                : 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'
+                : business.logo_url
+                  ? ''
+                  : 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'
             }`}
           >
-            {business.is_archived ? <PackageOpen className="w-6 h-6" /> : BUSINESS_TYPE_ICONS[business.business_type] || <Building2 className="w-6 h-6" />}
+            {business.logo_url && !business.is_archived ? (
+              <Image
+                src={business.logo_url}
+                alt={business.business_name}
+                width={48}
+                height={48}
+                className="w-full h-full object-cover"
+                unoptimized
+              />
+            ) : business.is_archived ? (
+              <PackageOpen className="w-6 h-6" />
+            ) : (
+              BUSINESS_TYPE_ICONS[business.business_type] || <Building2 className="w-6 h-6" />
+            )}
           </div>
           <div>
             <h3 className="font-bold text-gray-800 dark:text-gray-100">{business.business_name}</h3>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { BusinessForm, type BusinessFormData } from './BusinessForm';
 import * as businessesApi from '@/lib/api/businesses';
+import Image from 'next/image';
 import { Building2, Palette, Heart, Wheat, UtensilsCrossed, Home } from 'lucide-react';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -42,17 +43,28 @@ export function BusinessSwitcher() {
   const handleAddBusiness = async (formData: BusinessFormData) => {
     setIsSubmitting(true);
     try {
-      await businessesApi.createBusiness(
+      const { _logoFile, ...businessData } = formData;
+      const newBusiness = await businessesApi.createBusiness(
         {
-          business_name: formData.business_name,
-          business_type: formData.business_type,
-          property_address: formData.property_address,
+          business_name: businessData.business_name,
+          business_type: businessData.business_type,
+          property_address: businessData.property_address,
         },
         user?.id!
       );
+
+      // Upload logo if a file was selected
+      if (_logoFile) {
+        const uploadData = new FormData();
+        uploadData.append('file', _logoFile);
+        await fetch(`/api/businesses/${newBusiness.id}/logo`, {
+          method: 'POST',
+          body: uploadData,
+        });
+      }
+
       setShowAddForm(false);
       setIsOpen(false);
-      // Refresh page to load new business
       router.refresh();
     } catch (error) {
       console.error('Failed to create business:', error);
@@ -69,8 +81,12 @@ export function BusinessSwitcher() {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors w-full"
       >
-        <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center text-white">
-          {BUSINESS_TYPE_ICONS[activeBusiness.business_type] || <Building2 className="w-4 h-4" />}
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden ${activeBusiness.logo_url ? '' : 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'}`}>
+          {activeBusiness.logo_url ? (
+            <Image src={activeBusiness.logo_url} alt={activeBusiness.business_name} width={32} height={32} className="w-full h-full object-cover" unoptimized />
+          ) : (
+            BUSINESS_TYPE_ICONS[activeBusiness.business_type] || <Building2 className="w-4 h-4" />
+          )}
         </div>
         <div className="flex-1 text-left min-w-0">
           <div className="text-sm font-semibold text-gray-800 truncate">
@@ -105,13 +121,19 @@ export function BusinessSwitcher() {
                 }`}
               >
                 <div
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                    business.id === activeBusiness.id
-                      ? 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'
-                      : 'bg-gray-100 text-gray-600'
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden ${
+                    business.logo_url
+                      ? ''
+                      : business.id === activeBusiness.id
+                        ? 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'
+                        : 'bg-gray-100 text-gray-600'
                   }`}
                 >
-                  {BUSINESS_TYPE_ICONS[business.business_type] || <Building2 className="w-4 h-4" />}
+                  {business.logo_url ? (
+                    <Image src={business.logo_url} alt={business.business_name} width={32} height={32} className="w-full h-full object-cover" unoptimized />
+                  ) : (
+                    BUSINESS_TYPE_ICONS[business.business_type] || <Building2 className="w-4 h-4" />
+                  )}
                 </div>
                 <span
                   className={`text-sm flex-1 truncate ${

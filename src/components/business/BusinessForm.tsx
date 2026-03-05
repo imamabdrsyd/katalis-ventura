@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import Image from 'next/image';
+import { Camera, X, Loader2 } from 'lucide-react';
 import type { Business } from '@/types';
 
 export interface BusinessFormData {
@@ -9,6 +11,8 @@ export interface BusinessFormData {
   business_category: string;
   property_address: string;
   capital_investment?: number;
+  logo_url?: string;
+  _logoFile?: File;
 }
 
 interface BusinessFormProps {
@@ -50,9 +54,59 @@ export function BusinessForm({
     business_category: business?.business_category || 'jasa',
     property_address: business?.property_address || '',
     capital_investment: business?.capital_investment || 0,
+    logo_url: business?.logo_url || '',
   });
   const [customSector, setCustomSector] = useState(isCustomSector ? business?.business_type || '' : '');
   const [errors, setErrors] = useState<Partial<Record<keyof BusinessFormData, string>>>({});
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Hanya file gambar yang diperbolehkan');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setUploadError('Ukuran file maksimal 2MB');
+      return;
+    }
+
+    // If editing existing business, upload directly via API
+    if (business?.id) {
+      setUploading(true);
+      setUploadError('');
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch(`/api/businesses/${business.id}/logo`, {
+          method: 'POST',
+          body: formData,
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Gagal upload logo');
+        setFormData((prev) => ({ ...prev, logo_url: json.url }));
+      } catch (err: any) {
+        setUploadError(err.message || 'Gagal upload logo');
+      } finally {
+        setUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    } else {
+      // For new business, show preview and store file for upload after creation
+      const previewUrl = URL.createObjectURL(file);
+      setFormData((prev) => ({ ...prev, logo_url: previewUrl, _logoFile: file }));
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setFormData((prev) => ({ ...prev, logo_url: '', _logoFile: undefined }));
+    setUploadError('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const validate = (): boolean => {
     const newErrors: Partial<Record<keyof BusinessFormData, string>> = {};
@@ -94,6 +148,57 @@ export function BusinessForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 p-6">
+      {/* Logo Upload */}
+      <div>
+        <label className="label">Logo Bisnis</label>
+        <div className="flex items-center gap-4">
+          <div className="relative group">
+            <div
+              className="w-20 h-20 rounded-xl overflow-hidden border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors bg-gray-50 dark:bg-gray-800"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {uploading ? (
+                <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
+              ) : formData.logo_url ? (
+                <Image
+                  src={formData.logo_url}
+                  alt="Logo bisnis"
+                  width={80}
+                  height={80}
+                  className="w-full h-full object-cover"
+                  unoptimized
+                />
+              ) : (
+                <Camera className="w-6 h-6 text-gray-400" />
+              )}
+            </div>
+            {formData.logo_url && !uploading && (
+              <button
+                type="button"
+                onClick={handleRemoveLogo}
+                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-sm"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            <p>Klik untuk upload logo</p>
+            <p className="text-xs mt-1">JPG, PNG, WebP, GIF. Maks 2MB</p>
+          </div>
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          onChange={handleLogoUpload}
+          className="hidden"
+        />
+        {uploadError && (
+          <p className="text-sm text-red-500 mt-2">{uploadError}</p>
+        )}
+      </div>
+
       {/* Nama Bisnis */}
       <div>
         <label className="label">Nama Bisnis *</label>
