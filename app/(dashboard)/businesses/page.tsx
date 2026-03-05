@@ -124,7 +124,14 @@ export default function BusinessesPage() {
     if (!editingBusiness || !user) return;
     setLoading(true);
     try {
-      await businessesApi.updateBusiness(editingBusiness.id, data, user.id);
+      const { _logoFile, ...businessData } = data;
+      await businessesApi.updateBusiness(editingBusiness.id, businessData, user.id);
+
+      // Upload logo if a file was selected
+      if (_logoFile) {
+        await uploadLogoFile(editingBusiness.id, _logoFile);
+      }
+
       await fetchBusinesses();
       await refetch();
       setEditingBusiness(null);

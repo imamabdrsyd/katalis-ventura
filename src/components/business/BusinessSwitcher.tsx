@@ -20,7 +20,7 @@ const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
 };
 
 export function BusinessSwitcher() {
-  const { user, businesses, activeBusiness, setActiveBusiness, userRole } = useBusinessContext();
+  const { user, businesses, activeBusiness, setActiveBusiness, userRole, refetch } = useBusinessContext();
   const isInvestor = userRole === 'investor';
   const [isOpen, setIsOpen] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -65,6 +65,7 @@ export function BusinessSwitcher() {
 
       setShowAddForm(false);
       setIsOpen(false);
+      await refetch();
       router.refresh();
     } catch (error) {
       console.error('Failed to create business:', error);
