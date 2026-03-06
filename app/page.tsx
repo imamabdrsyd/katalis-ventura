@@ -76,7 +76,7 @@ export default function LandingPage() {
             Make Data-driven Decisions
             <br />
             <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              for your Asset & Business
+              for your growing business
             </span>
           </h1>
 
@@ -96,7 +96,7 @@ export default function LandingPage() {
         {/* Business Logo Marquee */}
         {stats.businessLogos.length > 0 && (
           <div className="max-w-5xl mx-auto w-full mb-12">
-            <p className="text-center text-sm text-gray-400 mb-4 font-medium">Trusted by businesses on our platform</p>
+            <p className="text-center text-sm text-gray-400 mb-4 font-medium">Assets Under Management</p>
             <div
               className="relative overflow-hidden group"
               style={{
@@ -132,20 +132,20 @@ export default function LandingPage() {
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
             <Briefcase className="w-6 h-6 text-indigo-500 mb-3" />
             <h3 className="text-base font-bold text-gray-900 mb-2">
-              For Business Managers
+              Business Manager
             </h3>
             <p className="text-sm text-gray-600">
-              Full control over transaction management, financial reporting, and team collaboration.
+              Kelola keuangan bisnis secara profesional dengan double-entry bookkeeping, laporan otomatis, dan transparansi data untuk membangun kepercayaan investor.
             </p>
           </div>
 
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
             <TrendingUp className="w-6 h-6 text-blue-500 mb-3" />
             <h3 className="text-base font-bold text-gray-900 mb-2">
-              For Investors
+              Investor
             </h3>
             <p className="text-sm text-gray-600">
-              Monitor portfolio performance with custom metrics, real-time reports, and detailed analytics.
+              Pantau portofolio bisnis di bawah manajemen Katalis Ventura. Lihat laporan keuangan real, analisis ROI, dan metrik performa sebelum membuat keputusan.
             </p>
           </div>
 
@@ -155,7 +155,7 @@ export default function LandingPage() {
               Secure & Private
             </h3>
             <p className="text-sm text-gray-600">
-              Enterprise-grade security with role-based access control and industry-standard encryption.
+              Kontrol akses per role (manager & investor), Row-Level Security di database, dan audit trail lengkap di setiap perubahan data.
             </p>
           </div>
         </div>
