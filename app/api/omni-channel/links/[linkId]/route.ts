@@ -18,6 +18,11 @@ const patchSchema = z.object({
 
 async function verifyManagerOwnsLink(userId: string, linkId: string): Promise<boolean> {
   const supabase = createAdminClient();
+
+  // Superadmin bypass
+  const { data: profile } = await supabase.from('profiles').select('default_role').eq('id', userId).maybeSingle();
+  if (profile?.default_role === 'superadmin') return true;
+
   const { data: link } = await supabase
     .from('business_omni_channel_links')
     .select('omni_channel_id, business_omni_channels!inner(business_id, created_by)')

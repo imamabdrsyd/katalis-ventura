@@ -35,7 +35,7 @@ export default function AccountsPage() {
   const [showInactive, setShowInactive] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
-  const canManageAccounts = userRole === 'business_manager' || userRole === 'both';
+  const canManageAccounts = userRole === 'business_manager' || userRole === 'both' || userRole === 'superadmin';
 
   // Fetch accounts
   useEffect(() => {

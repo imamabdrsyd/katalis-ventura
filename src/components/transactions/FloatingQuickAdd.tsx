@@ -24,7 +24,7 @@ export function FloatingQuickAdd({
   onOpenChange?: (open: boolean) => void;
 } = {}) {
   const { user, activeBusinessId: businessId, userRole } = useBusinessContext();
-  const canManage = userRole === 'business_manager' || userRole === 'both';
+  const canManage = userRole === 'business_manager' || userRole === 'both' || userRole === 'superadmin';
 
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [saving, setSaving] = useState(false);

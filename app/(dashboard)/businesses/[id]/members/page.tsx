@@ -109,11 +109,12 @@ export default function BusinessMembersPage() {
   const router = useRouter();
   const businessId = params.id as string;
 
-  const { user, userRole, businesses, activeBusiness, setActiveBusiness, refetch } = useBusinessContext();
+  const { user, userRole, isSuperadmin, businesses, activeBusiness, setActiveBusiness, refetch } = useBusinessContext();
   const isInvestor = userRole === 'investor';
+  const canManage = userRole === 'business_manager' || userRole === 'both' || userRole === 'superadmin';
 
   const business = businesses.find((b) => b.id === businessId);
-  const isCreator = business?.created_by === user?.id;
+  const isCreator = business?.created_by === user?.id || isSuperadmin;
 
   const [activeTab, setActiveTab] = useState<'members' | 'omni-channel'>('members');
   const [members, setMembers] = useState<BusinessMember[]>([]);

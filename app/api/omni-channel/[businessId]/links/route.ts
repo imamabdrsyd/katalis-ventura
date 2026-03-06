@@ -18,11 +18,12 @@ const linkSchema = z.object({
 
 async function verifyManager(userId: string, businessId: string): Promise<boolean> {
   const supabase = createAdminClient();
-  const [{ data: role }, { data: business }] = await Promise.all([
+  const [{ data: role }, { data: business }, { data: profile }] = await Promise.all([
     supabase.from('user_business_roles').select('role').eq('user_id', userId).eq('business_id', businessId).maybeSingle(),
     supabase.from('businesses').select('created_by').eq('id', businessId).maybeSingle(),
+    supabase.from('profiles').select('default_role').eq('id', userId).maybeSingle(),
   ]);
-  return role?.role === 'business_manager' || role?.role === 'both' || business?.created_by === userId;
+  return profile?.default_role === 'superadmin' || role?.role === 'business_manager' || role?.role === 'both' || business?.created_by === userId;
 }
 
 // POST /api/omni-channel/[businessId]/links

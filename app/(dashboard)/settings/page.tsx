@@ -11,16 +11,24 @@ const ROLE_LABELS: Record<string, string> = {
   business_manager: 'Business Manager',
   investor: 'Investor',
   both: 'Manager & Investor',
+  superadmin: 'Super Admin',
 };
 
+const SWITCHABLE_ROLES = [
+  { value: 'business_manager', label: 'Business Manager' },
+  { value: 'investor', label: 'Investor' },
+  { value: 'superadmin', label: 'Super Admin' },
+] as const;
+
 export default function SettingsPage() {
-  const { user, userRole, refetch } = useBusinessContext();
+  const { user, userRole, isSuperadmin, switchRole, refetch } = useBusinessContext();
   const router = useRouter();
   const supabase = createClient();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string>(userRole || '');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +43,10 @@ export default function SettingsPage() {
       setLoading(false);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (userRole) setSelectedRole(userRole);
+  }, [userRole]);
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -91,17 +103,22 @@ export default function SettingsPage() {
 
       if (updateError) throw updateError;
 
-      // Update profiles table
+      // Update profiles table (keep default_role as-is for superadmin)
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
           id: user.id,
           full_name: fullName,
           avatar_url: avatarUrl,
-          default_role: userRole,
+          default_role: isSuperadmin ? 'superadmin' : userRole,
         });
 
       if (profileError) throw profileError;
+
+      // Superadmin: switch active role via context
+      if (isSuperadmin && selectedRole !== userRole) {
+        switchRole(selectedRole as any);
+      }
 
       setSuccess('Profile berhasil diupdate!');
       await refetch();
@@ -224,21 +241,42 @@ export default function SettingsPage() {
             </p>
           </div>
 
-          {/* Role (Read-only) */}
+          {/* Role */}
           <div>
             <label className="label flex items-center gap-2">
               <Briefcase className="w-4 h-4" />
               Role
             </label>
-            <input
-              type="text"
-              value={userRole ? ROLE_LABELS[userRole] : '-'}
-              disabled
-              className="input bg-gray-50 dark:bg-gray-700 cursor-not-allowed"
-            />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Role tidak bisa diubah
-            </p>
+            {isSuperadmin ? (
+              <>
+                <select
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  className="input"
+                >
+                  {SWITCHABLE_ROLES.map((role) => (
+                    <option key={role.value} value={role.value}>
+                      {role.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Anda bisa berganti role karena memiliki akses Super Admin
+                </p>
+              </>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  value={userRole ? ROLE_LABELS[userRole] : '-'}
+                  disabled
+                  className="input bg-gray-50 dark:bg-gray-700 cursor-not-allowed"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Role tidak bisa diubah
+                </p>
+              </>
+            )}
           </div>
         </div>
 

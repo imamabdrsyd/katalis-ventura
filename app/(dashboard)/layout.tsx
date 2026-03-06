@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { BusinessProvider, useBusinessContext } from '@/context/BusinessContext';
 import { BusinessForm, type BusinessFormData } from '@/components/business/BusinessForm';
 import { createClient } from '@/lib/supabase';
@@ -52,6 +52,7 @@ const ROLE_LABELS: Record<string, string> = {
   business_manager: 'Business Manager',
   investor: 'Investor',
   both: 'Manager & Investor',
+  superadmin: 'Super Admin',
 };
 
 type NavItem = {
@@ -97,6 +98,126 @@ const navSections: NavSection[] = [
   },
 ];
 
+// Semua item navigasi yang bisa dicari
+const allNavItems: NavItem[] = [
+  ...navSections.flatMap((s) => s.items),
+  { href: '/transactions', label: 'Transactions', icon: CreditCard },
+  { href: '/transactions/journal-entry', label: 'Journal Entry', icon: Plus },
+  { href: '/settings', label: 'Settings', icon: Settings },
+];
+
+function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const router = useRouter();
+  const [query, setQuery] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const filtered = useMemo(
+    () =>
+      query.trim() === ''
+        ? allNavItems
+        : allNavItems.filter((item) =>
+            item.label.toLowerCase().includes(query.toLowerCase())
+          ),
+    [query]
+  );
+
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  // Reset state saat dialog dibuka
+  useEffect(() => {
+    if (open) {
+      setQuery('');
+      setSelectedIndex(0);
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  }, [open]);
+
+  // Reset selected index saat filtered berubah
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [filtered.length]);
+
+  const navigate = useCallback(
+    (href: string) => {
+      onClose();
+      router.push(href);
+    },
+    [onClose, router]
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex((i) => (i + 1) % filtered.length);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex((i) => (i - 1 + filtered.length) % filtered.length);
+      } else if (e.key === 'Enter' && filtered.length > 0) {
+        e.preventDefault();
+        navigate(filtered[selectedIndex].href);
+      }
+    },
+    [filtered, selectedIndex, navigate]
+  );
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[20vh]" onClick={onClose}>
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
+      <div
+        className="relative w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Search Input */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Cari halaman..."
+            className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 outline-none"
+          />
+          <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium text-gray-400 bg-gray-100 dark:bg-gray-700 rounded">
+            ESC
+          </kbd>
+        </div>
+
+        {/* Results */}
+        <div className="max-h-64 overflow-y-auto py-1">
+          {filtered.length === 0 ? (
+            <p className="px-4 py-6 text-sm text-gray-400 text-center">Tidak ditemukan</p>
+          ) : (
+            filtered.map((item, i) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.href}
+                  onClick={() => navigate(item.href)}
+                  onMouseEnter={() => setSelectedIndex(i)}
+                  className={`flex items-center gap-3 w-full px-4 py-2.5 text-sm transition-colors ${
+                    i === selectedIndex
+                      ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  <span>{item.label}</span>
+                  <span className="ml-auto text-xs text-gray-400">{item.href}</span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: () => void; onQuickAddClick: () => void; isCollapsed: boolean }) {
   const router = useRouter();
   const { user, businesses, activeBusiness, setActiveBusiness, userRole } = useBusinessContext();
@@ -105,12 +226,13 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [showAddBusiness, setShowAddBusiness] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
 
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
   const isInvestor = userRole === 'investor';
-  const canManage = userRole === 'business_manager' || userRole === 'both';
+  const canManage = userRole === 'business_manager' || userRole === 'both' || userRole === 'superadmin';
 
   const handleAddBusiness = async (formData: BusinessFormData) => {
     setIsSubmitting(true);
@@ -147,8 +269,21 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
         setIsProfileDropdownOpen(false);
       }
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+      }
+      if (e.key === 'Escape') {
+        setIsSearchOpen(false);
+      }
+    };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   return (
@@ -258,9 +393,16 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
 
       {/* Right Side Actions */}
       <div className="flex items-center gap-2 md:gap-4">
-        {/* Search - hidden on mobile */}
-        <button className="hidden md:block p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-          <Search className="w-5 h-5" />
+        {/* Search */}
+        <button
+          onClick={() => setIsSearchOpen(true)}
+          className="hidden md:flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors border border-gray-200 dark:border-gray-600"
+        >
+          <Search className="w-4 h-4" />
+          <span>Cari...</span>
+          <kbd className="ml-2 px-1.5 py-0.5 text-[10px] font-medium bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-500">
+            ⌘K
+          </kbd>
         </button>
 
         {/* Quick Entry Button */}
@@ -300,7 +442,9 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
               <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{userName}</p>
               {userRole && (
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  userRole === 'investor'
+                  userRole === 'superadmin'
+                    ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/20'
+                    : userRole === 'investor'
                     ? 'bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 ring-1 ring-sky-500/20'
                     : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 ring-1 ring-indigo-500/20'
                 }`}>
@@ -338,6 +482,9 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
       </div>
     </header>
 
+    {/* Search Dialog */}
+    <SearchDialog open={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+
     {/* Add Business Modal */}
     {showAddBusiness && !isInvestor && (
       <div
@@ -374,7 +521,7 @@ function Sidebar({
   userRole: string | null;
 }) {
   const pathname = usePathname();
-  const canManage = userRole === 'business_manager' || userRole === 'both';
+  const canManage = userRole === 'business_manager' || userRole === 'both' || userRole === 'superadmin';
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
@@ -489,7 +636,7 @@ function Sidebar({
                     <Link
                       href="/transactions/journal-entry"
                       onClick={onClose}
-                      className="flex-shrink-0 p-0.5 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-800/40 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
+                      className="flex-shrink-0 p-0.5 rounded-md border border-indigo-400 dark:border-indigo-500 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-800/40 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
                       title="Journal Entry"
                     >
                       <Plus className="w-5 h-5" />

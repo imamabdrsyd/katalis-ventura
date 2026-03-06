@@ -15,9 +15,10 @@ import type { Business, Transaction } from '@/types';
 type TabType = 'active' | 'archived';
 
 export default function BusinessesPage() {
-  const { user, userRole, businesses: contextBusinesses, activeBusiness, setActiveBusiness, refetch } =
+  const { user, userRole, isSuperadmin, businesses: contextBusinesses, activeBusiness, setActiveBusiness, refetch } =
     useBusinessContext();
   const isInvestor = userRole === 'investor';
+  const canManage = userRole === 'business_manager' || userRole === 'both' || userRole === 'superadmin';
 
   // Get user's first name
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
@@ -37,7 +38,19 @@ export default function BusinessesPage() {
     if (!user) return;
     setFetchLoading(true);
     try {
-      const data = await businessesApi.getUserBusinesses(user.id, true);
+      let data: Business[];
+      if (isSuperadmin) {
+        // Superadmin: fetch ALL businesses including archived
+        const supabaseClient = createClient();
+        const { data: allBiz, error: allBizErr } = await supabaseClient
+          .from('businesses')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (allBizErr) throw allBizErr;
+        data = (allBiz || []) as Business[];
+      } else {
+        data = await businessesApi.getUserBusinesses(user.id, true);
+      }
       setAllBusinesses(data);
 
       // Fetch transactions for all businesses to calculate total CAPEX
@@ -72,7 +85,7 @@ export default function BusinessesPage() {
     } finally {
       setFetchLoading(false);
     }
-  }, [user]);
+  }, [user, isSuperadmin]);
 
   useEffect(() => {
     fetchBusinesses();
@@ -193,7 +206,7 @@ export default function BusinessesPage() {
             {isInvestor ? `Bisnis yang di invest ${firstName}` : `Bisnis yang dikelola ${firstName}`}
           </p> */}
         </div>
-        {!isInvestor && (
+        {canManage && (
           <button onClick={() => setIsFormOpen(true)} className="btn-primary">
             + Tambah Bisnis
           </button>
@@ -245,7 +258,7 @@ export default function BusinessesPage() {
               ? (isInvestor ? 'Anda belum bergabung dengan bisnis manapun' : 'Mulai dengan menambahkan bisnis pertama Anda')
               : 'Bisnis yang diarsipkan akan muncul di sini'}
           </p>
-          {activeTab === 'active' && !isInvestor && (
+          {activeTab === 'active' && canManage && (
             <button onClick={() => setIsFormOpen(true)} className="btn-primary">
               + Tambah Bisnis
             </button>
@@ -269,14 +282,14 @@ export default function BusinessesPage() {
                   router.push(`/businesses/${business.id}/members`);
                 }
               }}
-              onEdit={(!isInvestor && business.created_by === user?.id) ? () => setEditingBusiness(business) : undefined}
-              onArchive={(!isInvestor && business.created_by === user?.id) ? () => {
+              onEdit={(canManage && (isSuperadmin || business.created_by === user?.id)) ? () => setEditingBusiness(business) : undefined}
+              onArchive={(canManage && (isSuperadmin || business.created_by === user?.id)) ? () => {
                 setArchivingBusiness(business);
                 setIsArchiveConfirmOpen(true);
               } : undefined}
-              onRestore={(!isInvestor && business.created_by === user?.id) ? () => handleRestoreBusiness(business) : undefined}
-              onInvite={isInvestor ? undefined : () => setManagingInviteBusiness(business)}
-              showActions={!isInvestor}
+              onRestore={(canManage && (isSuperadmin || business.created_by === user?.id)) ? () => handleRestoreBusiness(business) : undefined}
+              onInvite={canManage ? () => setManagingInviteBusiness(business) : undefined}
+              showActions={canManage}
             />
           ))}
         </div>

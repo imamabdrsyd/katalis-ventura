@@ -20,7 +20,10 @@ export async function POST(
     supabase.from('businesses').select('created_by').eq('id', businessId).maybeSingle(),
   ]);
 
+  // Check superadmin
+  const { data: profile } = await supabase.from('profiles').select('default_role').eq('id', user.id).maybeSingle();
   const isManager =
+    profile?.default_role === 'superadmin' ||
     role?.role === 'business_manager' ||
     role?.role === 'both' ||
     business?.created_by === user.id;
