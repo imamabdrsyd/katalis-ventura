@@ -147,7 +147,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="container mx-auto px-6 py-6 border-t border-gray-200">
         <div className="flex flex-col md:flex-row items-center justify-between text-sm text-gray-500 gap-2">
-          <p>&copy; 2026 AXION. All rights reserved.</p>
+          <p>&copy; 2026 PT Imam Katalis Ventura. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <a
               href="https://instagram.com/imamabdrsyd"

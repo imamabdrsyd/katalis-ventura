@@ -192,13 +192,19 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
                     }`}
                   >
                     <div
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        business.id === activeBusiness?.id
-                          ? 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden ${
+                        business.logo_url
+                          ? ''
+                          : business.id === activeBusiness?.id
+                            ? 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                       }`}
                     >
-                      {BUSINESS_TYPE_ICONS[business.business_type] || <Building2 className="w-4 h-4" />}
+                      {business.logo_url ? (
+                        <Image src={business.logo_url} alt={business.business_name} width={32} height={32} className="w-full h-full object-cover" unoptimized />
+                      ) : (
+                        BUSINESS_TYPE_ICONS[business.business_type] || <Building2 className="w-4 h-4" />
+                      )}
                     </div>
                     <span
                       className={`text-sm flex-1 truncate ${

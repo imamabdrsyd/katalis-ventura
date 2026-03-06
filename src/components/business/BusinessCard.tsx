@@ -89,7 +89,7 @@ export function BusinessCard({
   }, [business.created_by]);
   return (
     <div
-      className={`card cursor-pointer transition-all ${
+      className={`card cursor-pointer transition-all flex flex-col ${
         isActive
           ? 'ring-2 ring-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
           : 'hover:shadow-md hover:border-gray-200 dark:hover:border-gray-600'
@@ -198,7 +198,7 @@ export function BusinessCard({
         </div>
       )}
 
-      <div className="flex items-center justify-between text-sm mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+      <div className="flex items-center justify-between text-sm mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
         <div className="text-gray-500 dark:text-gray-400">
           <span className="text-xs">Created by: </span>
           <span className="font-medium text-gray-700 dark:text-gray-300">

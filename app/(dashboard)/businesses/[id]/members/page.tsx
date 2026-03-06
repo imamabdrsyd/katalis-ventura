@@ -6,6 +6,7 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import { MemberList } from '@/components/business/MemberList';
 import { InviteCodeManager } from '@/components/business/InviteCodeManager';
 import { getBusinessMembers, type BusinessMember } from '@/lib/api/members';
+import Image from 'next/image';
 import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
@@ -43,9 +44,13 @@ function BusinessDetailCard({ business, onLeave }: { business: Business; onLeave
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 flex-1 self-stretch">
-      {/* Business icon */}
-      <div className="text-indigo-500 dark:text-indigo-400 mb-4">
-        {icon}
+      {/* Business icon/logo */}
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden mb-4 ${business.logo_url ? '' : 'text-indigo-500 dark:text-indigo-400'}`}>
+        {business.logo_url ? (
+          <Image src={business.logo_url} alt={business.business_name} width={48} height={48} className="w-full h-full object-cover" unoptimized />
+        ) : (
+          icon
+        )}
       </div>
 
       {/* Business name */}
