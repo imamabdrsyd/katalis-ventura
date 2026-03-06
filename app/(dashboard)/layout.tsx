@@ -32,6 +32,7 @@ import {
   ClipboardCheck,
   Zap,
   FlaskConical,
+  Plus,
 } from 'lucide-react';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -75,7 +76,6 @@ const navSections: NavSection[] = [
   {
     label: 'ACCOUNTING',
     items: [
-      { href: '/transactions', label: 'Transactions', icon: CreditCard },
       { href: '/accounts', label: 'Chart of Accounts', icon: BookOpen },
       { href: '/general-ledger', label: 'General Ledger', icon: BookOpenCheck },
       { href: '/trial-balance', label: 'Trial Balance', icon: ClipboardCheck },
@@ -365,13 +365,33 @@ function Sidebar({
   onClose,
   isCollapsed,
   onToggleCollapse,
+  userRole,
 }: {
   isOpen: boolean;
   onClose: () => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  userRole: string | null;
 }) {
   const pathname = usePathname();
+  const canManage = userRole === 'business_manager' || userRole === 'both';
+
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('sidebar_sections_expanded');
+      if (saved) setExpandedSections(JSON.parse(saved));
+    } catch { /* ignore */ }
+  }, []);
+
+  const isSectionExpanded = (label: string) => expandedSections[label] ?? true;
+
+  const toggleSection = (label: string) => {
+    const next = { ...expandedSections, [label]: !isSectionExpanded(label) };
+    setExpandedSections(next);
+    localStorage.setItem('sidebar_sections_expanded', JSON.stringify(next));
+  };
 
   return (
     <>
@@ -452,54 +472,121 @@ function Sidebar({
           </button>
         </div>
 
+        {/* Transactions nav item — above sections */}
+        {canManage && (
+          <div className="px-2 pt-3 pb-1">
+            {(() => {
+              const isTransactionsActive = pathname === '/transactions' || pathname.startsWith('/transactions/');
+              return (
+                <div className="relative group">
+                  <div
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors
+                      ${isTransactionsActive
+                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
+                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
+                  >
+                    <Link
+                      href="/transactions/journal-entry"
+                      onClick={onClose}
+                      className="flex-shrink-0 p-0.5 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-800/40 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
+                      title="Journal Entry"
+                    >
+                      <Plus className="w-5 h-5" />
+                    </Link>
+                    <Link
+                      href="/transactions"
+                      onClick={onClose}
+                      className={`whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out hover:text-indigo-500 dark:hover:text-indigo-400 ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}
+                    >
+                      Transactions
+                    </Link>
+                  </div>
+                  {/* Tooltip saat collapsed: 2 aksi */}
+                  {isCollapsed && (
+                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-[60] overflow-hidden">
+                      <Link
+                        href="/transactions/journal-entry"
+                        onClick={onClose}
+                        className="flex items-center gap-2 px-3 py-2 hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Journal Entry
+                      </Link>
+                      <Link
+                        href="/transactions"
+                        onClick={onClose}
+                        className="flex items-center gap-2 px-3 py-2 hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+                      >
+                        <CreditCard className="w-3.5 h-3.5" />
+                        View Transactions
+                      </Link>
+                      <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
         {/* Navigation */}
         <nav className="flex-1 py-4 px-2 overflow-visible">
-          {navSections.map((section, sectionIndex) => (
-            <div key={section.label} className={sectionIndex > 0 ? 'mt-5' : ''}>
-              {/* Section label — fade out saat collapsed */}
-              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'h-0 opacity-0 mb-0' : 'h-5 opacity-100 mb-2'}`}>
-                <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-3 whitespace-nowrap">
-                  {section.label}
+          {navSections.map((section, sectionIndex) => {
+            const expanded = isSectionExpanded(section.label);
+            return (
+              <div key={section.label} className={sectionIndex > 0 ? 'mt-5' : ''}>
+                {/* Section label — fade out saat collapsed */}
+                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'h-0 opacity-0 mb-0' : 'h-5 opacity-100 mb-2'}`}>
+                  <button
+                    onClick={() => toggleSection(section.label)}
+                    className="flex items-center justify-between w-full px-3 group/section"
+                  >
+                    <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      {section.label}
+                    </span>
+                    <ChevronDown className={`w-3 h-3 text-gray-400 dark:text-gray-500 flex-shrink-0 transition-transform duration-200 ${expanded ? '' : '-rotate-90'}`} />
+                  </button>
+                </div>
+                {/* Divider antar section saat collapsed */}
+                {isCollapsed && sectionIndex > 0 && (
+                  <div className="border-t border-gray-200 dark:border-gray-700 mb-3" />
+                )}
+                <div className={`space-y-1 transition-all duration-200 ease-in-out ${!isCollapsed && !expanded ? 'max-h-0 overflow-hidden' : isCollapsed ? '' : 'max-h-96'}`}>
+                  {section.items.map((item) => {
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                    const Icon = item.icon;
+                    return (
+                      <div key={item.href} className="relative group">
+                        <Link
+                          href={item.href}
+                          onClick={onClose}
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors
+                            ${isActive
+                              ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
+                              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                            }`}
+                        >
+                          <Icon className="w-5 h-5 flex-shrink-0" />
+                          {/* Label — fade out saat collapsed */}
+                          <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+                            {item.label}
+                          </span>
+                        </Link>
+                        {/* Tooltip saat collapsed */}
+                        {isCollapsed && (
+                          <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 pointer-events-none z-[60]">
+                            {item.label}
+                            <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-              {/* Divider antar section saat collapsed */}
-              {isCollapsed && sectionIndex > 0 && (
-                <div className="border-t border-gray-200 dark:border-gray-700 mb-3" />
-              )}
-              <div className="space-y-1">
-                {section.items.map((item) => {
-                  const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-                  const Icon = item.icon;
-                  return (
-                    <div key={item.href} className="relative group">
-                      <Link
-                        href={item.href}
-                        onClick={onClose}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors
-                          ${isActive
-                            ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
-                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                          }`}
-                      >
-                        <Icon className="w-5 h-5 flex-shrink-0" />
-                        {/* Label — fade out saat collapsed */}
-                        <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
-                          {item.label}
-                        </span>
-                      </Link>
-                      {/* Tooltip saat collapsed */}
-                      {isCollapsed && (
-                        <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 pointer-events-none z-[60]">
-                          {item.label}
-                          <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </nav>
 
         {/* Footer */}
@@ -517,6 +604,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { userRole } = useBusinessContext();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -526,6 +614,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
         onClose={() => setSidebarOpen(false)}
         isCollapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
+        userRole={userRole}
       />
 
       {/* Fixed Header */}
