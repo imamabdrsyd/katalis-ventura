@@ -30,9 +30,22 @@ export async function GET() {
       console.error('Error fetching businesses count:', businessesError);
     }
 
+    // Get business logos for landing page marquee
+    const { data: businessLogos, error: logosError } = await supabaseAdmin
+      .from('businesses')
+      .select('id, business_name, logo_url')
+      .eq('is_archived', false)
+      .not('logo_url', 'is', null)
+      .order('created_at', { ascending: true });
+
+    if (logosError) {
+      console.error('Error fetching business logos:', logosError);
+    }
+
     return NextResponse.json({
       users: usersCount || 0,
       businesses: businessesCount || 0,
+      businessLogos: businessLogos || [],
     });
   } catch (error) {
     console.error('Stats API error:', error);

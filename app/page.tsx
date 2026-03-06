@@ -8,13 +8,20 @@ import { Inter } from 'next/font/google';
 
 const inter = Inter({ subsets: ['latin'] });
 
+interface BusinessLogo {
+  id: string;
+  business_name: string;
+  logo_url: string;
+}
+
 interface Stats {
   users: number;
   businesses: number;
+  businessLogos: BusinessLogo[];
 }
 
 export default function LandingPage() {
-  const [stats, setStats] = useState<Stats>({ users: 0, businesses: 0 });
+  const [stats, setStats] = useState<Stats>({ users: 0, businesses: 0, businessLogos: [] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -85,6 +92,40 @@ export default function LandingPage() {
             Enter AXION
           </Link>
         </div>
+
+        {/* Business Logo Marquee */}
+        {stats.businessLogos.length > 0 && (
+          <div className="max-w-5xl mx-auto w-full mb-12">
+            <p className="text-center text-sm text-gray-400 mb-4 font-medium">Trusted by businesses on our platform</p>
+            <div
+              className="relative overflow-hidden group"
+              style={{
+                maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
+                WebkitMaskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
+              }}
+            >
+              <div className="flex gap-12 animate-marquee group-hover:[animation-play-state:paused]">
+                {[...stats.businessLogos, ...stats.businessLogos].map((biz, i) => (
+                  <div
+                    key={`${biz.id}-${i}`}
+                    className="flex-shrink-0 flex items-center gap-3 px-2"
+                  >
+                    <Image
+                      src={biz.logo_url}
+                      alt={biz.business_name}
+                      width={40}
+                      height={40}
+                      className="rounded-lg object-cover w-10 h-10"
+                    />
+                    <span className="text-sm font-medium text-gray-500 whitespace-nowrap">
+                      {biz.business_name}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Features Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto mb-12">
