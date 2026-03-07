@@ -22,9 +22,18 @@ function TransactionRow({ tx }: { tx: CashFlowTransaction }) {
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-start gap-2">
           <div className="min-w-0">
-            <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{tx.name}</p>
-            {tx.description && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{tx.description}</p>
+            {tx.amount < 0 && tx.description ? (
+              <>
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{tx.description}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{tx.name}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{tx.name}</p>
+                {tx.description && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{tx.description}</p>
+                )}
+              </>
             )}
             {(tx.debitAccount || tx.creditAccount) && (
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">

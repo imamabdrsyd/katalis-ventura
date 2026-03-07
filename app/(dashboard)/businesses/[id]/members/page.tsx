@@ -45,7 +45,7 @@ function BusinessDetailCard({ business, onLeave }: { business: Business; onLeave
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 flex-1 self-stretch">
       {/* Business icon/logo */}
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden mb-4 ${business.logo_url ? '' : 'text-indigo-500 dark:text-indigo-400'}`}>
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden mb-4 ${business.logo_url ? 'bg-white' : 'text-indigo-500 dark:text-indigo-400'}`}>
         {business.logo_url ? (
           <Image src={business.logo_url} alt={business.business_name} width={48} height={48} className="w-full h-full object-cover" unoptimized />
         ) : (

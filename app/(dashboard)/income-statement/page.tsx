@@ -8,11 +8,14 @@ import { formatCurrency } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
 import type { Transaction } from '@/types';
 
+const EXPENSE_CATEGORIES = new Set(['OPEX', 'VAR', 'TAX', 'CAPEX']);
+
 function TransactionRow({ tx }: { tx: Transaction }) {
+  const isExpense = EXPENSE_CATEGORIES.has(tx.category);
   return (
     <div className="flex items-start gap-3 py-2.5 px-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
       <div className="mt-0.5 flex-shrink-0">
-        {tx.amount >= 0 ? (
+        {!isExpense ? (
           <ArrowUpCircle className="w-4 h-4 text-green-500" />
         ) : (
           <ArrowDownCircle className="w-4 h-4 text-red-500" />
@@ -21,9 +24,18 @@ function TransactionRow({ tx }: { tx: Transaction }) {
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-start gap-2">
           <div className="min-w-0">
-            <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{tx.name}</p>
-            {tx.description && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{tx.description}</p>
+            {isExpense && tx.description ? (
+              <>
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{tx.description}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{tx.name}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{tx.name}</p>
+                {tx.description && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{tx.description}</p>
+                )}
+              </>
             )}
           </div>
           <div className="text-right flex-shrink-0">

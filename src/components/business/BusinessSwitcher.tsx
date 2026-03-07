@@ -82,7 +82,7 @@ export function BusinessSwitcher() {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors w-full"
       >
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden ${activeBusiness.logo_url ? '' : 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'}`}>
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden ${activeBusiness.logo_url ? 'bg-white' : 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'}`}>
           {activeBusiness.logo_url ? (
             <Image src={activeBusiness.logo_url} alt={activeBusiness.business_name} width={32} height={32} className="w-full h-full object-cover" unoptimized />
           ) : (
@@ -124,7 +124,7 @@ export function BusinessSwitcher() {
                 <div
                   className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden ${
                     business.logo_url
-                      ? ''
+                      ? 'bg-white'
                       : business.id === activeBusiness.id
                         ? 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'
                         : 'bg-gray-100 text-gray-600'

@@ -106,20 +106,82 @@ const allNavItems: NavItem[] = [
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
+type SearchResult = {
+  type: 'page' | 'transaction';
+  label: string;
+  sublabel?: string;
+  href: string;
+  icon?: LucideIcon;
+  category?: string;
+};
+
 function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
+  const { activeBusinessId } = useBusinessContext();
   const [query, setQuery] = useState('');
+  const [transactionResults, setTransactionResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  const filtered = useMemo(
+  const filteredPages = useMemo(
     () =>
       query.trim() === ''
-        ? allNavItems
-        : allNavItems.filter((item) =>
-            item.label.toLowerCase().includes(query.toLowerCase())
-          ),
+        ? allNavItems.map((item) => ({ type: 'page' as const, label: item.label, href: item.href, icon: item.icon }))
+        : allNavItems
+            .filter((item) => item.label.toLowerCase().includes(query.toLowerCase()))
+            .map((item) => ({ type: 'page' as const, label: item.label, href: item.href, icon: item.icon })),
     [query]
   );
+
+  // Search transactions with debounce
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (!query.trim() || !activeBusinessId) {
+      setTransactionResults([]);
+      setSearching(false);
+      return;
+    }
+
+    setSearching(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const supabase = createClient();
+        const q = query.toLowerCase();
+        const { data } = await supabase
+          .from('active_transactions')
+          .select('id, name, description, category, amount, date')
+          .eq('business_id', activeBusinessId)
+          .or(`name.ilike.%${q}%,description.ilike.%${q}%`)
+          .order('date', { ascending: false })
+          .limit(8);
+
+        if (data) {
+          setTransactionResults(
+            data.map((t) => ({
+              type: 'transaction' as const,
+              label: t.name || t.description || '',
+              sublabel: t.description && t.name ? t.description : undefined,
+              href: `/transactions?highlight=${t.id}`,
+              category: t.category,
+            }))
+          );
+        }
+      } catch {
+        setTransactionResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [query, activeBusinessId]);
+
+  const allResults: SearchResult[] = useMemo(() => {
+    if (!query.trim()) return filteredPages;
+    return [...filteredPages, ...transactionResults];
+  }, [query, filteredPages, transactionResults]);
 
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -128,14 +190,15 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
     if (open) {
       setQuery('');
       setSelectedIndex(0);
+      setTransactionResults([]);
       setTimeout(() => inputRef.current?.focus(), 0);
     }
   }, [open]);
 
-  // Reset selected index saat filtered berubah
+  // Reset selected index saat results berubah
   useEffect(() => {
     setSelectedIndex(0);
-  }, [filtered.length]);
+  }, [allResults.length]);
 
   const navigate = useCallback(
     (href: string) => {
@@ -149,29 +212,32 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
     (e: React.KeyboardEvent) => {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setSelectedIndex((i) => (i + 1) % filtered.length);
+        setSelectedIndex((i) => (i + 1) % (allResults.length || 1));
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setSelectedIndex((i) => (i - 1 + filtered.length) % filtered.length);
-      } else if (e.key === 'Enter' && filtered.length > 0) {
+        setSelectedIndex((i) => (i - 1 + (allResults.length || 1)) % (allResults.length || 1));
+      } else if (e.key === 'Enter' && allResults.length > 0) {
         e.preventDefault();
-        navigate(filtered[selectedIndex].href);
+        navigate(allResults[selectedIndex].href);
       }
     },
-    [filtered, selectedIndex, navigate]
+    [allResults, selectedIndex, navigate]
   );
 
   if (!open) return null;
 
+  const hasPages = filteredPages.length > 0;
+  const hasTransactions = transactionResults.length > 0;
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[20vh]" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]" onClick={onClose}>
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+        className="relative w-full max-w-xl bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search Input */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-200 dark:border-gray-700">
           <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
           <input
             ref={inputRef}
@@ -179,8 +245,8 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Cari halaman..."
-            className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 outline-none"
+            placeholder="Cari halaman atau transaksi..."
+            className="flex-1 bg-transparent text-base text-gray-800 dark:text-gray-200 placeholder-gray-400 outline-none"
           />
           <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium text-gray-400 bg-gray-100 dark:bg-gray-700 rounded">
             ESC
@@ -188,29 +254,87 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
         </div>
 
         {/* Results */}
-        <div className="max-h-64 overflow-y-auto py-1">
-          {filtered.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-gray-400 text-center">Tidak ditemukan</p>
+        <div className="max-h-80 overflow-y-auto">
+          {allResults.length === 0 && !searching ? (
+            <p className="px-5 py-8 text-sm text-gray-400 text-center">Tidak ditemukan</p>
           ) : (
-            filtered.map((item, i) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.href}
-                  onClick={() => navigate(item.href)}
-                  onMouseEnter={() => setSelectedIndex(i)}
-                  className={`flex items-center gap-3 w-full px-4 py-2.5 text-sm transition-colors ${
-                    i === selectedIndex
-                      ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
-                  <span>{item.label}</span>
-                  <span className="ml-auto text-xs text-gray-400">{item.href}</span>
-                </button>
-              );
-            })
+            <>
+              {/* Pages section */}
+              {hasPages && (
+                <div>
+                  {query.trim() && <p className="px-5 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Halaman</p>}
+                  {filteredPages.map((item, i) => {
+                    const Icon = item.icon!;
+                    return (
+                      <button
+                        key={item.href}
+                        onClick={() => navigate(item.href)}
+                        onMouseEnter={() => setSelectedIndex(i)}
+                        className={`flex items-center gap-3 w-full px-5 py-2.5 text-sm transition-colors ${
+                          i === selectedIndex
+                            ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4 flex-shrink-0" />
+                        <span>{item.label}</span>
+                        <span className="ml-auto text-xs text-gray-400">{item.href}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Transactions section */}
+              {hasTransactions && (
+                <div>
+                  {hasPages && <div className="border-t border-gray-100 dark:border-gray-700 my-1" />}
+                  <p className="px-5 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Transaksi</p>
+                  {transactionResults.map((item, rawIdx) => {
+                    const globalIdx = filteredPages.length + rawIdx;
+                    const CATEGORY_COLORS: Record<string, string> = {
+                      EARN: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400',
+                      OPEX: 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400',
+                      VAR: 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400',
+                      CAPEX: 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400',
+                      TAX: 'bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400',
+                      FIN: 'bg-pink-100 dark:bg-pink-900/50 text-pink-600 dark:text-pink-400',
+                    };
+                    return (
+                      <button
+                        key={item.href + rawIdx}
+                        onClick={() => navigate(item.href)}
+                        onMouseEnter={() => setSelectedIndex(globalIdx)}
+                        className={`flex items-center gap-3 w-full px-5 py-2.5 text-sm transition-colors ${
+                          globalIdx === selectedIndex
+                            ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${CATEGORY_COLORS[item.category || ''] || 'bg-gray-100 text-gray-500'}`}>
+                          {item.category}
+                        </span>
+                        <div className="flex flex-col items-start min-w-0 flex-1">
+                          <span className="truncate w-full text-left">{item.label}</span>
+                          {item.sublabel && (
+                            <span className="text-xs text-gray-400 truncate w-full text-left">{item.sublabel}</span>
+                          )}
+                        </div>
+                        <CreditCard className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Loading indicator */}
+              {searching && (
+                <div className="px-5 py-3 flex items-center gap-2 text-xs text-gray-400">
+                  <div className="w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                  Mencari transaksi...
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -329,7 +453,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
                     <div
                       className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden ${
                         business.logo_url
-                          ? ''
+                          ? 'bg-white'
                           : business.id === activeBusiness?.id
                             ? 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'
                             : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
@@ -396,11 +520,11 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
         {/* Search */}
         <button
           onClick={() => setIsSearchOpen(true)}
-          className="hidden md:flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors border border-gray-200 dark:border-gray-600"
+          className="hidden md:flex items-center gap-2 px-4 py-1.5 text-sm text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors border border-gray-200 dark:border-gray-600 min-w-[220px]"
         >
           <Search className="w-4 h-4" />
-          <span>Cari...</span>
-          <kbd className="ml-2 px-1.5 py-0.5 text-[10px] font-medium bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-500">
+          <span>Cari halaman atau transaksi...</span>
+          <kbd className="ml-auto px-1.5 py-0.5 text-[10px] font-medium bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-500">
             ⌘K
           </kbd>
         </button>
