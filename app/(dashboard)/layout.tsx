@@ -33,6 +33,7 @@ import {
   Zap,
   FlaskConical,
   Plus,
+  UserPlus,
 } from 'lucide-react';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -248,7 +249,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
             placeholder="Cari halaman atau transaksi..."
             className="flex-1 bg-transparent text-base text-gray-800 dark:text-gray-200 placeholder-gray-400 outline-none"
           />
-          <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium text-gray-400 bg-gray-100 dark:bg-gray-700 rounded">
+          <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded">
             ESC
           </kbd>
         </div>
@@ -482,19 +483,19 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
                   </button>
                 ))}
               </div>
-              <div className="border-t border-gray-100 dark:border-gray-700">
+              <div className="border-t border-gray-100 dark:border-gray-700 grid grid-cols-2 py-1.5">
                 {canManage && (
                   <button
                     onClick={() => {
                       setShowAddBusiness(true);
                       setIsDropdownOpen(false);
                     }}
-                    className="flex items-center gap-2 w-full px-3 py-2.5 text-left text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                    className="relative group flex justify-center p-2 rounded-lg text-gray-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors mx-1"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    <span className="text-sm font-medium">Buat Bisnis Baru</span>
+                    <Plus className="w-5 h-5" />
+                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                      Buat Bisnis Baru
+                    </span>
                   </button>
                 )}
                 <button
@@ -502,12 +503,12 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
                     setIsDropdownOpen(false);
                     router.push('/join-business');
                   }}
-                  className="flex items-center gap-2 w-full px-3 py-2.5 text-left text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                  className="relative group flex justify-center p-2 rounded-lg text-gray-500 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors mx-1"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                  </svg>
-                  <span className="text-sm font-medium">Gabung Bisnis</span>
+                  <UserPlus className="w-5 h-5" />
+                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                    Gabung Bisnis
+                  </span>
                 </button>
               </div>
             </div>
@@ -520,11 +521,11 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
         {/* Search */}
         <button
           onClick={() => setIsSearchOpen(true)}
-          className="hidden md:flex items-center gap-2 px-4 py-1.5 text-sm text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors border border-gray-200 dark:border-gray-600 min-w-[220px]"
+          className="hidden md:flex items-center gap-2 px-4 py-1.5 text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors border border-gray-200 dark:border-gray-600 min-w-[220px]"
         >
           <Search className="w-4 h-4" />
           <span>Cari halaman atau transaksi...</span>
-          <kbd className="ml-auto px-1.5 py-0.5 text-[10px] font-medium bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-500">
+          <kbd className="ml-auto px-1.5 py-0.5 text-[10px] font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-500">
             ⌘K
           </kbd>
         </button>

@@ -437,7 +437,7 @@ export function TransactionForm({
           </select>
           {suggestedAccounts && (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              💡 {suggestedAccounts.description}
+              <Lightbulb className="w-3.5 h-3.5 inline-block mr-1 -mt-0.5" />{suggestedAccounts.description}
             </p>
           )}
         </div>

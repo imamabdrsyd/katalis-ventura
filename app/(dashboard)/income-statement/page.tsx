@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Calendar, TrendingUp, TrendingDown, Download, FileText, FileSpreadsheet, Info, DollarSign, ArrowUpCircle, ArrowDownCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, Download, FileText, FileSpreadsheet, Info, DollarSign, ArrowUpCircle, ArrowDownCircle, ChevronDown, ChevronRight, Building2 } from 'lucide-react';
 import { useIncomeStatement } from '@/hooks/useIncomeStatement';
 import { formatCurrency } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
@@ -170,7 +170,7 @@ function IncomeStatementPageInner() {
     return (
       <div className="p-8">
         <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-xl">
-          <div className="text-4xl mb-4">🏢</div>
+          <div className="flex justify-center mb-4"><Building2 className="w-10 h-10 text-gray-400" /></div>
           <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">
             Tidak ada bisnis aktif
           </h3>

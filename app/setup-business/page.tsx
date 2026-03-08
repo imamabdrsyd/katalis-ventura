@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
+import { Building2 } from 'lucide-react';
 import { createBusiness } from '@/lib/api/businesses';
 
 const BUSINESS_TYPES = [
@@ -101,8 +102,8 @@ export default function SetupBusinessPage() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-6">
       <div className="max-w-2xl w-full bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl mx-auto mb-4 flex items-center justify-center text-white text-2xl">
-            🏢
+          <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl mx-auto mb-4 flex items-center justify-center text-white">
+            <Building2 className="w-8 h-8" />
           </div>
           <h1 className="text-2xl font-bold text-gray-800">Setup Your Business</h1>
           <p className="text-gray-500 text-sm mt-2">

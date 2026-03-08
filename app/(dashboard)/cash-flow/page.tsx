@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Calendar, TrendingUp, TrendingDown, Download, Wallet, FileText, FileSpreadsheet, ChevronDown, ChevronRight, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Info, ExternalLink } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, Download, Wallet, FileText, FileSpreadsheet, ChevronDown, ChevronRight, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Info, ExternalLink, Building2 } from 'lucide-react';
 import { useCashFlow } from '@/hooks/useCashFlow';
 import { formatCurrency } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
@@ -173,7 +173,7 @@ export default function CashFlowPage() {
     return (
       <div className="p-8">
         <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-xl">
-          <div className="text-4xl mb-4">🏢</div>
+          <div className="flex justify-center mb-4"><Building2 className="w-10 h-10 text-gray-400" /></div>
           <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">
             Tidak ada bisnis aktif
           </h3>

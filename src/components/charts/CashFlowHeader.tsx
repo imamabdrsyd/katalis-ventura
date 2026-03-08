@@ -1,5 +1,7 @@
 'use client';
 
+import { TrendingUp, TrendingDown } from 'lucide-react';
+
 interface CashFlowHeaderProps {
   totalBalance: number;
   percentageChange: number;
@@ -53,7 +55,7 @@ export default function CashFlowHeader({
               percentageChange >= 0 ? 'text-emerald-500' : 'text-red-500'
             }`}
           >
-            {percentageChange >= 0 ? '📈' : '📉'} {percentageChange >= 0 ? '+' : ''}
+            {percentageChange >= 0 ? <TrendingUp className="w-5 h-5 inline-block" /> : <TrendingDown className="w-5 h-5 inline-block" />} {percentageChange >= 0 ? '+' : ''}
             {percentageChange.toFixed(1)}%
           </span>
         </div>

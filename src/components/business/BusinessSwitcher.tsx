@@ -6,7 +6,7 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import { BusinessForm, type BusinessFormData } from './BusinessForm';
 import * as businessesApi from '@/lib/api/businesses';
 import Image from 'next/image';
-import { Building2, Palette, Heart, Wheat, UtensilsCrossed, Home } from 'lucide-react';
+import { Building2, Palette, Heart, Wheat, UtensilsCrossed, Home, Plus, UserPlus } from 'lucide-react';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
   agribusiness: <Wheat className="w-4 h-4" />,
@@ -24,7 +24,6 @@ export function BusinessSwitcher() {
   const isInvestor = userRole === 'investor';
   const [isOpen, setIsOpen] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [showManageOptions, setShowManageOptions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -161,105 +160,32 @@ export function BusinessSwitcher() {
               </button>
             ))}
           </div>
-          <div className="border-t border-gray-100">
+          <div className="border-t border-gray-100 grid grid-cols-2 py-1.5">
+            {!isInvestor && (
+              <button
+                onClick={() => {
+                  setShowAddForm(true);
+                  setIsOpen(false);
+                }}
+                className="relative group flex justify-center p-2 rounded-lg text-gray-500 hover:text-indigo-500 hover:bg-indigo-50 transition-colors mx-1"
+              >
+                <Plus className="w-5 h-5" />
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                  Buat Bisnis Baru
+                </span>
+              </button>
+            )}
             <button
               onClick={() => {
-                console.log('🔍 DEBUG - userRole:', userRole, 'isInvestor:', isInvestor);
-                if (isInvestor) {
-                  setIsOpen(false);
-                  router.push('/join-business');
-                } else {
-                  console.log('✅ Setting showManageOptions to true');
-                  setShowManageOptions(true);
-                }
+                setIsOpen(false);
+                router.push('/join-business');
               }}
-              className="flex items-center gap-2 w-full px-3 py-2.5 text-left text-indigo-500 hover:bg-indigo-50 transition-colors"
+              className="relative group flex justify-center p-2 rounded-lg text-gray-500 hover:text-purple-500 hover:bg-purple-50 transition-colors mx-1"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d={isInvestor ? "M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" : "M12 6v6m0 0v6m0-6h6m-6 0H6"}
-                />
-              </svg>
-              <span className="text-sm font-medium">{isInvestor ? 'Gabung Bisnis' : 'Kelola Bisnis'}</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Manage Business Options Modal */}
-      {showManageOptions && !isInvestor && (
-        <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              console.log('🎯 Clicked backdrop, closing modal');
-              setShowManageOptions(false);
-            }
-          }}
-        >
-          <div
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Kelola Bisnis</h2>
-            <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">
-              Pilih tindakan yang ingin Anda lakukan
-            </p>
-
-            <div className="space-y-3">
-              {/* Create New Business */}
-              <button
-                onClick={() => {
-                  setShowManageOptions(false);
-                  setShowAddForm(true);
-                }}
-                className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-indigo-500 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all text-left group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center group-hover:bg-indigo-500 transition-colors">
-                    <svg className="w-6 h-6 text-indigo-500 dark:text-indigo-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-800 dark:text-gray-100">Tambah Bisnis Baru</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Buat bisnis baru yang Anda kelola</p>
-                  </div>
-                </div>
-              </button>
-
-              {/* Join Another Business */}
-              <button
-                onClick={() => {
-                  setShowManageOptions(false);
-                  setIsOpen(false);
-                  router.push('/join-business');
-                }}
-                className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-purple-500 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all text-left group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-purple-50 dark:bg-purple-900/30 rounded-lg flex items-center justify-center group-hover:bg-purple-500 transition-colors">
-                    <svg className="w-6 h-6 text-purple-500 dark:text-purple-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-800 dark:text-gray-100">Gabung Bisnis Lain</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Kelola bisnis milik manager lain</p>
-                  </div>
-                </div>
-              </button>
-            </div>
-
-            {/* Cancel Button */}
-            <button
-              onClick={() => setShowManageOptions(false)}
-              className="w-full mt-4 px-4 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 font-medium"
-            >
-              Batal
+              <UserPlus className="w-5 h-5" />
+              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                Gabung Bisnis
+              </span>
             </button>
           </div>
         </div>

@@ -246,7 +246,7 @@ export default function JoinBusinessPage() {
               </div>
             ) : filteredBusinesses.length === 0 ? (
               <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                <div className="text-4xl mb-3">🏢</div>
+                <div className="flex justify-center mb-3"><Building2 className="w-10 h-10 text-gray-400" /></div>
                 <p className="text-gray-600 dark:text-gray-400">
                   {searchQuery ? 'Tidak ada bisnis yang cocok' : 'Belum ada bisnis tersedia'}
                 </p>
@@ -271,7 +271,7 @@ export default function JoinBusinessPage() {
                             : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                         }`}
                       >
-                        🏢
+                        <Building2 className="w-5 h-5" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-gray-800 dark:text-gray-100 truncate">

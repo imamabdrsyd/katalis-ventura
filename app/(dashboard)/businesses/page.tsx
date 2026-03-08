@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/Modal';
 import { BusinessCard } from '@/components/business/BusinessCard';
 import { BusinessForm, type BusinessFormData } from '@/components/business/BusinessForm';
 import { InviteCodeManager } from '@/components/business/InviteCodeManager';
+import { Building2, Archive } from 'lucide-react';
 import * as businessesApi from '@/lib/api/businesses';
 import { calculateTotalCapex } from '@/lib/calculations';
 import { createClient } from '@/lib/supabase';
@@ -247,8 +248,8 @@ export default function BusinessesPage() {
         </div>
       ) : displayedBusinesses.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-xl">
-          <div className="text-4xl mb-4">
-            {activeTab === 'active' ? '🏢' : '📦'}
+          <div className="flex justify-center mb-4">
+            {activeTab === 'active' ? <Building2 className="w-10 h-10 text-gray-400" /> : <Archive className="w-10 h-10 text-gray-400" />}
           </div>
           <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">
             {activeTab === 'active' ? 'Belum ada bisnis aktif' : 'Tidak ada bisnis diarsipkan'}

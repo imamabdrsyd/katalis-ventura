@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { ClipboardList, Pencil, Trash2, ListChecks } from 'lucide-react';
 import type { Transaction, TransactionCategory } from '@/types';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
 
@@ -130,10 +131,6 @@ export function TransactionList({
   const [showDateDropdown, setShowDateDropdown] = useState(false);
   const dateDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Per-row kebab menu state
-  const [kebabOpenId, setKebabOpenId] = useState<string | null>(null);
-  const kebabRef = useRef<HTMLDivElement>(null);
-
   // Close dropdowns on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -142,9 +139,6 @@ export function TransactionList({
       }
       if (dateDropdownRef.current && !dateDropdownRef.current.contains(e.target as Node)) {
         setShowDateDropdown(false);
-      }
-      if (kebabRef.current && !kebabRef.current.contains(e.target as Node)) {
-        setKebabOpenId(null);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -166,7 +160,7 @@ export function TransactionList({
     return (
       <div className="text-center py-12">
         <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-          <span className="text-3xl">📋</span>
+          <ClipboardList className="w-8 h-8 text-gray-400 dark:text-gray-500" />
         </div>
         <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Belum ada transaksi</h3>
         <p className="text-gray-500 dark:text-gray-400">Mulai dengan menambahkan transaksi pertama Anda</p>
@@ -186,10 +180,10 @@ export function TransactionList({
           <col className="w-24" />
           <col className="w-32" />
           <col className="w-40" />
-          {showActions && <col className="w-14" />}
+          {showActions && <col className="w-28" />}
         </colgroup>
         <thead className="sticky top-0 z-10 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm">
-          <tr className="border-b border-gray-200 dark:border-gray-700">
+          <tr className="border-b-2 border-gray-300 dark:border-gray-500">
             {selectMode && (
               <th className="py-3 px-2 md:py-4">
                 <input
@@ -200,14 +194,14 @@ export function TransactionList({
                 />
               </th>
             )}
-            <th className="text-left py-3 px-2 md:py-4 text-sm font-normal text-gray-500 dark:text-gray-400">No</th>
+            <th className="text-left py-3 px-2 md:py-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">No</th>
 
             {/* Kategori header with filter dropdown */}
-            <th className="text-left py-3 pl-1 pr-2 md:py-4 md:pl-2 md:pr-4 text-sm font-normal text-gray-500 dark:text-gray-400">
+            <th className="text-left py-3 pl-1 pr-2 md:py-4 md:pl-2 md:pr-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <div className="relative" ref={categoryDropdownRef}>
                 <button
                   onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                  className={`flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${categoryFilter ? 'text-indigo-500 dark:text-indigo-400 font-medium' : ''}`}
+                  className={`flex items-center gap-1 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${categoryFilter ? 'text-indigo-500 dark:text-indigo-400 font-medium' : ''}`}
                 >
                   {categoryFilter || 'Kategori'}
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -237,15 +231,15 @@ export function TransactionList({
               </div>
             </th>
 
-            <th className="text-left py-3 px-2 md:py-4 text-sm font-normal text-gray-500 dark:text-gray-400">Subjek</th>
-            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Keterangan</th>
+            <th className="text-left py-3 px-2 md:py-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Subjek</th>
+            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Keterangan</th>
 
             {/* Tanggal header with date filter dropdown */}
-            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">
+            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <div className="relative" ref={dateDropdownRef}>
                 <button
                   onClick={() => setShowDateDropdown(!showDateDropdown)}
-                  className={`flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${dateRange?.start || dateRange?.end ? 'text-indigo-500 dark:text-indigo-400 font-medium' : ''}`}
+                  className={`flex items-center gap-1 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${dateRange?.start || dateRange?.end ? 'text-indigo-500 dark:text-indigo-400 font-medium' : ''}`}
                 >
                   Tanggal
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -281,10 +275,10 @@ export function TransactionList({
               </div>
             </th>
 
-            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Jumlah</th>
-            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Chart of Account</th>
+            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Jumlah</th>
+            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Chart of Account</th>
             {showActions && (
-              <th className="text-left py-3 px-2 md:py-4 md:px-4 text-sm font-normal text-gray-500 dark:text-gray-400">Aksi</th>
+              <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Aksi</th>
             )}
           </tr>
         </thead>
@@ -360,67 +354,42 @@ export function TransactionList({
               <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 break-words">{getAccountDisplay(transaction)}</td>
               {showActions && (
                 <td className="py-3 px-2 md:py-4 md:px-4">
-                  <div className="relative" ref={kebabOpenId === transaction.id ? kebabRef : undefined}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setKebabOpenId(kebabOpenId === transaction.id ? null : transaction.id);
-                      }}
-                      className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                      title="Menu"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01" />
-                      </svg>
-                    </button>
-                    {kebabOpenId === transaction.id && (
-                      <div className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[140px] z-20">
-                        {onEdit && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setKebabOpenId(null);
-                              onEdit(transaction);
-                            }}
-                            className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            Edit
-                          </button>
-                        )}
-                        {onDelete && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setKebabOpenId(null);
-                              onDelete(transaction);
-                            }}
-                            className="w-full text-left px-3 py-2 text-sm text-red-500 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            Hapus
-                          </button>
-                        )}
-                        {onEnterSelectMode && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setKebabOpenId(null);
-                              onEnterSelectMode();
-                            }}
-                            className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                            </svg>
-                            Pilih
-                          </button>
-                        )}
-                      </div>
+                  <div className="flex items-center gap-1">
+                    {onEdit && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(transaction);
+                        }}
+                        className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                        title="Edit"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    )}
+                    {onDelete && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(transaction);
+                        }}
+                        className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                        title="Hapus"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    {onEnterSelectMode && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEnterSelectMode();
+                        }}
+                        className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        title="Pilih"
+                      >
+                        <ListChecks className="w-4 h-4" />
+                      </button>
                     )}
                   </div>
                 </td>

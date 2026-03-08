@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet, Calendar, ClipboardList } from 'lucide-react';
 import { useDashboard } from '@/hooks/useDashboard';
 import { calculateFinancialSummary, calculateCategoryCounts } from '@/lib/calculations';
 import { formatCurrency, formatPercentage, formatDateShort } from '@/lib/utils';
@@ -437,7 +437,7 @@ export default function DashboardPage() {
       {/* Empty State */}
       {!transactionsLoading && transactions.length === 0 && (
         <div className="mt-8 p-6 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-xl text-center">
-          <div className="text-4xl mb-4">📋</div>
+          <div className="flex justify-center mb-4"><ClipboardList className="w-10 h-10 text-indigo-400" /></div>
           <h3 className="font-semibold text-indigo-900 dark:text-indigo-300 mb-2">Belum ada transaksi</h3>
           <p className="text-sm text-indigo-500 dark:text-indigo-400 mb-4">
             {canManageTransactions
