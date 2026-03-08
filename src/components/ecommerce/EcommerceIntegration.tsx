@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase';
 import { useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import {
-  ShoppingBag,
   RefreshCw,
   Unlink,
   CheckCircle2,
@@ -12,7 +12,6 @@ import {
   Clock,
   Loader2,
   ExternalLink,
-  Store,
 } from 'lucide-react';
 
 interface EcommerceConnection {
@@ -44,25 +43,19 @@ interface Props {
   canManage: boolean;
 }
 
-const PLATFORM_CONFIG: Record<string, { label: string; color: string; bgColor: string; icon: React.ReactNode; comingSoon?: boolean }> = {
+const PLATFORM_CONFIG: Record<string, { label: string; logo: string; comingSoon?: boolean }> = {
   shopee: {
     label: 'Shopee',
-    color: 'text-orange-600 dark:text-orange-400',
-    bgColor: 'bg-orange-50 dark:bg-orange-900/20',
-    icon: <ShoppingBag className="w-5 h-5" />,
+    logo: '/images/ecommerce/Shopee.png',
   },
   tokopedia: {
     label: 'Tokopedia',
-    color: 'text-green-600 dark:text-green-400',
-    bgColor: 'bg-green-50 dark:bg-green-900/20',
-    icon: <Store className="w-5 h-5" />,
+    logo: '/images/ecommerce/Tokopedia.png',
     comingSoon: true,
   },
   tiktok: {
     label: 'TikTok Shop',
-    color: 'text-gray-800 dark:text-gray-200',
-    bgColor: 'bg-gray-100 dark:bg-gray-700',
-    icon: <ShoppingBag className="w-5 h-5" />,
+    logo: '/images/ecommerce/Tiktokshop.png',
     comingSoon: true,
   },
 };
@@ -257,8 +250,8 @@ export function EcommerceIntegration({ businessId, canManage }: Props) {
               <div className="flex items-center justify-between">
                 {/* Left: platform info */}
                 <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${config.bgColor} ${config.color}`}>
-                    {config.icon}
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden">
+                    <Image src={config.logo} alt={config.label} width={40} height={40} className="w-full h-full object-contain" unoptimized />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
