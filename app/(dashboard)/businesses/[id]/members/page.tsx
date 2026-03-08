@@ -7,11 +7,12 @@ import { MemberList } from '@/components/business/MemberList';
 import { InviteCodeManager } from '@/components/business/InviteCodeManager';
 import { getBusinessMembers, type BusinessMember } from '@/lib/api/members';
 import Image from 'next/image';
-import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut } from 'lucide-react';
+import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut, ShoppingBag } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { OmniChannelManager } from '@/components/business/OmniChannelManager';
 import * as businessesApi from '@/lib/api/businesses';
+import { EcommerceIntegration } from '@/components/ecommerce/EcommerceIntegration';
 import type { Business } from '@/types';
 
 const BUSINESS_TYPE_LABELS: Record<string, string> = {
@@ -116,7 +117,7 @@ export default function BusinessMembersPage() {
   const business = businesses.find((b) => b.id === businessId);
   const isCreator = business?.created_by === user?.id || isSuperadmin;
 
-  const [activeTab, setActiveTab] = useState<'members' | 'omni-channel'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'omni-channel' | 'integrations'>('members');
   const [members, setMembers] = useState<BusinessMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInviteManager, setShowInviteManager] = useState(false);
@@ -227,10 +228,23 @@ export default function BusinessMembersPage() {
             Halaman Publik
           </button>
         )}
+        {!isInvestor && (
+          <button
+            onClick={() => setActiveTab('integrations')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'integrations'
+                ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <ShoppingBag className="w-4 h-4" />
+            Integrasi
+          </button>
+        )}
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'members' ? (
+      {activeTab === 'members' && (
         <div className="flex items-stretch gap-8">
           <div className="max-w-2xl w-full">
             <MemberList members={members} loading={loading} />
@@ -242,14 +256,19 @@ export default function BusinessMembersPage() {
             />
           )}
         </div>
-      ) : (
-        user && business && (
-          <OmniChannelManager
-            businessId={business.id}
-            businessName={business.business_name}
-            userId={user.id}
-          />
-        )
+      )}
+      {activeTab === 'omni-channel' && user && business && (
+        <OmniChannelManager
+          businessId={business.id}
+          businessName={business.business_name}
+          userId={user.id}
+        />
+      )}
+      {activeTab === 'integrations' && business && (
+        <EcommerceIntegration
+          businessId={business.id}
+          canManage={canManage}
+        />
       )}
 
       {/* Invite Code Manager Modal */}
