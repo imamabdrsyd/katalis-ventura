@@ -165,7 +165,7 @@ export default function BusinessMembersPage() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       {/* Back nav */}
       <button
         onClick={() => router.push('/businesses')}
@@ -176,8 +176,8 @@ export default function BusinessMembersPage() {
       </button>
 
       {/* Header row */}
-      <div className="flex items-start justify-between mb-6">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4 min-w-0">
           {business?.logo_url ? (
             <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-white border border-gray-200 dark:border-gray-700">
               <Image src={business.logo_url} alt={business.business_name} width={48} height={48} className="w-full h-full object-cover" unoptimized />
@@ -187,8 +187,8 @@ export default function BusinessMembersPage() {
               {BUSINESS_TYPE_ICONS[business.business_type] || <Building2 className="w-6 h-6" />}
             </div>
           ) : null}
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1">
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1 truncate">
               {business?.business_name || '—'}
             </h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm">
@@ -200,7 +200,7 @@ export default function BusinessMembersPage() {
         {activeTab === 'members' && !isInvestor && (
           <button
             onClick={() => setShowInviteManager(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl transition-colors font-medium text-sm shadow-sm"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl transition-colors font-medium text-sm shadow-sm flex-shrink-0 w-full sm:w-auto"
           >
             <UserPlus className="h-4 w-4" />
             Undang Anggota
@@ -208,55 +208,57 @@ export default function BusinessMembersPage() {
         )}
       </div>
 
-      {/* Tab Switcher */}
-      <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 w-fit">
-        <button
-          onClick={() => setActiveTab('members')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === 'members'
-              ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          Anggota
-          {!loading && (
-            <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300 rounded-full text-xs">
-              {members.length}
-            </span>
+      {/* Tab Switcher — horizontal scroll on mobile */}
+      <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 mb-6 scrollbar-hide">
+        <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 w-fit">
+          <button
+            onClick={() => setActiveTab('members')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+              activeTab === 'members'
+                ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <Users className="w-4 h-4 flex-shrink-0" />
+            Anggota
+            {!loading && (
+              <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300 rounded-full text-xs">
+                {members.length}
+              </span>
+            )}
+          </button>
+          {!isInvestor && (
+            <button
+              onClick={() => setActiveTab('omni-channel')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'omni-channel'
+                  ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              <Globe className="w-4 h-4 flex-shrink-0" />
+              Halaman Publik
+            </button>
           )}
-        </button>
-        {!isInvestor && (
-          <button
-            onClick={() => setActiveTab('omni-channel')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === 'omni-channel'
-                ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            <Globe className="w-4 h-4" />
-            Halaman Publik
-          </button>
-        )}
-        {!isInvestor && (
-          <button
-            onClick={() => setActiveTab('integrations')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === 'integrations'
-                ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            <ShoppingBag className="w-4 h-4" />
-            Integrasi
-          </button>
-        )}
+          {!isInvestor && (
+            <button
+              onClick={() => setActiveTab('integrations')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'integrations'
+                  ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              <ShoppingBag className="w-4 h-4 flex-shrink-0" />
+              Integrasi
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tab Content */}
       {activeTab === 'members' && (
-        <div className="flex items-stretch gap-8">
+        <div className="flex flex-col lg:flex-row items-stretch gap-6 lg:gap-8">
           <div className="max-w-2xl w-full">
             <MemberList members={members} loading={loading} />
           </div>

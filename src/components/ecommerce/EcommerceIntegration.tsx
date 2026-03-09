@@ -247,13 +247,13 @@ export function EcommerceIntegration({ businessId, canManage }: Props) {
               key={platform}
               className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 {/* Left: platform info */}
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden">
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0">
                     <Image src={config.logo} alt={config.label} width={40} height={40} className="w-full h-full object-contain" unoptimized />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold text-gray-900 dark:text-gray-100">
                         {config.label}
@@ -265,7 +265,7 @@ export function EcommerceIntegration({ businessId, canManage }: Props) {
                       )}
                     </div>
                     {isConnected && connection ? (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
                         {connection.shop_name || `Shop ID: ${connection.shop_id}`}
                         {connection.last_synced_at && (
                           <span className="ml-2 text-xs">
@@ -282,7 +282,7 @@ export function EcommerceIntegration({ businessId, canManage }: Props) {
                 </div>
 
                 {/* Right: actions */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0 sm:ml-auto">
                   {isConnected ? (
                     <>
                       {canManage && (

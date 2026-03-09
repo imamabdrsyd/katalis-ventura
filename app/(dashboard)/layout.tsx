@@ -414,12 +414,25 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
   return (
     <>
       <header className={`fixed top-0 left-0 right-0 h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-30 flex items-center justify-between px-4 md:px-6 transition-[left] duration-300 ease-in-out ${isCollapsed ? 'md:left-16' : 'md:left-52'}`}>
-      {/* Mobile Menu Button */}
+      {/* Mobile Menu Button — favicon icon */}
       <button
         onClick={onMenuClick}
-        className="md:hidden p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+        className="md:hidden p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
       >
-        <Menu className="w-6 h-6" />
+        <Image
+          src="/images/favicon.png"
+          alt="Menu"
+          width={28}
+          height={28}
+          className="object-contain dark:hidden"
+        />
+        <Image
+          src="/images/favicon-dark.png"
+          alt="Menu"
+          width={28}
+          height={28}
+          className="object-contain hidden dark:block"
+        />
       </button>
 
       {/* Business Switcher */}
@@ -877,6 +890,63 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { userRole } = useBusinessContext();
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  // Swipe to open/close sidebar on mobile
+  useEffect(() => {
+    const SWIPE_THRESHOLD = 50;
+    const EDGE_ZONE = 30; // px from left edge to start swipe-open
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+      touchStartY.current = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (touchStartX.current === null || touchStartY.current === null) return;
+      const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+      const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+
+      // Only trigger if horizontal swipe is dominant
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > SWIPE_THRESHOLD) {
+        if (deltaX > 0 && touchStartX.current < EDGE_ZONE && !sidebarOpen) {
+          // Swipe right from left edge → open
+          setSidebarOpen(true);
+        } else if (deltaX < 0 && sidebarOpen) {
+          // Swipe left while open → close
+          setSidebarOpen(false);
+        }
+      }
+
+      touchStartX.current = null;
+      touchStartY.current = null;
+    };
+
+    // Only add on mobile
+    const mql = window.matchMedia('(max-width: 767px)');
+    if (mql.matches) {
+      document.addEventListener('touchstart', handleTouchStart, { passive: true });
+      document.addEventListener('touchend', handleTouchEnd, { passive: true });
+    }
+
+    const handleChange = (e: MediaQueryListEvent) => {
+      if (e.matches) {
+        document.addEventListener('touchstart', handleTouchStart, { passive: true });
+        document.addEventListener('touchend', handleTouchEnd, { passive: true });
+      } else {
+        document.removeEventListener('touchstart', handleTouchStart);
+        document.removeEventListener('touchend', handleTouchEnd);
+      }
+    };
+
+    mql.addEventListener('change', handleChange);
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchend', handleTouchEnd);
+      mql.removeEventListener('change', handleChange);
+    };
+  }, [sidebarOpen]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

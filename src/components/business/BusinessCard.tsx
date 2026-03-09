@@ -70,15 +70,10 @@ export function BusinessCard({
         const response = await fetch(
           `/api/users/profile?userId=${business.created_by}`
         );
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch');
-        }
 
         const data = await response.json();
         setCreatorName(data.full_name || 'Unknown');
-      } catch (err) {
-        console.error('Failed to fetch creator info:', err);
+      } catch {
         setCreatorName('Unknown');
       } finally {
         setLoading(false);
