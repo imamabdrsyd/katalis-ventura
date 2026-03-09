@@ -105,10 +105,12 @@ export function TransactionDetailModal({
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [showAuditHistory, setShowAuditHistory] = useState(false);
   const [warningDismissed, setWarningDismissed] = useState(false);
+  const [warningExpanded, setWarningExpanded] = useState(false);
 
-  // Reset dismiss state when transaction changes
+  // Reset dismiss/expand state when transaction changes
   useEffect(() => {
     setWarningDismissed(false);
+    setWarningExpanded(false);
   }, [transaction?.id]);
 
   // Matching Principle warning detection
@@ -189,39 +191,39 @@ export function TransactionDetailModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Detail Transaksi">
       <div className="space-y-6">
-        {/* Matching Principle Warning Banner */}
-        {showWarning && matchingWarning && (
-          <div className="rounded-lg border border-amber-200 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 p-4">
+        {/* Matching Principle Warning — expanded panel */}
+        {showWarning && matchingWarning && warningExpanded && (
+          <div className="rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/60 p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3 flex-1 min-w-0">
-                <AlertTriangle className="w-5 h-5 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <AlertTriangle className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
                     {matchingWarning.title}
                   </p>
-                  <p className="mt-1 text-sm text-amber-500 dark:text-amber-300">
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                     {matchingWarning.body}
                   </p>
-                  <div className="mt-2 px-3 py-2 bg-amber-50 dark:bg-amber-900/40 rounded-md font-mono text-xs text-amber-800 dark:text-amber-200">
+                  <div className="mt-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-md font-mono text-xs text-gray-600 dark:text-gray-300">
                     {matchingWarning.journalHint}
                   </div>
-                  <p className="mt-2 text-xs text-amber-500 dark:text-amber-400 italic">
+                  <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 italic">
                     Jumlah HPP mungkin berbeda dari nilai penjualan. Isi jumlah yang tepat pada form berikutnya.
                   </p>
                   <button
                     onClick={handleCreateCOGSEntry}
-                    className="mt-3 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 dark:bg-amber-500 dark:hover:bg-amber-500 text-white text-sm font-medium rounded-lg transition-colors"
+                    className="mt-3 px-3 py-1.5 bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 text-white text-sm font-medium rounded-lg transition-colors"
                   >
                     Buat Entry COGS
                   </button>
                 </div>
               </div>
               <button
-                onClick={() => setWarningDismissed(true)}
-                className="p-1 rounded hover:bg-amber-50 dark:hover:bg-amber-800 transition-colors flex-shrink-0"
-                aria-label="Abaikan peringatan ini"
+                onClick={() => setWarningExpanded(false)}
+                className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+                aria-label="Tutup"
               >
-                <X className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+                <X className="w-4 h-4 text-gray-400 dark:text-gray-500" />
               </button>
             </div>
           </div>
@@ -265,7 +267,16 @@ export function TransactionDetailModal({
             </span>
           )}
           </div>
-          <div className="text-left">
+          <div className="text-right flex items-center gap-1.5 justify-end">
+            {showWarning && matchingWarning && !warningExpanded && (
+              <button
+                onClick={() => setWarningExpanded(true)}
+                title={matchingWarning.title}
+                className="w-5 h-5 rounded-full border border-gray-300 dark:border-gray-500 text-gray-400 dark:text-gray-500 hover:border-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors flex items-center justify-center flex-shrink-0"
+              >
+                <span className="text-[10px] font-bold leading-none">!</span>
+              </button>
+            )}
             <p className={`text-2xl font-bold ${
               transaction.category === 'EARN'
                 ? 'text-emerald-500 dark:text-emerald-400'
