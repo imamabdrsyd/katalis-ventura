@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { ClipboardList, Pencil, Trash2, ListChecks } from 'lucide-react';
+import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import type { Transaction, TransactionCategory } from '@/types';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
 
@@ -80,25 +80,26 @@ function getRowSubject(transaction: Transaction): string {
 }
 
 // Helper function to format account display based on transaction type
-function getAccountDisplay(transaction: Transaction): string {
+function getAccountDisplay(transaction: Transaction): { accountName: string; isInflow: boolean; tooltip: string } {
+  const isInflow = transaction.category === 'EARN';
+
   // For double-entry transactions
   if (transaction.is_double_entry && (transaction.debit_account || transaction.credit_account)) {
-    if (transaction.category === 'EARN') {
-      // For earnings, money comes into the bank (debit account)
+    if (isInflow) {
       const accountName = transaction.debit_account?.account_name || 'Unknown';
-      return `Masuk ke ${accountName}`;
+      return { accountName, isInflow, tooltip: `Masuk ke akun ${accountName}` };
     } else {
-      // For expenses, money goes out from the bank (credit account)
       const accountName = transaction.credit_account?.account_name || 'Unknown';
-      return `Keluar dari ${accountName}`;
+      return { accountName, isInflow, tooltip: `Keluar dari akun ${accountName}` };
     }
   }
 
   // For legacy transactions
-  if (transaction.category === 'EARN') {
-    return `Masuk ke ${transaction.account}`;
+  const accountName = transaction.account || 'Unknown';
+  if (isInflow) {
+    return { accountName, isInflow, tooltip: `Masuk ke akun ${accountName}` };
   } else {
-    return `Keluar dari ${transaction.account}`;
+    return { accountName, isInflow, tooltip: `Keluar dari akun ${accountName}` };
   }
 }
 
@@ -174,12 +175,12 @@ export function TransactionList({
         <colgroup>
           {selectMode && <col className="w-8" />}
           <col className="w-10" />
-          <col className="w-20" />
+          <col className="w-28" />
           <col className="w-36" />
           <col className="w-48" />
           <col className="w-24" />
           <col className="w-32" />
-          <col className="w-40" />
+          <col className="w-32" />
           {showActions && <col className="w-28" />}
         </colgroup>
         <thead className="sticky top-0 z-10 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm">
@@ -276,7 +277,7 @@ export function TransactionList({
             </th>
 
             <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Jumlah</th>
-            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Chart of Account</th>
+            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Transfer</th>
             {showActions && (
               <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Aksi</th>
             )}
@@ -321,17 +322,24 @@ export function TransactionList({
                 {index + 1}
               </td>
               <td className="py-3 pl-1 pr-2 md:py-4 md:pl-2 md:pr-4">
-                {isInventoryTransaction(transaction) ? (
-                  <span className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${STOCK_BADGE_CLASS}`}>
-                    STOCK
-                  </span>
-                ) : (
-                  <span
-                    className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${BADGE_CLASSES[transaction.category]}`}
-                  >
-                    {transaction.category}
-                  </span>
-                )}
+                <div className="flex items-center gap-1">
+                  {isInventoryTransaction(transaction) ? (
+                    <span className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${STOCK_BADGE_CLASS}`}>
+                      STOCK
+                    </span>
+                  ) : (
+                    <span
+                      className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${BADGE_CLASSES[transaction.category]}`}
+                    >
+                      {transaction.category}
+                    </span>
+                  )}
+                  {transaction.status === 'draft' && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">
+                      DRAFT
+                    </span>
+                  )}
+                </div>
               </td>
               <td className="py-3 px-2 md:py-4 text-sm font-medium text-gray-800 dark:text-gray-200 break-words">
                 {getRowSubject(transaction)}
@@ -351,7 +359,28 @@ export function TransactionList({
               }`}>
                 {formatCurrency(transaction.amount)}
               </td>
-              <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 break-words">{getAccountDisplay(transaction)}</td>
+              <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-800 dark:text-gray-200 break-words">
+                {(() => {
+                  const { accountName, isInflow, tooltip } = getAccountDisplay(transaction);
+                  return (
+                    <div className="group/transfer relative flex items-center gap-1.5">
+                      {isInflow ? (
+                        <ArrowDownLeft className="w-3.5 h-3.5 flex-shrink-0 text-emerald-500 dark:text-emerald-400" />
+                      ) : (
+                        <ArrowUpRight className="w-3.5 h-3.5 flex-shrink-0 text-red-500 dark:text-red-400" />
+                      )}
+                      <span className="truncate font-medium">{accountName}</span>
+                      {/* Custom tooltip */}
+                      <div className="pointer-events-none absolute top-full left-0 mt-1.5 hidden group-hover/transfer:block z-30">
+                        <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-md px-2.5 py-1.5 whitespace-nowrap shadow-lg">
+                          <div className="absolute bottom-full left-3 border-4 border-transparent border-b-gray-900 dark:border-b-gray-700" />
+                          {tooltip}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </td>
               {showActions && (
                 <td className="py-3 px-2 md:py-4 md:px-4">
                   <div className="flex items-center gap-1">

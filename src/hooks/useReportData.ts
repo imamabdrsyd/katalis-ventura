@@ -47,11 +47,17 @@ export function useReportData(): UseReportDataReturn {
   }, []);
 
   // Fetch transactions with TanStack Query — cached per businessId
-  const { data: transactions = [], isLoading: loading } = useQuery({
+  const { data: allTransactions = [], isLoading: loading } = useQuery({
     queryKey: ['transactions', activeBusinessId],
     queryFn: () => transactionsApi.getTransactions(activeBusinessId!),
     enabled: !!activeBusinessId,
   });
+
+  // Reports only use posted transactions — drafts are excluded from all financial calculations
+  const transactions = useMemo(
+    () => allTransactions.filter((t) => t.status === 'posted'),
+    [allTransactions]
+  );
 
   // Invalidate cache when FloatingQuickAdd saves a transaction
   useEffect(() => {

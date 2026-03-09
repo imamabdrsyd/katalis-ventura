@@ -5,6 +5,7 @@ import { z } from 'zod';
 // ============================================
 
 const VALID_CATEGORIES = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'] as const;
+const VALID_STATUSES = ['draft', 'posted'] as const;
 const MAX_TRANSACTION_AMOUNT = 100_000_000_000; // 100 billion IDR
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -31,6 +32,7 @@ export const createTransactionSchema = z.object({
   credit_account_id: z.string().regex(UUID_REGEX, 'Invalid credit account ID').optional().nullable(),
   is_double_entry: z.boolean().optional().default(false),
   notes: z.string().max(2000).optional().nullable(),
+  status: z.enum(VALID_STATUSES).optional().default('draft'),
 }).refine(
   (data) => {
     // If double-entry, both accounts must be present and different
@@ -61,6 +63,7 @@ export const updateTransactionSchema = z.object({
   credit_account_id: z.string().regex(UUID_REGEX).optional().nullable(),
   is_double_entry: z.boolean().optional(),
   notes: z.string().max(2000).optional().nullable(),
+  status: z.enum(VALID_STATUSES).optional(),
 });
 
 export const transactionIdSchema = z.string().regex(UUID_REGEX, 'Invalid transaction ID format');

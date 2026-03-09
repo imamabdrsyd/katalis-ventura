@@ -6,7 +6,7 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import * as transactionsApi from '@/lib/api/transactions';
 import { getAccounts } from '@/lib/api/accounts';
 import { findCogsAccount } from '@/lib/utils/inventoryHelper';
-import type { Transaction, TransactionCategory, Account } from '@/types';
+import type { Transaction, TransactionCategory, TransactionStatus, Account } from '@/types';
 import type { TransactionFormData } from '@/components/transactions/TransactionForm';
 
 export function useTransactions() {
@@ -21,6 +21,7 @@ export function useTransactions() {
   const [saving, setSaving] = useState(false);
 
   // Filter state
+  const [statusFilter, setStatusFilter] = useState<TransactionStatus | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<TransactionCategory | ''>('');
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
@@ -49,13 +50,17 @@ export function useTransactions() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Apply filters
+  // Apply filters (including status)
   const filteredTransactions = transactions.filter((transaction) => {
+    if (statusFilter !== 'all' && transaction.status !== statusFilter) return false;
     if (categoryFilter && transaction.category !== categoryFilter) return false;
     if (dateRange.start && new Date(transaction.date) < new Date(dateRange.start)) return false;
     if (dateRange.end && new Date(transaction.date) > new Date(dateRange.end)) return false;
     return true;
   });
+
+  // Count drafts for badge display
+  const draftCount = transactions.filter((t) => t.status === 'draft').length;
 
   // Pagination calculations
   const totalPages = Math.ceil(filteredTransactions.length / rowsPerPage);
@@ -65,7 +70,7 @@ export function useTransactions() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [categoryFilter, rowsPerPage, dateRange]);
+  }, [statusFilter, categoryFilter, rowsPerPage, dateRange]);
 
   // Fetch transactions
   const fetchTransactions = useCallback(async () => {
@@ -260,6 +265,47 @@ export function useTransactions() {
     }
   }, [selectedIds, fetchTransactions]);
 
+  // Post a single draft transaction
+  const handlePostTransaction = useCallback(async (id: string) => {
+    setSaving(true);
+    try {
+      await transactionsApi.postTransaction(id);
+      setDetailTransaction(null);
+      queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
+      fetchTransactions();
+    } catch (err: any) {
+      alert(err.message || 'Gagal memposting transaksi');
+    } finally {
+      setSaving(false);
+    }
+  }, [businessId, fetchTransactions, queryClient]);
+
+  // Bulk post selected draft transactions
+  const handleBulkPost = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    setSaving(true);
+    try {
+      const draftIds = [...selectedIds].filter((id) => {
+        const tx = transactions.find((t) => t.id === id);
+        return tx?.status === 'draft';
+      });
+      if (draftIds.length === 0) {
+        alert('Tidak ada transaksi draft yang dipilih');
+        return;
+      }
+      const posted = await transactionsApi.postTransactionsBulk(draftIds);
+      setSelectedIds(new Set());
+      setSelectMode(false);
+      queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
+      fetchTransactions();
+      alert(`${posted} transaksi berhasil diposting`);
+    } catch (err: any) {
+      alert(err.message || 'Gagal memposting transaksi');
+    } finally {
+      setSaving(false);
+    }
+  }, [selectedIds, transactions, businessId, fetchTransactions, queryClient]);
+
   // Handle COGS follow-up: close detail modal and open TransactionForm with prefill
   const handleCreateFollowUp = useCallback((prefillData: Partial<TransactionFormData>) => {
     setDetailTransaction(null);
@@ -283,6 +329,9 @@ export function useTransactions() {
     businessError,
     canManageTransactions,
     // Filter state
+    statusFilter,
+    setStatusFilter,
+    draftCount,
     categoryFilter,
     setCategoryFilter,
     dateRange,
@@ -327,6 +376,9 @@ export function useTransactions() {
     handleSelectAll,
     handleExitSelectMode,
     handleBulkDelete,
+    handleBulkPost,
+    // Post actions
+    handlePostTransaction,
     // Actions
     fetchTransactions,
     handleAddTransaction,

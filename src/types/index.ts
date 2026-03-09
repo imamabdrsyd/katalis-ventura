@@ -3,6 +3,7 @@
 export type UserRole = 'business_manager' | 'investor' | 'both' | 'superadmin';
 
 export type TransactionCategory = 'EARN' | 'OPEX' | 'VAR' | 'CAPEX' | 'TAX' | 'FIN';
+export type TransactionStatus = 'draft' | 'posted';
 
 // Double-entry bookkeeping types
 export type AccountType = 'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENSE';
@@ -110,6 +111,8 @@ export interface Transaction {
   description: string;
   amount: number;
   account: string; // Legacy field for backward compatibility
+  status: TransactionStatus;
+  posted_at?: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;

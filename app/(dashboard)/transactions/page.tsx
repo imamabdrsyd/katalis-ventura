@@ -9,7 +9,7 @@ import { DeleteConfirmModal } from '@/components/transactions/DeleteConfirmModal
 import TransactionImportModal from '@/components/transactions/TransactionImportModal';
 import type { TransactionCategory } from '@/types';
 import { QuickTransactionForm } from '@/components/transactions/QuickTransactionForm';
-import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical, CreditCard } from 'lucide-react';
+import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, Suspense } from 'react';
 
@@ -41,6 +41,9 @@ function TransactionsPageInner() {
     businessError,
     canManageTransactions,
     // Filter state
+    statusFilter,
+    setStatusFilter,
+    draftCount,
     categoryFilter,
     setCategoryFilter,
     dateRange,
@@ -85,6 +88,9 @@ function TransactionsPageInner() {
     handleSelectAll,
     handleExitSelectMode,
     handleBulkDelete,
+    handleBulkPost,
+    // Post actions
+    handlePostTransaction,
     // Actions
     fetchTransactions,
     handleAddTransaction,
@@ -247,6 +253,45 @@ function TransactionsPageInner() {
       {/* Transaction List */}
       <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_24px_rgba(0,0,0,0.04)] p-5">
 
+        {/* Status Filter Tabs */}
+        <div className="flex items-center gap-1 mb-4 border-b border-gray-200 dark:border-gray-700">
+          <button
+            onClick={() => setStatusFilter('all')}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              statusFilter === 'all'
+                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            Semua
+          </button>
+          <button
+            onClick={() => setStatusFilter('draft')}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+              statusFilter === 'draft'
+                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            Draft
+            {draftCount > 0 && (
+              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300">
+                {draftCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setStatusFilter('posted')}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              statusFilter === 'posted'
+                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            Posted
+          </button>
+        </div>
+
         {/* Select Mode Action Bar */}
         {selectMode && (
           <div className="flex items-center justify-between mb-4 px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-600 rounded-lg">
@@ -255,14 +300,24 @@ function TransactionsPageInner() {
                 {selectedIds.size} transaksi dipilih
               </span>
               {selectedIds.size > 0 && (
-                <button
-                  onClick={handleBulkDelete}
-                  disabled={saving}
-                  className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Hapus ({selectedIds.size})
-                </button>
+                <>
+                  <button
+                    onClick={handleBulkPost}
+                    disabled={saving}
+                    className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Posting
+                  </button>
+                  <button
+                    onClick={handleBulkDelete}
+                    disabled={saving}
+                    className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Hapus ({selectedIds.size})
+                  </button>
+                </>
               )}
             </div>
             <button
@@ -437,6 +492,7 @@ function TransactionsPageInner() {
         onClose={() => setDetailTransaction(null)}
         onEdit={canManageTransactions ? setEditTransaction : undefined}
         onDelete={canManageTransactions ? setDeleteTransaction : undefined}
+        onPost={canManageTransactions ? handlePostTransaction : undefined}
         accounts={accounts}
         allTransactions={transactions}
         onCreateFollowUp={canManageTransactions ? handleCreateFollowUp : undefined}

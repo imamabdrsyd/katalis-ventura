@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase';
-import type { Transaction, TransactionCategory, TransactionMeta } from '@/types';
+import type { Transaction, TransactionCategory, TransactionStatus, TransactionMeta } from '@/types';
 
 export interface TransactionInsert {
   business_id: string;
@@ -10,6 +10,7 @@ export interface TransactionInsert {
   amount: number;
   account: string; // Legacy field
   created_by: string;
+  status?: TransactionStatus;
 
   // Optional double-entry fields
   debit_account_id?: string;
@@ -26,6 +27,7 @@ export interface TransactionUpdate {
   description?: string;
   amount?: number;
   account?: string;
+  status?: TransactionStatus;
 
   // Optional double-entry fields
   debit_account_id?: string;
@@ -106,7 +108,7 @@ function validateDoubleEntryTransaction(transaction: TransactionInsert | Transac
   }
 }
 
-// Create a new transaction
+// Create a new transaction (default status: draft)
 export async function createTransaction(transaction: TransactionInsert): Promise<Transaction> {
   // Validate double-entry rules before creating
   validateDoubleEntryTransaction(transaction);
@@ -114,12 +116,50 @@ export async function createTransaction(transaction: TransactionInsert): Promise
   const supabase = createClient();
   const { data, error } = await supabase
     .from('transactions')
-    .insert(transaction)
+    .insert({
+      ...transaction,
+      status: transaction.status || 'draft',
+    })
     .select()
     .single();
 
   if (error) throw new Error(error.message);
   return data as Transaction;
+}
+
+// Post a draft transaction (draft → posted, one-way)
+export async function postTransaction(id: string): Promise<Transaction> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('transactions')
+    .update({
+      status: 'posted' as TransactionStatus,
+      posted_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .eq('status', 'draft') // Only draft can be posted
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as Transaction;
+}
+
+// Bulk post multiple draft transactions
+export async function postTransactionsBulk(ids: string[]): Promise<number> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('transactions')
+    .update({
+      status: 'posted' as TransactionStatus,
+      posted_at: new Date().toISOString(),
+    })
+    .in('id', ids)
+    .eq('status', 'draft')
+    .select('id');
+
+  if (error) throw new Error(error.message);
+  return data?.length ?? 0;
 }
 
 // Bulk import transactions

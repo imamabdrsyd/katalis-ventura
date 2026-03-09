@@ -9,7 +9,7 @@ import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import { getProfileName } from '@/lib/api/profiles';
 import { getRecordAuditHistory, getFieldChanges, formatFieldName, formatAuditValue } from '@/lib/api/audit';
 import { detectMatchingPrincipleWarning } from '@/lib/accounting/guidance';
-import { AlertTriangle, Info, X } from 'lucide-react';
+import { AlertTriangle, Info, X, CheckCircle2 } from 'lucide-react';
 
 interface TransactionDetailModalProps {
   transaction: Transaction | null;
@@ -17,6 +17,7 @@ interface TransactionDetailModalProps {
   onClose: () => void;
   onEdit?: (transaction: Transaction) => void;
   onDelete?: (transaction: Transaction) => void;
+  onPost?: (id: string) => void;
   accounts?: Account[];
   allTransactions?: Transaction[];
   onCreateFollowUp?: (prefillData: Partial<TransactionFormData>) => void;
@@ -91,6 +92,7 @@ export function TransactionDetailModal({
   onClose,
   onEdit,
   onDelete,
+  onPost,
   accounts,
   allTransactions,
   onCreateFollowUp,
@@ -181,7 +183,8 @@ export function TransactionDetailModal({
 
   if (!transaction) return null;
 
-  const showActions = onEdit || onDelete;
+  const isDraft = transaction.status === 'draft';
+  const showActions = onEdit || onDelete || (onPost && isDraft);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Detail Transaksi">
@@ -224,8 +227,9 @@ export function TransactionDetailModal({
           </div>
         )}
 
-        {/* Header with Category Badge and Amount */}
+        {/* Header with Category Badge, Status, and Amount */}
         <div className="flex items-start justify-between">
+          <div className="flex items-center gap-2">
           {isInventoryTransaction(transaction) ? (
             <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${STOCK_COLOR}`}>
               Stock
@@ -250,6 +254,17 @@ export function TransactionDetailModal({
               )}
             </div>
           )}
+          {isDraft ? (
+            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">
+              DRAFT
+            </span>
+          ) : (
+            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="w-3 h-3 mr-1" />
+              POSTED
+            </span>
+          )}
+          </div>
           <div className="text-left">
             <p className={`text-2xl font-bold ${
               transaction.category === 'EARN'
@@ -401,6 +416,13 @@ export function TransactionDetailModal({
               <span className="text-gray-500 dark:text-gray-400">ID Transaksi</span>
               <span className="text-gray-700 dark:text-gray-300 font-mono text-xs">
                 {transaction.id.slice(0, 8)}...
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500 dark:text-gray-400">Status</span>
+              <span className={`font-medium ${isDraft ? 'text-gray-500 dark:text-gray-400' : 'text-emerald-500 dark:text-emerald-400'}`}>
+                {isDraft ? 'Draft' : 'Posted'}
+                {transaction.posted_at && ` (${formatDateTime(transaction.posted_at)})`}
               </span>
             </div>
             <div className="flex justify-between">
@@ -565,7 +587,16 @@ export function TransactionDetailModal({
         {/* Action Buttons */}
         {showActions && (
           <div className="flex gap-3 pt-2">
-            {onEdit && (
+            {onPost && isDraft && (
+              <button
+                onClick={() => onPost(transaction.id)}
+                className="btn-primary flex-1 flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Posting
+              </button>
+            )}
+            {onEdit && isDraft && (
               <button
                 onClick={() => {
                   onClose();

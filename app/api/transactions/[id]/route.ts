@@ -43,16 +43,25 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const supabase = await createServerClient();
 
-    // Fetch the existing transaction to verify ownership
+    // Fetch the existing transaction to verify ownership and status
     const { data: existing, error: fetchError } = await supabase
       .from('transactions')
-      .select('id, business_id')
+      .select('id, business_id, status')
       .eq('id', idParsed.data)
       .is('deleted_at', null)
       .single();
 
     if (fetchError || !existing) {
       return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
+    }
+
+    // Block editing posted transactions (except status change draft→posted)
+    const isOnlyStatusChange = Object.keys(parsed.data).length === 1 && parsed.data.status === 'posted';
+    if (existing.status === 'posted' && !isOnlyStatusChange) {
+      return NextResponse.json(
+        { error: 'Transaksi yang sudah di-posting tidak dapat diedit. Hapus dan buat ulang jika perlu.' },
+        { status: 400 }
+      );
     }
 
     // Verify user has write access to this business
@@ -77,13 +86,16 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // If posting, set posted_at timestamp
+    const updateData = { ...parsed.data, updated_by: user.id } as Record<string, unknown>;
+    if (parsed.data.status === 'posted' && existing.status === 'draft') {
+      updateData.posted_at = new Date().toISOString();
+    }
+
     // Update with audit trail
     const { data: updated, error: updateError } = await supabase
       .from('transactions')
-      .update({
-        ...parsed.data,
-        updated_by: user.id,
-      })
+      .update(updateData)
       .eq('id', idParsed.data)
       .select()
       .single();

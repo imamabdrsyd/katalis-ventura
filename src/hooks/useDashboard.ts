@@ -13,7 +13,7 @@ export function useDashboard() {
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
   const firstName = userName.split(' ')[0];
 
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [transactionsLoading, setTransactionsLoading] = useState(true);
 
   const fetchTransactions = useCallback(async () => {
@@ -21,7 +21,7 @@ export function useDashboard() {
     setTransactionsLoading(true);
     try {
       const data = await transactionsApi.getTransactions(businessId);
-      setTransactions(data);
+      setAllTransactions(data);
     } catch (err) {
       console.error('Failed to fetch transactions:', err);
     } finally {
@@ -34,6 +34,12 @@ export function useDashboard() {
       fetchTransactions();
     }
   }, [businessId, fetchTransactions]);
+
+  // Dashboard KPIs only use posted transactions
+  const transactions = useMemo(
+    () => allTransactions.filter((t) => t.status === 'posted'),
+    [allTransactions]
+  );
 
   const summary = useMemo<FinancialSummary>(() => calculateFinancialSummary(transactions), [transactions]);
   const initialCapital = useMemo(() => calculateInitialCapital(transactions), [transactions]);
