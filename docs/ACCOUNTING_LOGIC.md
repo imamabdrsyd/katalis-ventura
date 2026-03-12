@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 19 Februari 2026 | Terakhir diupdate: 3 Maret 2026
+> Terakhir diaudit: 9 Maret 2026 | Terakhir diupdate: 9 Maret 2026
 
 ---
 
@@ -101,7 +101,7 @@
 | `src/lib/accounting/constants.ts` | Normal balance rules, valid combinations |
 | `src/lib/accounting/types.ts` | Type definitions untuk validation & guidance |
 | `src/lib/accounting/validators/transactionValidator.ts` | Double-entry validation engine |
-| `src/lib/accounting/guidance/transactionPatterns.ts` | 11 pola transaksi + keyword detection |
+| `src/lib/accounting/guidance/transactionPatterns.ts` | 15 pola transaksi + keyword detection |
 | `src/lib/accounting/guidance/suggestions.ts` | Smart account suggestion service |
 | `src/lib/accounting/guidance/matchingPrincipleWarning.ts` | Matching principle (EARN → HPP) warning |
 | `src/lib/calculations.ts` | Semua financial calculations |
@@ -307,7 +307,33 @@ ResolvedTransaction {
 }
 ```
 
-### 4.3 Flow: Full Transaction Lifecycle
+### 4.3 Transaction Status (Draft/Posted)
+
+Setiap transaksi memiliki field `status`:
+- **`draft`** (default saat create): Transaksi tersimpan tapi **tidak masuk kalkulasi** laporan keuangan manapun
+- **`posted`**: Transaksi aktif dan **masuk semua kalkulasi** (Income Statement, Balance Sheet, Cash Flow, dll)
+
+**Semua hook laporan dan dashboard hanya memproses transaksi `posted`:**
+
+```typescript
+// useReportData.ts & useDashboard.ts
+const transactions = useMemo(
+  () => allTransactions.filter((t) => t.status === 'posted'),
+  [allTransactions]
+);
+```
+
+**Workflow:**
+1. User buat transaksi → status `draft` (default)
+2. User review dan posting → `updateTransaction(id, { status: 'posted' })` (hanya dari `draft`)
+3. Bulk posting tersedia via `createTransactionsBulk()` yang langsung set `status: 'posted'`
+
+**UI:**
+- Badge "DRAFT" ditampilkan di `TransactionList` untuk transaksi draft
+- `TransactionDetailModal` menampilkan tombol "Post" jika status draft
+- `useTransactions` menyediakan `draftCount` untuk badge counter
+
+### 4.4 Flow: Full Transaction Lifecycle
 
 ```
                     ┌──────────────┐
@@ -573,13 +599,31 @@ File: `src/hooks/useGeneralLedger.ts`
 
 General Ledger (Buku Besar) menampilkan per-account ledger dengan running balance. Hanya memproses double-entry transactions.
 
-### 9.2 Account Ledger Calculation
+### 9.2 Transaction Index (Performance Optimization)
 
-`calculateAccountLedger(account, transactions)`:
+`buildTransactionIndex(transactions)` — pre-build index O(n) single pass:
 
 ```
-1. Filter transaksi yang menyentuh account ini
-   (debit_account_id === account.id ATAU credit_account_id === account.id)
+Input:  Transaction[]
+Output: { index: Map<accountId, Transaction[]>, legacyCount: number }
+
+Single pass:
+  - Skip legacy (is_double_entry = false) → increment legacyCount
+  - Push to index[debit_account_id] dan index[credit_account_id]
+
+Benefit: calculateAccountLedger() melakukan O(1) lookup per akun
+         alih-alih O(n) filter berulang untuk setiap akun
+```
+
+Digunakan di `useGeneralLedger` dan `useTrialBalance`.
+
+### 9.3 Account Ledger Calculation
+
+`calculateAccountLedger(account, transactions, txIndex?)`:
+
+```
+1. Jika txIndex diberikan: O(1) lookup dari pre-built index + deduplicate
+   Jika tidak: fallback filter O(n) (backward compat)
 
 2. Sort ascending by date, then by created_at
 
@@ -592,13 +636,13 @@ General Ledger (Buku Besar) menampilkan per-account ledger dengan running balanc
 4. Return: entries[], totalDebits, totalCredits, closingBalance, legacyCount
 ```
 
-### 9.3 Account Filtering
+### 9.4 Account Filtering
 
 - Hanya sub-accounts (parent_account_id != null) yang ditampilkan
 - Filter berdasarkan account type: ALL, ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE
 - allLedgers: Summary semua accounts yang di-filter
 
-### 9.4 Legacy Transaction Handling
+### 9.5 Legacy Transaction Handling
 
 Legacy transactions (is_double_entry = false) tidak memiliki account links, jadi mereka dicatat sebagai `legacyCount` tapi tidak muncul di ledger entries. UI menampilkan warning jika ada legacy transactions.
 
@@ -876,7 +920,7 @@ Sistem memberikan warning kontekstual:
 
 ### 14.5 Transaction Pattern Detection
 
-15 pola transaksi yang dikenali dari keyword di nama transaksi:
+15 pola transaksi yang dikenali dari keyword di nama transaksi (via `detectPatternFromName()` di `transactionPatterns.ts`):
 
 | Pattern | Keywords | Debit | Credit |
 |---------|----------|-------|--------|
@@ -1079,6 +1123,7 @@ Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
 | #11 | RLS Infinite Recursion | RESOLVED | SECURITY DEFINER functions: `get_my_business_ids()`, `is_business_manager()` |
 | #12 | Creator Bisnis Tidak Terlihat di Members | RESOLVED | `getBusinessMembers()` fetch `created_by` dari tabel `businesses` jika tidak ada di `user_business_roles` |
 | #13 | Non-Creator Bisa Klik Edit Bisnis | RESOLVED | Tombol Edit/Archive/Restore hanya muncul jika `created_by === user.id` |
+| #14 | Views bypass RLS (SECURITY DEFINER default) | RESOLVED | Migration 021: Recreate semua views dengan `security_invoker = true` |
 
 ---
 
@@ -1280,6 +1325,7 @@ debit_account_id UUID REFERENCES accounts(id),
 credit_account_id UUID REFERENCES accounts(id),
 is_double_entry BOOLEAN DEFAULT FALSE,
 category TEXT NOT NULL,                 -- EARN|OPEX|VAR|CAPEX|TAX|FIN
+status TEXT DEFAULT 'draft',            -- draft|posted (only posted masuk kalkulasi)
 
 -- Soft delete:
 deleted_at TIMESTAMPTZ,
@@ -1301,13 +1347,21 @@ Semua report hooks extend `useReportData()`:
 ```
 useReportData
 ├── activeBusiness (dari BusinessContext)
-├── transactions[] (all txns for business)
+├── transactions[] (all posted txns for business)
 ├── filteredTransactions[] (by date range)
 ├── period: 'month' | 'quarter' | 'year' | 'custom'
 ├── startDate, endDate
 ├── handlePeriodChange()
 └── showExportMenu, exportButtonRef
 ```
+
+**Data Fetching**: Menggunakan TanStack Query (`@tanstack/react-query`) untuk caching:
+- `queryKey: ['transactions', activeBusinessId]` — cached per bisnis
+- Cache invalidation via `window.dispatchEvent(new Event('transaction-saved'))` → `queryClient.invalidateQueries()`
+- Provider: `QueryProvider` di `src/components/providers/QueryProvider.tsx`
+- `useTransactions` juga menggunakan TanStack Query dengan key yang sama
+
+**Status Filter**: `useReportData` dan `useDashboard` keduanya memfilter hanya transaksi `status === 'posted'` sebelum kalkulasi.
 
 ### Specialized Hooks
 

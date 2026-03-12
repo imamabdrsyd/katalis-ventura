@@ -30,6 +30,7 @@ import {
   AlertTriangle,
   RotateCcw,
   Repeat,
+  FileText,
 } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { UnitBreakdownSection } from '@/components/transactions/UnitBreakdownSection';
@@ -564,6 +565,16 @@ export default function JournalEntryPage() {
               </button>
             );
           })}
+
+          {/* Buat Invoice — navigasi ke halaman invoice */}
+          <button
+            type="button"
+            onClick={() => router.push('/invoices?create=true')}
+            className="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/10 text-indigo-500 dark:text-indigo-400 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all text-center"
+          >
+            <FileText className="w-5 h-5" />
+            <span className="text-xs font-semibold leading-tight">Buat Invoice</span>
+          </button>
         </div>
         {selectedEntryType && (
           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">

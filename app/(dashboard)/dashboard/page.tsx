@@ -2,13 +2,20 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet, Calendar, ClipboardList } from 'lucide-react';
 import { useDashboard } from '@/hooks/useDashboard';
 import { calculateFinancialSummary, calculateCategoryCounts } from '@/lib/calculations';
 import { formatCurrency, formatPercentage, formatDateShort } from '@/lib/utils';
-import MonitoringChart from '@/components/charts/MonitoringChart';
-import ExpenseBreakdownChart from '@/components/charts/ExpenseBreakdownChart';
 import type { Transaction } from '@/types';
+
+// Lazy-load chart components — chart.js (~6.2 MB) only loads when charts render
+const MonitoringChart = dynamic(() => import('@/components/charts/MonitoringChart'), {
+  loading: () => <div className="animate-pulse h-80 bg-gray-200 dark:bg-gray-700 rounded-lg" />,
+});
+const ExpenseBreakdownChart = dynamic(() => import('@/components/charts/ExpenseBreakdownChart'), {
+  loading: () => <div className="animate-pulse h-80 bg-gray-200 dark:bg-gray-700 rounded-lg" />,
+});
 
 function isInventoryTransaction(t: Transaction): boolean {
   const debitCode = t.debit_account?.account_code || '';

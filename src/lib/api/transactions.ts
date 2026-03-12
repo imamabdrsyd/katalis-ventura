@@ -45,7 +45,7 @@ export interface BulkImportResult {
   data?: Transaction[];
 }
 
-// Get all transactions for a business
+// Get all transactions for a business (used by dashboard & reports that need full dataset)
 export async function getTransactions(businessId: string): Promise<Transaction[]> {
   const supabase = createClient();
   const { data, error } = await supabase
@@ -62,6 +62,74 @@ export async function getTransactions(businessId: string): Promise<Transaction[]
 
   if (error) throw new Error(error.message);
   return data as Transaction[];
+}
+
+// Get paginated transactions for the transactions list page
+export interface PaginatedTransactions {
+  data: Transaction[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface TransactionFilters {
+  status?: TransactionStatus | 'all';
+  category?: TransactionCategory | '';
+  startDate?: string;
+  endDate?: string;
+}
+
+export async function getTransactionsPaginated(
+  businessId: string,
+  page: number = 1,
+  pageSize: number = 50,
+  filters?: TransactionFilters
+): Promise<PaginatedTransactions> {
+  const supabase = createClient();
+  const offset = (page - 1) * pageSize;
+
+  let query = supabase
+    .from('transactions')
+    .select(`
+      *,
+      debit_account:accounts!transactions_debit_account_id_fkey(*),
+      credit_account:accounts!transactions_credit_account_id_fkey(*)
+    `, { count: 'exact' })
+    .eq('business_id', businessId)
+    .is('deleted_at', null);
+
+  // Apply filters
+  if (filters?.status && filters.status !== 'all') {
+    query = query.eq('status', filters.status);
+  }
+  if (filters?.category) {
+    query = query.eq('category', filters.category);
+  }
+  if (filters?.startDate) {
+    query = query.gte('date', filters.startDate);
+  }
+  if (filters?.endDate) {
+    query = query.lte('date', filters.endDate);
+  }
+
+  query = query
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .range(offset, offset + pageSize - 1);
+
+  const { data, error, count } = await query;
+
+  if (error) throw new Error(error.message);
+
+  const totalCount = count ?? 0;
+  return {
+    data: data as Transaction[],
+    totalCount,
+    page,
+    pageSize,
+    totalPages: Math.ceil(totalCount / pageSize),
+  };
 }
 
 // Get transactions by date range

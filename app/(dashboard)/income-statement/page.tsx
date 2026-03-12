@@ -188,7 +188,7 @@ function IncomeStatementPageInner() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
           <DollarSign className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
-          Income Statement
+          Profit & Loss
         </h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
           Laporan Laba Rugi - {activeBusiness.business_name}
@@ -360,7 +360,7 @@ function IncomeStatementPageInner() {
           <div className="card-static">
             <div className="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
               <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
-                Income Statement
+                Profit & Loss
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 Period: {new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - {new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}

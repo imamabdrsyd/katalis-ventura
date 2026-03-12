@@ -19,21 +19,24 @@ export interface BusinessMember {
 export async function getBusinessMembers(businessId: string): Promise<BusinessMember[]> {
   const supabase = createClient();
 
-  // Fetch roles from user_business_roles
-  const { data: roles, error: rolesError } = await supabase
-    .from('user_business_roles')
-    .select('id, user_id, role, joined_at, invited_by')
-    .eq('business_id', businessId)
-    .order('joined_at', { ascending: true });
+  // Batch roles + business creator queries in parallel
+  const [rolesResult, businessResult] = await Promise.all([
+    supabase
+      .from('user_business_roles')
+      .select('id, user_id, role, joined_at, invited_by')
+      .eq('business_id', businessId)
+      .order('joined_at', { ascending: true }),
+    supabase
+      .from('businesses')
+      .select('created_by, created_at')
+      .eq('id', businessId)
+      .single(),
+  ]);
 
+  const { data: roles, error: rolesError } = rolesResult;
   if (rolesError) throw new Error(rolesError.message);
 
-  // Fetch business creator info
-  const { data: business } = await supabase
-    .from('businesses')
-    .select('created_by, created_at')
-    .eq('id', businessId)
-    .single();
+  const { data: business } = businessResult;
 
   // Merge: start with roles, add creator if not already in the list
   const memberList = [...(roles || [])];

@@ -1,24 +1,19 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBusinessContext } from '@/context/BusinessContext';
 import * as transactionsApi from '@/lib/api/transactions';
 import { getAccounts } from '@/lib/api/accounts';
 import { findCogsAccount } from '@/lib/utils/inventoryHelper';
 import type { Transaction, TransactionCategory, TransactionStatus, Account } from '@/types';
 import type { TransactionFormData } from '@/components/transactions/TransactionForm';
+import type { TransactionFilters } from '@/lib/api/transactions';
 
 export function useTransactions() {
   const { user, activeBusinessId: businessId, loading: businessLoading, error: businessError, userRole } = useBusinessContext();
   const canManageTransactions = userRole === 'business_manager' || userRole === 'both';
   const queryClient = useQueryClient();
-
-  // Transaction state
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
 
   // Filter state
   const [statusFilter, setStatusFilter] = useState<TransactionStatus | 'all'>('all');
@@ -49,43 +44,54 @@ export function useTransactions() {
   const [showKebabMenu, setShowKebabMenu] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
 
-  // Apply filters (including status)
-  const filteredTransactions = transactions.filter((transaction) => {
-    if (statusFilter !== 'all' && transaction.status !== statusFilter) return false;
-    if (categoryFilter && transaction.category !== categoryFilter) return false;
-    if (dateRange.start && new Date(transaction.date) < new Date(dateRange.start)) return false;
-    if (dateRange.end && new Date(transaction.date) > new Date(dateRange.end)) return false;
-    return true;
+  // Build filters object for server-side query
+  const filters: TransactionFilters = useMemo(() => ({
+    status: statusFilter,
+    category: categoryFilter,
+    startDate: dateRange.start,
+    endDate: dateRange.end,
+  }), [statusFilter, categoryFilter, dateRange]);
+
+  // Server-side paginated query — filters & pagination handled by Supabase
+  const {
+    data: paginatedResult,
+    isLoading: loading,
+    error: queryError,
+  } = useQuery({
+    queryKey: ['transactions-paginated', businessId, currentPage, rowsPerPage, filters],
+    queryFn: () => transactionsApi.getTransactionsPaginated(businessId!, currentPage, rowsPerPage, filters),
+    enabled: !!businessId,
+    placeholderData: (prev) => prev, // Keep previous data while fetching (smooth pagination)
   });
 
-  // Count drafts for badge display
-  const draftCount = transactions.filter((t) => t.status === 'draft').length;
+  // Also fetch all transactions (lightweight — shared cache with dashboard/reports)
+  // Used only for draftCount badge
+  const { data: allTransactions = [] } = useQuery({
+    queryKey: ['transactions', businessId],
+    queryFn: () => transactionsApi.getTransactions(businessId!),
+    enabled: !!businessId,
+  });
 
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredTransactions.length / rowsPerPage);
-  const startIndex = (currentPage - 1) * rowsPerPage;
-  const visibleTransactions = filteredTransactions.slice(startIndex, startIndex + rowsPerPage);
+  const transactions = paginatedResult?.data ?? [];
+  const totalPages = paginatedResult?.totalPages ?? 0;
+  const totalCount = paginatedResult?.totalCount ?? 0;
+  const error = queryError?.message ?? null;
+
+  // visibleTransactions = transactions from server (already paginated)
+  const visibleTransactions = transactions;
+
+  // filteredTransactions kept for backward compat (same as transactions since server already filtered)
+  const filteredTransactions = transactions;
+
+  // Count drafts from full dataset for badge display
+  const draftCount = useMemo(() => allTransactions.filter((t) => t.status === 'draft').length, [allTransactions]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [statusFilter, categoryFilter, rowsPerPage, dateRange]);
-
-  // Fetch transactions
-  const fetchTransactions = useCallback(async () => {
-    if (!businessId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await transactionsApi.getTransactions(businessId);
-      setTransactions(data);
-    } catch (err: any) {
-      setError(err.message || 'Gagal memuat transaksi');
-    } finally {
-      setLoading(false);
-    }
-  }, [businessId]);
 
   // Fetch accounts for smart guidance
   const fetchAccounts = useCallback(async () => {
@@ -100,21 +106,30 @@ export function useTransactions() {
 
   useEffect(() => {
     if (businessId) {
-      fetchTransactions();
       fetchAccounts();
     }
-  }, [businessId, fetchTransactions, fetchAccounts]);
-
-  // Ref stabil agar event listener tidak di-attach/detach tiap categoryFilter berubah
-  const fetchTransactionsRef = useRef(fetchTransactions);
-  fetchTransactionsRef.current = fetchTransactions;
+  }, [businessId, fetchAccounts]);
 
   // Refetch ketika FloatingQuickAdd berhasil menyimpan transaksi
   useEffect(() => {
-    const handler = () => fetchTransactionsRef.current();
+    const handler = () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions-paginated', businessId] });
+      queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
+    };
     window.addEventListener('transaction-saved', handler);
     return () => window.removeEventListener('transaction-saved', handler);
-  }, []);
+  }, [queryClient, businessId]);
+
+  // Helper to invalidate all transaction caches
+  const invalidateTransactions = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['transactions-paginated', businessId] });
+    queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
+  }, [queryClient, businessId]);
+
+  // Kept for backward compat — now just triggers cache invalidation
+  const fetchTransactions = useCallback(() => {
+    invalidateTransactions();
+  }, [invalidateTransactions]);
 
   // CRUD handlers
   const handleAddTransaction = useCallback(async (data: TransactionFormData) => {
@@ -128,14 +143,13 @@ export function useTransactions() {
       });
       setShowAddModal(false);
       setTransactionMode(null);
-      queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
-      fetchTransactions();
+      invalidateTransactions();
     } catch (err: any) {
       alert(err.message || 'Gagal menambahkan transaksi');
     } finally {
       setSaving(false);
     }
-  }, [businessId, user, fetchTransactions]);
+  }, [businessId, user, invalidateTransactions]);
 
   const handleEditTransaction = useCallback(async (data: TransactionFormData) => {
     if (!editTransaction) return;
@@ -143,14 +157,13 @@ export function useTransactions() {
     try {
       await transactionsApi.updateTransaction(editTransaction.id, data);
       setEditTransaction(null);
-      queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
-      fetchTransactions();
+      invalidateTransactions();
     } catch (err: any) {
       alert(err.message || 'Gagal mengupdate transaksi');
     } finally {
       setSaving(false);
     }
-  }, [editTransaction, fetchTransactions]);
+  }, [editTransaction, invalidateTransactions]);
 
   const handleDeleteTransaction = useCallback(async () => {
     if (!deleteTransaction) return;
@@ -158,14 +171,13 @@ export function useTransactions() {
     try {
       await transactionsApi.deleteTransaction(deleteTransaction.id);
       setDeleteTransaction(null);
-      queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
-      fetchTransactions();
+      invalidateTransactions();
     } catch (err: any) {
       alert(err.message || 'Gagal menghapus transaksi');
     } finally {
       setSaving(false);
     }
-  }, [deleteTransaction, fetchTransactions]);
+  }, [deleteTransaction, invalidateTransactions]);
 
   const handlePrint = useCallback(() => {
     window.print();
@@ -195,14 +207,13 @@ export function useTransactions() {
         created_by: user.id,
       });
       setShowQuickAddModal(false);
-      queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
-      fetchTransactions();
+      invalidateTransactions();
     } catch (err: any) {
       alert(err.message || 'Gagal menambahkan transaksi');
     } finally {
       setSaving(false);
     }
-  }, [businessId, user, fetchTransactions]);
+  }, [businessId, user, invalidateTransactions]);
 
   // Convert stock transactions to COGS: change debit from Inventory to COGS account
   const handleConvertStockToCOGS = useCallback(async (transactionIds: string[]) => {
@@ -256,14 +267,13 @@ export function useTransactions() {
       }
       setSelectedIds(new Set());
       setSelectMode(false);
-      queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
-      fetchTransactions();
+      invalidateTransactions();
     } catch (err: any) {
       alert(err.message || 'Gagal menghapus transaksi');
     } finally {
       setSaving(false);
     }
-  }, [selectedIds, fetchTransactions]);
+  }, [selectedIds, invalidateTransactions]);
 
   // Post a single draft transaction
   const handlePostTransaction = useCallback(async (id: string) => {
@@ -271,14 +281,13 @@ export function useTransactions() {
     try {
       await transactionsApi.postTransaction(id);
       setDetailTransaction(null);
-      queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
-      fetchTransactions();
+      invalidateTransactions();
     } catch (err: any) {
       alert(err.message || 'Gagal memposting transaksi');
     } finally {
       setSaving(false);
     }
-  }, [businessId, fetchTransactions, queryClient]);
+  }, [invalidateTransactions]);
 
   // Bulk post selected draft transactions
   const handleBulkPost = useCallback(async () => {
@@ -296,15 +305,14 @@ export function useTransactions() {
       const posted = await transactionsApi.postTransactionsBulk(draftIds);
       setSelectedIds(new Set());
       setSelectMode(false);
-      queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
-      fetchTransactions();
+      invalidateTransactions();
       alert(`${posted} transaksi berhasil diposting`);
     } catch (err: any) {
       alert(err.message || 'Gagal memposting transaksi');
     } finally {
       setSaving(false);
     }
-  }, [selectedIds, transactions, businessId, fetchTransactions, queryClient]);
+  }, [selectedIds, transactions, invalidateTransactions]);
 
   // Handle COGS follow-up: close detail modal and open TransactionForm with prefill
   const handleCreateFollowUp = useCallback((prefillData: Partial<TransactionFormData>) => {
@@ -322,6 +330,7 @@ export function useTransactions() {
     loading,
     error,
     saving,
+    totalCount,
     // Business context
     user,
     businessId,

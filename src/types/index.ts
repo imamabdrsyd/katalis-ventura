@@ -95,6 +95,7 @@ export interface Business {
   property_address?: string;
   property_details?: Record<string, any>;
   logo_url?: string;
+  invoice_settings?: InvoiceSettings | null;
   is_archived: boolean;
   created_at: string;
   created_by: string;
@@ -334,4 +335,80 @@ export interface AuditLog {
   // Populated when joining with profiles table (from audit_trail_with_users view)
   changed_by_name?: string;
   changed_by_avatar?: string;
+}
+
+// ==================== INVOICE ====================
+
+export type InvoicePaymentStatus = 'draft' | 'unpaid' | 'paid' | 'overdue';
+export type InvoiceTaxType = 'included' | 'excluded' | 'none';
+
+export interface Invoice {
+  id: string;
+  business_id: string;
+  invoice_number: string;
+  invoice_date: string;
+  due_date: string | null;
+  customer_name: string;
+  customer_phone: string | null;
+  customer_id_label: string | null;
+  description: string | null;
+  item_label: string | null; // custom column header for line items table
+  subtotal: number;
+  tax_type: InvoiceTaxType;
+  tax_rate: number;
+  tax_amount: number;
+  total_amount: number;
+  payment_status: InvoicePaymentStatus;
+  notes: string | null;
+  meta: Record<string, unknown> | null;
+  transaction_id: string | null;
+  created_by: string;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  deleted_by: string | null;
+  line_items?: InvoiceLineItem[];
+}
+
+export interface InvoiceLineItem {
+  id: string;
+  invoice_id: string;
+  item_name: string;
+  quantity: number;
+  unit_price: number;
+  amount: number;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InvoiceFormData {
+  invoice_number: string;
+  invoice_date: string;
+  due_date: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_id_label: string;
+  description: string;
+  item_label: string;
+  line_items: {
+    item_name: string;
+    quantity: number;
+    unit_price: number;
+  }[];
+  tax_type: InvoiceTaxType;
+  tax_rate: number;
+  notes: string;
+}
+
+export interface InvoiceSettings {
+  prefix: string;
+  default_due_days: number;
+  default_tax_rate: number;
+  default_tax_type: InvoiceTaxType;
+  bank_name: string;
+  bank_account_number: string;
+  bank_account_holder: string;
+  contact_number: string;
 }

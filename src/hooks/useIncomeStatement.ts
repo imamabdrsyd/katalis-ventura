@@ -3,7 +3,6 @@
 import { useCallback, useMemo } from 'react';
 import { useReportData } from './useReportData';
 import { calculateFinancialSummary, calculateIncomeStatementMetrics } from '@/lib/calculations';
-import { exportIncomeStatementToPDF, exportIncomeStatementToExcel } from '@/lib/export';
 import type { Transaction } from '@/types';
 
 export interface TransactionsByCategory {
@@ -18,8 +17,8 @@ export interface UseIncomeStatementReturn extends ReturnType<typeof useReportDat
   summary: ReturnType<typeof calculateFinancialSummary>;
   metrics: ReturnType<typeof calculateIncomeStatementMetrics>;
   transactionsByCategory: TransactionsByCategory;
-  handleExportPDF: () => void;
-  handleExportExcel: () => void;
+  handleExportPDF: () => Promise<void>;
+  handleExportExcel: () => Promise<void>;
 }
 
 export function useIncomeStatement(): UseIncomeStatementReturn {
@@ -53,15 +52,17 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
     ),
   }), [filteredTransactions]);
 
-  const handleExportPDF = useCallback(() => {
+  const handleExportPDF = useCallback(async () => {
     if (!activeBusiness) return;
+    const { exportIncomeStatementToPDF } = await import('@/lib/export');
     const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
     exportIncomeStatementToPDF(activeBusiness.business_name, periodLabel, summary);
     setShowExportMenu(false);
   }, [activeBusiness, startDate, endDate, summary, setShowExportMenu]);
 
-  const handleExportExcel = useCallback(() => {
+  const handleExportExcel = useCallback(async () => {
     if (!activeBusiness) return;
+    const { exportIncomeStatementToExcel } = await import('@/lib/export');
     const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
     exportIncomeStatementToExcel(activeBusiness.business_name, periodLabel, summary);
     setShowExportMenu(false);

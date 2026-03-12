@@ -34,6 +34,10 @@ import {
   FlaskConical,
   Plus,
   UserPlus,
+  FileText,
+  BarChart3,
+  Calculator,
+  LineChart,
 } from 'lucide-react';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -64,35 +68,33 @@ type NavItem = {
 
 type NavSection = {
   label: string;
+  icon: LucideIcon;
   items: NavItem[];
 };
 
 const navSections: NavSection[] = [
   {
-    label: 'OVERVIEW',
-    items: [
-      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/businesses', label: 'Manage Business', icon: Building2 },
-    ],
-  },
-  {
     label: 'ACCOUNTING',
+    icon: Calculator,
     items: [
       { href: '/accounts', label: 'Chart of Accounts', icon: BookOpen },
+      { href: '/invoices', label: 'Invoice', icon: FileText },
       { href: '/general-ledger', label: 'General Ledger', icon: BookOpenCheck },
       { href: '/trial-balance', label: 'Trial Balance', icon: ClipboardCheck },
     ],
   },
   {
-    label: 'FINANCIAL STATEMENTS',
+    label: 'FINANCIAL REPORTS',
+    icon: BarChart3,
     items: [
-      { href: '/income-statement', label: 'Income Statement', icon: DollarSign },
+      { href: '/income-statement', label: 'Profit & Loss', icon: DollarSign },
       { href: '/balance-sheet', label: 'Balance Sheet', icon: Scale },
       { href: '/cash-flow', label: 'Cash Flow', icon: ArrowLeftRight },
     ],
   },
   {
     label: 'ANALYTICS',
+    icon: LineChart,
     items: [
       { href: '/scenario-modeling', label: 'Scenario Modeling', icon: FlaskConical },
     ],
@@ -413,7 +415,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
 
   return (
     <>
-      <header className={`fixed top-0 left-0 right-0 h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-30 flex items-center justify-between px-4 md:px-6 transition-[left] duration-300 ease-in-out ${isCollapsed ? 'md:left-16' : 'md:left-52'}`}>
+      <header className={`fixed top-0 left-0 right-0 h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-30 flex items-center justify-between px-4 md:px-6 transition-[left] duration-300 ease-in-out ${isCollapsed ? 'md:left-16' : 'md:left-56'}`}>
       {/* Mobile Menu Button — favicon icon */}
       <button
         onClick={onMenuClick}
@@ -659,6 +661,7 @@ function Sidebar({
   userRole: string | null;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const canManage = userRole === 'business_manager' || userRole === 'both' || userRole === 'superadmin';
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
@@ -691,7 +694,7 @@ function Sidebar({
       <aside
         className={`fixed top-0 left-0 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col z-50 transform transition-all duration-300 ease-in-out overflow-visible
           ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
-          ${isCollapsed ? 'w-16' : 'w-52'}`}
+          ${isCollapsed ? 'w-16' : 'w-56'}`}
       >
         {/* Logo + Hamburger row */}
         <div className={`flex items-center border-b border-gray-200 dark:border-gray-700 h-16 flex-shrink-0 ${isCollapsed ? 'justify-center px-2' : 'gap-2 px-3'}`}>
@@ -757,63 +760,86 @@ function Sidebar({
           </button>
         </div>
 
-        {/* Transactions nav item — above sections */}
-        {canManage && (
-          <div className="px-2 pt-3 pb-1">
-            {(() => {
-              const isTransactionsActive = pathname === '/transactions' || pathname.startsWith('/transactions/');
-              return (
-                <div className="relative group">
-                  <div
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors
-                      ${isTransactionsActive
-                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
-                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }`}
+        {/* Independent nav items: Transactions + Dashboard + Manage Business */}
+        <div className="px-2 pt-3 pb-1 space-y-0.5">
+          {/* Transactions (manager only) */}
+          {canManage && (() => {
+            const isTransactionsActive = pathname === '/transactions' || pathname.startsWith('/transactions/');
+            return (
+              <div className="relative group">
+                <div
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors
+                    ${isTransactionsActive
+                      ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                >
+                  <Link
+                    href="/transactions/journal-entry"
+                    onClick={onClose}
+                    className="flex-shrink-0 p-0.5 rounded-md border border-indigo-400 dark:border-indigo-500 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-800/40 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
+                    title="Journal Entry"
                   >
-                    <Link
-                      href="/transactions/journal-entry"
-                      onClick={onClose}
-                      className="flex-shrink-0 p-0.5 rounded-md border border-indigo-400 dark:border-indigo-500 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-800/40 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
-                      title="Journal Entry"
-                    >
-                      <Plus className="w-5 h-5" />
-                    </Link>
-                    <Link
-                      href="/transactions"
-                      onClick={onClose}
-                      className={`whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out hover:text-indigo-500 dark:hover:text-indigo-400 ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}
-                    >
-                      Transactions
-                    </Link>
-                  </div>
-                  {/* Tooltip saat collapsed: 2 aksi */}
-                  {isCollapsed && (
-                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-[60] overflow-hidden">
-                      <Link
-                        href="/transactions/journal-entry"
-                        onClick={onClose}
-                        className="flex items-center gap-2 px-3 py-2 hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        Journal Entry
-                      </Link>
-                      <Link
-                        href="/transactions"
-                        onClick={onClose}
-                        className="flex items-center gap-2 px-3 py-2 hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
-                      >
-                        <CreditCard className="w-3.5 h-3.5" />
-                        View Transactions
-                      </Link>
-                      <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
-                    </div>
-                  )}
+                    <Plus className="w-5 h-5" />
+                  </Link>
+                  <Link
+                    href="/transactions"
+                    onClick={onClose}
+                    className={`whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out hover:text-indigo-500 dark:hover:text-indigo-400 ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}
+                  >
+                    Transactions
+                  </Link>
                 </div>
-              );
-            })()}
-          </div>
-        )}
+                {isCollapsed && (
+                  <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-[60] overflow-hidden">
+                    <Link href="/transactions/journal-entry" onClick={onClose} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
+                      <Plus className="w-3.5 h-3.5" />
+                      Journal Entry
+                    </Link>
+                    <Link href="/transactions" onClick={onClose} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
+                      <CreditCard className="w-3.5 h-3.5" />
+                      View Transactions
+                    </Link>
+                    <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Dashboard & Manage Business — independent */}
+          {[
+            { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+            { href: '/businesses', label: 'Manage Business', icon: Building2 },
+          ].map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href;
+            return (
+              <div key={item.href} className="relative group">
+                <Link
+                  href={item.href}
+                  onClick={onClose}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors
+                    ${isActive
+                      ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                >
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`} />
+                  <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+                    {item.label}
+                  </span>
+                </Link>
+                {isCollapsed && (
+                  <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg px-3 py-2 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-[60]">
+                    {item.label}
+                    <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
 
         {/* Navigation */}
         <nav className="flex-1 py-4 px-2 overflow-visible">
@@ -821,51 +847,81 @@ function Sidebar({
             const expanded = isSectionExpanded(section.label);
             return (
               <div key={section.label} className={sectionIndex > 0 ? 'mt-5' : ''}>
-                {/* Section label — fade out saat collapsed */}
-                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'h-0 opacity-0 mb-0' : 'h-5 opacity-100 mb-2'}`}>
-                  <button
-                    onClick={() => toggleSection(section.label)}
-                    className="flex items-center justify-between w-full px-3 group/section"
-                  >
-                    <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                      {section.label}
-                    </span>
-                    <ChevronDown className={`w-3 h-3 text-gray-400 dark:text-gray-500 flex-shrink-0 transition-transform duration-200 ${expanded ? '' : '-rotate-90'}`} />
-                  </button>
-                </div>
-                {/* Divider antar section saat collapsed */}
-                {isCollapsed && sectionIndex > 0 && (
-                  <div className="border-t border-gray-200 dark:border-gray-700 mb-3" />
+                {/* Divider antar section — collapsed dan expanded */}
+                {sectionIndex > 0 && (
+                  <div className="border-t border-gray-200 dark:border-gray-700 mb-4 mx-1" />
                 )}
-                <div className={`space-y-1 transition-all duration-200 ease-in-out ${!isCollapsed && !expanded ? 'max-h-0 overflow-hidden' : isCollapsed ? '' : 'max-h-96'}`}>
+                {/* Section header with icon — fade to icon-only saat collapsed */}
+                {(() => {
+                  const SectionIcon = section.icon;
+                  const hasActiveChild = section.items.some(item => pathname === item.href || pathname.startsWith(item.href + '/'));
+                  return (
+                    <div className="relative group/section">
+                      <button
+                        onClick={() => isCollapsed ? router.push(section.items[0].href) : toggleSection(section.label)}
+                        className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-xl transition-colors ${
+                          isCollapsed
+                            ? hasActiveChild
+                              ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
+                              : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300'
+                            : ''
+                        }`}
+                      >
+                        <SectionIcon className={`w-5 h-5 flex-shrink-0 transition-colors ${
+                          hasActiveChild
+                            ? 'text-indigo-500 dark:text-indigo-400'
+                            : 'text-gray-400 dark:text-gray-500'
+                        }`} />
+                        {/* Label + chevron — hidden saat collapsed */}
+                        <span className={`flex items-center justify-between flex-1 overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+                          <span className={`text-xs font-semibold uppercase tracking-wider whitespace-nowrap ${hasActiveChild ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                            {section.label}
+                          </span>
+                          <ChevronDown className={`w-3 h-3 text-gray-400 dark:text-gray-500 flex-shrink-0 transition-transform duration-200 ${expanded ? '' : '-rotate-90'}`} />
+                        </span>
+                      </button>
+                      {/* Flyout menu saat collapsed — clickable */}
+                      {isCollapsed && (
+                        <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 invisible group-hover/section:opacity-100 group-hover/section:visible transition-all duration-150 z-[60] overflow-hidden">
+                          <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400 border-b border-gray-700 dark:border-gray-600">
+                            {section.label}
+                          </div>
+                          {section.items.map((item) => (
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              onClick={onClose}
+                              className={`flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors ${
+                                pathname === item.href || pathname.startsWith(item.href + '/')
+                                  ? 'text-indigo-400 font-semibold'
+                                  : 'text-gray-100'
+                              }`}
+                            >
+                              {item.label}
+                            </Link>
+                          ))}
+                          <div className="absolute right-full top-5 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+                <div className={`space-y-0.5 transition-all duration-200 ease-in-out ${!isCollapsed && !expanded ? 'max-h-0 overflow-hidden' : isCollapsed ? 'hidden' : 'max-h-96'}`}>
                   {section.items.map((item) => {
                     const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-                    const Icon = item.icon;
                     return (
-                      <div key={item.href} className="relative group">
-                        <Link
-                          href={item.href}
-                          onClick={onClose}
-                          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors
-                            ${isActive
-                              ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
-                              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                            }`}
-                        >
-                          <Icon className="w-5 h-5 flex-shrink-0" />
-                          {/* Label — fade out saat collapsed */}
-                          <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
-                            {item.label}
-                          </span>
-                        </Link>
-                        {/* Tooltip saat collapsed */}
-                        {isCollapsed && (
-                          <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 pointer-events-none z-[60]">
-                            {item.label}
-                            <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
-                          </div>
-                        )}
-                      </div>
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={onClose}
+                        className={`flex items-center pl-10 pr-3 py-2 rounded-xl text-sm font-medium transition-colors
+                          ${isActive
+                            ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
+                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                      >
+                        {item.label}
+                      </Link>
                     );
                   })}
                 </div>
@@ -967,7 +1023,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       />
 
       {/* Main Content - with margins for sidebar and header */}
-      <main className={`ml-0 pt-16 min-h-screen overflow-auto transition-[margin] duration-300 ease-in-out ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-52'}`}>
+      <main className={`ml-0 pt-16 min-h-screen overflow-auto transition-[margin] duration-300 ease-in-out ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-56'}`}>
         {children}
       </main>
 

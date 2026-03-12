@@ -1,0 +1,252 @@
+'use client';
+
+import { Suspense, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { FileText, Settings, Plus, Trash2 } from 'lucide-react';
+import { useInvoices } from '@/hooks/useInvoices';
+import { InvoiceForm } from '@/components/invoices/InvoiceForm';
+import { InvoiceList } from '@/components/invoices/InvoiceList';
+import { InvoiceSettingsModal } from '@/components/invoices/InvoiceSettingsModal';
+import { Modal } from '@/components/ui/Modal';
+import type { InvoicePaymentStatus } from '@/types';
+
+const STATUS_TABS: { value: '' | InvoicePaymentStatus; label: string }[] = [
+  { value: '', label: 'Semua' },
+  { value: 'draft', label: 'Draft' },
+  { value: 'unpaid', label: 'Belum Bayar' },
+  { value: 'paid', label: 'Lunas' },
+  { value: 'overdue', label: 'Jatuh Tempo' },
+];
+
+function InvoicesPageInner() {
+  const searchParams = useSearchParams();
+  const {
+    filteredInvoices,
+    loading,
+    saving,
+    error,
+    statusCounts,
+    activeBusiness,
+    businessLoading,
+    businessError,
+    canManageInvoices,
+    showAddModal, setShowAddModal,
+    editInvoice, setEditInvoice,
+    deleteInvoiceTarget, setDeleteInvoiceTarget,
+    showSettingsModal, setShowSettingsModal,
+    invoiceSettings,
+    nextInvoiceNumber,
+    statusFilter, setStatusFilter,
+    handleCreateInvoice,
+    handleUpdateInvoice,
+    handleDeleteInvoice,
+    handleDownloadPDF,
+    handleSaveSettings,
+    fetchInvoices,
+  } = useInvoices();
+
+  // Auto-open create modal when navigated from Journal Entry (?create=true)
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      setShowAddModal(true);
+    }
+  }, [searchParams, setShowAddModal]);
+
+  // Loading state
+  if (businessLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500 dark:text-gray-400">Memuat...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (businessError) {
+    return (
+      <div className="p-8">
+        <div className="max-w-md mx-auto text-center">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">Bisnis Tidak Ditemukan</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">{businessError}</p>
+          <a href="/setup-business" className="btn-primary">Setup Bisnis</a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-8">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
+            <FileText className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
+            Invoice
+          </h1>
+        </div>
+        {canManageInvoices && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowSettingsModal(true)}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
+            >
+              <Settings className="h-4 w-4" />
+              Pengaturan
+            </button>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors flex items-center gap-2 font-medium shadow-sm"
+            >
+              <Plus className="h-4 w-4" />
+              Buat Invoice
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl">
+          <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
+          <button onClick={fetchInvoices} className="text-red-500 dark:text-red-400 underline text-sm mt-2">
+            Coba lagi
+          </button>
+        </div>
+      )}
+
+      {/* Invoice List */}
+      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_24px_rgba(0,0,0,0.04)] p-5">
+
+        {/* Status Filter Tabs */}
+        <div className="flex items-center gap-1 mb-4 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+          {STATUS_TABS.map((tab) => {
+            const count = tab.value ? statusCounts[tab.value] : 0;
+            return (
+              <button
+                key={tab.value}
+                onClick={() => setStatusFilter(tab.value)}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
+                  statusFilter === tab.value
+                    ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                {tab.label}
+                {tab.value && count > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300">
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="overflow-auto max-h-[70vh]">
+          <InvoiceList
+            invoices={filteredInvoices}
+            loading={loading}
+            onRowClick={canManageInvoices ? setEditInvoice : undefined}
+            onEdit={canManageInvoices ? setEditInvoice : undefined}
+            onDelete={canManageInvoices ? setDeleteInvoiceTarget : undefined}
+            onDownloadPDF={handleDownloadPDF}
+          />
+        </div>
+      </div>
+
+      {/* Add Invoice Modal */}
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Buat Invoice"
+      >
+        <InvoiceForm
+          onSubmit={handleCreateInvoice}
+          onCancel={() => setShowAddModal(false)}
+          loading={saving}
+          defaultInvoiceNumber={nextInvoiceNumber}
+          defaultDueDays={invoiceSettings?.default_due_days ?? 7}
+          defaultTaxRate={invoiceSettings?.default_tax_rate ?? 11}
+          defaultTaxType={invoiceSettings?.default_tax_type ?? 'none'}
+          businessCategory={activeBusiness?.business_category}
+        />
+      </Modal>
+
+      {/* Edit Invoice Modal */}
+      <Modal
+        isOpen={!!editInvoice}
+        onClose={() => setEditInvoice(null)}
+        title="Edit Invoice"
+      >
+        {editInvoice && (
+          <InvoiceForm
+            onSubmit={handleUpdateInvoice}
+            onCancel={() => setEditInvoice(null)}
+            loading={saving}
+            invoice={editInvoice}
+            businessCategory={activeBusiness?.business_category}
+          />
+        )}
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!deleteInvoiceTarget}
+        onClose={() => setDeleteInvoiceTarget(null)}
+        title="Hapus Invoice"
+      >
+        <div className="p-2">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+              <Trash2 className="w-5 h-5 text-red-500" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                Yakin ingin menghapus invoice <strong>{deleteInvoiceTarget?.invoice_number}</strong>?
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Invoice untuk {deleteInvoiceTarget?.customer_name} akan dihapus.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setDeleteInvoiceTarget(null)}
+              className="btn-secondary flex-1"
+              disabled={saving}
+            >
+              Batal
+            </button>
+            <button
+              onClick={handleDeleteInvoice}
+              className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors font-medium disabled:opacity-50"
+              disabled={saving}
+            >
+              {saving ? 'Menghapus...' : 'Hapus'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Invoice Settings Modal */}
+      <InvoiceSettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        settings={invoiceSettings}
+        onSave={handleSaveSettings}
+        loading={saving}
+      />
+    </div>
+  );
+}
+
+export default function InvoicesPage() {
+  return (
+    <Suspense fallback={<div className="p-8 flex items-center justify-center min-h-[50vh]"><div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+      <InvoicesPageInner />
+    </Suspense>
+  );
+}

@@ -11,7 +11,6 @@ import {
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
-import * as businessesApi from '@/lib/api/businesses';
 import type { Business, UserRole } from '@/types';
 
 const ACTIVE_BUSINESS_KEY = 'katalis_active_business_id';
@@ -64,21 +63,24 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
 
       setUser(user);
 
-      // Check if user is superadmin (from profiles table)
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('default_role')
-        .eq('id', user.id)
-        .single();
+      // Batch profile + roles queries in parallel (saves ~200-300ms)
+      const [profileResult, rolesResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('default_role')
+          .eq('id', user.id)
+          .single(),
+        supabase
+          .from('user_business_roles')
+          .select('role, business_id, businesses(*)')
+          .eq('user_id', user.id),
+      ]);
+
+      const { data: profile } = profileResult;
+      const { data: rolesData, error: rolesError } = rolesResult;
 
       const userIsSuperadmin = profile?.default_role === 'superadmin';
       setIsSuperadmin(userIsSuperadmin);
-
-      // Get user's businesses with roles
-      const { data: rolesData, error: rolesError } = await supabase
-        .from('user_business_roles')
-        .select('role, business_id, businesses(*)')
-        .eq('user_id', user.id);
 
       if (rolesError) {
         if (rolesError.code === 'PGRST116') {
