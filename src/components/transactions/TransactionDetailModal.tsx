@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import type { Transaction, Account, AuditLog } from '@/types';
 import type { TransactionFormData } from '@/components/transactions/TransactionForm';
@@ -10,6 +10,7 @@ import { getProfileName } from '@/lib/api/profiles';
 import { getRecordAuditHistory, getFieldChanges, formatFieldName, formatAuditValue } from '@/lib/api/audit';
 import { detectMatchingPrincipleWarning } from '@/lib/accounting/guidance';
 import { AlertTriangle, Info, X, CheckCircle2 } from 'lucide-react';
+import { updateTransaction } from '@/lib/api/transactions';
 
 interface TransactionDetailModalProps {
   transaction: Transaction | null;
@@ -21,6 +22,8 @@ interface TransactionDetailModalProps {
   accounts?: Account[];
   allTransactions?: Transaction[];
   onCreateFollowUp?: (prefillData: Partial<TransactionFormData>) => void;
+  onTransactionUpdated?: (transaction: Transaction) => void;
+  allTags?: string[];
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -96,6 +99,8 @@ export function TransactionDetailModal({
   accounts,
   allTransactions,
   onCreateFollowUp,
+  onTransactionUpdated,
+  allTags = [],
 }: TransactionDetailModalProps) {
   const [creatorName, setCreatorName] = useState<string | null>(null);
   const [loadingCreator, setLoadingCreator] = useState(false);
@@ -106,6 +111,63 @@ export function TransactionDetailModal({
   const [showAuditHistory, setShowAuditHistory] = useState(false);
   const [warningDismissed, setWarningDismissed] = useState(false);
   const [warningExpanded, setWarningExpanded] = useState(false);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
+  const [savingTag, setSavingTag] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const tagInputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  const tagSuggestions = useMemo(() => {
+    const q = tagInput.trim().toLowerCase();
+    return allTags.filter(
+      (t) => !tags.includes(t) && (q === '' || t.toLowerCase().includes(q))
+    );
+  }, [allTags, tags, tagInput]);
+
+  // Sync tags from transaction meta
+  useEffect(() => {
+    setTags(transaction?.meta?.tags ?? []);
+    setTagInput('');
+  }, [transaction?.id]);
+
+  const saveTags = async (newTags: string[], prevTags: string[]) => {
+    if (!transaction) return;
+    setSavingTag(true);
+    try {
+      const updated = await updateTransaction(transaction.id, {
+        meta: { ...transaction.meta, tags: newTags },
+      });
+      // Merge updated meta back, preserving joined account fields
+      onTransactionUpdated?.({ ...transaction, ...updated, debit_account: transaction.debit_account, credit_account: transaction.credit_account });
+    } catch {
+      setTags(prevTags); // rollback
+    } finally {
+      setSavingTag(false);
+    }
+  };
+
+  const handleAddTag = async () => {
+    const trimmed = tagInput.trim();
+    if (!trimmed || !transaction) return;
+    if (tags.includes(trimmed)) {
+      setTagInput('');
+      return;
+    }
+    const prev = tags;
+    const newTags = [...tags, trimmed];
+    setTags(newTags);
+    setTagInput('');
+    await saveTags(newTags, prev);
+  };
+
+  const handleRemoveTag = async (tag: string) => {
+    if (!transaction) return;
+    const prev = tags;
+    const newTags = tags.filter((t) => t !== tag);
+    setTags(newTags);
+    await saveTags(newTags, prev);
+  };
 
   // Reset dismiss/expand state when transaction changes
   useEffect(() => {
@@ -327,9 +389,84 @@ export function TransactionDetailModal({
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Keterangan
             </label>
-            <p className="mt-1 text-gray-700 dark:text-gray-300">
-              {transaction.description}
-            </p>
+            <div className="mt-1 flex items-start gap-2 flex-wrap">
+              <p className="text-gray-700 dark:text-gray-300 flex-1 min-w-0">
+                {transaction.description}
+              </p>
+              {/* Tags inline */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700"
+                  >
+                    {tag}
+                    <button
+                      onClick={() => handleRemoveTag(tag)}
+                      disabled={savingTag}
+                      className="hover:text-indigo-900 dark:hover:text-indigo-100 transition-colors disabled:opacity-50"
+                      aria-label={`Hapus tag ${tag}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+                {/* Add tag inline with suggestions */}
+                <div className="relative flex items-center gap-1" ref={suggestionsRef}>
+                  <input
+                    ref={tagInputRef}
+                    type="text"
+                    value={tagInput}
+                    onChange={(e) => { setTagInput(e.target.value); setShowSuggestions(true); }}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={(e) => {
+                      // delay to allow suggestion click to fire
+                      if (!suggestionsRef.current?.contains(e.relatedTarget as Node)) {
+                        setTimeout(() => setShowSuggestions(false), 150);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); setShowSuggestions(false); }
+                      if (e.key === 'Escape') setShowSuggestions(false);
+                    }}
+                    placeholder="+ tag"
+                    disabled={savingTag}
+                    className="w-16 text-xs px-2 py-0.5 rounded-full border border-dashed border-gray-300 dark:border-gray-600 bg-transparent text-gray-500 dark:text-gray-400 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-indigo-400 focus:w-24 transition-all disabled:opacity-50"
+                  />
+                  {tagInput.trim() && (
+                    <button
+                      onClick={() => { handleAddTag(); setShowSuggestions(false); }}
+                      disabled={savingTag}
+                      className="w-5 h-5 flex items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors disabled:opacity-40"
+                    >
+                      +
+                    </button>
+                  )}
+                  {/* Suggestions dropdown */}
+                  {showSuggestions && tagSuggestions.length > 0 && (
+                    <div className="absolute left-0 top-full mt-1 z-30 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[120px] max-h-40 overflow-y-auto">
+                      {tagSuggestions.map((s) => (
+                        <button
+                          key={s}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={async () => {
+                            const prev = tags;
+                            const newTags = [...tags, s];
+                            setTags(newTags);
+                            setTagInput('');
+                            setShowSuggestions(false);
+                            await saveTags(newTags, prev);
+                          }}
+                          className="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           <div>

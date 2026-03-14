@@ -7,6 +7,12 @@ import type {
   BalanceSheetData,
   CashFlowData,
   CashFlowTransaction,
+  Account,
+  BudgetLine,
+  Budget,
+  BudgetVsActualRow,
+  BudgetSummaryKPI,
+  ProjectedMonth,
 } from '@/types';
 
 // Constants
@@ -719,4 +725,266 @@ export function getUniqueMonths(transactions: Transaction[]): string[] {
   });
 
   return Array.from(months).sort();
+}
+
+// ==================== BUDGET & FORECAST CALCULATIONS ====================
+
+/**
+ * Compute actual amounts per account per month from posted transactions.
+ * For each transaction, the amount is attributed to the debit and credit accounts.
+ * The returned value per account follows its normal_balance convention:
+ * - DEBIT normal_balance accounts: sum of debits - sum of credits
+ * - CREDIT normal_balance accounts: sum of credits - sum of debits
+ *
+ * Returns Map keyed by `${accountId}:${YYYY-MM}` with the net amount.
+ */
+export function computeActualsByAccountAndMonth(
+  transactions: Transaction[],
+  accounts: Account[]
+): Map<string, number> {
+  const accountMap = new Map<string, Account>();
+  accounts.forEach((a) => accountMap.set(a.id, a));
+
+  // Track debit/credit sides separately per account+month
+  const debits = new Map<string, number>();
+  const credits = new Map<string, number>();
+
+  const posted = transactions.filter((t) => t.status === 'posted');
+
+  posted.forEach((t) => {
+    const monthKey = t.date.substring(0, 7); // YYYY-MM
+
+    if (t.debit_account_id) {
+      const key = `${t.debit_account_id}:${monthKey}`;
+      debits.set(key, (debits.get(key) || 0) + t.amount);
+    }
+    if (t.credit_account_id) {
+      const key = `${t.credit_account_id}:${monthKey}`;
+      credits.set(key, (credits.get(key) || 0) + t.amount);
+    }
+  });
+
+  // Combine based on normal_balance
+  const result = new Map<string, number>();
+  const allKeys = new Set([...debits.keys(), ...credits.keys()]);
+
+  allKeys.forEach((key) => {
+    const accountId = key.split(':')[0];
+    const account = accountMap.get(accountId);
+    if (!account) return;
+
+    const debitTotal = debits.get(key) || 0;
+    const creditTotal = credits.get(key) || 0;
+
+    // For DEBIT normal_balance (ASSET, EXPENSE): actual = debits - credits
+    // For CREDIT normal_balance (LIABILITY, EQUITY, REVENUE): actual = credits - debits
+    const actual = account.normal_balance === 'DEBIT'
+      ? debitTotal - creditTotal
+      : creditTotal - debitTotal;
+
+    if (actual !== 0) {
+      result.set(key, actual);
+    }
+  });
+
+  return result;
+}
+
+/**
+ * Compare budget lines against actual transactions to produce variance rows.
+ * Variance semantics:
+ * - Revenue accounts: positive variance = favorable (actual > budget)
+ * - Expense accounts: negative variance = favorable (actual < budget)
+ */
+export function calculateBudgetVsActual(
+  budgetLines: BudgetLine[],
+  transactions: Transaction[],
+  accounts: Account[]
+): BudgetVsActualRow[] {
+  const actuals = computeActualsByAccountAndMonth(transactions, accounts);
+  const accountMap = new Map<string, Account>();
+  accounts.forEach((a) => accountMap.set(a.id, a));
+
+  return budgetLines.map((line) => {
+    const account = line.account || accountMap.get(line.account_id);
+    const monthKey = line.month.substring(0, 7); // YYYY-MM
+    const actualKey = `${line.account_id}:${monthKey}`;
+    const actual = actuals.get(actualKey) || 0;
+    const budgeted = line.amount;
+
+    // For revenue: variance = actual - budgeted (positive = good)
+    // For expense: variance = budgeted - actual (positive = good, under budget)
+    const isRevenue = account?.account_type === 'REVENUE';
+    const variance = isRevenue
+      ? actual - budgeted
+      : budgeted - actual;
+    const variancePercent = budgeted !== 0
+      ? (variance / budgeted) * 100
+      : actual === 0 ? 0 : (isRevenue ? 100 : -100);
+
+    return {
+      accountId: line.account_id,
+      accountCode: account?.account_code || '',
+      accountName: account?.account_name || '',
+      accountType: account?.account_type || 'EXPENSE',
+      month: monthKey,
+      budgeted,
+      actual,
+      variance,
+      variancePercent,
+    };
+  });
+}
+
+/**
+ * Compute summary KPIs for a budget period.
+ */
+export function calculateBudgetSummaryKPI(
+  rows: BudgetVsActualRow[],
+  budget: Budget
+): BudgetSummaryKPI {
+  let totalBudgetedRevenue = 0;
+  let totalActualRevenue = 0;
+  let totalBudgetedExpense = 0;
+  let totalActualExpense = 0;
+
+  rows.forEach((row) => {
+    if (row.accountType === 'REVENUE') {
+      totalBudgetedRevenue += row.budgeted;
+      totalActualRevenue += row.actual;
+    } else {
+      totalBudgetedExpense += row.budgeted;
+      totalActualExpense += row.actual;
+    }
+  });
+
+  const revenueVariance = totalActualRevenue - totalBudgetedRevenue;
+  const expenseVariance = totalBudgetedExpense - totalActualExpense;
+
+  const revenueVariancePercent = totalBudgetedRevenue !== 0
+    ? (revenueVariance / totalBudgetedRevenue) * 100
+    : 0;
+  const expenseVariancePercent = totalBudgetedExpense !== 0
+    ? (expenseVariance / totalBudgetedExpense) * 100
+    : 0;
+
+  // Calculate months elapsed and remaining
+  const now = new Date();
+  const start = new Date(budget.start_date);
+  const end = new Date(budget.end_date);
+  const totalMonths = Math.max(1,
+    (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1
+  );
+  const monthsElapsed = Math.max(1, Math.min(totalMonths,
+    (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()) + 1
+  ));
+  const monthsRemaining = Math.max(0, totalMonths - monthsElapsed);
+
+  const burnRate = totalActualExpense / monthsElapsed;
+  const totalBudget = totalBudgetedRevenue + totalBudgetedExpense;
+  const totalActual = totalActualRevenue + totalActualExpense;
+  const budgetUtilization = totalBudget !== 0
+    ? (totalActual / totalBudget) * 100
+    : 0;
+
+  return {
+    totalBudgetedRevenue,
+    totalActualRevenue,
+    totalBudgetedExpense,
+    totalActualExpense,
+    revenueVariance,
+    expenseVariance,
+    revenueVariancePercent,
+    expenseVariancePercent,
+    burnRate,
+    monthsRemaining,
+    budgetUtilization,
+  };
+}
+
+/**
+ * Project future months based on historical trend + budget targets.
+ * Past months use actual data. Future months use budget target weighted by
+ * the historical actual/budget ratio (trend factor).
+ */
+export function projectBudgetTrend(
+  budgetLines: BudgetLine[],
+  transactions: Transaction[],
+  accounts: Account[],
+  projectionMonths: number
+): ProjectedMonth[] {
+  const actuals = computeActualsByAccountAndMonth(transactions, accounts);
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  // Aggregate budget lines by month (total budgeted per month)
+  const budgetByMonth = new Map<string, number>();
+  budgetLines.forEach((line) => {
+    const monthKey = line.month.substring(0, 7);
+    budgetByMonth.set(monthKey, (budgetByMonth.get(monthKey) || 0) + line.amount);
+  });
+
+  // Aggregate actuals by month (sum absolute actuals across all budgeted accounts)
+  const actualByMonth = new Map<string, number>();
+  const budgetedAccountIds = new Set(budgetLines.map((l) => l.account_id));
+  actuals.forEach((amount, key) => {
+    const [accountId, monthKey] = key.split(':');
+    if (budgetedAccountIds.has(accountId)) {
+      actualByMonth.set(monthKey, (actualByMonth.get(monthKey) || 0) + Math.abs(amount));
+    }
+  });
+
+  // Calculate trend factor: average (actual / budget) for past months
+  let ratioSum = 0;
+  let ratioCount = 0;
+  budgetByMonth.forEach((budgeted, month) => {
+    if (month < currentMonth && budgeted > 0) {
+      const actual = actualByMonth.get(month) || 0;
+      ratioSum += actual / budgeted;
+      ratioCount++;
+    }
+  });
+  const trendFactor = ratioCount > 0 ? ratioSum / ratioCount : 1;
+
+  // Build projection data: all budget months + future projection months
+  const allMonths = Array.from(budgetByMonth.keys()).sort();
+
+  // Add future months beyond budget period if needed
+  const lastBudgetMonth = allMonths[allMonths.length - 1];
+  if (lastBudgetMonth) {
+    const [lastYear, lastMon] = lastBudgetMonth.split('-').map(Number);
+    let y = lastYear;
+    let m = lastMon;
+    for (let i = 0; i < projectionMonths; i++) {
+      m++;
+      if (m > 12) { m = 1; y++; }
+      const key = `${y}-${String(m).padStart(2, '0')}`;
+      if (!allMonths.includes(key)) {
+        allMonths.push(key);
+      }
+    }
+  }
+
+  return allMonths.map((month) => {
+    const budgeted = budgetByMonth.get(month) || 0;
+    const actual = actualByMonth.get(month) || 0;
+    const isPast = month < currentMonth;
+    const isCurrent = month === currentMonth;
+
+    let projected: number;
+    if (isPast) {
+      projected = actual; // past: projected = actual
+    } else if (isCurrent) {
+      // Current month: blend actual progress with budget
+      const dayOfMonth = now.getDate();
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const progress = dayOfMonth / daysInMonth;
+      projected = actual + (budgeted * trendFactor - actual) * (1 - progress);
+    } else {
+      // Future: budget target × trend factor
+      projected = budgeted > 0 ? budgeted * trendFactor : budgeted;
+    }
+
+    return { month, budgeted, actual, projected };
+  });
 }

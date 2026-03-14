@@ -38,6 +38,7 @@ import {
   BarChart3,
   Calculator,
   LineChart,
+  Target,
 } from 'lucide-react';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -97,6 +98,7 @@ const navSections: NavSection[] = [
     icon: LineChart,
     items: [
       { href: '/scenario-modeling', label: 'Scenario Modeling', icon: FlaskConical },
+      { href: '/roi-forecast', label: 'Budget & Forecast', icon: Target },
     ],
   },
 ];
@@ -840,6 +842,8 @@ function Sidebar({
             );
           })}
         </div>
+
+        <div className="mx-4 border-t border-gray-200 dark:border-gray-700" />
 
         {/* Navigation */}
         <nav className="flex-1 py-4 px-2 overflow-visible">

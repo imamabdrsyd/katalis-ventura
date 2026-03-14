@@ -7,8 +7,11 @@ export interface ParsedRow {
   description: string;
   amount: number | string;
   account: string;
-  debit_account?: string;  // NEW: Optional debit account code
-  credit_account?: string; // NEW: Optional credit account code
+  debit_account?: string;
+  credit_account?: string;
+  // Unit breakdown fields — detected from Qty + Harga Satuan columns
+  qty?: number | string;
+  unit_price?: number | string;
 }
 
 export interface ValidationError {

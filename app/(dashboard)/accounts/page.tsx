@@ -10,11 +10,11 @@ import { AccountDeleteModal } from '@/components/accounts/AccountDeleteModal';
 import { Plus, Search, ChevronDown, ChevronRight, Lock, Pencil, XCircle, CheckCircle2, BookOpen as BookOpenIcon } from 'lucide-react';
 
 const TYPE_COLORS: Record<AccountType, string> = {
-  ASSET: 'from-blue-500 to-blue-600',
-  LIABILITY: 'from-amber-500 to-amber-500',
-  EQUITY: 'from-purple-500 to-purple-500',
-  REVENUE: 'from-green-500 to-green-600',
-  EXPENSE: 'from-red-500 to-red-500',
+  ASSET: 'border-blue-400 dark:border-blue-500 text-blue-600 dark:text-blue-400',
+  LIABILITY: 'border-amber-400 dark:border-amber-500 text-amber-600 dark:text-amber-400',
+  EQUITY: 'border-purple-400 dark:border-purple-500 text-purple-600 dark:text-purple-400',
+  REVENUE: 'border-green-400 dark:border-green-500 text-green-600 dark:text-green-400',
+  EXPENSE: 'border-red-400 dark:border-red-500 text-red-600 dark:text-red-400',
 };
 
 export default function AccountsPage() {
@@ -406,8 +406,8 @@ function ParentAccountCard({
           ) : (
             <ChevronRight className="w-5 h-5 text-gray-500 dark:text-gray-400" />
           )}
-          <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${TYPE_COLORS[parent.account_type]} flex items-center justify-center`}>
-            <span className="text-white font-bold text-sm">{parent.account_code}</span>
+          <div className={`w-10 h-10 rounded-lg border-2 ${TYPE_COLORS[parent.account_type]} flex items-center justify-center bg-white dark:bg-gray-800`}>
+            <span className="font-bold text-xs">{parent.account_code}</span>
           </div>
           <div className="text-left">
             <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">

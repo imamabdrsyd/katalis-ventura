@@ -172,7 +172,9 @@ export default function TransactionImportModal({
 
           // Auto-resolve each valid row
           const resolved: SmartResolvedRow[] = validation.validRows.map((row) => {
-            const result = smartResolveTransaction(row.data.description, accounts);
+            // Pass the raw category column value as a hint (e.g. "Bahan / Kemasan")
+            const categoryHint = String(row.data.category || '').trim() || undefined;
+            const result = smartResolveTransaction(row.data.description, accounts, categoryHint);
             return {
               ...row.data,
               category: result.category,
@@ -306,6 +308,19 @@ export default function TransactionImportModal({
           transaction.debit_account_id = debitAccount!.id;
           transaction.credit_account_id = creditAccount!.id;
           transaction.is_double_entry = true;
+        }
+
+        // Build unit_breakdown meta when qty + unit_price are present
+        const qty = row.qty !== undefined && row.qty !== '' ? sanitizeAmount(row.qty) : null;
+        const unitPrice = row.unit_price !== undefined && row.unit_price !== '' ? sanitizeAmount(row.unit_price) : null;
+        if (qty && unitPrice) {
+          transaction.meta = {
+            unit_breakdown: {
+              quantity: qty,
+              price_per_unit: unitPrice,
+              unit: 'pcs',
+            },
+          };
         }
 
         return transaction;
@@ -523,24 +538,24 @@ export default function TransactionImportModal({
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Mode Toggle */}
           {progress.stage === 'idle' || progress.stage === 'error' ? (
-            <div className="flex gap-2">
+            <div className="flex border-b border-gray-200 dark:border-gray-700">
               <button
                 onClick={() => setImportMode('smart')}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${
                   importMode === 'smart'
-                    ? 'bg-primary-500 text-white shadow-sm'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
                 <Sparkles className="h-4 w-4" />
-                Smart Import (3 kolom)
+                Smart Import
               </button>
               <button
                 onClick={() => setImportMode('full')}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${
                   importMode === 'full'
-                    ? 'bg-primary-500 text-white shadow-sm'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
                 <Table2 className="h-4 w-4" />
@@ -550,24 +565,24 @@ export default function TransactionImportModal({
           ) : null}
 
           {/* Template Download */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
             <div className="flex flex-col sm:flex-row sm:items-start gap-3">
               <div className="flex items-start gap-3 flex-1">
-                <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                <FileText className="h-5 w-5 text-gray-500 dark:text-gray-400 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <h3 className="font-semibold text-blue-900 dark:text-blue-100">
+                  <h3 className="font-semibold text-gray-800 dark:text-gray-200">
                     {importMode === 'smart' ? 'Template Smart Import' : 'Template Import Lengkap'}
                   </h3>
-                  <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {importMode === 'smart'
-                      ? 'Cukup isi 3 kolom: Deskripsi, Tanggal, Nominal — sisanya otomatis'
+                      ? 'Upload file Excel apapun — sistem otomatis mendeteksi kolom dan mengisi kategori, akun, serta breakdown unit'
                       : 'Download template Excel dengan semua kolom untuk import manual'}
                   </p>
                 </div>
               </div>
               <button
                 onClick={handleDownloadTemplate}
-                className="px-4 py-2 rounded-lg flex items-center justify-center gap-2 w-full sm:w-auto whitespace-nowrap shadow-md font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 rounded-lg flex items-center justify-center gap-2 w-full sm:w-auto whitespace-nowrap font-semibold bg-primary-500 text-white hover:bg-primary-600 transition-colors"
               >
                 <Download className="h-4 w-4" />
                 <span>Download Template</span>
@@ -761,6 +776,11 @@ export default function TransactionImportModal({
                             </td>
                             <td className="px-3 py-2 text-right text-gray-900 dark:text-gray-100 whitespace-nowrap font-medium">
                               {formatCurrency(sanitizeAmount(row.amount))}
+                              {row.qty && row.unit_price && (
+                                <div className="text-[10px] text-gray-400 dark:text-gray-500 font-normal mt-0.5">
+                                  {String(row.qty)} × {formatCurrency(sanitizeAmount(row.unit_price))}
+                                </div>
+                              )}
                             </td>
                             {/* Category (editable) */}
                             <td className="px-3 py-2">

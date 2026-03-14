@@ -56,9 +56,9 @@ const CATEGORY_DEFAULT_ACCOUNTS: Record<TransactionCategory, { debitCodes: strin
  */
 const KEYWORD_CATEGORY_MAP: Array<{ keywords: string[]; category: TransactionCategory }> = [
   { keywords: ['pendapatan', 'pemasukan', 'revenue', 'income', 'penjualan', 'jual', 'terima pembayaran', 'fee jasa'], category: 'EARN' },
-  { keywords: ['bayar', 'biaya', 'beban', 'expense', 'telepon', 'wifi', 'keamanan', 'sewa kantor', 'operasional'], category: 'OPEX' },
-  { keywords: ['bahan baku', 'persediaan', 'stok', 'packaging', 'hpp', 'variabel'], category: 'VAR' },
-  { keywords: ['renovasi', 'bangunan', 'perbaikan besar', 'investasi aset'], category: 'CAPEX' },
+  { keywords: ['bayar', 'biaya', 'beban', 'expense', 'telepon', 'wifi', 'keamanan', 'sewa kantor', 'operasional', 'bbm', 'bensin', 'solar', 'atk', 'cetak', 'alat tulis', 'gaji', 'listrik', 'air'], category: 'OPEX' },
+  { keywords: ['bahan baku', 'bahan kemasan', 'bahan', 'kemasan', 'packaging', 'persediaan', 'stok', 'hpp', 'variabel', 'botol', 'plastik', 'karton'], category: 'VAR' },
+  { keywords: ['renovasi', 'bangunan', 'perbaikan besar', 'investasi aset', 'peralatan', 'mesin', 'kendaraan'], category: 'CAPEX' },
   { keywords: ['pajak', 'pph', 'pbb', 'ppn', 'retribusi', 'tax'], category: 'TAX' },
   { keywords: ['pinjaman', 'angsuran', 'bunga bank', 'transfer modal', 'modal', 'prive', 'cicilan'], category: 'FIN' },
 ];
@@ -132,11 +132,14 @@ function detectCategoryFromKeywords(description: string): TransactionCategory | 
 }
 
 /**
- * Main smart resolve function
+ * Main smart resolve function.
+ * @param categoryHint - Optional raw category string from the user's file (e.g. "Bahan / Kemasan")
+ *                       Used as additional keyword context when description alone doesn't match.
  */
 export function smartResolveTransaction(
   description: string,
-  accounts: Account[]
+  accounts: Account[],
+  categoryHint?: string
 ): SmartResolveResult {
   const pattern = detectPatternFromName(description);
 
@@ -144,9 +147,16 @@ export function smartResolveTransaction(
     return resolveFromPattern(description, pattern, accounts);
   }
 
-  // Fallback: keyword-based category detection
-  const category = detectCategoryFromKeywords(description) || 'OPEX';
-  return resolveFromCategory(description, category, accounts, category !== 'OPEX');
+  // Try keyword detection on description first
+  let category = detectCategoryFromKeywords(description);
+
+  // If no match, try the user's original category column value as a keyword hint
+  if (!category && categoryHint) {
+    category = detectCategoryFromKeywords(categoryHint);
+  }
+
+  const hasMatch = !!category;
+  return resolveFromCategory(description, category || 'OPEX', accounts, hasMatch);
 }
 
 /**

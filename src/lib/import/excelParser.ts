@@ -54,18 +54,30 @@ function normalizeRow(row: any): ParsedRow {
 
   // Map of possible column variations to standard names
   const columnMappings: Record<string, string[]> = {
-    date: ['date', 'tanggal', 'tgl'],
-    category: ['category', 'kategori', 'type', 'tipe'],
-    name: ['name', 'nama', 'customer', 'vendor', 'pelanggan'],
-    description: ['description', 'deskripsi', 'keterangan', 'notes', 'catatan'],
-    amount: ['amount', 'jumlah', 'nominal', 'total'],
+    date: ['date', 'tanggal', 'tgl', 'tanggal transaksi'],
+    category: ['category', 'kategori', 'type', 'tipe', 'jenis', 'jenis transaksi'],
+    name: ['name', 'nama', 'customer', 'vendor', 'pelanggan', 'nama pelanggan', 'nama vendor'],
+    description: [
+      'description', 'deskripsi', 'keterangan', 'notes', 'catatan',
+      // Product/item column names commonly found in non-standard files
+      'item', 'produk', 'barang', 'nama barang', 'nama item', 'nama produk',
+      'uraian', 'uraian barang', 'detail', 'rincian',
+    ],
+    amount: ['amount', 'jumlah', 'nominal', 'total', 'total harga', 'harga total', 'subtotal'],
     account: ['account', 'akun', 'payment method', 'metode pembayaran'],
     debit_account: ['debit account', 'debit', 'dr', 'akun debit', 'debit_account'],
     credit_account: ['credit account', 'credit', 'cr', 'akun kredit', 'credit_account'],
+    // Unit breakdown fields
+    qty: ['qty', 'quantity', 'jumlah item', 'jumlah barang', 'kuantitas', 'jumlah unit', 'banyak'],
+    unit_price: [
+      'harga satuan', 'harga/unit', 'unit price', 'price per unit',
+      'harga per unit', 'harga unit', 'satuan harga', 'harga per pcs', 'price',
+    ],
   };
 
   // Get all keys from the row (case-insensitive)
   const rowKeys = Object.keys(row);
+  const mappedRowKeys = new Set<string>();
 
   // For each standard column, find matching column in the row
   for (const [standardKey, variations] of Object.entries(columnMappings)) {
@@ -75,17 +87,36 @@ function normalizeRow(row: any): ParsedRow {
 
     if (matchingKey) {
       normalized[standardKey] = row[matchingKey];
+      mappedRowKeys.add(matchingKey);
     } else {
       normalized[standardKey] = '';
+    }
+  }
+
+  // Smart description fallback: if no description column matched,
+  // look for an unmapped column that has text (not numeric) values — likely the item/product name
+  if (!normalized.description || String(normalized.description).trim() === '') {
+    for (const key of rowKeys) {
+      if (mappedRowKeys.has(key)) continue;
+      const val = String(row[key] || '').trim();
+      // Must be non-empty and not purely numeric
+      if (val && isNaN(Number(val.replace(/[.,\s]/g, '')))) {
+        normalized.description = val;
+        break;
+      }
     }
   }
 
   return normalized as ParsedRow;
 }
 
+/** System categories that indicate the file was already in full-import format */
+const SYSTEM_CATEGORIES = new Set(['earn', 'opex', 'var', 'capex', 'tax', 'fin']);
+
 /**
  * Detect import mode from parsed data.
- * Smart mode: has description + date + amount but missing category AND name.
+ * Smart mode: has description + date + amount, and category (if any) is not a system category.
+ * This also handles non-standard files (e.g. with Qty + Harga Satuan columns).
  */
 export function detectImportMode(rows: ParsedRow[]): ImportMode {
   if (rows.length === 0) return 'full';
@@ -99,10 +130,15 @@ export function detectImportMode(rows: ParsedRow[]): ImportMode {
     const hasDescription = row.description && String(row.description).trim() !== '';
     const hasDate = row.date && String(row.date).trim() !== '';
     const hasAmount = row.amount !== '' && row.amount !== null && row.amount !== undefined;
-    const missingCategory = !row.category || String(row.category).trim() === '';
+
+    // Category is "missing for smart" if either not present, OR present but not a system category
+    // (e.g. "Bahan / Kemasan", "Operasional (BBM)" are user-defined labels, not system codes)
+    const categoryVal = String(row.category || '').trim().toLowerCase();
+    const categoryIsUserDefined = !categoryVal || !SYSTEM_CATEGORIES.has(categoryVal);
+
     const missingName = !row.name || String(row.name).trim() === '';
 
-    if (hasDescription && hasDate && hasAmount && missingCategory && missingName) {
+    if (hasDescription && hasDate && hasAmount && categoryIsUserDefined && missingName) {
       smartCount++;
     }
   }
