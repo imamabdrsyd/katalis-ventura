@@ -27,6 +27,8 @@ export interface TransactionMeta {
     label: string;
     description: string;
   };
+  /** Free-text tags for categorization and filtering */
+  tags?: string[];
 }
 
 export interface Account {
@@ -411,4 +413,82 @@ export interface InvoiceSettings {
   bank_account_number: string;
   bank_account_holder: string;
   contact_number: string;
+}
+
+// ==================== BUDGET & FORECAST ====================
+
+export type BudgetStatus = 'draft' | 'approved' | 'locked';
+
+export interface Budget {
+  id: string;
+  business_id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  status: BudgetStatus;
+  notes: string | null;
+  created_by: string;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+  lines?: BudgetLine[];
+}
+
+export interface BudgetLine {
+  id: string;
+  budget_id: string;
+  account_id: string;
+  month: string;
+  amount: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  account?: Account;
+}
+
+export interface BudgetFormData {
+  name: string;
+  start_date: string;
+  end_date: string;
+  notes: string;
+}
+
+export interface BudgetLineInput {
+  account_id: string;
+  month: string;
+  amount: number;
+  notes?: string;
+}
+
+export interface BudgetVsActualRow {
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  accountType: AccountType;
+  month: string;
+  budgeted: number;
+  actual: number;
+  variance: number;
+  variancePercent: number;
+}
+
+export interface BudgetSummaryKPI {
+  totalBudgetedRevenue: number;
+  totalActualRevenue: number;
+  totalBudgetedExpense: number;
+  totalActualExpense: number;
+  revenueVariance: number;
+  expenseVariance: number;
+  revenueVariancePercent: number;
+  expenseVariancePercent: number;
+  burnRate: number;
+  monthsRemaining: number;
+  budgetUtilization: number;
+}
+
+export interface ProjectedMonth {
+  month: string;
+  budgeted: number;
+  actual: number;
+  projected: number;
 }
