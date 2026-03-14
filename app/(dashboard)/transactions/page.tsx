@@ -9,9 +9,9 @@ import { DeleteConfirmModal } from '@/components/transactions/DeleteConfirmModal
 import TransactionImportModal from '@/components/transactions/TransactionImportModal';
 import type { TransactionCategory } from '@/types';
 import { QuickTransactionForm } from '@/components/transactions/QuickTransactionForm';
-import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2 } from 'lucide-react';
+import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2, Calculator } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
@@ -101,6 +101,49 @@ function TransactionsPageInner() {
     handleOpenInModal,
     handleOpenOutModal,
   } = useTransactions();
+
+  // Tag filter state
+  const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);
+
+  // Collect all unique tags from all transactions
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    transactions.forEach((t) => t.meta?.tags?.forEach((tag) => set.add(tag)));
+    return Array.from(set).sort();
+  }, [transactions]);
+
+  // Apply tag filter on top of visibleTransactions
+  const tagFilteredTransactions = useMemo(() => {
+    if (activeTagFilters.length === 0) return visibleTransactions;
+    return visibleTransactions.filter((t) =>
+      activeTagFilters.every((tag) => t.meta?.tags?.includes(tag))
+    );
+  }, [visibleTransactions, activeTagFilters]);
+
+
+  // Compute summary for selected transactions
+  const selectedSummary = useMemo(() => {
+    if (selectedIds.size === 0) return { masuk: 0, keluar: 0, selisih: 0 };
+    let masuk = 0;
+    let keluar = 0;
+    for (const t of transactions) {
+      if (!selectedIds.has(t.id)) continue;
+      if (t.category === 'EARN') {
+        masuk += t.amount;
+      } else {
+        keluar += t.amount;
+      }
+    }
+    return { masuk, keluar, selisih: masuk - keluar };
+  }, [selectedIds, transactions]);
+
+  const [showSelectedSummary, setShowSelectedSummary] = useState(false);
+
+  const toggleTagFilter = (tag: string) => {
+    setActiveTagFilters((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
 
   // Highlight recently imported transactions
   const [highlightAfter, setHighlightAfter] = useState<string | null>(null);
@@ -253,43 +296,64 @@ function TransactionsPageInner() {
       {/* Transaction List */}
       <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_24px_rgba(0,0,0,0.04)] p-5">
 
-        {/* Status Filter Tabs */}
-        <div className="flex items-center gap-1 mb-4 border-b border-gray-200 dark:border-gray-700">
-          <button
-            onClick={() => setStatusFilter('all')}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              statusFilter === 'all'
-                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            Semua
-          </button>
-          <button
-            onClick={() => setStatusFilter('draft')}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
-              statusFilter === 'draft'
-                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            Draft
-            {draftCount > 0 && (
-              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300">
-                {draftCount}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setStatusFilter('posted')}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              statusFilter === 'posted'
-                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            Posted
-          </button>
+        {/* Status Filter Tabs + Tag Filter */}
+        <div className="flex items-center mb-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-1 flex-1">
+            <button
+              onClick={() => setStatusFilter('all')}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                statusFilter === 'all'
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Semua
+            </button>
+            <button
+              onClick={() => setStatusFilter('draft')}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+                statusFilter === 'draft'
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Draft
+              {draftCount > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300">
+                  {draftCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setStatusFilter('posted')}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                statusFilter === 'posted'
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Posted
+            </button>
+          </div>
+
+          {/* Tag Filter — scrollable chips ujung kanan */}
+          {allTags.length > 0 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-px max-w-xs flex-shrink-0 pl-2">
+              {allTags.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => toggleTagFilter(tag)}
+                  className={`flex-shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition-colors whitespace-nowrap mb-1 ${
+                    activeTagFilters.includes(tag)
+                      ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 border-indigo-300 dark:border-indigo-600'
+                      : 'bg-gray-100 dark:bg-gray-700/60 text-gray-500 dark:text-gray-400 border-transparent hover:border-gray-300 dark:hover:border-gray-500 hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Select Mode Action Bar */}
@@ -317,7 +381,27 @@ function TransactionsPageInner() {
                     <Trash2 className="w-3.5 h-3.5" />
                     Hapus ({selectedIds.size})
                   </button>
+                  <button
+                    onClick={() => setShowSelectedSummary(!showSelectedSummary)}
+                    className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 ${showSelectedSummary ? 'bg-indigo-500 text-white' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}
+                  >
+                    <Calculator className="w-3.5 h-3.5" />
+                    Ringkasan
+                  </button>
                 </>
+              )}
+              {showSelectedSummary && selectedIds.size > 0 && (
+                <div className="flex items-center gap-3 ml-2 text-sm">
+                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                    Masuk: {selectedSummary.masuk.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}
+                  </span>
+                  <span className="text-red-500 dark:text-red-400 font-medium">
+                    Keluar: {selectedSummary.keluar.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}
+                  </span>
+                  <span className={`font-semibold ${selectedSummary.selisih >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-600 dark:text-red-300'}`}>
+                    Selisih: {selectedSummary.selisih.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}
+                  </span>
+                </div>
               )}
             </div>
             <button
@@ -332,7 +416,7 @@ function TransactionsPageInner() {
 
         <div className="overflow-auto max-h-[70vh]">
           <TransactionList
-            transactions={visibleTransactions}
+            transactions={tagFilteredTransactions}
             loading={loading}
             onRowClick={selectMode ? undefined : setDetailTransaction}
             onEdit={canManageTransactions && !selectMode ? setEditTransaction : undefined}
@@ -496,6 +580,8 @@ function TransactionsPageInner() {
         accounts={accounts}
         allTransactions={transactions}
         onCreateFollowUp={canManageTransactions ? handleCreateFollowUp : undefined}
+        onTransactionUpdated={setDetailTransaction}
+        allTags={allTags}
       />
 
       {/* Delete Confirmation */}
