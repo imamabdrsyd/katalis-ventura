@@ -39,6 +39,7 @@ import {
   Calculator,
   LineChart,
   Target,
+  Calendar,
 } from 'lucide-react';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -356,6 +357,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
   const [showAddBusiness, setShowAddBusiness] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -413,6 +415,12 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
+  }, []);
+
+  useEffect(() => {
+    setCurrentTime(new Date());
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
   }, []);
 
   return (
@@ -546,6 +554,16 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
             ⌘K
           </kbd>
         </button>
+
+        {/* Real-time Date Widget */}
+        {currentTime && (
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-xs text-gray-700 dark:text-gray-200">
+            <Calendar className="w-4 h-4 text-primary-500 flex-shrink-0" />
+            <span>
+              {currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            </span>
+          </div>
+        )}
 
         {/* Quick Entry Button */}
         {canManage && activeBusiness && (
