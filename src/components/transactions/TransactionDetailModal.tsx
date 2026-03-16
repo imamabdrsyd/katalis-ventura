@@ -8,9 +8,10 @@ import { CATEGORY_LABELS } from '@/lib/calculations';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import { getProfileName } from '@/lib/api/profiles';
 import { getRecordAuditHistory, getFieldChanges, formatFieldName, formatAuditValue } from '@/lib/api/audit';
-import { detectMatchingPrincipleWarning } from '@/lib/accounting/guidance';
-import { AlertTriangle, Info, X, CheckCircle2 } from 'lucide-react';
+import { detectMatchingPrincipleWarning, isReceivableTransaction, isSettled } from '@/lib/accounting/guidance';
+import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink } from 'lucide-react';
 import { updateTransaction } from '@/lib/api/transactions';
+import { formatFileSize, isImageType } from '@/lib/storage/attachments';
 
 interface TransactionDetailModalProps {
   transaction: Transaction | null;
@@ -24,6 +25,8 @@ interface TransactionDetailModalProps {
   onCreateFollowUp?: (prefillData: Partial<TransactionFormData>) => void;
   onTransactionUpdated?: (transaction: Transaction) => void;
   allTags?: string[];
+  onSettleReceivable?: (transaction: Transaction) => void;
+  settleLoading?: boolean;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -101,6 +104,8 @@ export function TransactionDetailModal({
   onCreateFollowUp,
   onTransactionUpdated,
   allTags = [],
+  onSettleReceivable,
+  settleLoading = false,
 }: TransactionDetailModalProps) {
   const [creatorName, setCreatorName] = useState<string | null>(null);
   const [loadingCreator, setLoadingCreator] = useState(false);
@@ -115,6 +120,7 @@ export function TransactionDetailModal({
   const [tagInput, setTagInput] = useState('');
   const [savingTag, setSavingTag] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showSettleConfirm, setShowSettleConfirm] = useState(false);
   const tagInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
@@ -129,6 +135,7 @@ export function TransactionDetailModal({
   useEffect(() => {
     setTags(transaction?.meta?.tags ?? []);
     setTagInput('');
+    setShowSettleConfirm(false);
   }, [transaction?.id]);
 
   const saveTags = async (newTags: string[], prevTags: string[]) => {
@@ -520,6 +527,58 @@ export function TransactionDetailModal({
           )}
         </div>
 
+        {/* Attachment / Dokumen Sumber */}
+        {transaction.meta?.attachment && (
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+              Lampiran
+            </h4>
+            {isImageType(transaction.meta.attachment.mime_type) ? (
+              <a
+                href={transaction.meta.attachment.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block group"
+              >
+                <div className="relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                  <img
+                    src={transaction.meta.attachment.url}
+                    alt={transaction.meta.attachment.filename}
+                    className="w-full max-h-64 object-contain bg-gray-50 dark:bg-gray-800 group-hover:opacity-90 transition-opacity"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                    <ExternalLink className="w-6 h-6 text-white drop-shadow-lg" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  <span className="truncate">{transaction.meta.attachment.filename}</span>
+                  <span>{formatFileSize(transaction.meta.attachment.size)}</span>
+                </div>
+              </a>
+            ) : (
+              <a
+                href={transaction.meta.attachment.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
+              >
+                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-red-500 dark:text-red-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    {transaction.meta.attachment.filename}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {formatFileSize(transaction.meta.attachment.size)}
+                  </p>
+                </div>
+                <Download className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors flex-shrink-0" />
+              </a>
+            )}
+          </div>
+        )}
+
         {/* Sold Stock Info */}
         {soldStockTransactions.length > 0 && (
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -551,6 +610,58 @@ export function TransactionDetailModal({
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Receivable Settlement Section */}
+        {isReceivableTransaction(transaction) && onSettleReceivable && (
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            {isSettled(transaction) ? (
+              <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-lg">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-300">LUNAS</p>
+                  <p className="text-xs text-emerald-500 dark:text-emerald-400">
+                    Dilunasi via transaksi {transaction.meta!.settled_by_transaction_id!.slice(0, 8)}...
+                  </p>
+                </div>
+              </div>
+            ) : !showSettleConfirm ? (
+              <button
+                onClick={() => setShowSettleConfirm(true)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg transition-colors"
+              >
+                <Banknote className="w-4 h-4" />
+                Lunasi Piutang
+              </button>
+            ) : (
+              <div className="rounded-lg border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 p-4 space-y-3">
+                <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                  Konfirmasi Pelunasan Piutang
+                </p>
+                <div className="px-3 py-2 bg-white dark:bg-gray-800 rounded-md font-mono text-xs text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                  Dr {transaction.credit_account?.account_code} - {transaction.credit_account?.account_name} &nbsp;|&nbsp;
+                  Cr {transaction.debit_account?.account_code} - {transaction.debit_account?.account_name} &nbsp;|&nbsp;
+                  {formatCurrency(transaction.amount)}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setShowSettleConfirm(false); onSettleReceivable(transaction); }}
+                    disabled={settleLoading}
+                    className="flex-1 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {settleLoading ? 'Memproses...' : 'Ya, Lunasi'}
+                  </button>
+                  <button
+                    onClick={() => setShowSettleConfirm(false)}
+                    disabled={settleLoading}
+                    className="flex-1 px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

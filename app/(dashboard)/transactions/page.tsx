@@ -91,6 +91,7 @@ function TransactionsPageInner() {
     handleBulkPost,
     // Post actions
     handlePostTransaction,
+    handleSettleReceivable,
     // Actions
     fetchTransactions,
     handleAddTransaction,
@@ -582,6 +583,8 @@ function TransactionsPageInner() {
         onCreateFollowUp={canManageTransactions ? handleCreateFollowUp : undefined}
         onTransactionUpdated={setDetailTransaction}
         allTags={allTags}
+        onSettleReceivable={canManageTransactions ? handleSettleReceivable : undefined}
+        settleLoading={saving}
       />
 
       {/* Delete Confirmation */}

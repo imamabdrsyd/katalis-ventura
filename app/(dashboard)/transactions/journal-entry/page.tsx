@@ -13,7 +13,7 @@ import { updateTransaction } from '@/lib/api/transactions';
 import { InventoryPicker } from '@/components/transactions/InventoryPicker';
 import { AccountDropdown } from '@/components/transactions/AccountDropdown';
 import { validateCategoryConsistency } from '@/lib/accounting/validators/transactionValidator';
-import type { Account, AccountType, TransactionCategory, Transaction, UnitBreakdown } from '@/types';
+import type { Account, AccountType, TransactionCategory, Transaction, UnitBreakdown, TransactionAttachment } from '@/types';
 import {
   ArrowLeft,
   BookOpen,
@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { UnitBreakdownSection } from '@/components/transactions/UnitBreakdownSection';
+import { FileUpload } from '@/components/ui/FileUpload';
 
 // ─── entry types ───────────────────────────────────────────────────────────
 
@@ -286,6 +287,9 @@ export default function JournalEntryPage() {
   const [unitBreakdown, setUnitBreakdown] = useState<UnitBreakdown | null>(null);
   const [showBreakdown, setShowBreakdown] = useState(false);
 
+  // attachment state
+  const [attachment, setAttachment] = useState<TransactionAttachment | null>(null);
+
   // inventory state
   const [selectedStockIds, setSelectedStockIds] = useState<string[]>([]);
 
@@ -465,6 +469,9 @@ export default function JournalEntryPage() {
           description: selectedEntryType.description,
         };
       }
+      if (attachment) {
+        meta.attachment = attachment;
+      }
 
       await createTransaction({
         business_id: businessId,
@@ -491,6 +498,7 @@ export default function JournalEntryPage() {
       setSelectedStockIds([]);
       setUnitBreakdown(null);
       setShowBreakdown(false);
+      setAttachment(null);
       setErrors({});
       setSuccessMessage('Transaksi berhasil disimpan!');
       setTimeout(() => setSuccessMessage(''), 3000);
@@ -780,6 +788,22 @@ export default function JournalEntryPage() {
                 placeholder="Catatan atau penjelasan tambahan..."
               />
             </div>
+
+            {/* Lampiran */}
+            {businessId && (
+              <div>
+                <label className="label text-base font-semibold">
+                  Lampiran
+                  <span className="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500">(opsional)</span>
+                </label>
+                <FileUpload
+                  businessId={businessId}
+                  value={attachment}
+                  onChange={setAttachment}
+                  disabled={saving}
+                />
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">

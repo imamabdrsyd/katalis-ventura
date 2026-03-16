@@ -6,6 +6,7 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import * as transactionsApi from '@/lib/api/transactions';
 import { getAccounts } from '@/lib/api/accounts';
 import { findCogsAccount } from '@/lib/utils/inventoryHelper';
+import { buildSettlementPrefill } from '@/lib/accounting/guidance/receivableSettlement';
 import type { Transaction, TransactionCategory, TransactionStatus, Account } from '@/types';
 import type { TransactionFormData } from '@/components/transactions/TransactionForm';
 import type { TransactionFilters } from '@/lib/api/transactions';
@@ -322,6 +323,42 @@ export function useTransactions() {
     setShowAddModal(true);
   }, []);
 
+  // Settle a receivable: create settlement transaction + mark original as settled
+  const handleSettleReceivable = useCallback(async (original: Transaction) => {
+    if (!businessId || !user) return;
+    setSaving(true);
+    try {
+      // 1. Buat transaksi settlement (langsung posted)
+      const settlement = await transactionsApi.createTransaction({
+        ...buildSettlementPrefill(original),
+        business_id: businessId,
+        created_by: user.id,
+      });
+
+      // 2. Update meta transaksi asli dengan settled_by_transaction_id
+      const updated = await transactionsApi.updateTransaction(original.id, {
+        meta: {
+          ...original.meta,
+          settled_by_transaction_id: settlement.id,
+        },
+      });
+
+      // 3. Update detail modal state agar langsung tampilkan status LUNAS
+      setDetailTransaction({
+        ...original,
+        ...updated,
+        debit_account: original.debit_account,
+        credit_account: original.credit_account,
+      });
+
+      invalidateTransactions();
+    } catch (err: any) {
+      alert(err.message || 'Gagal melunasi piutang');
+    } finally {
+      setSaving(false);
+    }
+  }, [businessId, user, invalidateTransactions]);
+
   return {
     // Data
     transactions,
@@ -374,6 +411,7 @@ export function useTransactions() {
     followUpPrefill,
     setFollowUpPrefill,
     handleCreateFollowUp,
+    handleSettleReceivable,
     handleConvertStockToCOGS,
     // Kebab menu & select mode
     showKebabMenu,

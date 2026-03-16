@@ -7,3 +7,10 @@ export {
 } from './transactionPatterns';
 export { detectMatchingPrincipleWarning } from './matchingPrincipleWarning';
 export type { MatchingPrincipleWarning } from './matchingPrincipleWarning';
+export {
+  isReceivableTransaction,
+  isSettled,
+  isSettlementEntry,
+  buildSettlementPrefill,
+} from './receivableSettlement';
+export type { SettlementPrefill } from './receivableSettlement';

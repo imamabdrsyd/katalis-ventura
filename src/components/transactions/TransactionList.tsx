@@ -344,8 +344,15 @@ export function TransactionList({
               <td className="py-3 px-2 md:py-4 text-sm font-medium text-gray-800 dark:text-gray-200 break-words">
                 {getRowSubject(transaction)}
               </td>
-              <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 break-words">
-                {isInventoryTransaction(transaction) ? transaction.name : transaction.description}
+              <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 max-w-[200px]">
+                <div className="relative group">
+                  <span className="block truncate cursor-default">
+                    {isInventoryTransaction(transaction) ? transaction.name : transaction.description}
+                  </span>
+                  <div className="absolute left-0 bottom-full mb-2 z-50 hidden group-hover:block w-64 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg p-3 shadow-xl pointer-events-none">
+                    {isInventoryTransaction(transaction) ? transaction.name : transaction.description}
+                  </div>
+                </div>
               </td>
               <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
                 {formatDateShort(transaction.date)}

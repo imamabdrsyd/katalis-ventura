@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import type { Account, AccountType } from '@/types';
+import type { Account, AccountType, TransactionAttachment } from '@/types';
 import type { TransactionFormData } from './TransactionForm';
 import { getAccounts } from '@/lib/api/accounts';
 import { useParams } from 'next/navigation';
@@ -16,6 +16,7 @@ import {
 import { getStockTransactions } from '@/lib/utils/inventoryHelper';
 import { InventoryPicker } from './InventoryPicker';
 import { UnitBreakdownSection } from './UnitBreakdownSection';
+import { FileUploadCompact } from '@/components/ui/FileUpload';
 import { ChevronDown, StickyNote, Zap, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 
@@ -67,6 +68,9 @@ export function QuickTransactionForm({
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
   const [showNotes, setShowNotes] = useState(false);
+
+  // Attachment state
+  const [attachment, setAttachment] = useState<TransactionAttachment | null>(null);
 
   // Unit breakdown state
   const [unitBreakdown, setUnitBreakdown] = useState<UnitBreakdown | null>(null);
@@ -279,11 +283,12 @@ export function QuickTransactionForm({
       }
     }
 
-    // Attach meta: sold_stock_ids + unit_breakdown
+    // Attach meta: sold_stock_ids + unit_breakdown + attachment
     const formData = result as TransactionFormData;
     formData.meta = {
       ...(selectedStockIds.length > 0 ? { sold_stock_ids: selectedStockIds } : {}),
       unit_breakdown: unitBreakdown && unitBreakdown.unit ? unitBreakdown : undefined,
+      attachment: attachment || undefined,
     };
 
     await onSubmit(formData);
@@ -527,6 +532,16 @@ export function QuickTransactionForm({
           </div>
         )}
       </div>
+
+      {/* 6. LAMPIRAN (Expandable) */}
+      {businessId && (
+        <FileUploadCompact
+          businessId={businessId}
+          value={attachment}
+          onChange={setAttachment}
+          disabled={loading}
+        />
+      )}
 
       {/* Action Buttons */}
       <div className="flex gap-3 pt-2">

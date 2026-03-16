@@ -16,6 +16,21 @@ export interface UnitBreakdown {
   unit: string; // e.g. 'pcs', 'gram', 'galon', 'ikat', 'orang', 'trip', or custom
 }
 
+export interface TransactionAttachment {
+  /** Storage path for deletion */
+  path: string;
+  /** Public URL of the file */
+  url: string;
+  /** Original filename */
+  filename: string;
+  /** File size in bytes */
+  size: number;
+  /** MIME type (e.g. image/jpeg, application/pdf) */
+  mime_type: string;
+  /** ISO timestamp of upload */
+  uploaded_at: string;
+}
+
 export interface TransactionMeta {
   /** IDs of stock transactions that were sold/converted to COGS alongside this sale */
   sold_stock_ids?: string[];
@@ -29,6 +44,12 @@ export interface TransactionMeta {
   };
   /** Free-text tags for categorization and filtering */
   tags?: string[];
+  /** ID transaksi pelunasan yang menyelesaikan piutang ini */
+  settled_by_transaction_id?: string;
+  /** ID transaksi piutang asli yang di-settle oleh entry ini */
+  settlement_of_transaction_id?: string;
+  /** Dokumen sumber / bukti transaksi (faktur, nota, kuitansi) */
+  attachment?: TransactionAttachment;
 }
 
 export interface Account {

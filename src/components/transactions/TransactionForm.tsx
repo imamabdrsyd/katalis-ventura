@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import type { Transaction, TransactionCategory, TransactionMeta, Account } from '@/types';
+import type { Transaction, TransactionCategory, TransactionMeta, TransactionAttachment, Account } from '@/types';
 import { CATEGORY_LABELS } from '@/lib/calculations';
 import { getAccounts } from '@/lib/api/accounts';
 import { AccountDropdown } from './AccountDropdown';
@@ -11,6 +11,7 @@ import { useAccountingGuidance } from '@/hooks/useAccountingGuidance';
 import { AlertCircle, Lightbulb, AlertTriangle } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { UnitBreakdownSection } from '@/components/transactions/UnitBreakdownSection';
+import { FileUpload } from '@/components/ui/FileUpload';
 import type { UnitBreakdown } from '@/types';
 
 export interface TransactionFormData {
@@ -131,6 +132,11 @@ export function TransactionForm({
   );
   const [showBreakdown, setShowBreakdown] = useState(!!transaction?.meta?.unit_breakdown);
 
+  // Attachment state
+  const [attachment, setAttachment] = useState<TransactionAttachment | null>(
+    transaction?.meta?.attachment || null
+  );
+
   // Fetch accounts on mount
   useEffect(() => {
     async function fetchAccounts() {
@@ -206,6 +212,7 @@ export function TransactionForm({
         meta: {
           ...formData.meta,
           unit_breakdown: unitBreakdown && unitBreakdown.unit ? unitBreakdown : undefined,
+          attachment: attachment || undefined,
         },
       };
 
@@ -508,7 +515,20 @@ export function TransactionForm({
         )}
       </div>
 
-      {/* 5. TANGGAL */}
+      {/* 5. LAMPIRAN */}
+      {businessId && (
+        <div>
+          <label className="label">Lampiran (opsional)</label>
+          <FileUpload
+            businessId={businessId}
+            value={attachment}
+            onChange={setAttachment}
+            disabled={loading}
+          />
+        </div>
+      )}
+
+      {/* 6. TANGGAL */}
       <div>
         <label className="label">Tanggal *</label>
         <input
