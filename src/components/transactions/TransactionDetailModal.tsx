@@ -687,10 +687,7 @@ export function TransactionDetailModal({
                 {settlementOf && (
                   <button
                     type="button"
-                    onClick={() => {
-                      onShowRelatedTransaction?.(settlementOf);
-                      onClose();
-                    }}
+                    onClick={() => onShowRelatedTransaction?.(settlementOf)}
                     className="w-full flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:border-blue-300 dark:hover:border-blue-700 transition-colors text-left group cursor-pointer"
                   >
                     <Link2 className="w-4 h-4 text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" />
@@ -711,10 +708,7 @@ export function TransactionDetailModal({
                 {settledBy && (
                   <button
                     type="button"
-                    onClick={() => {
-                      onShowRelatedTransaction?.(settledBy);
-                      onClose();
-                    }}
+                    onClick={() => onShowRelatedTransaction?.(settledBy)}
                     className="w-full flex items-start gap-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors text-left group cursor-pointer"
                   >
                     <Link2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
