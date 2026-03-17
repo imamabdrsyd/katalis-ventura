@@ -921,7 +921,7 @@ export function TransactionDetailModal({
                 Posting
               </button>
             )}
-            {onEdit && isDraft && (
+            {onEdit && (
               <button
                 onClick={() => {
                   onClose();
