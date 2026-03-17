@@ -740,42 +740,42 @@ export function TransactionDetailModal({
                   <button
                     type="button"
                     onClick={() => onShowRelatedTransaction?.(settlementOf)}
-                    className="w-full flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:border-blue-300 dark:hover:border-blue-700 transition-colors text-left group cursor-pointer"
+                    className="w-full flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-700 transition-colors text-left group cursor-pointer"
                   >
-                    <Link2 className="w-4 h-4 text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                    <Link2 className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 flex-shrink-0 mt-0.5 transition-colors" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-blue-600 dark:text-blue-300 font-semibold mb-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-300 font-semibold mb-1 transition-colors">
                         Pelunasan dari transaksi:
                       </p>
-                      <p className="text-sm text-blue-900 dark:text-blue-100 font-medium group-hover:underline">
+                      <p className="text-sm text-gray-800 dark:text-gray-100 font-medium group-hover:text-blue-600 dark:group-hover:text-blue-300 group-hover:underline transition-colors">
                         {formatDate(settlementOf.date)} • {settlementOf.name}
                       </p>
-                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-blue-500 dark:group-hover:text-blue-400 mt-1 transition-colors">
                         {formatCurrency(settlementOf.amount)}
                       </p>
                     </div>
-                    <ExternalLink className="w-4 h-4 text-blue-400 dark:text-blue-500 flex-shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ExternalLink className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-blue-400 dark:group-hover:text-blue-500 flex-shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-all" />
                   </button>
                 )}
                 {settledBy && (
                   <button
                     type="button"
                     onClick={() => onShowRelatedTransaction?.(settledBy)}
-                    className="w-full flex items-start gap-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors text-left group cursor-pointer"
+                    className="w-full flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-700 transition-colors text-left group cursor-pointer"
                   >
-                    <Link2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <Link2 className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 flex-shrink-0 mt-0.5 transition-colors" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-emerald-600 dark:text-emerald-300 font-semibold mb-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-300 font-semibold mb-1 transition-colors">
                         Dilunasi oleh transaksi:
                       </p>
-                      <p className="text-sm text-emerald-900 dark:text-emerald-100 font-medium group-hover:underline">
+                      <p className="text-sm text-gray-800 dark:text-gray-100 font-medium group-hover:text-blue-600 dark:group-hover:text-blue-300 group-hover:underline transition-colors">
                         {formatDate(settledBy.date)} • {settledBy.name}
                       </p>
-                      <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-blue-500 dark:group-hover:text-blue-400 mt-1 transition-colors">
                         {formatCurrency(settledBy.amount)}
                       </p>
                     </div>
-                    <ExternalLink className="w-4 h-4 text-emerald-400 dark:text-emerald-500 flex-shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ExternalLink className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-blue-400 dark:group-hover:text-blue-500 flex-shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-all" />
                   </button>
                 )}
               </div>
