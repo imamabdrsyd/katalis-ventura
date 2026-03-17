@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 9 Maret 2026 | Terakhir diupdate: 9 Maret 2026
+> Terakhir diaudit: 18 Maret 2026 | Terakhir diupdate: 18 Maret 2026
 
 ---
 
@@ -20,11 +20,13 @@
 11. [Scenario Modeling Logic](#11-scenario-modeling-logic)
 12. [Quick Transaction Resolver](#12-quick-transaction-resolver)
 13. [Matching Principle & Inventory (COGS)](#13-matching-principle--inventory-cogs)
-14. [Validation Layers](#14-validation-layers)
-15. [Category-to-Report Matrix (Cross-Category Summary)](#15-category-to-report-matrix-cross-category-summary)
-16. [Audit Findings & Known Issues](#16-audit-findings--known-issues)
-17. [Data Flow Diagrams](#17-data-flow-diagrams)
-18. [Business Members & Access Control](#18-business-members--access-control)
+14. [Receivable Settlement (Pelunasan Piutang)](#14-receivable-settlement-pelunasan-piutang)
+15. [Budget & Forecast Logic](#15-budget--forecast-logic)
+16. [Validation Layers](#16-validation-layers)
+17. [Category-to-Report Matrix (Cross-Category Summary)](#17-category-to-report-matrix-cross-category-summary)
+18. [Audit Findings & Known Issues](#18-audit-findings--known-issues)
+19. [Data Flow Diagrams](#19-data-flow-diagrams)
+20. [Business Members & Access Control](#20-business-members--access-control)
 
 ---
 
@@ -104,7 +106,8 @@
 | `src/lib/accounting/guidance/transactionPatterns.ts` | 15 pola transaksi + keyword detection |
 | `src/lib/accounting/guidance/suggestions.ts` | Smart account suggestion service |
 | `src/lib/accounting/guidance/matchingPrincipleWarning.ts` | Matching principle (EARN → HPP) warning |
-| `src/lib/calculations.ts` | Semua financial calculations |
+| `src/lib/accounting/guidance/receivableSettlement.ts` | Receivable settlement utilities (piutang) |
+| `src/lib/calculations.ts` | Semua financial calculations (termasuk budget vs actual) |
 | `src/lib/utils/transactionHelpers.ts` | Category detection, account filtering |
 | `src/lib/utils/quickTransactionHelper.ts` | Single-account to double-entry resolver |
 | `src/lib/export.ts` | PDF & Excel export (jsPDF, xlsx) |
@@ -116,6 +119,9 @@
 | `src/hooks/useGeneralLedger.ts` | Per-account ledger with running balance |
 | `src/hooks/useTrialBalance.ts` | Trial balance (all accounts, debit/credit columns) |
 | `src/hooks/useScenarioModeling.ts` | Scenario analysis & financial projections |
+| `src/hooks/useBudget.ts` | Budget CRUD, variance analysis, trend projection |
+| `src/lib/api/budgets.ts` | Budget data access layer ke Supabase |
+| `src/lib/storage/attachments.ts` | Upload/delete dokumen sumber transaksi |
 
 ---
 
@@ -311,7 +317,8 @@ ResolvedTransaction {
 
 Setiap transaksi memiliki field `status`:
 - **`draft`** (default saat create): Transaksi tersimpan tapi **tidak masuk kalkulasi** laporan keuangan manapun
-- **`posted`**: Transaksi aktif dan **masuk semua kalkulasi** (Income Statement, Balance Sheet, Cash Flow, dll)
+- **`posted`**: Transaksi aktif dan **masuk semua kalkulasi** (Income Statement, Balance Sheet, Cash Flow, Budget vs Actual, dll)
+- Field `posted_at` menyimpan timestamp kapan transaksi di-posting (NULL saat masih draft)
 
 **Semua hook laporan dan dashboard hanya memproses transaksi `posted`:**
 
@@ -862,9 +869,151 @@ detectMatchingPrincipleWarning(transaction, allAccounts):
 
 ---
 
-## 14. Validation Layers
+## 14. Receivable Settlement (Pelunasan Piutang)
 
-### 14.1 Three-Layer Validation
+### 14.1 Overview
+
+File: `src/lib/accounting/guidance/receivableSettlement.ts`
+
+Ketika transaksi EARN mencatat piutang (Dr Piutang / Cr Pendapatan), piutang tersebut belum menghasilkan kas. Sistem menyediakan mekanisme pelunasan (settlement) yang menciptakan entry pembalik.
+
+### 14.2 Deteksi Piutang
+
+`isReceivableTransaction(transaction)`:
+```
+Piutang terdeteksi jika:
+  1. is_double_entry = true
+  2. debit_account.account_type === 'ASSET'
+  3. debit_account.account_name mengandung "piutang" atau "receivable"
+```
+
+### 14.3 Settlement Entry
+
+`buildSettlementPrefill(original)` menghasilkan entry pelunasan dengan membalik debit/credit:
+
+```
+Original (pencatatan piutang):
+  Dr Piutang (ASSET)  / Cr Pendapatan (REVENUE)
+
+Settlement (pelunasan):
+  Dr Kas/Bank (ASSET) / Cr Piutang (ASSET)
+  category: EARN
+  status: posted
+  meta.settlement_of_transaction_id = original.id
+```
+
+Setelah settlement di-save, transaksi piutang asli ditandai:
+```
+meta.settled_by_transaction_id = settlement.id
+```
+
+### 14.4 Tracking di TransactionMeta
+
+| Field | Deskripsi |
+|-------|-----------|
+| `meta.settled_by_transaction_id` | ID transaksi pelunasan (di piutang asli) |
+| `meta.settlement_of_transaction_id` | ID piutang asli (di entry pelunasan) |
+| `meta.sold_stock_ids` | ID stok yang terjual (di EARN) |
+| `meta.tags` | Tag kategori bebas untuk filter |
+| `meta.attachment` | Dokumen sumber (faktur, nota, kuitansi) — path, url, filename, size, mime_type |
+
+### 14.5 Dampak ke Laporan
+
+- **Balance Sheet**: Piutang asli menambah ASSET (piutang). Settlement memindahkan dari piutang ke kas — net ASSET tetap sama.
+- **Cash Flow**: Piutang asli TIDAK muncul (non-cash). Settlement muncul sebagai Operating (+) karena Dr Kas / Cr ASSET (tapi counter = ASSET → sebenarnya Investing). Namun karena piutang adalah current asset terkait revenue, ini diperlakukan sesuai counter-account classification.
+- **Income Statement**: Revenue sudah diakui saat piutang dicatat. Settlement TIDAK menambah revenue lagi.
+
+---
+
+## 15. Budget & Forecast Logic
+
+### 15.1 Overview
+
+Files:
+- `src/lib/calculations.ts` (fungsi kalkulasi)
+- `src/hooks/useBudget.ts` (hook)
+- `src/lib/api/budgets.ts` (data access)
+
+Budget memungkinkan user menetapkan target per akun per bulan, lalu membandingkan dengan realisasi (actuals) dari transaksi posted.
+
+### 15.2 Budget Structure
+
+```
+Budget
+├── id, name, status (draft|approved|locked)
+├── start_date, end_date
+└── BudgetLine[] (one per account per month)
+    ├── account_id (REVENUE atau EXPENSE leaf account)
+    ├── month (YYYY-MM-01)
+    └── amount (target)
+```
+
+### 15.3 Actual Computation
+
+`computeActualsByAccountAndMonth(transactions, accounts)`:
+
+```
+1. Filter hanya transaksi status = 'posted'
+2. Untuk setiap transaksi:
+   - Catat amount ke debit account+month dan credit account+month
+3. Combine berdasarkan normal_balance:
+   - DEBIT normal (ASSET, EXPENSE): actual = debits - credits
+   - CREDIT normal (LIABILITY, EQUITY, REVENUE): actual = credits - debits
+4. Return Map<"accountId:YYYY-MM", amount>
+```
+
+### 15.4 Budget vs Actual (Variance Analysis)
+
+`calculateBudgetVsActual(budgetLines, transactions, accounts)`:
+
+```
+Untuk setiap budget line:
+  actual = lookup dari actuals map
+
+  Variance semantics:
+    Revenue: variance = actual - budgeted  (positif = favorable)
+    Expense: variance = budgeted - actual  (positif = favorable / under budget)
+
+  variancePercent = (variance / budgeted) × 100
+```
+
+### 15.5 Summary KPIs
+
+`calculateBudgetSummaryKPI(rows, budget)`:
+
+```
+Agregasi:
+  totalBudgetedRevenue, totalActualRevenue
+  totalBudgetedExpense, totalActualExpense
+
+  revenueVariance = actualRevenue - budgetedRevenue
+  expenseVariance = budgetedExpense - actualExpense
+
+  burnRate = totalActualExpense / monthsElapsed
+  budgetUtilization = totalActual / totalBudget × 100
+```
+
+### 15.6 Trend Projection
+
+`projectBudgetTrend(budgetLines, transactions, accounts, projectionMonths)`:
+
+```
+1. Hitung trend factor = rata-rata (actual / budget) untuk bulan lampau
+2. Untuk setiap bulan:
+   - Past: projected = actual (sudah terjadi)
+   - Current: blend actual progress dengan budget × trend factor
+   - Future: projected = budget × trend factor
+```
+
+### 15.7 Relevant Accounts
+
+Budget hanya untuk **leaf accounts** bertipe REVENUE atau EXPENSE (bukan parent accounts). Ini konsisten dengan prinsip bahwa budgeting dilakukan di level akun operasional.
+
+---
+
+## 16. Validation Layers
+
+### 16.1 Three-Layer Validation
 
 ```
 Layer 1: Client-side (TransactionValidator)
@@ -882,7 +1031,7 @@ Layer 3: Database (PostgreSQL Constraints)
   → RLS policies per business
 ```
 
-### 14.2 Client Validation Details
+### 16.2 Client Validation Details
 
 `TransactionValidator.validate()`:
 
@@ -894,14 +1043,14 @@ Layer 3: Database (PostgreSQL Constraints)
 | Revenue di debit | Warning | "Mendebit pendapatan akan mengurangi..." |
 | Expense di credit | Warning | "Mengkredit beban akan mengurangi..." |
 
-### 14.3 Smart Warnings
+### 16.3 Smart Warnings
 
 Sistem memberikan warning kontekstual:
 - **Capital sebagai Revenue**: "Jika ini setoran modal, gunakan akun Ekuitas"
 - **Withdrawal sebagai Expense**: "Jika ini penarikan pribadi, gunakan akun Prive"
 - **Revenue di-debit**: "Ini biasanya untuk koreksi atau retur penjualan"
 
-### 14.4 Category Consistency Warnings
+### 16.4 Category Consistency Warnings
 
 `validateCategoryConsistency()` di `transactionValidator.ts` mendeteksi ketidakcocokan antara category yang dipilih user dengan account type pair. Warning ditampilkan di UI journal entry (amber banner) tapi **tidak memblokir** transaksi.
 
@@ -918,7 +1067,7 @@ Sistem memberikan warning kontekstual:
 
 **PENTING**: Ini hanya warning, bukan error. Income statement tetap mengandalkan category as-is. Jika user mengabaikan warning dan salah pilih category, income statement akan terdampak tapi balance sheet tetap benar (karena balance sheet menggunakan account types, bukan categories).
 
-### 14.5 Transaction Pattern Detection
+### 16.5 Transaction Pattern Detection
 
 15 pola transaksi yang dikenali dari keyword di nama transaksi (via `detectPatternFromName()` di `transactionPatterns.ts`):
 
@@ -942,11 +1091,11 @@ Sistem memberikan warning kontekstual:
 
 ---
 
-## 15. Category-to-Report Matrix (Cross-Category Summary)
+## 17. Category-to-Report Matrix (Cross-Category Summary)
 
 Tabel ini memetakan setiap kategori transaksi — **termasuk sub-tipe** — ke dampaknya di setiap laporan keuangan. Informasi ini sebelumnya tersebar di Section 5-8 dan 12-13. Section ini menjadi referensi cepat satu halaman.
 
-### 15.1 Master Matrix
+### 17.1 Master Matrix
 
 | Kategori | Sub-tipe | Debit | Credit | Income Statement | Balance Sheet | Cash Flow |
 |----------|----------|-------|--------|------------------|---------------|-----------|
@@ -966,7 +1115,7 @@ Tabel ini memetakan setiap kategori transaksi — **termasuk sub-tipe** — ke d
 | **FIN** | **Beban Bunga** (Dr EXPENSE) | EXPENSE | ASSET / LIABILITY | `totalInterest` → Financing Costs | +Expenses → kurangi Retained Earnings | Operating (-) |
 | **FIN** | Reklasifikasi hutang | LIABILITY | LIABILITY | **TIDAK MASUK** | Net zero (pindah antar liability) | **Tidak masuk** (non-cash) |
 
-### 15.2 Kategori dengan Split (Sub-tipe)
+### 17.2 Kategori dengan Split (Sub-tipe)
 
 Tiga kategori memiliki perilaku berbeda tergantung **tipe akun** yang di-debit/credit:
 
@@ -1040,7 +1189,7 @@ Dr Kas / Cr EQUITY  → Financing (+)  — modal masuk
 Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
 ```
 
-### 15.3 Quick Entry — Perilaku Per Tipe Akun
+### 17.3 Quick Entry — Perilaku Per Tipe Akun
 
 | Tipe Akun Dipilih | Keyword Khusus | Resolusi | Label UI | Arah Kas | Kategori |
 |---|---|---|---|---|---|
@@ -1056,7 +1205,7 @@ Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
 
 *\*EXPENSE tanpa `default_category` = OPEX (fallback default)*
 
-### 15.4 Formula Ringkasan
+### 17.4 Formula Ringkasan
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -1104,7 +1253,7 @@ Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
 
 ---
 
-## 16. Audit Findings & Known Issues
+## 18. Audit Findings & Known Issues
 
 ### All Previously Reported Issues — RESOLVED
 
@@ -1127,9 +1276,9 @@ Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
 
 ---
 
-## 17. Data Flow Diagrams
+## 19. Data Flow Diagrams
 
-### 17.1 Transaction Input to Financial Reports
+### 19.1 Transaction Input to Financial Reports
 
 ```
 ┌────────────────┐     ┌──────────────────┐     ┌───────────────────┐
@@ -1165,7 +1314,7 @@ Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
                                                                               └────────────────┘
 ```
 
-### 17.2 Balance Sheet Calculation Flow
+### 19.2 Balance Sheet Calculation Flow
 
 ```
 All Transactions
@@ -1199,7 +1348,7 @@ Process per account type    calculateFinancialSummary()
       CHECK: |assets - (liabilities + equity)| < 0.01
 ```
 
-### 17.3 General Ledger & Trial Balance Flow
+### 19.3 General Ledger & Trial Balance Flow
 
 ```
 All Accounts (sub-accounts only)
@@ -1222,7 +1371,7 @@ General Ledger UI                                    Trial Balance UI
 (per-account view)                                  (all-accounts table)
 ```
 
-### 17.4 Quick Transaction Resolution
+### 19.4 Quick Transaction Resolution
 
 ```
 Selected Account Type?
@@ -1237,9 +1386,9 @@ Selected Account Type?
 
 ---
 
-## 18. Business Members & Access Control
+## 20. Business Members & Access Control
 
-### 18.1 Tabel & Relasi
+### 20.1 Tabel & Relasi
 
 ```
 businesses          user_business_roles       profiles
@@ -1254,7 +1403,7 @@ created_by ──┐      user_id ──────────────→ 
              └────→ (creator mungkin tidak ada di sini)
 ```
 
-### 18.2 Member Visibility Rules
+### 20.2 Member Visibility Rules
 
 `getBusinessMembers(businessId)` di `src/lib/api/members.ts`:
 
@@ -1267,7 +1416,7 @@ created_by ──┐      user_id ──────────────→ 
 5. Return merged list
 ```
 
-### 18.3 UX Flow
+### 20.3 UX Flow
 
 | Aksi | Behaviour |
 |------|-----------|
@@ -1276,7 +1425,7 @@ created_by ──┐      user_id ──────────────→ 
 | Tombol Edit/Archive/Restore | Hanya tampil jika `created_by === user.id` |
 | Tombol Undang Anggota | Hanya tampil untuk non-investor |
 
-### 18.4 RLS Policy (Migration 011)
+### 20.4 RLS Policy (Migration 011)
 
 Menggunakan `SECURITY DEFINER` functions untuk menghindari infinite recursion:
 
@@ -1326,6 +1475,7 @@ credit_account_id UUID REFERENCES accounts(id),
 is_double_entry BOOLEAN DEFAULT FALSE,
 category TEXT NOT NULL,                 -- EARN|OPEX|VAR|CAPEX|TAX|FIN
 status TEXT DEFAULT 'draft',            -- draft|posted (only posted masuk kalkulasi)
+posted_at TIMESTAMPTZ,                 -- timestamp saat di-posting (NULL jika draft)
 
 -- Soft delete:
 deleted_at TIMESTAMPTZ,
@@ -1373,6 +1523,7 @@ useReportData
 | `useGeneralLedger` | useReportData | accounts, selectedAccount, ledger, allLedgers |
 | `useTrialBalance` | useReportData | accounts, trialBalance |
 | `useScenarioModeling` | useReportData | baseline, optimistic, pessimistic, custom, projections |
+| `useBudget` | BusinessContext | budgets, varianceRows, summaryKPI, projections |
 | `useDashboard` | BusinessContext | summary, roi, categoryCounts (independent) |
 
 ---
