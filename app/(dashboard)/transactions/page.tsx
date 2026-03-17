@@ -585,6 +585,7 @@ function TransactionsPageInner() {
         allTags={allTags}
         onSettleReceivable={canManageTransactions ? handleSettleReceivable : undefined}
         settleLoading={saving}
+        onShowRelatedTransaction={setDetailTransaction}
       />
 
       {/* Delete Confirmation */}

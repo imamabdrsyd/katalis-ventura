@@ -9,7 +9,7 @@ import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import { getProfileName } from '@/lib/api/profiles';
 import { getRecordAuditHistory, getFieldChanges, formatFieldName, formatAuditValue } from '@/lib/api/audit';
 import { detectMatchingPrincipleWarning, isReceivableTransaction, isSettled } from '@/lib/accounting/guidance';
-import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink } from 'lucide-react';
+import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2 } from 'lucide-react';
 import { updateTransaction } from '@/lib/api/transactions';
 import { formatFileSize, isImageType } from '@/lib/storage/attachments';
 
@@ -27,6 +27,7 @@ interface TransactionDetailModalProps {
   allTags?: string[];
   onSettleReceivable?: (transaction: Transaction) => void;
   settleLoading?: boolean;
+  onShowRelatedTransaction?: (transaction: Transaction) => void;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -106,6 +107,7 @@ export function TransactionDetailModal({
   allTags = [],
   onSettleReceivable,
   settleLoading = false,
+  onShowRelatedTransaction,
 }: TransactionDetailModalProps) {
   const [creatorName, setCreatorName] = useState<string | null>(null);
   const [loadingCreator, setLoadingCreator] = useState(false);
@@ -664,6 +666,76 @@ export function TransactionDetailModal({
             )}
           </div>
         )}
+
+        {/* Related Transaction Section */}
+        {(() => {
+          const settlementOf = transaction.meta?.settlement_of_transaction_id
+            ? allTransactions?.find(t => t.id === transaction.meta!.settlement_of_transaction_id)
+            : null;
+          const settledBy = transaction.meta?.settled_by_transaction_id
+            ? allTransactions?.find(t => t.id === transaction.meta!.settled_by_transaction_id)
+            : null;
+
+          if (!settlementOf && !settledBy) return null;
+
+          return (
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                Informasi Terkait
+              </h4>
+              <div className="space-y-2">
+                {settlementOf && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onShowRelatedTransaction?.(settlementOf);
+                      onClose();
+                    }}
+                    className="w-full flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:border-blue-300 dark:hover:border-blue-700 transition-colors text-left group cursor-pointer"
+                  >
+                    <Link2 className="w-4 h-4 text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-blue-600 dark:text-blue-300 font-semibold mb-1">
+                        Pelunasan dari transaksi:
+                      </p>
+                      <p className="text-sm text-blue-900 dark:text-blue-100 font-medium group-hover:underline">
+                        {formatDate(settlementOf.date)} • {settlementOf.name}
+                      </p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                        {formatCurrency(settlementOf.amount)}
+                      </p>
+                    </div>
+                    <ExternalLink className="w-4 h-4 text-blue-400 dark:text-blue-500 flex-shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
+                )}
+                {settledBy && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onShowRelatedTransaction?.(settledBy);
+                      onClose();
+                    }}
+                    className="w-full flex items-start gap-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors text-left group cursor-pointer"
+                  >
+                    <Link2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-emerald-600 dark:text-emerald-300 font-semibold mb-1">
+                        Dilunasi oleh transaksi:
+                      </p>
+                      <p className="text-sm text-emerald-900 dark:text-emerald-100 font-medium group-hover:underline">
+                        {formatDate(settledBy.date)} • {settledBy.name}
+                      </p>
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                        {formatCurrency(settledBy.amount)}
+                      </p>
+                    </div>
+                    <ExternalLink className="w-4 h-4 text-emerald-400 dark:text-emerald-500 flex-shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Metadata Section */}
         <div className="border-t border-gray-200 dark:border-gray-700 pt-4">

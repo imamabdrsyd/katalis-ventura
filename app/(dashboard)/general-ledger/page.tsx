@@ -480,6 +480,8 @@ function GeneralLedgerPageInner() {
           onClose={() => setViewTransaction(null)}
           transaction={viewTransaction}
           accounts={accounts}
+          allTransactions={filteredTransactions}
+          onShowRelatedTransaction={setViewTransaction}
         />
       )}
     </div>
