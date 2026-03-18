@@ -135,5 +135,7 @@ CREATE POLICY "Managers can manage invoice line items"
   );
 
 -- View for active invoices (not soft-deleted)
-CREATE OR REPLACE VIEW active_invoices AS
+-- security_invoker = on ensures RLS policies of the querying user are enforced
+CREATE OR REPLACE VIEW active_invoices
+WITH (security_invoker = on) AS
 SELECT * FROM invoices WHERE deleted_at IS NULL;

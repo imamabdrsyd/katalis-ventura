@@ -1,112 +1,293 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import type { FinancialSummary, BalanceSheetData, CashFlowData } from '@/types';
+import type { FinancialSummary, BalanceSheetData, CashFlowData, Transaction } from '@/types';
 import { formatCurrency } from './utils';
 import { calculateIncomeStatementMetrics } from './calculations';
 
-// Export Income Statement to PDF
-export function exportIncomeStatementToPDF(
+// --- Income Statement PDF helpers ---
+
+interface TransactionsByCategory {
+  revenue: Transaction[];
+  cogs: Transaction[];
+  opex: Transaction[];
+  tax: Transaction[];
+  interest: Transaction[];
+}
+
+/** Group transactions by their relevant account name and sum amounts */
+function groupByAccount(
+  transactions: Transaction[],
+  side: 'debit' | 'credit'
+): { name: string; total: number }[] {
+  const map = new Map<string, number>();
+  for (const t of transactions) {
+    const account = side === 'debit' ? t.debit_account : t.credit_account;
+    const name = account?.account_name ?? t.description ?? 'Lainnya';
+    map.set(name, (map.get(name) ?? 0) + t.amount);
+  }
+  return Array.from(map.entries())
+    .map(([name, total]) => ({ name, total }))
+    .sort((a, b) => b.total - a.total);
+}
+
+// Row type markers for styling
+type RowKind = 'section' | 'item' | 'subtotal' | 'blank' | 'total' | 'margin';
+
+interface PDFRow {
+  cells: [string, string];
+  kind: RowKind;
+}
+
+/** Load an image from a URL and return as base64 data URI */
+async function loadImageAsBase64(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+// Export Income Statement to PDF — Xero-inspired layout with per-account breakdown
+export async function exportIncomeStatementToPDF(
   businessName: string,
   period: string,
-  summary: FinancialSummary
+  summary: FinancialSummary,
+  transactionsByCategory?: TransactionsByCategory
 ) {
   const doc = new jsPDF();
-
-  // Title
-  doc.setFontSize(18);
-  doc.text('INCOME STATEMENT', 105, 15, { align: 'center' });
-
-  // Business name
-  doc.setFontSize(12);
-  doc.text(businessName, 105, 25, { align: 'center' });
-
-  // Period
-  doc.setFontSize(10);
-  doc.text(`Period: ${period}`, 105, 32, { align: 'center' });
-
-  // Use consolidated calculation
+  const pageWidth = doc.internal.pageSize.getWidth();
   const metrics = calculateIncomeStatementMetrics(summary);
 
-  // Table data
-  const tableData = [
-    ['REVENUE', ''],
-    ['  Total Revenue', formatCurrency(summary.totalEarn)],
-    ['', ''],
-    ['COST OF GOODS SOLD', ''],
-    ['  Variable Costs', `(${formatCurrency(summary.totalVar)})`],
-    ['', ''],
-    ['GROSS PROFIT', formatCurrency(summary.grossProfit)],
-    ['  Gross Margin', `${metrics.grossMargin.toFixed(2)}%`],
-    ['', ''],
-    ['OPERATING EXPENSES', ''],
-    ['  Operating Expenses', `(${formatCurrency(summary.totalOpex)})`],
-    ['', ''],
-    ['OPERATING INCOME', formatCurrency(metrics.operatingIncome)],
-    ['  Operating Margin', `${metrics.operatingMargin.toFixed(2)}%`],
-    ['', ''],
-    ['FINANCING COSTS', ''],
-    ['  Interest & Financing', `(${formatCurrency(summary.totalInterest)})`],
-    ['', ''],
-    ['EARNINGS BEFORE TAX (EBT)', formatCurrency(metrics.ebt)],
-    ['', ''],
-    ['TAX', ''],
-    ['  Tax', `(${formatCurrency(summary.totalTax)})`],
-    ['', ''],
-    ['NET INCOME', formatCurrency(summary.netProfit)],
-    ['  Net Margin', `${metrics.netMargin.toFixed(2)}%`],
-  ];
+  // ── Header ──
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('LAPORAN LABA RUGI', pageWidth / 2, 18, { align: 'center' });
 
-  // Generate table
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.text(businessName, pageWidth / 2, 26, { align: 'center' });
+
+  doc.setFontSize(9);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Periode: ${period}`, pageWidth / 2, 33, { align: 'center' });
+  doc.setTextColor(0, 0, 0);
+
+  // ── Build rows ──
+  const rows: PDFRow[] = [];
+
+  const section = (label: string) => rows.push({ cells: [label, ''], kind: 'section' });
+  const item = (label: string, amount: number, negate = false) =>
+    rows.push({
+      cells: [`    ${label}`, negate ? `(${formatCurrency(amount)})` : formatCurrency(amount)],
+      kind: 'item',
+    });
+  const subtotal = (label: string, amount: number, negate = false) =>
+    rows.push({
+      cells: [label, negate ? `(${formatCurrency(amount)})` : formatCurrency(amount)],
+      kind: 'subtotal',
+    });
+  const total = (label: string, amount: number) =>
+    rows.push({ cells: [label, formatCurrency(amount)], kind: 'total' });
+  const margin = (label: string, pct: number) =>
+    rows.push({ cells: [`    ${label}`, `${pct.toFixed(2)}%`], kind: 'margin' });
+  const blank = () => rows.push({ cells: ['', ''], kind: 'blank' });
+
+  // ── REVENUE ──
+  section('PENDAPATAN');
+  if (transactionsByCategory?.revenue.length) {
+    const revenueItems = groupByAccount(transactionsByCategory.revenue, 'credit');
+    for (const r of revenueItems) item(r.name, r.total);
+  } else if (summary.totalEarn > 0) {
+    item('Pendapatan', summary.totalEarn);
+  }
+  subtotal('TOTAL PENDAPATAN', summary.totalEarn);
+  blank();
+
+  // ── COST OF SALES ──
+  section('HARGA POKOK PENJUALAN');
+  if (transactionsByCategory?.cogs.length) {
+    const cogsItems = groupByAccount(transactionsByCategory.cogs, 'debit');
+    for (const c of cogsItems) item(c.name, c.total);
+  } else if (summary.totalVar > 0) {
+    item('Harga pokok penjualan', summary.totalVar);
+  }
+  subtotal('TOTAL HARGA POKOK PENJUALAN', summary.totalVar, true);
+  blank();
+
+  // ── GROSS PROFIT ──
+  total('LABA KOTOR', summary.grossProfit);
+  if (summary.totalEarn > 0) margin('Margin kotor', metrics.grossMargin);
+  blank();
+
+  // ── OPERATING EXPENSES ──
+  section('BEBAN USAHA');
+  if (transactionsByCategory?.opex.length) {
+    const opexItems = groupByAccount(transactionsByCategory.opex, 'debit');
+    for (const o of opexItems) item(o.name, o.total);
+  } else if (summary.totalOpex > 0) {
+    item('Beban operasional', summary.totalOpex);
+  }
+  subtotal('TOTAL BEBAN USAHA', summary.totalOpex, true);
+  blank();
+
+  // ── OPERATING INCOME ──
+  total('LABA USAHA', metrics.operatingIncome);
+  if (summary.totalEarn > 0) margin('Margin usaha', metrics.operatingMargin);
+  blank();
+
+  // ── OTHER INCOME / FINANCING ──
+  if (summary.totalInterest > 0) {
+    section('BEBAN LAIN-LAIN');
+    if (transactionsByCategory?.interest.length) {
+      const interestItems = groupByAccount(transactionsByCategory.interest, 'debit');
+      for (const f of interestItems) item(f.name, f.total);
+    } else {
+      item('Beban bunga & pembiayaan', summary.totalInterest);
+    }
+    subtotal('TOTAL BEBAN LAIN-LAIN', summary.totalInterest, true);
+    blank();
+  }
+
+  // ── EBT ──
+  total('LABA SEBELUM PAJAK', metrics.ebt);
+  blank();
+
+  // ── TAX ──
+  if (summary.totalTax > 0) {
+    section('PAJAK');
+    if (transactionsByCategory?.tax.length) {
+      const taxItems = groupByAccount(transactionsByCategory.tax, 'debit');
+      for (const t of taxItems) item(t.name, t.total);
+    } else {
+      item('Pajak', summary.totalTax);
+    }
+    subtotal('TOTAL PAJAK', summary.totalTax, true);
+    blank();
+  }
+
+  // ── NET INCOME ──
+  total('LABA BERSIH', summary.netProfit);
+  if (summary.totalEarn > 0) margin('Margin bersih', metrics.netMargin);
+
+  // ── Render table ──
+  const tableBody = rows.map((r) => r.cells);
+
   autoTable(doc, {
     startY: 40,
-    head: [['Description', 'Amount']],
-    body: tableData,
-    theme: 'grid',
+    head: [['Keterangan', 'Jumlah (Rp)']],
+    body: tableBody,
+    theme: 'plain',
     headStyles: {
-      fillColor: [99, 102, 241], // Indigo color
-      fontSize: 11,
+      fillColor: [255, 255, 255],
+      textColor: [60, 60, 60],
+      fontSize: 9,
       fontStyle: 'bold',
+      cellPadding: { top: 3, bottom: 3, left: 4, right: 4 },
     },
     styles: {
-      fontSize: 10,
+      fontSize: 9,
+      cellPadding: { top: 2.5, bottom: 2.5, left: 4, right: 4 },
+      lineColor: [220, 220, 220],
+      lineWidth: 0,
+      textColor: [40, 40, 40],
     },
     columnStyles: {
-      0: { cellWidth: 120 },
-      1: { cellWidth: 60, halign: 'right' },
+      0: { cellWidth: 125 },
+      1: { cellWidth: 55, halign: 'right' },
     },
     didParseCell: function (data) {
-      // Bold specific rows
-      if (data.row.index !== undefined) {
-        const text = data.cell.raw as string;
-        if (
-          text === 'GROSS PROFIT' ||
-          text === 'OPERATING INCOME' ||
-          text === 'EARNINGS BEFORE TAX (EBT)' ||
-          text === 'NET INCOME'
-        ) {
+      if (data.section !== 'body') return;
+      const row = rows[data.row.index];
+      if (!row) return;
+
+      switch (row.kind) {
+        case 'section':
           data.cell.styles.fontStyle = 'bold';
-          data.cell.styles.fillColor = [243, 244, 246]; // Light gray
-        }
+          data.cell.styles.fontSize = 9.5;
+          data.cell.styles.textColor = [30, 30, 30];
+          break;
+        case 'item':
+          data.cell.styles.textColor = [80, 80, 80];
+          break;
+        case 'subtotal':
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fontSize = 9;
+          break;
+        case 'total':
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fontSize = 10;
+          data.cell.styles.fillColor = [245, 245, 245];
+          break;
+        case 'margin':
+          data.cell.styles.fontStyle = 'italic';
+          data.cell.styles.textColor = [120, 120, 120];
+          data.cell.styles.fontSize = 8;
+          break;
+        case 'blank':
+          data.cell.styles.minCellHeight = 3;
+          break;
+      }
+    },
+    didDrawCell: function (data) {
+      if (data.section !== 'body') return;
+      const row = rows[data.row.index];
+      if (!row) return;
+
+      // Draw top border line for section headers & totals
+      if (row.kind === 'section' || row.kind === 'total') {
+        doc.setDrawColor(180, 180, 180);
+        doc.setLineWidth(0.3);
+        doc.line(data.cell.x, data.cell.y, data.cell.x + data.cell.width, data.cell.y);
+      }
+
+      // Draw bottom border for subtotals & totals
+      if (row.kind === 'subtotal' || row.kind === 'total') {
+        const bottomY = data.cell.y + data.cell.height;
+        doc.setDrawColor(row.kind === 'total' ? 80 : 180, row.kind === 'total' ? 80 : 180, row.kind === 'total' ? 80 : 180);
+        doc.setLineWidth(row.kind === 'total' ? 0.5 : 0.3);
+        doc.line(data.cell.x, bottomY, data.cell.x + data.cell.width, bottomY);
       }
     },
   });
 
-  // Footer
+  // ── Footer with AXION logo ──
+  const faviconBase64 = await loadImageAsBase64('/images/favicon.png');
   const pageCount = (doc as any).internal.getNumberOfPages();
-  doc.setFontSize(8);
+  const footerY = 284;
+  const logoSize = 5;
+
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
+
+    // Left: "Dicetak oleh AXION pada [Date]"
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
     doc.text(
-      `Generated on ${new Date().toLocaleDateString('id-ID')} - Page ${i} of ${pageCount}`,
-      105,
-      285,
-      { align: 'center' }
+      `Dicetak oleh AXION pada ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+      14,
+      footerY + 1
     );
+
+    // Right: page number
+    doc.text(`Halaman ${i} dari ${pageCount}`, pageWidth - 14, footerY + 1, { align: 'right' });
+
+    // Center: favicon logo
+    if (faviconBase64) {
+      doc.addImage(faviconBase64, 'PNG', (pageWidth - logoSize) / 2, footerY - 3, logoSize, logoSize);
+    }
   }
+  doc.setTextColor(0, 0, 0);
 
   // Save
-  doc.save(`Income-Statement-${businessName}-${period}.pdf`);
+  doc.save(`Laporan-Laba-Rugi-${businessName}-${period}.pdf`);
 }
 
 // Export Income Statement to Excel

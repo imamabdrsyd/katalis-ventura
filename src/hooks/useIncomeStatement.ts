@@ -56,9 +56,9 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
     if (!activeBusiness) return;
     const { exportIncomeStatementToPDF } = await import('@/lib/export');
     const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
-    exportIncomeStatementToPDF(activeBusiness.business_name, periodLabel, summary);
+    await exportIncomeStatementToPDF(activeBusiness.business_name, periodLabel, summary, transactionsByCategory);
     setShowExportMenu(false);
-  }, [activeBusiness, startDate, endDate, summary, setShowExportMenu]);
+  }, [activeBusiness, startDate, endDate, summary, transactionsByCategory, setShowExportMenu]);
 
   const handleExportExcel = useCallback(async () => {
     if (!activeBusiness) return;
