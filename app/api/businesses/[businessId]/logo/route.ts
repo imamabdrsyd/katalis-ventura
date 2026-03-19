@@ -34,7 +34,7 @@ export async function POST(
 
   // Parse multipart form data
   const formData = await req.formData();
-  const file = formData.get('file') as File | null;
+  const file = (formData as any).get('file') as File | null;
   if (!file) {
     return NextResponse.json({ error: 'File tidak ditemukan' }, { status: 400 });
   }

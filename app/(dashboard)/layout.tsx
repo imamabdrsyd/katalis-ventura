@@ -128,7 +128,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
   const [transactionResults, setTransactionResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const filteredPages = useMemo(
     () =>
