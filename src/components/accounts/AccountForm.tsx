@@ -14,6 +14,10 @@ export interface AccountFormData {
   description?: string;
   sort_order: number;
   default_category?: TransactionCategory;
+  // Depreciation fields (PSAK 16) — only for ASSET + CAPEX
+  useful_life_months?: number;
+  residual_value?: number;
+  acquisition_date?: string;
 }
 
 interface AccountFormProps {
@@ -53,6 +57,9 @@ export function AccountForm({
     description: account?.description || '',
     sort_order: account?.sort_order || 0,
     default_category: account?.default_category,
+    useful_life_months: account?.useful_life_months,
+    residual_value: account?.residual_value,
+    acquisition_date: account?.acquisition_date,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -346,6 +353,72 @@ export function AccountForm({
           Kategori transaksi default ketika akun ini dipilih. Kosongkan untuk deteksi otomatis berdasarkan tipe akun.
         </p>
       </div>
+
+      {/* Depreciation Settings — only for ASSET + CAPEX accounts (PSAK 16) */}
+      {(formData.account_type === 'ASSET' && formData.default_category === 'CAPEX') && (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3 bg-gray-50 dark:bg-gray-800/50">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            Penyusutan Aset Tetap
+            <span className="text-xs font-normal text-gray-500 dark:text-gray-400 ml-2">(Opsional — PSAK 16)</span>
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Isi jika ingin sistem menghitung penyusutan otomatis di laporan keuangan. Kosongkan jika tidak perlu.
+          </p>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Tanggal Perolehan</label>
+              <input
+                type="date"
+                name="acquisition_date"
+                value={formData.acquisition_date || ''}
+                onChange={handleChange}
+                className="input"
+                disabled={loading}
+              />
+            </div>
+            <div>
+              <label className="label">Masa Manfaat (bulan)</label>
+              <input
+                type="number"
+                name="useful_life_months"
+                value={formData.useful_life_months ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value ? parseInt(e.target.value) : undefined;
+                  setFormData(prev => ({ ...prev, useful_life_months: val }));
+                }}
+                className="input"
+                placeholder="Contoh: 60"
+                min={1}
+                disabled={loading}
+              />
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                Kendaraan: 96, Peralatan: 48, Bangunan: 240
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Nilai Residu (Rp)</label>
+            <input
+              type="number"
+              name="residual_value"
+              value={formData.residual_value ?? ''}
+              onChange={(e) => {
+                const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                setFormData(prev => ({ ...prev, residual_value: val }));
+              }}
+              className="input"
+              placeholder="0"
+              min={0}
+              disabled={loading}
+            />
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              Estimasi nilai aset saat masa manfaat habis. Default: 0
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">

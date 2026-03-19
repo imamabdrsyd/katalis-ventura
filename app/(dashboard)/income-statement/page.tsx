@@ -309,6 +309,12 @@ function IncomeStatementPageInner() {
                 <span className="text-gray-600 dark:text-gray-400 pl-2">- OPEX:</span>
                 <span className="font-medium text-red-500 dark:text-red-400">({formatCurrency(summary.totalOpex)})</span>
               </div>
+              {summary.totalDepreciation > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400 pl-2">- Penyusutan:</span>
+                  <span className="font-medium text-red-500 dark:text-red-400">({formatCurrency(summary.totalDepreciation)})</span>
+                </div>
+              )}
               <div className="flex justify-between pt-1 border-t border-gray-200 dark:border-gray-600">
                 <span className="font-medium text-gray-700 dark:text-gray-300">Operating Income:</span>
                 <span className={`font-semibold ${metrics.operatingIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
@@ -432,6 +438,23 @@ function IncomeStatementPageInner() {
                 </div>
               </div>
 
+              {/* DEPRECIATION EXPENSE (PSAK 16) — only shown if > 0 */}
+              {summary.totalDepreciation > 0 && (
+                <div>
+                  <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
+                    <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Beban Penyusutan</h3>
+                  </div>
+                  <div className="flex justify-between py-2 pl-4">
+                    <span className="text-gray-600 dark:text-gray-400">Penyusutan Aset Tetap (Straight-Line)</span>
+                    <span className="text-red-500 dark:text-red-400">({formatCurrency(summary.totalDepreciation)})</span>
+                  </div>
+                  <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
+                    <span className="text-gray-800 dark:text-gray-100">Total Beban Penyusutan</span>
+                    <span className="text-red-500 dark:text-red-400">({formatCurrency(summary.totalDepreciation)})</span>
+                  </div>
+                </div>
+              )}
+
               {/* OPERATING INCOME */}
               <div className="relative group bg-gray-100 dark:bg-gray-700/50 rounded-lg p-4 hover:bg-gray-100/70 dark:hover:bg-gray-700/70 cursor-default">
                 <div className="flex justify-between items-center">
@@ -449,10 +472,11 @@ function IncomeStatementPageInner() {
                 <Tooltip
                   title="Operating Income (EBIT)"
                   color="text-purple-300"
-                  formula="Gross Profit − Operating Expenses"
+                  formula={summary.totalDepreciation > 0 ? "Gross Profit − Operating Expenses − Penyusutan" : "Gross Profit − Operating Expenses"}
                   breakdown={[
                     { label: 'Gross Profit', value: summary.grossProfit, color: summary.grossProfit >= 0 ? 'green' : 'red' },
                     { label: 'Operating Expenses', value: summary.totalOpex, color: 'red' },
+                    ...(summary.totalDepreciation > 0 ? [{ label: 'Beban Penyusutan', value: summary.totalDepreciation, color: 'red' as const }] : []),
                     { label: 'Operating Income', value: metrics.operatingIncome, color: metrics.operatingIncome >= 0 ? 'green' : 'red' },
                   ]}
                 />
@@ -540,6 +564,12 @@ function IncomeStatementPageInner() {
                       <span className="text-gray-300">Operating Expenses</span>
                       <span className="text-red-300">−{formatCurrency(summary.totalOpex)}</span>
                     </div>
+                    {summary.totalDepreciation > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">Beban Penyusutan</span>
+                        <span className="text-red-300">−{formatCurrency(summary.totalDepreciation)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-gray-300">Financing Costs</span>
                       <span className="text-red-300">−{formatCurrency(summary.totalInterest)}</span>

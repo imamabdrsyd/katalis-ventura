@@ -207,13 +207,23 @@ export default function BalanceSheetPage() {
             <div>
               <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Aset Tetap</h3>
               <div className="flex justify-between py-2 pl-4">
-                <span className="text-gray-700 dark:text-gray-300">Properti & Peralatan</span>
+                <span className="text-gray-700 dark:text-gray-300">Nilai Perolehan</span>
                 <span className="font-semibold text-gray-900 dark:text-gray-100">
                   {formatCurrency(balanceSheet.assets.fixedAssets)}
                 </span>
               </div>
+              {balanceSheet.assets.accumulatedDepreciation > 0 && (
+                <div className="flex justify-between py-2 pl-4">
+                  <span className="text-gray-500 dark:text-gray-400 italic">Akumulasi Penyusutan</span>
+                  <span className="font-semibold text-red-500 dark:text-red-400">
+                    ({formatCurrency(balanceSheet.assets.accumulatedDepreciation)})
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between py-2 pl-4 border-t border-gray-200 dark:border-gray-700 font-semibold">
-                <span className="text-gray-800 dark:text-gray-200">Total Aset Tetap</span>
+                <span className="text-gray-800 dark:text-gray-200">
+                  {balanceSheet.assets.accumulatedDepreciation > 0 ? 'Nilai Buku Aset Tetap' : 'Total Aset Tetap'}
+                </span>
                 <span className="text-gray-900 dark:text-gray-100">
                   {formatCurrency(balanceSheet.assets.totalFixedAssets)}
                 </span>

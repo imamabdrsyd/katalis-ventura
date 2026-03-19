@@ -138,6 +138,14 @@ export async function exportIncomeStatementToPDF(
   subtotal('TOTAL BEBAN USAHA', summary.totalOpex, true);
   blank();
 
+  // ── DEPRECIATION (PSAK 16) ──
+  if (summary.totalDepreciation > 0) {
+    section('BEBAN PENYUSUTAN');
+    item('Penyusutan aset tetap (straight-line)', summary.totalDepreciation);
+    subtotal('TOTAL BEBAN PENYUSUTAN', summary.totalDepreciation, true);
+    blank();
+  }
+
   // ── OPERATING INCOME ──
   total('LABA USAHA', metrics.operatingIncome);
   if (summary.totalEarn > 0) margin('Margin usaha', metrics.operatingMargin);
@@ -317,6 +325,9 @@ export function exportIncomeStatementToExcel(
     [],
     ['OPERATING EXPENSES', ''],
     ['Operating Expenses', -summary.totalOpex],
+    ...(summary.totalDepreciation > 0
+      ? [[], ['BEBAN PENYUSUTAN', ''], ['Depreciation Expense', -summary.totalDepreciation]]
+      : []),
     [],
     ['OPERATING INCOME', metrics.operatingIncome],
     ['Operating Margin (%)', metrics.operatingMargin],
@@ -543,8 +554,11 @@ export function exportBalanceSheetToPDF(
     ['Total Current Assets', formatCurrency(data.assets.totalCurrentAssets)],
     ['', ''],
     ['Fixed Assets', ''],
-    ['  Property & Equipment', formatCurrency(data.assets.fixedAssets)],
-    ['Total Fixed Assets', formatCurrency(data.assets.totalFixedAssets)],
+    ['  Nilai Perolehan', formatCurrency(data.assets.fixedAssets)],
+    ...(data.assets.accumulatedDepreciation > 0
+      ? [['  Akumulasi Penyusutan', `(${formatCurrency(data.assets.accumulatedDepreciation)})`]]
+      : []),
+    [data.assets.accumulatedDepreciation > 0 ? 'Nilai Buku Aset Tetap' : 'Total Fixed Assets', formatCurrency(data.assets.totalFixedAssets)],
     ['', ''],
     ['TOTAL ASSETS', formatCurrency(data.assets.totalAssets)],
   );
@@ -642,8 +656,11 @@ export function exportBalanceSheetToExcel(
     ['Total Current Assets', data.assets.totalCurrentAssets],
     [],
     ['Fixed Assets', ''],
-    ['Property & Equipment', data.assets.fixedAssets],
-    ['Total Fixed Assets', data.assets.totalFixedAssets],
+    ['Nilai Perolehan', data.assets.fixedAssets],
+    ...(data.assets.accumulatedDepreciation > 0
+      ? [['Akumulasi Penyusutan', -data.assets.accumulatedDepreciation]]
+      : []),
+    [data.assets.accumulatedDepreciation > 0 ? 'Nilai Buku Aset Tetap' : 'Total Fixed Assets', data.assets.totalFixedAssets],
     [],
     ['TOTAL ASSETS', data.assets.totalAssets],
     [],

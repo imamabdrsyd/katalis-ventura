@@ -1,8 +1,10 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useReportData } from './useReportData';
 import { calculateBalanceSheet, filterTransactionsUpToDate } from '@/lib/calculations';
+import * as accountsApi from '@/lib/api/accounts';
+import type { Account } from '@/types';
 
 export interface UseBalanceSheetReturn extends ReturnType<typeof useReportData> {
   balanceSheet: ReturnType<typeof calculateBalanceSheet>;
@@ -15,6 +17,16 @@ export function useBalanceSheet(): UseBalanceSheetReturn {
   const reportData = useReportData();
   const { activeBusiness, transactions, endDate, setShowExportMenu } = reportData;
 
+  // Fetch accounts for depreciation calculation
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  useEffect(() => {
+    if (!activeBusiness) return;
+    accountsApi
+      .getAccounts(activeBusiness.id, false)
+      .then(setAccounts)
+      .catch(console.error);
+  }, [activeBusiness]);
+
   // Balance Sheet uses cumulative transactions up to endDate (not just within period)
   const cumulativeTransactions = useMemo(() => {
     if (!endDate) return transactions;
@@ -25,8 +37,13 @@ export function useBalanceSheet(): UseBalanceSheetReturn {
   const capital = activeBusiness?.capital_investment ?? 0;
 
   const balanceSheet = useMemo(
-    () => calculateBalanceSheet(cumulativeTransactions, capital),
-    [cumulativeTransactions, capital]
+    () => calculateBalanceSheet(
+      cumulativeTransactions,
+      capital,
+      accounts,
+      endDate ? new Date(endDate) : undefined
+    ),
+    [cumulativeTransactions, capital, accounts, endDate]
   );
 
   // Check if accounting equation is balanced

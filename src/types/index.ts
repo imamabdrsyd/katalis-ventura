@@ -65,6 +65,11 @@ export interface Account {
   sort_order: number;
   description?: string;
   default_category?: TransactionCategory; // Optional: Auto-detected category for transactions
+  // Depreciation fields (PSAK 16 / IAS 16) — only for ASSET + CAPEX accounts
+  useful_life_months?: number;        // Masa manfaat dalam bulan
+  residual_value?: number;            // Nilai residu
+  depreciation_method?: string;       // 'straight_line' (default)
+  acquisition_date?: string;          // Tanggal perolehan (ISO date string)
   created_at: string;
   updated_at: string;
   updated_by?: string;
@@ -230,6 +235,7 @@ export interface FinancialSummary {
   totalTax: number;
   totalFin: number; // All FIN transactions (for cash flow, includes equity/liability movements)
   totalInterest: number; // Only FIN transactions that are EXPENSE type (interest/financing costs for income statement)
+  totalDepreciation: number; // Beban penyusutan periode (PSAK 16 straight-line, calculated on-the-fly)
   netProfit: number;
   grossProfit: number;
 }
@@ -253,8 +259,10 @@ export interface BalanceSheetData {
     receivables: number;
     otherCurrentAssets: number;
     totalCurrentAssets: number;
-    fixedAssets: number;
-    totalFixedAssets: number;
+    fixedAssets: number;               // Nilai perolehan (cost)
+    accumulatedDepreciation: number;   // Akumulasi penyusutan (positive value, displayed as contra-asset)
+    netFixedAssets: number;            // fixedAssets - accumulatedDepreciation
+    totalFixedAssets: number;          // = netFixedAssets
     totalAssets: number;
   };
   liabilities: {

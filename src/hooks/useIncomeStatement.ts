@@ -1,9 +1,11 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useReportData } from './useReportData';
-import { calculateFinancialSummary, calculateIncomeStatementMetrics } from '@/lib/calculations';
-import type { Transaction } from '@/types';
+import { calculateFinancialSummary, calculateIncomeStatementMetrics, applyDepreciationToSummary } from '@/lib/calculations';
+import { calculateDepreciationSummary } from '@/lib/accounting/depreciation';
+import * as accountsApi from '@/lib/api/accounts';
+import type { Transaction, Account } from '@/types';
 
 export interface TransactionsByCategory {
   revenue: Transaction[];
@@ -23,12 +25,51 @@ export interface UseIncomeStatementReturn extends ReturnType<typeof useReportDat
 
 export function useIncomeStatement(): UseIncomeStatementReturn {
   const reportData = useReportData();
-  const { activeBusiness, filteredTransactions, startDate, endDate, setShowExportMenu } = reportData;
+  const { activeBusiness, transactions, filteredTransactions, startDate, endDate, setShowExportMenu } = reportData;
 
-  const summary = useMemo(
+  // Fetch accounts for depreciation calculation
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  useEffect(() => {
+    if (!activeBusiness) return;
+    accountsApi
+      .getAccounts(activeBusiness.id, false)
+      .then(setAccounts)
+      .catch(console.error);
+  }, [activeBusiness]);
+
+  // Base summary without depreciation
+  const baseSummary = useMemo(
     () => calculateFinancialSummary(filteredTransactions),
     [filteredTransactions]
   );
+
+  // Calculate period depreciation and apply to summary
+  const summary = useMemo(() => {
+    if (!accounts.length || !startDate || !endDate) return baseSummary;
+
+    // Build fixed asset cost map from ALL transactions (cumulative, not period-filtered)
+    // because asset cost is cumulative — we need total cost to compute depreciation rate
+    const fixedAssetCosts = new Map<string, number>();
+    for (const t of transactions) {
+      if (!t.is_double_entry) continue;
+      const amount = Number(t.amount);
+      if (t.debit_account?.account_type === 'ASSET' && t.debit_account.default_category === 'CAPEX') {
+        fixedAssetCosts.set(t.debit_account.id, (fixedAssetCosts.get(t.debit_account.id) ?? 0) + amount);
+      }
+      if (t.credit_account?.account_type === 'ASSET' && t.credit_account.default_category === 'CAPEX') {
+        fixedAssetCosts.set(t.credit_account.id, (fixedAssetCosts.get(t.credit_account.id) ?? 0) - amount);
+      }
+    }
+
+    const depSummary = calculateDepreciationSummary(
+      accounts,
+      (accountId) => fixedAssetCosts.get(accountId) ?? 0,
+      new Date(endDate),
+      new Date(startDate)
+    );
+
+    return applyDepreciationToSummary(baseSummary, depSummary.periodDepreciation);
+  }, [baseSummary, accounts, transactions, startDate, endDate]);
 
   const metrics = useMemo(
     () => calculateIncomeStatementMetrics(summary),

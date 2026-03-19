@@ -14,6 +14,7 @@ import type {
   BudgetSummaryKPI,
   ProjectedMonth,
 } from '@/types';
+import { calculateDepreciationSummary } from '@/lib/accounting/depreciation';
 
 // Constants
 export const CAPITAL = 350_000_000; // Default capital investment (fallback only)
@@ -48,6 +49,7 @@ export function calculateFinancialSummary(
     totalTax: 0,
     totalFin: 0,
     totalInterest: 0,
+    totalDepreciation: 0, // Set by hooks via applyDepreciationToSummary()
     netProfit: 0,
     grossProfit: 0,
   };
@@ -107,13 +109,34 @@ export function calculateFinancialSummary(
 export function calculateIncomeStatementMetrics(
   summary: FinancialSummary
 ): IncomeStatementMetrics {
-  const operatingIncome = summary.grossProfit - summary.totalOpex;
-  const ebt = operatingIncome - summary.totalInterest; // Use totalInterest instead of totalFin
+  // Depreciation is included in operating expenses (PSAK 16)
+  const operatingIncome = summary.grossProfit - summary.totalOpex - summary.totalDepreciation;
+  const ebt = operatingIncome - summary.totalInterest;
   const grossMargin = summary.totalEarn > 0 ? (summary.grossProfit / summary.totalEarn) * 100 : 0;
   const operatingMargin = summary.totalEarn > 0 ? (operatingIncome / summary.totalEarn) * 100 : 0;
   const netMargin = summary.totalEarn > 0 ? (summary.netProfit / summary.totalEarn) * 100 : 0;
 
   return { operatingIncome, ebt, grossMargin, operatingMargin, netMargin };
+}
+
+/**
+ * Apply depreciation expense to a FinancialSummary and recalculate netProfit.
+ * Called by hooks that know the accounts and period dates.
+ * Returns a new summary object (does not mutate the original).
+ */
+export function applyDepreciationToSummary(
+  summary: FinancialSummary,
+  periodDepreciation: number
+): FinancialSummary {
+  const updated = { ...summary, totalDepreciation: periodDepreciation };
+  updated.netProfit =
+    updated.totalEarn -
+    updated.totalOpex -
+    updated.totalVar -
+    updated.totalTax -
+    updated.totalInterest -
+    updated.totalDepreciation;
+  return updated;
 }
 
 // Count transactions per category
@@ -288,7 +311,9 @@ export function calculateTotalCapex(transactions: Transaction[]): number {
 // Capital should come from business settings (capital_investment), not calculated from transactions
 export function calculateBalanceSheet(
   transactions: Transaction[],
-  capital: number = 0
+  capital: number = 0,
+  accounts?: Account[],
+  reportDate?: Date
 ): BalanceSheetData {
 
   // Single-pass partition: O(n) bukan 2x O(n)
@@ -407,19 +432,52 @@ export function calculateBalanceSheet(
     totalAssets += capital;
   }
 
-  // Calculate retained earnings (revenue - expenses)
-  const retainedEarnings = totalRevenue - totalExpenses;
+  // --- Depreciation (PSAK 16 / IAS 16) ---
+  // Calculated on-the-fly from account metadata, not from journal entries.
+  // Reduces fixed asset value (contra-asset) and retained earnings (via expense).
+  let accumulatedDepreciation = 0;
+  if (accounts && accounts.length > 0 && reportDate) {
+    // Build a map of fixed asset account costs from the transaction totals.
+    // Cost = net debit balance of each CAPEX asset account.
+    const fixedAssetCosts = new Map<string, number>();
+    doubleEntryTransactions.forEach(t => {
+      const amount = Number(t.amount);
+      if (t.debit_account?.account_type === 'ASSET' && t.debit_account.default_category === 'CAPEX') {
+        fixedAssetCosts.set(t.debit_account.id, (fixedAssetCosts.get(t.debit_account.id) ?? 0) + amount);
+      }
+      if (t.credit_account?.account_type === 'ASSET' && t.credit_account.default_category === 'CAPEX') {
+        fixedAssetCosts.set(t.credit_account.id, (fixedAssetCosts.get(t.credit_account.id) ?? 0) - amount);
+      }
+    });
+
+    const depSummary = calculateDepreciationSummary(
+      accounts,
+      (accountId) => fixedAssetCosts.get(accountId) ?? 0,
+      reportDate
+    );
+    accumulatedDepreciation = depSummary.totalAccumulatedDepreciation;
+  }
+
+  // Calculate retained earnings (revenue - expenses - depreciation)
+  // Depreciation reduces retained earnings like any other expense
+  const retainedEarnings = totalRevenue - totalExpenses - accumulatedDepreciation;
 
   // Net equity from movements: capital injections minus withdrawals
   const netEquityMovements = totalEquityCredit - totalEquityDebit;
 
   const totalCurrentAssets = totalCash + totalInventory + totalReceivables + totalOtherCurrentAssets;
 
+  // Net fixed assets = cost - accumulated depreciation
+  const netFixedAssets = totalFixedAssets - accumulatedDepreciation;
+
+  // Total assets uses net (depreciated) fixed asset value
+  const adjustedTotalAssets = totalCurrentAssets + netFixedAssets;
+
   // Runtime balance sheet equation assertion: Assets = Liabilities + Equity
   const finalTotalEquity = netEquityMovements + retainedEarnings;
-  const imbalance = Math.abs(totalAssets - (totalLiabilities + finalTotalEquity));
+  const imbalance = Math.abs(adjustedTotalAssets - (totalLiabilities + finalTotalEquity));
   if (imbalance > 0.01) {
-    console.warn(`[Accounting] Balance sheet imbalance detected: ${imbalance.toFixed(2)} (A=${totalAssets.toFixed(2)}, L=${totalLiabilities.toFixed(2)}, E=${finalTotalEquity.toFixed(2)})`);
+    console.warn(`[Accounting] Balance sheet imbalance detected: ${imbalance.toFixed(2)} (A=${adjustedTotalAssets.toFixed(2)}, L=${totalLiabilities.toFixed(2)}, E=${finalTotalEquity.toFixed(2)})`);
   }
 
   return {
@@ -429,9 +487,11 @@ export function calculateBalanceSheet(
       receivables: totalReceivables,
       otherCurrentAssets: totalOtherCurrentAssets,
       totalCurrentAssets,
-      fixedAssets: totalFixedAssets,
-      totalFixedAssets: totalFixedAssets,
-      totalAssets,
+      fixedAssets: totalFixedAssets,                // Nilai perolehan (cost)
+      accumulatedDepreciation,                      // Akumulasi penyusutan (contra-asset)
+      netFixedAssets,                               // fixedAssets - accumulatedDepreciation
+      totalFixedAssets: netFixedAssets,              // Uses net value for totals
+      totalAssets: adjustedTotalAssets,
     },
     liabilities: {
       loans: totalLiabilities,
@@ -454,23 +514,59 @@ function isCashAccount(code: string): boolean {
 }
 
 /**
- * Classify a cash movement by the counter-account's type.
- *   - Revenue / Expense counter → Operating
- *   - Asset (non-cash) counter  → Investing
- *   - Liability / Equity counter → Financing
+ * Classify a cash movement by the counter-account for cash flow statement.
+ *
+ * Per IAS 7 / PSAK 2, the classification depends on the *nature* of the
+ * counter-account, not just its account_type:
+ *
+ *   - REVENUE / EXPENSE → Operating (unchanged)
+ *   - ASSET:
+ *       • Trade receivables (piutang usaha) → Operating
+ *         (cash received from customers is an operating activity)
+ *       • Other assets (fixed assets, inventory, etc.) → Investing
+ *   - LIABILITY:
+ *       • Trade/operating payables (hutang usaha, accrued expenses) → Operating
+ *         (cash paid to suppliers/for operating obligations is operating)
+ *       • Other liabilities (bank loans, long-term debt) → Financing
+ *   - EQUITY → Financing (unchanged)
  */
 function classifyCashFlow(
-  counterAccountType: string
+  counterAccount: Account
 ): 'operating' | 'investing' | 'financing' {
-  switch (counterAccountType) {
+  const accountType = counterAccount.account_type;
+  const name = (counterAccount.account_name || '').toLowerCase();
+  const defaultCategory = counterAccount.default_category;
+
+  switch (accountType) {
     case 'REVENUE':
     case 'EXPENSE':
       return 'operating';
-    case 'ASSET':
-      return 'investing';
-    case 'LIABILITY':
+
+    case 'ASSET': {
+      // Trade receivables are operating (IAS 7.14 — cash received from customers)
+      const isTradeReceivable =
+        defaultCategory === 'EARN' ||
+        name.includes('piutang') ||
+        name.includes('receivable');
+      return isTradeReceivable ? 'operating' : 'investing';
+    }
+
+    case 'LIABILITY': {
+      // Trade/operating payables are operating (IAS 7.14 — cash paid to suppliers)
+      const isOperatingPayable =
+        defaultCategory === 'OPEX' ||
+        defaultCategory === 'VAR' ||
+        defaultCategory === 'TAX' ||
+        name.includes('hutang usaha') ||
+        name.includes('utang usaha') ||
+        name.includes('payable') ||
+        name.includes('accrued');
+      return isOperatingPayable ? 'operating' : 'financing';
+    }
+
     case 'EQUITY':
       return 'financing';
+
     default:
       return 'operating';
   }
@@ -558,11 +654,11 @@ export function calculateCashFlow(
 
     if (debitIsCash) {
       // Cash increases (debit to cash) → money IN
-      bucket = classifyCashFlow(t.credit_account!.account_type);
+      bucket = classifyCashFlow(t.credit_account!);
       cashAmount = amount;
     } else {
       // Cash decreases (credit to cash) → money OUT
-      bucket = classifyCashFlow(t.debit_account!.account_type);
+      bucket = classifyCashFlow(t.debit_account!);
       cashAmount = -amount;
     }
 

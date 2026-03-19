@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 18 Maret 2026 | Terakhir diupdate: 18 Maret 2026
+> Terakhir diaudit: 18 Maret 2026 | Terakhir diupdate: 19 Maret 2026
 
 ---
 
@@ -22,11 +22,12 @@
 13. [Matching Principle & Inventory (COGS)](#13-matching-principle--inventory-cogs)
 14. [Receivable Settlement (Pelunasan Piutang)](#14-receivable-settlement-pelunasan-piutang)
 15. [Budget & Forecast Logic](#15-budget--forecast-logic)
-16. [Validation Layers](#16-validation-layers)
-17. [Category-to-Report Matrix (Cross-Category Summary)](#17-category-to-report-matrix-cross-category-summary)
-18. [Audit Findings & Known Issues](#18-audit-findings--known-issues)
-19. [Data Flow Diagrams](#19-data-flow-diagrams)
-20. [Business Members & Access Control](#20-business-members--access-control)
+16. [Depreciation — Straight-Line (PSAK 16 / IAS 16)](#16-depreciation--straight-line-psak-16--ias-16)
+17. [Validation Layers](#17-validation-layers)
+18. [Category-to-Report Matrix (Cross-Category Summary)](#18-category-to-report-matrix-cross-category-summary)
+19. [Audit Findings & Known Issues](#19-audit-findings--known-issues)
+20. [Data Flow Diagrams](#20-data-flow-diagrams)
+21. [Business Members & Access Control](#21-business-members--access-control)
 
 ---
 
@@ -107,6 +108,7 @@
 | `src/lib/accounting/guidance/suggestions.ts` | Smart account suggestion service |
 | `src/lib/accounting/guidance/matchingPrincipleWarning.ts` | Matching principle (EARN → HPP) warning |
 | `src/lib/accounting/guidance/receivableSettlement.ts` | Receivable settlement utilities (piutang) |
+| `src/lib/accounting/depreciation.ts` | Straight-line depreciation calculator (PSAK 16) |
 | `src/lib/calculations.ts` | Semua financial calculations (termasuk budget vs actual) |
 | `src/lib/utils/transactionHelpers.ts` | Category detection, account filtering |
 | `src/lib/utils/quickTransactionHelper.ts` | Single-account to double-entry resolver |
@@ -422,7 +424,7 @@ Priority 3: Account type-based detection:
 
 ```
 grossProfit    = totalEarn - totalVar
-netProfit      = totalEarn - totalOpex - totalVar - totalTax - totalInterest
+netProfit      = totalEarn - totalOpex - totalVar - totalTax - totalInterest - totalDepreciation
 ```
 
 **PENTING — FIN vs Interest distinction:**
@@ -523,6 +525,7 @@ Revenue (EARN)
 ─────────────────────────
 = Gross Profit
 ─ Operating Expenses (OPEX)
+─ Beban Penyusutan (totalDepreciation, PSAK 16 straight-line)
 ─────────────────────────
 = Operating Income
 ─ Financing Costs (totalInterest, bukan totalFin)
@@ -535,7 +538,7 @@ Revenue (EARN)
 
 **PENTING:** Financing Costs hanya menampilkan `totalInterest` (FIN yang debit EXPENSE account), bukan semua FIN. FIN yang menyentuh LIABILITY/EQUITY (loan received, capital injection, loan repayment) TIDAK masuk income statement.
 
-CAPEX tidak muncul di income statement. CAPEX hanya ada di Cash Flow Statement (investing activities). Sistem ini tidak menerapkan depreciation.
+CAPEX tidak muncul langsung di income statement. Namun, aset tetap yang memiliki setting depreciation akan memunculkan **Beban Penyusutan** di income statement (lihat Section 16). CAPEX tetap muncul di Cash Flow Statement (investing activities).
 
 ### 7.2 Margin Calculations
 
@@ -569,18 +572,40 @@ Cash account codes: 1100 (Cash), 1200 (Bank)
 Untuk setiap transaksi yang menyentuh Cash/Bank:
 
 Cash MASUK (debit cash):
-  Counter = REVENUE/EXPENSE → Operating  (+amount)
-  Counter = ASSET (non-cash) → Investing (+amount)
-  Counter = LIABILITY/EQUITY → Financing (+amount)
+  Counter = REVENUE/EXPENSE          → Operating  (+amount)
+  Counter = ASSET, trade receivable  → Operating  (+amount)  ← IAS 7.14
+  Counter = ASSET, lainnya           → Investing  (+amount)
+  Counter = LIABILITY, operating     → Operating  (+amount)  ← IAS 7.14
+  Counter = LIABILITY, lainnya       → Financing  (+amount)
+  Counter = EQUITY                   → Financing  (+amount)
 
 Cash KELUAR (credit cash):
-  Counter = REVENUE/EXPENSE → Operating  (-amount)
-  Counter = ASSET (non-cash) → Investing (-amount)
-  Counter = LIABILITY/EQUITY → Financing (-amount)
+  Counter = REVENUE/EXPENSE          → Operating  (-amount)
+  Counter = ASSET, trade receivable  → Operating  (-amount)  ← IAS 7.14
+  Counter = ASSET, lainnya           → Investing  (-amount)
+  Counter = LIABILITY, operating     → Operating  (-amount)  ← IAS 7.14
+  Counter = LIABILITY, lainnya       → Financing  (-amount)
+  Counter = EQUITY                   → Financing  (-amount)
 
 Transaksi non-cash (tidak menyentuh 1100/1200) → diabaikan
 Bank transfer (kedua sisi cash) → net zero, diabaikan
 ```
+
+**Sub-classification per IAS 7 / PSAK 2:**
+
+Counter ASSET dianggap **trade receivable** (→ Operating) jika:
+- `default_category === 'EARN'`, ATAU
+- `account_name` mengandung "piutang" atau "receivable"
+
+Semua ASSET lainnya (fixed asset, inventory, dll) → **Investing**.
+
+Counter LIABILITY dianggap **operating payable** (→ Operating) jika:
+- `default_category` = `OPEX`, `VAR`, atau `TAX`, ATAU
+- `account_name` mengandung "hutang usaha", "utang usaha", "payable", atau "accrued"
+
+Semua LIABILITY lainnya (pinjaman bank, hutang jangka panjang) → **Financing**.
+
+Counter EQUITY → selalu **Financing** (tidak ada sub-classification).
 
 **B. Legacy Transactions** — Category-based fallback:
 ```
@@ -920,7 +945,7 @@ meta.settled_by_transaction_id = settlement.id
 ### 14.5 Dampak ke Laporan
 
 - **Balance Sheet**: Piutang asli menambah ASSET (piutang). Settlement memindahkan dari piutang ke kas — net ASSET tetap sama.
-- **Cash Flow**: Piutang asli TIDAK muncul (non-cash). Settlement muncul sebagai Operating (+) karena Dr Kas / Cr ASSET (tapi counter = ASSET → sebenarnya Investing). Namun karena piutang adalah current asset terkait revenue, ini diperlakukan sesuai counter-account classification.
+- **Cash Flow**: Piutang asli TIDAK muncul (non-cash). Settlement (Dr Kas / Cr Piutang) muncul sebagai **Operating (+)** karena counter-account piutang dikenali sebagai trade receivable (per IAS 7.14 sub-classification: `default_category='EARN'` atau nama mengandung "piutang"/"receivable").
 - **Income Statement**: Revenue sudah diakui saat piutang dicatat. Settlement TIDAK menambah revenue lagi.
 
 ---
@@ -1011,9 +1036,97 @@ Budget hanya untuk **leaf accounts** bertipe REVENUE atau EXPENSE (bukan parent 
 
 ---
 
-## 16. Validation Layers
+## 16. Depreciation — Straight-Line (PSAK 16 / IAS 16)
 
-### 16.1 Three-Layer Validation
+### 16.1 Overview
+
+File: `src/lib/accounting/depreciation.ts`
+
+Aset tetap (CAPEX) didepresiasi menggunakan metode **straight-line** berdasarkan metadata yang disimpan di tabel `accounts`. Depreciation dihitung **on-the-fly** saat render laporan — BUKAN sebagai jurnal manual ke database.
+
+### 16.2 Database Fields (Migration 025)
+
+Kolom tambahan di tabel `accounts` (hanya relevan untuk ASSET + `default_category = 'CAPEX'`):
+
+| Kolom | Tipe | Deskripsi |
+|-------|------|-----------|
+| `useful_life_months` | INTEGER | Masa manfaat dalam bulan |
+| `residual_value` | NUMERIC (default 0) | Nilai residu setelah masa manfaat habis |
+| `depreciation_method` | TEXT (default 'straight_line') | Metode penyusutan |
+| `acquisition_date` | DATE | Tanggal perolehan aset |
+
+### 16.3 Formula Straight-Line
+
+```
+monthlyDepreciation = (cost - residualValue) / usefulLifeMonths
+monthsElapsed = bulan dari acquisitionDate sampai reportDate (capped di usefulLifeMonths)
+accumulatedDepreciation = monthlyDepreciation × monthsElapsed
+bookValue = cost - accumulatedDepreciation (min = residualValue)
+```
+
+**Cost** dihitung dari total transaksi CAPEX yang mendebit akun tersebut (net debit balance).
+
+### 16.4 Eligibility
+
+Akun eligible untuk depreciation jika memenuhi SEMUA:
+- `account_type === 'ASSET'`
+- `default_category === 'CAPEX'`
+- `is_active === true`
+- `useful_life_months > 0` (terisi)
+- `acquisition_date` terisi
+
+Jika tidak eligible → depreciation = 0, backward compatible.
+
+### 16.5 Dampak ke Laporan
+
+**Balance Sheet** (`calculateBalanceSheet()`):
+```
+Aset Tetap:
+  Nilai Perolehan (cost)                Rp XXX
+  Akumulasi Penyusutan                  (Rp YYY)  ← contra-asset
+  ──────────────────────────
+  Nilai Buku Aset Tetap                Rp ZZZ
+
+Total Assets menggunakan nilai buku (net), bukan cost.
+Retained Earnings dikurangi akumulasi penyusutan.
+→ Balance sheet tetap balanced: ΔAssets = ΔEquity (via retained earnings)
+```
+
+**Income Statement** (`useIncomeStatement` + `applyDepreciationToSummary()`):
+```
+  Operating Expenses (OPEX)
+  Beban Penyusutan                      (Rp AAA)  ← periode saja
+  ──────────────────────────
+  = Operating Income (sudah dikurangi penyusutan)
+
+periodDepreciation = monthlyDepreciation × jumlah bulan dalam periode laporan
+netProfit = totalEarn - totalOpex - totalVar - totalTax - totalInterest - totalDepreciation
+```
+
+**Cash Flow** — TIDAK berubah. Depreciation adalah non-cash expense.
+
+### 16.6 Suggested Useful Life
+
+| Jenis Aset | Masa Manfaat | Sumber |
+|------------|-------------|--------|
+| Kendaraan | 96 bulan (8 tahun) | PSAK 16 / pajak |
+| Peralatan Kantor | 48 bulan (4 tahun) | PSAK 16 / pajak |
+| Bangunan | 240 bulan (20 tahun) | PSAK 16 / pajak |
+| Furniture | 48 bulan (4 tahun) | PSAK 16 / pajak |
+| Mesin | 96 bulan (8 tahun) | PSAK 16 / pajak |
+
+### 16.7 UI
+
+Form input depreciation settings tersedia di `AccountForm.tsx` — hanya muncul jika `account_type = 'ASSET'` dan `default_category = 'CAPEX'`. Fields:
+- Tanggal Perolehan
+- Masa Manfaat (bulan)
+- Nilai Residu (Rp)
+
+---
+
+## 17. Validation Layers
+
+### 17.1 Three-Layer Validation
 
 ```
 Layer 1: Client-side (TransactionValidator)
@@ -1031,7 +1144,7 @@ Layer 3: Database (PostgreSQL Constraints)
   → RLS policies per business
 ```
 
-### 16.2 Client Validation Details
+### 17.2 Client Validation Details
 
 `TransactionValidator.validate()`:
 
@@ -1043,14 +1156,14 @@ Layer 3: Database (PostgreSQL Constraints)
 | Revenue di debit | Warning | "Mendebit pendapatan akan mengurangi..." |
 | Expense di credit | Warning | "Mengkredit beban akan mengurangi..." |
 
-### 16.3 Smart Warnings
+### 17.3 Smart Warnings
 
 Sistem memberikan warning kontekstual:
 - **Capital sebagai Revenue**: "Jika ini setoran modal, gunakan akun Ekuitas"
 - **Withdrawal sebagai Expense**: "Jika ini penarikan pribadi, gunakan akun Prive"
 - **Revenue di-debit**: "Ini biasanya untuk koreksi atau retur penjualan"
 
-### 16.4 Category Consistency Warnings
+### 17.4 Category Consistency Warnings
 
 `validateCategoryConsistency()` di `transactionValidator.ts` mendeteksi ketidakcocokan antara category yang dipilih user dengan account type pair. Warning ditampilkan di UI journal entry (amber banner) tapi **tidak memblokir** transaksi.
 
@@ -1067,7 +1180,7 @@ Sistem memberikan warning kontekstual:
 
 **PENTING**: Ini hanya warning, bukan error. Income statement tetap mengandalkan category as-is. Jika user mengabaikan warning dan salah pilih category, income statement akan terdampak tapi balance sheet tetap benar (karena balance sheet menggunakan account types, bukan categories).
 
-### 16.5 Transaction Pattern Detection
+### 17.5 Transaction Pattern Detection
 
 15 pola transaksi yang dikenali dari keyword di nama transaksi (via `detectPatternFromName()` di `transactionPatterns.ts`):
 
@@ -1091,19 +1204,21 @@ Sistem memberikan warning kontekstual:
 
 ---
 
-## 17. Category-to-Report Matrix (Cross-Category Summary)
+## 18. Category-to-Report Matrix (Cross-Category Summary)
 
 Tabel ini memetakan setiap kategori transaksi — **termasuk sub-tipe** — ke dampaknya di setiap laporan keuangan. Informasi ini sebelumnya tersebar di Section 5-8 dan 12-13. Section ini menjadi referensi cepat satu halaman.
 
-### 17.1 Master Matrix
+### 18.1 Master Matrix
 
 | Kategori | Sub-tipe | Debit | Credit | Income Statement | Balance Sheet | Cash Flow |
 |----------|----------|-------|--------|------------------|---------------|-----------|
 | **EARN** | Pendapatan tunai | ASSET (Kas/Bank) | REVENUE | `totalEarn` → Revenue (top line) | +Cash, +Revenue → Retained Earnings | Operating (+) |
 | **EARN** | Realisasi pendapatan dimuka | LIABILITY | REVENUE | `totalEarn` → Revenue | -Liability, +Revenue → Retained Earnings | Tidak ada cash movement |
+| **EARN** | Pelunasan piutang (settlement) | ASSET (Kas/Bank) | ASSET (Piutang) | **TIDAK MASUK** (revenue sudah diakui saat piutang) | +Cash, -Piutang (tukar aset) | **Operating (+)** ← IAS 7.14: trade receivable |
 | **EARN** | Retur pendapatan | REVENUE | ASSET (Kas/Bank) | Mengurangi `totalEarn` | -Cash, -Revenue → Retained Earnings | Operating (-) |
 | **OPEX** | Bayar tunai | EXPENSE | ASSET (Kas/Bank) | `totalOpex` → Operating Expenses | -Cash, +Expenses → kurangi Retained Earnings | Operating (-) |
 | **OPEX** | Beban akrual | EXPENSE | LIABILITY | `totalOpex` → Operating Expenses | +Liability, +Expenses → kurangi Retained Earnings | **Tidak masuk** (non-cash) |
+| **OPEX** | Bayar hutang usaha (settlement) | LIABILITY (Hutang Usaha) | ASSET (Kas/Bank) | **TIDAK MASUK** (expense sudah diakui saat akrual) | -Cash, -Liability | **Operating (-)** ← IAS 7.14: trade payable |
 | **VAR** | **HPP / COGS** (Dr EXPENSE) | EXPENSE | ASSET (Kas/Bank) | `totalVar` → Cost of Goods Sold | -Cash, +Expenses → kurangi Retained Earnings | Operating (-) |
 | **VAR** | **Beli Persediaan** (Dr ASSET) | ASSET (Inventory) | ASSET (Kas/Bank) | **TIDAK MASUK** (tetap di neraca) | -Cash, +Inventory | Investing (-) |
 | **CAPEX** | Beli aset tetap | ASSET (Fixed) | ASSET (Kas/Bank) | **TIDAK MASUK** | -Cash, +Fixed Assets (tukar aset, total sama) | Investing (-) |
@@ -1115,7 +1230,7 @@ Tabel ini memetakan setiap kategori transaksi — **termasuk sub-tipe** — ke d
 | **FIN** | **Beban Bunga** (Dr EXPENSE) | EXPENSE | ASSET / LIABILITY | `totalInterest` → Financing Costs | +Expenses → kurangi Retained Earnings | Operating (-) |
 | **FIN** | Reklasifikasi hutang | LIABILITY | LIABILITY | **TIDAK MASUK** | Net zero (pindah antar liability) | **Tidak masuk** (non-cash) |
 
-### 17.2 Kategori dengan Split (Sub-tipe)
+### 18.2 Kategori dengan Split (Sub-tipe)
 
 Tiga kategori memiliki perilaku berbeda tergantung **tipe akun** yang di-debit/credit:
 
@@ -1157,7 +1272,7 @@ case 'FIN':
 
 **Dampak ke formula:**
 ```
-netProfit = totalEarn - totalOpex - totalVar - totalTax - totalInterest
+netProfit = totalEarn - totalOpex - totalVar - totalTax - totalInterest - totalDepreciation
                                                           ↑ bukan totalFin
 ```
 
@@ -1189,7 +1304,7 @@ Dr Kas / Cr EQUITY  → Financing (+)  — modal masuk
 Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
 ```
 
-### 17.3 Quick Entry — Perilaku Per Tipe Akun
+### 18.3 Quick Entry — Perilaku Per Tipe Akun
 
 | Tipe Akun Dipilih | Keyword Khusus | Resolusi | Label UI | Arah Kas | Kategori |
 |---|---|---|---|---|---|
@@ -1205,7 +1320,7 @@ Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
 
 *\*EXPENSE tanpa `default_category` = OPEX (fallback default)*
 
-### 17.4 Formula Ringkasan
+### 18.4 Formula Ringkasan
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -1216,6 +1331,7 @@ Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
 │  ─────────────────────────────                          │
 │  = Gross Profit                                         │
 │  - Operating Expenses (OPEX)                            │
+│  - Beban Penyusutan (PSAK 16, on-the-fly)               │
 │  ─────────────────────────────                          │
 │  = Operating Income                                     │
 │  - Interest (FIN, dr EXPENSE only)                      │
@@ -1243,17 +1359,26 @@ Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
 │                    CASH FLOW                              │
 │                                                         │
 │  Operating  = EARN - OPEX - VAR(cogs) - TAX - Interest   │
-│  Investing  = -CAPEX - VAR(inventory)                    │
-│  Financing  = +Modal + Pinjaman - Bayar Hutang - Prive   │
+│             + Pelunasan Piutang (trade receivable)        │
+│             - Bayar Hutang Usaha (trade payable)          │
+│  Investing  = -CAPEX - VAR(inventory) ± aset non-cash    │
+│  Financing  = +Modal + Pinjaman - Bayar Hutang Bank      │
+│             - Prive                                      │
 │  ─────────────────────────────                          │
 │  Net Cash Flow = Operating + Investing + Financing       │
 │  Closing = Opening + Net Cash Flow                       │
+│                                                         │
+│  Sub-classification (IAS 7 / PSAK 2):                    │
+│    Counter ASSET → Operating jika piutang usaha          │
+│                  → Investing jika lainnya                 │
+│    Counter LIABILITY → Operating jika hutang usaha       │
+│                      → Financing jika lainnya             │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 18. Audit Findings & Known Issues
+## 19. Audit Findings & Known Issues
 
 ### All Previously Reported Issues — RESOLVED
 
@@ -1273,12 +1398,14 @@ Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
 | #12 | Creator Bisnis Tidak Terlihat di Members | RESOLVED | `getBusinessMembers()` fetch `created_by` dari tabel `businesses` jika tidak ada di `user_business_roles` |
 | #13 | Non-Creator Bisa Klik Edit Bisnis | RESOLVED | Tombol Edit/Archive/Restore hanya muncul jika `created_by === user.id` |
 | #14 | Views bypass RLS (SECURITY DEFINER default) | RESOLVED | Migration 021: Recreate semua views dengan `security_invoker = true` |
+| #15 | Cash Flow: Piutang usaha masuk Investing | RESOLVED | Sub-classification per IAS 7: trade receivable → Operating, trade payable → Operating |
+| #16 | Tidak ada depreciation untuk aset tetap | RESOLVED | Straight-line depreciation (PSAK 16) on-the-fly — Section 16 |
 
 ---
 
-## 19. Data Flow Diagrams
+## 20. Data Flow Diagrams
 
-### 19.1 Transaction Input to Financial Reports
+### 20.1 Transaction Input to Financial Reports
 
 ```
 ┌────────────────┐     ┌──────────────────┐     ┌───────────────────┐
@@ -1314,7 +1441,7 @@ Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
                                                                               └────────────────┘
 ```
 
-### 19.2 Balance Sheet Calculation Flow
+### 20.2 Balance Sheet Calculation Flow
 
 ```
 All Transactions
@@ -1348,7 +1475,7 @@ Process per account type    calculateFinancialSummary()
       CHECK: |assets - (liabilities + equity)| < 0.01
 ```
 
-### 19.3 General Ledger & Trial Balance Flow
+### 20.3 General Ledger & Trial Balance Flow
 
 ```
 All Accounts (sub-accounts only)
@@ -1371,7 +1498,7 @@ General Ledger UI                                    Trial Balance UI
 (per-account view)                                  (all-accounts table)
 ```
 
-### 19.4 Quick Transaction Resolution
+### 20.4 Quick Transaction Resolution
 
 ```
 Selected Account Type?
@@ -1386,9 +1513,9 @@ Selected Account Type?
 
 ---
 
-## 20. Business Members & Access Control
+## 21. Business Members & Access Control
 
-### 20.1 Tabel & Relasi
+### 21.1 Tabel & Relasi
 
 ```
 businesses          user_business_roles       profiles
@@ -1403,7 +1530,7 @@ created_by ──┐      user_id ──────────────→ 
              └────→ (creator mungkin tidak ada di sini)
 ```
 
-### 20.2 Member Visibility Rules
+### 21.2 Member Visibility Rules
 
 `getBusinessMembers(businessId)` di `src/lib/api/members.ts`:
 
@@ -1416,7 +1543,7 @@ created_by ──┐      user_id ──────────────→ 
 5. Return merged list
 ```
 
-### 20.3 UX Flow
+### 21.3 UX Flow
 
 | Aksi | Behaviour |
 |------|-----------|
@@ -1425,7 +1552,7 @@ created_by ──┐      user_id ──────────────→ 
 | Tombol Edit/Archive/Restore | Hanya tampil jika `created_by === user.id` |
 | Tombol Undang Anggota | Hanya tampil untuk non-investor |
 
-### 20.4 RLS Policy (Migration 011)
+### 21.4 RLS Policy (Migration 011)
 
 Menggunakan `SECURITY DEFINER` functions untuk menghindari infinite recursion:
 
