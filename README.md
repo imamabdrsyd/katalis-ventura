@@ -333,7 +333,7 @@ Works on any platform that supports Next.js:
 ### Phase 3: Advanced
 - [ ] Multi-currency support
 - [ ] Recurring transactions
-- [ ] Budget forecasting
+- [x] Budget forecasting
 - [x] Mobile app (React Native)
 
 ### Phase 4: Scale
