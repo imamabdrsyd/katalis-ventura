@@ -143,6 +143,7 @@
 └── 2xxx [User-defined sub-accounts]
 
 3000 Equity       (Normal Balance: CREDIT)
+├── 3100 Owner's Capital    (is_system: true, default_category: FIN)
 └── 3xxx [User-defined sub-accounts]
 
 4000 Revenue      (Normal Balance: CREDIT)
@@ -187,7 +188,7 @@ Setiap business baru otomatis mendapat Chart of Accounts lengkap. Flow:
 2. User diberi role `business_manager` → INSERT ke `user_business_roles`
 3. `create_default_accounts(business_id)` dipanggil via `supabase.rpc()` — function berjalan sebagai `SECURITY DEFINER` (bypass RLS) sehingga dapat INSERT ke `accounts` meski RLS aktif
 
-Lihat `database/migrations/001_add_double_entry_bookkeeping.sql` dan `012_fix_accounts_rls_and_function.sql`.
+Lihat `database/migrations/001_add_double_entry_bookkeeping.sql`, `012_fix_accounts_rls_and_function.sql`, dan `016_ensure_equity_subaccount.sql` (definisi terbaru — menambah 3100 Owner's Capital sebagai system account + backfill bisnis lama).
 
 ### 2.5 Account Code Generation (Smart Auto-Code)
 

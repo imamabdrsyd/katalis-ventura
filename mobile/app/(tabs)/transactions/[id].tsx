@@ -4,8 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react-native';
 
-import { useBusiness } from '@/context/BusinessContext';
-import { getDatabase } from '@/db';
+import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -17,7 +16,6 @@ import type { Transaction } from '@shared/types';
 export default function TransactionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { activeBusinessId } = useBusiness();
 
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -27,9 +25,18 @@ export default function TransactionDetailScreen() {
 
     const fetchTransaction = async () => {
       try {
-        const db = getDatabase();
-        const tx = await db.collections.get('transactions').find(id);
-        setTransaction(tx as any);
+        const { data, error } = await supabase
+          .from('transactions')
+          .select(
+            `*,
+            debit_account:accounts!transactions_debit_account_id_fkey(id, account_code, account_name, account_type),
+            credit_account:accounts!transactions_credit_account_id_fkey(id, account_code, account_name, account_type)`
+          )
+          .eq('id', id)
+          .single();
+
+        if (error) throw error;
+        setTransaction(data as Transaction);
       } catch (err) {
         console.error('Error fetching transaction:', err);
       } finally {
@@ -175,19 +182,6 @@ export default function TransactionDetailScreen() {
               <Text className="text-base text-gray-700">{transaction.notes}</Text>
             </Card>
           )}
-
-          {/* Metadata */}
-          <Card className="p-4 mb-3">
-            <Text className="text-xs font-semibold text-gray-500 uppercase mb-2">Info</Text>
-            <View className="gap-1">
-              <Text className="text-xs text-gray-400">ID: {transaction.id}</Text>
-              {transaction._status && transaction._status !== 'synced' && (
-                <Text className="text-xs text-amber-600">
-                  Sync status: {transaction._status}
-                </Text>
-              )}
-            </View>
-          </Card>
         </View>
       </ScrollView>
 

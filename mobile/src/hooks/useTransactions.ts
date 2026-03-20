@@ -1,13 +1,12 @@
-import { useState, useEffect } from 'react';
-import { withObservables } from '@nozbe/with-observables';
-import { Observable } from 'rxjs';
-import { getDatabase } from '@/db';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
 import type { Transaction } from '@shared/types';
 
 interface UseTransactionsResult {
   transactions: Transaction[];
   isLoading: boolean;
   error: Error | null;
+  refetch: () => void;
 }
 
 export function useTransactions(businessId: string): UseTransactionsResult {
@@ -15,84 +14,91 @@ export function useTransactions(businessId: string): UseTransactionsResult {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
+  const fetchTransactions = useCallback(async () => {
     if (!businessId) {
       setTransactions([]);
       setIsLoading(false);
       return;
     }
 
-    const db = getDatabase();
-    const subscription = db.collections
-      .get('transactions')
-      .query()
-      .observe()
-      .subscribe({
-        next: (records: any[]) => {
-          const filtered = records
-            .filter((tx) => tx.business_id === businessId)
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-          setTransactions(filtered as Transaction[]);
-          setIsLoading(false);
-        },
-        error: (err) => {
-          setError(err);
-          setIsLoading(false);
-        },
-      });
+    setIsLoading(true);
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('transactions')
+        .select(
+          `*,
+          debit_account:accounts!transactions_debit_account_id_fkey(id, account_code, account_name, account_type),
+          credit_account:accounts!transactions_credit_account_id_fkey(id, account_code, account_name, account_type)`
+        )
+        .eq('business_id', businessId)
+        .is('deleted_at', null)
+        .order('date', { ascending: false });
 
-    return () => subscription.unsubscribe();
+      if (fetchError) throw new Error(fetchError.message);
+      setTransactions((data || []) as Transaction[]);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to fetch transactions'));
+    } finally {
+      setIsLoading(false);
+    }
   }, [businessId]);
 
-  return { transactions, isLoading, error };
+  useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
+
+  return { transactions, isLoading, error, refetch: fetchTransactions };
 }
 
 export async function createTransaction(
   businessId: string,
   data: Partial<Transaction>
 ): Promise<Transaction> {
-  const db = getDatabase();
-  const collection = db.collections.get('transactions');
-
-  const newTransaction = await collection.create((tx) => {
-    Object.assign(tx, {
+  const { data: result, error } = await supabase
+    .from('transactions')
+    .insert({
       business_id: businessId,
-      ...data,
-      created_at: Date.now(),
-      updated_at: Date.now(),
-      _status: 'created',
-    });
-  });
+      date: data.date,
+      name: data.name,
+      description: data.description || null,
+      amount: data.amount,
+      category: data.category,
+      debit_account_id: data.debit_account_id || null,
+      credit_account_id: data.credit_account_id || null,
+      is_double_entry: data.is_double_entry || false,
+      status: data.status || 'posted',
+      notes: data.notes || null,
+      meta: data.meta || null,
+    })
+    .select()
+    .single();
 
-  return newTransaction as Transaction;
+  if (error) throw new Error(error.message);
+  return result as Transaction;
 }
 
 export async function updateTransaction(
   id: string,
   data: Partial<Transaction>
 ): Promise<Transaction> {
-  const db = getDatabase();
-  const collection = db.collections.get('transactions');
-  const tx = await collection.find(id);
-
-  await tx.update((updater) => {
-    Object.assign(updater, {
+  const { data: result, error } = await supabase
+    .from('transactions')
+    .update({
       ...data,
-      updated_at: Date.now(),
-      _status: 'updated',
-    });
-  });
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select()
+    .single();
 
-  return tx as Transaction;
+  if (error) throw new Error(error.message);
+  return result as Transaction;
 }
 
 export async function deleteTransaction(id: string): Promise<void> {
-  const db = getDatabase();
-  const collection = db.collections.get('transactions');
-  const tx = await collection.find(id);
-
-  await tx.update((updater) => {
-    updater.deleted_at = Date.now();
-    updater._status = 'deleted';
+  const { error } = await supabase.rpc('soft_delete_transaction', {
+    transaction_id: id,
   });
+  if (error) throw new Error(error.message);
 }

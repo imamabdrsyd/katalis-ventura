@@ -58,6 +58,32 @@ app/
 - Tipe data bisnis ada di `src/types/index.ts`
 - API helper functions ada di `src/lib/api/`
 
+## Live Documentation — `docs/ACCOUNTING_LOGIC.md`
+
+`docs/ACCOUNTING_LOGIC.md` adalah **live document** yang harus selalu sinkron dengan kode. Setiap kali Claude melakukan perubahan yang menyentuh logic akuntansi, **wajib update dokumen ini di sesi yang sama** sebelum selesai.
+
+### Perubahan yang wajib trigger update docs:
+
+| File yang berubah | Section yang perlu di-update |
+|-------------------|------------------------------|
+| `src/lib/calculations.ts` | Section 5 (Financial Calculations), 6 (Balance Sheet), 7 (Income Statement), 8 (Cash Flow) |
+| `src/lib/accounting/constants.ts` | Section 3 (Double-Entry Engine), 17 (Validation Layers) |
+| `src/lib/accounting/guidance/transactionPatterns.ts` | Section 3, 12 (Quick Transaction Resolver) |
+| `src/lib/accounting/depreciation.ts` | Section 16 (Depreciation) |
+| `src/lib/utils/quickTransactionHelper.ts` | Section 12 (Quick Transaction Resolver) |
+| `src/lib/utils/transactionHelpers.ts` | Section 4 (Transaction Lifecycle), 18 (Category Matrix) |
+| `database/migrations/*.sql` | Section 2 (Chart of Accounts), 2.4 (Auto-Provisioning) |
+| `src/hooks/useCashFlow.ts` | Section 8 (Cash Flow Logic) |
+| `src/hooks/useBalanceSheet.ts` | Section 6 (Balance Sheet Logic) |
+| `src/hooks/useScenarioModeling.ts` | Section 11 (Scenario Modeling) |
+| `src/hooks/useIncomeStatement.ts` | Section 7 (Income Statement Logic) |
+
+### Cara update:
+1. Identifikasi section yang terdampak dari tabel di atas
+2. Update konten section tersebut agar sesuai dengan perilaku kode terbaru
+3. Update baris `Terakhir diupdate:` di header dokumen (format: DD Bulan YYYY)
+4. Jika ada bug fix pada logic, tambahkan atau update entry di **Section 19 (Audit Findings & Known Issues)**
+
 ## Middleware
 
 - `middleware.ts` di root wajib ada — me-refresh session cookies `@supabase/ssr` di setiap request

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDatabase } from '@/db';
+import { supabase } from '@/lib/supabase';
 import {
   calculateIncomeStatementMetrics,
   calculateFinancialSummary,
@@ -45,40 +45,48 @@ export function useReports(
 
     const fetchReportData = async () => {
       try {
-        const db = getDatabase();
-        const collection = db.collections.get('transactions');
-        const records: any[] = await collection.query().fetch();
+        setIsLoading(true);
 
-        // Filter by business
-        const businessTxs = records.filter(
-          (tx) => tx.business_id === businessId && !tx.deleted_at && tx.status === 'posted'
-        );
+        // Fetch all transactions from Supabase
+        const { data, error: fetchError } = await supabase
+          .from('transactions')
+          .select(
+            `*,
+            debit_account:accounts!transactions_debit_account_id_fkey(id, account_code, account_name, account_type),
+            credit_account:accounts!transactions_credit_account_id_fkey(id, account_code, account_name, account_type)`
+          )
+          .eq('business_id', businessId)
+          .is('deleted_at', null)
+          .eq('status', 'posted')
+          .order('date', { ascending: false });
+
+        if (fetchError) throw new Error(fetchError.message);
+
+        const allTxs = (data || []) as Transaction[];
+
+        // Fetch business capital
+        const { data: biz } = await supabase
+          .from('businesses')
+          .select('capital_investment')
+          .eq('id', businessId)
+          .single();
+
+        const capital = biz?.capital_investment || 0;
 
         // Filter by date range
-        const filtered = filterTransactionsByDateRange(businessTxs, startDate, endDate);
+        const filtered = filterTransactionsByDateRange(allTxs, startDate, endDate);
 
         // Calculate income statement
         const summary = calculateFinancialSummary(filtered);
         const metrics = calculateIncomeStatementMetrics(summary);
 
         // Calculate balance sheet
-        const bs = calculateBalanceSheet(
-          businessTxs,
-          summary.totalCapitalInvested || 0
-        );
+        const bs = calculateBalanceSheet(allTxs, capital);
 
         // Calculate cash flow
-        const cf = calculateCashFlow(
-          filtered,
-          summary.totalCapitalInvested || 0,
-          businessTxs,
-          startDate
-        );
+        const cf = calculateCashFlow(filtered, capital, allTxs, startDate);
 
-        setIncomeStatement({
-          metrics,
-          transactions: filtered,
-        });
+        setIncomeStatement({ metrics, transactions: filtered });
         setBalanceSheet(bs);
         setCashFlow(cf);
         setError(null);

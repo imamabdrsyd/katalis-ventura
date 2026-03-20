@@ -37,20 +37,9 @@ export function useSyncImpl(): SyncState {
     }
   }, []);
 
-  // Calculate pending count from local DB
+  // Pending count not applicable — using direct Supabase queries
   const calculatePendingCount = useCallback(async () => {
-    try {
-      const { getDatabase } = await import('@/db');
-      const db = getDatabase();
-      const txCollection = db.collections.get('transactions');
-      const allTxs: any[] = await txCollection.query().fetch();
-      const pending = allTxs.filter(
-        (tx) => tx._status === 'created' || tx._status === 'updated' || tx._status === 'deleted'
-      ).length;
-      setPendingCount(pending);
-    } catch (error) {
-      console.warn('Error calculating pending count:', error);
-    }
+    setPendingCount(0);
   }, []);
 
   // Perform sync

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDatabase } from '@/db';
+import { supabase } from '@/lib/supabase';
 import {
   calculateFinancialSummary,
   calculateBalanceSheet,
@@ -38,17 +38,24 @@ export function useDashboard(businessId: string, year: number, month?: number): 
 
     const fetchData = async () => {
       try {
-        const db = getDatabase();
-        const collection = db.collections.get('transactions');
-        const records: any[] = await collection.query().fetch();
+        setIsLoading(true);
 
-        // Filter by business and date range
-        const businessTxs = records.filter(
-          (tx) =>
-            tx.business_id === businessId &&
-            !tx.deleted_at &&
-            tx.status === 'posted'
-        );
+        // Fetch transactions directly from Supabase
+        const { data, error: fetchError } = await supabase
+          .from('transactions')
+          .select(
+            `*,
+            debit_account:accounts!transactions_debit_account_id_fkey(id, account_code, account_name, account_type),
+            credit_account:accounts!transactions_credit_account_id_fkey(id, account_code, account_name, account_type)`
+          )
+          .eq('business_id', businessId)
+          .is('deleted_at', null)
+          .eq('status', 'posted')
+          .order('date', { ascending: false });
+
+        if (fetchError) throw new Error(fetchError.message);
+
+        const allTxs = (data || []) as Transaction[];
 
         // Calculate date range
         const startDate = new Date(year, month ?? 0, 1).toISOString().split('T')[0];
@@ -56,21 +63,22 @@ export function useDashboard(businessId: string, year: number, month?: number): 
           ? new Date(year, month + 1, 0).toISOString().split('T')[0]
           : new Date(year + 1, 0, 0).toISOString().split('T')[0];
 
-        const filtered = filterTransactionsByDateRange(businessTxs, startDate, endDate);
+        const filtered = filterTransactionsByDateRange(allTxs, startDate, endDate);
+
+        // Fetch business capital
+        const { data: biz } = await supabase
+          .from('businesses')
+          .select('capital_investment')
+          .eq('id', businessId)
+          .single();
+
+        const capital = biz?.capital_investment || 0;
 
         // Calculate metrics
         const financialSummary = calculateFinancialSummary(filtered);
         const counts = calculateCategoryCounts(filtered);
-        const roiValue = calculateROI(
-          financialSummary.netProfit,
-          financialSummary.totalCapitalInvested || 0
-        );
-
-        // Calculate balance sheet
-        const bs = calculateBalanceSheet(
-          businessTxs,
-          financialSummary.totalCapitalInvested || 0
-        );
+        const roiValue = calculateROI(financialSummary.netProfit, capital);
+        const bs = calculateBalanceSheet(allTxs, capital);
 
         setTransactions(filtered);
         setSummary(financialSummary);
