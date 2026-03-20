@@ -334,7 +334,7 @@ Works on any platform that supports Next.js:
 - [ ] Multi-currency support
 - [ ] Recurring transactions
 - [ ] Budget forecasting
-- [ ] Mobile app (React Native)
+- [x] Mobile app (React Native)
 
 ### Phase 4: Scale
 - [ ] Webhooks & API access
@@ -373,9 +373,9 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 Need help? Have questions?
 
-- 📧 Email: support@katalisventura.com
+- 📧 Email: imam.isyida@gmail.com
 - 💬 Discord: [Join our community](#)
-- 📚 Docs: [docs.katalisventura.com](#)
+- 📚 Docs: [/docs](/docs) - Complete documentation including ACCOUNTING_LOGIC.md, architecture guides, and implementation details
 
 ---
 
@@ -390,4 +390,4 @@ Built with amazing open-source tools:
 
 ---
 
-**Made with ❤️ for Private Equity & Property Management**
+**Made with ❤️ for AXION Accounting Engine by Katalis Ventura**
