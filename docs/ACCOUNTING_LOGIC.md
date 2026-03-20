@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 18 Maret 2026 | Terakhir diupdate: 19 Maret 2026
+> Terakhir diaudit: 18 Maret 2026 | Terakhir diupdate: 20 Maret 2026
 
 ---
 
@@ -1247,6 +1247,7 @@ Tabel ini memetakan setiap kategori transaksi — **termasuk sub-tipe** — ke d
 | **VAR** | **HPP / COGS** (Dr EXPENSE) | EXPENSE | ASSET (Kas/Bank) | `totalVar` → Cost of Goods Sold | -Cash, +Expenses → kurangi Retained Earnings | Operating (-) |
 | **VAR** | **Beli Persediaan** (Dr ASSET) | ASSET (Inventory) | ASSET (Kas/Bank) | **TIDAK MASUK** (tetap di neraca) | -Cash, +Inventory | Investing (-) |
 | **CAPEX** | Beli aset tetap | ASSET (Fixed) | ASSET (Kas/Bank) | **TIDAK MASUK** | -Cash, +Fixed Assets (tukar aset, total sama) | Investing (-) |
+| **DEPR** | Beban Penyusutan (on-the-fly) | — | — | `totalDepreciation` → Operating Expenses (di bawah OPEX) | -Fixed Assets (contra-asset), -Retained Earnings | **Tidak masuk** (non-cash expense) |
 | **TAX** | Bayar pajak | EXPENSE | ASSET (Kas/Bank) | `totalTax` → Tax Expense | -Cash, +Expenses → kurangi Retained Earnings | Operating (-) |
 | **FIN** | **Suntik Modal** (Cr EQUITY) | ASSET (Kas/Bank) | EQUITY | **TIDAK MASUK** | +Cash, +Equity (modal disetor) | Financing (+) |
 | **FIN** | **Prive / Dividen** (Dr EQUITY) | EQUITY | ASSET (Kas/Bank) | **TIDAK MASUK** | -Cash, -Equity (penarikan pemilik) | Financing (-) |
@@ -1375,7 +1376,8 @@ Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
 │  Assets = Cash + Inventory + Fixed Assets + Other        │
 │  Liabilities = Hutang                                    │
 │  Equity = (Modal - Prive) + Retained Earnings            │
-│         = (ΣCr EQUITY - ΣDr EQUITY) + (Revenue - Exp.)  │
+│         = (ΣCr EQUITY - ΣDr EQUITY)                     │
+│           + (Revenue - Expenses - Acc. Depreciation)     │
 │                                                         │
 │  CHECK: |Assets - (Liabilities + Equity)| < 0.01        │
 └─────────────────────────────────────────────────────────┘
@@ -1425,6 +1427,9 @@ Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
 | #14 | Views bypass RLS (SECURITY DEFINER default) | RESOLVED | Migration 021: Recreate semua views dengan `security_invoker = true` |
 | #15 | Cash Flow: Piutang usaha masuk Investing | RESOLVED | Sub-classification per IAS 7: trade receivable → Operating, trade payable → Operating |
 | #16 | Tidak ada depreciation untuk aset tetap | RESOLVED | Straight-line depreciation (PSAK 16) on-the-fly — Section 16 |
+| #17 | Cash Flow Opening Balance hanya pakai capital | RESOLVED | Multi-year aware: hitung dari semua cash movements sebelum startDate |
+| #18 | Scenario Modeling baseline tidak include depreciation | RESOLVED | Baseline include periodDepreciation, constant di scenarios |
+| #19 | Docs: Retained Earnings formula tidak include depreciation | RESOLVED | Code sudah benar, docs diupdate: `retainedEarnings = revenue - expenses - accumulatedDepreciation` |
 
 ---
 
@@ -1614,6 +1619,11 @@ CREATE TABLE accounts (
     is_system BOOLEAN DEFAULT FALSE,    -- TRUE = cannot be deleted
     sort_order INTEGER,
     default_category TEXT,              -- EARN|OPEX|VAR|CAPEX|TAX|FIN (optional)
+    -- Depreciation fields (PSAK 16, Migration 025)
+    useful_life_months INTEGER,
+    residual_value NUMERIC DEFAULT 0,
+    depreciation_method TEXT DEFAULT 'straight_line',
+    acquisition_date DATE,
     UNIQUE(business_id, account_code)
 );
 ```
