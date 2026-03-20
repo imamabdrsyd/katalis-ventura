@@ -384,10 +384,14 @@ export function TransactionDetailModal({
               DRAFT
             </span>
           ) : (
-            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400">
-              <CheckCircle2 className="w-3 h-3 mr-1" />
-              POSTED
-            </span>
+            <div className="relative group inline-flex items-center">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 cursor-help" />
+              <div className="absolute left-0 top-full mt-1.5 z-50 hidden group-hover:block whitespace-nowrap">
+                <div className="bg-gray-900 dark:bg-gray-700 text-white rounded-lg px-3 py-2 shadow-lg">
+                  <p className="text-xs font-semibold">POSTED</p>
+                </div>
+              </div>
+            </div>
           )}
           </div>
           <div className="text-right flex items-center gap-1.5 justify-end">
