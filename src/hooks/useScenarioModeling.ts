@@ -1,12 +1,16 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useReportData } from './useReportData';
 import {
   calculateFinancialSummary,
   calculateIncomeStatementMetrics,
+  applyDepreciationToSummary,
   groupTransactionsByMonth,
 } from '@/lib/calculations';
+import { calculateDepreciationSummary } from '@/lib/accounting/depreciation';
+import * as accountsApi from '@/lib/api/accounts';
+import type { Account } from '@/types';
 
 export interface ScenarioAssumptions {
   revenueGrowth: number;      // % change
@@ -22,6 +26,7 @@ export interface ScenarioResult {
   cogs: number;
   grossProfit: number;
   opex: number;
+  depreciation: number;
   operatingIncome: number;
   interest: number;
   ebt: number;
@@ -55,7 +60,9 @@ function applyScenario(
   const cogs = baseline.cogs * (1 + assumptions.cogsGrowth / 100);
   const grossProfit = revenue - cogs;
   const opex = baseline.opex * (1 + assumptions.opexGrowth / 100);
-  const operatingIncome = grossProfit - opex;
+  // Depreciation stays fixed — it depends on existing assets, not growth assumptions
+  const depreciation = baseline.depreciation;
+  const operatingIncome = grossProfit - opex - depreciation;
   const interest = baseline.interest * (1 + assumptions.interestGrowth / 100);
   const ebt = operatingIncome - interest;
   const tax = assumptions.taxRate > 0 ? Math.max(0, ebt * (assumptions.taxRate / 100)) : baseline.tax;
@@ -67,6 +74,7 @@ function applyScenario(
     cogs,
     grossProfit,
     opex,
+    depreciation,
     operatingIncome,
     interest,
     ebt,
@@ -80,7 +88,17 @@ function applyScenario(
 
 export function useScenarioModeling() {
   const reportData = useReportData();
-  const { activeBusiness, filteredTransactions, transactions } = reportData;
+  const { activeBusiness, filteredTransactions, transactions, startDate, endDate } = reportData;
+
+  // Fetch accounts for depreciation calculation
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  useEffect(() => {
+    if (!activeBusiness) return;
+    accountsApi
+      .getAccounts(activeBusiness.id, false)
+      .then(setAccounts)
+      .catch(console.error);
+  }, [activeBusiness]);
 
   const [optimisticAssumptions, setOptimisticAssumptions] = useState<ScenarioAssumptions>({
     revenueGrowth: 20,
@@ -104,9 +122,36 @@ export function useScenarioModeling() {
 
   const [projectionMonths, setProjectionMonths] = useState(6);
 
-  // Baseline from actual data
+  // Baseline from actual data (including depreciation)
   const baseline = useMemo<ScenarioResult>(() => {
-    const summary = calculateFinancialSummary(filteredTransactions);
+    const baseSummary = calculateFinancialSummary(filteredTransactions);
+
+    // Calculate period depreciation (same pattern as useIncomeStatement)
+    let periodDepreciation = 0;
+    if (accounts.length && startDate && endDate) {
+      const fixedAssetCosts = new Map<string, number>();
+      for (const t of transactions) {
+        if (!t.is_double_entry) continue;
+        const amount = Number(t.amount);
+        if (t.debit_account?.account_type === 'ASSET' && t.debit_account.default_category === 'CAPEX') {
+          fixedAssetCosts.set(t.debit_account.id, (fixedAssetCosts.get(t.debit_account.id) ?? 0) + amount);
+        }
+        if (t.credit_account?.account_type === 'ASSET' && t.credit_account.default_category === 'CAPEX') {
+          fixedAssetCosts.set(t.credit_account.id, (fixedAssetCosts.get(t.credit_account.id) ?? 0) - amount);
+        }
+      }
+      const depSummary = calculateDepreciationSummary(
+        accounts,
+        (accountId) => fixedAssetCosts.get(accountId) ?? 0,
+        new Date(endDate),
+        new Date(startDate)
+      );
+      periodDepreciation = depSummary.periodDepreciation;
+    }
+
+    const summary = periodDepreciation > 0
+      ? applyDepreciationToSummary(baseSummary, periodDepreciation)
+      : baseSummary;
     const metrics = calculateIncomeStatementMetrics(summary);
 
     return {
@@ -115,6 +160,7 @@ export function useScenarioModeling() {
       cogs: summary.totalVar,
       grossProfit: summary.grossProfit,
       opex: summary.totalOpex,
+      depreciation: periodDepreciation,
       operatingIncome: metrics.operatingIncome,
       interest: summary.totalInterest,
       ebt: metrics.ebt,
@@ -124,7 +170,7 @@ export function useScenarioModeling() {
       operatingMargin: metrics.operatingMargin,
       netMargin: metrics.netMargin,
     };
-  }, [filteredTransactions]);
+  }, [filteredTransactions, accounts, transactions, startDate, endDate]);
 
   // Scenario results
   const optimistic = useMemo(() => {

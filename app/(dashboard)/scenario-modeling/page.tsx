@@ -116,6 +116,9 @@ function ScenarioCard({
         <Divider />
         <Row label="Gross Profit" value={scenario.grossProfit} bold />
         <Row label="OpEx" value={-scenario.opex} negative />
+        {scenario.depreciation > 0 && (
+          <Row label="Depreciation" value={-scenario.depreciation} negative />
+        )}
         <Divider />
         <Row label="Operating Income" value={scenario.operatingIncome} bold />
         <Row label="Interest" value={-scenario.interest} negative />
@@ -593,6 +596,7 @@ export default function ScenarioModelingPage() {
                 { label: 'COGS', key: 'cogs' as const },
                 { label: 'Gross Profit', key: 'grossProfit' as const, bold: true },
                 { label: 'OpEx', key: 'opex' as const },
+                { label: 'Depreciation', key: 'depreciation' as const },
                 { label: 'Operating Income', key: 'operatingIncome' as const, bold: true },
                 { label: 'Interest', key: 'interest' as const },
                 { label: 'Tax', key: 'tax' as const },

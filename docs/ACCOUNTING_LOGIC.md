@@ -502,9 +502,13 @@ Fallback: Jika tidak ada equity transactions dari double-entry DAN `capital_inve
 ### 6.4 Retained Earnings
 
 ```
-retainedEarnings = totalRevenue - totalExpenses
+retainedEarnings = totalRevenue - totalExpenses - accumulatedDepreciation
 totalEquity = netEquityMovements + retainedEarnings
 ```
+
+> Depreciation dihitung on-the-fly (Section 16), bukan dari jurnal.
+> Harus dikurangkan dari retained earnings agar sisi Equity turun seimbang
+> dengan sisi Assets yang sudah menggunakan nilai buku (cost - depreciation).
 
 ### 6.5 Balance Check
 
@@ -617,9 +621,20 @@ Financing  = FIN
 **Hasil akhir:**
 ```
 Net Cash Flow = Operating + Investing + Financing
-Opening Balance = capital (dari business settings)
+Opening Balance = sum of ALL net cash movements before startDate
 Closing Balance = Opening + Net Cash Flow
 ```
+
+> **Opening Balance** dihitung dari seluruh transaksi yang menyentuh akun kas/bank
+> (1100/1200) **sebelum** periode laporan — bukan hanya dari `capital_investment`.
+>
+> Logika:
+> - Double-entry: Dr Kas = +amount, Cr Kas = -amount (termasuk modal, revenue, OPEX, CAPEX, dll)
+> - Legacy: category-based (EARN +, OPEX/VAR/TAX/CAPEX -, FIN +)
+> - Jika tidak ada transaksi sebelum periode → fallback ke `capital_investment` dari business settings
+> - Jika hanya legacy (tanpa double-entry equity) → `capital + legacy cash movements`
+>
+> Ini memastikan opening balance benar untuk multi-period/multi-year reporting.
 
 ---
 
@@ -725,19 +740,25 @@ Scenario Modeling memungkinkan simulasi perubahan asumsi keuangan terhadap basel
 
 ### 11.2 Baseline
 
-Baseline dihitung dari transaksi aktual dalam periode yang dipilih:
+Baseline dihitung dari transaksi aktual dalam periode yang dipilih, **termasuk depreciation** (sama seperti Income Statement):
 
 ```
+baseSummary    = calculateFinancialSummary(filteredTransactions)
+periodDeprec   = calculateDepreciationSummary(accounts, costs, endDate, startDate).periodDepreciation
+summary        = applyDepreciationToSummary(baseSummary, periodDeprec)
+metrics        = calculateIncomeStatementMetrics(summary)
+
 baseline = {
-  revenue:         calculateFinancialSummary().totalEarn,
-  cogs:            calculateFinancialSummary().totalVar,
-  grossProfit:     grossProfit,
-  opex:            totalOpex,
-  operatingIncome: calculateIncomeStatementMetrics().operatingIncome,
-  interest:        totalInterest,
-  ebt:             ebt,
-  tax:             totalTax,
-  netIncome:       netProfit,
+  revenue:         summary.totalEarn,
+  cogs:            summary.totalVar,
+  grossProfit:     summary.grossProfit,
+  opex:            summary.totalOpex,
+  depreciation:    periodDeprec,              ← NEW
+  operatingIncome: metrics.operatingIncome,   (sudah include depreciation)
+  interest:        summary.totalInterest,
+  ebt:             metrics.ebt,
+  tax:             summary.totalTax,
+  netIncome:       summary.netProfit,
   + margins (gross, operating, net)
 }
 ```
@@ -762,12 +783,16 @@ applyScenario(baseline, assumptions):
   cogs            = baseline.cogs × (1 + cogsGrowth/100)
   grossProfit     = revenue - cogs
   opex            = baseline.opex × (1 + opexGrowth/100)
-  operatingIncome = grossProfit - opex
+  depreciation    = baseline.depreciation            ← FIXED, tidak kena growth
+  operatingIncome = grossProfit - opex - depreciation
   interest        = baseline.interest × (1 + interestGrowth/100)
   ebt             = operatingIncome - interest
   tax             = taxRate > 0 ? max(0, ebt × taxRate/100) : baseline.tax
   netIncome       = ebt - tax
 ```
+
+> **Depreciation tetap konstan** di semua skenario karena bergantung pada aset
+> yang sudah dimiliki, bukan proyeksi revenue/expense.
 
 ### 11.5 Pre-configured Scenarios
 
@@ -1285,7 +1310,7 @@ Cr EQUITY → totalEquityCredit (suntik modal masuk)
 Dr EQUITY → totalEquityDebit  (prive/dividen keluar)
 
 totalEquity = (totalEquityCredit - totalEquityDebit) + retainedEarnings
-            = netEquityMovements + (totalRevenue - totalExpenses)
+            = netEquityMovements + (totalRevenue - totalExpenses - accumulatedDepreciation)
 ```
 
 Di **Quick Entry**, arah transaksi ditentukan dari **keyword nama akun**:
@@ -1469,7 +1494,7 @@ Process per account type    calculateFinancialSummary()
       └──────────┬───────────────┘
                  │
                  ▼
-      retainedEarnings = revenue - expenses
+      retainedEarnings = revenue - expenses - accumulatedDepreciation
       totalEquity = (equityCredit - equityDebit) + retainedEarnings
 
       CHECK: |assets - (liabilities + equity)| < 0.01

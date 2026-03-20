@@ -573,45 +573,84 @@ function classifyCashFlow(
 }
 
 /**
- * Calculate opening balance from equity transactions (Dr Cash / Cr EQUITY)
- * that occurred strictly before the given startDate.
- * Falls back to capital_investment if no equity transactions exist at all.
+ * Calculate opening balance from ALL cash movements before startDate.
+ *
+ * This sums every transaction that touches a cash/bank account (1100/1200)
+ * before the reporting period, giving the correct cash position at period start.
+ *
+ * For double-entry: Dr Cash = +amount, Cr Cash = -amount.
+ * For legacy: category-based (EARN +, OPEX/VAR/TAX/CAPEX -, FIN +).
+ *
+ * Falls back to capital_investment only when no transactions exist before the period.
  */
 function calculateOpeningBalance(
   allTransactions: Transaction[],
   startDate: string,
   fallbackCapital: number
 ): number {
-  const equityTxnsBefore = allTransactions.filter(t => {
-    if (!t.is_double_entry) return false;
-    if (t.date >= startDate) return false;
+  const prePeriodTxns = allTransactions.filter(t => t.date < startDate);
+
+  // No transactions before period → fall back to capital from business settings
+  if (prePeriodTxns.length === 0) return fallbackCapital;
+
+  let opening = 0;
+
+  // Double-entry: sum net cash movements
+  for (const t of prePeriodTxns) {
+    if (!t.is_double_entry) continue;
+
     const debitCode = t.debit_account?.account_code;
     const creditCode = t.credit_account?.account_code;
-    if (!debitCode || !creditCode) return false;
-    // Dr Cash / Cr EQUITY → capital injection (money IN)
-    if (isCashAccount(debitCode) && t.credit_account?.account_type === 'EQUITY') return true;
-    // Dr EQUITY / Cr Cash → owner withdrawal (money OUT)
-    if (isCashAccount(creditCode) && t.debit_account?.account_type === 'EQUITY') return true;
-    return false;
-  });
+    if (!debitCode || !creditCode) continue;
 
-  // If no equity transactions exist at all (all-time), fall back to capital_investment
-  const hasAnyEquityTxn = allTransactions.some(
+    const debitIsCash = isCashAccount(debitCode);
+    const creditIsCash = isCashAccount(creditCode);
+    const amount = Number(t.amount);
+
+    if (debitIsCash && !creditIsCash) {
+      opening += amount;  // cash in
+    } else if (!debitIsCash && creditIsCash) {
+      opening -= amount;  // cash out
+    }
+    // Both cash (transfer between kas/bank) → net zero, skip
+  }
+
+  // Legacy: category-based cash movements
+  for (const t of prePeriodTxns) {
+    if (t.is_double_entry) continue;
+
+    const amount = Number(t.amount);
+    switch (t.category) {
+      case 'EARN':
+        opening += amount; break;
+      case 'OPEX':
+      case 'VAR':
+      case 'TAX':
+        opening -= amount; break;
+      case 'CAPEX':
+        opening -= amount; break;
+      case 'FIN':
+        opening += amount; break;
+      default:
+        opening += amount;
+    }
+  }
+
+  // If we only have legacy transactions and no double-entry equity transactions,
+  // capital from business settings is the base (legacy didn't record capital injection)
+  const hasDoubleEntryEquity = prePeriodTxns.some(
     t => t.is_double_entry && (
-      (t.credit_account?.account_type === 'EQUITY' && isCashAccount(t.debit_account?.account_code ?? '')) ||
-      (t.debit_account?.account_type === 'EQUITY' && isCashAccount(t.credit_account?.account_code ?? ''))
+      (isCashAccount(t.debit_account?.account_code ?? '') && t.credit_account?.account_type === 'EQUITY') ||
+      (isCashAccount(t.credit_account?.account_code ?? '') && t.debit_account?.account_type === 'EQUITY')
     )
   );
-  if (!hasAnyEquityTxn) return fallbackCapital;
+  const hasLegacyTxns = prePeriodTxns.some(t => !t.is_double_entry);
 
-  return equityTxnsBefore.reduce((sum, t) => {
-    const amount = Number(t.amount);
-    const debitCode = t.debit_account?.account_code ?? '';
-    // Dr Cash / Cr EQUITY → cash in (+)
-    if (isCashAccount(debitCode)) return sum + amount;
-    // Dr EQUITY / Cr Cash → cash out (-)
-    return sum - amount;
-  }, 0);
+  if (hasLegacyTxns && !hasDoubleEntryEquity) {
+    opening += fallbackCapital;
+  }
+
+  return opening;
 }
 
 // Calculate cash flow
