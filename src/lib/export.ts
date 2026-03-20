@@ -72,8 +72,11 @@ export async function exportIncomeStatementToPDF(
   doc.text('LAPORAN LABA RUGI', pageWidth / 2, 18, { align: 'center' });
 
   doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(99, 102, 241); // Indigo color
   doc.text(businessName, pageWidth / 2, 26, { align: 'center' });
+  doc.setTextColor(0, 0, 0); // Reset color
+  doc.setFont('helvetica', 'normal');
 
   doc.setFontSize(9);
   doc.setTextColor(100, 100, 100);
@@ -383,8 +386,11 @@ export async function exportCashFlowToPDF(
   doc.text('LAPORAN ARUS KAS', pageWidth / 2, 18, { align: 'center' });
 
   doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(99, 102, 241); // Indigo color
   doc.text(businessName, pageWidth / 2, 26, { align: 'center' });
+  doc.setTextColor(0, 0, 0); // Reset color
+  doc.setFont('helvetica', 'normal');
 
   doc.setFontSize(9);
   doc.setTextColor(100, 100, 100);
@@ -600,123 +606,220 @@ export function exportCashFlowToExcel(
 }
 
 // Export Balance Sheet to PDF
-export function exportBalanceSheetToPDF(
+export async function exportBalanceSheetToPDF(
   businessName: string,
   asOfDate: string,
   data: BalanceSheetData
 ) {
   const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
 
-  // Title
-  doc.setFontSize(18);
-  doc.text('BALANCE SHEET', 105, 15, { align: 'center' });
+  // ── Header ──
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('NERACA', pageWidth / 2, 18, { align: 'center' });
 
-  // Business name
-  doc.setFontSize(12);
-  doc.text(businessName, 105, 25, { align: 'center' });
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(99, 102, 241); // Indigo color
+  doc.text(businessName, pageWidth / 2, 26, { align: 'center' });
+  doc.setTextColor(0, 0, 0); // Reset color
 
-  // As of date
-  doc.setFontSize(10);
-  doc.text(`As of: ${asOfDate}`, 105, 32, { align: 'center' });
+  doc.setFontSize(9);
+  doc.setTextColor(100, 100, 100);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Per: ${asOfDate}`, pageWidth / 2, 33, { align: 'center' });
+  doc.setTextColor(0, 0, 0);
 
   // Check if balanced
   const isBalanced = Math.abs(
     data.assets.totalAssets - (data.liabilities.totalLiabilities + data.equity.totalEquity)
   ) < 0.01;
 
-  // Assets table
-  const assetsRows: string[][] = [
-    ['ASSETS', ''],
-    ['', ''],
-    ['Current Assets', ''],
-    ['  Cash & Bank', formatCurrency(data.assets.cash)],
-  ];
+  // ── Build rows ──
+  const rows: PDFRow[] = [];
+
+  const section = (label: string) => rows.push({ cells: [label, ''], kind: 'section' });
+  const item = (label: string, amount: number) =>
+    rows.push({
+      cells: [`    ${label}`, formatCurrency(amount)],
+      kind: 'item',
+    });
+  const subtotal = (label: string, amount: number) =>
+    rows.push({
+      cells: [label, formatCurrency(amount)],
+      kind: 'subtotal',
+    });
+  const total = (label: string, amount: number) =>
+    rows.push({ cells: [label, formatCurrency(amount)], kind: 'total' });
+  const blank = () => rows.push({ cells: ['', ''], kind: 'blank' });
+
+  // ── ASSETS ──
+  section('ASET');
+  section('Aset Lancar');
+  item('Kas & Bank', data.assets.cash);
   if (data.assets.inventory !== 0) {
-    assetsRows.push(['  Inventory', formatCurrency(data.assets.inventory)]);
+    item('Persediaan', data.assets.inventory);
   }
   if (data.assets.receivables !== 0) {
-    assetsRows.push(['  Receivables', formatCurrency(data.assets.receivables)]);
+    item('Piutang', data.assets.receivables);
   }
   if (data.assets.otherCurrentAssets !== 0) {
-    assetsRows.push(['  Other Current Assets', formatCurrency(data.assets.otherCurrentAssets)]);
+    item('Aset Lancar Lainnya', data.assets.otherCurrentAssets);
   }
-  assetsRows.push(
-    ['Total Current Assets', formatCurrency(data.assets.totalCurrentAssets)],
-    ['', ''],
-    ['Fixed Assets', ''],
-    ['  Nilai Perolehan', formatCurrency(data.assets.fixedAssets)],
-    ...(data.assets.accumulatedDepreciation > 0
-      ? [['  Akumulasi Penyusutan', `(${formatCurrency(data.assets.accumulatedDepreciation)})`]]
-      : []),
-    [data.assets.accumulatedDepreciation > 0 ? 'Nilai Buku Aset Tetap' : 'Total Fixed Assets', formatCurrency(data.assets.totalFixedAssets)],
-    ['', ''],
-    ['TOTAL ASSETS', formatCurrency(data.assets.totalAssets)],
+  subtotal('TOTAL ASET LANCAR', data.assets.totalCurrentAssets);
+  blank();
+
+  section('Aset Tetap');
+  item('Nilai Perolehan', data.assets.fixedAssets);
+  if (data.assets.accumulatedDepreciation > 0) {
+    item('Akumulasi Penyusutan', data.assets.accumulatedDepreciation);
+  }
+  subtotal(
+    data.assets.accumulatedDepreciation > 0 ? 'Nilai Buku Aset Tetap' : 'TOTAL ASET TETAP',
+    data.assets.totalFixedAssets
   );
-  const assetsData = assetsRows;
+  blank();
+
+  total('TOTAL ASET', data.assets.totalAssets);
+  blank();
+
+  // ── LIABILITIES & EQUITY ──
+  section('LIABILITAS');
+  item('Hutang', data.liabilities.loans);
+  subtotal('TOTAL LIABILITAS', data.liabilities.totalLiabilities);
+  blank();
+
+  section('EKUITAS');
+  item('Modal Disetor', data.equity.capital);
+  if (data.equity.drawings > 0) {
+    item('Prive / Dividen', data.equity.drawings);
+  }
+  item('Laba Ditahan', data.equity.retainedEarnings);
+  subtotal('TOTAL EKUITAS', data.equity.totalEquity);
+  blank();
+
+  total(
+    'TOTAL LIABILITAS & EKUITAS',
+    data.liabilities.totalLiabilities + data.equity.totalEquity
+  );
+  blank();
+
+  // Balance status
+  rows.push({
+    cells: [
+      isBalanced ? '✓ Seimbang' : '⚠ Tidak Seimbang',
+      isBalanced ? 'Aset = Liabilitas + Ekuitas' : 'Aset ≠ Liabilitas + Ekuitas',
+    ],
+    kind: 'item',
+  });
+
+  // ── Render table ──
+  const tableBody = rows.map((r) => r.cells);
 
   autoTable(doc, {
     startY: 40,
-    head: [],
-    body: assetsData,
-    theme: 'grid',
-    styles: { fontSize: 10 },
-    headStyles: { fillColor: [59, 130, 246] },
+    head: [['Keterangan', 'Jumlah (Rp)']],
+    body: tableBody,
+    theme: 'plain',
+    headStyles: {
+      fillColor: [255, 255, 255],
+      textColor: [60, 60, 60],
+      fontSize: 9,
+      fontStyle: 'bold',
+      cellPadding: { top: 3, bottom: 3, left: 4, right: 4 },
+    },
+    styles: {
+      fontSize: 9,
+      cellPadding: { top: 2.5, bottom: 2.5, left: 4, right: 4 },
+      lineColor: [220, 220, 220],
+      lineWidth: 0,
+      textColor: [40, 40, 40],
+    },
     columnStyles: {
-      0: { cellWidth: 120 },
-      1: { cellWidth: 60, halign: 'right' },
+      0: { cellWidth: 125 },
+      1: { cellWidth: 55, halign: 'right' },
+    },
+    didParseCell: function (data) {
+      if (data.section !== 'body') return;
+      const row = rows[data.row.index];
+      if (!row) return;
+
+      switch (row.kind) {
+        case 'section':
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fontSize = 9.5;
+          data.cell.styles.textColor = [30, 30, 30];
+          break;
+        case 'item':
+          data.cell.styles.textColor = [80, 80, 80];
+          break;
+        case 'subtotal':
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fontSize = 9;
+          break;
+        case 'total':
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fontSize = 10;
+          data.cell.styles.fillColor = [245, 245, 245];
+          break;
+        case 'blank':
+          data.cell.styles.minCellHeight = 3;
+          break;
+      }
+    },
+    didDrawCell: function (data) {
+      if (data.section !== 'body') return;
+      const row = rows[data.row.index];
+      if (!row) return;
+
+      // Draw top border line for section headers & totals
+      if (row.kind === 'section' || row.kind === 'total') {
+        doc.setDrawColor(180, 180, 180);
+        doc.setLineWidth(0.3);
+        doc.line(data.cell.x, data.cell.y, data.cell.x + data.cell.width, data.cell.y);
+      }
+
+      // Draw bottom border for subtotals & totals
+      if (row.kind === 'subtotal' || row.kind === 'total') {
+        const bottomY = data.cell.y + data.cell.height;
+        doc.setDrawColor(row.kind === 'total' ? 80 : 180, row.kind === 'total' ? 80 : 180, row.kind === 'total' ? 80 : 180);
+        doc.setLineWidth(row.kind === 'total' ? 0.5 : 0.3);
+        doc.line(data.cell.x, bottomY, data.cell.x + data.cell.width, bottomY);
+      }
     },
   });
 
-  // Liabilities & Equity table
-  const finalY = (doc as any).lastAutoTable.finalY + 10;
+  // ── Footer with AXION logo ──
+  const faviconBase64 = await loadImageAsBase64('/images/favicon.png');
+  const pageCount = (doc as any).internal.getNumberOfPages();
+  const footerY = 284;
+  const logoSize = 5;
 
-  const liabilitiesEquityData = [
-    ['LIABILITIES & EQUITY', ''],
-    ['', ''],
-    ['Liabilities', ''],
-    ['  Loans', formatCurrency(data.liabilities.loans)],
-    ['Total Liabilities', formatCurrency(data.liabilities.totalLiabilities)],
-    ['', ''],
-    ['Equity', ''],
-    ['  Modal Disetor', formatCurrency(data.equity.capital)],
-    ...(data.equity.drawings > 0 ? [['  Prive / Dividen', `(${formatCurrency(data.equity.drawings)})`]] : []),
-    ['  Retained Earnings', formatCurrency(data.equity.retainedEarnings)],
-    ['Total Equity', formatCurrency(data.equity.totalEquity)],
-    ['', ''],
-    [
-      'TOTAL LIABILITIES & EQUITY',
-      formatCurrency(data.liabilities.totalLiabilities + data.equity.totalEquity),
-    ],
-    ['', ''],
-    [
-      isBalanced ? '✓ Balanced' : '⚠ Not Balanced',
-      isBalanced
-        ? 'Assets = Liabilities + Equity'
-        : 'Assets ≠ Liabilities + Equity',
-    ],
-  ];
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
 
-  autoTable(doc, {
-    startY: finalY,
-    head: [],
-    body: liabilitiesEquityData,
-    theme: 'grid',
-    styles: { fontSize: 10 },
-    columnStyles: {
-      0: { cellWidth: 120 },
-      1: { cellWidth: 60, halign: 'right' },
-    },
-  });
+    // Left: "Dicetak oleh AXION pada [Date]"
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.text(
+      `Dicetak oleh AXION pada ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+      14,
+      footerY + 1
+    );
 
-  // Footer
-  const footerY = (doc as any).lastAutoTable.finalY + 10;
-  doc.setFontSize(8);
-  doc.text(`Generated on ${new Date().toLocaleDateString('id-ID')}`, 105, footerY, {
-    align: 'center',
-  });
+    // Right: page number
+    doc.text(`Halaman ${i} dari ${pageCount}`, pageWidth - 14, footerY + 1, { align: 'right' });
+
+    // Center: favicon logo
+    if (faviconBase64) {
+      doc.addImage(faviconBase64, 'PNG', (pageWidth - logoSize) / 2, footerY - 3, logoSize, logoSize);
+    }
+  }
+  doc.setTextColor(0, 0, 0);
 
   // Save
-  doc.save(`Balance-Sheet-${businessName}-${asOfDate}.pdf`);
+  doc.save(`Neraca-${businessName}-${asOfDate}.pdf`);
 }
 
 // Export Balance Sheet to Excel
