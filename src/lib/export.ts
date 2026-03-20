@@ -362,7 +362,7 @@ export function exportIncomeStatementToExcel(
 }
 
 // Export Cash Flow Statement to PDF
-export function exportCashFlowToPDF(
+export async function exportCashFlowToPDF(
   businessName: string,
   period: string,
   data: {
@@ -375,85 +375,175 @@ export function exportCashFlowToPDF(
   }
 ) {
   const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
 
-  // Title
-  doc.setFontSize(18);
-  doc.text('CASH FLOW STATEMENT', 105, 15, { align: 'center' });
+  // ── Header ──
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('LAPORAN ARUS KAS', pageWidth / 2, 18, { align: 'center' });
 
-  // Business name
-  doc.setFontSize(12);
-  doc.text(businessName, 105, 25, { align: 'center' });
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.text(businessName, pageWidth / 2, 26, { align: 'center' });
 
-  // Period
-  doc.setFontSize(10);
-  doc.text(`Period: ${period}`, 105, 32, { align: 'center' });
+  doc.setFontSize(9);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Periode: ${period}`, pageWidth / 2, 33, { align: 'center' });
+  doc.setTextColor(0, 0, 0);
 
-  // Table data
-  const tableData = [
-    ['Opening Balance', formatCurrency(data.openingBalance)],
-    ['', ''],
-    ['OPERATING ACTIVITIES', ''],
-    ['  Cash from Operations', formatCurrency(data.operating)],
-    ['', ''],
-    ['INVESTING ACTIVITIES', ''],
-    ['  Capital Expenditure', formatCurrency(data.investing)],
-    ['', ''],
-    ['FINANCING ACTIVITIES', ''],
-    ['  Financing Cash Flow', formatCurrency(data.financing)],
-    ['', ''],
-    ['NET CASH FLOW', formatCurrency(data.netCashFlow)],
-    ['', ''],
-    ['CLOSING BALANCE', formatCurrency(data.closingBalance)],
-  ];
+  // ── Build rows ──
+  const rows: PDFRow[] = [];
 
-  // Generate table
+  const section = (label: string) => rows.push({ cells: [label, ''], kind: 'section' });
+  const item = (label: string, amount: number) =>
+    rows.push({
+      cells: [`    ${label}`, formatCurrency(amount)],
+      kind: 'item',
+    });
+  const subtotal = (label: string, amount: number) =>
+    rows.push({
+      cells: [label, formatCurrency(amount)],
+      kind: 'subtotal',
+    });
+  const total = (label: string, amount: number) =>
+    rows.push({ cells: [label, formatCurrency(amount)], kind: 'total' });
+  const blank = () => rows.push({ cells: ['', ''], kind: 'blank' });
+
+  // ── OPENING BALANCE ──
+  total('SALDO AWAL', data.openingBalance);
+  blank();
+
+  // ── OPERATING ACTIVITIES ──
+  section('ARUS KAS OPERASIONAL');
+  item('Kas dari operasi', data.operating);
+  subtotal('TOTAL ARUS KAS OPERASIONAL', data.operating);
+  blank();
+
+  // ── INVESTING ACTIVITIES ──
+  section('ARUS KAS INVESTASI');
+  item('Belanja modal', data.investing);
+  subtotal('TOTAL ARUS KAS INVESTASI', data.investing);
+  blank();
+
+  // ── FINANCING ACTIVITIES ──
+  section('ARUS KAS PEMBIAYAAN');
+  item('Kas dari pembiayaan', data.financing);
+  subtotal('TOTAL ARUS KAS PEMBIAYAAN', data.financing);
+  blank();
+
+  // ── NET CASH FLOW ──
+  total('PERUBAHAN BERSIH KAS', data.netCashFlow);
+  blank();
+
+  // ── CLOSING BALANCE ──
+  total('SALDO AKHIR', data.closingBalance);
+
+  // ── Render table ──
+  const tableBody = rows.map((r) => r.cells);
+
   autoTable(doc, {
     startY: 40,
-    head: [['Description', 'Amount']],
-    body: tableData,
-    theme: 'grid',
+    head: [['Keterangan', 'Jumlah (Rp)']],
+    body: tableBody,
+    theme: 'plain',
     headStyles: {
-      fillColor: [99, 102, 241],
-      fontSize: 11,
+      fillColor: [255, 255, 255],
+      textColor: [60, 60, 60],
+      fontSize: 9,
       fontStyle: 'bold',
+      cellPadding: { top: 3, bottom: 3, left: 4, right: 4 },
     },
     styles: {
-      fontSize: 10,
+      fontSize: 9,
+      cellPadding: { top: 2.5, bottom: 2.5, left: 4, right: 4 },
+      lineColor: [220, 220, 220],
+      lineWidth: 0,
+      textColor: [40, 40, 40],
     },
     columnStyles: {
-      0: { cellWidth: 120 },
-      1: { cellWidth: 60, halign: 'right' },
+      0: { cellWidth: 125 },
+      1: { cellWidth: 55, halign: 'right' },
     },
     didParseCell: function (data) {
-      if (data.row.index !== undefined) {
-        const text = data.cell.raw as string;
-        if (
-          text === 'Opening Balance' ||
-          text === 'NET CASH FLOW' ||
-          text === 'CLOSING BALANCE'
-        ) {
+      if (data.section !== 'body') return;
+      const row = rows[data.row.index];
+      if (!row) return;
+
+      switch (row.kind) {
+        case 'section':
           data.cell.styles.fontStyle = 'bold';
-          data.cell.styles.fillColor = [243, 244, 246];
-        }
+          data.cell.styles.fontSize = 9.5;
+          data.cell.styles.textColor = [30, 30, 30];
+          break;
+        case 'item':
+          data.cell.styles.textColor = [80, 80, 80];
+          break;
+        case 'subtotal':
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fontSize = 9;
+          break;
+        case 'total':
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fontSize = 10;
+          data.cell.styles.fillColor = [245, 245, 245];
+          break;
+        case 'blank':
+          data.cell.styles.minCellHeight = 3;
+          break;
+      }
+    },
+    didDrawCell: function (data) {
+      if (data.section !== 'body') return;
+      const row = rows[data.row.index];
+      if (!row) return;
+
+      // Draw top border line for section headers & totals
+      if (row.kind === 'section' || row.kind === 'total') {
+        doc.setDrawColor(180, 180, 180);
+        doc.setLineWidth(0.3);
+        doc.line(data.cell.x, data.cell.y, data.cell.x + data.cell.width, data.cell.y);
+      }
+
+      // Draw bottom border for subtotals & totals
+      if (row.kind === 'subtotal' || row.kind === 'total') {
+        const bottomY = data.cell.y + data.cell.height;
+        doc.setDrawColor(row.kind === 'total' ? 80 : 180, row.kind === 'total' ? 80 : 180, row.kind === 'total' ? 80 : 180);
+        doc.setLineWidth(row.kind === 'total' ? 0.5 : 0.3);
+        doc.line(data.cell.x, bottomY, data.cell.x + data.cell.width, bottomY);
       }
     },
   });
 
-  // Footer
+  // ── Footer with AXION logo ──
+  const faviconBase64 = await loadImageAsBase64('/images/favicon.png');
   const pageCount = (doc as any).internal.getNumberOfPages();
-  doc.setFontSize(8);
+  const footerY = 284;
+  const logoSize = 5;
+
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
+
+    // Left: "Dicetak oleh AXION pada [Date]"
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
     doc.text(
-      `Generated on ${new Date().toLocaleDateString('id-ID')} - Page ${i} of ${pageCount}`,
-      105,
-      285,
-      { align: 'center' }
+      `Dicetak oleh AXION pada ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+      14,
+      footerY + 1
     );
+
+    // Right: page number
+    doc.text(`Halaman ${i} dari ${pageCount}`, pageWidth - 14, footerY + 1, { align: 'right' });
+
+    // Center: favicon logo
+    if (faviconBase64) {
+      doc.addImage(faviconBase64, 'PNG', (pageWidth - logoSize) / 2, footerY - 3, logoSize, logoSize);
+    }
   }
+  doc.setTextColor(0, 0, 0);
 
   // Save
-  doc.save(`Cash-Flow-${businessName}-${period}.pdf`);
+  doc.save(`Laporan-Arus-Kas-${businessName}-${period}.pdf`);
 }
 
 // Export Cash Flow Statement to Excel
