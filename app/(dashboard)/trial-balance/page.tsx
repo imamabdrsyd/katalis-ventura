@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { ClipboardCheck, Calendar, CheckCircle, AlertCircle } from 'lucide-react';
 import { useTrialBalance } from '@/hooks/useTrialBalance';
 import { formatCurrency } from '@/lib/utils';
@@ -30,7 +30,7 @@ const PERIOD_LABELS: Record<Period, string> = {
   custom: 'Kustom',
 };
 
-export default function TrialBalancePage() {
+function TrialBalancePageInner() {
   const {
     activeBusiness,
     loading,
@@ -280,5 +280,13 @@ export default function TrialBalancePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function TrialBalancePage() {
+  return (
+    <Suspense fallback={<div className="p-8 flex items-center justify-center min-h-[50vh]"><div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+      <TrialBalancePageInner />
+    </Suspense>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { filterTransactionsByDateRange } from '@/lib/calculations';
 import * as transactionsApi from '@/lib/api/transactions';
@@ -30,6 +31,7 @@ export function useReportData(): UseReportDataReturn {
   const { activeBusiness } = useBusinessContext();
   const activeBusinessId = activeBusiness?.id ?? null;
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
 
   const [period, setPeriod] = useState<Period>('month');
   const [startDate, setStartDate] = useState('');
@@ -37,13 +39,22 @@ export function useReportData(): UseReportDataReturn {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportButtonRef = useRef<HTMLDivElement>(null);
 
-  // Initialize dates based on current month
+  // Initialize dates — from URL params if provided (e.g. from dashboard card), else current month
   useEffect(() => {
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    setStartDate(firstDay.toISOString().split('T')[0]);
-    setEndDate(lastDay.toISOString().split('T')[0]);
+    const urlStart = searchParams.get('startDate');
+    const urlEnd = searchParams.get('endDate');
+    if (urlStart && urlEnd) {
+      setStartDate(urlStart);
+      setEndDate(urlEnd);
+      setPeriod('custom');
+    } else {
+      const now = new Date();
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      setStartDate(firstDay.toISOString().split('T')[0]);
+      setEndDate(lastDay.toISOString().split('T')[0]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch transactions with TanStack Query — cached per businessId

@@ -1,11 +1,12 @@
 'use client';
 
+import { Suspense } from 'react';
 import { Calendar, Scale, Download, FileText, FileSpreadsheet, CheckCircle, AlertCircle } from 'lucide-react';
 import { useBalanceSheet } from '@/hooks/useBalanceSheet';
 import { formatCurrency } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
 
-export default function BalanceSheetPage() {
+function BalanceSheetPageInner() {
   const {
     activeBusiness,
     loading,
@@ -351,5 +352,13 @@ export default function BalanceSheetPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function BalanceSheetPage() {
+  return (
+    <Suspense fallback={<div className="p-8 flex items-center justify-center min-h-[50vh]"><div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+      <BalanceSheetPageInner />
+    </Suspense>
   );
 }

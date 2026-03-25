@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { Calendar, TrendingUp, TrendingDown, Minus, FlaskConical, BarChart3, SlidersHorizontal, LineChart, Building2 } from 'lucide-react';
 import { useScenarioModeling, type ScenarioResult } from '@/hooks/useScenarioModeling';
 import { formatCurrency } from '@/lib/utils';
@@ -228,7 +228,7 @@ function ProjectionBar({ projections }: { projections: { month: string; revenue:
   );
 }
 
-export default function ScenarioModelingPage() {
+function ScenarioModelingPageInner() {
   const {
     activeBusiness,
     loading,
@@ -638,5 +638,13 @@ export default function ScenarioModelingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ScenarioModelingPage() {
+  return (
+    <Suspense fallback={<div className="p-8 flex items-center justify-center min-h-[50vh]"><div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+      <ScenarioModelingPageInner />
+    </Suspense>
   );
 }

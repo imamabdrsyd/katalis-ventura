@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { Calendar, TrendingUp, TrendingDown, Download, Wallet, FileText, FileSpreadsheet, ChevronDown, ChevronRight, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Info, ExternalLink, Building2 } from 'lucide-react';
 import { useCashFlow } from '@/hooks/useCashFlow';
@@ -120,7 +120,7 @@ function ActivitySection({ title, subtitle, total, totalLabel, transactions, tra
   );
 }
 
-export default function CashFlowPage() {
+function CashFlowPageInner() {
   const {
     activeBusiness,
     loading,
@@ -460,5 +460,13 @@ export default function CashFlowPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CashFlowPage() {
+  return (
+    <Suspense fallback={<div className="p-8 flex items-center justify-center min-h-[50vh]"><div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+      <CashFlowPageInner />
+    </Suspense>
   );
 }

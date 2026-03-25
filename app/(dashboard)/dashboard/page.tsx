@@ -276,7 +276,15 @@ export default function DashboardPage() {
 
         <div
           className="card cursor-pointer flex flex-col"
-          onClick={() => router.push('/income-statement?scrollTo=net-income')}
+          onClick={() => {
+            const start = selectedMonth === null
+              ? `${selectedYear}-01-01`
+              : `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-01`;
+            const end = selectedMonth === null
+              ? `${selectedYear}-12-31`
+              : new Date(selectedYear, selectedMonth + 1, 0).toISOString().split('T')[0];
+            router.push(`/income-statement?startDate=${start}&endDate=${end}&scrollTo=net-income`);
+          }}
         >
           <div className="flex items-center justify-between mb-2">
             <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Profit/Loss</div>
