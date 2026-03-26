@@ -19,6 +19,9 @@ import { UnitBreakdownSection } from './UnitBreakdownSection';
 import { FileUploadCompact } from '@/components/ui/FileUpload';
 import { ChevronDown, StickyNote, Zap, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
+import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
+import { saveContactFromTransaction } from '@/lib/api/contacts';
+import { useBusinessContext } from '@/context/BusinessContext';
 
 import type { Transaction, UnitBreakdown } from '@/types';
 
@@ -59,6 +62,7 @@ export function QuickTransactionForm({
 }: QuickTransactionFormProps) {
   const params = useParams();
   const businessId = businessIdProp || (params?.businessId as string);
+  const { user } = useBusinessContext();
 
   // Form state
   const [amount, setAmount] = useState(0);
@@ -505,6 +509,28 @@ export function QuickTransactionForm({
         {errors.date && (
           <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.date}</p>
         )}
+      </div>
+
+      {/* 4. NAMA Customer/Vendor */}
+      <div>
+        <label className="label text-base font-semibold">
+          {flowDirection === 'in' ? 'Customer' : flowDirection === 'out' ? 'Vendor' : 'Nama'} (opsional)
+        </label>
+        <ContactAutocomplete
+          businessId={businessId}
+          value={name}
+          onChange={setName}
+          placeholder={flowDirection === 'in' ? 'Nama customer' : flowDirection === 'out' ? 'Nama vendor' : 'Customer atau vendor'}
+          onSaveAsContact={async (contactName) => {
+            if (!businessId || !user) return;
+            try {
+              const contactType = flowDirection === 'in' ? 'customer' : flowDirection === 'out' ? 'vendor' : 'other';
+              await saveContactFromTransaction(businessId, contactName, contactType, user.id);
+            } catch (err) {
+              console.error('Failed to save contact:', err);
+            }
+          }}
+        />
       </div>
 
       {/* 5. NOTES (Expandable) */}

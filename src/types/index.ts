@@ -521,3 +521,21 @@ export interface ProjectedMonth {
   actual: number;
   projected: number;
 }
+
+// ==================== CONTACTS ====================
+
+export type ContactType = 'customer' | 'vendor' | 'other';
+
+export interface Contact {
+  id: string;
+  business_id: string;
+  name: string;
+  type: ContactType;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}

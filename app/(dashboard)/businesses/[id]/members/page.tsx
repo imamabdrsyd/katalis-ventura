@@ -7,12 +7,13 @@ import { MemberList } from '@/components/business/MemberList';
 import { InviteCodeManager } from '@/components/business/InviteCodeManager';
 import { getBusinessMembers, type BusinessMember } from '@/lib/api/members';
 import Image from 'next/image';
-import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut, ShoppingBag, Contact } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { OmniChannelManager } from '@/components/business/OmniChannelManager';
 import * as businessesApi from '@/lib/api/businesses';
 import { EcommerceIntegration } from '@/components/ecommerce/EcommerceIntegration';
+import { ContactList } from '@/components/business/ContactList';
 import type { Business } from '@/types';
 
 const BUSINESS_TYPE_LABELS: Record<string, string> = {
@@ -117,7 +118,7 @@ export default function BusinessMembersPage() {
   const business = businesses.find((b) => b.id === businessId);
   const isCreator = business?.created_by === user?.id || isSuperadmin;
 
-  const [activeTab, setActiveTab] = useState<'members' | 'omni-channel' | 'integrations'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'contacts' | 'omni-channel' | 'integrations'>('members');
   const [members, setMembers] = useState<BusinessMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInviteManager, setShowInviteManager] = useState(false);
@@ -227,6 +228,17 @@ export default function BusinessMembersPage() {
               </span>
             )}
           </button>
+          <button
+            onClick={() => setActiveTab('contacts')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+              activeTab === 'contacts'
+                ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <Contact className="w-4 h-4 flex-shrink-0" />
+            Kontak
+          </button>
           {!isInvestor && (
             <button
               onClick={() => setActiveTab('omni-channel')}
@@ -268,6 +280,15 @@ export default function BusinessMembersPage() {
               onLeave={!isCreator ? () => setIsLeaveConfirmOpen(true) : undefined}
             />
           )}
+        </div>
+      )}
+      {activeTab === 'contacts' && user && business && (
+        <div className="max-w-3xl">
+          <ContactList
+            businessId={business.id}
+            userId={user.id}
+            canManage={canManage}
+          />
         </div>
       )}
       {activeTab === 'omni-channel' && user && business && (

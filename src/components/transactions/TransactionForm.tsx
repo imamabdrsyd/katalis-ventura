@@ -12,6 +12,9 @@ import { AlertCircle, Lightbulb, AlertTriangle } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { UnitBreakdownSection } from '@/components/transactions/UnitBreakdownSection';
 import { FileUpload } from '@/components/ui/FileUpload';
+import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
+import { saveContactFromTransaction } from '@/lib/api/contacts';
+import { useBusinessContext } from '@/context/BusinessContext';
 import type { UnitBreakdown } from '@/types';
 
 export interface TransactionFormData {
@@ -100,6 +103,7 @@ export function TransactionForm({
 }: TransactionFormProps) {
   const params = useParams();
   const businessId = businessIdProp || (params?.businessId as string);
+  const { user } = useBusinessContext();
 
   const categories = allowedCategories || ALL_CATEGORIES;
   const [formData, setFormData] = useState<TransactionFormData>({
@@ -482,14 +486,21 @@ export function TransactionForm({
         <label className="label">
           {mode === 'in' ? 'Nama Customer' : mode === 'out' ? 'Nama Vendor' : 'Nama'} *
         </label>
-        <input
-          type="text"
-          name="name"
+        <ContactAutocomplete
+          businessId={businessId}
           value={formData.name}
-          onChange={handleChange}
-          className="input"
+          onChange={(val) => setFormData((prev) => ({ ...prev, name: val }))}
           placeholder={mode === 'in' ? 'Nama customer' : mode === 'out' ? 'Nama vendor/penerima' : 'Customer atau vendor terkait'}
           required
+          onSaveAsContact={async (name) => {
+            if (!businessId || !user) return;
+            try {
+              const contactType = mode === 'in' ? 'customer' : mode === 'out' ? 'vendor' : 'other';
+              await saveContactFromTransaction(businessId, name, contactType, user.id);
+            } catch (err) {
+              console.error('Failed to save contact:', err);
+            }
+          }}
         />
         {errors.name && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.name}</p>}
       </div>
