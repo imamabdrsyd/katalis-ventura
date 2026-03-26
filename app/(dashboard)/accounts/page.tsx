@@ -8,7 +8,6 @@ import type { AccountTreeNode } from '@/lib/api/accounts';
 import { AccountForm, type AccountFormData } from '@/components/accounts/AccountForm';
 import { AccountDeleteModal } from '@/components/accounts/AccountDeleteModal';
 import { Plus, Search, ChevronDown, ChevronRight, Lock, Pencil, XCircle, CheckCircle2, BookOpen as BookOpenIcon, Wallet, HandCoins, Scale, TrendingUp, Receipt } from 'lucide-react';
-import type { AccountType } from '@/types';
 
 const ACCOUNT_TYPE_ICONS: Record<AccountType, React.ReactNode> = {
   ASSET: <Wallet className="w-4 h-4 text-blue-400 dark:text-blue-500" />,
