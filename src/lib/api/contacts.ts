@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase';
-import type { Contact, ContactType } from '@/types';
+import type { Contact, ContactType, Transaction } from '@/types';
 
 export interface ContactInsert {
   business_id: string;
@@ -85,6 +85,26 @@ export async function deleteContact(contactId: string): Promise<void> {
     .eq('id', contactId);
 
   if (error) throw new Error(error.message);
+}
+
+/** Ambil transaksi yang terkait dengan nama kontak */
+export async function getContactTransactions(businessId: string, contactName: string): Promise<Transaction[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('transactions')
+    .select(`
+      *,
+      debit_account:accounts!transactions_debit_account_id_fkey(*),
+      credit_account:accounts!transactions_credit_account_id_fkey(*)
+    `)
+    .eq('business_id', businessId)
+    .ilike('name', contactName)
+    .is('deleted_at', null)
+    .order('date', { ascending: false })
+    .limit(50);
+
+  if (error) throw new Error(error.message);
+  return data as Transaction[];
 }
 
 /** Simpan nama dari transaksi sebagai kontak (jika belum ada) */

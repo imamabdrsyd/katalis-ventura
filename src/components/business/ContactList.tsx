@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Contact, Phone, Mail, MapPin, Plus, Search, Pencil, Trash2, X, User, Building, Users2 } from 'lucide-react';
+import { Contact, Phone, Mail, MapPin, Plus, Search, Pencil, Trash2, User, Building, Users2, ArrowLeft, ArrowDownLeft, ArrowUpRight, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import * as contactsApi from '@/lib/api/contacts';
-import type { Contact as ContactType, ContactType as ContactTypeEnum } from '@/types';
+import { formatCurrency, formatDate } from '@/lib/utils';
+import { CATEGORY_LABELS } from '@/lib/calculations';
+import type { Contact as ContactType, ContactType as ContactTypeEnum, Transaction } from '@/types';
 
 const CONTACT_TYPE_CONFIG: Record<ContactTypeEnum, { label: string; icon: React.ReactNode; className: string }> = {
   customer: {
@@ -22,6 +24,15 @@ const CONTACT_TYPE_CONFIG: Record<ContactTypeEnum, { label: string; icon: React.
     icon: <Users2 className="w-3.5 h-3.5" />,
     className: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400',
   },
+};
+
+const CATEGORY_BADGE_COLORS: Record<string, string> = {
+  EARN: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
+  OPEX: 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400',
+  VAR: 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400',
+  CAPEX: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
+  TAX: 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400',
+  FIN: 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
 };
 
 function getInitials(name: string): string {
@@ -63,6 +74,11 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<ContactTypeEnum | 'all'>('all');
 
+  // Detail view state
+  const [selectedContact, setSelectedContact] = useState<ContactType | null>(null);
+  const [contactTransactions, setContactTransactions] = useState<Transaction[]>([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
+
   // Form state
   const [showForm, setShowForm] = useState(false);
   const [editingContact, setEditingContact] = useState<ContactType | null>(null);
@@ -99,6 +115,20 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
     const matchType = filterType === 'all' || c.type === filterType;
     return matchSearch && matchType;
   });
+
+  const handleSelectContact = async (contact: ContactType) => {
+    setSelectedContact(contact);
+    setLoadingTransactions(true);
+    try {
+      const txns = await contactsApi.getContactTransactions(businessId, contact.name);
+      setContactTransactions(txns);
+    } catch (err) {
+      console.error('Failed to fetch contact transactions:', err);
+      setContactTransactions([]);
+    } finally {
+      setLoadingTransactions(false);
+    }
+  };
 
   const openAddForm = () => {
     setEditingContact(null);
@@ -170,6 +200,9 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
     try {
       await contactsApi.deleteContact(deleteTarget.id);
       setDeleteTarget(null);
+      if (selectedContact?.id === deleteTarget.id) {
+        setSelectedContact(null);
+      }
       fetchContacts();
     } catch (err) {
       console.error('Failed to delete contact:', err);
@@ -177,6 +210,20 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
       setDeleting(false);
     }
   };
+
+  // Compute transaction summary for selected contact
+  const txnSummary = contactTransactions.reduce(
+    (acc, txn) => {
+      if (txn.category === 'EARN') {
+        acc.totalIn += txn.amount;
+      } else {
+        acc.totalOut += txn.amount;
+      }
+      acc.count += 1;
+      return acc;
+    },
+    { totalIn: 0, totalOut: 0, count: 0 }
+  );
 
   // Loading skeleton
   if (loading) {
@@ -195,6 +242,180 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
     );
   }
 
+  // ============ DETAIL VIEW ============
+  if (selectedContact) {
+    const typeConfig = CONTACT_TYPE_CONFIG[selectedContact.type];
+    return (
+      <div className="space-y-6">
+        {/* Back + Header */}
+        <div>
+          <button
+            onClick={() => setSelectedContact(null)}
+            className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mb-4 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Kembali ke daftar kontak
+          </button>
+
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center flex-shrink-0">
+              <span className="text-base font-bold text-indigo-500 dark:text-indigo-400">
+                {getInitials(selectedContact.name)}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate">
+                  {selectedContact.name}
+                </h2>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${typeConfig.className}`}>
+                  {typeConfig.icon}
+                  {typeConfig.label}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
+                {selectedContact.phone && (
+                  <span className="inline-flex items-center gap-1">
+                    <Phone className="w-3.5 h-3.5" />
+                    {selectedContact.phone}
+                  </span>
+                )}
+                {selectedContact.email && (
+                  <span className="inline-flex items-center gap-1">
+                    <Mail className="w-3.5 h-3.5" />
+                    {selectedContact.email}
+                  </span>
+                )}
+                {selectedContact.address && (
+                  <span className="inline-flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5" />
+                    {selectedContact.address}
+                  </span>
+                )}
+              </div>
+              {selectedContact.notes && (
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">{selectedContact.notes}</p>
+              )}
+            </div>
+            {canManage && (
+              <div className="flex gap-1 flex-shrink-0">
+                <button
+                  onClick={() => openEditForm(selectedContact)}
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  title="Edit kontak"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setDeleteTarget(selectedContact)}
+                  className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                  title="Hapus kontak"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Summary Cards */}
+        {!loadingTransactions && contactTransactions.length > 0 && (
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Transaksi</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{txnSummary.count}</p>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Pemasukan</p>
+              <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(txnSummary.totalIn)}</p>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Pengeluaran</p>
+              <p className="text-lg font-bold text-red-600 dark:text-red-400">{formatCurrency(txnSummary.totalOut)}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Transaction History */}
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+            Riwayat Transaksi
+          </h3>
+
+          {loadingTransactions ? (
+            <div className="flex items-center justify-center py-12 text-gray-400">
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              Memuat transaksi...
+            </div>
+          ) : contactTransactions.length === 0 ? (
+            <div className="text-center py-10">
+              <p className="text-gray-500 dark:text-gray-400 text-sm">Belum ada transaksi dengan kontak ini</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {contactTransactions.map((txn) => {
+                const isIncome = txn.category === 'EARN';
+                return (
+                  <div
+                    key={txn.id}
+                    className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                  >
+                    {/* Direction icon */}
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      isIncome
+                        ? 'bg-emerald-50 dark:bg-emerald-900/30'
+                        : 'bg-red-50 dark:bg-red-900/30'
+                    }`}>
+                      {isIncome ? (
+                        <ArrowDownLeft className="w-4 h-4 text-emerald-500" />
+                      ) : (
+                        <ArrowUpRight className="w-4 h-4 text-red-500" />
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                          {txn.description || txn.name}
+                        </p>
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${CATEGORY_BADGE_COLORS[txn.category] || ''}`}>
+                          {CATEGORY_LABELS[txn.category]}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {formatDate(txn.date)}
+                        {txn.debit_account && txn.credit_account && (
+                          <span className="ml-2 text-gray-400 dark:text-gray-500">
+                            {txn.debit_account.account_name} → {txn.credit_account.account_name}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+
+                    {/* Amount */}
+                    <p className={`text-sm font-semibold tabular-nums flex-shrink-0 ${
+                      isIncome
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-red-600 dark:text-red-400'
+                    }`}>
+                      {isIncome ? '+' : '-'}{formatCurrency(txn.amount)}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Modals (shared with list view) */}
+        {renderFormModal()}
+        {renderDeleteModal()}
+      </div>
+    );
+  }
+
+  // ============ LIST VIEW ============
   return (
     <div className="space-y-4">
       {/* Search + Filter bar */}
@@ -281,9 +502,12 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                    <button
+                      onClick={() => handleSelectContact(contact)}
+                      className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline truncate transition-colors text-left"
+                    >
                       {contact.name}
-                    </p>
+                    </button>
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${typeConfig.className}`}>
                       {typeConfig.icon}
                       {typeConfig.label}
@@ -339,14 +563,20 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
         </div>
       )}
 
-      {/* Add/Edit Form Modal */}
+      {renderFormModal()}
+      {renderDeleteModal()}
+    </div>
+  );
+
+  // ============ SHARED MODALS ============
+  function renderFormModal() {
+    return (
       <Modal
         isOpen={showForm}
         onClose={() => setShowForm(false)}
         title={editingContact ? 'Edit Kontak' : 'Tambah Kontak'}
       >
         <div className="space-y-4">
-          {/* Nama */}
           <div>
             <label className="label">Nama *</label>
             <input
@@ -359,7 +589,6 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
             />
           </div>
 
-          {/* Tipe */}
           <div>
             <label className="label">Tipe</label>
             <div className="flex gap-2">
@@ -385,7 +614,6 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
             </div>
           </div>
 
-          {/* Telepon */}
           <div>
             <label className="label">Telepon</label>
             <input
@@ -397,7 +625,6 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
             />
           </div>
 
-          {/* Email */}
           <div>
             <label className="label">Email</label>
             <input
@@ -409,7 +636,6 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
             />
           </div>
 
-          {/* Alamat */}
           <div>
             <label className="label">Alamat</label>
             <textarea
@@ -421,7 +647,6 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
             />
           </div>
 
-          {/* Catatan */}
           <div>
             <label className="label">Catatan</label>
             <textarea
@@ -433,12 +658,10 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
             />
           </div>
 
-          {/* Error */}
           {formError && (
             <p className="text-sm text-red-500 dark:text-red-400">{formError}</p>
           )}
 
-          {/* Actions */}
           <div className="flex gap-3 pt-2">
             <button
               onClick={() => setShowForm(false)}
@@ -457,8 +680,11 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
           </div>
         </div>
       </Modal>
+    );
+  }
 
-      {/* Delete Confirmation Modal */}
+  function renderDeleteModal() {
+    return (
       <Modal
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
@@ -486,6 +712,6 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
           </div>
         </div>
       </Modal>
-    </div>
-  );
+    );
+  }
 }
