@@ -16,6 +16,22 @@ import type {
 } from '@/types';
 import { calculateDepreciationSummary } from '@/lib/accounting/depreciation';
 
+// Helpers
+
+/**
+ * Heuristic: check if a legacy FIN transaction is actually an interest payment.
+ * Legacy transactions don't have debit/credit accounts, so we rely on keywords.
+ */
+function isInterestKeyword(name: string, description: string): boolean {
+  const text = `${name} ${description}`.toLowerCase();
+  return (
+    text.includes('bunga') ||
+    text.includes('interest') ||
+    text.includes('bunga bank') ||
+    text.includes('beban bunga')
+  );
+}
+
 // Constants
 export const CAPITAL = 350_000_000; // Default capital investment (fallback only)
 
@@ -86,8 +102,10 @@ export function calculateFinancialSummary(
         if (t.is_double_entry && t.debit_account?.account_type === 'EXPENSE') {
           summary.totalInterest += amount;
         }
-        // For legacy transactions, include in totalInterest (backward compatibility)
-        if (!t.is_double_entry) {
+        // For legacy transactions, only count as interest if name/description
+        // contains interest-related keywords. Not all FIN is interest — it can be
+        // capital injection, loan received, loan repayment, etc.
+        if (!t.is_double_entry && isInterestKeyword(t.name, t.description)) {
           summary.totalInterest += amount;
         }
         break;
@@ -208,8 +226,8 @@ export function groupTransactionsByMonth(
         if (t.is_double_entry && t.debit_account?.account_type === 'EXPENSE') {
           monthData.interest += amount;
         }
-        // For legacy transactions, include in interest (backward compatibility)
-        if (!t.is_double_entry) {
+        // For legacy transactions, only count as interest with keyword heuristic
+        if (!t.is_double_entry && isInterestKeyword(t.name, t.description)) {
           monthData.interest += amount;
         }
         break;
@@ -240,17 +258,16 @@ export function calculateInitialCapital(transactions: Transaction[]): number {
   // Filter CAPEX transactions
   // CAPEX can be identified by:
   // 1. category === 'CAPEX'
-  // 2. OR debit_account_id points to Fixed Assets (codes 1200-1299)
+  // 2. OR debit_account_id points to a Fixed Asset account (default_category === 'CAPEX')
   const capexTransactions = transactions.filter(t => {
     // Skip deleted transactions
     if (t.deleted_at) return false;
 
     if (t.category === 'CAPEX') return true;
 
-    // Check if double-entry transaction debits to Fixed Assets
+    // Check if double-entry transaction debits to a Fixed Asset account
     if (t.is_double_entry && t.debit_account) {
-      const accountCode = t.debit_account.account_code;
-      return accountCode >= '1200' && accountCode < '1300';
+      return t.debit_account.account_type === 'ASSET' && t.debit_account.default_category === 'CAPEX';
     }
 
     return false;

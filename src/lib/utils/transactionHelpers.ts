@@ -62,7 +62,13 @@ export function detectCategory(
 
   // Money OUT flow: Asset credit (paying from bank/cash)
   if (creditType === 'ASSET') {
-    if (debitType === 'EXPENSE') return 'OPEX'; // Default expense category
+    if (debitType === 'EXPENSE') {
+      // Differentiate expense sub-types by account code
+      const debitCode = debitAccountCode;
+      if (debitCode.startsWith('52')) return 'VAR';  // 5200 HPP/COGS
+      if (debitCode.startsWith('53')) return 'TAX';  // 5300 Beban Pajak
+      return 'OPEX'; // 5100 and others default to OPEX
+    }
     if (debitType === 'ASSET') {
       // Use debit account's default_category if set (inventory=VAR, equipment=CAPEX)
       if (debitAccount?.default_category) return debitAccount.default_category;
@@ -73,7 +79,11 @@ export function detectCategory(
   }
 
   // Accrued expense: EXPENSE → LIABILITY
-  if (debitType === 'EXPENSE' && creditType === 'LIABILITY') return 'OPEX';
+  if (debitType === 'EXPENSE' && creditType === 'LIABILITY') {
+    if (debitAccountCode.startsWith('52')) return 'VAR';
+    if (debitAccountCode.startsWith('53')) return 'TAX';
+    return 'OPEX';
+  }
 
   // Unearned revenue recognized: LIABILITY → REVENUE
   if (debitType === 'LIABILITY' && creditType === 'REVENUE') return 'EARN';
