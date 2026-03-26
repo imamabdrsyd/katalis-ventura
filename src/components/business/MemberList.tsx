@@ -7,15 +7,15 @@ import { formatDate } from '@/lib/utils';
 const ROLE_BADGE: Record<string, { label: string; className: string }> = {
   business_manager: {
     label: 'Business Manager',
-    className: 'bg-purple-50 dark:bg-purple-900/50 text-purple-500 dark:text-purple-400',
+    className: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 ring-1 ring-indigo-500/20',
   },
   investor: {
     label: 'Investor',
-    className: 'bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400',
+    className: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 ring-1 ring-indigo-500/20',
   },
   both: {
     label: 'Manager & Investor',
-    className: 'bg-indigo-50 dark:bg-indigo-900/50 text-indigo-500 dark:text-indigo-400',
+    className: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 ring-1 ring-indigo-500/20',
   },
 };
 

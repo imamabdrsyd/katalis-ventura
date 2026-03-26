@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { searchContacts } from '@/lib/api/contacts';
-import { User, Building, Users2, UserPlus } from 'lucide-react';
+import { searchContacts, getContacts } from '@/lib/api/contacts';
+import { User, Building, Users2, UserPlus, BookUser } from 'lucide-react';
 import type { Contact, ContactType } from '@/types';
 
 const TYPE_ICON: Record<ContactType, React.ReactNode> = {
@@ -42,6 +42,9 @@ export function ContactAutocomplete({
   const [suggestions, setSuggestions] = useState<Contact[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [allContacts, setAllContacts] = useState<Contact[]>([]);
+  const [showContactBook, setShowContactBook] = useState(false);
+  const [contactBookLoading, setContactBookLoading] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -78,11 +81,30 @@ export function ContactAutocomplete({
     function handleClickOutside(e: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
         setShowDropdown(false);
+        setShowContactBook(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const toggleContactBook = async () => {
+    if (showContactBook) {
+      setShowContactBook(false);
+      return;
+    }
+    setShowDropdown(false);
+    setContactBookLoading(true);
+    setShowContactBook(true);
+    try {
+      const contacts = await getContacts(businessId);
+      setAllContacts(contacts);
+    } catch {
+      setAllContacts([]);
+    } finally {
+      setContactBookLoading(false);
+    }
+  };
 
   const handleSelect = (contact: Contact) => {
     onChange(contact.name);
@@ -123,26 +145,81 @@ export function ContactAutocomplete({
 
   return (
     <div ref={wrapperRef} className="relative">
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={(e) => {
-          onChange(e.target.value);
-          setShowDropdown(true);
-          setActiveIndex(-1);
-        }}
-        onFocus={() => {
-          if (value.trim()) setShowDropdown(true);
-        }}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        className={className}
-        required={required}
-        autoComplete="off"
-      />
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+            setShowContactBook(false);
+            setShowDropdown(true);
+            setActiveIndex(-1);
+          }}
+          onFocus={() => {
+            if (value.trim()) setShowDropdown(true);
+          }}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className={`${className} pr-10`}
+          required={required}
+          autoComplete="off"
+        />
+        <button
+          type="button"
+          onClick={toggleContactBook}
+          className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-colors ${
+            showContactBook
+              ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
+              : 'text-gray-400 hover:text-indigo-500 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+          title="Pilih dari daftar kontak"
+        >
+          <BookUser className="w-4 h-4" />
+        </button>
+      </div>
 
-      {shouldShowDropdown && (
+      {/* Contact Book Dropdown */}
+      {showContactBook && (
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+          {contactBookLoading ? (
+            <div className="px-4 py-6 text-center text-sm text-gray-400">Memuat kontak...</div>
+          ) : allContacts.length === 0 ? (
+            <div className="px-4 py-6 text-center text-sm text-gray-400">Belum ada kontak tersimpan</div>
+          ) : (
+            allContacts.map((contact, idx) => (
+              <button
+                key={contact.id}
+                type="button"
+                onClick={() => {
+                  handleSelect(contact);
+                  setShowContactBook(false);
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+                  idx === 0 ? 'rounded-t-xl' : ''
+                } ${idx === allContacts.length - 1 ? 'rounded-b-xl' : ''} ${
+                  contact.name.toLowerCase() === value.trim().toLowerCase()
+                    ? 'bg-indigo-50 dark:bg-indigo-900/20'
+                    : ''
+                }`}
+              >
+                <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                  {TYPE_ICON[contact.type]}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{contact.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {TYPE_LABEL[contact.type]}
+                    {contact.phone ? ` · ${contact.phone}` : ''}
+                  </p>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+
+      {shouldShowDropdown && !showContactBook && (
         <div className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-52 overflow-y-auto">
           {suggestions.map((contact, idx) => (
             <button

@@ -143,6 +143,13 @@ export default function BusinessMembersPage() {
     fetchMembers();
   }, [fetchMembers]);
 
+  // Saat user switch bisnis via BusinessSwitcher, redirect ke detail bisnis yang baru
+  useEffect(() => {
+    if (activeBusiness && activeBusiness.id !== businessId) {
+      router.replace(`/businesses/${activeBusiness.id}/members`);
+    }
+  }, [activeBusiness, businessId, router]);
+
   const handleLeaveBusiness = async () => {
     if (!user || !business) return;
     setLeaveLoading(true);
@@ -283,13 +290,11 @@ export default function BusinessMembersPage() {
         </div>
       )}
       {activeTab === 'contacts' && user && business && (
-        <div className="max-w-3xl">
-          <ContactList
-            businessId={business.id}
-            userId={user.id}
-            canManage={canManage}
-          />
-        </div>
+        <ContactList
+          businessId={business.id}
+          userId={user.id}
+          canManage={canManage}
+        />
       )}
       {activeTab === 'omni-channel' && user && business && (
         <OmniChannelManager

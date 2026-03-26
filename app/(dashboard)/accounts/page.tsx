@@ -7,7 +7,16 @@ import * as accountsApi from '@/lib/api/accounts';
 import type { AccountTreeNode } from '@/lib/api/accounts';
 import { AccountForm, type AccountFormData } from '@/components/accounts/AccountForm';
 import { AccountDeleteModal } from '@/components/accounts/AccountDeleteModal';
-import { Plus, Search, ChevronDown, ChevronRight, Lock, Pencil, XCircle, CheckCircle2, BookOpen as BookOpenIcon } from 'lucide-react';
+import { Plus, Search, ChevronDown, ChevronRight, Lock, Pencil, XCircle, CheckCircle2, BookOpen as BookOpenIcon, Wallet, HandCoins, Scale, TrendingUp, Receipt } from 'lucide-react';
+import type { AccountType } from '@/types';
+
+const ACCOUNT_TYPE_ICONS: Record<AccountType, React.ReactNode> = {
+  ASSET: <Wallet className="w-4 h-4 text-blue-400 dark:text-blue-500" />,
+  LIABILITY: <HandCoins className="w-4 h-4 text-amber-400 dark:text-amber-500" />,
+  EQUITY: <Scale className="w-4 h-4 text-purple-400 dark:text-purple-500" />,
+  REVENUE: <TrendingUp className="w-4 h-4 text-emerald-400 dark:text-emerald-500" />,
+  EXPENSE: <Receipt className="w-4 h-4 text-red-400 dark:text-red-500" />,
+};
 
 const TYPE_COLORS: Record<AccountType, string> = {
   ASSET: 'border-blue-400 dark:border-blue-500 text-blue-600 dark:text-blue-400',
@@ -419,7 +428,7 @@ function ParentAccountCard({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span title="Akun sistem"><Lock className="w-4 h-4 text-gray-300 dark:text-gray-600" /></span>
+          {ACCOUNT_TYPE_ICONS[parent.account_type]}
         </div>
       </button>
 
