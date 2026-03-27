@@ -93,7 +93,14 @@
   - Terima pembayaran + PPN (1 debit, 2 credit: revenue + pajak)
   - Beli aset dengan DP + hutang (1 debit, 2 credit: kas + hutang)
 - **Implementasi**: Tambah tabel `journal_lines` (account_id, debit_amount, credit_amount) yang FK ke `transactions`.
-- **Status**: [ ] BELUM
+- **Status**: [x] SELESAI
+  - DB: `journal_lines` table + `is_multi_line` column di transactions (`database/migrations/028_multi_line_journal_entries.sql`), RLS policies per operasi (SELECT/INSERT/UPDATE/DELETE)
+  - Types: `JournalLine`, `JournalLineInput` di `src/types/index.ts`, `is_multi_line` + `journal_lines?` di Transaction interface
+  - Validasi: `journalLineSchema`, `createMultiLineTransactionSchema` di `src/lib/validations.ts` (balanced debit=credit, min 2 lines, one-side-nonzero per line)
+  - API lib: `createMultiLineTransaction()`, `updateMultiLineTransaction()` di `src/lib/api/transactions.ts`; semua `getTransactions*` query join `journal_lines(*, account:accounts(*))`
+  - API route: POST multi-line branch di `app/api/transactions/route.ts` (role check, period lock, account ownership verification, insert header + lines)
+  - Kalkulasi: `calculateFinancialSummary`, `calculateBalanceSheet`, `calculateCashFlow`, `calculateOpeningBalance`, `groupTransactionsByMonth` di `src/lib/calculations.ts` — semua handle `is_multi_line` path (iterasi journal_lines per baris, classify per account_type)
+  - UI: `src/components/transactions/MultiLineJournalForm.tsx` (tabel dinamis debit/kredit, validasi seimbang, running total), tombol "Multi-Baris" + modal di halaman transaksi
 
 ### 3. Piutang & Hutang Tracking (AR/AP)
 - **Prioritas**: TINGGI
@@ -176,7 +183,7 @@
 | 6 | ~~Recurring transactions~~ | Operasional | Sedang | **DONE** |
 | 7 | ~~Template transaksi~~ | Operasional | Kecil | **DONE** |
 | 8 | ~~AR/AP tracking~~ | Operasional | Besar | **DONE** |
-| 9 | Multi-line journal entry | Kelengkapan | Besar | **Tinggi** |
+| 9 | ~~Multi-line journal entry~~ | Kelengkapan | Besar | **DONE** |
 | 10 | ~~Period locking~~ | Data integrity | Sedang | **DONE** |
 | 11 | ~~Validasi akun server-side~~ | Data integrity | Kecil | **DONE** |
 | 12 | ~~Deteksi keyword context-aware~~ | UX | Kecil | **DONE** |

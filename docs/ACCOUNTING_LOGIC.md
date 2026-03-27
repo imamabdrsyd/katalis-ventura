@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 27 Maret 2026
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 27 Maret 2026 | Multi-line journal entry: 27 Maret 2026
 
 ---
 
@@ -242,9 +242,43 @@ Didefinisikan di `constants.ts` → `VALID_COMBINATIONS`:
 | 13 | LIABILITY | LIABILITY | Reklasifikasi hutang | Hutang jk. panjang → jk. pendek |
 | 14 | REVENUE | LIABILITY | Pendapatan diterima dimuka | Terima deposit sewa di muka |
 
-### 3.2 Prinsip Accounting Equation
+### 3.2 Multi-line Journal Entry
 
-Setiap transaksi double-entry **harus** menjaga:
+Selain simple 2-line (1 debit + 1 credit), sistem mendukung **compound/multi-line journal entries** (N debit + M credit lines, total debit = total credit).
+
+**Database:**
+- Tabel `journal_lines` (FK → `transactions.id`, ON DELETE CASCADE):
+  - `account_id` (FK → accounts), `debit_amount`, `credit_amount`, `description`, `sort_order`
+  - Constraint: tepat satu sisi harus > 0 per baris
+- Kolom `transactions.is_multi_line` (boolean, default false)
+
+**Validasi (Zod):**
+- `journalLineSchema`: satu sisi non-zero per baris
+- `createMultiLineTransactionSchema`: min 2 baris, total debit = total kredit (tolerance < 0.01), total > 0
+
+**Kalkulasi:**
+- Semua fungsi di `calculations.ts` (`calculateFinancialSummary`, `calculateBalanceSheet`, `calculateCashFlow`, `calculateOpeningBalance`, `groupTransactionsByMonth`) mem-partisi transaksi ke 3 jalur:
+  1. `is_multi_line=true` → iterasi `journal_lines[]`, classify per baris berdasar `account.account_type`
+  2. `is_double_entry=true` → logik existing (debit_account / credit_account)
+  3. Legacy → logik kategori-based
+
+**Income statement (multi-line):**
+- REVENUE credit lines → `totalEarn`
+- EXPENSE debit lines → `totalOpex`/`totalVar`/`totalTax` (by `default_category`)
+- FIN + EXPENSE debit → `totalInterest`
+
+**Balance sheet (multi-line):**
+- Setiap baris di-proses independen: debit ASSET → +totalAssets, credit EQUITY → +totalEquityCredit, dst.
+
+**Cash flow (multi-line):**
+- Cari baris kas (akun 1100/1200), hitung net (debit − credit)
+- Klasifikasi bucket via `transaction.category` (operating/investing/financing)
+
+**UI:** Tombol "Multi-Baris" di halaman transaksi → `MultiLineJournalForm.tsx` (tabel dinamis, validasi seimbang real-time).
+
+### 3.3 Prinsip Accounting Equation
+
+Setiap transaksi double-entry dan multi-line **harus** menjaga:
 
 ```
 Assets = Liabilities + Equity + (Revenue - Expenses)
@@ -252,7 +286,7 @@ Assets = Liabilities + Equity + (Revenue - Expenses)
 
 Sistem memvalidasi ini di `useBalanceSheet.ts` dengan tolerance `< 0.01`.
 
-### 3.3 Kombinasi yang DITOLAK
+### 3.4 Kombinasi yang DITOLAK
 
 Semua kombinasi di luar 14 valid combinations akan ditolak oleh `TransactionValidator`. Contoh yang tidak valid:
 - `EXPENSE → REVENUE` (tidak ada artinya secara akuntansi)
@@ -264,7 +298,7 @@ Semua kombinasi di luar 14 valid combinations akan ditolak oleh `TransactionVali
 
 ## 4. Transaction Lifecycle
 
-### 4.1 Dua Mode Input
+### 4.1 Tiga Mode Input
 
 **Mode 1: Full Double-Entry (TransactionForm.tsx)**
 ```
@@ -289,6 +323,24 @@ System auto-resolves:
   → Counter-account = default Cash/Bank
   → Debit/Credit side berdasarkan account type
   → Category dari default_category atau type detection
+```
+
+**Mode 3: Multi-line Journal Entry (MultiLineJournalForm.tsx)**
+```
+User memilih:
+  1. Nama / referensi jurnal
+  2. Tanggal
+  3. Kategori (manual)
+  4. N baris jurnal, masing-masing:
+     - Akun
+     - Debit ATAU Kredit (satu sisi per baris)
+     - Keterangan baris (opsional)
+
+Validasi:
+  → Total debit HARUS = total kredit
+  → Minimal 2 baris
+  → Amount header = sum debit lines
+  → is_multi_line = true, is_double_entry = false
 ```
 
 ### 4.2 Flow: Quick Transaction Resolution
