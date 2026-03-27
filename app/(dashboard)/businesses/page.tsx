@@ -8,7 +8,7 @@ import { BusinessCard } from '@/components/business/BusinessCard';
 import { BusinessForm, type BusinessFormData } from '@/components/business/BusinessForm';
 import { InviteCodeManager } from '@/components/business/InviteCodeManager';
 import { PeriodLockManager } from '@/components/business/PeriodLockManager';
-import { Building2, Archive } from 'lucide-react';
+import { Building2, Archive, Lock } from 'lucide-react';
 import * as businessesApi from '@/lib/api/businesses';
 import { calculateTotalCapex } from '@/lib/calculations';
 import { createClient } from '@/lib/supabase';
@@ -314,7 +314,7 @@ export default function BusinessesPage() {
         <Modal
           isOpen={!!periodLockBusiness}
           onClose={() => setPeriodLockBusiness(null)}
-          title="Kunci Periode"
+          title={<span className="flex items-center gap-2"><Lock className="w-5 h-5 text-amber-500" />Kunci Periode</span>}
         >
           <PeriodLockManager
             business={periodLockBusiness}
