@@ -280,11 +280,6 @@ export default function BusinessesPage() {
                   router.push(`/businesses/${business.id}/members`);
                 }
               }}
-              onDoubleClick={() => {
-                if (!business.is_archived) {
-                  setActiveBusiness(business.id);
-                }
-              }}
               onEdit={(canManage && (isSuperadmin || business.created_by === user?.id)) ? () => setEditingBusiness(business) : undefined}
               onArchive={(canManage && (isSuperadmin || business.created_by === user?.id)) ? () => {
                 setArchivingBusiness(business);
