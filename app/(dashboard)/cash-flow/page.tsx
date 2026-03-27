@@ -6,12 +6,13 @@ import { Calendar, TrendingUp, TrendingDown, Download, Wallet, FileText, FileSpr
 import { useCashFlow } from '@/hooks/useCashFlow';
 import { formatCurrency } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
-import type { CashFlowTransaction } from '@/types';
+import type { CashFlowTransaction, Transaction } from '@/types';
+import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 
-function TransactionRow({ tx }: { tx: CashFlowTransaction }) {
+function TransactionRow({ tx, onClick }: { tx: CashFlowTransaction; onClick: (tx: CashFlowTransaction) => void }) {
   const isIn = tx.amount >= 0;
   return (
-    <div className="flex items-start gap-3 py-2.5 px-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg transition-colors">
+    <div onClick={() => onClick(tx)} className="flex items-start gap-3 py-2.5 px-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg transition-colors cursor-pointer">
       <div className="mt-0.5 flex-shrink-0">
         {isIn ? (
           <ArrowUpCircle className="w-4 h-4 text-green-500" />
@@ -62,9 +63,10 @@ interface ActivitySectionProps {
   totalLabel: string;
   transactions: CashFlowTransaction[];
   transactionLink?: string;
+  onTransactionClick: (tx: CashFlowTransaction) => void;
 }
 
-function ActivitySection({ title, subtitle, total, totalLabel, transactions, transactionLink }: ActivitySectionProps) {
+function ActivitySection({ title, subtitle, total, totalLabel, transactions, transactionLink, onTransactionClick }: ActivitySectionProps) {
   const [open, setOpen] = useState(false);
   const sorted = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -94,7 +96,7 @@ function ActivitySection({ title, subtitle, total, totalLabel, transactions, tra
                 Tidak ada transaksi
               </p>
             ) : (
-              sorted.map(tx => <TransactionRow key={tx.id} tx={tx} />)
+              sorted.map(tx => <TransactionRow key={tx.id} tx={tx} onClick={onTransactionClick} />)
             )}
           </div>
         )}
@@ -123,6 +125,7 @@ function ActivitySection({ title, subtitle, total, totalLabel, transactions, tra
 function CashFlowPageInner() {
   const {
     activeBusiness,
+    transactions,
     loading,
     period,
     startDate,
@@ -138,6 +141,13 @@ function CashFlowPageInner() {
     handleExportPDF,
     handleExportExcel,
   } = useCashFlow();
+
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+
+  const handleTransactionClick = (tx: CashFlowTransaction) => {
+    const full = transactions.find(t => t.id === tx.id) ?? null;
+    setSelectedTransaction(full);
+  };
 
   // Pre-compute safe date labels and URLs — guard against invalid dates
   const safeFormat = (dateStr: string) => {
@@ -390,6 +400,7 @@ function CashFlowPageInner() {
                 totalLabel="Total Operating Cash Flow"
                 transactions={cashFlow.operatingTransactions}
                 transactionLink={`/transactions?start=${startDate}&end=${endDate}&category=EARN`}
+                onTransactionClick={handleTransactionClick}
               />
 
               {/* CASH FLOW FROM INVESTING ACTIVITIES */}
@@ -400,6 +411,7 @@ function CashFlowPageInner() {
                 totalLabel="Total Investing Cash Flow"
                 transactions={cashFlow.investingTransactions}
                 transactionLink={`/transactions?start=${startDate}&end=${endDate}&category=CAPEX`}
+                onTransactionClick={handleTransactionClick}
               />
 
               {/* CASH FLOW FROM FINANCING ACTIVITIES */}
@@ -410,6 +422,7 @@ function CashFlowPageInner() {
                 totalLabel="Total Financing Cash Flow"
                 transactions={cashFlow.financingTransactions}
                 transactionLink={`/transactions?start=${startDate}&end=${endDate}&category=FIN`}
+                onTransactionClick={handleTransactionClick}
               />
 
               {/* NET CASH FLOW */}
@@ -459,6 +472,12 @@ function CashFlowPageInner() {
           </div>
         </div>
       </div>
+
+      <TransactionDetailModal
+        transaction={selectedTransaction}
+        isOpen={!!selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
+      />
     </div>
   );
 }

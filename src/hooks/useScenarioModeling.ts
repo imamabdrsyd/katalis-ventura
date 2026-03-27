@@ -97,7 +97,7 @@ export function useScenarioModeling() {
     accountsApi
       .getAccounts(activeBusiness.id, false)
       .then(setAccounts)
-      .catch(console.error);
+      .catch((err) => console.error('[useScenarioModeling] Failed to load accounts for depreciation:', err));
   }, [activeBusiness]);
 
   const [optimisticAssumptions, setOptimisticAssumptions] = useState<ScenarioAssumptions>({

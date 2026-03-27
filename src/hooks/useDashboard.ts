@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { calculateFinancialSummary, calculateROI, calculateCategoryCounts, calculateBalanceSheet } from '@/lib/calculations';
 import * as transactionsApi from '@/lib/api/transactions';
+import { generateDueRecurringTransactions } from '@/lib/api/recurring';
 import type { Transaction } from '@/types';
 
 export function useDashboard() {
@@ -21,6 +22,23 @@ export function useDashboard() {
     queryFn: () => transactionsApi.getTransactions(businessId!),
     enabled: !!businessId,
   });
+
+  // Auto-generate due recurring transactions on dashboard load (once per day)
+  useEffect(() => {
+    if (!businessId || !user) return;
+    const today = new Date().toISOString().split('T')[0];
+    const key = `recurring_checked_${businessId}_${today}`;
+    if (sessionStorage.getItem(key)) return;
+
+    generateDueRecurringTransactions(businessId, user.id)
+      .then((count) => {
+        sessionStorage.setItem(key, '1');
+        if (count > 0) {
+          queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
+        }
+      })
+      .catch((err) => console.error('[useDashboard] Recurring generation failed:', err));
+  }, [businessId, user, queryClient]);
 
   // Invalidate cache when FloatingQuickAdd saves a transaction
   useEffect(() => {

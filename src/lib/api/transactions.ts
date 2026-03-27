@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase';
-import type { Transaction, TransactionCategory, TransactionStatus, TransactionMeta } from '@/types';
+import type { Transaction, TransactionCategory, TransactionStatus, TransactionMeta, JournalLineInput } from '@/types';
 
 export interface TransactionInsert {
   business_id: string;
@@ -18,6 +18,17 @@ export interface TransactionInsert {
   is_double_entry?: boolean;
   notes?: string;
   meta?: TransactionMeta | null;
+}
+
+export interface MultiLineTransactionInsert {
+  business_id: string;
+  date: string;
+  category: TransactionCategory;
+  name: string;
+  description: string;
+  notes?: string;
+  status?: TransactionStatus;
+  journal_lines: JournalLineInput[];
 }
 
 export interface TransactionUpdate {
@@ -53,15 +64,137 @@ export async function getTransactions(businessId: string): Promise<Transaction[]
     .select(`
       *,
       debit_account:accounts!transactions_debit_account_id_fkey(*),
-      credit_account:accounts!transactions_credit_account_id_fkey(*)
+      credit_account:accounts!transactions_credit_account_id_fkey(*),
+      journal_lines(*, account:accounts(*))
     `)
     .eq('business_id', businessId)
-    .is('deleted_at', null) // Only fetch non-deleted transactions
+    .is('deleted_at', null)
     .order('date', { ascending: false })
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);
   return data as Transaction[];
+}
+
+// Create a multi-line journal entry (N debit + M credit lines, balanced)
+export async function createMultiLineTransaction(
+  insert: MultiLineTransactionInsert
+): Promise<Transaction> {
+  const supabase = createClient();
+
+  const totalDebit = insert.journal_lines.reduce((s, l) => s + l.debit_amount, 0);
+  const totalCredit = insert.journal_lines.reduce((s, l) => s + l.credit_amount, 0);
+
+  if (Math.abs(totalDebit - totalCredit) > 0.01) {
+    throw new Error('Jurnal tidak seimbang: total debit harus sama dengan total kredit');
+  }
+
+  // Insert transaction header
+  const { data: transaction, error: txnError } = await supabase
+    .from('transactions')
+    .insert({
+      business_id: insert.business_id,
+      date: insert.date,
+      category: insert.category,
+      name: insert.name,
+      description: insert.description,
+      notes: insert.notes ?? null,
+      amount: totalDebit,
+      account: 'Multi-line journal entry',
+      status: insert.status ?? 'draft',
+      is_multi_line: true,
+      is_double_entry: false,
+    })
+    .select()
+    .single();
+
+  if (txnError || !transaction) throw new Error(txnError?.message ?? 'Failed to create transaction');
+
+  // Insert journal lines
+  const lines = insert.journal_lines.map((l, i) => ({
+    transaction_id: transaction.id,
+    account_id: l.account_id,
+    debit_amount: l.debit_amount,
+    credit_amount: l.credit_amount,
+    description: l.description ?? null,
+    sort_order: l.sort_order ?? i,
+  }));
+
+  const { error: linesError } = await supabase
+    .from('journal_lines')
+    .insert(lines);
+
+  if (linesError) {
+    // Rollback by deleting the transaction (cascade deletes lines)
+    await supabase.from('transactions').delete().eq('id', transaction.id);
+    throw new Error(linesError.message);
+  }
+
+  return transaction as Transaction;
+}
+
+// Update a multi-line journal entry (replaces all journal_lines)
+export async function updateMultiLineTransaction(
+  id: string,
+  updates: Partial<Omit<MultiLineTransactionInsert, 'business_id'>>
+): Promise<Transaction> {
+  const supabase = createClient();
+
+  const updateData: Record<string, unknown> = {
+    date: updates.date,
+    category: updates.category,
+    name: updates.name,
+    description: updates.description,
+    notes: updates.notes ?? null,
+    status: updates.status,
+  };
+
+  // Remove undefined keys
+  Object.keys(updateData).forEach((k) => {
+    if (updateData[k] === undefined) delete updateData[k];
+  });
+
+  if (updates.journal_lines) {
+    const totalDebit = updates.journal_lines.reduce((s, l) => s + l.debit_amount, 0);
+    const totalCredit = updates.journal_lines.reduce((s, l) => s + l.credit_amount, 0);
+
+    if (Math.abs(totalDebit - totalCredit) > 0.01) {
+      throw new Error('Jurnal tidak seimbang: total debit harus sama dengan total kredit');
+    }
+
+    updateData.amount = totalDebit;
+  }
+
+  const { data: transaction, error: txnError } = await supabase
+    .from('transactions')
+    .update(updateData)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (txnError || !transaction) throw new Error(txnError?.message ?? 'Failed to update transaction');
+
+  if (updates.journal_lines) {
+    // Delete old lines and re-insert
+    await supabase.from('journal_lines').delete().eq('transaction_id', id);
+
+    const lines = updates.journal_lines.map((l, i) => ({
+      transaction_id: id,
+      account_id: l.account_id,
+      debit_amount: l.debit_amount,
+      credit_amount: l.credit_amount,
+      description: l.description ?? null,
+      sort_order: l.sort_order ?? i,
+    }));
+
+    const { error: linesError } = await supabase
+      .from('journal_lines')
+      .insert(lines);
+
+    if (linesError) throw new Error(linesError.message);
+  }
+
+  return transaction as Transaction;
 }
 
 // Get paginated transactions for the transactions list page
@@ -94,7 +227,8 @@ export async function getTransactionsPaginated(
     .select(`
       *,
       debit_account:accounts!transactions_debit_account_id_fkey(*),
-      credit_account:accounts!transactions_credit_account_id_fkey(*)
+      credit_account:accounts!transactions_credit_account_id_fkey(*),
+      journal_lines(*, account:accounts(*))
     `, { count: 'exact' })
     .eq('business_id', businessId)
     .is('deleted_at', null);
@@ -144,10 +278,11 @@ export async function getTransactionsByDateRange(
     .select(`
       *,
       debit_account:accounts!transactions_debit_account_id_fkey(*),
-      credit_account:accounts!transactions_credit_account_id_fkey(*)
+      credit_account:accounts!transactions_credit_account_id_fkey(*),
+      journal_lines(*, account:accounts(*))
     `)
     .eq('business_id', businessId)
-    .is('deleted_at', null) // Only fetch non-deleted transactions
+    .is('deleted_at', null)
     .gte('date', startDate)
     .lte('date', endDate)
     .order('date', { ascending: false });

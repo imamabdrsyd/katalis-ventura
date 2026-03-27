@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/Modal';
 import { BusinessCard } from '@/components/business/BusinessCard';
 import { BusinessForm, type BusinessFormData } from '@/components/business/BusinessForm';
 import { InviteCodeManager } from '@/components/business/InviteCodeManager';
+import { PeriodLockManager } from '@/components/business/PeriodLockManager';
 import { Building2, Archive } from 'lucide-react';
 import * as businessesApi from '@/lib/api/businesses';
 import { calculateTotalCapex } from '@/lib/calculations';
@@ -31,6 +32,7 @@ export default function BusinessesPage() {
   const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
   const [archivingBusiness, setArchivingBusiness] = useState<Business | null>(null);
   const [managingInviteBusiness, setManagingInviteBusiness] = useState<Business | null>(null);
+  const [periodLockBusiness, setPeriodLockBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
   const [capexByBusiness, setCapexByBusiness] = useState<Map<string, number>>(new Map());
@@ -290,6 +292,7 @@ export default function BusinessesPage() {
               } : undefined}
               onRestore={(canManage && (isSuperadmin || business.created_by === user?.id)) ? () => handleRestoreBusiness(business) : undefined}
               onInvite={canManage ? () => setManagingInviteBusiness(business) : undefined}
+              onPeriodLock={(canManage && (isSuperadmin || business.created_by === user?.id)) ? () => setPeriodLockBusiness(business) : undefined}
               showActions={canManage}
             />
           ))}
@@ -304,6 +307,24 @@ export default function BusinessesPage() {
           userId={user.id}
           onClose={() => setManagingInviteBusiness(null)}
         />
+      )}
+
+      {/* Period Lock Manager Modal */}
+      {periodLockBusiness && (
+        <Modal
+          isOpen={!!periodLockBusiness}
+          onClose={() => setPeriodLockBusiness(null)}
+          title=""
+        >
+          <PeriodLockManager
+            business={periodLockBusiness}
+            onClose={() => setPeriodLockBusiness(null)}
+            onUpdated={(updated) => {
+              setAllBusinesses((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
+              setPeriodLockBusiness(null);
+            }}
+          />
+        </Modal>
       )}
 
       {/* Add Business Modal */}

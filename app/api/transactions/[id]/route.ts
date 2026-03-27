@@ -46,7 +46,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Fetch the existing transaction to verify ownership and status
     const { data: existing, error: fetchError } = await supabase
       .from('transactions')
-      .select('id, business_id, status')
+      .select('id, business_id, status, date')
       .eq('id', idParsed.data)
       .is('deleted_at', null)
       .single();
@@ -61,6 +61,20 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(
         { error: 'Transaksi yang sudah di-posting tidak dapat diedit. Hapus dan buat ulang jika perlu.' },
         { status: 400 }
+      );
+    }
+
+    // Period lock check: reject if transaction date is within locked period
+    const { data: biz } = await supabase
+      .from('businesses')
+      .select('closed_until_date')
+      .eq('id', existing.business_id)
+      .single();
+
+    if (biz?.closed_until_date && existing.date <= biz.closed_until_date) {
+      return NextResponse.json(
+        { error: `Periode hingga ${biz.closed_until_date} sudah dikunci. Transaksi tidak dapat diedit.` },
+        { status: 423 }
       );
     }
 
@@ -135,7 +149,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     // Fetch the existing transaction to verify ownership
     const { data: existing, error: fetchError } = await supabase
       .from('transactions')
-      .select('id, business_id')
+      .select('id, business_id, date')
       .eq('id', idParsed.data)
       .is('deleted_at', null)
       .single();
@@ -163,6 +177,20 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(
         { error: 'Only business managers can delete transactions' },
         { status: 403 }
+      );
+    }
+
+    // Period lock check: reject if transaction date is within locked period
+    const { data: biz } = await supabase
+      .from('businesses')
+      .select('closed_until_date')
+      .eq('id', existing.business_id)
+      .single();
+
+    if (biz?.closed_until_date && existing.date <= biz.closed_until_date) {
+      return NextResponse.json(
+        { error: `Periode hingga ${biz.closed_until_date} sudah dikunci. Transaksi tidak dapat dihapus.` },
+        { status: 423 }
       );
     }
 

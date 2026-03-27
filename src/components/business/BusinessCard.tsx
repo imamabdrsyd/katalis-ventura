@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, PackageOpen, Home, UserPlus, Coins } from 'lucide-react';
+import { MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, PackageOpen, Home, UserPlus, Coins, Lock } from 'lucide-react';
 import type { Business } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 
@@ -16,6 +16,7 @@ interface BusinessCardProps {
   onArchive?: () => void;
   onRestore?: () => void;
   onInvite?: () => void;
+  onPeriodLock?: () => void;
   showActions?: boolean;
 }
 
@@ -54,6 +55,7 @@ export function BusinessCard({
   onArchive,
   onRestore,
   onInvite,
+  onPeriodLock,
   showActions = true,
 }: BusinessCardProps) {
   const [creatorName, setCreatorName] = useState<string>('');
@@ -125,19 +127,37 @@ export function BusinessCard({
             </p>
           </div>
         </div>
-        {/* Invite Button Icon */}
-        {onInvite && !business.is_archived && showActions && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onInvite();
-            }}
-            className="p-2 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
-            title="Kelola Undangan"
-          >
-            <UserPlus className="w-5 h-5" />
-          </button>
-        )}
+        {/* Invite & Period Lock Button Icons */}
+        <div className="flex items-center gap-1">
+          {onInvite && !business.is_archived && showActions && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onInvite();
+              }}
+              className="p-2 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+              title="Kelola Undangan"
+            >
+              <UserPlus className="w-5 h-5" />
+            </button>
+          )}
+          {onPeriodLock && !business.is_archived && showActions && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onPeriodLock();
+              }}
+              className={`p-2 rounded-lg transition-colors ${
+                business.closed_until_date
+                  ? 'text-amber-500 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30'
+                  : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+              title={business.closed_until_date ? `Dikunci s/d ${business.closed_until_date}` : 'Kunci Periode'}
+            >
+              <Lock className="w-5 h-5" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-2 mb-4">
@@ -200,14 +220,22 @@ export function BusinessCard({
             {loading ? 'Loading...' : creatorName}
           </span>
         </div>
-        {isActive && !business.is_archived && (
-          <span className="text-sm font-semibold text-emerald-500 dark:text-emerald-400">Active</span>
-        )}
-        {business.is_archived && (
-          <span className="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs font-semibold rounded-lg">
-            Archived
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {business.closed_until_date && !business.is_archived && (
+            <span className="flex items-center gap-1 px-2 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 text-xs font-medium rounded-lg">
+              <Lock className="w-3 h-3" />
+              s/d {business.closed_until_date}
+            </span>
+          )}
+          {isActive && !business.is_archived && (
+            <span className="text-sm font-semibold text-emerald-500 dark:text-emerald-400">Active</span>
+          )}
+          {business.is_archived && (
+            <span className="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs font-semibold rounded-lg">
+              Archived
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

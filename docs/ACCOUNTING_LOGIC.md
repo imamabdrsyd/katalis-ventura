@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 18 Maret 2026 | Terakhir diupdate: 20 Maret 2026
+> Terakhir diaudit: 18 Maret 2026 | Terakhir diupdate: 27 Maret 2026
 
 ---
 
@@ -1160,15 +1160,31 @@ Layer 1: Client-side (TransactionValidator)
   → Indonesian language messages
   → Warnings untuk unusual patterns
 
-Layer 2: API-side (src/lib/api/transactions.ts)
+Layer 2: API-side (app/api/transactions/)
   → Double-entry account pair validation
   → Auth check & role check
+  → Period lock check: transaksi di periode terkunci ditolak (HTTP 423)
 
 Layer 3: Database (PostgreSQL Constraints)
   → check_different_accounts: debit ≠ credit
   → FK constraints ke accounts table
   → RLS policies per business
 ```
+
+### 17.1.1 Period Lock Enforcement
+
+`businesses.closed_until_date DATE` menyimpan batas periode terkunci. Aturan:
+- **POST** `/api/transactions`: tolak jika `date <= closed_until_date`
+- **PUT** `/api/transactions/[id]`: tolak jika `transaction.date <= closed_until_date`
+- **DELETE** `/api/transactions/[id]`: tolak jika `transaction.date <= closed_until_date`
+- HTTP response status: **423 Locked**
+- Error message: "Periode hingga {date} sudah dikunci..."
+
+UI:
+- Ikon kunci amber menggantikan tombol Edit/Hapus pada baris transaksi yang terkunci
+- Badge "s/d YYYY-MM-DD" pada BusinessCard
+- Tombol kunci (ikon gembok) di header BusinessCard → buka modal `PeriodLockManager`
+- Hanya `business_manager` atau `both` yang dapat mengatur/membuka kunci periode
 
 ### 17.2 Client Validation Details
 

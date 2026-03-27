@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import type { Transaction, TransactionCategory, TransactionMeta, TransactionAttachment, Account } from '@/types';
+import type { Transaction, TransactionCategory, TransactionMeta, TransactionAttachment, Account, TransactionTemplate } from '@/types';
 import { CATEGORY_LABELS } from '@/lib/calculations';
 import { getAccounts } from '@/lib/api/accounts';
 import { AccountDropdown } from './AccountDropdown';
 import { useParams } from 'next/navigation';
 import { detectCategory } from '@/lib/utils/transactionHelpers';
 import { useAccountingGuidance } from '@/hooks/useAccountingGuidance';
-import { AlertCircle, Lightbulb, AlertTriangle } from 'lucide-react';
+import { AlertCircle, Lightbulb, AlertTriangle, BookTemplate, ChevronDown, Trash2, X, RefreshCw } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { UnitBreakdownSection } from '@/components/transactions/UnitBreakdownSection';
 import { FileUpload } from '@/components/ui/FileUpload';
@@ -16,6 +16,14 @@ import { ContactAutocomplete } from '@/components/transactions/ContactAutocomple
 import { saveContactFromTransaction } from '@/lib/api/contacts';
 import { useBusinessContext } from '@/context/BusinessContext';
 import type { UnitBreakdown } from '@/types';
+import { getTransactionTemplates, createTransactionTemplate, deleteTransactionTemplate } from '@/lib/api/transactionTemplates';
+
+export interface RecurringFormData {
+  frequency: 'weekly' | 'monthly' | 'yearly';
+  interval_value: number;
+  start_date: string;
+  end_date?: string;
+}
 
 export interface TransactionFormData {
   date: string;
@@ -32,6 +40,9 @@ export interface TransactionFormData {
 
   // Metadata
   meta?: TransactionMeta | null;
+
+  // Recurring (optional — set when "Jadikan Berulang" is toggled)
+  recurring?: RecurringFormData | null;
 }
 
 interface TransactionFormProps {
@@ -122,6 +133,21 @@ export function TransactionForm({
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Template state
+  const [templates, setTemplates] = useState<TransactionTemplate[]>([]);
+  const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false);
+  const [saveTemplateMode, setSaveTemplateMode] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
+  // Recurring state (only for new transactions)
+  const isNewTransaction = !transaction;
+  const [recurringEnabled, setRecurringEnabled] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
+  const [recurringInterval, setRecurringInterval] = useState(1);
+  const [recurringEndDate, setRecurringEndDate] = useState('');
+
   const [displayAmount, setDisplayAmount] = useState<string>(
     transaction?.amount
       ? formatNumberWithSeparator(transaction.amount)
@@ -158,6 +184,14 @@ export function TransactionForm({
 
     fetchAccounts();
   }, [businessId]);
+
+  // Fetch templates (only when creating new transaction)
+  useEffect(() => {
+    if (!businessId || transaction) return;
+    getTransactionTemplates(businessId)
+      .then(setTemplates)
+      .catch(() => {/* silent */});
+  }, [businessId, transaction]);
 
   // Get suggested account codes based on category
   const suggestedAccounts = useMemo(() => {
@@ -241,6 +275,16 @@ export function TransactionForm({
       } else {
         submitData.debit_account_id = undefined;
         submitData.credit_account_id = undefined;
+      }
+
+      // Attach recurring data if enabled
+      if (isNewTransaction && recurringEnabled) {
+        submitData.recurring = {
+          frequency: recurringFrequency,
+          interval_value: recurringInterval,
+          start_date: formData.date,
+          end_date: recurringEndDate || undefined,
+        };
       }
 
       await onSubmit(submitData);
@@ -332,6 +376,57 @@ export function TransactionForm({
     }
   };
 
+  // Apply a template to the form
+  const applyTemplate = (tmpl: TransactionTemplate) => {
+    setFormData(prev => ({
+      ...prev,
+      category: tmpl.category,
+      description: tmpl.description ?? prev.description,
+      debit_account_id: tmpl.debit_account_id ?? prev.debit_account_id,
+      credit_account_id: tmpl.credit_account_id ?? prev.credit_account_id,
+      is_double_entry: tmpl.is_double_entry,
+      ...(tmpl.default_amount ? { amount: tmpl.default_amount } : {}),
+    }));
+    if (tmpl.default_amount) {
+      setDisplayAmount(tmpl.default_amount.toLocaleString('id-ID'));
+    }
+    setTemplateDropdownOpen(false);
+  };
+
+  // Save current form state as a new template
+  const handleSaveTemplate = async () => {
+    if (!businessId || !templateName.trim()) return;
+    setSavingTemplate(true);
+    try {
+      const saved = await createTransactionTemplate(businessId, {
+        name: templateName.trim(),
+        category: formData.category,
+        description: formData.description || null,
+        default_amount: formData.amount > 0 ? formData.amount : null,
+        debit_account_id: formData.debit_account_id ?? null,
+        credit_account_id: formData.credit_account_id ?? null,
+        is_double_entry: isDoubleEntry,
+      });
+      setTemplates(prev => [saved, ...prev]);
+      setTemplateName('');
+      setSaveTemplateMode(false);
+    } catch {
+      /* silent — user can retry */
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  const handleDeleteTemplate = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await deleteTransactionTemplate(id);
+      setTemplates(prev => prev.filter(t => t.id !== id));
+    } catch {
+      /* silent */
+    }
+  };
+
   // Unit breakdown handlers
   const handleToggleBreakdown = () => {
     if (!showBreakdown) {
@@ -400,6 +495,50 @@ export function TransactionForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* TEMPLATE SELECTOR — only when creating new transaction */}
+      {!transaction && templates.length > 0 && (
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setTemplateDropdownOpen(v => !v)}
+            className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-sm text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <BookTemplate className="w-4 h-4" />
+              <span>Gunakan Template</span>
+            </div>
+            <ChevronDown className={`w-4 h-4 transition-transform ${templateDropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {templateDropdownOpen && (
+            <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
+              {templates.map(tmpl => (
+                <div
+                  key={tmpl.id}
+                  onClick={() => applyTemplate(tmpl)}
+                  className="flex items-center justify-between px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer group"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{tmpl.name}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                      {CATEGORY_LABELS[tmpl.category]}{tmpl.default_amount ? ` · Rp ${tmpl.default_amount.toLocaleString('id-ID')}` : ''}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteTemplate(tmpl.id, e)}
+                    className="ml-2 p-1 rounded text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Hapus template"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 1. AMOUNT — prominent for in/out mode */}
       {mode !== 'full' && (
         <>
@@ -788,6 +927,113 @@ export function TransactionForm({
             Format lama (backward compatible)
           </p>
           {errors.account && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.account}</p>}
+        </div>
+      )}
+
+      {/* SIMPAN SEBAGAI TEMPLATE — only when creating new */}
+      {!transaction && (
+        <div>
+          {!saveTemplateMode ? (
+            <button
+              type="button"
+              onClick={() => setSaveTemplateMode(true)}
+              className="flex items-center gap-1.5 text-xs text-indigo-500 dark:text-indigo-400 hover:underline"
+            >
+              <BookTemplate className="w-3.5 h-3.5" />
+              Simpan sebagai Template
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 p-2.5 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-700">
+              <BookTemplate className="w-4 h-4 text-indigo-500 dark:text-indigo-400 flex-shrink-0" />
+              <input
+                type="text"
+                value={templateName}
+                onChange={e => setTemplateName(e.target.value)}
+                placeholder="Nama template, e.g. Bayar Gaji Bulanan"
+                className="flex-1 text-sm bg-transparent outline-none text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSaveTemplate(); } }}
+              />
+              <button
+                type="button"
+                onClick={handleSaveTemplate}
+                disabled={!templateName.trim() || savingTemplate}
+                className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 disabled:opacity-40"
+              >
+                {savingTemplate ? 'Menyimpan...' : 'Simpan'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setSaveTemplateMode(false); setTemplateName(''); }}
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Recurring toggle — only for new transactions */}
+      {isNewTransaction && (
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={recurringEnabled}
+              onChange={(e) => setRecurringEnabled(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-indigo-500 focus:ring-indigo-500"
+            />
+            <RefreshCw className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+              Jadikan Berulang
+            </span>
+          </label>
+
+          {recurringEnabled && (
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Frekuensi</label>
+                <select
+                  value={recurringFrequency}
+                  onChange={(e) => setRecurringFrequency(e.target.value as 'weekly' | 'monthly' | 'yearly')}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                >
+                  <option value="weekly">Mingguan</option>
+                  <option value="monthly">Bulanan</option>
+                  <option value="yearly">Tahunan</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Setiap</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={52}
+                    value={recurringInterval}
+                    onChange={(e) => setRecurringInterval(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-16 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                  />
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {recurringFrequency === 'weekly' ? 'minggu' : recurringFrequency === 'monthly' ? 'bulan' : 'tahun'}
+                  </span>
+                </div>
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Sampai (opsional)
+                </label>
+                <input
+                  type="date"
+                  value={recurringEndDate}
+                  onChange={(e) => setRecurringEndDate(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                  placeholder="Tanpa batas"
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 

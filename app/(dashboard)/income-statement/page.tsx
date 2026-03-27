@@ -7,13 +7,14 @@ import { useIncomeStatement } from '@/hooks/useIncomeStatement';
 import { formatCurrency } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
 import type { Transaction } from '@/types';
+import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 
 const EXPENSE_CATEGORIES = new Set(['OPEX', 'VAR', 'TAX', 'CAPEX']);
 
-function TransactionRow({ tx }: { tx: Transaction }) {
+function TransactionRow({ tx, onClick }: { tx: Transaction; onClick: (tx: Transaction) => void }) {
   const isExpense = EXPENSE_CATEGORIES.has(tx.category);
   return (
-    <div className="flex items-start gap-3 py-2.5 px-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+    <div onClick={() => onClick(tx)} className="flex items-start gap-3 py-2.5 px-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer">
       <div className="mt-0.5 flex-shrink-0">
         {!isExpense ? (
           <ArrowUpCircle className="w-4 h-4 text-green-500" />
@@ -52,7 +53,7 @@ function TransactionRow({ tx }: { tx: Transaction }) {
   );
 }
 
-function TransactionSection({ title, transactions }: { title: string; transactions: Transaction[] }) {
+function TransactionSection({ title, transactions, onTransactionClick }: { title: string; transactions: Transaction[]; onTransactionClick: (tx: Transaction) => void }) {
   const [open, setOpen] = useState(false);
   const sorted = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -76,7 +77,7 @@ function TransactionSection({ title, transactions }: { title: string; transactio
               Tidak ada transaksi
             </p>
           ) : (
-            sorted.map(tx => <TransactionRow key={tx.id} tx={tx} />)
+            sorted.map(tx => <TransactionRow key={tx.id} tx={tx} onClick={onTransactionClick} />)
           )}
         </div>
       )}
@@ -140,6 +141,8 @@ function IncomeStatementPageInner() {
     handleExportPDF,
     handleExportExcel,
   } = useIncomeStatement();
+
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   // Scroll to section from URL param (e.g., /income-statement?scrollTo=net-income)
   const searchParams = useSearchParams();
@@ -379,7 +382,7 @@ function IncomeStatementPageInner() {
                 <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
                   <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Revenue</h3>
                 </div>
-                <TransactionSection title="Earnings" transactions={transactionsByCategory.revenue} />
+                <TransactionSection title="Earnings" transactions={transactionsByCategory.revenue} onTransactionClick={setSelectedTransaction} />
                 <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
                   <span className="text-gray-800 dark:text-gray-100">Total Revenue</span>
                   <span className="text-green-600 dark:text-green-400">{formatCurrency(summary.totalEarn)}</span>
@@ -391,7 +394,7 @@ function IncomeStatementPageInner() {
                 <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
                   <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Cost of Goods Sold</h3>
                 </div>
-                <TransactionSection title="Variable Costs" transactions={transactionsByCategory.cogs} />
+                <TransactionSection title="Variable Costs" transactions={transactionsByCategory.cogs} onTransactionClick={setSelectedTransaction} />
                 <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
                   <span className="text-gray-800 dark:text-gray-100">Total COGS</span>
                   <span className="text-red-500 dark:text-red-400">({formatCurrency(summary.totalVar)})</span>
@@ -431,7 +434,7 @@ function IncomeStatementPageInner() {
                 <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
                   <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Operating Expenses</h3>
                 </div>
-                <TransactionSection title="Operating Expenses" transactions={transactionsByCategory.opex} />
+                <TransactionSection title="Operating Expenses" transactions={transactionsByCategory.opex} onTransactionClick={setSelectedTransaction} />
                 <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
                   <span className="text-gray-800 dark:text-gray-100">Total Operating Expenses</span>
                   <span className="text-red-500 dark:text-red-400">({formatCurrency(summary.totalOpex)})</span>
@@ -487,7 +490,7 @@ function IncomeStatementPageInner() {
                 <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
                   <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Financing Costs</h3>
                 </div>
-                <TransactionSection title="Interest & Financing Expenses" transactions={transactionsByCategory.interest} />
+                <TransactionSection title="Interest & Financing Expenses" transactions={transactionsByCategory.interest} onTransactionClick={setSelectedTransaction} />
               </div>
 
               {/* EBT */}
@@ -515,7 +518,7 @@ function IncomeStatementPageInner() {
 
               {/* TAX */}
               <div>
-                <TransactionSection title="Tax" transactions={transactionsByCategory.tax} />
+                <TransactionSection title="Tax" transactions={transactionsByCategory.tax} onTransactionClick={setSelectedTransaction} />
               </div>
 
               {/* NET INCOME */}
@@ -590,6 +593,12 @@ function IncomeStatementPageInner() {
           </div>
         </div>
       </div>
+
+      <TransactionDetailModal
+        transaction={selectedTransaction}
+        isOpen={!!selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBusinessContext } from '@/context/BusinessContext';
 import * as transactionsApi from '@/lib/api/transactions';
+import * as recurringApi from '@/lib/api/recurring';
 import { getAccounts } from '@/lib/api/accounts';
 import { findCogsAccount } from '@/lib/utils/inventoryHelper';
 import { buildSettlementPrefill } from '@/lib/accounting/guidance/receivableSettlement';
@@ -12,7 +13,7 @@ import type { TransactionFormData } from '@/components/transactions/TransactionF
 import type { TransactionFilters } from '@/lib/api/transactions';
 
 export function useTransactions() {
-  const { user, activeBusinessId: businessId, loading: businessLoading, error: businessError, userRole } = useBusinessContext();
+  const { user, activeBusinessId: businessId, activeBusiness, loading: businessLoading, error: businessError, userRole } = useBusinessContext();
   const canManageTransactions = userRole === 'business_manager' || userRole === 'both';
   const queryClient = useQueryClient();
 
@@ -142,6 +143,34 @@ export function useTransactions() {
         business_id: businessId,
         created_by: user.id,
       });
+
+      // If recurring data is present, create recurring template
+      if (data.recurring) {
+        const nextDue = recurringApi.computeNextDueDate(
+          data.recurring.start_date,
+          data.recurring.frequency,
+          data.recurring.interval_value
+        );
+        await recurringApi.createRecurringTransaction({
+          business_id: businessId,
+          name: data.name,
+          description: data.description,
+          amount: data.amount,
+          category: data.category,
+          account: data.account || '',
+          debit_account_id: data.debit_account_id,
+          credit_account_id: data.credit_account_id,
+          is_double_entry: data.is_double_entry,
+          notes: data.meta ? undefined : undefined,
+          frequency: data.recurring.frequency,
+          interval_value: data.recurring.interval_value,
+          next_due_date: nextDue,
+          end_date: data.recurring.end_date || null,
+          created_by: user.id,
+        });
+        queryClient.invalidateQueries({ queryKey: ['recurring-transactions', businessId] });
+      }
+
       setShowAddModal(false);
       setTransactionMode(null);
       invalidateTransactions();
@@ -150,7 +179,7 @@ export function useTransactions() {
     } finally {
       setSaving(false);
     }
-  }, [businessId, user, invalidateTransactions]);
+  }, [businessId, user, invalidateTransactions, queryClient]);
 
   const handleEditTransaction = useCallback(async (data: TransactionFormData) => {
     if (!editTransaction) return;
@@ -374,6 +403,7 @@ export function useTransactions() {
     businessLoading,
     businessError,
     canManageTransactions,
+    closedUntilDate: activeBusiness?.closed_until_date ?? null,
     // Filter state
     statusFilter,
     setStatusFilter,

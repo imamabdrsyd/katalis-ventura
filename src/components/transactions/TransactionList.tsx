@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, Lock } from 'lucide-react';
 import type { Transaction, TransactionCategory } from '@/types';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
 
@@ -22,6 +22,7 @@ interface TransactionListProps {
   dateRange?: { start: string; end: string };
   onDateRangeChange?: (range: { start: string; end: string }) => void;
   onEnterSelectMode?: () => void;
+  closedUntilDate?: string | null;
 }
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
@@ -120,6 +121,7 @@ export function TransactionList({
   dateRange,
   onDateRangeChange,
   onEnterSelectMode,
+  closedUntilDate,
 }: TransactionListProps) {
   const showActions = (onEdit || onDelete || onEnterSelectMode) && !selectMode;
   const allSelected = selectMode && transactions.length > 0 && transactions.every((t) => selectedIds?.has(t.id));
@@ -391,30 +393,47 @@ export function TransactionList({
               {showActions && (
                 <td className="py-3 px-2 md:py-4 md:px-4">
                   <div className="flex items-center gap-1">
-                    {onEdit && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEdit(transaction);
-                        }}
-                        className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
-                        title="Edit"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                    )}
-                    {onDelete && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDelete(transaction);
-                        }}
-                        className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-                        title="Hapus"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+                    {(() => {
+                      const isLocked = !!closedUntilDate && transaction.date <= closedUntilDate;
+                      if (isLocked) {
+                        return (
+                          <span
+                            title={`Periode terkunci hingga ${closedUntilDate}`}
+                            className="p-1.5 text-amber-400 dark:text-amber-500"
+                          >
+                            <Lock className="w-4 h-4" />
+                          </span>
+                        );
+                      }
+                      return (
+                        <>
+                          {onEdit && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(transaction);
+                              }}
+                              className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                              title="Edit"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                          )}
+                          {onDelete && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete(transaction);
+                              }}
+                              className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                              title="Hapus"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </>
+                      );
+                    })()}
                     {onEnterSelectMode && (
                       <button
                         onClick={(e) => {

@@ -24,7 +24,7 @@ export function useBalanceSheet(): UseBalanceSheetReturn {
     accountsApi
       .getAccounts(activeBusiness.id, false)
       .then(setAccounts)
-      .catch(console.error);
+      .catch((err) => console.error('[useBalanceSheet] Failed to load accounts for depreciation:', err));
   }, [activeBusiness]);
 
   // Balance Sheet uses cumulative transactions up to endDate (not just within period)

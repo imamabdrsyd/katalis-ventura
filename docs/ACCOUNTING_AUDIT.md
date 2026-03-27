@@ -78,8 +78,13 @@
 ### 1. Recurring Transactions (Transaksi Berulang)
 - **Prioritas**: TINGGI
 - **Manfaat**: Gaji, sewa, listrik, cicilan — 60-70% transaksi UKM itu repetitif setiap bulan.
-- **Implementasi**: Tambah field `recurrence_rule` (monthly/weekly/yearly) di transaksi, lalu auto-generate draft di awal periode.
-- **Status**: [ ] BELUM
+- **Status**: [x] SELESAI
+  - DB: `recurring_transactions` table + RLS (`database/migrations/027_recurring_transactions.sql`)
+  - API: `src/lib/api/recurring.ts` (CRUD + auto-generate due drafts)
+  - Type: `RecurringTransaction`, `RecurringFrequency`, `RecurringStatus` di `src/types/index.ts`
+  - Hook: `src/hooks/useRecurringTransactions.ts` (client-triggered generation, deduplicated per day via sessionStorage)
+  - UI: toggle "Jadikan Berulang" di TransactionForm (frequency picker + interval + end date), tab "Berulang" di halaman transaksi dengan RecurringList (pause/resume/stop/delete)
+  - Auto-generate: triggered on dashboard + transactions page load
 
 ### 2. Multi-line Journal Entry
 - **Prioritas**: TINGGI
@@ -109,7 +114,7 @@
 - **Prioritas**: SEDANG
 - **Manfaat**: Mencegah user mengubah transaksi di periode yang sudah ditutup (misal sudah lapor pajak).
 - **Implementasi**: Tambah `closed_until_date` di tabel `businesses`. Transaksi sebelum tanggal ini tidak bisa di-edit/delete.
-- **Status**: [ ] BELUM
+- **Status**: [x] DONE (migration 028, enforced di POST/PUT/DELETE API, UI di halaman Businesses)
 
 ### 6. Multi-currency Support
 - **Prioritas**: RENDAH (untuk saat ini)
@@ -119,7 +124,11 @@
 ### 7. Template Transaksi yang Bisa Disimpan
 - **Prioritas**: TINGGI
 - **Manfaat**: User bisa simpan pola transaksi yang sering dilakukan (misal "Bayar Gaji Bulanan") lalu tinggal klik + ubah tanggal/jumlah. Lebih cepat dari Quick Entry.
-- **Status**: [ ] BELUM
+- **Status**: [x] SELESAI
+  - DB: `transaction_templates` table + RLS (`database/migrations/027_transaction_templates.sql`)
+  - API: `src/lib/api/transactionTemplates.ts` (get, create, delete)
+  - Type: `TransactionTemplate` di `src/types/index.ts`
+  - UI: template selector dropdown di atas form (saat buat baru), tombol "Simpan sebagai Template" di bawah form, hapus template via ikon trash
 
 ### 8. Validasi Akun Server-side yang Lebih Ketat
 - **Prioritas**: SEDANG
@@ -149,9 +158,9 @@
 | 2 | ~~Fix legacy FIN → interest overstated~~ | Bug fix | Kecil | **DONE** |
 | 3 | ~~Fix `detectCategory` EXPENSE hardcode OPEX~~ | Bug fix | Kecil | **DONE** |
 | 4 | Recurring transactions | Operasional | Sedang | **Tinggi** |
-| 5 | Template transaksi | Operasional | Kecil | **Tinggi** |
+| 5 | ~~Template transaksi~~ | Operasional | Kecil | **DONE** |
 | 6 | AR/AP tracking | Operasional | Besar | **Tinggi** |
 | 7 | Multi-line journal entry | Kelengkapan | Besar | **Tinggi** |
-| 8 | Period locking | Data integrity | Sedang | **Sedang** |
+| 8 | ~~Period locking~~ | Data integrity | Sedang | **DONE** |
 | 9 | Bank reconciliation | Operasional | Sedang | **Sedang** |
 | 10 | Automatic closing entry | Kelengkapan | Sedang | **Sedang** |

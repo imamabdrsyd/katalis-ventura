@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser, createServerClient } from '@/lib/supabase-server';
-import { createTransactionSchema, businessIdSchema } from '@/lib/validations';
+import { createTransactionSchema, createMultiLineTransactionSchema, businessIdSchema } from '@/lib/validations';
 
 /**
  * GET /api/transactions?businessId=<uuid>
@@ -31,7 +31,8 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         debit_account:accounts!transactions_debit_account_id_fkey(*),
-        credit_account:accounts!transactions_credit_account_id_fkey(*)
+        credit_account:accounts!transactions_credit_account_id_fkey(*),
+        journal_lines(*, account:accounts(*))
       `)
       .eq('business_id', parsed.data)
       .is('deleted_at', null)
@@ -63,6 +64,105 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
+    // Route to multi-line handler when journal_lines array is present
+    if (body.journal_lines && Array.isArray(body.journal_lines)) {
+      const parsed = createMultiLineTransactionSchema.safeParse(body);
+      if (!parsed.success) {
+        return NextResponse.json(
+          {
+            error: 'Validation failed',
+            details: parsed.error.issues.map((i) => ({
+              field: i.path.join('.'),
+              message: i.message,
+            })),
+          },
+          { status: 400 }
+        );
+      }
+
+      const supabase = await createServerClient();
+
+      const { data: role, error: roleError } = await supabase
+        .from('user_business_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('business_id', parsed.data.business_id)
+        .single();
+
+      if (roleError || !role || (role.role !== 'business_manager' && role.role !== 'both')) {
+        return NextResponse.json({ error: 'Only business managers can create transactions' }, { status: 403 });
+      }
+
+      // Period lock check
+      const { data: biz } = await supabase
+        .from('businesses')
+        .select('closed_until_date')
+        .eq('id', parsed.data.business_id)
+        .single();
+
+      if (biz?.closed_until_date && parsed.data.date <= biz.closed_until_date) {
+        return NextResponse.json(
+          { error: `Periode hingga ${biz.closed_until_date} sudah dikunci.` },
+          { status: 423 }
+        );
+      }
+
+      // Verify all accounts belong to this business
+      const accountIds = [...new Set(parsed.data.journal_lines.map((l) => l.account_id))];
+      const { data: accs, error: accsErr } = await supabase
+        .from('accounts').select('id, business_id').in('id', accountIds);
+
+      if (accsErr || !accs || accs.length !== accountIds.length) {
+        return NextResponse.json({ error: 'One or more accounts not found' }, { status: 400 });
+      }
+      if (!accs.every((a) => a.business_id === parsed.data.business_id)) {
+        return NextResponse.json({ error: 'All accounts must belong to the same business' }, { status: 400 });
+      }
+
+      const totalDebit = parsed.data.journal_lines.reduce((s, l) => s + l.debit_amount, 0);
+
+      const { data: transaction, error: insertErr } = await supabase
+        .from('transactions')
+        .insert({
+          business_id: parsed.data.business_id,
+          date: parsed.data.date,
+          category: parsed.data.category,
+          name: parsed.data.name,
+          description: parsed.data.description,
+          notes: parsed.data.notes ?? null,
+          amount: totalDebit,
+          account: 'Multi-line journal entry',
+          status: parsed.data.status ?? 'draft',
+          is_multi_line: true,
+          is_double_entry: false,
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (insertErr || !transaction) {
+        return NextResponse.json({ error: insertErr?.message ?? 'Insert failed' }, { status: 500 });
+      }
+
+      const lines = parsed.data.journal_lines.map((l, i) => ({
+        transaction_id: transaction.id,
+        account_id: l.account_id,
+        debit_amount: l.debit_amount,
+        credit_amount: l.credit_amount,
+        description: l.description ?? null,
+        sort_order: l.sort_order ?? i,
+      }));
+
+      const { error: linesErr } = await supabase.from('journal_lines').insert(lines);
+      if (linesErr) {
+        await supabase.from('transactions').delete().eq('id', transaction.id);
+        return NextResponse.json({ error: linesErr.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ data: transaction }, { status: 201 });
+    }
+
+    // --- Standard single-entry path ---
     // Server-side validation with zod
     const parsed = createTransactionSchema.safeParse(body);
     if (!parsed.success) {
@@ -99,6 +199,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Only business managers can create transactions' },
         { status: 403 }
+      );
+    }
+
+    // Period lock check: reject if transaction date is within locked period
+    const { data: biz } = await supabase
+      .from('businesses')
+      .select('closed_until_date')
+      .eq('id', parsed.data.business_id)
+      .single();
+
+    if (biz?.closed_until_date && parsed.data.date <= biz.closed_until_date) {
+      return NextResponse.json(
+        { error: `Periode hingga ${biz.closed_until_date} sudah dikunci. Tidak dapat membuat transaksi di periode ini.` },
+        { status: 423 }
       );
     }
 

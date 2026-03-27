@@ -11,13 +11,14 @@ import {
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
+import type { AuthUser } from '@supabase/supabase-js';
 import type { Business, UserRole } from '@/types';
 
 const ACTIVE_BUSINESS_KEY = 'katalis_active_business_id';
 const ACTIVE_ROLE_KEY = 'katalis_active_role';
 
 interface BusinessContextType {
-  user: any;
+  user: AuthUser | null;
   userRole: UserRole | null;
   isSuperadmin: boolean;
   businesses: Business[];
@@ -33,7 +34,7 @@ interface BusinessContextType {
 const BusinessContext = createContext<BusinessContextType | null>(null);
 
 export function BusinessProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [isSuperadmin, setIsSuperadmin] = useState(false);
   const [businesses, setBusinesses] = useState<Business[]>([]);
@@ -168,8 +169,8 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
           localStorage.setItem(ACTIVE_BUSINESS_KEY, selectedBusiness.id);
         }
       }
-    } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
     } finally {
       setLoading(false);
     }

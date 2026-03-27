@@ -39,7 +39,9 @@ export function useReportData(): UseReportDataReturn {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportButtonRef = useRef<HTMLDivElement>(null);
 
-  // Initialize dates — from URL params if provided (e.g. from dashboard card), else current month
+  // Initialize dates — from URL params if provided (e.g. from dashboard card), else current month.
+  // Intentionally run only on mount (empty deps) so that subsequent user-driven date changes
+  // via period controls / custom date pickers are not overwritten by URL param re-reads.
   useEffect(() => {
     const urlStart = searchParams.get('startDate');
     const urlEnd = searchParams.get('endDate');

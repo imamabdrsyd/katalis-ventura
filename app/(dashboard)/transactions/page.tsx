@@ -9,7 +9,12 @@ import { DeleteConfirmModal } from '@/components/transactions/DeleteConfirmModal
 import TransactionImportModal from '@/components/transactions/TransactionImportModal';
 import type { TransactionCategory } from '@/types';
 import { QuickTransactionForm } from '@/components/transactions/QuickTransactionForm';
-import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2, Calculator } from 'lucide-react';
+import { RecurringList } from '@/components/transactions/RecurringList';
+import { useRecurringTransactions } from '@/hooks/useRecurringTransactions';
+import { MultiLineJournalForm } from '@/components/transactions/MultiLineJournalForm';
+import type { MultiLineFormData } from '@/components/transactions/MultiLineJournalForm';
+import { createMultiLineTransaction } from '@/lib/api/transactions';
+import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2, Calculator, RefreshCw, Layers } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 
@@ -40,6 +45,7 @@ function TransactionsPageInner() {
     businessLoading,
     businessError,
     canManageTransactions,
+    closedUntilDate,
     // Filter state
     statusFilter,
     setStatusFilter,
@@ -102,6 +108,42 @@ function TransactionsPageInner() {
     handleOpenInModal,
     handleOpenOutModal,
   } = useTransactions();
+
+  // Recurring transactions
+  const {
+    recurringList,
+    loading: recurringLoading,
+    activeCount: recurringActiveCount,
+    handlePause: handleRecurringPause,
+    handleResume: handleRecurringResume,
+    handleStop: handleRecurringStop,
+    handleDelete: handleRecurringDelete,
+  } = useRecurringTransactions();
+
+  // Main view tab: 'transactions' or 'recurring'
+  const [activeView, setActiveView] = useState<'transactions' | 'recurring'>('transactions');
+
+  // Multi-line journal modal state
+  const [showMultiLineModal, setShowMultiLineModal] = useState(false);
+  const [savingMultiLine, setSavingMultiLine] = useState(false);
+
+  const handleMultiLineSubmit = useCallback(async (data: MultiLineFormData) => {
+    if (!businessId || !user) return;
+    setSavingMultiLine(true);
+    try {
+      await createMultiLineTransaction({
+        business_id: businessId,
+        ...data,
+      });
+      setShowMultiLineModal(false);
+      fetchTransactions();
+      window.dispatchEvent(new Event('transaction-saved'));
+    } catch (err) {
+      console.error('Failed to create multi-line transaction:', err);
+    } finally {
+      setSavingMultiLine(false);
+    }
+  }, [businessId, user, fetchTransactions]);
 
   // Tag filter state
   const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);
@@ -257,6 +299,14 @@ function TransactionsPageInner() {
               Journal Entry
             </button>
 
+            <button
+              onClick={() => setShowMultiLineModal(true)}
+              className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors flex items-center gap-2 font-medium shadow-sm"
+            >
+              <Layers className="h-4 w-4" />
+              Multi-Baris
+            </button>
+
             {/* TEMPORARILY HIDDEN - To re-enable, uncomment this section */}
             {/* <button
               onClick={handleOpenInModal}
@@ -301,9 +351,9 @@ function TransactionsPageInner() {
         <div className="flex items-center mb-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-1 flex-1">
             <button
-              onClick={() => setStatusFilter('all')}
+              onClick={() => { setActiveView('transactions'); setStatusFilter('all'); }}
               className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                statusFilter === 'all'
+                activeView === 'transactions' && statusFilter === 'all'
                   ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
@@ -311,9 +361,9 @@ function TransactionsPageInner() {
               Semua
             </button>
             <button
-              onClick={() => setStatusFilter('draft')}
+              onClick={() => { setActiveView('transactions'); setStatusFilter('draft'); }}
               className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
-                statusFilter === 'draft'
+                activeView === 'transactions' && statusFilter === 'draft'
                   ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
@@ -326,14 +376,30 @@ function TransactionsPageInner() {
               )}
             </button>
             <button
-              onClick={() => setStatusFilter('posted')}
+              onClick={() => { setActiveView('transactions'); setStatusFilter('posted'); }}
               className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                statusFilter === 'posted'
+                activeView === 'transactions' && statusFilter === 'posted'
                   ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
               Posted
+            </button>
+            <button
+              onClick={() => setActiveView('recurring')}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+                activeView === 'recurring'
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Berulang
+              {recurringActiveCount > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300">
+                  {recurringActiveCount}
+                </span>
+              )}
             </button>
           </div>
 
@@ -357,6 +423,20 @@ function TransactionsPageInner() {
           )}
         </div>
 
+        {/* Recurring List View */}
+        {activeView === 'recurring' && (
+          <RecurringList
+            items={recurringList}
+            loading={recurringLoading}
+            onPause={handleRecurringPause}
+            onResume={handleRecurringResume}
+            onStop={handleRecurringStop}
+            onDelete={handleRecurringDelete}
+          />
+        )}
+
+        {/* Transaction List View */}
+        {activeView === 'transactions' && <>
         {/* Select Mode Action Bar */}
         {selectMode && (
           <div className="flex items-center justify-between mb-4 px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-600 rounded-lg">
@@ -433,6 +513,7 @@ function TransactionsPageInner() {
             dateRange={dateRange}
             onDateRangeChange={setDateRange}
             onEnterSelectMode={canManageTransactions ? () => setSelectMode(true) : undefined}
+            closedUntilDate={closedUntilDate}
           />
         </div>
 
@@ -513,6 +594,7 @@ function TransactionsPageInner() {
             </select>
           </div>
         )}
+        </>}
       </div>
 
       {/* Quick Add Modal */}
@@ -607,6 +689,20 @@ function TransactionsPageInner() {
           onImportComplete={handleImportComplete}
         />
       )}
+
+      {/* Multi-Line Journal Entry Modal */}
+      <Modal
+        isOpen={showMultiLineModal}
+        onClose={() => setShowMultiLineModal(false)}
+        title="Jurnal Multi-Baris"
+      >
+        <MultiLineJournalForm
+          onSubmit={handleMultiLineSubmit}
+          onCancel={() => setShowMultiLineModal(false)}
+          loading={savingMultiLine}
+          businessId={businessId}
+        />
+      </Modal>
     </div>
   );
 }

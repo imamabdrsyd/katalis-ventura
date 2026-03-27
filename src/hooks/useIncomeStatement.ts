@@ -34,7 +34,7 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
     accountsApi
       .getAccounts(activeBusiness.id, false)
       .then(setAccounts)
-      .catch(console.error);
+      .catch((err) => console.error('[useIncomeStatement] Failed to load accounts for depreciation:', err));
   }, [activeBusiness]);
 
   // Base summary without depreciation

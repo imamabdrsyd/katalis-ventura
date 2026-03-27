@@ -72,6 +72,46 @@ export function calculateFinancialSummary(
 
   transactions.forEach((t) => {
     const amount = Number(t.amount);
+
+    // --- Multi-line journal entry path ---
+    if (t.is_multi_line && t.journal_lines && t.journal_lines.length > 0) {
+      // totalFin and totalCapex use transaction.amount for display/category tracking
+      if (t.category === 'FIN') summary.totalFin += amount;
+      if (t.category === 'CAPEX') summary.totalCapex += amount;
+
+      // Income statement lines derived directly from journal_lines
+      for (const line of t.journal_lines) {
+        const acc = line.account;
+        if (!acc) continue;
+
+        if (line.debit_amount > 0) {
+          if (acc.account_type === 'EXPENSE') {
+            const cat = acc.default_category;
+            if (cat === 'VAR') {
+              summary.totalVar += line.debit_amount;
+            } else if (cat === 'TAX') {
+              summary.totalTax += line.debit_amount;
+            } else {
+              summary.totalOpex += line.debit_amount;
+            }
+            // Interest: FIN category with EXPENSE debit line
+            if (t.category === 'FIN') {
+              summary.totalInterest += line.debit_amount;
+            }
+          } else if (acc.account_type === 'REVENUE') {
+            // Debit to REVENUE = contra-revenue (sales return)
+            summary.totalEarn -= line.debit_amount;
+          }
+        }
+
+        if (line.credit_amount > 0 && acc.account_type === 'REVENUE') {
+          summary.totalEarn += line.credit_amount;
+        }
+      }
+      return; // skip the switch below
+    }
+
+    // --- Simple double-entry and legacy path ---
     switch (t.category) {
       case 'EARN':
         summary.totalEarn += amount;
@@ -199,38 +239,63 @@ export function groupTransactionsByMonth(
     const monthData = monthMap.get(monthKey)!;
     const amount = Number(t.amount);
 
-    switch (t.category) {
-      case 'EARN':
-        monthData.earn += amount;
-        break;
-      case 'OPEX':
-        monthData.opex += amount;
-        break;
-      case 'VAR':
-        // For double-entry: only count as COGS if debit account is EXPENSE type
-        // If debit is ASSET (inventory purchase), skip from income statement
-        if (t.is_double_entry && t.debit_account?.account_type === 'ASSET') {
+    // Multi-line path
+    if (t.is_multi_line && t.journal_lines && t.journal_lines.length > 0) {
+      if (t.category === 'FIN') monthData.fin += amount;
+      if (t.category === 'CAPEX') monthData.capex += amount;
+
+      for (const line of t.journal_lines) {
+        const acc = line.account;
+        if (!acc) continue;
+        if (line.debit_amount > 0 && acc.account_type === 'EXPENSE') {
+          const cat = acc.default_category;
+          if (cat === 'VAR') monthData.var += line.debit_amount;
+          else if (cat === 'TAX') monthData.tax += line.debit_amount;
+          else monthData.opex += line.debit_amount;
+          if (t.category === 'FIN') monthData.interest += line.debit_amount;
+        }
+        if (line.credit_amount > 0 && acc.account_type === 'REVENUE') {
+          monthData.earn += line.credit_amount;
+        }
+        if (line.debit_amount > 0 && acc.account_type === 'REVENUE') {
+          monthData.earn -= line.debit_amount;
+        }
+      }
+    } else {
+      // Simple double-entry and legacy path
+      switch (t.category) {
+        case 'EARN':
+          monthData.earn += amount;
           break;
-        }
-        monthData.var += amount;
-        break;
-      case 'CAPEX':
-        monthData.capex += amount;
-        break;
-      case 'TAX':
-        monthData.tax += amount;
-        break;
-      case 'FIN':
-        monthData.fin += amount;
-        // Only count FIN as interest if it debits an EXPENSE account
-        if (t.is_double_entry && t.debit_account?.account_type === 'EXPENSE') {
-          monthData.interest += amount;
-        }
-        // For legacy transactions, only count as interest with keyword heuristic
-        if (!t.is_double_entry && isInterestKeyword(t.name, t.description)) {
-          monthData.interest += amount;
-        }
-        break;
+        case 'OPEX':
+          monthData.opex += amount;
+          break;
+        case 'VAR':
+          // For double-entry: only count as COGS if debit account is EXPENSE type
+          // If debit is ASSET (inventory purchase), skip from income statement
+          if (t.is_double_entry && t.debit_account?.account_type === 'ASSET') {
+            break;
+          }
+          monthData.var += amount;
+          break;
+        case 'CAPEX':
+          monthData.capex += amount;
+          break;
+        case 'TAX':
+          monthData.tax += amount;
+          break;
+        case 'FIN':
+          monthData.fin += amount;
+          // Only count FIN as interest if it debits an EXPENSE account
+          if (t.is_double_entry && t.debit_account?.account_type === 'EXPENSE') {
+            monthData.interest += amount;
+          }
+          // For legacy transactions, only count as interest with keyword heuristic
+          if (!t.is_double_entry && isInterestKeyword(t.name, t.description)) {
+            monthData.interest += amount;
+          }
+          break;
+      }
     }
 
     monthData.netProfit =
@@ -334,10 +399,12 @@ export function calculateBalanceSheet(
 ): BalanceSheetData {
 
   // Single-pass partition: O(n) bukan 2x O(n)
+  const multiLineTransactions: Transaction[] = [];
   const doubleEntryTransactions: Transaction[] = [];
   const legacyTransactions: Transaction[] = [];
   for (const t of transactions) {
-    if (t.is_double_entry) doubleEntryTransactions.push(t);
+    if (t.is_multi_line) multiLineTransactions.push(t);
+    else if (t.is_double_entry) doubleEntryTransactions.push(t);
     else legacyTransactions.push(t);
   }
 
@@ -369,6 +436,59 @@ export function calculateBalanceSheet(
       totalOtherCurrentAssets += amount;
     }
   }
+
+  // Process multi-line journal entries
+  multiLineTransactions.forEach(transaction => {
+    const lines = transaction.journal_lines ?? [];
+    for (const line of lines) {
+      const acc = line.account;
+      if (!acc) continue;
+
+      if (line.debit_amount > 0) {
+        const amt = line.debit_amount;
+        switch (acc.account_type) {
+          case 'ASSET':
+            totalAssets += amt;
+            classifyAsset(acc, amt);
+            break;
+          case 'LIABILITY':
+            totalLiabilities -= amt;
+            break;
+          case 'EQUITY':
+            totalEquityDebit += amt;
+            break;
+          case 'EXPENSE':
+            totalExpenses += amt;
+            break;
+          case 'REVENUE':
+            totalRevenue -= amt;
+            break;
+        }
+      }
+
+      if (line.credit_amount > 0) {
+        const amt = line.credit_amount;
+        switch (acc.account_type) {
+          case 'ASSET':
+            totalAssets -= amt;
+            classifyAsset(acc, -amt);
+            break;
+          case 'LIABILITY':
+            totalLiabilities += amt;
+            break;
+          case 'EQUITY':
+            totalEquityCredit += amt;
+            break;
+          case 'REVENUE':
+            totalRevenue += amt;
+            break;
+          case 'EXPENSE':
+            totalExpenses -= amt;
+            break;
+        }
+      }
+    }
+  });
 
   // Process double-entry transactions
   doubleEntryTransactions.forEach(transaction => {
@@ -441,9 +561,10 @@ export function calculateBalanceSheet(
     totalEquityCredit += capital;
   }
 
-  // If no equity was recorded from double-entry transactions,
+  // If no equity was recorded from double-entry or multi-line transactions,
   // fall back to capital parameter (from businesses.capital_investment)
-  if (totalEquityCredit === 0 && totalEquityDebit === 0 && capital > 0 && legacyTransactions.length === 0) {
+  if (totalEquityCredit === 0 && totalEquityDebit === 0 && capital > 0 &&
+      legacyTransactions.length === 0 && multiLineTransactions.length === 0) {
     totalEquityCredit = capital;
     totalCash += capital;
     totalAssets += capital;
@@ -464,6 +585,15 @@ export function calculateBalanceSheet(
       }
       if (t.credit_account?.account_type === 'ASSET' && t.credit_account.default_category === 'CAPEX') {
         fixedAssetCosts.set(t.credit_account.id, (fixedAssetCosts.get(t.credit_account.id) ?? 0) - amount);
+      }
+    });
+    // Also accumulate fixed asset costs from multi-line journal lines
+    multiLineTransactions.forEach(t => {
+      for (const line of (t.journal_lines ?? [])) {
+        const acc = line.account;
+        if (!acc || acc.account_type !== 'ASSET' || acc.default_category !== 'CAPEX') continue;
+        const prev = fixedAssetCosts.get(acc.id) ?? 0;
+        fixedAssetCosts.set(acc.id, prev + line.debit_amount - line.credit_amount);
       }
     });
 
@@ -612,9 +742,19 @@ function calculateOpeningBalance(
 
   let opening = 0;
 
+  // Multi-line: sum actual cash line movements
+  for (const t of prePeriodTxns) {
+    if (!t.is_multi_line) continue;
+    for (const line of (t.journal_lines ?? [])) {
+      const acc = line.account;
+      if (!acc || !isCashAccount(acc.account_code)) continue;
+      opening += line.debit_amount - line.credit_amount;
+    }
+  }
+
   // Double-entry: sum net cash movements
   for (const t of prePeriodTxns) {
-    if (!t.is_double_entry) continue;
+    if (!t.is_double_entry || t.is_multi_line) continue;
 
     const debitCode = t.debit_account?.account_code;
     const creditCode = t.credit_account?.account_code;
@@ -634,7 +774,7 @@ function calculateOpeningBalance(
 
   // Legacy: category-based cash movements
   for (const t of prePeriodTxns) {
-    if (t.is_double_entry) continue;
+    if (t.is_double_entry || t.is_multi_line) continue;
 
     const amount = Number(t.amount);
     switch (t.category) {
@@ -655,13 +795,19 @@ function calculateOpeningBalance(
 
   // If we only have legacy transactions and no double-entry equity transactions,
   // capital from business settings is the base (legacy didn't record capital injection)
-  const hasDoubleEntryEquity = prePeriodTxns.some(
-    t => t.is_double_entry && (
+  const hasDoubleEntryEquity = prePeriodTxns.some(t => {
+    if (t.is_multi_line) {
+      const lines = t.journal_lines ?? [];
+      const hasCashLine = lines.some(l => l.account && isCashAccount(l.account.account_code));
+      const hasEquityLine = lines.some(l => l.account?.account_type === 'EQUITY');
+      return hasCashLine && hasEquityLine;
+    }
+    return t.is_double_entry && (
       (isCashAccount(t.debit_account?.account_code ?? '') && t.credit_account?.account_type === 'EQUITY') ||
       (isCashAccount(t.credit_account?.account_code ?? '') && t.debit_account?.account_type === 'EQUITY')
-    )
-  );
-  const hasLegacyTxns = prePeriodTxns.some(t => !t.is_double_entry);
+    );
+  });
+  const hasLegacyTxns = prePeriodTxns.some(t => !t.is_double_entry && !t.is_multi_line);
 
   if (hasLegacyTxns && !hasDoubleEntryEquity) {
     opening += fallbackCapital;
@@ -677,8 +823,9 @@ export function calculateCashFlow(
   allTransactions?: Transaction[],
   startDate?: string,
 ): CashFlowData {
-  const doubleEntryTxns = transactions.filter(t => t.is_double_entry);
-  const legacyTxns = transactions.filter(t => !t.is_double_entry);
+  const multiLineTxns = transactions.filter(t => t.is_multi_line);
+  const doubleEntryTxns = transactions.filter(t => t.is_double_entry && !t.is_multi_line);
+  const legacyTxns = transactions.filter(t => !t.is_double_entry && !t.is_multi_line);
 
   let operating = 0;
   let investing = 0;
@@ -737,6 +884,60 @@ export function calculateCashFlow(
       investingTransactions.push(entry);
     } else {
       financing += cashAmount;
+      financingTransactions.push(entry);
+    }
+  });
+
+  // --- Multi-line: use actual cash lines from journal_lines ---
+  multiLineTxns.forEach(t => {
+    const lines = t.journal_lines ?? [];
+    // Compute net cash movement from cash/bank lines
+    let cashIn = 0;
+    let cashOut = 0;
+    for (const line of lines) {
+      const acc = line.account;
+      if (!acc) continue;
+      if (isCashAccount(acc.account_code)) {
+        cashIn += line.debit_amount;
+        cashOut += line.credit_amount;
+      }
+    }
+
+    const netCash = cashIn - cashOut;
+    if (netCash === 0) return; // Non-cash transaction (accrual)
+
+    // Use transaction category for bucket classification
+    let bucket: 'operating' | 'investing' | 'financing';
+    switch (t.category) {
+      case 'EARN':
+        bucket = 'operating'; break;
+      case 'OPEX': case 'VAR': case 'TAX':
+        bucket = 'operating'; break;
+      case 'CAPEX':
+        bucket = 'investing'; break;
+      case 'FIN':
+        bucket = 'financing'; break;
+      default:
+        bucket = 'operating';
+    }
+
+    const entry: CashFlowTransaction = {
+      id: t.id,
+      date: t.date,
+      name: t.name,
+      description: t.description,
+      amount: netCash,
+      category: t.category,
+    };
+
+    if (bucket === 'operating') {
+      operating += netCash;
+      operatingTransactions.push(entry);
+    } else if (bucket === 'investing') {
+      investing += netCash;
+      investingTransactions.push(entry);
+    } else {
+      financing += netCash;
       financingTransactions.push(entry);
     }
   });

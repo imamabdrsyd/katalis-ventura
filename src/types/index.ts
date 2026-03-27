@@ -50,6 +50,8 @@ export interface TransactionMeta {
   settlement_of_transaction_id?: string;
   /** Dokumen sumber / bukti transaksi (faktur, nota, kuitansi) */
   attachment?: TransactionAttachment;
+  /** ID recurring template yang men-generate transaksi ini */
+  recurring_template_id?: string;
 }
 
 export interface Account {
@@ -125,10 +127,34 @@ export interface Business {
   logo_url?: string;
   invoice_settings?: InvoiceSettings | null;
   is_archived: boolean;
+  closed_until_date?: string | null; // Period lock: transaksi <= tanggal ini tidak bisa diedit/dihapus
   created_at: string;
   created_by: string;
   updated_at: string;
   updated_by?: string;
+}
+
+// One line in a multi-line journal entry
+export interface JournalLine {
+  id: string;
+  transaction_id: string;
+  account_id: string;
+  debit_amount: number;   // > 0 for debit lines, 0 for credit lines
+  credit_amount: number;  // > 0 for credit lines, 0 for debit lines
+  description?: string | null;
+  sort_order: number;
+  created_at: string;
+  // Populated when joining with accounts table
+  account?: Account;
+}
+
+// Input type for creating/updating journal lines
+export interface JournalLineInput {
+  account_id: string;
+  debit_amount: number;
+  credit_amount: number;
+  description?: string;
+  sort_order: number;
 }
 
 export interface Transaction {
@@ -146,10 +172,19 @@ export interface Transaction {
   created_at: string;
   updated_at: string;
 
-  // Optional double-entry fields
+  // Contact linkage (AR/AP tracking)
+  contact_id?: string | null;
+  contact?: Contact;
+
+  // Optional double-entry fields (simple 1-debit / 1-credit)
   debit_account_id?: string;
   credit_account_id?: string;
   is_double_entry?: boolean;
+
+  // Multi-line journal entry (N-debit / M-credit, balanced)
+  is_multi_line?: boolean;
+  journal_lines?: JournalLine[];
+
   notes?: string;
   meta?: TransactionMeta | null;
 
@@ -393,6 +428,7 @@ export interface Invoice {
   notes: string | null;
   meta: Record<string, unknown> | null;
   transaction_id: string | null;
+  contact_id: string | null;
   created_by: string;
   updated_by: string | null;
   created_at: string;
@@ -400,6 +436,7 @@ export interface Invoice {
   deleted_at: string | null;
   deleted_by: string | null;
   line_items?: InvoiceLineItem[];
+  contact?: Contact;
 }
 
 export interface InvoiceLineItem {
@@ -522,6 +559,64 @@ export interface ProjectedMonth {
   projected: number;
 }
 
+// ==================== TRANSACTION TEMPLATES ====================
+
+export interface TransactionTemplate {
+  id: string;
+  business_id: string;
+  name: string;
+  category: TransactionCategory;
+  description: string | null;
+  default_amount: number | null;
+  debit_account_id: string | null;
+  credit_account_id: string | null;
+  is_double_entry: boolean;
+  created_by: string | null;
+  created_at: string;
+}
+
+// ==================== RECURRING TRANSACTIONS ====================
+
+export type RecurringFrequency = 'weekly' | 'monthly' | 'yearly';
+export type RecurringStatus = 'active' | 'paused' | 'stopped';
+
+export interface RecurringTransaction {
+  id: string;
+  business_id: string;
+
+  // Template fields
+  name: string;
+  description: string;
+  amount: number;
+  category: TransactionCategory;
+  account: string;
+  debit_account_id?: string;
+  credit_account_id?: string;
+  is_double_entry?: boolean;
+  notes?: string;
+  meta?: TransactionMeta | null;
+
+  // Schedule
+  frequency: RecurringFrequency;
+  interval_value: number;
+  next_due_date: string;
+  end_date?: string | null;
+
+  // State
+  status: RecurringStatus;
+  last_generated_date?: string | null;
+  total_generated: number;
+
+  // Audit
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+
+  // Populated via join
+  debit_account?: Account;
+  credit_account?: Account;
+}
+
 // ==================== CONTACTS ====================
 
 export type ContactType = 'customer' | 'vendor' | 'other';
@@ -538,4 +633,31 @@ export interface Contact {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// ==================== AR/AP AGING ====================
+
+export type AgingBucket = 'current' | '1-30' | '31-60' | '61-90' | '90+';
+
+export interface AgingRow {
+  contactId: string | null;
+  contactName: string;
+  contactType: ContactType | null;
+  current: number;    // belum jatuh tempo
+  bucket30: number;   // 1-30 hari
+  bucket60: number;   // 31-60 hari
+  bucket90: number;   // 61-90 hari
+  bucketOver90: number; // >90 hari
+  total: number;
+  oldestDate: string | null;
+}
+
+export interface ArApSummary {
+  totalCurrent: number;
+  total30: number;
+  total60: number;
+  total90: number;
+  totalOver90: number;
+  grandTotal: number;
+  rows: AgingRow[];
 }
