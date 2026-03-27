@@ -59,7 +59,7 @@
   totalLiabilities += summary.totalFin;
   ```
 - **Masalah**: FIN bisa mencakup injeksi modal (equity), bayar hutang (mengurangi liability), atau bunga (expense). Menjumlahkan semua ke liabilitas salah secara akuntansi.
-- **Status**: [ ] BELUM DIPERBAIKI — perlu redesign legacy handling
+- **Status**: [x] FIXED — `classifyLegacyFin()` heuristik keyword classify FIN ke equity/liability_in/liability_out/interest. Balance sheet sekarang memisahkan legacy FIN ke `legacyFinLiability`, `legacyFinEquityIn`, `legacyFinEquityOut`, `legacyFinCashOut`.
 
 ### Bug 5: Opening balance legacy FIN selalu positif (+amount)
 - **File**: `src/lib/calculations.ts` (baris 632)
@@ -69,7 +69,7 @@
     opening += amount; break;
   ```
 - **Masalah**: FIN bisa keluar (bayar cicilan, prive). Tanpa akun double-entry, semua FIN dianggap cash masuk. Ini bisa overstate opening balance.
-- **Status**: [ ] BELUM DIPERBAIKI — perlu redesign legacy handling
+- **Status**: [x] FIXED — Opening balance sekarang menggunakan `classifyLegacyFin()`: equity/liability_in → +amount (cash in), liability_out/interest → -amount (cash out).
 
 ---
 
@@ -134,7 +134,7 @@
 - **Prioritas**: SEDANG
 - **Manfaat**: Saat ini Zod schema tidak validate apakah `debit_account_id` dan `credit_account_id` benar-benar exist dan milik business yang sama. Validasi hanya cek format UUID.
 - **Solusi**: Tambah server-side check di route handler yang query kedua akun sebelum insert.
-- **Status**: [ ] BELUM
+- **Status**: [x] DONE — POST sudah ada validasi (line 219-242), PUT sekarang juga validasi ownership akun sebelum update.
 
 ### 9. Automatic Closing Entry (Jurnal Penutup)
 - **Prioritas**: SEDANG
@@ -146,7 +146,7 @@
 - **File**: `src/lib/accounting/guidance/transactionPatterns.ts`
 - **Masalah**: `detectPatternFromName` pakai if-else chain yang rigid. Keyword "bayar sewa" salah detect ke `pay_opex` padahal bisa jadi "bayar sewa dari tenant" (revenue).
 - **Solusi**: Tambah context awareness — kalau ada keyword "terima" + "sewa" → revenue, kalau "bayar" + "sewa" → expense.
-- **Status**: [ ] BELUM
+- **Status**: [x] DONE — Ditambahkan early context check: "terima sewa"/"pendapatan sewa" → revenue. Juga "bayar pinjaman" → pay_loan (bukan receive_loan).
 
 ---
 
@@ -157,10 +157,14 @@
 | 1 | ~~Fix `calculateInitialCapital` range 1200~~ | Bug fix | Kecil | **DONE** |
 | 2 | ~~Fix legacy FIN → interest overstated~~ | Bug fix | Kecil | **DONE** |
 | 3 | ~~Fix `detectCategory` EXPENSE hardcode OPEX~~ | Bug fix | Kecil | **DONE** |
-| 4 | Recurring transactions | Operasional | Sedang | **Tinggi** |
-| 5 | ~~Template transaksi~~ | Operasional | Kecil | **DONE** |
-| 6 | AR/AP tracking | Operasional | Besar | **Tinggi** |
-| 7 | Multi-line journal entry | Kelengkapan | Besar | **Tinggi** |
-| 8 | ~~Period locking~~ | Data integrity | Sedang | **DONE** |
-| 9 | Bank reconciliation | Operasional | Sedang | **Sedang** |
-| 10 | Automatic closing entry | Kelengkapan | Sedang | **Sedang** |
+| 4 | ~~Fix legacy FIN balance sheet → classify per keyword~~ | Bug fix | Sedang | **DONE** |
+| 5 | ~~Fix legacy FIN opening balance → cash direction~~ | Bug fix | Kecil | **DONE** |
+| 6 | ~~Recurring transactions~~ | Operasional | Sedang | **DONE** |
+| 7 | ~~Template transaksi~~ | Operasional | Kecil | **DONE** |
+| 8 | AR/AP tracking | Operasional | Besar | **Tinggi** |
+| 9 | Multi-line journal entry | Kelengkapan | Besar | **Tinggi** |
+| 10 | ~~Period locking~~ | Data integrity | Sedang | **DONE** |
+| 11 | ~~Validasi akun server-side~~ | Data integrity | Kecil | **DONE** |
+| 12 | ~~Deteksi keyword context-aware~~ | UX | Kecil | **DONE** |
+| 13 | Bank reconciliation | Operasional | Sedang | **Sedang** |
+| 14 | Automatic closing entry | Kelengkapan | Sedang | **Sedang** |

@@ -277,6 +277,15 @@ export function detectPatternFromName(name: string): TransactionPattern | null {
     return getPatternById('capital_injection') || null;
   }
 
+  // Context-aware "sewa" detection: "terima sewa" / "pendapatan sewa" = revenue
+  // "bayar sewa" / "sewa kantor" = expense
+  if (nameLower.includes('sewa') || nameLower.includes('rental')) {
+    const isIncome = nameLower.includes('terima') || nameLower.includes('pendapatan') || nameLower.includes('pembayaran dari');
+    if (isIncome) {
+      return getPatternById('receive_revenue') || null;
+    }
+  }
+
   // OPEX keywords (checked BEFORE revenue to catch compound "sewa" keywords like "sewa kantor")
   if (
     nameLower.includes('listrik') ||
@@ -313,13 +322,14 @@ export function detectPatternFromName(name: string): TransactionPattern | null {
     return getPatternById('receive_revenue') || null;
   }
 
-  // Loan keywords
+  // Loan keywords — context-aware: "bayar pinjaman" → pay_loan, else → receive_loan
   if (
     nameLower.includes('pinjaman') ||
     nameLower.includes('kredit') ||
     nameLower.includes('kpr')
   ) {
-    return getPatternById('receive_loan') || null;
+    const isPayment = nameLower.includes('bayar') || nameLower.includes('lunasi') || nameLower.includes('angsuran');
+    return getPatternById(isPayment ? 'pay_loan' : 'receive_loan') || null;
   }
 
   // Variable cost keywords

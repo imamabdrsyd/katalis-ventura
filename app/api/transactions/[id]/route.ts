@@ -100,6 +100,32 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // Validate account ownership if debit/credit accounts are being updated
+    const debitId = parsed.data.debit_account_id;
+    const creditId = parsed.data.credit_account_id;
+    const accountIdsToCheck = [debitId, creditId].filter(Boolean) as string[];
+
+    if (accountIdsToCheck.length > 0) {
+      const { data: accts, error: acctErr } = await supabase
+        .from('accounts')
+        .select('id, business_id')
+        .in('id', accountIdsToCheck);
+
+      if (acctErr || !accts || accts.length !== accountIdsToCheck.length) {
+        return NextResponse.json(
+          { error: 'Satu atau kedua akun tidak ditemukan' },
+          { status: 400 }
+        );
+      }
+
+      if (!accts.every((a) => a.business_id === existing.business_id)) {
+        return NextResponse.json(
+          { error: 'Akun harus milik bisnis yang sama' },
+          { status: 400 }
+        );
+      }
+    }
+
     // If posting, set posted_at timestamp
     const updateData = { ...parsed.data, updated_by: user.id } as Record<string, unknown>;
     if (parsed.data.status === 'posted' && existing.status === 'draft') {

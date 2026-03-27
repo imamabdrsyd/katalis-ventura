@@ -19,17 +19,71 @@ import { calculateDepreciationSummary } from '@/lib/accounting/depreciation';
 // Helpers
 
 /**
- * Heuristic: check if a legacy FIN transaction is actually an interest payment.
- * Legacy transactions don't have debit/credit accounts, so we rely on keywords.
+ * Heuristic: classify legacy FIN transactions by keyword analysis.
+ * Legacy transactions don't have debit/credit accounts, so we rely on keywords
+ * to determine whether FIN is: equity, liability, expense (interest), or cash-out.
  */
-function isInterestKeyword(name: string, description: string): boolean {
+type LegacyFinType = 'equity' | 'liability_in' | 'liability_out' | 'interest' | 'unknown';
+
+function classifyLegacyFin(name: string, description: string): LegacyFinType {
   const text = `${name} ${description}`.toLowerCase();
-  return (
+
+  // Interest / beban bunga → expense (income statement)
+  if (
     text.includes('bunga') ||
     text.includes('interest') ||
-    text.includes('bunga bank') ||
     text.includes('beban bunga')
-  );
+  ) {
+    return 'interest';
+  }
+
+  // Capital injection / equity
+  if (
+    text.includes('modal') ||
+    text.includes('setoran') ||
+    text.includes('investasi pemilik') ||
+    text.includes('injeksi')
+  ) {
+    return 'equity';
+  }
+
+  // Owner withdrawal / prive → equity out (cash out)
+  if (
+    text.includes('prive') ||
+    text.includes('dividen') ||
+    text.includes('penarikan pemilik') ||
+    text.includes('pribadi')
+  ) {
+    return 'liability_out'; // treated as cash-out for opening balance
+  }
+
+  // Loan repayment / cicilan → liability reduction (cash out)
+  if (
+    text.includes('cicilan') ||
+    text.includes('pelunasan') ||
+    text.includes('bayar hutang') ||
+    text.includes('angsuran') ||
+    text.includes('bayar pinjaman')
+  ) {
+    return 'liability_out';
+  }
+
+  // Loan received / pinjaman masuk → liability increase (cash in)
+  if (
+    text.includes('pinjaman') ||
+    text.includes('kredit') ||
+    text.includes('kpr') ||
+    text.includes('terima pinjaman')
+  ) {
+    return 'liability_in';
+  }
+
+  return 'unknown';
+}
+
+/** Backward-compat wrapper — checks if legacy FIN is interest */
+function isInterestKeyword(name: string, description: string): boolean {
+  return classifyLegacyFin(name, description) === 'interest';
 }
 
 // Constants
@@ -544,21 +598,57 @@ export function calculateBalanceSheet(
   });
 
   // Process legacy transactions (fallback to old calculation)
+  // Bug 4 fix: classify each legacy FIN by keyword heuristic instead of
+  // lumping all FIN into liabilities.
   if (legacyTransactions.length > 0) {
     const summary = calculateFinancialSummary(legacyTransactions);
 
+    // Classify legacy FIN transactions individually
+    let legacyFinLiability = 0;   // net pinjaman masuk
+    let legacyFinEquityIn = 0;    // modal masuk
+    let legacyFinEquityOut = 0;   // prive / penarikan
+    let legacyFinCashOut = 0;     // cicilan, pelunasan
+
+    for (const t of legacyTransactions) {
+      if (t.category !== 'FIN') continue;
+      const amount = Number(t.amount);
+      const finType = classifyLegacyFin(t.name, t.description);
+      switch (finType) {
+        case 'equity':
+          legacyFinEquityIn += amount;
+          break;
+        case 'liability_in':
+          legacyFinLiability += amount;
+          break;
+        case 'liability_out':
+          legacyFinCashOut += amount;
+          legacyFinEquityOut += amount;
+          break;
+        case 'interest':
+          // Already handled by totalInterest in calculateFinancialSummary
+          legacyFinCashOut += amount;
+          break;
+        default:
+          // Unknown FIN → assume liability (conservative)
+          legacyFinLiability += amount;
+          break;
+      }
+    }
+
+    const netFinCash = legacyFinEquityIn + legacyFinLiability - legacyFinCashOut;
     const operatingCash = summary.totalEarn - summary.totalOpex - summary.totalVar - summary.totalTax;
-    const closingCash = capital + operatingCash - summary.totalCapex + summary.totalFin;
+    const closingCash = capital + operatingCash - summary.totalCapex + netFinCash;
 
     totalCash += closingCash;
     totalFixedAssets += summary.totalCapex;
     totalAssets += closingCash + summary.totalCapex;
-    totalLiabilities += summary.totalFin;
+    totalLiabilities += legacyFinLiability;
     totalRevenue += summary.totalEarn;
     totalExpenses += summary.totalOpex + summary.totalVar + summary.totalTax;
 
-    // Legacy: lump capital into equity credit (no drawings distinction possible)
-    totalEquityCredit += capital;
+    // Legacy equity: capital + detected equity injections - withdrawals
+    totalEquityCredit += capital + legacyFinEquityIn;
+    totalEquityDebit += legacyFinEquityOut;
   }
 
   // If no equity was recorded from double-entry or multi-line transactions,
@@ -773,6 +863,7 @@ function calculateOpeningBalance(
   }
 
   // Legacy: category-based cash movements
+  // Bug 5 fix: FIN can be cash-in (pinjaman, modal) or cash-out (cicilan, prive, bunga)
   for (const t of prePeriodTxns) {
     if (t.is_double_entry || t.is_multi_line) continue;
 
@@ -786,8 +877,17 @@ function calculateOpeningBalance(
         opening -= amount; break;
       case 'CAPEX':
         opening -= amount; break;
-      case 'FIN':
-        opening += amount; break;
+      case 'FIN': {
+        const finType = classifyLegacyFin(t.name, t.description);
+        if (finType === 'equity' || finType === 'liability_in') {
+          opening += amount;  // cash in
+        } else if (finType === 'liability_out' || finType === 'interest') {
+          opening -= amount;  // cash out
+        } else {
+          opening += amount;  // unknown → assume cash in (conservative)
+        }
+        break;
+      }
       default:
         opening += amount;
     }

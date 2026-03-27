@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 18 Maret 2026 | Terakhir diupdate: 27 Maret 2026
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 27 Maret 2026
 
 ---
 
@@ -470,15 +470,28 @@ Untuk setiap transaksi:
 ```
 
 **B. Legacy Transactions** (is_double_entry = false)
-```
-openingCash = capital (dari business settings)
-operatingCash = EARN - OPEX - VAR - TAX
-closingCash = capital + operatingCash - CAPEX + FIN
 
-totalCash     = closingCash
-totalProperty = CAPEX
-totalAssets   = closingCash + CAPEX
-totalLiabilities = FIN
+Legacy FIN diklasifikasi per-transaksi menggunakan `classifyLegacyFin()` keyword heuristic:
+
+| Keyword | Tipe | Dampak Balance Sheet |
+|---------|------|---------------------|
+| modal, setoran, injeksi | `equity` | totalEquityCredit += amount |
+| pinjaman, kredit, kpr | `liability_in` | totalLiabilities += amount |
+| cicilan, pelunasan, bayar hutang | `liability_out` | totalEquityDebit += amount, cash out |
+| bunga, interest | `interest` | expense (cash out), sudah di income statement |
+| tidak dikenali | `unknown` | totalLiabilities += amount (konservatif) |
+
+```
+netFinCash = equityIn + liabilityIn - cashOut
+operatingCash = EARN - OPEX - VAR - TAX
+closingCash = capital + operatingCash - CAPEX + netFinCash
+
+totalCash          = closingCash
+totalFixedAssets    = CAPEX
+totalAssets         = closingCash + CAPEX
+totalLiabilities    = legacyFinLiability (hanya pinjaman masuk)
+totalEquityCredit  += capital + legacyFinEquityIn
+totalEquityDebit   += legacyFinEquityOut (prive/cicilan)
 ```
 
 ### 6.2 Asset Classification (Double-Entry)
@@ -631,7 +644,7 @@ Closing Balance = Opening + Net Cash Flow
 >
 > Logika:
 > - Double-entry: Dr Kas = +amount, Cr Kas = -amount (termasuk modal, revenue, OPEX, CAPEX, dll)
-> - Legacy: category-based (EARN +, OPEX/VAR/TAX/CAPEX -, FIN +)
+> - Legacy: category-based (EARN +, OPEX/VAR/TAX/CAPEX -). FIN diklasifikasi via `classifyLegacyFin()`: equity/liability_in → +, liability_out/interest → -.
 > - Jika tidak ada transaksi sebelum periode → fallback ke `capital_investment` dari business settings
 > - Jika hanya legacy (tanpa double-entry equity) → `capital + legacy cash movements`
 >
@@ -1434,6 +1447,11 @@ Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
 | #4 | Legacy FIN Math.abs | RESOLVED | Menggunakan raw value, bukan Math.abs |
 | #5 | Revenue Debit di Balance Sheet | RESOLVED | Handle REVENUE debit dan EXPENSE credit |
 | #6 | detectCategory Priority Salah | RESOLVED | Cash/Bank accounts di-skip saat priority check |
+| #7 | Legacy FIN selalu masuk totalInterest | RESOLVED | Hanya keyword "bunga"/"interest" yang masuk interest (via `isInterestKeyword`) |
+| #8 | calculateInitialCapital range 1200 = Bank | RESOLVED | Diganti `default_category === 'CAPEX'` |
+| #9 | detectCategory EXPENSE hardcode OPEX | RESOLVED | Deteksi kode akun: 52xx→VAR, 53xx→TAX, sisanya OPEX |
+| #10 | Legacy FIN semua masuk totalLiabilities | RESOLVED | `classifyLegacyFin()` heuristik: equity/liability_in/liability_out/interest |
+| #11 | Legacy FIN opening balance selalu +amount | RESOLVED | Opening balance menggunakan `classifyLegacyFin()` untuk arah cash |
 | #7 | Fixed Asset Code Range Fragile | RESOLVED | Logic berbasis account_type, bukan hardcoded range |
 | #8 | Cash Flow Tidak Double-Entry Aware | RESOLVED | Dual-mode: double-entry + category fallback |
 | #9 | Inventory Purchase Masuk COGS | RESOLVED | VAR + debit ASSET = inventory, di-skip dari Income Statement |
