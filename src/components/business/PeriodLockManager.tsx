@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Lock, LockOpen, AlertTriangle, X } from 'lucide-react';
+import { Lock, LockOpen, AlertTriangle } from 'lucide-react';
 import type { Business } from '@/types';
 
 interface PeriodLockManagerProps {
@@ -61,20 +61,7 @@ export function PeriodLockManager({ business, onClose, onUpdated }: PeriodLockMa
   };
 
   return (
-    <div className="max-w-md w-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-2">
-          <Lock className="w-5 h-5 text-amber-500" />
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Kunci Periode</h2>
-        </div>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* Content */}
-      <div className="p-6">
+    <div>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
         Transaksi dengan tanggal pada atau sebelum periode terkunci tidak dapat diedit atau dihapus.
       </p>
@@ -148,7 +135,6 @@ export function PeriodLockManager({ business, onClose, onUpdated }: PeriodLockMa
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 }

@@ -314,7 +314,7 @@ export default function BusinessesPage() {
         <Modal
           isOpen={!!periodLockBusiness}
           onClose={() => setPeriodLockBusiness(null)}
-          title=""
+          title="Kunci Periode"
         >
           <PeriodLockManager
             business={periodLockBusiness}
