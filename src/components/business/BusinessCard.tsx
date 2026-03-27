@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, PackageOpen, Home, UserPlus, Coins, Lock } from 'lucide-react';
+import { MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, PackageOpen, Home, UserPlus, Coins, Lock, MoreVertical, Pencil, Archive, RotateCcw } from 'lucide-react';
 import type { Business } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 
@@ -60,6 +60,19 @@ export function BusinessCard({
 }: BusinessCardProps) {
   const [creatorName, setCreatorName] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close kebab menu on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpen]);
 
   useEffect(() => {
     const fetchCreatorInfo = async () => {
@@ -127,37 +140,80 @@ export function BusinessCard({
             </p>
           </div>
         </div>
-        {/* Invite & Period Lock Button Icons */}
-        <div className="flex items-center gap-1">
-          {onInvite && !business.is_archived && showActions && (
+        {/* Kebab Menu */}
+        {showActions && !business.is_archived && (onEdit || onArchive) && (
+          <div className="relative" ref={menuRef}>
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onInvite();
+                setMenuOpen((v) => !v);
               }}
-              className="p-2 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
-              title="Kelola Undangan"
+              className="p-2 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              title="Menu"
             >
-              <UserPlus className="w-5 h-5" />
+              <MoreVertical className="w-5 h-5" />
             </button>
-          )}
-          {onPeriodLock && !business.is_archived && showActions && (
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-20 py-1">
+                {onEdit && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpen(false);
+                      onEdit();
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    Edit
+                  </button>
+                )}
+                {onArchive && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpen(false);
+                      onArchive();
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  >
+                    <Archive className="w-4 h-4" />
+                    Archive
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        {showActions && business.is_archived && onRestore && (
+          <div className="relative" ref={menuRef}>
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onPeriodLock();
+                setMenuOpen((v) => !v);
               }}
-              className={`p-2 rounded-lg transition-colors ${
-                business.closed_until_date
-                  ? 'text-amber-500 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30'
-                  : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-              title={business.closed_until_date ? `Dikunci s/d ${business.closed_until_date}` : 'Kunci Periode'}
+              className="p-2 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              title="Menu"
             >
-              <Lock className="w-5 h-5" />
+              <MoreVertical className="w-5 h-5" />
             </button>
-          )}
-        </div>
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-20 py-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    onRestore();
+                  }}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Restore
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="space-y-2 mb-4">
@@ -175,39 +231,35 @@ export function BusinessCard({
         )}
       </div>
 
-      {showActions && (
+      {showActions && !business.is_archived && (onInvite || onPeriodLock) && (
         <div className="flex gap-2 mt-4">
-          {onEdit && !business.is_archived && (
+          {onInvite && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onEdit();
+                onInvite();
               }}
-              className="flex-1 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
             >
-              Edit
+              <UserPlus className="w-4 h-4" />
+              Undang
             </button>
           )}
-          {onArchive && !business.is_archived && (
+          {onPeriodLock && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onArchive();
+                onPeriodLock();
               }}
-              className="flex-1 px-3 py-2 text-sm font-medium text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                business.closed_until_date
+                  ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50'
+                  : 'text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+              title={business.closed_until_date ? `Dikunci s/d ${business.closed_until_date}` : 'Kunci Periode'}
             >
-              Archive
-            </button>
-          )}
-          {onRestore && business.is_archived && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onRestore();
-              }}
-              className="flex-1 px-3 py-2 text-sm font-medium text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
-            >
-              Restore
+              <Lock className="w-4 h-4" />
+              {business.closed_until_date ? 'Terkunci' : 'Kunci Periode'}
             </button>
           )}
         </div>
