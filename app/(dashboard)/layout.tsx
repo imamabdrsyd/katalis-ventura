@@ -718,7 +718,7 @@ function Sidebar({
       )}
 
       <aside
-        className={`fixed top-0 left-0 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col z-50 transform transition-all duration-300 ease-in-out overflow-visible
+        className={`fixed top-0 left-0 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col z-50 transform transition-all duration-300 ease-in-out ${isCollapsed ? 'overflow-visible' : 'overflow-hidden'}
           ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
           ${isCollapsed ? 'w-16' : 'w-56'}`}
       >
@@ -786,6 +786,8 @@ function Sidebar({
           </button>
         </div>
 
+        {/* Scrollable nav area */}
+        <div className={`flex-1 min-h-0 ${isCollapsed ? 'overflow-visible' : 'overflow-y-auto'}`}>
         {/* Independent nav items: Transactions + Dashboard + Manage Business */}
         <div className="px-2 pt-3 pb-1 space-y-0.5">
           {/* Transactions (manager only) */}
@@ -870,7 +872,7 @@ function Sidebar({
         <div className="mx-4 border-t border-gray-200 dark:border-gray-700" />
 
         {/* Navigation */}
-        <nav className="flex-1 py-4 px-2 overflow-visible">
+        <nav className="py-4 px-2">
           {navSections.map((section, sectionIndex) => {
             const expanded = isSectionExpanded(section.label);
             return (
@@ -957,6 +959,7 @@ function Sidebar({
             );
           })}
         </nav>
+        </div>
 
         {/* Footer */}
         <div className="pt-4 pb-4 px-4 border-t border-gray-200 dark:border-gray-700">
