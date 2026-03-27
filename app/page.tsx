@@ -178,7 +178,7 @@ export default function LandingPage() {
                 <div className="text-3xl font-bold">
                   {loading ? '...' : stats.businesses}
                 </div>
-                <div className="text-indigo-100 text-sm">Businesses</div>
+                <div className="text-indigo-100 text-sm">Business Onboard</div>
               </div>
             </div>
           </div>
