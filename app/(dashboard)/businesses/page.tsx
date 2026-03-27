@@ -277,12 +277,12 @@ export default function BusinessesPage() {
               isActive={activeBusiness?.id === business.id}
               onSelect={() => {
                 if (!business.is_archived) {
-                  setActiveBusiness(business.id);
+                  router.push(`/businesses/${business.id}/members`);
                 }
               }}
               onDoubleClick={() => {
                 if (!business.is_archived) {
-                  router.push(`/businesses/${business.id}/members`);
+                  setActiveBusiness(business.id);
                 }
               }}
               onEdit={(canManage && (isSuperadmin || business.created_by === user?.id)) ? () => setEditingBusiness(business) : undefined}
