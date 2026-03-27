@@ -98,11 +98,16 @@
 ### 3. Piutang & Hutang Tracking (AR/AP)
 - **Prioritas**: TINGGI
 - **Manfaat**: Saat ini tidak ada mekanisme melacak siapa yang masih berhutang / siapa yang kita hutangi. Sangat penting untuk cash flow management.
-- **Implementasi**:
-  - Tambah field `contact_id` di transaksi (relasi ke tabel `contacts`)
-  - Dashboard AR aging (piutang 30/60/90 hari)
-  - Dashboard AP aging (hutang jatuh tempo)
-- **Status**: [ ] BELUM
+- **Status**: [x] SELESAI
+  - DB: `business_contacts` table + `contact_id` FK di transactions (`migrations/027_business_contacts.sql`, `migrations/032_ar_ap_contact_id.sql`)
+  - Contact CRUD: `src/lib/api/contacts.ts` (get, search, create, update, delete, getContactTransactions)
+  - Contact UI: `src/components/business/ContactList.tsx` (panel kontak + riwayat transaksi), `src/components/transactions/ContactAutocomplete.tsx` (autocomplete di form)
+  - AR detection: `src/lib/accounting/guidance/receivableSettlement.ts` (isReceivableTransaction, isSettled, buildSettlementPrefill)
+  - AP detection: `src/lib/accounting/guidance/payableSettlement.ts` (isPayableTransaction, isPayableSettled, buildPayableSettlementPrefill)
+  - Aging hook: `src/hooks/useArApAging.ts` (kalkulasi aging bucket current/30/60/90/90+, grouping per kontak)
+  - Aging page: `app/(dashboard)/ar-ap/page.tsx` (summary cards + aging table AR/AP dengan tab)
+  - Sidebar: link "Piutang & Hutang" di section ACCOUNTING
+  - Types: `Contact`, `ContactType`, `AgingBucket`, `AgingRow`, `ArApSummary` di `src/types/index.ts`
 
 ### 4. Bank Reconciliation
 - **Prioritas**: SEDANG
@@ -161,7 +166,7 @@
 | 5 | ~~Fix legacy FIN opening balance → cash direction~~ | Bug fix | Kecil | **DONE** |
 | 6 | ~~Recurring transactions~~ | Operasional | Sedang | **DONE** |
 | 7 | ~~Template transaksi~~ | Operasional | Kecil | **DONE** |
-| 8 | AR/AP tracking | Operasional | Besar | **Tinggi** |
+| 8 | ~~AR/AP tracking~~ | Operasional | Besar | **DONE** |
 | 9 | Multi-line journal entry | Kelengkapan | Besar | **Tinggi** |
 | 10 | ~~Period locking~~ | Data integrity | Sedang | **DONE** |
 | 11 | ~~Validasi akun server-side~~ | Data integrity | Kecil | **DONE** |

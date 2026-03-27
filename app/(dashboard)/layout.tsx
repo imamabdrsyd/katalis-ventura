@@ -40,6 +40,7 @@ import {
   LineChart,
   Target,
   Calendar,
+  HandCoins,
 } from 'lucide-react';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -83,6 +84,7 @@ const navSections: NavSection[] = [
       { href: '/invoices', label: 'Invoice', icon: FileText },
       { href: '/general-ledger', label: 'General Ledger', icon: BookOpenCheck },
       { href: '/trial-balance', label: 'Trial Balance', icon: ClipboardCheck },
+      { href: '/ar-ap', label: 'Piutang & Hutang', icon: HandCoins },
     ],
   },
   {

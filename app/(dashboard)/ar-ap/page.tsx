@@ -1,0 +1,307 @@
+'use client';
+
+import React, { Suspense, useState } from 'react';
+import { Users, Calendar, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
+import { useArApAging } from '@/hooks/useArApAging';
+import { formatCurrency } from '@/lib/utils';
+import type { Period } from '@/hooks/useReportData';
+import type { ArApSummary, AgingRow } from '@/types';
+
+const PERIOD_LABELS: Record<Period, string> = {
+  month: 'Bulan Ini',
+  quarter: 'Kuartal Ini',
+  year: 'Tahun Ini',
+  custom: 'Kustom',
+};
+
+// ─── Aging Table Component ─────────────────────────────────────
+
+function AgingTable({ summary, type }: { summary: ArApSummary; type: 'ar' | 'ap' }) {
+  const colorAccent = type === 'ar' ? 'emerald' : 'rose';
+  const label = type === 'ar' ? 'Piutang' : 'Hutang';
+
+  if (summary.rows.length === 0) {
+    return (
+      <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+        <Users className="w-12 h-12 mx-auto mb-3 opacity-40" />
+        <p className="font-medium">Tidak ada {label.toLowerCase()} outstanding</p>
+        <p className="text-sm mt-1">Semua transaksi {label.toLowerCase()} sudah dilunasi atau belum ada transaksi.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-gray-200 dark:border-gray-700 text-left">
+            <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300">Nama Kontak</th>
+            <th className="py-3 px-3 font-semibold text-gray-600 dark:text-gray-300 text-right">Current</th>
+            <th className="py-3 px-3 font-semibold text-gray-600 dark:text-gray-300 text-right">1-30 Hari</th>
+            <th className="py-3 px-3 font-semibold text-gray-600 dark:text-gray-300 text-right">31-60 Hari</th>
+            <th className="py-3 px-3 font-semibold text-gray-600 dark:text-gray-300 text-right">61-90 Hari</th>
+            <th className="py-3 px-3 font-semibold text-gray-600 dark:text-gray-300 text-right">&gt;90 Hari</th>
+            <th className="py-3 px-3 font-semibold text-gray-600 dark:text-gray-300 text-right">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {summary.rows.map((row, i) => (
+            <AgingTableRow key={row.contactId || row.contactName + i} row={row} colorAccent={colorAccent} />
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="border-t-2 border-gray-300 dark:border-gray-600 font-bold">
+            <td className="py-3 px-4">Total</td>
+            <td className="py-3 px-3 text-right">{formatCurrency(summary.totalCurrent)}</td>
+            <td className="py-3 px-3 text-right">{formatCurrency(summary.total30)}</td>
+            <td className="py-3 px-3 text-right">{formatCurrency(summary.total60)}</td>
+            <td className="py-3 px-3 text-right">{formatCurrency(summary.total90)}</td>
+            <td className={`py-3 px-3 text-right ${summary.totalOver90 > 0 ? 'text-red-600 dark:text-red-400' : ''}`}>
+              {formatCurrency(summary.totalOver90)}
+            </td>
+            <td className={`py-3 px-3 text-right font-bold text-${colorAccent}-600 dark:text-${colorAccent}-400`}>
+              {formatCurrency(summary.grandTotal)}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
+}
+
+function AgingTableRow({ row, colorAccent }: { row: AgingRow; colorAccent: string }) {
+  const hasOverdue = row.bucket60 > 0 || row.bucket90 > 0 || row.bucketOver90 > 0;
+
+  return (
+    <tr className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+      <td className="py-3 px-4">
+        <div className="flex items-center gap-2">
+          <div className={`w-8 h-8 rounded-full bg-${colorAccent}-100 dark:bg-${colorAccent}-900/30 flex items-center justify-center text-${colorAccent}-600 dark:text-${colorAccent}-400 font-semibold text-xs`}>
+            {row.contactName.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <span className="font-medium text-gray-900 dark:text-gray-100">{row.contactName}</span>
+            {row.contactType && (
+              <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                {row.contactType === 'customer' ? 'Pelanggan' : row.contactType === 'vendor' ? 'Vendor' : 'Lainnya'}
+              </span>
+            )}
+            {hasOverdue && (
+              <AlertTriangle className="inline w-3.5 h-3.5 ml-1.5 text-amber-500" />
+            )}
+          </div>
+        </div>
+      </td>
+      <td className="py-3 px-3 text-right text-gray-600 dark:text-gray-400">{row.current > 0 ? formatCurrency(row.current) : '-'}</td>
+      <td className="py-3 px-3 text-right text-gray-600 dark:text-gray-400">{row.bucket30 > 0 ? formatCurrency(row.bucket30) : '-'}</td>
+      <td className="py-3 px-3 text-right text-amber-600 dark:text-amber-400">{row.bucket60 > 0 ? formatCurrency(row.bucket60) : '-'}</td>
+      <td className="py-3 px-3 text-right text-orange-600 dark:text-orange-400">{row.bucket90 > 0 ? formatCurrency(row.bucket90) : '-'}</td>
+      <td className="py-3 px-3 text-right text-red-600 dark:text-red-400 font-medium">{row.bucketOver90 > 0 ? formatCurrency(row.bucketOver90) : '-'}</td>
+      <td className="py-3 px-3 text-right font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(row.total)}</td>
+    </tr>
+  );
+}
+
+// ─── Summary Cards ─────────────────────────────────────────────
+
+function SummaryCards({ arSummary, apSummary }: { arSummary: ArApSummary; apSummary: ArApSummary }) {
+  const netPosition = arSummary.grandTotal - apSummary.grandTotal;
+  const overdueAR = arSummary.total60 + arSummary.total90 + arSummary.totalOver90;
+  const overdueAP = apSummary.total60 + apSummary.total90 + apSummary.totalOver90;
+
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {/* Total AR */}
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+        <div className="flex items-center gap-2 mb-1">
+          <TrendingUp className="w-4 h-4 text-emerald-500" />
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Total Piutang</span>
+        </div>
+        <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(arSummary.grandTotal)}</p>
+        <p className="text-xs text-gray-500 mt-1">{arSummary.rows.length} kontak</p>
+      </div>
+
+      {/* Total AP */}
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+        <div className="flex items-center gap-2 mb-1">
+          <TrendingDown className="w-4 h-4 text-rose-500" />
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Total Hutang</span>
+        </div>
+        <p className="text-xl font-bold text-rose-600 dark:text-rose-400">{formatCurrency(apSummary.grandTotal)}</p>
+        <p className="text-xs text-gray-500 mt-1">{apSummary.rows.length} kontak</p>
+      </div>
+
+      {/* Net Position */}
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+        <div className="flex items-center gap-2 mb-1">
+          <Users className="w-4 h-4 text-blue-500" />
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Posisi Bersih</span>
+        </div>
+        <p className={`text-xl font-bold ${netPosition >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+          {formatCurrency(netPosition)}
+        </p>
+        <p className="text-xs text-gray-500 mt-1">{netPosition >= 0 ? 'Lebih banyak diterima' : 'Lebih banyak dibayar'}</p>
+      </div>
+
+      {/* Overdue */}
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+        <div className="flex items-center gap-2 mb-1">
+          <AlertTriangle className="w-4 h-4 text-amber-500" />
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Overdue (&gt;60 hari)</span>
+        </div>
+        <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{formatCurrency(overdueAR + overdueAP)}</p>
+        <p className="text-xs text-gray-500 mt-1">
+          AR: {formatCurrency(overdueAR)} | AP: {formatCurrency(overdueAP)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ─────────────────────────────────────────────────
+
+function ArApPageInner() {
+  const {
+    activeBusiness,
+    loading,
+    period,
+    startDate,
+    endDate,
+    setStartDate,
+    setEndDate,
+    handlePeriodChange,
+    arSummary,
+    apSummary,
+  } = useArApAging();
+
+  const [activeTab, setActiveTab] = useState<'ar' | 'ap'>('ar');
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-500 dark:text-gray-400">Memuat data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!activeBusiness) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <p className="text-gray-500 dark:text-gray-400">Pilih bisnis terlebih dahulu.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Piutang & Hutang</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Aging report — {activeBusiness.business_name}
+          </p>
+        </div>
+
+        {/* Period Filter */}
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-gray-400" />
+          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+            {(['month', 'quarter', 'year', 'custom'] as Period[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => handlePeriodChange(p)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  period === p
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                {PERIOD_LABELS[p]}
+              </button>
+            ))}
+          </div>
+          {period === 'custom' && (
+            <div className="flex items-center gap-1.5 ml-2">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
+              />
+              <span className="text-xs text-gray-400">—</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <SummaryCards arSummary={arSummary} apSummary={apSummary} />
+
+      {/* Tabs */}
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
+        <div className="border-b border-gray-200 dark:border-gray-800">
+          <div className="flex">
+            <button
+              onClick={() => setActiveTab('ar')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'ar'
+                  ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Piutang (AR)
+              {arSummary.rows.length > 0 && (
+                <span className="ml-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs px-2 py-0.5 rounded-full">
+                  {arSummary.rows.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('ap')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'ap'
+                  ? 'border-rose-500 text-rose-600 dark:text-rose-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Hutang (AP)
+              {apSummary.rows.length > 0 && (
+                <span className="ml-2 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 text-xs px-2 py-0.5 rounded-full">
+                  {apSummary.rows.length}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="p-0">
+          {activeTab === 'ar' && <AgingTable summary={arSummary} type="ar" />}
+          {activeTab === 'ap' && <AgingTable summary={apSummary} type="ap" />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function ArApPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+      </div>
+    }>
+      <ArApPageInner />
+    </Suspense>
+  );
+}
