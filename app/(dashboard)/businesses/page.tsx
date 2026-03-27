@@ -277,6 +277,11 @@ export default function BusinessesPage() {
               isActive={activeBusiness?.id === business.id}
               onSelect={() => {
                 if (!business.is_archived) {
+                  setActiveBusiness(business.id);
+                }
+              }}
+              onDoubleClick={() => {
+                if (!business.is_archived) {
                   router.push(`/businesses/${business.id}/members`);
                 }
               }}
