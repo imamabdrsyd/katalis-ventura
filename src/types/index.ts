@@ -188,6 +188,11 @@ export interface Transaction {
   notes?: string;
   meta?: TransactionMeta | null;
 
+  // Bank reconciliation
+  is_reconciled?: boolean;
+  reconciled_at?: string | null;
+  reconciled_by?: string | null;
+
   // Audit trail fields
   updated_by?: string;
   deleted_at?: string | null;

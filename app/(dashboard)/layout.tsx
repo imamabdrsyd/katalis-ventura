@@ -41,6 +41,8 @@ import {
   Target,
   Calendar,
   HandCoins,
+  ScanSearch,
+  BookCheck,
 } from 'lucide-react';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -85,6 +87,8 @@ const navSections: NavSection[] = [
       { href: '/general-ledger', label: 'General Ledger', icon: BookOpenCheck },
       { href: '/trial-balance', label: 'Trial Balance', icon: ClipboardCheck },
       { href: '/ar-ap', label: 'Piutang & Hutang', icon: HandCoins },
+      { href: '/reconciliation', label: 'Rekonsiliasi Bank', icon: ScanSearch },
+      { href: '/closing-entry', label: 'Tutup Buku', icon: BookCheck },
     ],
   },
   {

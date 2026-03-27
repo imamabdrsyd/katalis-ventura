@@ -112,8 +112,12 @@
 ### 4. Bank Reconciliation
 - **Prioritas**: SEDANG
 - **Manfaat**: User bisa mencocokkan saldo buku dengan saldo bank. Ini standar fitur bookkeeping.
-- **Implementasi**: Tambah field `is_reconciled`, `reconciled_at` di transaksi. Halaman rekonsiliasi yang match transaksi dengan mutasi bank.
-- **Status**: [ ] BELUM
+- **Status**: [x] DONE
+  - DB: migration 033 (`is_reconciled`, `reconciled_at`, `reconciled_by` di transactions)
+  - Hook: `src/hooks/useReconciliation.ts` (filter kas/bank, saldo buku, select + reconcile/unreconcile)
+  - Halaman: `app/(dashboard)/reconciliation/page.tsx` (saldo buku vs saldo bank, selisih, checklist transaksi)
+  - Sidebar: link "Rekonsiliasi Bank" di section ACCOUNTING
+  - Types: `is_reconciled`, `reconciled_at`, `reconciled_by` di Transaction interface
 
 ### 5. Closing Period / Lock Period
 - **Prioritas**: SEDANG
@@ -144,7 +148,12 @@
 ### 9. Automatic Closing Entry (Jurnal Penutup)
 - **Prioritas**: SEDANG
 - **Manfaat**: Di akhir tahun buku, akun pendapatan & beban harus ditutup ke Laba Ditahan. Saat ini ini dilakukan implisit via `retainedEarnings` di balance sheet calculation, tapi tidak ada jurnal eksplisit. Untuk audit trail yang bersih, sebaiknya ada fitur "Tutup Buku" yang generate closing entries otomatis.
-- **Status**: [ ] BELUM
+- **Status**: [x] DONE
+  - Utility: `src/lib/accounting/closingEntry.ts` (`previewClosingEntries`, `executeClosingEntries`)
+  - Logic: hitung net balance per akun Revenue & Expense → generate Dr Revenue / Cr Laba Ditahan + Dr Laba Ditahan / Cr Expense
+  - Halaman: `app/(dashboard)/closing-entry/page.tsx` (pilih periode → preview → execute dengan konfirmasi)
+  - Sidebar: link "Tutup Buku" di section ACCOUNTING
+  - Cari akun Laba Ditahan via kode 3200 atau nama "laba ditahan"/"retained earnings"
 
 ### 10. Deteksi Keyword yang Lebih Smart
 - **Prioritas**: SEDANG
@@ -171,5 +180,5 @@
 | 10 | ~~Period locking~~ | Data integrity | Sedang | **DONE** |
 | 11 | ~~Validasi akun server-side~~ | Data integrity | Kecil | **DONE** |
 | 12 | ~~Deteksi keyword context-aware~~ | UX | Kecil | **DONE** |
-| 13 | Bank reconciliation | Operasional | Sedang | **Sedang** |
-| 14 | Automatic closing entry | Kelengkapan | Sedang | **Sedang** |
+| 13 | ~~Bank reconciliation~~ | Operasional | Sedang | **DONE** |
+| 14 | ~~Automatic closing entry~~ | Kelengkapan | Sedang | **DONE** |
