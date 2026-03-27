@@ -76,14 +76,12 @@ function BudgetForecastPageInner() {
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl">
-            <Target className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Budget & Forecast</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{activeBusiness.business_name}</p>
-          </div>
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
+            <Target className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
+            Budget & Forecast
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{activeBusiness.business_name}</p>
         </div>
 
         <div className="flex items-center gap-3">

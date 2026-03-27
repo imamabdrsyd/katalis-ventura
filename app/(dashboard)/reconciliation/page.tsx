@@ -84,8 +84,11 @@ function ReconciliationPageInner() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Rekonsiliasi Bank</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
+            <ArrowLeftRight className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
+            Rekonsiliasi Bank
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Cocokkan saldo buku dengan saldo bank — {activeBusiness.business_name}
           </p>
         </div>

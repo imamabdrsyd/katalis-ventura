@@ -101,8 +101,8 @@ function ClosingEntryPageInner() {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-          <BookCheck className="w-6 h-6" />
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
+          <BookCheck className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
           Tutup Buku
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">

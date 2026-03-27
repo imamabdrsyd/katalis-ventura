@@ -287,17 +287,13 @@ function ScenarioModelingPageInner() {
     <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/40 flex items-center justify-center">
-            <FlaskConical className="w-5 h-5 text-purple-500 dark:text-purple-400" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Scenario Modeling</h1>
-            <p className="text-gray-500 dark:text-gray-400">
-              Simulasi skenario keuangan - {activeBusiness.business_name}
-            </p>
-          </div>
-        </div>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
+          <FlaskConical className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
+          Scenario Modeling
+        </h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Simulasi skenario keuangan - {activeBusiness.business_name}
+        </p>
       </div>
 
       {/* Period Filter */}
