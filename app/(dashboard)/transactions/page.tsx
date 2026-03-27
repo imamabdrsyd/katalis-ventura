@@ -700,7 +700,7 @@ function TransactionsPageInner() {
           onSubmit={handleMultiLineSubmit}
           onCancel={() => setShowMultiLineModal(false)}
           loading={savingMultiLine}
-          businessId={businessId}
+          businessId={businessId ?? undefined}
         />
       </Modal>
     </div>
