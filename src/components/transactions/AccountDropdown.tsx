@@ -15,6 +15,9 @@ interface AccountDropdownProps {
   error?: string;
   required?: boolean;
   filterMode?: FilterMode;
+  /** Optional sub-filter applied to selectable accounts (children).
+   *  Parent accounts matching this filter but having no children will be shown as selectable items. */
+  subFilter?: (acc: Account) => boolean;
 }
 
 export function AccountDropdown({
@@ -27,6 +30,7 @@ export function AccountDropdown({
   error,
   required = false,
   filterMode,
+  subFilter,
 }: AccountDropdownProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -41,24 +45,63 @@ export function AccountDropdown({
     return buildAccountTree(filteredAccounts);
   }, [filteredAccounts]);
 
+  // When subFilter is provided, parent accounts that match but have no matching
+  // children should be promoted to selectable "leaf" items under a synthetic group.
+  // This handles cases like "1400 - Piutang Talangan" which is a parent with no sub-accounts yet.
+  const { displayTree, promotedParents } = useMemo(() => {
+    if (!subFilter) return { displayTree: accountTree, promotedParents: [] as AccountTreeNode[] };
+
+    const promoted: AccountTreeNode[] = [];
+    const filtered = accountTree
+      .map(parent => {
+        const matchingChildren = parent.children.filter(child => subFilter(child));
+        if (matchingChildren.length > 0) {
+          return { ...parent, children: matchingChildren };
+        }
+        // Parent itself matches but has no matching children → promote to selectable
+        if (subFilter(parent)) {
+          promoted.push(parent);
+        }
+        return null;
+      })
+      .filter((n): n is AccountTreeNode => n !== null);
+
+    return { displayTree: filtered, promotedParents: promoted };
+  }, [accountTree, subFilter]);
+
   // Filter accounts based on search
   const filteredTree = useMemo(() => {
-    if (!searchTerm.trim()) return accountTree;
+    const query = searchTerm.trim().toLowerCase();
 
-    const query = searchTerm.toLowerCase();
-    // Filter: keep parents that have matching children
-    return accountTree
-      .map(parent => ({
-        ...parent,
-        children: parent.children.filter(
-          child =>
-            child.account_code.toLowerCase().includes(query) ||
-            child.account_name.toLowerCase().includes(query) ||
-            child.description?.toLowerCase().includes(query)
-        ),
-      }))
-      .filter(parent => parent.children.length > 0);
-  }, [accountTree, searchTerm]);
+    const filterNodes = (nodes: AccountTreeNode[]) => {
+      if (!query) return nodes;
+      return nodes
+        .map(parent => ({
+          ...parent,
+          children: parent.children.filter(
+            child =>
+              child.account_code.toLowerCase().includes(query) ||
+              child.account_name.toLowerCase().includes(query) ||
+              child.description?.toLowerCase().includes(query)
+          ),
+        }))
+        .filter(parent => parent.children.length > 0);
+    };
+
+    const mainFiltered = filterNodes(displayTree);
+
+    // Also filter promoted parents by search
+    const promotedFiltered = !query
+      ? promotedParents
+      : promotedParents.filter(
+          p =>
+            p.account_code.toLowerCase().includes(query) ||
+            p.account_name.toLowerCase().includes(query) ||
+            p.description?.toLowerCase().includes(query)
+        );
+
+    return { tree: mainFiltered, promoted: promotedFiltered };
+  }, [displayTree, promotedParents, searchTerm]);
 
   // Get selected account
   const selectedAccount = accounts.find(acc => acc.id === value);
@@ -128,7 +171,37 @@ export function AccountDropdown({
 
           {/* Accounts list - hierarchical */}
           <div className="overflow-y-auto max-h-80">
-            {filteredTree.map(parent => (
+            {/* Promoted parents (parent accounts with no sub-accounts that match subFilter) */}
+            {filteredTree.promoted.map(parent => {
+              const isSelected = parent.id === value;
+              return (
+                <button
+                  key={parent.id}
+                  type="button"
+                  onClick={() => handleSelectAccount(parent)}
+                  className={`w-full text-left px-3 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                    isSelected ? 'bg-blue-100 dark:bg-blue-900/30' : ''
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-sm font-semibold text-gray-700 dark:text-gray-200">
+                      {parent.account_code}
+                    </span>
+                    <span className="text-sm text-gray-900 dark:text-gray-100">
+                      {parent.account_name}
+                    </span>
+                  </div>
+                  {parent.description && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {parent.description}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+
+            {/* Tree: parent headers with selectable children */}
+            {filteredTree.tree.map(parent => (
               <div key={parent.id}>
                 {/* Parent group header */}
                 <div className="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
@@ -183,7 +256,7 @@ export function AccountDropdown({
             ))}
 
             {/* No results */}
-            {filteredTree.length === 0 && (
+            {filteredTree.tree.length === 0 && filteredTree.promoted.length === 0 && (
               <div className="px-3 py-4 text-center text-gray-500 dark:text-gray-400 text-sm">
                 Tidak ada akun yang cocok
               </div>

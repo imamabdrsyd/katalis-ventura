@@ -789,13 +789,12 @@ export default function JournalEntryPage() {
               <div>
                 <AccountDropdown
                   label="Akun Debit"
-                  accounts={accounts.filter(a => {
-                    const typeMatch = selectedEntryType.debitFilter === 'ALL'
+                  accounts={accounts.filter(a =>
+                    selectedEntryType.debitFilter === 'ALL'
                       ? true
-                      : a.account_type === selectedEntryType.debitFilter;
-                    if (!typeMatch) return false;
-                    return selectedEntryType.debitSubFilter ? selectedEntryType.debitSubFilter(a) : true;
-                  })}
+                      : a.account_type === selectedEntryType.debitFilter
+                  )}
+                  subFilter={selectedEntryType.debitSubFilter}
                   value={debitAccountId}
                   onChange={(id, _code) => {
                     setDebitAccountId(id);
@@ -809,13 +808,12 @@ export default function JournalEntryPage() {
               <div>
                 <AccountDropdown
                   label="Akun Kredit"
-                  accounts={accounts.filter(a => {
-                    const typeMatch = selectedEntryType.creditFilter === 'ALL'
+                  accounts={accounts.filter(a =>
+                    selectedEntryType.creditFilter === 'ALL'
                       ? true
-                      : a.account_type === selectedEntryType.creditFilter;
-                    if (!typeMatch) return false;
-                    return selectedEntryType.creditSubFilter ? selectedEntryType.creditSubFilter(a) : true;
-                  })}
+                      : a.account_type === selectedEntryType.creditFilter
+                  )}
+                  subFilter={selectedEntryType.creditSubFilter}
                   value={creditAccountId}
                   onChange={(id, _code) => {
                     setCreditAccountId(id);

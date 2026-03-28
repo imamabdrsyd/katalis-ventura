@@ -261,11 +261,11 @@ export function validateCategoryConsistency(
     );
   }
 
-  // Asset purchase (ASSET → ASSET) should be CAPEX
+  // Asset purchase (ASSET → ASSET) should be CAPEX/VAR, or FIN for talangan/advance receivables
   if (
     debitType === 'ASSET' &&
     creditType === 'ASSET' &&
-    !['CAPEX', 'VAR'].includes(category)
+    !['CAPEX', 'VAR', 'FIN'].includes(category)
   ) {
     warnings.push(
       'Pembelian aset biasanya menggunakan kategori CAPEX atau VAR, bukan ' + category + '.'
