@@ -11,10 +11,7 @@ import type { TransactionCategory } from '@/types';
 import { QuickTransactionForm } from '@/components/transactions/QuickTransactionForm';
 import { RecurringList } from '@/components/transactions/RecurringList';
 import { useRecurringTransactions } from '@/hooks/useRecurringTransactions';
-import { MultiLineJournalForm } from '@/components/transactions/MultiLineJournalForm';
-import type { MultiLineFormData } from '@/components/transactions/MultiLineJournalForm';
-import { createMultiLineTransaction } from '@/lib/api/transactions';
-import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2, Calculator, RefreshCw, Layers } from 'lucide-react';
+import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2, Calculator, RefreshCw } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 
@@ -122,28 +119,6 @@ function TransactionsPageInner() {
 
   // Main view tab: 'transactions' or 'recurring'
   const [activeView, setActiveView] = useState<'transactions' | 'recurring'>('transactions');
-
-  // Multi-line journal modal state
-  const [showMultiLineModal, setShowMultiLineModal] = useState(false);
-  const [savingMultiLine, setSavingMultiLine] = useState(false);
-
-  const handleMultiLineSubmit = useCallback(async (data: MultiLineFormData) => {
-    if (!businessId || !user) return;
-    setSavingMultiLine(true);
-    try {
-      await createMultiLineTransaction({
-        business_id: businessId,
-        ...data,
-      });
-      setShowMultiLineModal(false);
-      fetchTransactions();
-      window.dispatchEvent(new Event('transaction-saved'));
-    } catch (err) {
-      console.error('Failed to create multi-line transaction:', err);
-    } finally {
-      setSavingMultiLine(false);
-    }
-  }, [businessId, user, fetchTransactions]);
 
   // Tag filter state
   const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);
@@ -297,14 +272,6 @@ function TransactionsPageInner() {
             >
               <BookOpen className="h-4 w-4" />
               Journal Entry
-            </button>
-
-            <button
-              onClick={() => setShowMultiLineModal(true)}
-              className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors flex items-center gap-2 font-medium shadow-sm"
-            >
-              <Layers className="h-4 w-4" />
-              Multi-Baris
             </button>
 
             {/* TEMPORARILY HIDDEN - To re-enable, uncomment this section */}
@@ -690,19 +657,6 @@ function TransactionsPageInner() {
         />
       )}
 
-      {/* Multi-Line Journal Entry Modal */}
-      <Modal
-        isOpen={showMultiLineModal}
-        onClose={() => setShowMultiLineModal(false)}
-        title="Jurnal Multi-Baris"
-      >
-        <MultiLineJournalForm
-          onSubmit={handleMultiLineSubmit}
-          onCancel={() => setShowMultiLineModal(false)}
-          loading={savingMultiLine}
-          businessId={businessId ?? undefined}
-        />
-      </Modal>
     </div>
   );
 }
