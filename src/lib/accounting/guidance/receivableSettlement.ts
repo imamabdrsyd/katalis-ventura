@@ -13,18 +13,35 @@ import type { Transaction, TransactionCategory } from '@/types';
  * - explicitly excludes talangan/advance (default_category === 'FIN') — no settlement banner needed
  */
 export function isReceivableTransaction(transaction: Transaction): boolean {
-  if (!transaction.is_double_entry) return false;
-  if (!transaction.debit_account) return false;
-  if (transaction.debit_account.account_type !== 'ASSET') return false;
+  // Single double-entry path
+  if (transaction.is_double_entry) {
+    if (!transaction.debit_account) return false;
+    if (transaction.debit_account.account_type !== 'ASSET') return false;
 
-  // Talangan/advance accounts are NOT trade receivables — no settlement flow
-  if (transaction.debit_account.default_category === 'FIN') return false;
-  const name = transaction.debit_account.account_name.toLowerCase();
-  if (/talangan|advance/i.test(name)) return false;
+    // Talangan/advance accounts are NOT trade receivables — no settlement flow
+    if (transaction.debit_account.default_category === 'FIN') return false;
+    const name = transaction.debit_account.account_name.toLowerCase();
+    if (/talangan|advance/i.test(name)) return false;
 
-  // Trade receivable: explicit EARN category or name-based match
-  if (transaction.debit_account.default_category === 'EARN') return true;
-  return /piutang usaha|receivable/i.test(name);
+    // Trade receivable: explicit EARN category or name-based match
+    if (transaction.debit_account.default_category === 'EARN') return true;
+    return /piutang usaha|receivable/i.test(name);
+  }
+
+  // Multi-line path
+  if (transaction.is_multi_line && transaction.journal_lines) {
+    return transaction.journal_lines.some((line) => {
+      if (line.debit_amount <= 0 || !line.account) return false;
+      if (line.account.account_type !== 'ASSET') return false;
+      if (line.account.default_category === 'FIN') return false;
+      const name = line.account.account_name.toLowerCase();
+      if (/talangan|advance/i.test(name)) return false;
+      if (line.account.default_category === 'EARN') return true;
+      return /piutang usaha|receivable/i.test(name);
+    });
+  }
+
+  return false;
 }
 
 /**

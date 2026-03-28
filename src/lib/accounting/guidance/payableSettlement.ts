@@ -8,15 +8,28 @@ import type { Transaction, TransactionCategory } from '@/types';
 
 /**
  * Returns true if the transaction represents a payable (hutang):
- * - is double-entry
- * - credit account is LIABILITY type
- * - credit account name contains "hutang", "utang", or "payable"
+ * - is double-entry: credit account is LIABILITY type with "hutang/utang/payable" name
+ * - OR is multi-line: any credit journal line hits a LIABILITY account with matching name
  */
 export function isPayableTransaction(transaction: Transaction): boolean {
-  if (!transaction.is_double_entry) return false;
-  if (!transaction.credit_account) return false;
-  if (transaction.credit_account.account_type !== 'LIABILITY') return false;
-  return /hutang|utang|payable/i.test(transaction.credit_account.account_name);
+  // Single double-entry path
+  if (transaction.is_double_entry) {
+    if (!transaction.credit_account) return false;
+    if (transaction.credit_account.account_type !== 'LIABILITY') return false;
+    return /hutang|utang|payable/i.test(transaction.credit_account.account_name);
+  }
+
+  // Multi-line path
+  if (transaction.is_multi_line && transaction.journal_lines) {
+    return transaction.journal_lines.some(
+      (line) =>
+        line.credit_amount > 0 &&
+        line.account?.account_type === 'LIABILITY' &&
+        /hutang|utang|payable/i.test(line.account.account_name)
+    );
+  }
+
+  return false;
 }
 
 /**
