@@ -769,6 +769,7 @@ export default function JournalEntryPage() {
 
         await createMultiLineTransaction({
           business_id: businessId,
+          created_by: user.id,
           date,
           category,
           name,

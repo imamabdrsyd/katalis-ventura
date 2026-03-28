@@ -862,7 +862,7 @@ export function TransactionDetailModal({
                 ) : creatorName ? (
                   creatorName
                 ) : (
-                  <span className="font-mono text-xs">{transaction.created_by.slice(0, 8)}...</span>
+                  <span className="font-mono text-xs">{transaction.created_by?.slice(0, 8) ?? '—'}...</span>
                 )}
               </span>
             </div>

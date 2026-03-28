@@ -22,6 +22,7 @@ export interface TransactionInsert {
 
 export interface MultiLineTransactionInsert {
   business_id: string;
+  created_by: string;
   date: string;
   category: TransactionCategory;
   name: string;
@@ -94,6 +95,7 @@ export async function createMultiLineTransaction(
     .from('transactions')
     .insert({
       business_id: insert.business_id,
+      created_by: insert.created_by,
       date: insert.date,
       category: insert.category,
       name: insert.name,
