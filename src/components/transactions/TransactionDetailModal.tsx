@@ -543,8 +543,56 @@ export function TransactionDetailModal({
             </p>
           </div>
 
-          {/* Chart of Account - Show both Debit and Credit for double-entry */}
-          {transaction.is_double_entry && (transaction.debit_account || transaction.credit_account) ? (
+          {/* Multi-line Journal Lines */}
+          {transaction.is_multi_line && transaction.journal_lines && transaction.journal_lines.length > 0 ? (
+            <div className="mt-4">
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">
+                Baris Jurnal
+              </label>
+              <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                      <th className="text-left px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">Akun</th>
+                      <th className="text-right px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 w-28">Debit</th>
+                      <th className="text-right px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 w-28">Kredit</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {transaction.journal_lines.map((line) => (
+                      <tr key={line.id} className="bg-white dark:bg-gray-900">
+                        <td className="px-3 py-2">
+                          <p className="font-medium text-gray-900 dark:text-gray-100">
+                            {line.account?.account_code} - {line.account?.account_name || 'Unknown'}
+                          </p>
+                          {line.description && (
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{line.description}</p>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-right font-medium text-gray-900 dark:text-gray-100">
+                          {line.debit_amount > 0 ? formatCurrency(line.debit_amount) : ''}
+                        </td>
+                        <td className="px-3 py-2 text-right font-medium text-gray-900 dark:text-gray-100">
+                          {line.credit_amount > 0 ? formatCurrency(line.credit_amount) : ''}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-gray-50 dark:bg-gray-800 font-semibold">
+                      <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">TOTAL</td>
+                      <td className="px-3 py-2 text-right text-gray-900 dark:text-gray-100">
+                        {formatCurrency(transaction.journal_lines.reduce((s, l) => s + l.debit_amount, 0))}
+                      </td>
+                      <td className="px-3 py-2 text-right text-gray-900 dark:text-gray-100">
+                        {formatCurrency(transaction.journal_lines.reduce((s, l) => s + l.credit_amount, 0))}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          ) : transaction.is_double_entry && (transaction.debit_account || transaction.credit_account) ? (
             <div className="grid grid-cols-2 gap-4 mt-4">
               <div>
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
