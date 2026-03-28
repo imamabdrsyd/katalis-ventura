@@ -34,6 +34,15 @@ export function detectCategory(
   const debitIsCash = CASH_CODES.includes(debitAccountCode);
   const creditIsCash = CASH_CODES.includes(creditAccountCode);
 
+  // Priority 0.5: Talangan/advance receivable (ASSET with FIN category) must always be FIN,
+  // even when paired with cash — prevents mislabeling as EARN or CAPEX
+  if (debitAccount?.account_type === 'ASSET' && debitAccount.default_category === 'FIN' && creditIsCash) {
+    return 'FIN';
+  }
+  if (creditAccount?.account_type === 'ASSET' && creditAccount.default_category === 'FIN' && debitIsCash) {
+    return 'FIN';
+  }
+
   // Prefer the non-cash account's default_category
   if (!debitIsCash && debitAccount?.default_category) {
     return debitAccount.default_category;

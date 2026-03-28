@@ -192,6 +192,21 @@ export function resolveQuickTransaction(
  * Only shows sub-accounts (with parent_account_id), excluding main parent accounts.
  * Excludes Cash (1100) and Bank (1200) since they are used as the automatic counter-account.
  */
+/**
+ * Returns true if the account is a receivable/advance that should only be used
+ * via Full Double-Entry or Multi-line Journal mode, never Quick Transaction.
+ *
+ * Matches:
+ * - account_name containing piutang, receivable, talangan, or advance
+ * - ASSET accounts with default_category === 'EARN' (trade receivable)
+ */
+function isReceivableOrAdvanceAccount(acc: Account): boolean {
+  const name = acc.account_name.toLowerCase();
+  if (/piutang|receivable|talangan|advance/i.test(name)) return true;
+  if (acc.account_type === 'ASSET' && acc.default_category === 'EARN') return true;
+  return false;
+}
+
 export function getQuickAddAccounts(accounts: Account[]): Account[] {
   // Find the default cash/bank account to exclude it
   const defaultCash = findDefaultCashAccount(accounts);
@@ -203,6 +218,8 @@ export function getQuickAddAccounts(accounts: Account[]): Account[] {
     if (defaultCash && acc.id === defaultCash.id) return false;
     // Also exclude the other cash/bank account (both 1100 and 1200 are counter-accounts)
     if (acc.account_code === '1100' || acc.account_code === '1200') return false;
+    // Exclude receivable/advance accounts — must use Full Double-Entry or Multi-line Journal
+    if (isReceivableOrAdvanceAccount(acc)) return false;
     return true;
   });
 }

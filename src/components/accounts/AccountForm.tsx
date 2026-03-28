@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Account, AccountType, NormalBalance, TransactionCategory } from '@/types';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Check } from 'lucide-react';
 import * as accountsApi from '@/lib/api/accounts';
 
 export interface AccountFormData {
@@ -66,6 +66,13 @@ export function AccountForm({
   const [loadingCode, setLoadingCode] = useState(false);
   const [codeRangeError, setCodeRangeError] = useState<string | null>(null);
   const [guideOpen, setGuideOpen] = useState(true);
+  // Track auto-generated suggestion separately so user can override
+  const [suggestedCode, setSuggestedCode] = useState('');
+  const [codeManuallyEdited, setCodeManuallyEdited] = useState(false);
+  const [codeValidation, setCodeValidation] = useState<{ valid: boolean; message: string } | null>(null);
+
+  // Get the selected parent for display and validation
+  const selectedParent = parentAccounts.find(p => p.id === formData.parent_account_id);
 
   // Auto-generate code when parent changes (create mode only)
   useEffect(() => {
@@ -74,8 +81,11 @@ export function AccountForm({
     async function generateCode() {
       setLoadingCode(true);
       setCodeRangeError(null);
+      setCodeManuallyEdited(false);
+      setCodeValidation(null);
       try {
         const nextCode = await accountsApi.getNextAccountCode(businessId, formData.parent_account_id!);
+        setSuggestedCode(nextCode);
         setFormData(prev => ({
           ...prev,
           account_code: nextCode,
@@ -106,6 +116,60 @@ export function AccountForm({
     }
   }, [formData.parent_account_id, parentAccounts, isEditMode]);
 
+  // Validate account code on change (create mode, when user edits manually)
+  const validateAccountCode = useCallback((code: string) => {
+    if (!code) {
+      setCodeValidation(null);
+      return;
+    }
+
+    // Must be 4-digit numeric
+    if (!/^\d{4}$/.test(code)) {
+      setCodeValidation({ valid: false, message: 'Kode harus 4 digit angka' });
+      return;
+    }
+
+    // Must be within parent range
+    if (selectedParent) {
+      const baseCode = parseInt(selectedParent.account_code);
+      const codeNum = parseInt(code);
+      const minCode = baseCode + 1;
+      const maxCode = baseCode + 999;
+      if (codeNum < minCode || codeNum > maxCode) {
+        setCodeValidation({ valid: false, message: `Kode harus dalam rentang ${minCode}–${maxCode}` });
+        return;
+      }
+    }
+
+    // Must not be already taken
+    if (existingCodes.includes(code)) {
+      setCodeValidation({ valid: false, message: 'Kode sudah digunakan oleh akun lain' });
+      return;
+    }
+
+    setCodeValidation({ valid: true, message: 'Kode tersedia' });
+  }, [selectedParent, existingCodes]);
+
+  // Handle manual account code input
+  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 4); // numeric only, max 4 chars
+    setCodeManuallyEdited(value !== suggestedCode);
+    setFormData(prev => ({
+      ...prev,
+      account_code: value,
+      sort_order: parseInt(value) || 0,
+    }));
+    validateAccountCode(value);
+    // Clear submit-time errors for this field
+    if (errors.account_code) {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next.account_code;
+        return next;
+      });
+    }
+  };
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -123,8 +187,20 @@ export function AccountForm({
 
     if (!formData.account_code) {
       newErrors.account_code = 'Kode akun belum dibuat';
-    } else if (!isEditMode && existingCodes.includes(formData.account_code)) {
-      newErrors.account_code = 'Kode akun sudah digunakan';
+    } else if (!isEditMode) {
+      if (!/^\d{4}$/.test(formData.account_code)) {
+        newErrors.account_code = 'Kode harus 4 digit angka';
+      } else if (selectedParent) {
+        const baseCode = parseInt(selectedParent.account_code);
+        const codeNum = parseInt(formData.account_code);
+        if (codeNum < baseCode + 1 || codeNum > baseCode + 999) {
+          newErrors.account_code = `Kode harus dalam rentang ${baseCode + 1}–${baseCode + 999}`;
+        } else if (existingCodes.includes(formData.account_code)) {
+          newErrors.account_code = 'Kode akun sudah digunakan';
+        }
+      } else if (existingCodes.includes(formData.account_code)) {
+        newErrors.account_code = 'Kode akun sudah digunakan';
+      }
     }
 
     setErrors(newErrors);
@@ -168,8 +244,6 @@ export function AccountForm({
     }
   };
 
-  // Get the selected parent for display
-  const selectedParent = parentAccounts.find(p => p.id === formData.parent_account_id);
 
   return (
     <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -246,21 +320,49 @@ export function AccountForm({
         </div>
       )}
 
-      {/* Account Code (auto-generated, read-only) */}
+      {/* Account Code — editable in create mode, read-only in edit mode */}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="label">Kode Akun</label>
-          <input
-            type="text"
-            name="account_code"
-            value={loadingCode ? 'Generating...' : formData.account_code}
-            className="input bg-gray-50 dark:bg-gray-700"
-            disabled
-            readOnly
-          />
-          {!isEditMode && formData.account_code && !codeRangeError && (
+          <div className="relative">
+            <input
+              type="text"
+              name="account_code"
+              value={loadingCode ? '' : formData.account_code}
+              onChange={handleCodeChange}
+              placeholder={loadingCode ? 'Generating...' : suggestedCode || 'Kode akun'}
+              className={`input ${isEditMode ? 'bg-gray-50 dark:bg-gray-700' : ''} ${
+                !isEditMode && codeValidation
+                  ? codeValidation.valid
+                    ? 'border-emerald-400 dark:border-emerald-500 focus:ring-emerald-300'
+                    : 'border-red-400 dark:border-red-500 focus:ring-red-300'
+                  : ''
+              } pr-9`}
+              disabled={loading || loadingCode || isEditMode}
+              readOnly={isEditMode}
+              inputMode="numeric"
+              maxLength={4}
+            />
+            {/* Validation indicator */}
+            {!isEditMode && !loadingCode && formData.account_code && codeValidation && (
+              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                {codeValidation.valid ? (
+                  <Check className="w-4 h-4 text-emerald-500" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-red-500" />
+                )}
+              </span>
+            )}
+          </div>
+          {/* Validation message */}
+          {!isEditMode && !loadingCode && codeValidation && (
+            <p className={`text-xs mt-1 ${codeValidation.valid ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+              {codeValidation.message}
+            </p>
+          )}
+          {!isEditMode && !codeValidation && formData.account_code && !codeRangeError && !loadingCode && (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Kode otomatis berdasarkan kategori
+              Kode otomatis — bisa diubah manual
             </p>
           )}
           {codeRangeError && (
@@ -433,7 +535,7 @@ export function AccountForm({
         <button
           type="submit"
           className="btn-primary flex-1"
-          disabled={loading || loadingCode || !!codeRangeError || (!isEditMode && !formData.parent_account_id)}
+          disabled={loading || loadingCode || !!codeRangeError || (!isEditMode && !formData.parent_account_id) || (codeValidation !== null && !codeValidation.valid)}
         >
           {loading ? 'Menyimpan...' : isEditMode ? 'Simpan Perubahan' : 'Buat Akun'}
         </button>

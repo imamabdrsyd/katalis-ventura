@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 27 Maret 2026 | Multi-line journal entry: 27 Maret 2026
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 28 Maret 2026 | Multi-line journal entry: 27 Maret 2026
 
 ---
 
@@ -642,20 +642,22 @@ Cash account codes: 1100 (Cash), 1200 (Bank)
 Untuk setiap transaksi yang menyentuh Cash/Bank:
 
 Cash MASUK (debit cash):
-  Counter = REVENUE/EXPENSE          → Operating  (+amount)
-  Counter = ASSET, trade receivable  → Operating  (+amount)  ← IAS 7.14
-  Counter = ASSET, lainnya           → Investing  (+amount)
-  Counter = LIABILITY, operating     → Operating  (+amount)  ← IAS 7.14
-  Counter = LIABILITY, lainnya       → Financing  (+amount)
-  Counter = EQUITY                   → Financing  (+amount)
+  Counter = REVENUE/EXPENSE              → Operating  (+amount)
+  Counter = ASSET, trade receivable      → Operating  (+amount)  ← IAS 7.14
+  Counter = ASSET, advance/talangan      → Financing  (+amount)
+  Counter = ASSET, lainnya               → Investing  (+amount)
+  Counter = LIABILITY, operating         → Operating  (+amount)  ← IAS 7.14
+  Counter = LIABILITY, lainnya           → Financing  (+amount)
+  Counter = EQUITY                       → Financing  (+amount)
 
 Cash KELUAR (credit cash):
-  Counter = REVENUE/EXPENSE          → Operating  (-amount)
-  Counter = ASSET, trade receivable  → Operating  (-amount)  ← IAS 7.14
-  Counter = ASSET, lainnya           → Investing  (-amount)
-  Counter = LIABILITY, operating     → Operating  (-amount)  ← IAS 7.14
-  Counter = LIABILITY, lainnya       → Financing  (-amount)
-  Counter = EQUITY                   → Financing  (-amount)
+  Counter = REVENUE/EXPENSE              → Operating  (-amount)
+  Counter = ASSET, trade receivable      → Operating  (-amount)  ← IAS 7.14
+  Counter = ASSET, advance/talangan      → Financing  (-amount)
+  Counter = ASSET, lainnya               → Investing  (-amount)
+  Counter = LIABILITY, operating         → Operating  (-amount)  ← IAS 7.14
+  Counter = LIABILITY, lainnya           → Financing  (-amount)
+  Counter = EQUITY                       → Financing  (-amount)
 
 Transaksi non-cash (tidak menyentuh 1100/1200) → diabaikan
 Bank transfer (kedua sisi cash) → net zero, diabaikan
@@ -665,7 +667,11 @@ Bank transfer (kedua sisi cash) → net zero, diabaikan
 
 Counter ASSET dianggap **trade receivable** (→ Operating) jika:
 - `default_category === 'EARN'`, ATAU
-- `account_name` mengandung "piutang" atau "receivable"
+- `account_name` mengandung "piutang usaha" atau "receivable"
+
+Counter ASSET dianggap **advance/talangan** (→ Financing) jika:
+- `default_category === 'FIN'`, ATAU
+- `account_name` mengandung "talangan" atau "advance"
 
 Semua ASSET lainnya (fixed asset, inventory, dll) → **Investing**.
 
@@ -921,6 +927,7 @@ Priority: Bank (1200) → Cash (1100) → first active ASSET sub-account
 - Parent accounts (tanpa parent_account_id)
 - Inactive accounts
 - Cash (1100) dan Bank (1200) — karena mereka jadi counter-account otomatis
+- Akun piutang/receivable/talangan/advance — termasuk ASSET dengan `default_category === 'EARN'` (trade receivable). Akun-akun ini memerlukan kontrol debit/kredit manual, sehingga hanya bisa digunakan via **Full Double-Entry** atau **Multi-line Journal**.
 
 ---
 
@@ -997,10 +1004,18 @@ Ketika transaksi EARN mencatat piutang (Dr Piutang / Cr Pendapatan), piutang ter
 
 `isReceivableTransaction(transaction)`:
 ```
-Piutang terdeteksi jika:
+Trade receivable (piutang usaha) terdeteksi jika:
   1. is_double_entry = true
   2. debit_account.account_type === 'ASSET'
-  3. debit_account.account_name mengandung "piutang" atau "receivable"
+  3. debit_account.default_category !== 'FIN' (bukan talangan)
+  4. account_name TIDAK mengandung "talangan" atau "advance"
+  5. debit_account.default_category === 'EARN'
+     ATAU account_name mengandung "piutang usaha" atau "receivable"
+
+Piutang Talangan (advance/FIN) → return FALSE
+  - default_category === 'FIN' atau nama mengandung "talangan"/"advance"
+  - Talangan bukan piutang usaha, tidak butuh banner pelunasan
+  - Kategori transaksi: FIN (bukan EARN)
 ```
 
 ### 14.3 Settlement Entry
@@ -1336,6 +1351,8 @@ Tabel ini memetakan setiap kategori transaksi — **termasuk sub-tipe** — ke d
 | **FIN** | **Terima Pinjaman** (Cr LIABILITY) | ASSET (Kas/Bank) | LIABILITY | **TIDAK MASUK** | +Cash, +Liability | Financing (+) |
 | **FIN** | **Bayar Pinjaman** (Dr LIABILITY) | LIABILITY | ASSET (Kas/Bank) | **TIDAK MASUK** | -Cash, -Liability | Financing (-) |
 | **FIN** | **Beban Bunga** (Dr EXPENSE) | EXPENSE | ASSET / LIABILITY | `totalInterest` → Financing Costs | +Expenses → kurangi Retained Earnings | Operating (-) |
+| **FIN** | **Piutang Talangan** (Dr ASSET, `default_category='FIN'`) | ASSET (Talangan) | ASSET (Kas/Bank) | **TIDAK MASUK** (bukan pendapatan) | -Cash, +Piutang Talangan (tukar aset) | **Financing (-)** |
+| **FIN** | **Pelunasan Talangan** (Cr ASSET, `default_category='FIN'`) | ASSET (Kas/Bank) | ASSET (Talangan) | **TIDAK MASUK** | +Cash, -Piutang Talangan | **Financing (+)** |
 | **FIN** | Reklasifikasi hutang | LIABILITY | LIABILITY | **TIDAK MASUK** | Net zero (pindah antar liability) | **Tidak masuk** (non-cash) |
 
 ### 18.2 Kategori dengan Split (Sub-tipe)

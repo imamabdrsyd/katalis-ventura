@@ -6,16 +6,25 @@
 import type { Transaction, TransactionCategory } from '@/types';
 
 /**
- * Returns true if the transaction represents a receivable (piutang):
+ * Returns true if the transaction represents a trade receivable (piutang usaha):
  * - is double-entry
  * - debit account is ASSET type
- * - debit account name contains "piutang" or "receivable"
+ * - debit account has default_category === 'EARN' OR name contains "piutang usaha"/"receivable"
+ * - explicitly excludes talangan/advance (default_category === 'FIN') — no settlement banner needed
  */
 export function isReceivableTransaction(transaction: Transaction): boolean {
   if (!transaction.is_double_entry) return false;
   if (!transaction.debit_account) return false;
   if (transaction.debit_account.account_type !== 'ASSET') return false;
-  return /piutang|receivable/i.test(transaction.debit_account.account_name);
+
+  // Talangan/advance accounts are NOT trade receivables — no settlement flow
+  if (transaction.debit_account.default_category === 'FIN') return false;
+  const name = transaction.debit_account.account_name.toLowerCase();
+  if (/talangan|advance/i.test(name)) return false;
+
+  // Trade receivable: explicit EARN category or name-based match
+  if (transaction.debit_account.default_category === 'EARN') return true;
+  return /piutang usaha|receivable/i.test(name);
 }
 
 /**

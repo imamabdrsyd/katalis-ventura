@@ -783,9 +783,19 @@ function classifyCashFlow(
       // Trade receivables are operating (IAS 7.14 — cash received from customers)
       const isTradeReceivable =
         defaultCategory === 'EARN' ||
-        name.includes('piutang') ||
+        name.includes('piutang usaha') ||
         name.includes('receivable');
-      return isTradeReceivable ? 'operating' : 'investing';
+      if (isTradeReceivable) return 'operating';
+
+      // Advances/talangan are financing (cash paid on behalf of others, to be reimbursed)
+      const isAdvanceReceivable =
+        defaultCategory === 'FIN' ||
+        name.includes('talangan') ||
+        name.includes('advance');
+      if (isAdvanceReceivable) return 'financing';
+
+      // Other non-cash assets (fixed assets, inventory, etc.) → investing
+      return 'investing';
     }
 
     case 'LIABILITY': {
