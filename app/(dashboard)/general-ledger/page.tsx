@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { BookOpenCheck, AlertCircle, FileText } from 'lucide-react';
+import { BookOpenCheck, AlertCircle, FileText, X } from 'lucide-react';
 import { useGeneralLedger, type AccountTypeFilter } from '@/hooks/useGeneralLedger';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
@@ -65,6 +65,10 @@ function GeneralLedgerPageInner() {
   } = useGeneralLedger();
 
   const [viewTransaction, setViewTransaction] = useState<Transaction | null>(null);
+  const [legacyNoticeDismissed, setLegacyNoticeDismissed] = useState(false);
+
+  // Reset legacy notice when switching accounts
+  useEffect(() => { setLegacyNoticeDismissed(false); }, [selectedAccountId]);
 
   // "All Time" = custom period with no date bounds
   const isAllTime = period === 'custom' && !startDate && !endDate;
@@ -295,7 +299,7 @@ function GeneralLedgerPageInner() {
                         Normal: {selectedAccount.normal_balance}
                       </span>
                     </div>
-                    <h2 className={`text-lg font-bold ${ACCOUNT_TYPE_COLORS[selectedAccount.account_type]}`}>
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                       {selectedAccount.account_name}
                     </h2>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
@@ -338,12 +342,18 @@ function GeneralLedgerPageInner() {
               </div>
 
               {/* Legacy Transactions Notice */}
-              {ledger.legacyCount > 0 && (
-                <div className="mx-4 md:mx-6 mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-600 rounded-lg flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-amber-500 dark:text-amber-300">
+              {ledger.legacyCount > 0 && !legacyNoticeDismissed && (
+                <div className="mx-4 md:mx-6 mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 flex-1">
                     <strong>{ledger.legacyCount} transaksi lama</strong> tidak ditampilkan di sini karena tidak menggunakan sistem double-entry. Transaksi tersebut tetap dihitung di laporan keuangan.
                   </p>
+                  <button
+                    onClick={() => setLegacyNoticeDismissed(true)}
+                    className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex-shrink-0"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               )}
 
