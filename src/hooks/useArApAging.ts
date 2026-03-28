@@ -18,7 +18,6 @@ function daysSince(txDate: string, referenceDate: string): number {
  * Returns: 'credit' if it creates debt (Cr LIABILITY), 'debit' if it pays debt (Dr LIABILITY), or null.
  */
 function getPayableDirection(t: Transaction): 'credit' | 'debit' | null {
-  if (!t.is_double_entry) return null;
   if (t.credit_account?.account_type === 'LIABILITY') {
     return 'credit';
   }
@@ -33,8 +32,6 @@ function getPayableDirection(t: Transaction): 'credit' | 'debit' | null {
  * Returns: 'debit' if it creates receivable (Dr ASSET), 'credit' if it collects (Cr ASSET), or null.
  */
 function getReceivableDirection(t: Transaction): 'debit' | 'credit' | null {
-  if (!t.is_double_entry) return null;
-
   const isReceivableAccount = (acc: { account_type: string; account_name: string; default_category?: string | null }) => {
     if (acc.account_type !== 'ASSET') return false;
     if (acc.default_category === 'FIN') return false;
