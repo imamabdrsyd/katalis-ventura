@@ -1156,7 +1156,7 @@ export default function JournalEntryPage() {
                     </span>
                   </div>
 
-                  <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                  <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-visible">
                     <table className="w-full text-sm">
                       <thead className="bg-gray-50 dark:bg-gray-800">
                         <tr>
