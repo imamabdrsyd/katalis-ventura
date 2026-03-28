@@ -624,7 +624,7 @@ export interface RecurringTransaction {
 
 // ==================== CONTACTS ====================
 
-export type ContactType = 'customer' | 'vendor' | 'other';
+export type ContactType = 'customer' | 'vendor' | 'partner' | 'staff' | 'investor' | 'other';
 
 export interface Contact {
   id: string;

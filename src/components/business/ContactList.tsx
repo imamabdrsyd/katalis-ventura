@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Contact, Phone, Mail, MapPin, Plus, Search, Pencil, Trash2, User, Building, Users2, ArrowDownLeft, ArrowUpRight, Loader2, X } from 'lucide-react';
+import { Contact, Phone, Mail, MapPin, Plus, Search, Pencil, Trash2, User, Building, Users2, Handshake, UserCog, TrendingUp, ArrowDownLeft, ArrowUpRight, Loader2, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import * as contactsApi from '@/lib/api/contacts';
@@ -18,6 +18,21 @@ const CONTACT_TYPE_CONFIG: Record<ContactTypeEnum, { label: string; icon: React.
   vendor: {
     label: 'Vendor',
     icon: <Building className="w-3.5 h-3.5" />,
+    className: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
+  },
+  partner: {
+    label: 'Partner',
+    icon: <Handshake className="w-3.5 h-3.5" />,
+    className: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
+  },
+  staff: {
+    label: 'Staff',
+    icon: <UserCog className="w-3.5 h-3.5" />,
+    className: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
+  },
+  investor: {
+    label: 'Investor',
+    icon: <TrendingUp className="w-3.5 h-3.5" />,
     className: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
   },
   other: {
@@ -277,6 +292,9 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
               <option value="all">Semua Tipe</option>
               <option value="customer">Customer</option>
               <option value="vendor">Vendor</option>
+              <option value="partner">Partner</option>
+              <option value="staff">Staff</option>
+              <option value="investor">Investor</option>
               <option value="other">Lainnya</option>
             </select>
             {canManage && (
@@ -575,7 +593,7 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
           <div>
             <label className="label">Tipe</label>
             <div className="flex gap-2">
-              {(['customer', 'vendor', 'other'] as ContactTypeEnum[]).map((t) => {
+              {(['customer', 'vendor', 'partner', 'staff', 'investor', 'other'] as ContactTypeEnum[]).map((t) => {
                 const config = CONTACT_TYPE_CONFIG[t];
                 const isActive = formData.type === t;
                 return (
