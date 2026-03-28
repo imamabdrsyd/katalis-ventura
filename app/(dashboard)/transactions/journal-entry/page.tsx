@@ -12,6 +12,7 @@ import { getStockTransactions, findCogsAccount } from '@/lib/utils/inventoryHelp
 import { updateTransaction } from '@/lib/api/transactions';
 import { InventoryPicker } from '@/components/transactions/InventoryPicker';
 import { AccountDropdown } from '@/components/transactions/AccountDropdown';
+import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
 import { validateCategoryConsistency } from '@/lib/accounting/validators/transactionValidator';
 import type { Account, AccountType, TransactionCategory, Transaction, UnitBreakdown, TransactionAttachment, JournalLineInput } from '@/types';
 import {
@@ -1298,14 +1299,13 @@ export default function JournalEntryPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="label text-base font-semibold">{selectedEntryType.nameLabel}</label>
-                <input
-                  type="text"
+                <ContactAutocomplete
+                  businessId={businessId ?? ''}
                   value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
+                  onChange={(v) => {
+                    setName(v);
                     if (errors.name) setErrors(p => { const n = { ...p }; delete n.name; return n; });
                   }}
-                  className="input"
                   placeholder={selectedEntryType.namePlaceholder}
                 />
                 {errors.name && (
