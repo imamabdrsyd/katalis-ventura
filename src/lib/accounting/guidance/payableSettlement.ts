@@ -19,13 +19,10 @@ export function isPayableTransaction(transaction: Transaction): boolean {
     return /hutang|utang|payable/i.test(transaction.credit_account.account_name);
   }
 
-  // Multi-line path
+  // Multi-line path — any credit line to a LIABILITY account counts as payable
   if (transaction.is_multi_line && transaction.journal_lines) {
     return transaction.journal_lines.some(
-      (line) =>
-        line.credit_amount > 0 &&
-        line.account?.account_type === 'LIABILITY' &&
-        /hutang|utang|payable/i.test(line.account.account_name)
+      (line) => line.credit_amount > 0 && line.account?.account_type === 'LIABILITY'
     );
   }
 
