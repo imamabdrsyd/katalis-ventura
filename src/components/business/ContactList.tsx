@@ -235,10 +235,19 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
     }
   };
 
+  // Determine cash direction: inflow if debit account is cash/bank (1100/1200)
+  function isCashInflow(txn: Transaction): boolean {
+    if (txn.is_double_entry && txn.debit_account) {
+      const code = txn.debit_account.account_code || '';
+      return code === '1100' || code === '1200';
+    }
+    return txn.category === 'EARN';
+  }
+
   // Compute transaction summary for selected contact
   const txnSummary = contactTransactions.reduce(
     (acc, txn) => {
-      if (txn.category === 'EARN') {
+      if (isCashInflow(txn)) {
         acc.totalIn += txn.amount;
       } else {
         acc.totalOut += txn.amount;
@@ -503,7 +512,7 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
               ) : (
                 <div className="divide-y divide-gray-100 dark:divide-gray-700">
                   {contactTransactions.map((txn) => {
-                    const isIncome = txn.category === 'EARN';
+                    const isIncome = isCashInflow(txn);
                     return (
                       <div key={txn.id} onClick={() => setDetailTransaction(txn)} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors cursor-pointer">
                         {/* Direction icon */}
