@@ -138,8 +138,9 @@ export function useTransactions() {
     if (!businessId || !user) return;
     setSaving(true);
     try {
+      const { recurring, ...transactionData } = data;
       await transactionsApi.createTransaction({
-        ...data,
+        ...transactionData,
         business_id: businessId,
         created_by: user.id,
       });
@@ -185,7 +186,8 @@ export function useTransactions() {
     if (!editTransaction) return;
     setSaving(true);
     try {
-      await transactionsApi.updateTransaction(editTransaction.id, data);
+      const { recurring, ...transactionData } = data;
+      await transactionsApi.updateTransaction(editTransaction.id, transactionData);
       setEditTransaction(null);
       invalidateTransactions();
     } catch (err: any) {
