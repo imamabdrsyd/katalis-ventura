@@ -274,7 +274,12 @@ Selain simple 2-line (1 debit + 1 credit), sistem mendukung **compound/multi-lin
 - Cari baris kas (akun 1100/1200), hitung net (debit − credit)
 - Klasifikasi bucket via `transaction.category` (operating/investing/financing)
 
-**UI:** Tombol "Multi-Baris" di halaman transaksi → `MultiLineJournalForm.tsx` (tabel dinamis, validasi seimbang real-time).
+**UI:**
+- Tombol "Multi-Baris" di halaman transaksi → `MultiLineJournalForm.tsx` (tabel dinamis, validasi seimbang real-time).
+- **Embedded multi-line di Penjualan & Pengeluaran:** Di halaman Journal Entry (`journal-entry/page.tsx`), entry type "Penjualan" dan "Pengeluaran" memiliki tombol "+ Tambah Baris" yang mengubah form single-line menjadi tabel multi-line (N debit + M credit). Baris pertama di-prefill dari state single-line. Account filtering diterapkan per entry type:
+  - Penjualan: debit → ASSET saja, kredit → REVENUE saja
+  - Pengeluaran: debit → EXPENSE atau ASSET, kredit → ASSET atau LIABILITY
+- Saat disimpan dalam mode multi-line, data dikirim via `createMultiLineTransaction()` (`is_multi_line: true`). Mode single-line tetap menggunakan `createTransaction()` (`is_double_entry: true`).
 
 ### 3.3 Prinsip Accounting Equation
 

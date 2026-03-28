@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { getAccounts } from '@/lib/api/accounts';
-import { createTransaction } from '@/lib/api/transactions';
+import { createTransaction, createMultiLineTransaction } from '@/lib/api/transactions';
 import { getTransactions } from '@/lib/api/transactions';
 import { detectCategory } from '@/lib/utils/transactionHelpers';
 import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
@@ -13,7 +13,7 @@ import { updateTransaction } from '@/lib/api/transactions';
 import { InventoryPicker } from '@/components/transactions/InventoryPicker';
 import { AccountDropdown } from '@/components/transactions/AccountDropdown';
 import { validateCategoryConsistency } from '@/lib/accounting/validators/transactionValidator';
-import type { Account, AccountType, TransactionCategory, Transaction, UnitBreakdown, TransactionAttachment } from '@/types';
+import type { Account, AccountType, TransactionCategory, Transaction, UnitBreakdown, TransactionAttachment, JournalLineInput } from '@/types';
 import {
   ArrowLeft,
   BookOpen,
@@ -35,6 +35,11 @@ import {
   Receipt,
   ChevronDown,
   ChevronUp,
+  PlusCircle,
+  Trash2,
+  X,
+  CheckCircle,
+  AlertCircle,
 } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { UnitBreakdownSection } from '@/components/transactions/UnitBreakdownSection';
@@ -330,6 +335,34 @@ const DEFAULT_VISIBLE_IDS: Set<EntryTypeId> = new Set([
 
 const STORAGE_KEY_ENTRY_TYPES_EXPANDED = 'katalis_journal_entry_types_expanded';
 
+// ─── multi-line helpers ───────────────────────────────────────────────────
+
+/** Entry types that support multi-line mode */
+const MULTI_LINE_ELIGIBLE: Set<EntryTypeId> = new Set(['penjualan', 'pengeluaran']);
+
+interface MultiLineLine {
+  account_id: string;
+  debit_amount: number;
+  credit_amount: number;
+  description: string;
+  sort_order: number;
+}
+
+function emptyLine(sort_order: number): MultiLineLine {
+  return { account_id: '', debit_amount: 0, credit_amount: 0, description: '', sort_order };
+}
+
+function mlFormatNumber(n: number): string {
+  if (n === 0) return '';
+  return n.toLocaleString('id-ID');
+}
+
+function mlParseNumber(s: string): number {
+  const cleaned = s.replace(/\./g, '').replace(/,/g, '.');
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? 0 : n;
+}
+
 // ─── page ──────────────────────────────────────────────────────────────────
 
 export default function JournalEntryPage() {
@@ -371,6 +404,20 @@ export default function JournalEntryPage() {
 
   // attachment state
   const [attachment, setAttachment] = useState<TransactionAttachment | null>(null);
+
+  // multi-line state
+  const [isMultiLineMode, setIsMultiLineMode] = useState(false);
+  const [mlLines, setMlLines] = useState<MultiLineLine[]>([emptyLine(0), emptyLine(1)]);
+  const [mlDisplayDebit, setMlDisplayDebit] = useState<string[]>(['', '']);
+  const [mlDisplayCredit, setMlDisplayCredit] = useState<string[]>(['', '']);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
+  const isMultiLineEligible = selectedEntryType ? MULTI_LINE_ELIGIBLE.has(selectedEntryType.id) : false;
+
+  const mlTotalDebit = useMemo(() => mlLines.reduce((s, l) => s + l.debit_amount, 0), [mlLines]);
+  const mlTotalCredit = useMemo(() => mlLines.reduce((s, l) => s + l.credit_amount, 0), [mlLines]);
+  const mlIsBalanced = Math.abs(mlTotalDebit - mlTotalCredit) < 0.01;
+  const mlDifference = mlTotalDebit - mlTotalCredit;
 
   // inventory state
   const [selectedStockIds, setSelectedStockIds] = useState<string[]>([]);
@@ -426,6 +473,13 @@ export default function JournalEntryPage() {
     }
 
     setCategory(entryType.suggestedCategory);
+
+    // Reset multi-line state when switching entry types
+    setIsMultiLineMode(false);
+    setMlLines([emptyLine(0), emptyLine(1)]);
+    setMlDisplayDebit(['', '']);
+    setMlDisplayCredit(['', '']);
+    setShowCancelConfirm(false);
   }, [cashAccount]);
 
   // Auto-detect category when debit/credit accounts change (skip if locked)
@@ -508,17 +562,173 @@ export default function JournalEntryPage() {
     setShowBreakdown(false);
   };
 
-  // handlers
+  // ─── multi-line handlers ────────────────────────────────────────────────
+
+  /** Enter multi-line mode, pre-filling first row from single-line state */
+  const handleEnterMultiLine = () => {
+    const firstLine: MultiLineLine = { ...emptyLine(0) };
+    const secondLine: MultiLineLine = { ...emptyLine(1) };
+
+    if (selectedEntryType?.id === 'penjualan') {
+      // Penjualan: first row debit=ASSET(cash), second row credit=REVENUE
+      if (debitAccountId) {
+        firstLine.account_id = debitAccountId;
+        firstLine.debit_amount = amount;
+      }
+      if (creditAccountId) {
+        secondLine.account_id = creditAccountId;
+        secondLine.credit_amount = amount;
+      }
+    } else if (selectedEntryType?.id === 'pengeluaran') {
+      // Pengeluaran: first row debit=EXPENSE, second row credit=ASSET(cash)
+      if (debitAccountId) {
+        firstLine.account_id = debitAccountId;
+        firstLine.debit_amount = amount;
+      }
+      if (creditAccountId) {
+        secondLine.account_id = creditAccountId;
+        secondLine.credit_amount = amount;
+      }
+    }
+
+    setMlLines([firstLine, secondLine]);
+    setMlDisplayDebit([mlFormatNumber(firstLine.debit_amount), mlFormatNumber(secondLine.debit_amount)]);
+    setMlDisplayCredit([mlFormatNumber(firstLine.credit_amount), mlFormatNumber(secondLine.credit_amount)]);
+    setIsMultiLineMode(true);
+  };
+
+  /** Exit multi-line mode, restoring first row values to single-line */
+  const handleExitMultiLine = () => {
+    // Keep first line values
+    const first = mlLines[0];
+    if (first) {
+      const lineAmount = first.debit_amount || first.credit_amount;
+      if (lineAmount > 0) {
+        setAmount(lineAmount);
+        setDisplayAmount(lineAmount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'));
+      }
+      if (first.account_id) {
+        if (first.debit_amount > 0) setDebitAccountId(first.account_id);
+        else if (first.credit_amount > 0) setCreditAccountId(first.account_id);
+      }
+    }
+    setMlLines([emptyLine(0), emptyLine(1)]);
+    setMlDisplayDebit(['', '']);
+    setMlDisplayCredit(['', '']);
+    setIsMultiLineMode(false);
+    setShowCancelConfirm(false);
+  };
+
+  const mlAddLine = () => {
+    setMlLines(prev => [...prev, emptyLine(prev.length)]);
+    setMlDisplayDebit(prev => [...prev, '']);
+    setMlDisplayCredit(prev => [...prev, '']);
+  };
+
+  const mlRemoveLine = (idx: number) => {
+    if (mlLines.length <= 2) return;
+    setMlLines(prev => prev.filter((_, i) => i !== idx));
+    setMlDisplayDebit(prev => prev.filter((_, i) => i !== idx));
+    setMlDisplayCredit(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const mlUpdateAccount = (idx: number, accountId: string) => {
+    setMlLines(prev => prev.map((l, i) => (i === idx ? { ...l, account_id: accountId } : l)));
+    if (errors[`ml_${idx}_account`]) {
+      setErrors(prev => { const n = { ...prev }; delete n[`ml_${idx}_account`]; return n; });
+    }
+  };
+
+  const mlUpdateDebit = (idx: number, raw: string) => {
+    const n = mlParseNumber(raw);
+    setMlDisplayDebit(prev => prev.map((v, i) => (i === idx ? (raw === '' ? '' : mlFormatNumber(n)) : v)));
+    setMlLines(prev =>
+      prev.map((l, i) => (i === idx ? { ...l, debit_amount: n, credit_amount: n > 0 ? 0 : l.credit_amount } : l))
+    );
+    if (n > 0) {
+      setMlDisplayCredit(prev => prev.map((v, i) => (i === idx ? '' : v)));
+    }
+  };
+
+  const mlUpdateCredit = (idx: number, raw: string) => {
+    const n = mlParseNumber(raw);
+    setMlDisplayCredit(prev => prev.map((v, i) => (i === idx ? (raw === '' ? '' : mlFormatNumber(n)) : v)));
+    setMlLines(prev =>
+      prev.map((l, i) => (i === idx ? { ...l, credit_amount: n, debit_amount: n > 0 ? 0 : l.debit_amount } : l))
+    );
+    if (n > 0) {
+      setMlDisplayDebit(prev => prev.map((v, i) => (i === idx ? '' : v)));
+    }
+  };
+
+  const mlUpdateDescription = (idx: number, value: string) => {
+    setMlLines(prev => prev.map((l, i) => (i === idx ? { ...l, description: value } : l)));
+  };
+
+  /** Get filtered accounts for a multi-line row based on entry type */
+  const getMlAccountsForRow = (side: 'debit' | 'credit'): Account[] => {
+    if (!selectedEntryType) return accounts;
+    if (selectedEntryType.id === 'penjualan') {
+      // Debit rows → ASSET only; Credit rows → REVENUE only
+      return side === 'debit'
+        ? accounts.filter(a => a.account_type === 'ASSET')
+        : accounts.filter(a => a.account_type === 'REVENUE');
+    }
+    if (selectedEntryType.id === 'pengeluaran') {
+      // Debit rows → EXPENSE or ASSET; Credit rows → ASSET or LIABILITY
+      return side === 'debit'
+        ? accounts.filter(a => a.account_type === 'EXPENSE' || a.account_type === 'ASSET')
+        : accounts.filter(a => a.account_type === 'ASSET' || a.account_type === 'LIABILITY');
+    }
+    return accounts;
+  };
+
+  /** Determine which side a line account should be filtered for */
+  const getMlLineSide = (line: MultiLineLine): 'debit' | 'credit' => {
+    if (line.debit_amount > 0) return 'debit';
+    if (line.credit_amount > 0) return 'credit';
+    // Default: infer from account type if set
+    if (line.account_id) {
+      const acc = accounts.find(a => a.id === line.account_id);
+      if (acc) {
+        if (acc.account_type === 'REVENUE') return 'credit';
+        if (acc.account_type === 'EXPENSE') return 'debit';
+      }
+    }
+    return 'debit'; // default
+  };
+
+  // ─── handlers ──────────────────────────────────────────────────────────
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (amount <= 0) newErrors.amount = 'Jumlah harus lebih dari 0';
-    if (!debitAccountId) newErrors.debit = 'Akun debit harus dipilih';
-    if (!creditAccountId) newErrors.credit = 'Akun kredit harus dipilih';
-    if (debitAccountId && creditAccountId && debitAccountId === creditAccountId) {
-      newErrors.credit = 'Akun debit dan kredit tidak boleh sama';
-    }
+
     if (!name.trim()) newErrors.name = 'Nama harus diisi';
     if (!date) newErrors.date = 'Tanggal harus diisi';
+
+    if (isMultiLineMode) {
+      // Multi-line validation
+      mlLines.forEach((line, idx) => {
+        if (!line.account_id) newErrors[`ml_${idx}_account`] = 'Pilih akun';
+        if (line.debit_amount === 0 && line.credit_amount === 0) {
+          newErrors[`ml_${idx}_amount`] = 'Masukkan jumlah debit atau kredit';
+        }
+      });
+      if (mlTotalDebit === 0) {
+        newErrors.ml_balance = 'Jumlah transaksi tidak boleh 0';
+      } else if (!mlIsBalanced) {
+        newErrors.ml_balance = `Jurnal tidak seimbang. Selisih: Rp ${Math.abs(mlDifference).toLocaleString('id-ID')}`;
+      }
+    } else {
+      // Single-line validation
+      if (amount <= 0) newErrors.amount = 'Jumlah harus lebih dari 0';
+      if (!debitAccountId) newErrors.debit = 'Akun debit harus dipilih';
+      if (!creditAccountId) newErrors.credit = 'Akun kredit harus dipilih';
+      if (debitAccountId && creditAccountId && debitAccountId === creditAccountId) {
+        newErrors.credit = 'Akun debit dan kredit tidak boleh sama';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -529,48 +739,70 @@ export default function JournalEntryPage() {
 
     setSaving(true);
     try {
-      // Convert selected stock to COGS first
-      if (selectedStockIds.length > 0) {
-        const cogsAccount = findCogsAccount(accounts);
-        if (!cogsAccount) throw new Error('Tidak ada akun HPP/Beban yang aktif.');
-        for (const txId of selectedStockIds) {
-          await updateTransaction(txId, { debit_account_id: cogsAccount.id });
+      if (isMultiLineMode) {
+        // ── Multi-line save ──
+        const journalLines: JournalLineInput[] = mlLines.map((l, i) => ({
+          account_id: l.account_id,
+          debit_amount: l.debit_amount,
+          credit_amount: l.credit_amount,
+          description: l.description || undefined,
+          sort_order: i,
+        }));
+
+        await createMultiLineTransaction({
+          business_id: businessId,
+          date,
+          category,
+          name,
+          description: description || (selectedEntryType?.label ?? ''),
+          notes: description || undefined,
+          journal_lines: journalLines,
+        });
+      } else {
+        // ── Single-line save ──
+        // Convert selected stock to COGS first
+        if (selectedStockIds.length > 0) {
+          const cogsAccount = findCogsAccount(accounts);
+          if (!cogsAccount) throw new Error('Tidak ada akun HPP/Beban yang aktif.');
+          for (const txId of selectedStockIds) {
+            await updateTransaction(txId, { debit_account_id: cogsAccount.id });
+          }
         }
-      }
 
-      const meta: Record<string, unknown> = {};
-      if (selectedStockIds.length > 0) {
-        meta.sold_stock_ids = selectedStockIds;
-      }
-      if (unitBreakdown && unitBreakdown.unit) {
-        meta.unit_breakdown = unitBreakdown;
-      }
-      if (selectedEntryType) {
-        meta.entry_type = {
-          id: selectedEntryType.id,
-          label: selectedEntryType.label,
-          description: selectedEntryType.description,
-        };
-      }
-      if (attachment) {
-        meta.attachment = attachment;
-      }
+        const meta: Record<string, unknown> = {};
+        if (selectedStockIds.length > 0) {
+          meta.sold_stock_ids = selectedStockIds;
+        }
+        if (unitBreakdown && unitBreakdown.unit) {
+          meta.unit_breakdown = unitBreakdown;
+        }
+        if (selectedEntryType) {
+          meta.entry_type = {
+            id: selectedEntryType.id,
+            label: selectedEntryType.label,
+            description: selectedEntryType.description,
+          };
+        }
+        if (attachment) {
+          meta.attachment = attachment;
+        }
 
-      await createTransaction({
-        business_id: businessId,
-        created_by: user.id,
-        date,
-        category,
-        name,
-        description: description || (debitAccount?.account_name ?? ''),
-        amount,
-        account: 'Double-entry transaction',
-        debit_account_id: debitAccountId,
-        credit_account_id: creditAccountId,
-        is_double_entry: true,
-        notes: description || undefined,
-        meta: Object.keys(meta).length > 0 ? meta : undefined,
-      });
+        await createTransaction({
+          business_id: businessId,
+          created_by: user.id,
+          date,
+          category,
+          name,
+          description: description || (debitAccount?.account_name ?? ''),
+          amount,
+          account: 'Double-entry transaction',
+          debit_account_id: debitAccountId,
+          credit_account_id: creditAccountId,
+          is_double_entry: true,
+          notes: description || undefined,
+          meta: Object.keys(meta).length > 0 ? meta : undefined,
+        });
+      }
 
       // Reset form (keep entry type selected for quick multi-entry)
       setAmount(0);
@@ -582,6 +814,10 @@ export default function JournalEntryPage() {
       setUnitBreakdown(null);
       setShowBreakdown(false);
       setAttachment(null);
+      setIsMultiLineMode(false);
+      setMlLines([emptyLine(0), emptyLine(1)]);
+      setMlDisplayDebit(['', '']);
+      setMlDisplayCredit(['', '']);
       setErrors({});
       setSuccessMessage('Transaksi berhasil disimpan!');
       setTimeout(() => setSuccessMessage(''), 3000);
@@ -733,125 +969,329 @@ export default function JournalEntryPage() {
               </div>
             )}
 
-            {/* Row 1: Amount + Date */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <CurrencyInputWithCalculator
-                  label="Jumlah (Rp)"
-                  value={amount}
-                  displayValue={displayAmount}
-                  onChange={(numeric, formatted) => {
-                    setDisplayAmount(formatted);
-                    setAmount(numeric);
-                    if (errors.amount) setErrors(p => { const n = { ...p }; delete n.amount; return n; });
-                  }}
-                  inputClassName="text-2xl font-bold"
-                  colorVariant={
-                    selectedEntryType.id === 'penjualan' || selectedEntryType.id === 'pinjaman' || selectedEntryType.id === 'suntik_modal' || selectedEntryType.id === 'terima_kembali_talangan'
-                      ? 'green'
-                      : 'red'
-                  }
-                  error={errors.amount}
-                  autoFocus
-                />
-              </div>
+            {/* ── Single-line mode (default) ── */}
+            {!isMultiLineMode && (
+              <>
+                {/* Row 1: Amount + Date */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <CurrencyInputWithCalculator
+                      label="Jumlah (Rp)"
+                      value={amount}
+                      displayValue={displayAmount}
+                      onChange={(numeric, formatted) => {
+                        setDisplayAmount(formatted);
+                        setAmount(numeric);
+                        if (errors.amount) setErrors(p => { const n = { ...p }; delete n.amount; return n; });
+                      }}
+                      inputClassName="text-2xl font-bold"
+                      colorVariant={
+                        selectedEntryType.id === 'penjualan' || selectedEntryType.id === 'pinjaman' || selectedEntryType.id === 'suntik_modal' || selectedEntryType.id === 'terima_kembali_talangan'
+                          ? 'green'
+                          : 'red'
+                      }
+                      error={errors.amount}
+                      autoFocus
+                    />
+                  </div>
 
-              <div>
-                <label className="label text-base font-semibold">Tanggal</label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => {
-                    setDate(e.target.value);
-                    if (errors.date) setErrors(p => { const n = { ...p }; delete n.date; return n; });
-                  }}
-                  className="input"
+                  <div>
+                    <label className="label text-base font-semibold">Tanggal</label>
+                    <input
+                      type="date"
+                      value={date}
+                      onChange={(e) => {
+                        setDate(e.target.value);
+                        if (errors.date) setErrors(p => { const n = { ...p }; delete n.date; return n; });
+                      }}
+                      className="input"
+                    />
+                    {errors.date && (
+                      <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.date}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Unit Breakdown */}
+                <UnitBreakdownSection
+                  unitBreakdown={unitBreakdown}
+                  showBreakdown={showBreakdown}
+                  onToggle={handleToggleBreakdown}
+                  onPriceChange={handleBreakdownPriceChange}
+                  onQuantityChange={handleBreakdownQtyChange}
+                  onUnitChange={handleBreakdownUnitChange}
+                  onRemove={handleRemoveBreakdown}
                 />
-                {errors.date && (
-                  <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.date}</p>
+
+                {/* Row 2: Debit + Credit */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <AccountDropdown
+                      label="Akun Debit"
+                      accounts={accounts.filter(a =>
+                        selectedEntryType.debitFilter === 'ALL'
+                          ? true
+                          : a.account_type === selectedEntryType.debitFilter
+                      )}
+                      subFilter={selectedEntryType.debitSubFilter}
+                      value={debitAccountId}
+                      onChange={(id, _code) => {
+                        setDebitAccountId(id);
+                        if (errors.debit) setErrors(p => { const n = { ...p }; delete n.debit; return n; });
+                      }}
+                      placeholder="Pilih akun debit..."
+                      error={errors.debit}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <AccountDropdown
+                      label="Akun Kredit"
+                      accounts={accounts.filter(a =>
+                        selectedEntryType.creditFilter === 'ALL'
+                          ? true
+                          : a.account_type === selectedEntryType.creditFilter
+                      )}
+                      subFilter={selectedEntryType.creditSubFilter}
+                      value={creditAccountId}
+                      onChange={(id, _code) => {
+                        setCreditAccountId(id);
+                        if (errors.credit) setErrors(p => { const n = { ...p }; delete n.credit; return n; });
+                      }}
+                      placeholder="Pilih akun kredit..."
+                      error={errors.credit}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Debit/Credit visual preview */}
+                {debitAccount && creditAccount && (
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-sm">
+                    <span className="px-2 py-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold">
+                      Debit
+                    </span>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                      {debitAccount.account_code} {debitAccount.account_name}
+                    </span>
+                    <span className="text-gray-400 dark:text-gray-500 mx-1">→</span>
+                    <span className="px-2 py-1 rounded bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-300 text-xs font-semibold">
+                      Kredit
+                    </span>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                      {creditAccount.account_code} {creditAccount.account_name}
+                    </span>
+                  </div>
                 )}
-              </div>
-            </div>
 
-            {/* Unit Breakdown */}
-            <UnitBreakdownSection
-              unitBreakdown={unitBreakdown}
-              showBreakdown={showBreakdown}
-              onToggle={handleToggleBreakdown}
-              onPriceChange={handleBreakdownPriceChange}
-              onQuantityChange={handleBreakdownQtyChange}
-              onUnitChange={handleBreakdownUnitChange}
-              onRemove={handleRemoveBreakdown}
-            />
+                {/* Inventory Picker */}
+                {showInventoryPicker && (
+                  <InventoryPicker
+                    stockTransactions={stockTransactions}
+                    selectedIds={selectedStockIds}
+                    onToggle={handleToggleStock}
+                  />
+                )}
 
-            {/* Row 2: Debit + Credit */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <AccountDropdown
-                  label="Akun Debit"
-                  accounts={accounts.filter(a =>
-                    selectedEntryType.debitFilter === 'ALL'
-                      ? true
-                      : a.account_type === selectedEntryType.debitFilter
-                  )}
-                  subFilter={selectedEntryType.debitSubFilter}
-                  value={debitAccountId}
-                  onChange={(id, _code) => {
-                    setDebitAccountId(id);
-                    if (errors.debit) setErrors(p => { const n = { ...p }; delete n.debit; return n; });
-                  }}
-                  placeholder="Pilih akun debit..."
-                  error={errors.debit}
-                  required
-                />
-              </div>
-              <div>
-                <AccountDropdown
-                  label="Akun Kredit"
-                  accounts={accounts.filter(a =>
-                    selectedEntryType.creditFilter === 'ALL'
-                      ? true
-                      : a.account_type === selectedEntryType.creditFilter
-                  )}
-                  subFilter={selectedEntryType.creditSubFilter}
-                  value={creditAccountId}
-                  onChange={(id, _code) => {
-                    setCreditAccountId(id);
-                    if (errors.credit) setErrors(p => { const n = { ...p }; delete n.credit; return n; });
-                  }}
-                  placeholder="Pilih akun kredit..."
-                  error={errors.credit}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Debit/Credit visual preview */}
-            {debitAccount && creditAccount && (
-              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-sm">
-                <span className="px-2 py-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold">
-                  Debit
-                </span>
-                <span className="font-medium text-gray-700 dark:text-gray-300">
-                  {debitAccount.account_code} {debitAccount.account_name}
-                </span>
-                <span className="text-gray-400 dark:text-gray-500 mx-1">→</span>
-                <span className="px-2 py-1 rounded bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-300 text-xs font-semibold">
-                  Kredit
-                </span>
-                <span className="font-medium text-gray-700 dark:text-gray-300">
-                  {creditAccount.account_code} {creditAccount.account_name}
-                </span>
-              </div>
+                {/* + Tambah Baris button — only for penjualan & pengeluaran */}
+                {isMultiLineEligible && (
+                  <button
+                    type="button"
+                    onClick={handleEnterMultiLine}
+                    className="flex items-center gap-1.5 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 transition-colors border border-indigo-200 dark:border-indigo-700 rounded-lg px-3 py-1.5"
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    Tambah Baris
+                  </button>
+                )}
+              </>
             )}
 
-            {/* Inventory Picker */}
-            {showInventoryPicker && (
-              <InventoryPicker
-                stockTransactions={stockTransactions}
-                selectedIds={selectedStockIds}
-                onToggle={handleToggleStock}
-              />
+            {/* ── Multi-line mode ── */}
+            {isMultiLineMode && (
+              <>
+                {/* Date field in multi-line mode */}
+                <div className="max-w-xs">
+                  <label className="label text-base font-semibold">Tanggal</label>
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => {
+                      setDate(e.target.value);
+                      if (errors.date) setErrors(p => { const n = { ...p }; delete n.date; return n; });
+                    }}
+                    className="input"
+                  />
+                  {errors.date && (
+                    <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.date}</p>
+                  )}
+                </div>
+
+                {/* Multi-line journal table */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Baris Jurnal
+                    </label>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      Total Debit harus = Total Kredit
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                          <th className="text-left px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 w-8">#</th>
+                          <th className="text-left px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">Akun</th>
+                          <th className="text-right px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 w-36">Debit (Rp)</th>
+                          <th className="text-right px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 w-36">Kredit (Rp)</th>
+                          <th className="text-left px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">Keterangan</th>
+                          <th className="w-8"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                        {mlLines.map((line, idx) => {
+                          const side = getMlLineSide(line);
+                          return (
+                            <tr key={idx} className="bg-white dark:bg-gray-900">
+                              <td className="px-3 py-2 text-gray-400 dark:text-gray-500">{idx + 1}</td>
+                              <td className="px-2 py-1.5 min-w-48">
+                                <AccountDropdown
+                                  label=""
+                                  accounts={getMlAccountsForRow(side)}
+                                  value={line.account_id || undefined}
+                                  onChange={(accountId) => mlUpdateAccount(idx, accountId)}
+                                  placeholder="Pilih akun"
+                                  error={errors[`ml_${idx}_account`]}
+                                />
+                              </td>
+                              <td className="px-2 py-1.5">
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={mlDisplayDebit[idx] ?? ''}
+                                  onChange={(e) => mlUpdateDebit(idx, e.target.value.replace(/[^0-9.,]/g, ''))}
+                                  className="input text-right text-sm py-1"
+                                  placeholder="0"
+                                />
+                                {errors[`ml_${idx}_amount`] && (
+                                  <p className="text-xs text-red-500 mt-0.5">{errors[`ml_${idx}_amount`]}</p>
+                                )}
+                              </td>
+                              <td className="px-2 py-1.5">
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={mlDisplayCredit[idx] ?? ''}
+                                  onChange={(e) => mlUpdateCredit(idx, e.target.value.replace(/[^0-9.,]/g, ''))}
+                                  className="input text-right text-sm py-1"
+                                  placeholder="0"
+                                />
+                              </td>
+                              <td className="px-2 py-1.5">
+                                <input
+                                  type="text"
+                                  value={line.description ?? ''}
+                                  onChange={(e) => mlUpdateDescription(idx, e.target.value)}
+                                  className="input text-sm py-1"
+                                  placeholder="Opsional"
+                                />
+                              </td>
+                              <td className="px-1 py-1.5 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => mlRemoveLine(idx)}
+                                  disabled={mlLines.length <= 2}
+                                  className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                  title="Hapus baris"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot className="bg-gray-50 dark:bg-gray-800 border-t-2 border-gray-300 dark:border-gray-600">
+                        <tr>
+                          <td colSpan={2} className="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-400">
+                            TOTAL
+                          </td>
+                          <td className="px-3 py-2 text-right text-sm font-semibold text-gray-800 dark:text-gray-100">
+                            {mlTotalDebit.toLocaleString('id-ID')}
+                          </td>
+                          <td className="px-3 py-2 text-right text-sm font-semibold text-gray-800 dark:text-gray-100">
+                            {mlTotalCredit.toLocaleString('id-ID')}
+                          </td>
+                          <td colSpan={2} className="px-3 py-2">
+                            {mlIsBalanced && mlTotalDebit > 0 ? (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400">
+                                <CheckCircle className="w-3.5 h-3.5" />
+                                Jurnal seimbang
+                              </span>
+                            ) : mlTotalDebit > 0 ? (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-red-500 dark:text-red-400">
+                                <AlertCircle className="w-3.5 h-3.5" />
+                                Selisih: Rp {Math.abs(mlDifference).toLocaleString('id-ID')}
+                              </span>
+                            ) : null}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+
+                  {/* Multi-line balance error */}
+                  {errors.ml_balance && (
+                    <div className="mt-2 flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                      <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-red-600 dark:text-red-400">{errors.ml_balance}</p>
+                    </div>
+                  )}
+
+                  {/* + Tambah Baris & Batalkan Multi-Baris */}
+                  <div className="mt-2 flex items-center gap-4">
+                    <button
+                      type="button"
+                      onClick={mlAddLine}
+                      className="flex items-center gap-1.5 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 transition-colors border border-indigo-200 dark:border-indigo-700 rounded-lg px-3 py-1.5"
+                    >
+                      <PlusCircle className="w-4 h-4" />
+                      Tambah Baris
+                    </button>
+
+                    {!showCancelConfirm ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowCancelConfirm(true)}
+                        className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        Batalkan Multi-Baris
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-gray-600 dark:text-gray-300">Kembali ke mode biasa? Baris tambahan akan dihapus.</span>
+                        <button
+                          type="button"
+                          onClick={handleExitMultiLine}
+                          className="text-red-600 dark:text-red-400 font-medium hover:underline"
+                        >
+                          Ya
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowCancelConfirm(false)}
+                          className="text-gray-500 dark:text-gray-400 hover:underline"
+                        >
+                          Tidak
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Row 3: Name + Category */}
@@ -953,7 +1393,7 @@ export default function JournalEntryPage() {
               <button
                 type="submit"
                 className="btn-primary flex-1 flex items-center justify-center gap-2"
-                disabled={saving || loadingAccounts}
+                disabled={saving || loadingAccounts || (isMultiLineMode && (!mlIsBalanced || mlTotalDebit === 0))}
               >
                 {saving ? (
                   <span className="flex items-center gap-2">
