@@ -141,8 +141,7 @@ export function TransactionForm({
   const [templateName, setTemplateName] = useState('');
   const [savingTemplate, setSavingTemplate] = useState(false);
 
-  // Recurring state (only for new transactions)
-  const isNewTransaction = !transaction;
+  // Recurring state
   const [recurringEnabled, setRecurringEnabled] = useState(false);
   const [recurringFrequency, setRecurringFrequency] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
   const [recurringInterval, setRecurringInterval] = useState(1);
@@ -278,7 +277,7 @@ export function TransactionForm({
       }
 
       // Attach recurring data if enabled
-      if (isNewTransaction && recurringEnabled) {
+      if (recurringEnabled) {
         submitData.recurring = {
           frequency: recurringFrequency,
           interval_value: recurringInterval,
@@ -974,8 +973,8 @@ export function TransactionForm({
         </div>
       )}
 
-      {/* Recurring toggle — only for new transactions */}
-      {isNewTransaction && (
+      {/* Recurring toggle */}
+      {(
         <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
