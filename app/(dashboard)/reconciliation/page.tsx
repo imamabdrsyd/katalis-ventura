@@ -17,7 +17,7 @@ import type { Transaction } from '@/types';
 const CATEGORY_COLORS: Record<string, string> = {
   EARN: 'text-emerald-600 dark:text-emerald-400',
   OPEX: 'text-red-600 dark:text-red-400',
-  VAR: 'text-amber-600 dark:text-amber-400',
+  VAR: 'text-pink-600 dark:text-pink-400',
   CAPEX: 'text-blue-600 dark:text-blue-400',
   TAX: 'text-yellow-600 dark:text-yellow-400',
   FIN: 'text-indigo-600 dark:text-indigo-400',

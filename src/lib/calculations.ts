@@ -101,7 +101,7 @@ export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
 export const CATEGORY_COLORS: Record<TransactionCategory, string> = {
   EARN: '#059669', // emerald
   OPEX: '#dc2626', // red
-  VAR: '#d97706', // amber
+  VAR: '#db2777', // pink
   CAPEX: '#2563eb', // blue
   TAX: '#ca8a04', // yellow
   FIN: '#4f46e5', // indigo
