@@ -165,11 +165,11 @@ export function BudgetVarianceTable({ rows }: BudgetVarianceTableProps) {
                   <td className="px-4 py-2.5 text-right font-semibold text-gray-700 dark:text-gray-200">
                     {formatCurrency(subtotalActual)}
                   </td>
-                  <td className={`px-4 py-2.5 text-right font-semibold ${subtotalVariance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {subtotalVariance >= 0 ? '+' : ''}{formatCurrency(subtotalVariance)}
+                  <td className={`px-4 py-2.5 text-right font-semibold ${subtotalVariance === 0 ? 'text-gray-500 dark:text-gray-400' : subtotalVariance > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {subtotalVariance > 0 ? '+' : ''}{formatCurrency(subtotalVariance)}
                   </td>
-                  <td className={`px-4 py-2.5 text-right font-semibold ${subtotalPercent >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {subtotalPercent >= 0 ? '+' : ''}{subtotalPercent.toFixed(1)}%
+                  <td className={`px-4 py-2.5 text-right font-semibold ${subtotalPercent === 0 ? 'text-gray-500 dark:text-gray-400' : subtotalPercent > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {subtotalPercent > 0 ? '+' : ''}{subtotalPercent.toFixed(1)}%
                   </td>
                 </tr>
 
@@ -189,11 +189,11 @@ export function BudgetVarianceTable({ rows }: BudgetVarianceTableProps) {
                     <td className="px-4 py-2.5 text-right text-gray-800 dark:text-gray-200">
                       {formatCurrency(row.actual)}
                     </td>
-                    <td className={`px-4 py-2.5 text-right font-medium ${row.variance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {row.variance >= 0 ? '+' : ''}{formatCurrency(row.variance)}
+                    <td className={`px-4 py-2.5 text-right font-medium ${row.variance === 0 ? 'text-gray-500 dark:text-gray-400' : row.variance > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {row.variance > 0 ? '+' : ''}{formatCurrency(row.variance)}
                     </td>
-                    <td className={`px-4 py-2.5 text-right font-medium ${row.variancePercent >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {row.variancePercent >= 0 ? '+' : ''}{row.variancePercent.toFixed(1)}%
+                    <td className={`px-4 py-2.5 text-right font-medium ${row.variancePercent === 0 ? 'text-gray-500 dark:text-gray-400' : row.variancePercent > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {row.variancePercent > 0 ? '+' : ''}{row.variancePercent.toFixed(1)}%
                     </td>
                   </tr>
                 ))}

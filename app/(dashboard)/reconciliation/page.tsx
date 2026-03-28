@@ -307,8 +307,8 @@ function ReconciliationRow({
 
       {/* Amount */}
       <div className="w-32 text-right flex-shrink-0">
-        <p className={`text-sm font-semibold ${direction === 'in' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
-          {direction === 'in' ? '+' : '-'}{formatCurrency(amount)}
+        <p className={`text-sm font-semibold ${amount === 0 ? 'text-gray-500 dark:text-gray-400' : direction === 'in' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+          {amount === 0 ? '' : direction === 'in' ? '+' : '-'}{formatCurrency(amount)}
         </p>
       </div>
 

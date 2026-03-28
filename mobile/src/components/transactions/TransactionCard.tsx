@@ -20,7 +20,7 @@ export function TransactionCard({ transaction, onPress }: TransactionCardProps) 
   const displayName = transaction.name || transaction.description || '-';
 
   // Determine amount color
-  const amountColor = isInflow ? 'text-emerald-600' : 'text-red-600';
+  const amountColor = transaction.amount === 0 ? 'text-gray-500' : isInflow ? 'text-emerald-600' : 'text-red-600';
 
   return (
     <Pressable onPress={onPress}>

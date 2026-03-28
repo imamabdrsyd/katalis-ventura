@@ -150,9 +150,9 @@ export default function DashboardScreen() {
                           </Text>
                         </View>
                         <Text
-                          className={`font-bold text-base ${isInflow ? 'text-emerald-600' : 'text-red-600'}`}
+                          className={`font-bold text-base ${item.amount === 0 ? 'text-gray-500' : isInflow ? 'text-emerald-600' : 'text-red-600'}`}
                         >
-                          {isInflow ? '+' : '-'}{formatCurrency(item.amount)}
+                          {item.amount === 0 ? '' : isInflow ? '+' : '-'}{formatCurrency(item.amount)}
                         </Text>
                       </View>
                     </Card>

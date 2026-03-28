@@ -67,12 +67,14 @@ export function BudgetKPICards({ kpi }: BudgetKPICardsProps) {
             {card.percent !== null && (
               <span
                 className={`text-xs font-medium ${
-                  card.favorable
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-red-600 dark:text-red-400'
+                  card.percent === 0
+                    ? 'text-gray-500 dark:text-gray-400'
+                    : card.favorable
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400'
                 }`}
               >
-                {card.percent >= 0 ? '+' : ''}{card.percent.toFixed(1)}%
+                {card.percent > 0 ? '+' : ''}{card.percent.toFixed(1)}%
               </span>
             )}
           </div>

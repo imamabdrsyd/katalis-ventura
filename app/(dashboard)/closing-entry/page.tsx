@@ -178,17 +178,17 @@ function ClosingEntryPageInner() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
               <p className="text-xs text-gray-500 uppercase mb-1">Total Pendapatan</p>
-              <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(preview.totalRevenue)}</p>
+              <p className={`text-xl font-bold ${preview.totalRevenue === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{formatCurrency(preview.totalRevenue)}</p>
               <p className="text-xs text-gray-500">{preview.revenueLines.length} akun</p>
             </div>
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
               <p className="text-xs text-gray-500 uppercase mb-1">Total Beban</p>
-              <p className="text-xl font-bold text-red-500 dark:text-red-400">{formatCurrency(preview.totalExpense)}</p>
+              <p className={`text-xl font-bold ${preview.totalExpense === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-red-500 dark:text-red-400'}`}>{formatCurrency(preview.totalExpense)}</p>
               <p className="text-xs text-gray-500">{preview.expenseLines.length} akun</p>
             </div>
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
               <p className="text-xs text-gray-500 uppercase mb-1">Laba Bersih → Laba Ditahan</p>
-              <p className={`text-xl font-bold ${preview.netIncome >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+              <p className={`text-xl font-bold ${preview.netIncome === 0 ? 'text-gray-500 dark:text-gray-400' : preview.netIncome > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
                 {formatCurrency(preview.netIncome)}
               </p>
               <p className="text-xs text-gray-500">{preview.netIncome >= 0 ? 'Laba' : 'Rugi'} periode ini</p>

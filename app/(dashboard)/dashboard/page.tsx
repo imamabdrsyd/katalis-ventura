@@ -157,7 +157,7 @@ export default function DashboardPage() {
         ? 'Modal sudah balik'
         : 'Modal belum balik';
   const roiLabelColor =
-    roi > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400';
+    roi === 0 ? 'text-gray-500 dark:text-gray-400' : roi > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400';
 
   // --- Cash Balance: runway in months (uses all-time data, not year-filtered) ---
   const totalAllTimeExpenses = allTimeSummary.totalOpex + allTimeSummary.totalVar + allTimeSummary.totalTax + allTimeSummary.totalInterest;
@@ -263,7 +263,7 @@ export default function DashboardPage() {
               {transactionsLoading ? '...' : `${categoryCounts.EARN} transaksi masuk`}
             </div>
             {!transactionsLoading && revenueGrowthData.growth !== null && (
-              <div className={`flex items-center gap-0.5 text-xs font-semibold ${revenueGrowthData.growth >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+              <div className={`flex items-center gap-0.5 text-xs font-semibold ${revenueGrowthData.growth === 0 ? 'text-gray-500 dark:text-gray-400' : revenueGrowthData.growth > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
                 <span>{revenueGrowthData.growth >= 0 ? '▲' : '▼'}</span>
                 <span>{Math.abs(revenueGrowthData.growth).toFixed(1)}% {revenueGrowthData.label}</span>
               </div>
@@ -290,7 +290,7 @@ export default function DashboardPage() {
             <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Profit/Loss</div>
             <BarChart3 className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           </div>
-          <div className={`text-xl md:text-2xl font-bold break-all ${summary.netProfit >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+          <div className={`text-xl md:text-2xl font-bold break-all ${summary.netProfit === 0 ? 'text-gray-500 dark:text-gray-400' : summary.netProfit > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
             {transactionsLoading ? '...' : formatCurrency(summary.netProfit)}
           </div>
           <div className="flex items-center justify-between mt-2 min-h-[2.5rem]">
@@ -302,7 +302,7 @@ export default function DashboardPage() {
                   : 'Belum ada pemasukan'}
             </div>
             {!transactionsLoading && netMargin !== null && (
-              <div className={`text-xs font-semibold ${netMargin >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+              <div className={`text-xs font-semibold ${netMargin === 0 ? 'text-gray-500 dark:text-gray-400' : netMargin > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
                 Margin {netMargin.toFixed(1)}%
               </div>
             )}
@@ -314,7 +314,7 @@ export default function DashboardPage() {
             <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">ROI</div>
             <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           </div>
-          <div className={`text-xl md:text-2xl font-bold ${roi >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+          <div className={`text-xl md:text-2xl font-bold ${roi === 0 ? 'text-gray-500 dark:text-gray-400' : roi > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
             {transactionsLoading ? '...' : formatPercentage(roi)}
           </div>
           <div className="mt-2 min-h-[2.5rem] flex flex-col justify-center">
@@ -437,9 +437,9 @@ export default function DashboardPage() {
                       </span>
                     </td>
                     <td className={`py-3 text-sm font-semibold text-right whitespace-nowrap ${
-                      t.category === 'EARN' ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
+                      t.amount === 0 ? 'text-gray-500 dark:text-gray-400' : t.category === 'EARN' ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
                     }`}>
-                      {t.category === 'EARN' ? '+' : '-'}{formatCurrency(t.amount)}
+                      {t.amount === 0 ? '' : t.category === 'EARN' ? '+' : '-'}{formatCurrency(t.amount)}
                     </td>
                   </tr>
                 ))}

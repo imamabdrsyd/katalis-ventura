@@ -42,11 +42,13 @@ export function ReportTable({ title, rows }: ReportTableProps) {
             className={`text-right ${
               row.isBold || row.isTotal ? 'font-bold' : 'font-normal'
             } ${
-              row.value < 0
-                ? 'text-red-600'
-                : row.isTotal
-                  ? 'text-gray-900'
-                  : 'text-gray-700'
+              row.value === 0
+                ? 'text-gray-500'
+                : row.value < 0
+                  ? 'text-red-600'
+                  : row.isTotal
+                    ? 'text-gray-900'
+                    : 'text-gray-700'
             } text-sm`}
           >
             {formatCurrency(row.value)}
