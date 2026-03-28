@@ -6,11 +6,11 @@ import { User, Building, Users2, Handshake, UserCog, TrendingUp, UserPlus, BookU
 import type { Contact, ContactType } from '@/types';
 
 const TYPE_ICON: Record<ContactType, React.ReactNode> = {
-  customer: <User className="w-3.5 h-3.5 text-green-500" />,
-  vendor: <Building className="w-3.5 h-3.5 text-blue-500" />,
-  partner: <Handshake className="w-3.5 h-3.5 text-purple-500" />,
-  staff: <UserCog className="w-3.5 h-3.5 text-orange-500" />,
-  investor: <TrendingUp className="w-3.5 h-3.5 text-indigo-500" />,
+  customer: <User className="w-3.5 h-3.5 text-green-600" />,
+  vendor: <Building className="w-3.5 h-3.5 text-blue-600" />,
+  partner: <Handshake className="w-3.5 h-3.5 text-indigo-600" />,
+  staff: <UserCog className="w-3.5 h-3.5 text-orange-600" />,
+  investor: <TrendingUp className="w-3.5 h-3.5 text-indigo-600" />,
   other: <Users2 className="w-3.5 h-3.5 text-gray-400" />,
 };
 

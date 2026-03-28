@@ -13,12 +13,12 @@ const CONTACT_TYPE_CONFIG: Record<ContactTypeEnum, { label: string; icon: React.
   customer: {
     label: 'Customer',
     icon: <User className="w-3.5 h-3.5" />,
-    className: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
+    className: 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400',
   },
   vendor: {
     label: 'Vendor',
     icon: <Building className="w-3.5 h-3.5" />,
-    className: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
+    className: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
   },
   partner: {
     label: 'Partner',
@@ -28,7 +28,7 @@ const CONTACT_TYPE_CONFIG: Record<ContactTypeEnum, { label: string; icon: React.
   staff: {
     label: 'Staff',
     icon: <UserCog className="w-3.5 h-3.5" />,
-    className: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
+    className: 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400',
   },
   investor: {
     label: 'Investor',
@@ -38,7 +38,7 @@ const CONTACT_TYPE_CONFIG: Record<ContactTypeEnum, { label: string; icon: React.
   other: {
     label: 'Lainnya',
     icon: <Users2 className="w-3.5 h-3.5" />,
-    className: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
+    className: 'bg-gray-100 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400',
   },
 };
 
