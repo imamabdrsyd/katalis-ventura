@@ -31,6 +31,10 @@ import {
   RotateCcw,
   Repeat,
   FileText,
+  HandCoins,
+  Receipt,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { UnitBreakdownSection } from '@/components/transactions/UnitBreakdownSection';
@@ -49,7 +53,9 @@ type EntryTypeId =
   | 'beban_terutang'
   | 'realisasi_pendapatan_dimuka'
   | 'reklasifikasi_hutang'
-  | 'pendapatan_dimuka';
+  | 'pendapatan_dimuka'
+  | 'catat_talangan'
+  | 'terima_kembali_talangan';
 
 interface EntryType {
   id: EntryTypeId;
@@ -63,15 +69,27 @@ interface EntryType {
   debitFilter: AccountType | 'ALL';
   /** Which account type should the credit dropdown show */
   creditFilter: AccountType | 'ALL';
+  /** Optional sub-filter applied AFTER debitFilter (e.g. only talangan ASSET accounts) */
+  debitSubFilter?: (acc: Account) => boolean;
+  /** Optional sub-filter applied AFTER creditFilter */
+  creditSubFilter?: (acc: Account) => boolean;
   /** Default debit account type for auto-resolve */
   defaultDebitType: AccountType;
   /** Default credit account type for auto-resolve */
   defaultCreditType: AccountType;
   /** Suggested category */
   suggestedCategory: TransactionCategory;
+  /** If true, category dropdown is locked (user cannot change it) */
+  lockCategory?: boolean;
   /** Nama label for the "from" party */
   nameLabel: string;
   namePlaceholder: string;
+}
+
+/** Filter: only ASSET accounts that are talangan/advance (default_category=FIN or name match) */
+function isTalanganAccount(acc: Account): boolean {
+  if (acc.default_category === 'FIN') return true;
+  return /talangan|advance|piutang talangan/i.test(acc.account_name);
 }
 
 const ENTRY_TYPES: EntryType[] = [
@@ -251,6 +269,42 @@ const ENTRY_TYPES: EntryType[] = [
     nameLabel: 'Nama Pelanggan',
     namePlaceholder: 'Pelanggan yang membayar di muka',
   },
+  {
+    id: 'catat_talangan',
+    label: 'Catat Talangan',
+    description: 'Bayar dulu untuk orang lain, akan ditagih kembali',
+    icon: <HandCoins className="w-5 h-5" />,
+    color: 'text-sky-600 dark:text-sky-400',
+    bgColor: 'bg-sky-50 dark:bg-sky-900/20',
+    borderColor: 'border-sky-500',
+    debitFilter: 'ASSET',
+    creditFilter: 'ASSET',
+    debitSubFilter: isTalanganAccount,
+    defaultDebitType: 'ASSET',
+    defaultCreditType: 'ASSET',
+    suggestedCategory: 'FIN',
+    lockCategory: true,
+    nameLabel: 'Nama Penerima Talangan',
+    namePlaceholder: 'Siapa yang ditalangi?',
+  },
+  {
+    id: 'terima_kembali_talangan',
+    label: 'Terima Kembali Talangan',
+    description: 'Terima pembayaran kembali atas talangan yang diberikan',
+    icon: <Receipt className="w-5 h-5" />,
+    color: 'text-lime-600 dark:text-lime-400',
+    bgColor: 'bg-lime-50 dark:bg-lime-900/20',
+    borderColor: 'border-lime-500',
+    debitFilter: 'ASSET',
+    creditFilter: 'ASSET',
+    creditSubFilter: isTalanganAccount,
+    defaultDebitType: 'ASSET',
+    defaultCreditType: 'ASSET',
+    suggestedCategory: 'FIN',
+    lockCategory: true,
+    nameLabel: 'Nama Pembayar',
+    namePlaceholder: 'Siapa yang membayar kembali?',
+  },
 ];
 
 const CATEGORY_LABELS: Record<TransactionCategory, string> = {
@@ -264,6 +318,18 @@ const CATEGORY_LABELS: Record<TransactionCategory, string> = {
 
 const ALL_CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
+// TODO: make default visible types user-configurable per business
+const DEFAULT_VISIBLE_IDS: Set<EntryTypeId> = new Set([
+  'penjualan',
+  'pengeluaran',
+  'catat_talangan',
+  'terima_kembali_talangan',
+  'suntik_modal',
+  'tarik_dividen',
+]);
+
+const STORAGE_KEY_ENTRY_TYPES_EXPANDED = 'katalis_journal_entry_types_expanded';
+
 // ─── page ──────────────────────────────────────────────────────────────────
 
 export default function JournalEntryPage() {
@@ -272,6 +338,22 @@ export default function JournalEntryPage() {
 
   // step state
   const [selectedEntryType, setSelectedEntryType] = useState<EntryType | null>(null);
+
+  // entry type grid expand/collapse — persisted to localStorage
+  const [entryTypesExpanded, setEntryTypesExpanded] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try { return localStorage.getItem(STORAGE_KEY_ENTRY_TYPES_EXPANDED) === 'true'; } catch { return false; }
+  });
+  const toggleEntryTypesExpanded = () => {
+    setEntryTypesExpanded(prev => {
+      const next = !prev;
+      try { localStorage.setItem(STORAGE_KEY_ENTRY_TYPES_EXPANDED, String(next)); } catch { /* noop */ }
+      return next;
+    });
+  };
+
+  const defaultEntryTypes = ENTRY_TYPES.filter(et => DEFAULT_VISIBLE_IDS.has(et.id));
+  const extraEntryTypes = ENTRY_TYPES.filter(et => !DEFAULT_VISIBLE_IDS.has(et.id));
 
   // form state
   const [amount, setAmount] = useState(0);
@@ -346,15 +428,16 @@ export default function JournalEntryPage() {
     setCategory(entryType.suggestedCategory);
   }, [cashAccount]);
 
-  // Auto-detect category when debit/credit accounts change
+  // Auto-detect category when debit/credit accounts change (skip if locked)
   useEffect(() => {
+    if (selectedEntryType?.lockCategory) return;
     if (!debitAccountId || !creditAccountId) return;
     const debitAcc = accounts.find(a => a.id === debitAccountId);
     const creditAcc = accounts.find(a => a.id === creditAccountId);
     if (!debitAcc || !creditAcc) return;
     const detected = detectCategory(debitAcc.account_code, creditAcc.account_code, debitAcc, creditAcc);
     setCategory(detected);
-  }, [debitAccountId, creditAccountId, accounts]);
+  }, [debitAccountId, creditAccountId, accounts, selectedEntryType]);
 
   // Inventory picker
   const debitAccount = accounts.find(a => a.id === debitAccountId);
@@ -552,8 +635,10 @@ export default function JournalEntryPage() {
         <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
           Jenis Transaksi
         </p>
+
+        {/* Default visible entry types */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-          {ENTRY_TYPES.map((et) => {
+          {defaultEntryTypes.map((et) => {
             const isSelected = selectedEntryType?.id === et.id;
             return (
               <button
@@ -573,17 +658,62 @@ export default function JournalEntryPage() {
               </button>
             );
           })}
-
-          {/* Buat Invoice — navigasi ke halaman invoice */}
-          <button
-            type="button"
-            onClick={() => router.push('/invoices?create=true')}
-            className="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/10 text-indigo-500 dark:text-indigo-400 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all text-center"
-          >
-            <FileText className="w-5 h-5" />
-            <span className="text-xs font-semibold leading-tight">Buat Invoice</span>
-          </button>
         </div>
+
+        {/* Expandable extra entry types */}
+        {entryTypesExpanded && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
+            {extraEntryTypes.map((et) => {
+              const isSelected = selectedEntryType?.id === et.id;
+              return (
+                <button
+                  key={et.id}
+                  type="button"
+                  onClick={() => handleSelectEntryType(et)}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center ${
+                    isSelected
+                      ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 dark:border-indigo-400 text-indigo-500 dark:text-indigo-400'
+                      : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
+                  }`}
+                >
+                  <span className={isSelected ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}>
+                    {et.icon}
+                  </span>
+                  <span className="text-xs font-semibold leading-tight">{et.label}</span>
+                </button>
+              );
+            })}
+
+            {/* Buat Invoice — always in the extra section, with dashed border styling */}
+            <button
+              type="button"
+              onClick={() => router.push('/invoices?create=true')}
+              className="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/10 text-indigo-500 dark:text-indigo-400 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all text-center"
+            >
+              <FileText className="w-5 h-5" />
+              <span className="text-xs font-semibold leading-tight">Buat Invoice</span>
+            </button>
+          </div>
+        )}
+
+        {/* Toggle button */}
+        <button
+          type="button"
+          onClick={toggleEntryTypesExpanded}
+          className="mt-2 flex items-center gap-1.5 text-xs font-medium text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
+        >
+          {entryTypesExpanded ? (
+            <>
+              <ChevronUp className="w-3.5 h-3.5" />
+              Sembunyikan
+            </>
+          ) : (
+            <>
+              <ChevronDown className="w-3.5 h-3.5" />
+              + Tampilkan Lainnya
+            </>
+          )}
+        </button>
         {selectedEntryType && (
           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
             {selectedEntryType.description}
@@ -617,7 +747,7 @@ export default function JournalEntryPage() {
                   }}
                   inputClassName="text-2xl font-bold"
                   colorVariant={
-                    selectedEntryType.id === 'penjualan' || selectedEntryType.id === 'pinjaman' || selectedEntryType.id === 'suntik_modal'
+                    selectedEntryType.id === 'penjualan' || selectedEntryType.id === 'pinjaman' || selectedEntryType.id === 'suntik_modal' || selectedEntryType.id === 'terima_kembali_talangan'
                       ? 'green'
                       : 'red'
                   }
@@ -659,11 +789,13 @@ export default function JournalEntryPage() {
               <div>
                 <AccountDropdown
                   label="Akun Debit"
-                  accounts={accounts.filter(a =>
-                    selectedEntryType.debitFilter === 'ALL'
+                  accounts={accounts.filter(a => {
+                    const typeMatch = selectedEntryType.debitFilter === 'ALL'
                       ? true
-                      : a.account_type === selectedEntryType.debitFilter
-                  )}
+                      : a.account_type === selectedEntryType.debitFilter;
+                    if (!typeMatch) return false;
+                    return selectedEntryType.debitSubFilter ? selectedEntryType.debitSubFilter(a) : true;
+                  })}
                   value={debitAccountId}
                   onChange={(id, _code) => {
                     setDebitAccountId(id);
@@ -677,11 +809,13 @@ export default function JournalEntryPage() {
               <div>
                 <AccountDropdown
                   label="Akun Kredit"
-                  accounts={accounts.filter(a =>
-                    selectedEntryType.creditFilter === 'ALL'
+                  accounts={accounts.filter(a => {
+                    const typeMatch = selectedEntryType.creditFilter === 'ALL'
                       ? true
-                      : a.account_type === selectedEntryType.creditFilter
-                  )}
+                      : a.account_type === selectedEntryType.creditFilter;
+                    if (!typeMatch) return false;
+                    return selectedEntryType.creditSubFilter ? selectedEntryType.creditSubFilter(a) : true;
+                  })}
                   value={creditAccountId}
                   onChange={(id, _code) => {
                     setCreditAccountId(id);
@@ -744,12 +878,15 @@ export default function JournalEntryPage() {
               <div>
                 <label className="label text-base font-semibold">
                   Kategori
-                  <span className="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500">(otomatis terdeteksi)</span>
+                  <span className="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500">
+                    {selectedEntryType.lockCategory ? '(terkunci)' : '(otomatis terdeteksi)'}
+                  </span>
                 </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value as TransactionCategory)}
-                  className="input"
+                  className={`input ${selectedEntryType.lockCategory ? 'bg-gray-50 dark:bg-gray-700' : ''}`}
+                  disabled={selectedEntryType.lockCategory}
                 >
                   {ALL_CATEGORIES.map((cat) => (
                     <option key={cat} value={cat}>
