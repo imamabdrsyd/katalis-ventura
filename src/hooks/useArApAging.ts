@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useReportData } from './useReportData';
-import type { Transaction, ArApSummary, AgingRow } from '@/types';
+import type { Transaction, ArApSummary, AgingRow, ContactType } from '@/types';
 
 /**
  * Calculate the number of days between a transaction date and the reference (report end) date.
@@ -55,7 +55,7 @@ function getReceivableDirection(t: Transaction): 'debit' | 'credit' | null {
 interface ContactAgingData {
   contactName: string;
   contactId: string | null;
-  contactType: string | null;
+  contactType: ContactType | null;
   /** Originating transactions sorted by date ascending (oldest first) */
   originatingTxns: Transaction[];
   /** Total payments received/made */
