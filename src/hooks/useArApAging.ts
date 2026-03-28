@@ -2,7 +2,9 @@
 
 import { useMemo } from 'react';
 import { useReportData } from './useReportData';
-import type { Transaction, ArApSummary, AgingRow, ContactType } from '@/types';
+import { isReceivableTransaction, isSettled, isSettlementEntry } from '@/lib/accounting/guidance/receivableSettlement';
+import { isPayableTransaction, isPayableSettled, isPayableSettlementEntry } from '@/lib/accounting/guidance/payableSettlement';
+import type { Transaction, ArApSummary, AgingRow } from '@/types';
 
 /**
  * Calculate the number of days between a transaction date and the reference (report end) date.
@@ -14,131 +16,36 @@ function daysSince(txDate: string, referenceDate: string): number {
 }
 
 /**
- * Check if a transaction touches a LIABILITY account (for AP).
- * Returns: 'credit' if it creates debt (Cr LIABILITY), 'debit' if it pays debt (Dr LIABILITY), or null.
- */
-function getPayableDirection(t: Transaction): 'credit' | 'debit' | null {
-  if (t.credit_account?.account_type === 'LIABILITY') {
-    return 'credit';
-  }
-  if (t.debit_account?.account_type === 'LIABILITY') {
-    return 'debit';
-  }
-  return null;
-}
-
-/**
- * Check if a transaction touches a receivable ASSET account (for AR).
- * Returns: 'debit' if it creates receivable (Dr ASSET), 'credit' if it collects (Cr ASSET), or null.
- */
-function getReceivableDirection(t: Transaction): 'debit' | 'credit' | null {
-  const isReceivableAccount = (acc: { account_type: string; account_name: string; default_category?: string | null }) => {
-    if (acc.account_type !== 'ASSET') return false;
-    if (acc.default_category === 'FIN') return false;
-    if (/talangan|advance/i.test(acc.account_name)) return false;
-    if (acc.default_category === 'EARN') return true;
-    return /piutang usaha|receivable/i.test(acc.account_name);
-  };
-
-  if (t.debit_account && isReceivableAccount(t.debit_account)) {
-    return 'debit';
-  }
-  if (t.credit_account && isReceivableAccount(t.credit_account)) {
-    return 'credit';
-  }
-  return null;
-}
-
-interface ContactAgingData {
-  contactName: string;
-  contactId: string | null;
-  contactType: ContactType | null;
-  /** Originating transactions sorted by date ascending (oldest first) */
-  originatingTxns: Transaction[];
-  /** Total payments received/made */
-  totalPayments: number;
-}
-
-/**
- * Build aging summary by netting payments against outstanding per contact.
- *
- * For AP: outstanding = sum(Cr LIABILITY) - sum(Dr LIABILITY) per contact
- * For AR: outstanding = sum(Dr ASSET receivable) - sum(Cr ASSET receivable) per contact
- *
- * Net outstanding is placed into aging buckets based on the oldest unpaid
- * transaction date (FIFO: payments retire oldest debt first).
+ * Group outstanding transactions into aging buckets by contact name.
  */
 function buildAgingSummary(
   transactions: Transaction[],
   referenceDate: string,
-  directionFn: (t: Transaction) => 'debit' | 'credit' | null,
-  originatingSide: 'credit' | 'debit',
+  filterFn: (t: Transaction) => boolean,
+  isSettledFn: (t: Transaction) => boolean,
+  isEntryFn: (t: Transaction) => boolean,
 ): ArApSummary {
-  // Group by contact name, separating originating vs payment transactions
-  const byContact = new Map<string, ContactAgingData>();
+  // Filter: matching transactions that are NOT settled and NOT themselves settlement entries
+  const outstanding = transactions.filter(
+    (t) => filterFn(t) && !isSettledFn(t) && !isEntryFn(t)
+  );
 
-  for (const t of transactions) {
-    const dir = directionFn(t);
-    if (dir === null) continue;
-
-    const key = t.contact_id || t.name || 'Tanpa Nama';
-    if (!byContact.has(key)) {
-      byContact.set(key, {
-        contactName: t.contact?.name || t.name || 'Tanpa Nama',
-        contactId: t.contact_id ?? null,
-        contactType: t.contact?.type ?? null,
-        originatingTxns: [],
-        totalPayments: 0,
-      });
-    }
-    const data = byContact.get(key)!;
-
-    if (dir === originatingSide) {
-      // This creates debt/receivable
-      data.originatingTxns.push(t);
-    } else {
-      // This pays down debt/receivable
-      data.totalPayments += Number(t.amount);
-    }
-
-    // Update contact info if available
-    if (!data.contactType && t.contact?.type) {
-      data.contactType = t.contact.type;
-    }
-    if (!data.contactId && t.contact_id) {
-      data.contactId = t.contact_id;
-    }
+  // Group by contact name
+  const byContact = new Map<string, Transaction[]>();
+  for (const t of outstanding) {
+    const name = t.name || 'Tanpa Nama';
+    const list = byContact.get(name) || [];
+    list.push(t);
+    byContact.set(name, list);
   }
 
   const rows: AgingRow[] = [];
 
-  for (const [, data] of byContact) {
-    // Sort originating transactions by date ascending (oldest first) for FIFO
-    data.originatingTxns.sort((a, b) => a.date.localeCompare(b.date));
-
-    // Apply payments FIFO: retire oldest transactions first
-    let remainingPayments = data.totalPayments;
-    const unpaidTxns: { date: string; amount: number }[] = [];
-
-    for (const t of data.originatingTxns) {
-      const amount = Number(t.amount);
-      if (remainingPayments >= amount) {
-        // Fully paid — skip
-        remainingPayments -= amount;
-      } else {
-        // Partially or not paid
-        unpaidTxns.push({ date: t.date, amount: amount - remainingPayments });
-        remainingPayments = 0;
-      }
-    }
-
-    // Skip contacts with no outstanding balance
-    if (unpaidTxns.length === 0) continue;
-
+  for (const [contactName, txns] of byContact) {
     const row: AgingRow = {
-      contactId: data.contactId,
-      contactName: data.contactName,
-      contactType: data.contactType,
+      contactId: txns[0].contact_id ?? null,
+      contactName,
+      contactType: null,
       current: 0,
       bucket30: 0,
       bucket60: 0,
@@ -148,26 +55,32 @@ function buildAgingSummary(
       oldestDate: null,
     };
 
-    for (const u of unpaidTxns) {
-      const days = daysSince(u.date, referenceDate);
+    for (const t of txns) {
+      const amount = Number(t.amount);
+      const days = daysSince(t.date, referenceDate);
 
       if (days <= 0) {
-        row.current += u.amount;
+        row.current += amount;
       } else if (days <= 30) {
-        row.bucket30 += u.amount;
+        row.bucket30 += amount;
       } else if (days <= 60) {
-        row.bucket60 += u.amount;
+        row.bucket60 += amount;
       } else if (days <= 90) {
-        row.bucket90 += u.amount;
+        row.bucket90 += amount;
       } else {
-        row.bucketOver90 += u.amount;
+        row.bucketOver90 += amount;
       }
 
-      row.total += u.amount;
+      row.total += amount;
 
-      if (!row.oldestDate || u.date < row.oldestDate) {
-        row.oldestDate = u.date;
+      if (!row.oldestDate || t.date < row.oldestDate) {
+        row.oldestDate = t.date;
       }
+    }
+
+    // Try to get contact type from the first transaction's contact
+    if (txns[0].contact) {
+      row.contactType = txns[0].contact.type;
     }
 
     rows.push(row);
@@ -205,17 +118,15 @@ export function useArApAging() {
 
   const referenceDate = endDate || new Date().toISOString().split('T')[0];
 
-  // AR (Piutang) — receivable ASSET transactions netted against collections
-  // Originating side = 'debit' (Dr Piutang creates receivable)
+  // AR (Piutang) — receivable transactions that haven't been settled
   const arSummary = useMemo(
-    () => buildAgingSummary(transactions, referenceDate, getReceivableDirection, 'debit'),
+    () => buildAgingSummary(transactions, referenceDate, isReceivableTransaction, isSettled, isSettlementEntry),
     [transactions, referenceDate]
   );
 
-  // AP (Hutang) — payable LIABILITY transactions netted against payments
-  // Originating side = 'credit' (Cr Hutang creates debt)
+  // AP (Hutang) — payable transactions that haven't been settled
   const apSummary = useMemo(
-    () => buildAgingSummary(transactions, referenceDate, getPayableDirection, 'credit'),
+    () => buildAgingSummary(transactions, referenceDate, isPayableTransaction, isPayableSettled, isPayableSettlementEntry),
     [transactions, referenceDate]
   );
 
