@@ -99,12 +99,12 @@ export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
 };
 
 export const CATEGORY_COLORS: Record<TransactionCategory, string> = {
-  EARN: '#10b981', // green
-  OPEX: '#ef4444', // red
-  VAR: '#f59e0b', // amber
-  CAPEX: '#6366f1', // indigo
-  TAX: '#8b5cf6', // purple
-  FIN: '#ec4899', // pink
+  EARN: '#059669', // emerald
+  OPEX: '#dc2626', // red
+  VAR: '#d97706', // amber
+  CAPEX: '#2563eb', // blue
+  TAX: '#ca8a04', // yellow
+  FIN: '#4f46e5', // indigo
 };
 
 // Calculate financial summary from transactions

@@ -31,12 +31,12 @@ interface TransactionDetailModalProps {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  EARN: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-500 dark:text-emerald-300',
-  OPEX: 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-300',
-  VAR: 'bg-amber-50 dark:bg-amber-900/30 text-amber-500 dark:text-amber-300',
-  CAPEX: 'bg-blue-100 dark:bg-blue-900/100 text-blue-700 dark:text-blue-700',
-  TAX: 'bg-purple-50 dark:bg-purple-900/30 text-purple-500 dark:text-purple-300',
-  FIN: 'bg-pink-50 dark:bg-pink-900/30 text-pink-500 dark:text-pink-300',
+  EARN: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
+  OPEX: 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400',
+  VAR: 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
+  CAPEX: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
+  TAX: 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400',
+  FIN: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
 };
 
 const STOCK_COLOR = 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300';
