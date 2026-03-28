@@ -19,10 +19,10 @@ function daysSince(txDate: string, referenceDate: string): number {
  */
 function getPayableDirection(t: Transaction): 'credit' | 'debit' | null {
   if (!t.is_double_entry) return null;
-  if (t.credit_account?.account_type === 'LIABILITY' && /hutang|utang|payable/i.test(t.credit_account.account_name)) {
+  if (t.credit_account?.account_type === 'LIABILITY') {
     return 'credit';
   }
-  if (t.debit_account?.account_type === 'LIABILITY' && /hutang|utang|payable/i.test(t.debit_account.account_name)) {
+  if (t.debit_account?.account_type === 'LIABILITY') {
     return 'debit';
   }
   return null;
@@ -84,17 +84,17 @@ function buildAgingSummary(
     const dir = directionFn(t);
     if (dir === null) continue;
 
-    const name = t.name || 'Tanpa Nama';
-    if (!byContact.has(name)) {
-      byContact.set(name, {
-        contactName: name,
+    const key = t.contact_id || t.name || 'Tanpa Nama';
+    if (!byContact.has(key)) {
+      byContact.set(key, {
+        contactName: t.contact?.name || t.name || 'Tanpa Nama',
         contactId: t.contact_id ?? null,
         contactType: t.contact?.type ?? null,
         originatingTxns: [],
         totalPayments: 0,
       });
     }
-    const data = byContact.get(name)!;
+    const data = byContact.get(key)!;
 
     if (dir === originatingSide) {
       // This creates debt/receivable
