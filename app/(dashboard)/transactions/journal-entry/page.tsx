@@ -339,7 +339,7 @@ const STORAGE_KEY_ENTRY_TYPES_EXPANDED = 'katalis_journal_entry_types_expanded';
 // ─── multi-line helpers ───────────────────────────────────────────────────
 
 /** Entry types that support multi-line mode */
-const MULTI_LINE_ELIGIBLE: Set<EntryTypeId> = new Set(['penjualan', 'pengeluaran']);
+const MULTI_LINE_ELIGIBLE: Set<EntryTypeId> = new Set(['penjualan', 'pengeluaran', 'pinjaman']);
 
 interface MultiLineLine {
   account_id: string;
@@ -590,6 +590,16 @@ export default function JournalEntryPage() {
         secondLine.account_id = creditAccountId;
         secondLine.credit_amount = amount;
       }
+    } else if (selectedEntryType?.id === 'pinjaman') {
+      // Terima Pinjaman: first row debit=ASSET(cash/bank), second row credit=LIABILITY
+      if (debitAccountId) {
+        firstLine.account_id = debitAccountId;
+        firstLine.debit_amount = amount;
+      }
+      if (creditAccountId) {
+        secondLine.account_id = creditAccountId;
+        secondLine.credit_amount = amount;
+      }
     }
 
     setMlLines([firstLine, secondLine]);
@@ -681,6 +691,13 @@ export default function JournalEntryPage() {
         ? accounts.filter(a => a.account_type === 'EXPENSE' || a.account_type === 'ASSET')
         : accounts.filter(a => a.account_type === 'ASSET' || a.account_type === 'LIABILITY');
     }
+    if (selectedEntryType.id === 'pinjaman') {
+      // Debit rows → ASSET or EXPENSE (biaya layanan, admin fee, provisi)
+      // Credit rows → LIABILITY only
+      return side === 'debit'
+        ? accounts.filter(a => a.account_type === 'ASSET' || a.account_type === 'EXPENSE')
+        : accounts.filter(a => a.account_type === 'LIABILITY');
+    }
     return accounts;
   };
 
@@ -692,7 +709,7 @@ export default function JournalEntryPage() {
     if (line.account_id) {
       const acc = accounts.find(a => a.id === line.account_id);
       if (acc) {
-        if (acc.account_type === 'REVENUE') return 'credit';
+        if (acc.account_type === 'REVENUE' || acc.account_type === 'LIABILITY') return 'credit';
         if (acc.account_type === 'EXPENSE') return 'debit';
       }
     }
