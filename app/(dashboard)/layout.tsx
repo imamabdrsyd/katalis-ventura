@@ -841,7 +841,7 @@ function Sidebar({
             { href: '/businesses', label: 'Manage Business', icon: Building2 },
           ].map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
               <div key={item.href} className="relative group">
                 <Link
