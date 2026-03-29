@@ -139,7 +139,7 @@ function SummaryCards({ arSummary, apSummary, netArTotal, netApTotal }: {
       {/* Net Position */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
         <div className="flex items-center gap-2 mb-1">
-          <Users className="w-4 h-4 text-blue-500" />
+          <Users className="w-4 h-4 text-indigo-500" />
           <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Posisi Bersih</span>
         </div>
         <p className={`text-xl font-bold ${netPosition >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
@@ -342,13 +342,13 @@ function ArApPageInner() {
               onClick={() => setActiveTab('ar')}
               className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'ar'
-                  ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                   : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
               Piutang (AR)
               {arSummary.rows.length > 0 && (
-                <span className="ml-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs px-2 py-0.5 rounded-full">
+                <span className="ml-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs px-2 py-0.5 rounded-full">
                   {arSummary.rows.length}
                 </span>
               )}
@@ -357,13 +357,13 @@ function ArApPageInner() {
               onClick={() => setActiveTab('ap')}
               className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'ap'
-                  ? 'border-rose-500 text-rose-600 dark:text-rose-400'
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                   : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
               Hutang (AP)
               {apSummary.rows.length > 0 && (
-                <span className="ml-2 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 text-xs px-2 py-0.5 rounded-full">
+                <span className="ml-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs px-2 py-0.5 rounded-full">
                   {apSummary.rows.length}
                 </span>
               )}
