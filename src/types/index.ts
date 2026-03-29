@@ -666,3 +666,21 @@ export interface ArApSummary {
   grandTotal: number;
   rows: AgingRow[];
 }
+
+export interface RepaymentRow {
+  id: string;
+  date: string;
+  contactName: string;
+  contactId: string | null;
+  contactType: ContactType | null;
+  description: string;
+  amount: number;
+  /** 'ap' = bisnis bayar hutang, 'ar' = pihak lain bayar piutang ke bisnis */
+  type: 'ap' | 'ar';
+}
+
+export interface RepaymentSummary {
+  rows: RepaymentRow[];
+  totalApRepaid: number;
+  totalArCollected: number;
+}

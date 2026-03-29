@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { useReportData } from './useReportData';
 import { isReceivableTransaction, isSettled, isSettlementEntry } from '@/lib/accounting/guidance/receivableSettlement';
 import { isPayableTransaction, isPayableSettled, isPayableSettlementEntry } from '@/lib/accounting/guidance/payableSettlement';
-import type { Transaction, ArApSummary, AgingRow } from '@/types';
+import type { Transaction, ArApSummary, AgingRow, RepaymentRow, RepaymentSummary } from '@/types';
 
 /**
  * Calculate the number of days between a transaction date and the reference (report end) date.
@@ -112,6 +112,64 @@ function buildAgingSummary(
   return summary;
 }
 
+/**
+ * Detect repayment/collection transactions:
+ * - AP repayment: Dr LIABILITY (bisnis bayar hutang)
+ * - AR collection: Cr receivable ASSET (pihak lain bayar piutang ke bisnis)
+ */
+function buildRepaymentSummary(transactions: Transaction[]): RepaymentSummary {
+  const rows: RepaymentRow[] = [];
+  let totalApRepaid = 0;
+  let totalArCollected = 0;
+
+  for (const t of transactions) {
+    if (!t.is_double_entry) continue;
+
+    // AP repayment: Dr LIABILITY / Cr Kas-Bank
+    if (t.debit_account?.account_type === 'LIABILITY') {
+      const amount = Number(t.amount);
+      rows.push({
+        id: t.id,
+        date: t.date,
+        contactName: t.name || 'Tanpa Nama',
+        contactId: t.contact_id ?? null,
+        contactType: t.contact?.type ?? null,
+        description: t.description,
+        amount,
+        type: 'ap',
+      });
+      totalApRepaid += amount;
+    }
+
+    // AR collection: Cr receivable ASSET / Dr Kas-Bank
+    if (t.credit_account?.account_type === 'ASSET') {
+      const acct = t.credit_account;
+      if (acct.default_category === 'FIN') continue;
+      if (/talangan|advance/i.test(acct.account_name)) continue;
+      const isReceivable = acct.default_category === 'EARN' || /piutang usaha|receivable/i.test(acct.account_name);
+      if (!isReceivable) continue;
+
+      const amount = Number(t.amount);
+      rows.push({
+        id: t.id,
+        date: t.date,
+        contactName: t.name || 'Tanpa Nama',
+        contactId: t.contact_id ?? null,
+        contactType: t.contact?.type ?? null,
+        description: t.description,
+        amount,
+        type: 'ar',
+      });
+      totalArCollected += amount;
+    }
+  }
+
+  // Sort by date descending (most recent first)
+  rows.sort((a, b) => b.date.localeCompare(a.date));
+
+  return { rows, totalApRepaid, totalArCollected };
+}
+
 export function useArApAging() {
   const reportData = useReportData();
   const { transactions, loading, endDate } = reportData;
@@ -130,10 +188,23 @@ export function useArApAging() {
     [transactions, referenceDate]
   );
 
+  // Repayment history (pembayaran hutang + pelunasan piutang)
+  const repaymentSummary = useMemo(
+    () => buildRepaymentSummary(transactions),
+    [transactions]
+  );
+
+  // Net summaries: outstanding - repaid
+  const netArTotal = arSummary.grandTotal - repaymentSummary.totalArCollected;
+  const netApTotal = apSummary.grandTotal - repaymentSummary.totalApRepaid;
+
   return {
     ...reportData,
     arSummary,
     apSummary,
+    repaymentSummary,
+    netArTotal,
+    netApTotal,
     loading,
   };
 }

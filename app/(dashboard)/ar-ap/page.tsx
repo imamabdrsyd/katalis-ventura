@@ -1,11 +1,11 @@
 'use client';
 
 import React, { Suspense, useState } from 'react';
-import { Users, Calendar, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
+import { Users, Calendar, AlertTriangle, TrendingUp, TrendingDown, ArrowRightLeft } from 'lucide-react';
 import { useArApAging } from '@/hooks/useArApAging';
 import { formatCurrency } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
-import type { ArApSummary, AgingRow } from '@/types';
+import type { ArApSummary, AgingRow, RepaymentSummary } from '@/types';
 
 const PERIOD_LABELS: Record<Period, string> = {
   month: 'Bulan Ini',
@@ -104,30 +104,35 @@ function AgingTableRow({ row, colorAccent }: { row: AgingRow; colorAccent: strin
 
 // ─── Summary Cards ─────────────────────────────────────────────
 
-function SummaryCards({ arSummary, apSummary }: { arSummary: ArApSummary; apSummary: ArApSummary }) {
-  const netPosition = arSummary.grandTotal - apSummary.grandTotal;
+function SummaryCards({ arSummary, apSummary, netArTotal, netApTotal }: {
+  arSummary: ArApSummary;
+  apSummary: ArApSummary;
+  netArTotal: number;
+  netApTotal: number;
+}) {
+  const netPosition = netArTotal - netApTotal;
   const overdueAR = arSummary.total60 + arSummary.total90 + arSummary.totalOver90;
   const overdueAP = apSummary.total60 + apSummary.total90 + apSummary.totalOver90;
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      {/* Total AR */}
+      {/* Sisa Piutang */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
         <div className="flex items-center gap-2 mb-1">
           <TrendingUp className="w-4 h-4 text-emerald-500" />
-          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Total Piutang</span>
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Sisa Piutang</span>
         </div>
-        <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(arSummary.grandTotal)}</p>
+        <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(Math.max(0, netArTotal))}</p>
         <p className="text-xs text-gray-500 mt-1">{arSummary.rows.length} kontak</p>
       </div>
 
-      {/* Total AP */}
+      {/* Sisa Hutang */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
         <div className="flex items-center gap-2 mb-1">
           <TrendingDown className="w-4 h-4 text-rose-500" />
-          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Total Hutang</span>
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Sisa Hutang</span>
         </div>
-        <p className="text-xl font-bold text-rose-600 dark:text-rose-400">{formatCurrency(apSummary.grandTotal)}</p>
+        <p className="text-xl font-bold text-rose-600 dark:text-rose-400">{formatCurrency(Math.max(0, netApTotal))}</p>
         <p className="text-xs text-gray-500 mt-1">{apSummary.rows.length} kontak</p>
       </div>
 
@@ -158,6 +163,82 @@ function SummaryCards({ arSummary, apSummary }: { arSummary: ArApSummary; apSumm
   );
 }
 
+// ─── Repayment History Table ────────────────────────────────────
+
+function RepaymentTable({ summary }: { summary: RepaymentSummary }) {
+  if (summary.rows.length === 0) {
+    return (
+      <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+        <ArrowRightLeft className="w-12 h-12 mx-auto mb-3 opacity-40" />
+        <p className="font-medium">Belum ada riwayat pembayaran</p>
+        <p className="text-sm mt-1">Transaksi pembayaran hutang atau pelunasan piutang akan muncul di sini.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      {/* Summary bar */}
+      <div className="flex items-center gap-4 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 text-sm">
+        <span className="text-gray-500 dark:text-gray-400">Total dibayar:</span>
+        <span className="font-semibold text-rose-600 dark:text-rose-400">
+          Hutang: {formatCurrency(summary.totalApRepaid)}
+        </span>
+        <span className="text-gray-300 dark:text-gray-600">|</span>
+        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+          Piutang diterima: {formatCurrency(summary.totalArCollected)}
+        </span>
+      </div>
+
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-gray-200 dark:border-gray-700 text-left">
+            <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300">Tanggal</th>
+            <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300">Kontak</th>
+            <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300">Keterangan</th>
+            <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300">Tipe</th>
+            <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300 text-right">Jumlah</th>
+          </tr>
+        </thead>
+        <tbody>
+          {summary.rows.map((row) => (
+            <tr key={row.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+              <td className="py-3 px-4 text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                {new Date(row.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </td>
+              <td className="py-3 px-4">
+                <div className="flex items-center gap-2">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
+                    row.type === 'ap'
+                      ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400'
+                      : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                  }`}>
+                    {row.contactName.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{row.contactName}</span>
+                </div>
+              </td>
+              <td className="py-3 px-4 text-gray-600 dark:text-gray-400 max-w-[300px] truncate">{row.description}</td>
+              <td className="py-3 px-4">
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                  row.type === 'ap'
+                    ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400'
+                    : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                }`}>
+                  {row.type === 'ap' ? 'Bayar Hutang' : 'Terima Piutang'}
+                </span>
+              </td>
+              <td className="py-3 px-4 text-right font-semibold text-gray-900 dark:text-gray-100">
+                {formatCurrency(row.amount)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ─── Main Page ─────────────────────────────────────────────────
 
 function ArApPageInner() {
@@ -172,9 +253,12 @@ function ArApPageInner() {
     handlePeriodChange,
     arSummary,
     apSummary,
+    repaymentSummary,
+    netArTotal,
+    netApTotal,
   } = useArApAging();
 
-  const [activeTab, setActiveTab] = useState<'ar' | 'ap'>('ar');
+  const [activeTab, setActiveTab] = useState<'ar' | 'ap' | 'repayment'>('ar');
 
   if (loading) {
     return (
@@ -248,7 +332,7 @@ function ArApPageInner() {
       </div>
 
       {/* Summary Cards */}
-      <SummaryCards arSummary={arSummary} apSummary={apSummary} />
+      <SummaryCards arSummary={arSummary} apSummary={apSummary} netArTotal={netArTotal} netApTotal={netApTotal} />
 
       {/* Tabs */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
@@ -284,6 +368,21 @@ function ArApPageInner() {
                 </span>
               )}
             </button>
+            <button
+              onClick={() => setActiveTab('repayment')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'repayment'
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Riwayat Pembayaran
+              {repaymentSummary.rows.length > 0 && (
+                <span className="ml-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs px-2 py-0.5 rounded-full">
+                  {repaymentSummary.rows.length}
+                </span>
+              )}
+            </button>
           </div>
         </div>
 
@@ -291,6 +390,7 @@ function ArApPageInner() {
         <div className="p-0">
           {activeTab === 'ar' && <AgingTable summary={arSummary} type="ar" />}
           {activeTab === 'ap' && <AgingTable summary={apSummary} type="ap" />}
+          {activeTab === 'repayment' && <RepaymentTable summary={repaymentSummary} />}
         </div>
       </div>
     </div>
