@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 28 Maret 2026 | Multi-line journal entry: 28 Maret 2026
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 29 Maret 2026 | AR/AP Aging & Repayment: 29 Maret 2026
 
 ---
 
@@ -28,6 +28,7 @@
 19. [Audit Findings & Known Issues](#19-audit-findings--known-issues)
 20. [Data Flow Diagrams](#20-data-flow-diagrams)
 21. [Business Members & Access Control](#21-business-members--access-control)
+22. [AR/AP Aging & Repayment History](#22-arap-aging--repayment-history)
 
 ---
 
@@ -1156,7 +1157,7 @@ File: `src/lib/accounting/depreciation.ts`
 
 Aset tetap (CAPEX) didepresiasi menggunakan metode **straight-line** berdasarkan metadata yang disimpan di tabel `accounts`. Depreciation dihitung **on-the-fly** saat render laporan — BUKAN sebagai jurnal manual ke database.
 
-### 16.2 Database Fields (Migration 025)
+### 16.2 Database Fields (Migration 026)
 
 Kolom tambahan di tabel `accounts` (hanya relevan untuk ASSET + `default_category = 'CAPEX'`):
 
@@ -1729,7 +1730,7 @@ CREATE TABLE accounts (
     is_system BOOLEAN DEFAULT FALSE,    -- TRUE = cannot be deleted
     sort_order INTEGER,
     default_category TEXT,              -- EARN|OPEX|VAR|CAPEX|TAX|FIN (optional)
-    -- Depreciation fields (PSAK 16, Migration 025)
+    -- Depreciation fields (PSAK 16, Migration 026)
     useful_life_months INTEGER,
     residual_value NUMERIC DEFAULT 0,
     depreciation_method TEXT DEFAULT 'straight_line',
@@ -1797,6 +1798,101 @@ useReportData
 | `useScenarioModeling` | useReportData | baseline, optimistic, pessimistic, custom, projections |
 | `useBudget` | BusinessContext | budgets, varianceRows, summaryKPI, projections |
 | `useDashboard` | BusinessContext | summary, roi, categoryCounts (independent) |
+
+---
+
+## 22. AR/AP Aging & Repayment History
+
+### 22.1 Overview
+
+File: `src/hooks/useArApAging.ts`
+
+Halaman Piutang & Hutang (`/ar-ap`) menampilkan aging report dan riwayat pembayaran. Hook `useArApAging` menghitung tiga hal:
+1. **AR Aging** — outstanding piutang per kontak, grouped by aging bucket
+2. **AP Aging** — outstanding hutang per kontak, grouped by aging bucket
+3. **Repayment History** — riwayat transaksi pembayaran hutang dan pelunasan piutang
+
+### 22.2 Aging Summary (AR & AP)
+
+Menggunakan `buildAgingSummary()` dengan filter dari `receivableSettlement.ts` dan `payableSettlement.ts`:
+
+```
+AR (Piutang): isReceivableTransaction()
+  - is_double_entry = true
+  - debit_account.account_type === 'ASSET'
+  - default_category === 'EARN' ATAU nama mengandung "piutang usaha"/"receivable"
+  - Exclude: talangan/advance (FIN)
+
+AP (Hutang): isPayableTransaction()
+  - is_double_entry = true
+  - credit_account.account_type === 'LIABILITY'
+  - nama mengandung "hutang"/"utang"/"payable"
+```
+
+Transaksi yang sudah settled (`meta.settled_by_transaction_id`) atau merupakan settlement entry (`meta.settlement_of_transaction_id`) diexclude dari aging.
+
+Aging buckets: Current (≤0 hari), 1-30, 31-60, 61-90, >90 hari. Dihitung dari selisih tanggal transaksi ke tanggal referensi (akhir periode).
+
+### 22.3 Repayment History (Riwayat Pembayaran)
+
+`buildRepaymentSummary()` mendeteksi transaksi pembayaran yang merupakan **counter-entry** dari piutang/hutang:
+
+```
+AP Repayment (Bisnis bayar hutang):
+  - debit_account.account_type === 'LIABILITY'
+  - Contoh: Dr Hutang Bank / Cr Kas → cicilan pinjaman
+
+AR Collection (Pihak lain bayar piutang ke bisnis):
+  - credit_account.account_type === 'ASSET'
+  - credit_account harus receivable account (EARN / "piutang usaha")
+  - Exclude: talangan/advance (FIN)
+  - Contoh: Dr Kas / Cr Piutang Usaha → pelanggan bayar
+```
+
+### 22.4 Net Summary (Widget)
+
+Widget summary card menampilkan **sisa** (net) bukan total mentah:
+
+```
+Sisa Piutang = Total AR Outstanding - Total AR Collected
+Sisa Hutang  = Total AP Outstanding - Total AP Repaid
+Posisi Bersih = Sisa Piutang - Sisa Hutang
+```
+
+### 22.5 Tipe Data
+
+```typescript
+interface RepaymentRow {
+  id: string;
+  date: string;
+  contactName: string;
+  contactId: string | null;
+  contactType: ContactType | null;
+  description: string;
+  amount: number;
+  type: 'ap' | 'ar';  // ap = bayar hutang, ar = terima piutang
+}
+
+interface RepaymentSummary {
+  rows: RepaymentRow[];
+  totalApRepaid: number;
+  totalArCollected: number;
+}
+```
+
+### 22.6 Contoh Skenario
+
+```
+Jenius pencairan: Dr Kas Rp 39.412.363 / Cr Flexi Cash (LIABILITY)
+  → AP aging: +Rp 39.412.363
+
+Jenius cicilan:   Dr Flexi Cash (LIABILITY) Rp 7.875.504 / Cr Bank
+  → Repayment history: Bayar Hutang Rp 7.875.504
+  → totalApRepaid: Rp 7.875.504
+
+Widget:
+  Sisa Hutang = 39.412.363 - 7.875.504 = Rp 31.536.859
+```
 
 ---
 
