@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, Lock } from 'lucide-react';
+import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Lock } from 'lucide-react';
 import type { Transaction, TransactionCategory } from '@/types';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
 
@@ -370,6 +370,22 @@ export function TransactionList({
               </td>
               <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-800 dark:text-gray-200 break-words">
                 {(() => {
+                  // Multi-line journal: distinct icon
+                  if (transaction.is_multi_line) {
+                    return (
+                      <div className="group/transfer relative flex items-center gap-1.5">
+                        <ArrowLeftRight className="w-3.5 h-3.5 flex-shrink-0 text-indigo-500 dark:text-indigo-400" />
+                        <span className="truncate font-medium">Multi-line journal</span>
+                        <div className="pointer-events-none absolute top-full left-0 mt-1.5 hidden group-hover/transfer:block z-30">
+                          <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-md px-2.5 py-1.5 whitespace-nowrap shadow-lg">
+                            <div className="absolute bottom-full left-3 border-4 border-transparent border-b-gray-900 dark:border-b-gray-700" />
+                            Jurnal multi-line (beberapa akun)
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   const { accountName, isInflow, tooltip } = getAccountDisplay(transaction);
                   return (
                     <div className="group/transfer relative flex items-center gap-1.5">
