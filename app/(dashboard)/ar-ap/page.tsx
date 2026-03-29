@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { Users, Calendar, AlertTriangle, TrendingUp, TrendingDown, ArrowRightLeft } from 'lucide-react';
 import { useArApAging } from '@/hooks/useArApAging';
 import { formatCurrency } from '@/lib/utils';
@@ -76,7 +76,7 @@ function AgingTableRow({ row, colorAccent }: { row: AgingRow; colorAccent: strin
     <tr className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-full bg-${colorAccent}-100 dark:bg-${colorAccent}-900/30 flex items-center justify-center text-${colorAccent}-600 dark:text-${colorAccent}-400 font-semibold text-xs`}>
+          <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-semibold text-xs">
             {row.contactName.charAt(0).toUpperCase()}
           </div>
           <div>
@@ -208,11 +208,7 @@ function RepaymentTable({ summary }: { summary: RepaymentSummary }) {
               </td>
               <td className="py-3 px-4">
                 <div className="flex items-center gap-2">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
-                    row.type === 'ap'
-                      ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400'
-                      : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-                  }`}>
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
                     {row.contactName.charAt(0).toUpperCase()}
                   </div>
                   <span className="font-medium text-gray-900 dark:text-gray-100">{row.contactName}</span>
