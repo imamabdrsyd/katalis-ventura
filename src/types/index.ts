@@ -683,4 +683,6 @@ export interface RepaymentSummary {
   rows: RepaymentRow[];
   totalApRepaid: number;
   totalArCollected: number;
+  totalApRepaidNonSettlement: number;
+  totalArCollectedNonSettlement: number;
 }

@@ -121,9 +121,13 @@ function buildRepaymentSummary(transactions: Transaction[]): RepaymentSummary {
   const rows: RepaymentRow[] = [];
   let totalApRepaid = 0;
   let totalArCollected = 0;
+  let totalApRepaidNonSettlement = 0;
+  let totalArCollectedNonSettlement = 0;
 
   for (const t of transactions) {
     if (!t.is_double_entry) continue;
+
+    const isSettlementTx = !!t.meta?.settlement_of_transaction_id;
 
     // AP repayment: Dr LIABILITY / Cr Kas-Bank
     if (t.debit_account?.account_type === 'LIABILITY') {
@@ -139,6 +143,7 @@ function buildRepaymentSummary(transactions: Transaction[]): RepaymentSummary {
         type: 'ap',
       });
       totalApRepaid += amount;
+      if (!isSettlementTx) totalApRepaidNonSettlement += amount;
     }
 
     // AR collection: Cr receivable ASSET / Dr Kas-Bank
@@ -161,13 +166,14 @@ function buildRepaymentSummary(transactions: Transaction[]): RepaymentSummary {
         type: 'ar',
       });
       totalArCollected += amount;
+      if (!isSettlementTx) totalArCollectedNonSettlement += amount;
     }
   }
 
   // Sort by date descending (most recent first)
   rows.sort((a, b) => b.date.localeCompare(a.date));
 
-  return { rows, totalApRepaid, totalArCollected };
+  return { rows, totalApRepaid, totalArCollected, totalApRepaidNonSettlement, totalArCollectedNonSettlement };
 }
 
 export function useArApAging() {
@@ -194,9 +200,12 @@ export function useArApAging() {
     [transactions]
   );
 
-  // Net summaries: outstanding - repaid
-  const netArTotal = arSummary.grandTotal - repaymentSummary.totalArCollected;
-  const netApTotal = apSummary.grandTotal - repaymentSummary.totalApRepaid;
+  // Net summaries: outstanding - non-settlement repayments only
+  // Settlement entries (with meta.settlement_of_transaction_id) are already excluded
+  // from aging via isSettled/isSettlementEntry, so only subtract collections that
+  // were NOT created through the settlement flow to avoid double subtraction.
+  const netArTotal = arSummary.grandTotal - repaymentSummary.totalArCollectedNonSettlement;
+  const netApTotal = apSummary.grandTotal - repaymentSummary.totalApRepaidNonSettlement;
 
   return {
     ...reportData,
