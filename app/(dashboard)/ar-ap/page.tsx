@@ -17,7 +17,6 @@ const PERIOD_LABELS: Record<Period, string> = {
 // ─── Aging Table Component ─────────────────────────────────────
 
 function AgingTable({ summary, type }: { summary: ArApSummary; type: 'ar' | 'ap' }) {
-  const colorAccent = type === 'ar' ? 'emerald' : 'rose';
   const label = type === 'ar' ? 'Piutang' : 'Hutang';
 
   if (summary.rows.length === 0) {
@@ -46,7 +45,7 @@ function AgingTable({ summary, type }: { summary: ArApSummary; type: 'ar' | 'ap'
         </thead>
         <tbody>
           {summary.rows.map((row, i) => (
-            <AgingTableRow key={row.contactId || row.contactName + i} row={row} colorAccent={colorAccent} />
+            <AgingTableRow key={row.contactId || row.contactName + i} row={row} />
           ))}
         </tbody>
         <tfoot>
@@ -59,7 +58,7 @@ function AgingTable({ summary, type }: { summary: ArApSummary; type: 'ar' | 'ap'
             <td className={`py-3 px-3 text-right ${summary.totalOver90 > 0 ? 'text-red-600 dark:text-red-400' : ''}`}>
               {formatCurrency(summary.totalOver90)}
             </td>
-            <td className={`py-3 px-3 text-right font-bold text-${colorAccent}-600 dark:text-${colorAccent}-400`}>
+            <td className="py-3 px-3 text-right font-bold text-gray-900 dark:text-gray-100">
               {formatCurrency(summary.grandTotal)}
             </td>
           </tr>
@@ -69,7 +68,7 @@ function AgingTable({ summary, type }: { summary: ArApSummary; type: 'ar' | 'ap'
   );
 }
 
-function AgingTableRow({ row, colorAccent }: { row: AgingRow; colorAccent: string }) {
+function AgingTableRow({ row }: { row: AgingRow }) {
   const hasOverdue = row.bucket60 > 0 || row.bucket90 > 0 || row.bucketOver90 > 0;
 
   return (
@@ -119,30 +118,30 @@ function SummaryCards({ arSummary, apSummary, netArTotal, netApTotal }: {
       {/* Sisa Piutang */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
         <div className="flex items-center gap-2 mb-1">
-          <TrendingUp className="w-4 h-4 text-emerald-500" />
+          <TrendingUp className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Sisa Piutang</span>
         </div>
-        <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(Math.max(0, netArTotal))}</p>
+        <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(Math.max(0, netArTotal))}</p>
         <p className="text-xs text-gray-500 mt-1">{arSummary.rows.length} kontak</p>
       </div>
 
       {/* Sisa Hutang */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
         <div className="flex items-center gap-2 mb-1">
-          <TrendingDown className="w-4 h-4 text-rose-500" />
+          <TrendingDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Sisa Hutang</span>
         </div>
-        <p className="text-xl font-bold text-rose-600 dark:text-rose-400">{formatCurrency(Math.max(0, netApTotal))}</p>
+        <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(Math.max(0, netApTotal))}</p>
         <p className="text-xs text-gray-500 mt-1">{apSummary.rows.length} kontak</p>
       </div>
 
       {/* Net Position */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
         <div className="flex items-center gap-2 mb-1">
-          <Users className="w-4 h-4 text-indigo-500" />
+          <Users className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Posisi Bersih</span>
         </div>
-        <p className={`text-xl font-bold ${netPosition >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+        <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
           {formatCurrency(netPosition)}
         </p>
         <p className="text-xs text-gray-500 mt-1">{netPosition >= 0 ? 'Lebih banyak diterima' : 'Lebih banyak dibayar'}</p>
