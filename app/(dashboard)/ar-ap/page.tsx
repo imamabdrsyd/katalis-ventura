@@ -180,12 +180,12 @@ function RepaymentTable({ summary }: { summary: RepaymentSummary }) {
       {/* Summary bar */}
       <div className="flex items-center gap-4 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 text-sm">
         <span className="text-gray-500 dark:text-gray-400">Total dibayar:</span>
-        <span className="font-semibold text-rose-600 dark:text-rose-400">
-          Hutang: {formatCurrency(summary.totalApRepaid)}
+        <span className="text-gray-500 dark:text-gray-400">
+          Hutang: <span className="font-semibold text-rose-600 dark:text-rose-400">{formatCurrency(summary.totalApRepaid)}</span>
         </span>
         <span className="text-gray-300 dark:text-gray-600">|</span>
-        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-          Piutang diterima: {formatCurrency(summary.totalArCollected)}
+        <span className="text-gray-500 dark:text-gray-400">
+          Piutang diterima: <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(summary.totalArCollected)}</span>
         </span>
       </div>
 
