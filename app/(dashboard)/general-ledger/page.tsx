@@ -310,28 +310,20 @@ function GeneralLedgerPageInner() {
                   {/* Summary Cards */}
                   <div className="flex gap-3">
                     <div className="text-center px-3 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
-                      <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Total Debit</p>
-                      <p className="text-sm font-bold text-blue-700 dark:text-blue-300">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Total Debit</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
                         {formatCurrency(ledger.totalDebits)}
                       </p>
                     </div>
                     <div className="text-center px-3 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
-                      <p className="text-xs text-red-500 dark:text-red-400 font-medium">Total Kredit</p>
-                      <p className="text-sm font-bold text-red-500 dark:text-red-300">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Total Kredit</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
                         {formatCurrency(ledger.totalCredits)}
                       </p>
                     </div>
                     <div className="text-center px-3 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
-                      <p className={`text-xs font-medium ${
-                        ledger.closingBalance >= 0
-                          ? 'text-emerald-500 dark:text-emerald-400'
-                          : 'text-orange-600 dark:text-orange-400'
-                      }`}>Saldo Akhir</p>
-                      <p className={`text-sm font-bold ${
-                        ledger.closingBalance >= 0
-                          ? 'text-emerald-500 dark:text-emerald-300'
-                          : 'text-orange-700 dark:text-orange-300'
-                      }`}>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Saldo Akhir</p>
+                      <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
                         {ledger.closingBalance < 0 ? '(' : ''}
                         {formatCurrency(Math.abs(ledger.closingBalance))}
                         {ledger.closingBalance < 0 ? ')' : ''}
@@ -380,10 +372,10 @@ function GeneralLedgerPageInner() {
                           <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             Akun Lawan
                           </th>
-                          <th className="text-right py-2.5 px-3 text-xs font-semibold text-blue-500 dark:text-blue-400 uppercase tracking-wider w-32">
+                          <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
                             Debit
                           </th>
-                          <th className="text-right py-2.5 px-3 text-xs font-semibold text-red-500 dark:text-red-400 uppercase tracking-wider w-32">
+                          <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
                             Kredit
                           </th>
                           <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-36">
@@ -427,7 +419,7 @@ function GeneralLedgerPageInner() {
                             </td>
                             <td className="py-2.5 px-3 text-right text-sm font-medium">
                               {entry.debitAmount > 0 ? (
-                                <span className="text-blue-600 dark:text-blue-400">
+                                <span className="text-gray-800 dark:text-gray-200">
                                   {formatCurrency(entry.debitAmount)}
                                 </span>
                               ) : (
@@ -436,7 +428,7 @@ function GeneralLedgerPageInner() {
                             </td>
                             <td className="py-2.5 px-3 text-right text-sm font-medium">
                               {entry.creditAmount > 0 ? (
-                                <span className="text-red-500 dark:text-red-400">
+                                <span className="text-gray-800 dark:text-gray-200">
                                   {formatCurrency(entry.creditAmount)}
                                 </span>
                               ) : (
@@ -460,10 +452,10 @@ function GeneralLedgerPageInner() {
                           <td colSpan={3} className="py-3 px-3 text-sm font-bold text-gray-700 dark:text-gray-300">
                             TOTAL
                           </td>
-                          <td className="py-3 px-3 text-right text-sm font-bold text-blue-700 dark:text-blue-300">
+                          <td className="py-3 px-3 text-right text-sm font-bold text-gray-900 dark:text-gray-100">
                             {formatCurrency(ledger.totalDebits)}
                           </td>
-                          <td className="py-3 px-3 text-right text-sm font-bold text-red-500 dark:text-red-300">
+                          <td className="py-3 px-3 text-right text-sm font-bold text-gray-900 dark:text-gray-100">
                             {formatCurrency(ledger.totalCredits)}
                           </td>
                           <td className="py-3 px-3 text-right text-sm font-bold">
