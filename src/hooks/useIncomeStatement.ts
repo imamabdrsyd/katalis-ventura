@@ -77,7 +77,11 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
   );
 
   const transactionsByCategory: TransactionsByCategory = useMemo(() => ({
-    revenue: filteredTransactions.filter(t => t.category === 'EARN'),
+    revenue: filteredTransactions.filter(t =>
+      t.category === 'EARN' &&
+      // Exclude settlement entries (Dr Kas / Cr Piutang) — ASSET-to-ASSET, no revenue recognized
+      !(t.is_double_entry && t.credit_account?.account_type !== 'REVENUE')
+    ),
     cogs: filteredTransactions.filter(t =>
       t.category === 'VAR' &&
       // Exclude inventory purchases (debit to ASSET) — not COGS until sold

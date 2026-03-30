@@ -168,6 +168,10 @@ export function calculateFinancialSummary(
     // --- Simple double-entry and legacy path ---
     switch (t.category) {
       case 'EARN':
+        // For double-entry: only count if credit account is REVENUE type.
+        // Settlement entries (Dr Kas / Cr Piutang) are ASSET-to-ASSET — no revenue recognized.
+        // This catches both manual journal entries and button-based settlements.
+        if (t.is_double_entry && t.credit_account?.account_type !== 'REVENUE') break;
         summary.totalEarn += amount;
         break;
       case 'OPEX':
