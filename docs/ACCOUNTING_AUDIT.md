@@ -79,7 +79,7 @@
 - **Prioritas**: TINGGI
 - **Manfaat**: Gaji, sewa, listrik, cicilan — 60-70% transaksi UKM itu repetitif setiap bulan.
 - **Status**: [x] SELESAI
-  - DB: `recurring_transactions` table + RLS (`database/migrations/027_recurring_transactions.sql`)
+  - DB: `recurring_transactions` table + RLS (`database/migrations/028_recurring_transactions.sql`)
   - API: `src/lib/api/recurring.ts` (CRUD + auto-generate due drafts)
   - Type: `RecurringTransaction`, `RecurringFrequency`, `RecurringStatus` di `src/types/index.ts`
   - Hook: `src/hooks/useRecurringTransactions.ts` (client-triggered generation, deduplicated per day via sessionStorage)
@@ -94,7 +94,7 @@
   - Beli aset dengan DP + hutang (1 debit, 2 credit: kas + hutang)
 - **Implementasi**: Tambah tabel `journal_lines` (account_id, debit_amount, credit_amount) yang FK ke `transactions`.
 - **Status**: [x] SELESAI
-  - DB: `journal_lines` table + `is_multi_line` column di transactions (`database/migrations/028_multi_line_journal_entries.sql`), RLS policies per operasi (SELECT/INSERT/UPDATE/DELETE)
+  - DB: `journal_lines` table + `is_multi_line` column di transactions (`database/migrations/031_multi_line_journal_entries.sql`), RLS policies per operasi (SELECT/INSERT/UPDATE/DELETE)
   - Types: `JournalLine`, `JournalLineInput` di `src/types/index.ts`, `is_multi_line` + `journal_lines?` di Transaction interface
   - Validasi: `journalLineSchema`, `createMultiLineTransactionSchema` di `src/lib/validations.ts` (balanced debit=credit, min 2 lines, one-side-nonzero per line)
   - API lib: `createMultiLineTransaction()`, `updateMultiLineTransaction()` di `src/lib/api/transactions.ts`; semua `getTransactions*` query join `journal_lines(*, account:accounts(*))`
@@ -130,7 +130,7 @@
 - **Prioritas**: SEDANG
 - **Manfaat**: Mencegah user mengubah transaksi di periode yang sudah ditutup (misal sudah lapor pajak).
 - **Implementasi**: Tambah `closed_until_date` di tabel `businesses`. Transaksi sebelum tanggal ini tidak bisa di-edit/delete.
-- **Status**: [x] DONE (migration 028, enforced di POST/PUT/DELETE API, UI di halaman Businesses)
+- **Status**: [x] DONE (migration 030, enforced di POST/PUT/DELETE API, UI di halaman Businesses)
 
 ### 6. Multi-currency Support
 - **Prioritas**: RENDAH (untuk saat ini)
@@ -141,7 +141,7 @@
 - **Prioritas**: TINGGI
 - **Manfaat**: User bisa simpan pola transaksi yang sering dilakukan (misal "Bayar Gaji Bulanan") lalu tinggal klik + ubah tanggal/jumlah. Lebih cepat dari Quick Entry.
 - **Status**: [x] SELESAI
-  - DB: `transaction_templates` table + RLS (`database/migrations/027_transaction_templates.sql`)
+  - DB: `transaction_templates` table + RLS (`database/migrations/029_transaction_templates.sql`)
   - API: `src/lib/api/transactionTemplates.ts` (get, create, delete)
   - Type: `TransactionTemplate` di `src/types/index.ts`
   - UI: template selector dropdown di atas form (saat buat baru), tombol "Simpan sebagai Template" di bawah form, hapus template via ikon trash
