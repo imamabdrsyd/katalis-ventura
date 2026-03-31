@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useReportData } from './useReportData';
-import { isReceivableTransaction, isSettled, isSettlementEntry } from '@/lib/accounting/guidance/receivableSettlement';
+import { isReceivableTransaction, isSettled, isSettlementEntry, getOutstandingAmount } from '@/lib/accounting/guidance/receivableSettlement';
 import { isPayableTransaction, isPayableSettled, isPayableSettlementEntry } from '@/lib/accounting/guidance/payableSettlement';
 import type { Transaction, ArApSummary, AgingRow, RepaymentRow, RepaymentSummary } from '@/types';
 
@@ -24,6 +24,7 @@ function buildAgingSummary(
   filterFn: (t: Transaction) => boolean,
   isSettledFn: (t: Transaction) => boolean,
   isEntryFn: (t: Transaction) => boolean,
+  getAmountFn: (t: Transaction) => number = (t) => Number(t.amount),
 ): ArApSummary {
   // Filter: matching transactions that are NOT settled and NOT themselves settlement entries
   const outstanding = transactions.filter(
@@ -56,7 +57,7 @@ function buildAgingSummary(
     };
 
     for (const t of txns) {
-      const amount = Number(t.amount);
+      const amount = getAmountFn(t);
       const days = daysSince(t.date, referenceDate);
 
       if (days <= 0) {
@@ -184,7 +185,7 @@ export function useArApAging() {
 
   // AR (Piutang) — receivable transactions that haven't been settled
   const arSummary = useMemo(
-    () => buildAgingSummary(transactions, referenceDate, isReceivableTransaction, isSettled, isSettlementEntry),
+    () => buildAgingSummary(transactions, referenceDate, isReceivableTransaction, isSettled, isSettlementEntry, getOutstandingAmount),
     [transactions, referenceDate]
   );
 
