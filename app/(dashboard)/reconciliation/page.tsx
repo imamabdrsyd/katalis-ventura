@@ -179,7 +179,7 @@ function ReconciliationPageInner() {
                 }`}
               >
                 Belum Dicocokkan
-                <span className="ml-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-xs px-1.5 py-0.5 rounded-full">
+                <span className="ml-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs px-1.5 py-0.5 rounded-full">
                   {unreconciledTransactions.length}
                 </span>
               </button>
@@ -192,7 +192,11 @@ function ReconciliationPageInner() {
                 }`}
               >
                 Sudah Dicocokkan
-                <span className="ml-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs px-1.5 py-0.5 rounded-full">
+                <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
+                  reconciledTransactions.length === 0
+                    ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                    : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                }`}>
                   {reconciledTransactions.length}
                 </span>
               </button>
