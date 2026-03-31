@@ -8,9 +8,10 @@ import { CATEGORY_LABELS } from '@/lib/calculations';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import { getProfileName } from '@/lib/api/profiles';
 import { getRecordAuditHistory, getFieldChanges, formatFieldName, formatAuditValue } from '@/lib/api/audit';
-import { detectMatchingPrincipleWarning, isReceivableTransaction, isSettled } from '@/lib/accounting/guidance';
-import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2 } from 'lucide-react';
+import { detectMatchingPrincipleWarning, isReceivableTransaction, isSettled, isPartiallySettled, getOutstandingAmount, getPartialSettlementIds } from '@/lib/accounting/guidance';
+import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History } from 'lucide-react';
 import { updateTransaction } from '@/lib/api/transactions';
+import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { formatFileSize, isImageType } from '@/lib/storage/attachments';
 
 interface TransactionDetailModalProps {
@@ -26,6 +27,7 @@ interface TransactionDetailModalProps {
   onTransactionUpdated?: (transaction: Transaction) => void;
   allTags?: string[];
   onSettleReceivable?: (transaction: Transaction) => void;
+  onPartialSettleReceivable?: (transaction: Transaction, amount: number) => Promise<void>;
   settleLoading?: boolean;
   onShowRelatedTransaction?: (transaction: Transaction) => void;
 }
@@ -106,6 +108,7 @@ export function TransactionDetailModal({
   onTransactionUpdated,
   allTags = [],
   onSettleReceivable,
+  onPartialSettleReceivable,
   settleLoading = false,
   onShowRelatedTransaction,
 }: TransactionDetailModalProps) {
@@ -123,6 +126,11 @@ export function TransactionDetailModal({
   const [savingTag, setSavingTag] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showSettleConfirm, setShowSettleConfirm] = useState(false);
+  const [showPartialInput, setShowPartialInput] = useState(false);
+  const [partialAmount, setPartialAmount] = useState(0);
+  const [partialDisplayAmount, setPartialDisplayAmount] = useState('');
+  const [partialLoading, setPartialLoading] = useState(false);
+  const [partialError, setPartialError] = useState('');
   const tagInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
@@ -138,6 +146,10 @@ export function TransactionDetailModal({
     setTags(transaction?.meta?.tags ?? []);
     setTagInput('');
     setShowSettleConfirm(false);
+    setShowPartialInput(false);
+    setPartialAmount(0);
+    setPartialDisplayAmount('');
+    setPartialError('');
   }, [transaction?.id]);
 
   const saveTags = async (newTags: string[], prevTags: string[]) => {
@@ -720,56 +732,190 @@ export function TransactionDetailModal({
         )}
 
         {/* Receivable Settlement Section */}
-        {isReceivableTransaction(transaction) && onSettleReceivable && (
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-            {isSettled(transaction) ? (
-              <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-lg">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-300">LUNAS</p>
-                  <p className="text-xs text-emerald-500 dark:text-emerald-400">
-                    Dilunasi via transaksi {transaction.meta!.settled_by_transaction_id!.slice(0, 8)}...
-                  </p>
+        {isReceivableTransaction(transaction) && onSettleReceivable && (() => {
+          const outstanding = getOutstandingAmount(transaction);
+          const partialIds = getPartialSettlementIds(transaction);
+          const partialTxns = allTransactions?.filter(t => partialIds.includes(t.id)) ?? [];
+          const settled = isSettled(transaction);
+          const hasPartials = partialTxns.length > 0;
+
+          return (
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
+
+              {/* Status badge */}
+              {settled ? (
+                <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-lg">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-300">LUNAS</p>
+                    <p className="text-xs text-emerald-500 dark:text-emerald-400">
+                      Piutang telah dilunasi sepenuhnya
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ) : !showSettleConfirm ? (
-              <button
-                onClick={() => setShowSettleConfirm(true)}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg transition-colors"
-              >
-                <Banknote className="w-4 h-4" />
-                Lunasi Piutang
-              </button>
-            ) : (
-              <div className="rounded-lg border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 p-4 space-y-3">
-                <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                  Konfirmasi Pelunasan Piutang
-                </p>
-                <div className="px-3 py-2 bg-white dark:bg-gray-800 rounded-md font-mono text-xs text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
-                  Dr {transaction.credit_account?.account_code} - {transaction.credit_account?.account_name} &nbsp;|&nbsp;
-                  Cr {transaction.debit_account?.account_code} - {transaction.debit_account?.account_name} &nbsp;|&nbsp;
-                  {formatCurrency(transaction.amount)}
+              ) : hasPartials ? (
+                <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <History className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">TERBAYAR SEBAGIAN</p>
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        Sisa: <span className="font-semibold">{formatCurrency(outstanding)}</span>
+                      </p>
+                    </div>
+                  </div>
                 </div>
+              ) : null}
+
+              {/* Partial payment history */}
+              {hasPartials && (
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700/50 flex items-center gap-1.5">
+                    <History className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                      Riwayat Pembayaran
+                    </span>
+                  </div>
+                  <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {partialTxns
+                      .sort((a, b) => a.date.localeCompare(b.date))
+                      .map((pt) => (
+                        <div key={pt.id} className="flex items-center justify-between px-3 py-2.5">
+                          <div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(pt.date)}</p>
+                            <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{pt.description || 'Pelunasan sebagian'}</p>
+                          </div>
+                          <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                            +{formatCurrency(pt.amount)}
+                          </span>
+                        </div>
+                      ))}
+                    {/* Running total paid */}
+                    <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-700/50">
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Total terbayar</span>
+                      <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
+                        {formatCurrency(transaction.amount - outstanding)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action buttons — only when not fully settled */}
+              {!settled && !showSettleConfirm && !showPartialInput && (
                 <div className="flex gap-2">
                   <button
-                    onClick={() => { setShowSettleConfirm(false); onSettleReceivable(transaction); }}
-                    disabled={settleLoading}
-                    className="flex-1 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                    onClick={() => setShowSettleConfirm(true)}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg transition-colors"
                   >
-                    {settleLoading ? 'Memproses...' : 'Ya, Lunasi'}
+                    <Banknote className="w-4 h-4" />
+                    Lunasi Piutang
                   </button>
-                  <button
-                    onClick={() => setShowSettleConfirm(false)}
-                    disabled={settleLoading}
-                    className="flex-1 px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
-                  >
-                    Batal
-                  </button>
+                  {onPartialSettleReceivable && (
+                    <button
+                      onClick={() => setShowPartialInput(true)}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-400 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                      Bayar Sebagian
+                    </button>
+                  )}
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+
+              {/* Full settle confirm */}
+              {showSettleConfirm && (
+                <div className="rounded-lg border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 p-4 space-y-3">
+                  <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                    Konfirmasi Pelunasan Penuh
+                  </p>
+                  <div className="px-3 py-2 bg-white dark:bg-gray-800 rounded-md font-mono text-xs text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                    Dr {transaction.credit_account?.account_code} – {transaction.credit_account?.account_name} &nbsp;|&nbsp;
+                    Cr {transaction.debit_account?.account_code} – {transaction.debit_account?.account_name} &nbsp;|&nbsp;
+                    {formatCurrency(outstanding)}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { setShowSettleConfirm(false); onSettleReceivable(transaction); }}
+                      disabled={settleLoading}
+                      className="flex-1 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {settleLoading ? 'Memproses...' : 'Ya, Lunasi'}
+                    </button>
+                    <button
+                      onClick={() => setShowSettleConfirm(false)}
+                      disabled={settleLoading}
+                      className="flex-1 px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+                    >
+                      Batal
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Partial settle input */}
+              {showPartialInput && onPartialSettleReceivable && (
+                <div className="rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50/50 dark:bg-indigo-900/10 p-4 space-y-3">
+                  <p className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">
+                    Bayar Sebagian — Sisa {formatCurrency(outstanding)}
+                  </p>
+                  <CurrencyInputWithCalculator
+                    label="Jumlah Pembayaran (Rp)"
+                    value={partialAmount}
+                    displayValue={partialDisplayAmount}
+                    onChange={(num, fmt) => {
+                      setPartialAmount(num);
+                      setPartialDisplayAmount(fmt);
+                      setPartialError('');
+                    }}
+                    colorVariant="green"
+                  />
+                  {partialError && (
+                    <p className="text-xs text-red-500 dark:text-red-400">{partialError}</p>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        if (partialAmount <= 0) {
+                          setPartialError('Masukkan jumlah pembayaran');
+                          return;
+                        }
+                        if (partialAmount >= outstanding) {
+                          setPartialError(`Jumlah harus kurang dari sisa piutang (${formatCurrency(outstanding)}). Gunakan "Lunasi Piutang" untuk pelunasan penuh.`);
+                          return;
+                        }
+                        setPartialLoading(true);
+                        setPartialError('');
+                        try {
+                          await onPartialSettleReceivable(transaction, partialAmount);
+                          setShowPartialInput(false);
+                          setPartialAmount(0);
+                          setPartialDisplayAmount('');
+                        } catch (err: any) {
+                          setPartialError(err.message || 'Gagal mencatat pembayaran');
+                        } finally {
+                          setPartialLoading(false);
+                        }
+                      }}
+                      disabled={partialLoading}
+                      className="flex-1 px-3 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {partialLoading ? 'Memproses...' : 'Catat Pembayaran'}
+                    </button>
+                    <button
+                      onClick={() => { setShowPartialInput(false); setPartialError(''); }}
+                      disabled={partialLoading}
+                      className="flex-1 px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+                    >
+                      Batal
+                    </button>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          );
+        })()}
 
         {/* Related Transaction Section */}
         {(() => {

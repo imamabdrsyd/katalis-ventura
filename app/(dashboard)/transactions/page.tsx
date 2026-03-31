@@ -95,6 +95,7 @@ function TransactionsPageInner() {
     // Post actions
     handlePostTransaction,
     handleSettleReceivable,
+    handlePartialSettleReceivable,
     // Actions
     fetchTransactions,
     handleAddTransaction,
@@ -633,6 +634,7 @@ function TransactionsPageInner() {
         onTransactionUpdated={setDetailTransaction}
         allTags={allTags}
         onSettleReceivable={canManageTransactions ? handleSettleReceivable : undefined}
+        onPartialSettleReceivable={canManageTransactions ? handlePartialSettleReceivable : undefined}
         settleLoading={saving}
         onShowRelatedTransaction={setDetailTransaction}
       />

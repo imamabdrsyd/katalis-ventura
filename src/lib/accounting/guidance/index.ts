@@ -10,7 +10,11 @@ export type { MatchingPrincipleWarning } from './matchingPrincipleWarning';
 export {
   isReceivableTransaction,
   isSettled,
+  isPartiallySettled,
   isSettlementEntry,
   buildSettlementPrefill,
+  buildPartialSettlementPrefill,
+  getOutstandingAmount,
+  getPartialSettlementIds,
 } from './receivableSettlement';
-export type { SettlementPrefill } from './receivableSettlement';
+export type { SettlementPrefill, PartialSettlementPrefill } from './receivableSettlement';

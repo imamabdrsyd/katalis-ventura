@@ -44,10 +44,16 @@ export interface TransactionMeta {
   };
   /** Free-text tags for categorization and filtering */
   tags?: string[];
-  /** ID transaksi pelunasan yang menyelesaikan piutang ini */
+  /** ID transaksi pelunasan penuh yang menyelesaikan piutang ini */
   settled_by_transaction_id?: string;
   /** ID transaksi piutang asli yang di-settle oleh entry ini */
   settlement_of_transaction_id?: string;
+  /** Daftar ID transaksi pelunasan sebagian (partial payment) */
+  partial_settlements?: string[];
+  /** Sisa piutang yang belum terbayar setelah pelunasan sebagian (Rp) */
+  remaining_amount?: number;
+  /** Jumlah yang dilunasi pada transaksi settlement ini (untuk partial) */
+  settlement_amount?: number;
   /** Dokumen sumber / bukti transaksi (faktur, nota, kuitansi) */
   attachment?: TransactionAttachment;
   /** ID recurring template yang men-generate transaksi ini */
