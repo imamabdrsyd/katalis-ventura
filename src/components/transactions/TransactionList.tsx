@@ -366,7 +366,9 @@ export function TransactionList({
                 {formatDateShort(transaction.date)}
               </td>
               <td className={`py-3 px-2 md:py-4 md:px-4 text-sm font-medium whitespace-nowrap ${
-                transaction.category === 'EARN'
+                transaction.meta?.settlement_of_transaction_id
+                  ? 'text-gray-900 dark:text-gray-300'
+                  : transaction.category === 'EARN'
                   ? 'text-emerald-500 dark:text-emerald-400'
                   : transaction.category === 'OPEX' || transaction.category === 'VAR' || transaction.category === 'TAX'
                   ? 'text-red-500 dark:text-red-400'
