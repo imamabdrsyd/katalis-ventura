@@ -49,6 +49,7 @@ const CATEGORY_BADGE_COLORS: Record<string, string> = {
   CAPEX: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
   TAX: 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400',
   FIN: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
+  SETTLE: 'bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400',
 };
 
 function getInitials(name: string): string {
@@ -534,8 +535,8 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                               {txn.description || txn.name}
                             </p>
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold flex-shrink-0 ${CATEGORY_BADGE_COLORS[txn.category] || ''}`}>
-                              {CATEGORY_LABELS[txn.category]}
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold flex-shrink-0 ${txn.meta?.settlement_of_transaction_id ? CATEGORY_BADGE_COLORS['SETTLE'] : (CATEGORY_BADGE_COLORS[txn.category] || '')}`}>
+                              {txn.meta?.settlement_of_transaction_id ? 'SETTLE' : CATEGORY_LABELS[txn.category]}
                             </span>
                           </div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">

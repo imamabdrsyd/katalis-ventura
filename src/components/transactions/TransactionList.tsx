@@ -36,6 +36,8 @@ const BADGE_CLASSES: Record<TransactionCategory, string> = {
   FIN: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
 };
 
+const SETTLE_BADGE_CLASS = 'bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400';
+
 const STOCK_BADGE_CLASS = 'bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400';
 
 function getMonthKey(date: string) {
@@ -328,6 +330,10 @@ export function TransactionList({
                   {isInventoryTransaction(transaction) ? (
                     <span className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${STOCK_BADGE_CLASS}`}>
                       STOCK
+                    </span>
+                  ) : transaction.meta?.settlement_of_transaction_id ? (
+                    <span className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${SETTLE_BADGE_CLASS}`}>
+                      SETTLE
                     </span>
                   ) : (
                     <span

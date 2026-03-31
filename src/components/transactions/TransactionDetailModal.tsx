@@ -39,6 +39,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   CAPEX: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
   TAX: 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400',
   FIN: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
+  SETTLE: 'bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400',
 };
 
 const STOCK_COLOR = 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300';
@@ -374,9 +375,9 @@ export function TransactionDetailModal({
           ) : (
             <div className="relative group inline-flex items-center gap-1.5">
               <span
-                className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${CATEGORY_COLORS[transaction.category]}`}
+                className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${transaction.meta?.settlement_of_transaction_id ? CATEGORY_COLORS['SETTLE'] : CATEGORY_COLORS[transaction.category]}`}
               >
-                {CATEGORY_LABELS[transaction.category]}
+                {transaction.meta?.settlement_of_transaction_id ? 'Pelunasan' : CATEGORY_LABELS[transaction.category]}
               </span>
               {transaction.meta?.entry_type && (
                 <>
