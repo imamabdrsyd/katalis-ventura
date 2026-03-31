@@ -174,18 +174,17 @@ export default function BusinessMembersPage() {
 
   return (
     <div className="p-4 md:p-8">
-      {/* Back nav */}
-      <button
-        onClick={() => router.push('/businesses')}
-        className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mb-6 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Kembali ke Business
-      </button>
-
       {/* Header row */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div className="flex items-center gap-4 min-w-0">
+          {/* Back button */}
+          <button
+            onClick={() => router.push('/businesses')}
+            className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0"
+            title="Kembali ke Business"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
           {business?.logo_url ? (
             <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-white border border-gray-200 dark:border-gray-700">
               <Image src={business.logo_url} alt={business.business_name} width={48} height={48} className="w-full h-full object-cover" unoptimized />

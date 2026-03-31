@@ -855,17 +855,16 @@ export default function JournalEntryPage() {
 
   return (
     <div className="p-8">
-      {/* Back nav */}
-      <button
-        onClick={() => router.push('/transactions')}
-        className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mb-6 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Kembali ke Transaksi
-      </button>
-
       {/* Header */}
       <div className="flex items-center gap-3 mb-8">
+        {/* Back button */}
+        <button
+          onClick={() => router.push('/transactions')}
+          className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0"
+          title="Kembali ke Transaksi"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
           <BookOpen className="w-5 h-5 text-white" />
         </div>
