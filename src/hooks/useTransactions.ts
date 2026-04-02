@@ -362,7 +362,7 @@ export function useTransactions() {
       // 1. Buat transaksi settlement penuh (langsung posted)
       const outstanding = getOutstandingAmount(original);
       const settlement = await transactionsApi.createTransaction({
-        ...buildSettlementPrefill(original),
+        ...buildSettlementPrefill(original, accounts),
         business_id: businessId,
         created_by: user.id,
         amount: outstanding,
@@ -391,7 +391,7 @@ export function useTransactions() {
     } finally {
       setSaving(false);
     }
-  }, [businessId, user, invalidateTransactions]);
+  }, [businessId, user, accounts, invalidateTransactions]);
 
   const handlePartialSettleReceivable = useCallback(async (
     original: Transaction,
@@ -406,7 +406,7 @@ export function useTransactions() {
     try {
       // 1. Buat transaksi settlement sebagian
       const settlement = await transactionsApi.createTransaction({
-        ...buildPartialSettlementPrefill(original, partialAmount),
+        ...buildPartialSettlementPrefill(original, partialAmount, accounts),
         business_id: businessId,
         created_by: user.id,
       });
@@ -436,7 +436,7 @@ export function useTransactions() {
     } finally {
       setSaving(false);
     }
-  }, [businessId, user, invalidateTransactions]);
+  }, [businessId, user, accounts, invalidateTransactions]);
 
   return {
     // Data

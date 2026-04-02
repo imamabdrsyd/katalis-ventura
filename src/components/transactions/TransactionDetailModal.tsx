@@ -9,6 +9,7 @@ import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import { getProfileName } from '@/lib/api/profiles';
 import { getRecordAuditHistory, getFieldChanges, formatFieldName, formatAuditValue } from '@/lib/api/audit';
 import { detectMatchingPrincipleWarning, isReceivableTransaction, isSettled, isPartiallySettled, getOutstandingAmount, getPartialSettlementIds } from '@/lib/accounting/guidance';
+import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
 import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History } from 'lucide-react';
 import { updateTransaction } from '@/lib/api/transactions';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
@@ -831,9 +832,16 @@ export function TransactionDetailModal({
                     Konfirmasi Pelunasan Penuh
                   </p>
                   <div className="px-3 py-2 bg-white dark:bg-gray-800 rounded-md font-mono text-xs text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
-                    Dr {transaction.credit_account?.account_code} – {transaction.credit_account?.account_name} &nbsp;|&nbsp;
-                    Cr {transaction.debit_account?.account_code} – {transaction.debit_account?.account_name} &nbsp;|&nbsp;
-                    {formatCurrency(outstanding)}
+                    {(() => {
+                      const cashAcc = findDefaultCashAccount(accounts || []);
+                      return (
+                        <>
+                          Dr {cashAcc?.account_code ?? '1200'} – {cashAcc?.account_name ?? 'Bank'} &nbsp;|&nbsp;
+                          Cr {transaction.debit_account?.account_code} – {transaction.debit_account?.account_name} &nbsp;|&nbsp;
+                          {formatCurrency(outstanding)}
+                        </>
+                      );
+                    })()}
                   </div>
                   <div className="flex gap-2">
                     <button

@@ -3,7 +3,8 @@
  * Utilities for detecting receivable transactions and building settlement entries.
  */
 
-import type { Transaction, TransactionCategory } from '@/types';
+import type { Transaction, TransactionCategory, Account } from '@/types';
+import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
 
 /**
  * Returns true if the transaction represents a trade receivable (piutang usaha):
@@ -108,14 +109,34 @@ export interface SettlementPrefill {
 }
 
 /**
- * Builds the prefill data for a FULL settlement transaction.
- * Settlement = swap debit/credit: Dr Kas/Bank / Cr Piutang
+ * Finds the receivable (piutang) account ID from the original transaction.
+ * For single double-entry: the debit account is the receivable.
+ * For multi-line: the first debit line hitting a receivable ASSET account.
  */
-export function buildSettlementPrefill(original: Transaction): SettlementPrefill {
+function getReceivableAccountId(original: Transaction): string {
+  if (original.is_multi_line && original.journal_lines) {
+    const line = original.journal_lines.find(
+      (l) => l.debit_amount > 0 && l.account?.account_type === 'ASSET'
+    );
+    if (line) return line.account_id;
+  }
+  return original.debit_account_id!;
+}
+
+/**
+ * Builds the prefill data for a FULL settlement transaction.
+ *
+ * Correct journal: Dr Kas/Bank (1200/1100)  |  Cr Piutang Usaha
+ * NOT a swap of the original entry.
+ */
+export function buildSettlementPrefill(original: Transaction, accounts: Account[]): SettlementPrefill {
   const outstanding = getOutstandingAmount(original);
+  const cashAccount = findDefaultCashAccount(accounts);
+  const receivableAccountId = getReceivableAccountId(original);
+
   return {
-    debit_account_id: original.credit_account_id!,
-    credit_account_id: original.debit_account_id!,
+    debit_account_id: cashAccount?.id ?? '',
+    credit_account_id: receivableAccountId,
     amount: outstanding,
     date: new Date().toISOString().slice(0, 10),
     name: original.name,
@@ -140,15 +161,20 @@ export interface PartialSettlementPrefill extends SettlementPrefill {
 
 /**
  * Builds the prefill data for a PARTIAL settlement transaction.
- * Same journal entry as full settlement but with a specified partial amount.
+ *
+ * Correct journal: Dr Kas/Bank (1200/1100)  |  Cr Piutang Usaha
  */
 export function buildPartialSettlementPrefill(
   original: Transaction,
-  partialAmount: number
+  partialAmount: number,
+  accounts: Account[]
 ): PartialSettlementPrefill {
+  const cashAccount = findDefaultCashAccount(accounts);
+  const receivableAccountId = getReceivableAccountId(original);
+
   return {
-    debit_account_id: original.credit_account_id!,
-    credit_account_id: original.debit_account_id!,
+    debit_account_id: cashAccount?.id ?? '',
+    credit_account_id: receivableAccountId,
     amount: partialAmount,
     date: new Date().toISOString().slice(0, 10),
     name: original.name,

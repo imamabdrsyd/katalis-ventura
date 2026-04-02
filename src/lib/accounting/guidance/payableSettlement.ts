@@ -4,7 +4,8 @@
  * Mirror of receivableSettlement.ts for the AP (Accounts Payable) side.
  */
 
-import type { Transaction, TransactionCategory } from '@/types';
+import type { Transaction, TransactionCategory, Account } from '@/types';
+import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
 
 /**
  * Returns true if the transaction represents a payable (hutang):
@@ -59,13 +60,33 @@ export interface PayableSettlementPrefill {
 }
 
 /**
- * Builds the prefill data for a payable settlement transaction.
- * Settlement = swap debit/credit: Dr Hutang / Cr Kas/Bank
+ * Finds the payable (hutang) account ID from the original transaction.
+ * For single double-entry: the credit account is the liability.
+ * For multi-line: the first credit line hitting a LIABILITY account.
  */
-export function buildPayableSettlementPrefill(original: Transaction): PayableSettlementPrefill {
+function getPayableAccountId(original: Transaction): string {
+  if (original.is_multi_line && original.journal_lines) {
+    const line = original.journal_lines.find(
+      (l) => l.credit_amount > 0 && l.account?.account_type === 'LIABILITY'
+    );
+    if (line) return line.account_id;
+  }
+  return original.credit_account_id!;
+}
+
+/**
+ * Builds the prefill data for a payable settlement transaction.
+ *
+ * Correct journal: Dr Hutang (LIABILITY)  |  Cr Kas/Bank (1200/1100)
+ * NOT a swap of the original entry.
+ */
+export function buildPayableSettlementPrefill(original: Transaction, accounts: Account[]): PayableSettlementPrefill {
+  const cashAccount = findDefaultCashAccount(accounts);
+  const payableAccountId = getPayableAccountId(original);
+
   return {
-    debit_account_id: original.credit_account_id!,
-    credit_account_id: original.debit_account_id!,
+    debit_account_id: payableAccountId,
+    credit_account_id: cashAccount?.id ?? '',
     amount: original.amount,
     date: new Date().toISOString().slice(0, 10),
     name: original.name,
