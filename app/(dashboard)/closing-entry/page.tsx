@@ -142,7 +142,7 @@ function ClosingEntryPageInner() {
             disabled={loading || !startDate || !endDate}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
           >
-            {loading ? '{t.closingEntry.calculating}' : '{t.closingEntry.preview}'}
+            {loading ? t.closingEntry.calculating : t.closingEntry.preview}
           </button>
         </div>
       </div>

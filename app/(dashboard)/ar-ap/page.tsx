@@ -252,6 +252,15 @@ function ArApPageInner() {
     netApTotal,
   } = useArApAging();
 
+  const { t } = useLanguage();
+
+  const PERIOD_LABELS: Record<Period, string> = {
+    month: t.period.thisMonth,
+    quarter: t.period.quarter,
+    year: t.period.thisYear,
+    custom: t.period.custom,
+  };
+
   const [activeTab, setActiveTab] = useState<'ar' | 'ap' | 'repayment'>('ar');
 
   if (loading) {

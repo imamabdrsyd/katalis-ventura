@@ -233,9 +233,9 @@ function ReconciliationPageInner() {
               {!showReconciled && unreconciledTransactions.length > 0 && (
                 <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 dark:bg-gray-800/50">
                   <button onClick={selectAll} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
-                    {unreconciledTransactions.every((t) => selectedIds.has(t.id))
-                      ? '{t.reconciliation.deselectAll}'
-                      : '{t.reconciliation.selectAll}'}
+                    {unreconciledTransactions.every((tx) => selectedIds.has(tx.id))
+                      ? t.reconciliation.deselectAll
+                      : t.reconciliation.selectAll}
                   </button>
                 </div>
               )}

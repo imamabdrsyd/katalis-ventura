@@ -11,13 +11,7 @@ import { Modal } from '@/components/ui/Modal';
 import { useLanguage } from '@/context/LanguageContext';
 import type { InvoicePaymentStatus } from '@/types';
 
-const STATUS_TABS: { value: '' | InvoicePaymentStatus; label: string }[] = [
-  { value: '', label: 'Semua' },
-  { value: 'draft', label: 'Draft' },
-  { value: 'unpaid', label: '{t.invoices.unpaid}' },
-  { value: 'paid', label: '{t.invoices.paid}' },
-  { value: 'overdue', label: '{t.invoices.overdue}' },
-];
+const STATUS_TAB_VALUES: ('' | InvoicePaymentStatus)[] = ['', 'draft', 'unpaid', 'paid', 'overdue'];
 
 function InvoicesPageInner() {
   const searchParams = useSearchParams();
@@ -124,20 +118,27 @@ function InvoicesPageInner() {
 
         {/* Status Filter Tabs */}
         <div className="flex items-center gap-1 mb-4 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
-          {STATUS_TABS.map((tab) => {
-            const count = tab.value ? statusCounts[tab.value] : 0;
+          {STATUS_TAB_VALUES.map((value) => {
+            const statusLabels: Record<string, string> = {
+              '': t.invoices.allTab,
+              draft: t.invoices.draftTab,
+              unpaid: t.invoices.unpaid,
+              paid: t.invoices.paid,
+              overdue: t.invoices.overdue,
+            };
+            const count = value ? statusCounts[value] : 0;
             return (
               <button
-                key={tab.value}
-                onClick={() => setStatusFilter(tab.value)}
+                key={value}
+                onClick={() => setStatusFilter(value)}
                 className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
-                  statusFilter === tab.value
+                  statusFilter === value
                     ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                     : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
-                {tab.label}
-                {tab.value && count > 0 && (
+                {statusLabels[value]}
+                {value && count > 0 && (
                   <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300">
                     {count}
                   </span>
