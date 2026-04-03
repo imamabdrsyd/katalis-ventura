@@ -14,19 +14,12 @@ import { useRecurringTransactions } from '@/hooks/useRecurringTransactions';
 import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2, Calculator, RefreshCw } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
-const CATEGORY_LABELS_ID: Record<TransactionCategory, string> = {
-  EARN: 'Pendapatan',
-  OPEX: 'Beban Operasional',
-  VAR: 'Beban Variabel',
-  CAPEX: 'Belanja Modal',
-  TAX: 'Pajak',
-  FIN: 'Financing',
-};
-
 function TransactionsPageInner() {
+  const { t } = useLanguage();
   const router = useRouter();
   const {
     // Data

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet, Calendar, ClipboardList } from 'lucide-react';
 import { useDashboard } from '@/hooks/useDashboard';
+import { useLanguage } from '@/context/LanguageContext';
 import { calculateFinancialSummary, calculateCategoryCounts } from '@/lib/calculations';
 import { formatCurrency, formatPercentage, formatDateShort } from '@/lib/utils';
 import type { Transaction } from '@/types';
@@ -45,12 +46,13 @@ export default function DashboardPage() {
   } = useDashboard();
 
   const router = useRouter();
+  const { t } = useLanguage();
 
   // --- Global year + month filter ---
   const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null); // null = Yearly, 0-11 = specific month
 
-  const MONTH_LABELS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  const MONTH_LABELS = t.dashboard.months;
 
   const availableYears = useMemo(() => {
     const years = new Set<number>();
@@ -126,7 +128,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+          <p className="text-gray-500 dark:text-gray-400">{t.common.loading}</p>
         </div>
       </div>
     );
@@ -152,10 +154,8 @@ export default function DashboardPage() {
     : 0;
   const roiLabel =
     allTimeSummary.totalCapex === 0
-      ? 'Belum ada investasi'
-      : roi > 0
-        ? 'Modal sudah balik'
-        : 'Modal belum balik';
+      ? ''
+      : '';
   const roiLabelColor =
     roi === 0 ? 'text-gray-500 dark:text-gray-400' : roi > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400';
 
@@ -227,7 +227,7 @@ export default function DashboardPage() {
               : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
           }`}
         >
-          Yearly
+          {t.dashboard.yearly}
         </button>
         {MONTH_LABELS.map((label, i) => (
           <button
@@ -252,7 +252,7 @@ export default function DashboardPage() {
           onClick={() => router.push('/transactions?category=EARN')}
         >
           <div className="flex items-center justify-between mb-2">
-            <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Revenue</div>
+            <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t.dashboard.revenue}</div>
             <TrendingUp className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           </div>
           <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 break-all">
@@ -260,7 +260,7 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center justify-between mt-2 min-h-[2.5rem]">
             <div className="text-sm text-gray-500 dark:text-gray-400">
-              {transactionsLoading ? '...' : `${categoryCounts.EARN} transaksi masuk`}
+              {transactionsLoading ? '...' : t.dashboard.transactionsIn.replace('{n}', String(categoryCounts.EARN))}
             </div>
             {!transactionsLoading && revenueGrowthData.growth !== null && (
               <div className={`flex items-center gap-0.5 text-xs font-semibold ${revenueGrowthData.growth === 0 ? 'text-gray-500 dark:text-gray-400' : revenueGrowthData.growth > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
@@ -269,7 +269,7 @@ export default function DashboardPage() {
               </div>
             )}
             {!transactionsLoading && revenueGrowthData.growth === null && revenueGrowthData.isNew && (
-              <div className="text-xs text-emerald-500 dark:text-emerald-400 font-semibold">Belum ada data pembanding</div>
+              <div className="text-xs text-emerald-500 dark:text-emerald-400 font-semibold">{t.dashboard.noComparisonData}</div>
             )}
           </div>
         </div>
@@ -287,7 +287,7 @@ export default function DashboardPage() {
           }}
         >
           <div className="flex items-center justify-between mb-2">
-            <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Profit/Loss</div>
+            <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t.dashboard.profitLoss}</div>
             <BarChart3 className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           </div>
           <div className={`text-xl md:text-2xl font-bold break-all ${summary.netProfit === 0 ? 'text-gray-500 dark:text-gray-400' : summary.netProfit > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
@@ -298,12 +298,12 @@ export default function DashboardPage() {
               {transactionsLoading
                 ? '...'
                 : expenseRatio !== null
-                  ? `${expenseRatio.toFixed(1)}% dari revenue terpakai`
-                  : 'Belum ada pemasukan'}
+                  ? t.dashboard.ofRevenueUsed.replace('{n}', expenseRatio.toFixed(1))
+                  : ''}
             </div>
             {!transactionsLoading && netMargin !== null && (
               <div className={`text-xs font-semibold ${netMargin === 0 ? 'text-gray-500 dark:text-gray-400' : netMargin > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
-                Margin {netMargin.toFixed(1)}%
+                {t.dashboard.margin.replace('{n}', netMargin.toFixed(1))}
               </div>
             )}
           </div>
@@ -311,14 +311,14 @@ export default function DashboardPage() {
 
         <div className="card flex flex-col">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">ROI</div>
+            <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t.dashboard.roi}</div>
             <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           </div>
           <div className={`text-xl md:text-2xl font-bold ${roi === 0 ? 'text-gray-500 dark:text-gray-400' : roi > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
             {transactionsLoading ? '...' : formatPercentage(roi)}
           </div>
           <div className="mt-2 min-h-[2.5rem] flex flex-col justify-center">
-            <div className="text-sm text-gray-500 dark:text-gray-400">Year to date</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">{t.dashboard.yearToDate}</div>
           </div>
         </div>
 
@@ -327,14 +327,14 @@ export default function DashboardPage() {
           onClick={() => router.push('/general-ledger?filterType=ASSET')}
         >
           <div className="flex items-center justify-between mb-2">
-            <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Cash Balance</div>
+            <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t.dashboard.cashBalance}</div>
             <Wallet className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           </div>
           <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 break-all">
             {transactionsLoading ? '...' : formatCurrency(balanceSheet.assets.cash)}
           </div>
           <div className="mt-2 min-h-[2.5rem] flex flex-col justify-center">
-            <div className="text-sm text-gray-500 dark:text-gray-400">Cash & Bank</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">{t.dashboard.cashAndBank}</div>
           </div>
         </div>
       </div>
@@ -352,50 +352,24 @@ export default function DashboardPage() {
       {/* Financial Summary */}
       {transactions.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Ringkasan Keuangan</h2>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">{t.dashboard.financialSummary}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-emerald-500 dark:text-emerald-400 font-semibold">Earnings</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600/50 px-2 py-0.5 rounded-full">{categoryCounts.EARN} record</div>
+            {([
+              { label: t.dashboard.earnings, color: 'text-emerald-500 dark:text-emerald-400', value: summary.totalEarn, count: categoryCounts.EARN },
+              { label: t.dashboard.opex, color: 'text-red-500 dark:text-red-400', value: summary.totalOpex, count: categoryCounts.OPEX },
+              { label: t.dashboard.variable, color: 'text-amber-500 dark:text-amber-400', value: summary.totalVar, count: categoryCounts.VAR },
+              { label: t.dashboard.capex, color: 'text-indigo-500 dark:text-indigo-400', value: summary.totalCapex, count: categoryCounts.CAPEX },
+              { label: t.dashboard.taxes, color: 'text-purple-500 dark:text-purple-400', value: summary.totalTax, count: categoryCounts.TAX },
+              { label: t.dashboard.financing, color: 'text-pink-500 dark:text-pink-400', value: summary.totalFin, count: categoryCounts.FIN },
+            ] as const).map((item) => (
+              <div key={item.label} className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div className={`text-sm font-semibold ${item.color}`}>{item.label}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600/50 px-2 py-0.5 rounded-full">{t.dashboard.records.replace('{n}', String(item.count))}</div>
+                </div>
+                <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(item.value)}</div>
               </div>
-              <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(summary.totalEarn)}</div>
-            </div>
-            <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-red-500 dark:text-red-400 font-semibold">OPEX</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600/50 px-2 py-0.5 rounded-full">{categoryCounts.OPEX} record</div>
-              </div>
-              <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(summary.totalOpex)}</div>
-            </div>
-            <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-amber-500 dark:text-amber-400 font-semibold">Variable</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600/50 px-2 py-0.5 rounded-full">{categoryCounts.VAR} record</div>
-              </div>
-              <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(summary.totalVar)}</div>
-            </div>
-            <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-indigo-500 dark:text-indigo-400 font-semibold">CAPEX</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600/50 px-2 py-0.5 rounded-full">{categoryCounts.CAPEX} record</div>
-              </div>
-              <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(summary.totalCapex)}</div>
-            </div>
-            <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-purple-500 dark:text-purple-400 font-semibold">Taxes</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600/50 px-2 py-0.5 rounded-full">{categoryCounts.TAX} record</div>
-              </div>
-              <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(summary.totalTax)}</div>
-            </div>
-            <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-pink-500 dark:text-pink-400 font-semibold">Financing</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600/50 px-2 py-0.5 rounded-full">{categoryCounts.FIN} record</div>
-              </div>
-              <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(summary.totalFin)}</div>
-            </div>
+            ))}
           </div>
         </div>
       )}
@@ -404,22 +378,22 @@ export default function DashboardPage() {
       {transactions.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Recent Transactions</h2>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.recentTransactions}</h2>
             <button
               onClick={() => router.push('/transactions')}
               className="text-sm text-indigo-500 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-medium"
             >
-              View all
+              {t.dashboard.viewAll}
             </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                  <th className="pb-3 pr-4">Date</th>
-                  <th className="pb-3 pr-4">Description</th>
-                  <th className="pb-3 pr-4">Category</th>
-                  <th className="pb-3 text-right">Amount</th>
+                  <th className="pb-3 pr-4">{t.common.date}</th>
+                  <th className="pb-3 pr-4">{t.common.description}</th>
+                  <th className="pb-3 pr-4">{t.common.category}</th>
+                  <th className="pb-3 text-right">{t.common.amount}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -453,18 +427,18 @@ export default function DashboardPage() {
       {!transactionsLoading && transactions.length === 0 && (
         <div className="mt-8 p-6 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-xl text-center">
           <div className="flex justify-center mb-4"><ClipboardList className="w-10 h-10 text-indigo-400" /></div>
-          <h3 className="font-semibold text-indigo-900 dark:text-indigo-300 mb-2">Belum ada transaksi</h3>
+          <h3 className="font-semibold text-indigo-900 dark:text-indigo-300 mb-2">{t.dashboard.noTransactions}</h3>
           <p className="text-sm text-indigo-500 dark:text-indigo-400 mb-4">
             {canManageTransactions
-              ? 'Mulai dengan menambahkan transaksi pertama Anda untuk melihat statistik keuangan.'
-              : 'Belum ada transaksi yang tercatat untuk bisnis ini.'}
+              ? t.dashboard.noTransactionsDesc
+              : t.dashboard.noTransactionsForBusiness}
           </p>
           {canManageTransactions && (
             <button
               onClick={() => router.push('/transactions')}
               className="btn-primary"
             >
-              Tambah Transaksi Pertama
+              {t.dashboard.addFirstTransaction}
             </button>
           )}
         </div>
