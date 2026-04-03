@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 29 Maret 2026 | AR/AP Aging & Repayment: 29 Maret 2026
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 3 April 2026 | AR/AP Aging & Repayment: 29 Maret 2026
 
 ---
 
@@ -250,7 +250,8 @@ Selain simple 2-line (1 debit + 1 credit), sistem mendukung **compound/multi-lin
 **Database:**
 - Tabel `journal_lines` (FK → `transactions.id`, ON DELETE CASCADE):
   - `account_id` (FK → accounts), `debit_amount`, `credit_amount`, `description`, `sort_order`
-  - Constraint: tepat satu sisi harus > 0 per baris
+  - Constraint `journal_line_one_side_nonzero`: tepat satu sisi harus > 0 per baris
+  - Constraint trigger `trg_check_journal_balance` (DEFERRABLE INITIALLY DEFERRED): total debit = total credit per transaction_id, minimal 2 baris (tolerance 0.01)
 - Kolom `transactions.is_multi_line` (boolean, default false)
 
 **Validasi (Zod):**
@@ -1252,8 +1253,17 @@ Layer 2: API-side (app/api/transactions/)
   → Auth check & role check
   → Period lock check: transaksi di periode terkunci ditolak (HTTP 423)
 
-Layer 3: Database (PostgreSQL Constraints)
-  → check_different_accounts: debit ≠ credit
+Layer 3: Database (PostgreSQL Constraints & Triggers)
+  → transactions_account_rules: context-aware per tipe transaksi
+    - is_multi_line=true → debit/credit account HARUS NULL (pakai journal_lines)
+    - is_double_entry=true → debit/credit account WAJIB terisi dan BERBEDA
+    - legacy (keduanya false) → NULL diizinkan (backward compat)
+  → journal_line_one_side_nonzero: tepat satu sisi > 0 per baris
+  → trg_check_journal_balance (CONSTRAINT TRIGGER, DEFERRABLE INITIALLY DEFERRED):
+    - Total debit = total credit per transaction_id (tolerance 0.01)
+    - Minimal 2 baris per multi-line journal entry
+    - Hanya enforce untuk is_multi_line=true
+    - DEFERRABLE agar batch INSERT tidak gagal prematur (fire saat COMMIT)
   → FK constraints ke accounts table
   → RLS policies per business
 ```
@@ -1754,9 +1764,46 @@ posted_at TIMESTAMPTZ,                 -- timestamp saat di-posting (NULL jika d
 deleted_at TIMESTAMPTZ,
 deleted_by UUID,
 
--- Constraint:
-CHECK (debit_account_id IS NULL OR credit_account_id IS NULL
-       OR debit_account_id != credit_account_id)
+-- Constraint (context-aware per tipe transaksi):
+CONSTRAINT transactions_account_rules CHECK (
+  CASE
+    WHEN is_multi_line = true THEN
+      debit_account_id IS NULL AND credit_account_id IS NULL
+    WHEN is_double_entry = true THEN
+      debit_account_id IS NOT NULL
+      AND credit_account_id IS NOT NULL
+      AND debit_account_id != credit_account_id
+    ELSE true  -- legacy: NULL diizinkan
+  END
+)
+```
+
+### journal_lines
+
+```sql
+CREATE TABLE journal_lines (
+    id UUID PRIMARY KEY,
+    transaction_id UUID REFERENCES transactions(id) ON DELETE CASCADE,
+    account_id UUID REFERENCES accounts(id),
+    debit_amount NUMERIC(20,2) NOT NULL DEFAULT 0,
+    credit_amount NUMERIC(20,2) NOT NULL DEFAULT 0,
+    description TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+
+    -- Tepat satu sisi harus > 0 per baris:
+    CONSTRAINT journal_line_one_side_nonzero CHECK (
+        (debit_amount > 0 AND credit_amount = 0)
+        OR (credit_amount > 0 AND debit_amount = 0)
+    )
+);
+
+-- Balance check trigger (DEFERRABLE — fire saat COMMIT, bukan per-row):
+-- Total debit = total credit per transaction_id (tolerance 0.01)
+-- Minimal 2 baris per multi-line journal entry
+CREATE CONSTRAINT TRIGGER trg_check_journal_balance
+AFTER INSERT OR UPDATE OR DELETE ON journal_lines
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION check_journal_lines_balance();
 ```
 
 ---
