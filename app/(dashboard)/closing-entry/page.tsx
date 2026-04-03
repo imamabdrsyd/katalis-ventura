@@ -8,11 +8,13 @@ import { getAccounts } from '@/lib/api/accounts';
 import * as transactionsApi from '@/lib/api/transactions';
 import { previewClosingEntries, executeClosingEntries } from '@/lib/accounting/closingEntry';
 import { formatCurrency } from '@/lib/utils';
+import { useLanguage } from '@/context/LanguageContext';
 import type { ClosingEntryPreview } from '@/lib/accounting/closingEntry';
 
 function ClosingEntryPageInner() {
   const { activeBusiness, activeBusinessId: businessId, user } = useBusinessContext();
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
 
   // Period defaults to current fiscal year
   const currentYear = new Date().getFullYear();
@@ -140,7 +142,7 @@ function ClosingEntryPageInner() {
             disabled={loading || !startDate || !endDate}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
           >
-            {loading ? 'Menghitung...' : 'Preview Jurnal Penutup'}
+            {loading ? '{t.closingEntry.calculating}' : '{t.closingEntry.preview}'}
           </button>
         </div>
       </div>
@@ -177,12 +179,12 @@ function ClosingEntryPageInner() {
           {/* Summary */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-              <p className="text-xs text-gray-500 uppercase mb-1">Total Pendapatan</p>
+              <p className="text-xs text-gray-500 uppercase mb-1">{t.closingEntry.totalRevenue}</p>
               <p className={`text-xl font-bold ${preview.totalRevenue === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{formatCurrency(preview.totalRevenue)}</p>
               <p className="text-xs text-gray-500">{preview.revenueLines.length} akun</p>
             </div>
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-              <p className="text-xs text-gray-500 uppercase mb-1">Total Beban</p>
+              <p className="text-xs text-gray-500 uppercase mb-1">{t.closingEntry.totalExpense}</p>
               <p className={`text-xl font-bold ${preview.totalExpense === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-red-500 dark:text-red-400'}`}>{formatCurrency(preview.totalExpense)}</p>
               <p className="text-xs text-gray-500">{preview.expenseLines.length} akun</p>
             </div>
@@ -199,14 +201,14 @@ function ClosingEntryPageInner() {
           {preview.revenueLines.length > 0 && (
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
               <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Penutupan Pendapatan</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t.closingEntry.revenueClosing}</h3>
                 <p className="text-xs text-gray-500">Dr Pendapatan / Cr Laba Ditahan</p>
               </div>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 dark:border-gray-800 text-left">
                     <th className="py-2 px-4 text-xs font-medium text-gray-500">Kode</th>
-                    <th className="py-2 px-4 text-xs font-medium text-gray-500">Nama Akun</th>
+                    <th className="py-2 px-4 text-xs font-medium text-gray-500">{t.closingEntry.accountName}</th>
                     <th className="py-2 px-4 text-xs font-medium text-gray-500 text-right">Jumlah</th>
                   </tr>
                 </thead>
@@ -226,14 +228,14 @@ function ClosingEntryPageInner() {
           {preview.expenseLines.length > 0 && (
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
               <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Penutupan Beban</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t.closingEntry.expenseClosing}</h3>
                 <p className="text-xs text-gray-500">Dr Laba Ditahan / Cr Beban</p>
               </div>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 dark:border-gray-800 text-left">
                     <th className="py-2 px-4 text-xs font-medium text-gray-500">Kode</th>
-                    <th className="py-2 px-4 text-xs font-medium text-gray-500">Nama Akun</th>
+                    <th className="py-2 px-4 text-xs font-medium text-gray-500">{t.closingEntry.accountName}</th>
                     <th className="py-2 px-4 text-xs font-medium text-gray-500 text-right">Jumlah</th>
                   </tr>
                 </thead>
@@ -261,7 +263,7 @@ function ClosingEntryPageInner() {
                 {executing ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                    Memproses...
+                    {t.closingEntry.processing}
                   </>
                 ) : (
                   <>

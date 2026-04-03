@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useBusinessContext } from '@/context/BusinessContext';
+import { useLanguage } from '@/context/LanguageContext';
 import type { Account, AccountType } from '@/types';
 import * as accountsApi from '@/lib/api/accounts';
 import type { AccountTreeNode } from '@/lib/api/accounts';
@@ -27,6 +28,7 @@ const TYPE_COLORS: Record<AccountType, string> = {
 
 export default function AccountsPage() {
   const { activeBusiness, userRole } = useBusinessContext();
+  const { t } = useLanguage();
   const businessId = activeBusiness?.id;
 
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -139,7 +141,7 @@ export default function AccountsPage() {
       setPreselectedParentId(null);
     } catch (err) {
       console.error('Failed to create account:', err);
-      alert('Gagal membuat akun. Silakan coba lagi.');
+      alert(t.accounts.createFailed);
     } finally {
       setSaving(false);
     }
@@ -163,7 +165,7 @@ export default function AccountsPage() {
       setEditAccount(null);
     } catch (err) {
       console.error('Failed to update account:', err);
-      alert('Gagal mengupdate akun. Silakan coba lagi.');
+      alert(t.accounts.updateFailed);
     } finally {
       setSaving(false);
     }
@@ -182,7 +184,7 @@ export default function AccountsPage() {
       setDeleteAccount(null);
     } catch (err) {
       console.error('Failed to deactivate account:', err);
-      alert('Gagal menonaktifkan akun. Silakan coba lagi.');
+      alert(t.accounts.deactivateFailed);
     } finally {
       setSaving(false);
     }
@@ -200,7 +202,7 @@ export default function AccountsPage() {
       setAccounts(updatedAccounts);
     } catch (err) {
       console.error('Failed to activate account:', err);
-      alert('Gagal mengaktifkan akun. Silakan coba lagi.');
+      alert(t.accounts.activateFailed);
     } finally {
       setSaving(false);
     }
@@ -216,7 +218,7 @@ export default function AccountsPage() {
     return (
       <div className="p-6">
         <div className="text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400">Pilih bisnis untuk melihat akun.</p>
+          <p className="text-gray-500 dark:text-gray-400">{t.common.selectBusinessFirst}</p>
         </div>
       </div>
     );
@@ -230,10 +232,10 @@ export default function AccountsPage() {
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
               <BookOpenIcon className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
-              Chart of Accounts
+              {t.accounts.title}
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              5 kategori utama, tambah sub-akun sesuai kebutuhan bisnis Anda
+              {t.accounts.subtitle}
             </p>
           </div>
           {canManageAccounts && (
@@ -242,7 +244,7 @@ export default function AccountsPage() {
               className="btn-primary flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              Tambah Akun
+              {t.accounts.addAccount}
             </button>
           )}
         </div>
@@ -257,7 +259,7 @@ export default function AccountsPage() {
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Cari kode atau nama akun..."
+              placeholder={t.accounts.searchPlaceholder}
               className="input pl-10 w-full"
             />
           </div>
@@ -268,7 +270,7 @@ export default function AccountsPage() {
               onChange={e => setShowInactive(e.target.checked)}
               className="rounded border-gray-300 dark:border-gray-600 text-indigo-500 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400"
             />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Tampilkan nonaktif</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">{t.accounts.showInactive}</span>
           </label>
         </div>
       </div>
@@ -397,6 +399,7 @@ function ParentAccountCard({
   canManage: boolean;
   showInactive: boolean;
 }) {
+  const { t } = useLanguage();
   const activeChildren = parent.children.filter(c => c.is_active);
   const inactiveChildren = parent.children.filter(c => !c.is_active);
   const displayChildren = showInactive ? parent.children : activeChildren;
@@ -422,7 +425,7 @@ function ParentAccountCard({
               {parent.account_name}
             </h2>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              {activeChildren.length} sub-akun{inactiveChildren.length > 0 && showInactive ? `, ${inactiveChildren.length} nonaktif` : ''}
+              {activeChildren.length} {t.accounts.subAccounts}{inactiveChildren.length > 0 && showInactive ? `, ${inactiveChildren.length} ${t.common.inactive.toLowerCase()}` : ''}
             </p>
           </div>
         </div>
@@ -448,7 +451,7 @@ function ParentAccountCard({
             </div>
           ) : (
             <div className="px-4 py-6 text-center text-gray-400 dark:text-gray-500 text-sm">
-              Belum ada sub-akun
+              {t.accounts.noSubAccounts}
             </div>
           )}
 

@@ -3,6 +3,7 @@
 import React, { Suspense } from 'react';
 import { ClipboardCheck, Calendar, CheckCircle, AlertCircle } from 'lucide-react';
 import { useTrialBalance } from '@/hooks/useTrialBalance';
+import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
 import type { AccountType } from '@/types';
@@ -15,22 +16,8 @@ const ACCOUNT_TYPE_BG: Record<AccountType, string> = {
   EXPENSE: 'bg-amber-50 dark:bg-amber-900/20 text-amber-500 dark:text-amber-300',
 };
 
-const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
-  ASSET: 'Aset',
-  LIABILITY: 'Liabilitas',
-  EQUITY: 'Ekuitas',
-  REVENUE: 'Pendapatan',
-  EXPENSE: 'Beban',
-};
-
-const PERIOD_LABELS: Record<Period, string> = {
-  month: 'Bulan Ini',
-  quarter: 'Kuartal Ini',
-  year: 'Tahun Ini',
-  custom: 'Kustom',
-};
-
 function TrialBalancePageInner() {
+  const { t } = useLanguage();
   const {
     activeBusiness,
     loading,
@@ -44,12 +31,27 @@ function TrialBalancePageInner() {
     trialBalance,
   } = useTrialBalance();
 
+  const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
+    ASSET: t.generalLedger.asset,
+    LIABILITY: t.generalLedger.liability,
+    EQUITY: t.generalLedger.equityLabel,
+    REVENUE: t.generalLedger.revenueLabel,
+    EXPENSE: t.generalLedger.expense,
+  };
+
+  const PERIOD_LABELS: Record<Period, string> = {
+    month: t.period.thisMonth,
+    quarter: t.period.quarter,
+    year: t.period.thisYear,
+    custom: t.period.custom,
+  };
+
   if (loading || accountsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-500 dark:text-gray-400">Memuat data...</p>
+          <p className="text-gray-500 dark:text-gray-400">{t.common.loading}</p>
         </div>
       </div>
     );
@@ -60,7 +62,7 @@ function TrialBalancePageInner() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <ClipboardCheck className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">Pilih bisnis untuk melihat Trial Balance</p>
+          <p className="text-gray-500 dark:text-gray-400">{t.common.selectBusinessFirst}</p>
         </div>
       </div>
     );
@@ -83,10 +85,10 @@ function TrialBalancePageInner() {
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
           <ClipboardCheck className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
-          Trial Balance
+          {t.trialBalance.title}
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Neraca Saldo — {activeBusiness.business_name}
+          {t.trialBalance.reportTitle} — {activeBusiness.business_name}
         </p>
       </div>
 
@@ -95,7 +97,7 @@ function TrialBalancePageInner() {
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
           <div className="flex-1">
             <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-              Periode
+              {t.period.period}
             </label>
             <div className="flex gap-2 flex-wrap">
               {(['month', 'quarter', 'year', 'custom'] as Period[]).map((p) => (
@@ -119,7 +121,7 @@ function TrialBalancePageInner() {
               <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
-                  Dari
+                  {t.period.startDate}
                 </label>
                 <input
                   type="date"
@@ -131,7 +133,7 @@ function TrialBalancePageInner() {
               <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
-                  Sampai
+                  {t.period.endDate}
                 </label>
                 <input
                   type="date"
@@ -152,16 +154,16 @@ function TrialBalancePageInner() {
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-800/50 border-b-2 border-gray-200 dark:border-gray-600">
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20">
-                  Kode
+                  {t.common.code}
                 </th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Nama Akun
+                  {t.trialBalance.accountName}
                 </th>
                 <th className="text-right py-3 px-4 text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider w-36">
-                  Debit
+                  {t.generalLedger.debit}
                 </th>
                 <th className="text-right py-3 px-4 text-xs font-semibold text-red-500 dark:text-red-400 uppercase tracking-wider w-36">
-                  Kredit
+                  {t.generalLedger.credit}
                 </th>
               </tr>
             </thead>
@@ -169,7 +171,7 @@ function TrialBalancePageInner() {
               {trialBalance.rows.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="py-12 text-center text-gray-500 dark:text-gray-400 text-sm">
-                    Tidak ada transaksi pada periode ini
+                    {t.trialBalance.noTransactions}
                   </td>
                 </tr>
               ) : (
@@ -259,19 +261,19 @@ function TrialBalancePageInner() {
                   ? 'text-emerald-900 dark:text-emerald-100'
                   : 'text-red-900 dark:text-red-100'
               }`}>
-                {trialBalance.isBalanced ? '\u2713 Neraca Saldo Seimbang' : '\u26A0\uFE0F Neraca Saldo Tidak Seimbang'}
+                {trialBalance.isBalanced ? `\u2713 ${t.trialBalance.balanced}` : `\u26A0\uFE0F ${t.trialBalance.notBalanced}`}
               </p>
               <p className={`text-sm mt-1 ${
                 trialBalance.isBalanced
                   ? 'text-emerald-500 dark:text-emerald-300'
                   : 'text-red-500 dark:text-red-300'
               }`}>
-                Total Debit ({formatCurrency(trialBalance.totalDebits)})
+                {t.trialBalance.totalDebitEquals.replace('{amount}', formatCurrency(trialBalance.totalDebits))}
                 {trialBalance.isBalanced ? ' = ' : ' \u2260 '}
-                Total Kredit ({formatCurrency(trialBalance.totalCredits)})
+                {t.generalLedger.totalCredit} ({formatCurrency(trialBalance.totalCredits)})
                 {!trialBalance.isBalanced && (
                   <span className="ml-2 font-semibold">
-                    | Selisih: {formatCurrency(trialBalance.difference)}
+                    | {t.trialBalance.differenceAmount.replace('{amount}', formatCurrency(trialBalance.difference))}
                   </span>
                 )}
               </p>

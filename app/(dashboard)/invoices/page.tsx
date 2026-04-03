@@ -8,18 +8,20 @@ import { InvoiceForm } from '@/components/invoices/InvoiceForm';
 import { InvoiceList } from '@/components/invoices/InvoiceList';
 import { InvoiceSettingsModal } from '@/components/invoices/InvoiceSettingsModal';
 import { Modal } from '@/components/ui/Modal';
+import { useLanguage } from '@/context/LanguageContext';
 import type { InvoicePaymentStatus } from '@/types';
 
 const STATUS_TABS: { value: '' | InvoicePaymentStatus; label: string }[] = [
   { value: '', label: 'Semua' },
   { value: 'draft', label: 'Draft' },
-  { value: 'unpaid', label: 'Belum Bayar' },
-  { value: 'paid', label: 'Lunas' },
-  { value: 'overdue', label: 'Jatuh Tempo' },
+  { value: 'unpaid', label: '{t.invoices.unpaid}' },
+  { value: 'paid', label: '{t.invoices.paid}' },
+  { value: 'overdue', label: '{t.invoices.overdue}' },
 ];
 
 function InvoicesPageInner() {
   const searchParams = useSearchParams();
+  const { t } = useLanguage();
   const {
     filteredInvoices,
     loading,
@@ -58,7 +60,7 @@ function InvoicesPageInner() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500 dark:text-gray-400">Memuat...</p>
+          <p className="text-gray-500 dark:text-gray-400">{t.common.loading}</p>
         </div>
       </div>
     );
@@ -94,14 +96,14 @@ function InvoicesPageInner() {
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
             >
               <Settings className="h-4 w-4" />
-              Pengaturan
+              {t.invoices.settings}
             </button>
             <button
               onClick={() => setShowAddModal(true)}
               className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors flex items-center gap-2 font-medium shadow-sm"
             >
               <Plus className="h-4 w-4" />
-              Buat Invoice
+              {t.invoices.createInvoice}
             </button>
           </div>
         )}
@@ -161,7 +163,7 @@ function InvoicesPageInner() {
       <Modal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        title="Buat Invoice"
+        title="{t.invoices.createInvoice}"
       >
         <InvoiceForm
           onSubmit={handleCreateInvoice}
@@ -175,11 +177,11 @@ function InvoicesPageInner() {
         />
       </Modal>
 
-      {/* Edit Invoice Modal */}
+      {/* {t.invoices.editInvoice} Modal */}
       <Modal
         isOpen={!!editInvoice}
         onClose={() => setEditInvoice(null)}
-        title="Edit Invoice"
+        title="{t.invoices.editInvoice}"
       >
         {editInvoice && (
           <InvoiceForm

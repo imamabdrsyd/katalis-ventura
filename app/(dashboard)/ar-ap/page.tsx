@@ -3,28 +3,23 @@
 import { Suspense, useState } from 'react';
 import { Users, Calendar, AlertTriangle, TrendingUp, TrendingDown, ArrowRightLeft } from 'lucide-react';
 import { useArApAging } from '@/hooks/useArApAging';
+import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
 import type { ArApSummary, AgingRow, RepaymentSummary } from '@/types';
 
-const PERIOD_LABELS: Record<Period, string> = {
-  month: 'Bulan Ini',
-  quarter: 'Kuartal Ini',
-  year: 'Tahun Ini',
-  custom: 'Kustom',
-};
-
 // ─── Aging Table Component ─────────────────────────────────────
 
 function AgingTable({ summary, type }: { summary: ArApSummary; type: 'ar' | 'ap' }) {
-  const label = type === 'ar' ? 'Piutang' : 'Hutang';
+  const { t } = useLanguage();
+  const label = type === 'ar' ? t.arAp.receivables : t.arAp.payables;
 
   if (summary.rows.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500 dark:text-gray-400">
         <Users className="w-12 h-12 mx-auto mb-3 opacity-40" />
-        <p className="font-medium">Tidak ada {label.toLowerCase()} outstanding</p>
-        <p className="text-sm mt-1">Semua transaksi {label.toLowerCase()} sudah dilunasi atau belum ada transaksi.</p>
+        <p className="font-medium">{t.arAp.noOutstanding.replace('{label}', label.toLowerCase())}</p>
+        <p className="text-sm mt-1">{t.arAp.allSettled.replace('{label}', label.toLowerCase())}</p>
       </div>
     );
   }
@@ -34,13 +29,13 @@ function AgingTable({ summary, type }: { summary: ArApSummary; type: 'ar' | 'ap'
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-200 dark:border-gray-700 text-left">
-            <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300">Nama Kontak</th>
-            <th className="py-3 px-3 font-semibold text-gray-600 dark:text-gray-300 text-right">Current</th>
-            <th className="py-3 px-3 font-semibold text-gray-600 dark:text-gray-300 text-right">1-30 Hari</th>
-            <th className="py-3 px-3 font-semibold text-gray-600 dark:text-gray-300 text-right">31-60 Hari</th>
-            <th className="py-3 px-3 font-semibold text-gray-600 dark:text-gray-300 text-right">61-90 Hari</th>
-            <th className="py-3 px-3 font-semibold text-gray-600 dark:text-gray-300 text-right">&gt;90 Hari</th>
-            <th className="py-3 px-3 font-semibold text-gray-600 dark:text-gray-300 text-right">Total</th>
+            <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300">{t.arAp.contactName}</th>
+            <th className="py-3 px-3 font-semibold text-gray-600 dark:text-gray-300 text-right">{t.arAp.current}</th>
+            <th className="py-3 px-3 font-semibold text-gray-600 dark:text-gray-300 text-right">{t.arAp.days1to30}</th>
+            <th className="py-3 px-3 font-semibold text-gray-600 dark:text-gray-300 text-right">{t.arAp.days31to60}</th>
+            <th className="py-3 px-3 font-semibold text-gray-600 dark:text-gray-300 text-right">{t.arAp.days61to90}</th>
+            <th className="py-3 px-3 font-semibold text-gray-600 dark:text-gray-300 text-right">{t.arAp.daysOver90}</th>
+            <th className="py-3 px-3 font-semibold text-gray-600 dark:text-gray-300 text-right">{t.common.total}</th>
           </tr>
         </thead>
         <tbody>
@@ -69,6 +64,7 @@ function AgingTable({ summary, type }: { summary: ArApSummary; type: 'ar' | 'ap'
 }
 
 function AgingTableRow({ row }: { row: AgingRow }) {
+  const { t } = useLanguage();
   const hasOverdue = row.bucket60 > 0 || row.bucket90 > 0 || row.bucketOver90 > 0;
 
   return (
@@ -82,7 +78,7 @@ function AgingTableRow({ row }: { row: AgingRow }) {
             <span className="font-medium text-gray-900 dark:text-gray-100">{row.contactName}</span>
             {row.contactType && (
               <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-                {row.contactType === 'customer' ? 'Pelanggan' : row.contactType === 'vendor' ? 'Vendor' : 'Lainnya'}
+                {row.contactType === 'customer' ? t.arAp.customerType : row.contactType === 'vendor' ? t.arAp.vendorType : t.arAp.otherType}
               </span>
             )}
             {hasOverdue && (
@@ -109,49 +105,50 @@ function SummaryCards({ arSummary, apSummary, netArTotal, netApTotal }: {
   netArTotal: number;
   netApTotal: number;
 }) {
+  const { t } = useLanguage();
   const netPosition = netArTotal - netApTotal;
   const overdueAR = arSummary.total60 + arSummary.total90 + arSummary.totalOver90;
   const overdueAP = apSummary.total60 + apSummary.total90 + apSummary.totalOver90;
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      {/* Sisa Piutang */}
+      {/* Receivables */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
         <div className="flex items-center gap-2 mb-1">
           <TrendingUp className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Sisa Piutang</span>
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t.arAp.receivables}</span>
         </div>
         <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(Math.max(0, netArTotal))}</p>
-        <p className="text-xs text-gray-500 mt-1">{arSummary.rows.length} kontak</p>
+        <p className="text-xs text-gray-500 mt-1">{t.arAp.contacts.replace('{n}', String(arSummary.rows.length))}</p>
       </div>
 
-      {/* Sisa Hutang */}
+      {/* Payables */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
         <div className="flex items-center gap-2 mb-1">
           <TrendingDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Sisa Hutang</span>
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t.arAp.payables}</span>
         </div>
         <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(Math.max(0, netApTotal))}</p>
-        <p className="text-xs text-gray-500 mt-1">{apSummary.rows.length} kontak</p>
+        <p className="text-xs text-gray-500 mt-1">{t.arAp.contacts.replace('{n}', String(apSummary.rows.length))}</p>
       </div>
 
       {/* Net Position */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
         <div className="flex items-center gap-2 mb-1">
           <Users className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Posisi Bersih</span>
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t.arAp.netPosition}</span>
         </div>
         <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
           {formatCurrency(netPosition)}
         </p>
-        <p className="text-xs text-gray-500 mt-1">{netPosition >= 0 ? 'Lebih banyak diterima' : 'Lebih banyak dibayar'}</p>
+        <p className="text-xs text-gray-500 mt-1">{netPosition >= 0 ? t.arAp.moreReceived : t.arAp.morePaid}</p>
       </div>
 
       {/* Overdue */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
         <div className="flex items-center gap-2 mb-1">
           <AlertTriangle className="w-4 h-4 text-amber-500" />
-          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Overdue (&gt;60 hari)</span>
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t.arAp.overdueLabel}</span>
         </div>
         <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{formatCurrency(overdueAR + overdueAP)}</p>
         <p className="text-xs text-gray-500 mt-1">
@@ -165,12 +162,14 @@ function SummaryCards({ arSummary, apSummary, netArTotal, netApTotal }: {
 // ─── Repayment History Table ────────────────────────────────────
 
 function RepaymentTable({ summary }: { summary: RepaymentSummary }) {
+  const { t } = useLanguage();
+
   if (summary.rows.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500 dark:text-gray-400">
         <ArrowRightLeft className="w-12 h-12 mx-auto mb-3 opacity-40" />
-        <p className="font-medium">Belum ada riwayat pembayaran</p>
-        <p className="text-sm mt-1">Transaksi pembayaran hutang atau pelunasan piutang akan muncul di sini.</p>
+        <p className="font-medium">{t.arAp.noPaymentHistory}</p>
+        <p className="text-sm mt-1">{t.arAp.paymentHistoryHint}</p>
       </div>
     );
   }
@@ -179,24 +178,24 @@ function RepaymentTable({ summary }: { summary: RepaymentSummary }) {
     <div className="overflow-x-auto">
       {/* Summary bar */}
       <div className="flex items-center gap-4 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 text-sm">
-        <span className="text-gray-500 dark:text-gray-400">Total dibayar:</span>
+        <span className="text-gray-500 dark:text-gray-400">{t.arAp.totalPaid}</span>
         <span className="text-gray-500 dark:text-gray-400">
-          Hutang: <span className="font-semibold text-rose-600 dark:text-rose-400">{formatCurrency(summary.totalApRepaid)}</span>
+          {t.arAp.payDebt}: <span className="font-semibold text-rose-600 dark:text-rose-400">{formatCurrency(summary.totalApRepaid)}</span>
         </span>
         <span className="text-gray-300 dark:text-gray-600">|</span>
         <span className="text-gray-500 dark:text-gray-400">
-          Piutang diterima: <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(summary.totalArCollected)}</span>
+          {t.arAp.receivePayment}: <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(summary.totalArCollected)}</span>
         </span>
       </div>
 
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-200 dark:border-gray-700 text-left">
-            <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300">Tanggal</th>
-            <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300">Kontak</th>
-            <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300">Keterangan</th>
-            <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300">Tipe</th>
-            <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300 text-right">Jumlah</th>
+            <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300">{t.common.date}</th>
+            <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300">{t.arAp.contactName}</th>
+            <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300">{t.common.description}</th>
+            <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300">{t.common.type}</th>
+            <th className="py-3 px-4 font-semibold text-gray-600 dark:text-gray-300 text-right">{t.common.amount}</th>
           </tr>
         </thead>
         <tbody>
@@ -220,7 +219,7 @@ function RepaymentTable({ summary }: { summary: RepaymentSummary }) {
                     ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400'
                     : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
                 }`}>
-                  {row.type === 'ap' ? 'Bayar Hutang' : 'Terima Piutang'}
+                  {row.type === 'ap' ? t.arAp.payDebt : t.arAp.receivePayment}
                 </span>
               </td>
               <td className="py-3 px-4 text-right font-semibold text-gray-900 dark:text-gray-100">
@@ -341,7 +340,7 @@ function ArApPageInner() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
-              Piutang (AR)
+              {t.arAp.arTab}
               {arSummary.rows.length > 0 && (
                 <span className="ml-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs px-2 py-0.5 rounded-full">
                   {arSummary.rows.length}
@@ -356,7 +355,7 @@ function ArApPageInner() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
-              Hutang (AP)
+              {t.arAp.apTab}
               {apSummary.rows.length > 0 && (
                 <span className="ml-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs px-2 py-0.5 rounded-full">
                   {apSummary.rows.length}
@@ -371,7 +370,7 @@ function ArApPageInner() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
-              Riwayat Pembayaran
+              {t.arAp.paymentHistory}
               {repaymentSummary.rows.length > 0 && (
                 <span className="ml-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs px-2 py-0.5 rounded-full">
                   {repaymentSummary.rows.length}

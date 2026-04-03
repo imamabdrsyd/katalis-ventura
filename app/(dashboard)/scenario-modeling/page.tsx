@@ -4,6 +4,7 @@ import { useState, Suspense } from 'react';
 import { Calendar, TrendingUp, TrendingDown, Minus, FlaskConical, BarChart3, SlidersHorizontal, LineChart, Building2 } from 'lucide-react';
 import { useScenarioModeling, type ScenarioResult } from '@/hooks/useScenarioModeling';
 import { formatCurrency } from '@/lib/utils';
+import { useLanguage } from '@/context/LanguageContext';
 import type { Period } from '@/hooks/useReportData';
 
 function AssumptionSlider({
@@ -229,6 +230,7 @@ function ProjectionBar({ projections }: { projections: { month: string; revenue:
 }
 
 function ScenarioModelingPageInner() {
+  const { t } = useLanguage();
   const {
     activeBusiness,
     loading,
@@ -246,8 +248,8 @@ function ScenarioModelingPageInner() {
     optimisticAssumptions,
     pessimisticAssumptions,
     customAssumptions,
-    setOptimisticAssumptions,
-    setPessimisticAssumptions,
+    set{t.scenario.optimistic}Assumptions,
+    set{t.scenario.pessimistic}Assumptions,
     setCustomAssumptions,
     projectionMonths,
     setProjectionMonths,
@@ -300,7 +302,7 @@ function ScenarioModelingPageInner() {
       <div className="card mb-6">
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
           <div className="flex-1">
-            <label className="label">Periode Baseline</label>
+            <label className="label">Periode {t.scenario.baseline}</label>
             <div className="flex gap-2">
               {(['month', 'quarter', 'year', 'custom'] as Period[]).map((p) => (
                 <button
@@ -361,7 +363,7 @@ function ScenarioModelingPageInner() {
           }`}
         >
           <BarChart3 className="w-4 h-4" />
-          Perbandingan Skenario
+          {t.scenario.comparisonTab}
         </button>
         <button
           onClick={() => setActiveTab('custom')}
@@ -372,7 +374,7 @@ function ScenarioModelingPageInner() {
           }`}
         >
           <SlidersHorizontal className="w-4 h-4" />
-          Custom Scenario & Proyeksi
+          {t.scenario.customTab}
         </button>
       </div>
 
@@ -387,64 +389,64 @@ function ScenarioModelingPageInner() {
 
           {/* Assumption Editors */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* Optimistic Assumptions */}
+            {/* {t.scenario.optimistic} Assumptions */}
             <div className="card">
               <div className="flex items-center gap-2 mb-4">
                 <TrendingUp className="w-5 h-5 text-emerald-500" />
-                <h3 className="font-bold text-gray-800 dark:text-gray-100">Asumsi Optimistic</h3>
+                <h3 className="font-bold text-gray-800 dark:text-gray-100">Asumsi {t.scenario.optimistic}</h3>
               </div>
               <div className="space-y-4">
                 <AssumptionSlider
                   label="Revenue Growth"
                   value={optimisticAssumptions.revenueGrowth}
-                  onChange={(v) => setOptimisticAssumptions(prev => ({ ...prev, revenueGrowth: v }))}
+                  onChange={(v) => set{t.scenario.optimistic}Assumptions(prev => ({ ...prev, revenueGrowth: v }))}
                 />
                 <AssumptionSlider
                   label="COGS Growth"
                   value={optimisticAssumptions.cogsGrowth}
-                  onChange={(v) => setOptimisticAssumptions(prev => ({ ...prev, cogsGrowth: v }))}
+                  onChange={(v) => set{t.scenario.optimistic}Assumptions(prev => ({ ...prev, cogsGrowth: v }))}
                 />
                 <AssumptionSlider
                   label="OpEx Growth"
                   value={optimisticAssumptions.opexGrowth}
-                  onChange={(v) => setOptimisticAssumptions(prev => ({ ...prev, opexGrowth: v }))}
+                  onChange={(v) => set{t.scenario.optimistic}Assumptions(prev => ({ ...prev, opexGrowth: v }))}
                 />
                 <AssumptionSlider
                   label="Tax Rate (% of EBT)"
                   value={optimisticAssumptions.taxRate}
-                  onChange={(v) => setOptimisticAssumptions(prev => ({ ...prev, taxRate: v }))}
+                  onChange={(v) => set{t.scenario.optimistic}Assumptions(prev => ({ ...prev, taxRate: v }))}
                   min={0}
                   max={50}
                 />
               </div>
             </div>
 
-            {/* Pessimistic Assumptions */}
+            {/* {t.scenario.pessimistic} Assumptions */}
             <div className="card">
               <div className="flex items-center gap-2 mb-4">
                 <TrendingDown className="w-5 h-5 text-red-500" />
-                <h3 className="font-bold text-gray-800 dark:text-gray-100">Asumsi Pessimistic</h3>
+                <h3 className="font-bold text-gray-800 dark:text-gray-100">Asumsi {t.scenario.pessimistic}</h3>
               </div>
               <div className="space-y-4">
                 <AssumptionSlider
                   label="Revenue Growth"
                   value={pessimisticAssumptions.revenueGrowth}
-                  onChange={(v) => setPessimisticAssumptions(prev => ({ ...prev, revenueGrowth: v }))}
+                  onChange={(v) => set{t.scenario.pessimistic}Assumptions(prev => ({ ...prev, revenueGrowth: v }))}
                 />
                 <AssumptionSlider
                   label="COGS Growth"
                   value={pessimisticAssumptions.cogsGrowth}
-                  onChange={(v) => setPessimisticAssumptions(prev => ({ ...prev, cogsGrowth: v }))}
+                  onChange={(v) => set{t.scenario.pessimistic}Assumptions(prev => ({ ...prev, cogsGrowth: v }))}
                 />
                 <AssumptionSlider
                   label="OpEx Growth"
                   value={pessimisticAssumptions.opexGrowth}
-                  onChange={(v) => setPessimisticAssumptions(prev => ({ ...prev, opexGrowth: v }))}
+                  onChange={(v) => set{t.scenario.pessimistic}Assumptions(prev => ({ ...prev, opexGrowth: v }))}
                 />
                 <AssumptionSlider
                   label="Tax Rate (% of EBT)"
                   value={pessimisticAssumptions.taxRate}
-                  onChange={(v) => setPessimisticAssumptions(prev => ({ ...prev, taxRate: v }))}
+                  onChange={(v) => set{t.scenario.pessimistic}Assumptions(prev => ({ ...prev, taxRate: v }))}
                   min={0}
                   max={50}
                 />
@@ -504,7 +506,7 @@ function ScenarioModelingPageInner() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <LineChart className="w-5 h-5 text-purple-500" />
-                  <h3 className="font-bold text-gray-800 dark:text-gray-100">Proyeksi Keuangan</h3>
+                  <h3 className="font-bold text-gray-800 dark:text-gray-100">{t.scenario.financialProjection}</h3>
                 </div>
                 <select
                   value={projectionMonths}
@@ -527,7 +529,7 @@ function ScenarioModelingPageInner() {
             {/* Projection Summary */}
             {projections.length > 0 && (
               <div className="card">
-                <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4">Ringkasan Proyeksi</h3>
+                <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4">{t.scenario.projectionSummary}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4">
                     <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">Total Revenue Proyeksi</p>
@@ -580,9 +582,9 @@ function ScenarioModelingPageInner() {
             <thead>
               <tr className="border-b-2 border-gray-200 dark:border-gray-700">
                 <th className="text-left py-3 px-3 text-gray-500 dark:text-gray-400 font-semibold">Metrik</th>
-                <th className="text-right py-3 px-3 text-gray-500 dark:text-gray-400 font-semibold">Baseline</th>
-                <th className="text-right py-3 px-3 text-emerald-500 dark:text-emerald-400 font-semibold">Optimistic</th>
-                <th className="text-right py-3 px-3 text-red-500 dark:text-red-400 font-semibold">Pessimistic</th>
+                <th className="text-right py-3 px-3 text-gray-500 dark:text-gray-400 font-semibold">{t.scenario.baseline}</th>
+                <th className="text-right py-3 px-3 text-emerald-500 dark:text-emerald-400 font-semibold">{t.scenario.optimistic}</th>
+                <th className="text-right py-3 px-3 text-red-500 dark:text-red-400 font-semibold">{t.scenario.pessimistic}</th>
                 <th className="text-right py-3 px-3 text-blue-600 dark:text-blue-400 font-semibold">Custom</th>
               </tr>
             </thead>

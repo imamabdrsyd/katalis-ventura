@@ -3,10 +3,12 @@
 import { Suspense } from 'react';
 import { Calendar, Scale, Download, FileText, FileSpreadsheet, CheckCircle, AlertCircle } from 'lucide-react';
 import { useBalanceSheet } from '@/hooks/useBalanceSheet';
+import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
 
 function BalanceSheetPageInner() {
+  const { t } = useLanguage();
   const {
     activeBusiness,
     loading,
@@ -30,7 +32,7 @@ function BalanceSheetPageInner() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-500 dark:text-gray-400">Memuat data...</p>
+          <p className="text-gray-500 dark:text-gray-400">{t.common.loading}</p>
         </div>
       </div>
     );
@@ -41,7 +43,7 @@ function BalanceSheetPageInner() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <Scale className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">Pilih bisnis untuk melihat neraca</p>
+          <p className="text-gray-500 dark:text-gray-400">{t.common.selectBusinessFirst}</p>
         </div>
       </div>
     );
@@ -53,10 +55,10 @@ function BalanceSheetPageInner() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
           <Scale className="w-8 h-8 text-primary-600 dark:text-primary-400" />
-          Balance Sheet
+          {t.balanceSheetPage.title}
         </h1>
         <p className="text-gray-500 dark:text-gray-400 mt-2">
-          Neraca Keuangan - {activeBusiness?.business_name}
+          {t.balanceSheetPage.reportTitle} - {activeBusiness?.business_name}
         </p>
       </div>
 
@@ -65,7 +67,7 @@ function BalanceSheetPageInner() {
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end justify-between">
           {/* Period Selector */}
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Periode</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t.period.period}</label>
             <div className="flex gap-2 flex-wrap">
               {(['month', 'quarter', 'year', 'custom'] as Period[]).map((p) => (
                 <button
@@ -77,7 +79,7 @@ function BalanceSheetPageInner() {
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
-                  {p === 'month' ? 'Bulan Ini' : p === 'quarter' ? 'Kuartal' : p === 'year' ? 'Tahun Ini' : 'Custom'}
+                  {p === 'month' ? t.period.thisMonth : p === 'quarter' ? t.period.quarter : p === 'year' ? t.period.thisYear : t.period.custom}
                 </button>
               ))}
             </div>
@@ -89,7 +91,7 @@ function BalanceSheetPageInner() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
-                  Tanggal Mulai
+                  {t.period.startDate}
                 </label>
                 <input
                   type="date"
@@ -101,7 +103,7 @@ function BalanceSheetPageInner() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
-                  Tanggal Akhir
+                  {t.period.endDate}
                 </label>
                 <input
                   type="date"
@@ -120,7 +122,7 @@ function BalanceSheetPageInner() {
               className="btn-secondary flex items-center gap-2"
             >
               <Download className="w-4 h-4" />
-              Export
+              {t.common.export}
             </button>
 
             {showExportMenu && (
@@ -130,14 +132,14 @@ function BalanceSheetPageInner() {
                   className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3"
                 >
                   <FileText className="w-4 h-4 text-red-500" />
-                  Export as PDF
+                  {t.common.exportPDF}
                 </button>
                 <button
                   onClick={handleExportExcel}
                   className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3"
                 >
                   <FileSpreadsheet className="w-4 h-4 text-green-500" />
-                  Export as Excel
+                  {t.common.exportExcel}
                 </button>
               </div>
             )}
@@ -148,7 +150,7 @@ function BalanceSheetPageInner() {
       {/* As of Date Display */}
       <div className="text-center mb-6">
         <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-          As of {new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+          {t.balanceSheetPage.asOf} {new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
         </p>
       </div>
 
@@ -158,23 +160,23 @@ function BalanceSheetPageInner() {
         <div className="card-static">
           <div className="border-b-2 border-gray-300 dark:border-gray-600 pb-3 mb-6">
             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">
-              ASET (Assets)
+              {t.balanceSheetPage.assets}
             </h2>
           </div>
 
           <div className="space-y-6">
             {/* Current Assets */}
             <div>
-              <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Aset Lancar</h3>
+              <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">{t.balanceSheetPage.currentAssets}</h3>
               <div className="flex justify-between py-2 pl-4">
-                <span className="text-gray-700 dark:text-gray-300">Kas & Bank</span>
+                <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.cashAndBank}</span>
                 <span className="font-semibold text-gray-900 dark:text-gray-100">
                   {formatCurrency(balanceSheet.assets.cash)}
                 </span>
               </div>
               {balanceSheet.assets.inventory !== 0 && (
                 <div className="flex justify-between py-2 pl-4">
-                  <span className="text-gray-700 dark:text-gray-300">Persediaan</span>
+                  <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.inventory}</span>
                   <span className="font-semibold text-gray-900 dark:text-gray-100">
                     {formatCurrency(balanceSheet.assets.inventory)}
                   </span>
@@ -182,7 +184,7 @@ function BalanceSheetPageInner() {
               )}
               {balanceSheet.assets.receivables !== 0 && (
                 <div className="flex justify-between py-2 pl-4">
-                  <span className="text-gray-700 dark:text-gray-300">Piutang Usaha</span>
+                  <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.accountsReceivable}</span>
                   <span className="font-semibold text-gray-900 dark:text-gray-100">
                     {formatCurrency(balanceSheet.assets.receivables)}
                   </span>
@@ -190,14 +192,14 @@ function BalanceSheetPageInner() {
               )}
               {balanceSheet.assets.otherCurrentAssets !== 0 && (
                 <div className="flex justify-between py-2 pl-4">
-                  <span className="text-gray-700 dark:text-gray-300">Aset Lancar Lainnya</span>
+                  <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.otherCurrentAssets}</span>
                   <span className="font-semibold text-gray-900 dark:text-gray-100">
                     {formatCurrency(balanceSheet.assets.otherCurrentAssets)}
                   </span>
                 </div>
               )}
               <div className="flex justify-between py-2 pl-4 border-t border-gray-200 dark:border-gray-700 font-semibold">
-                <span className="text-gray-800 dark:text-gray-200">Total Aset Lancar</span>
+                <span className="text-gray-800 dark:text-gray-200">{t.balanceSheetPage.totalCurrentAssets}</span>
                 <span className="text-gray-900 dark:text-gray-100">
                   {formatCurrency(balanceSheet.assets.totalCurrentAssets)}
                 </span>
@@ -206,16 +208,16 @@ function BalanceSheetPageInner() {
 
             {/* Fixed Assets */}
             <div>
-              <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Aset Tetap</h3>
+              <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">{t.balanceSheetPage.fixedAssets}</h3>
               <div className="flex justify-between py-2 pl-4">
-                <span className="text-gray-700 dark:text-gray-300">Nilai Perolehan</span>
+                <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.acquisitionValue}</span>
                 <span className="font-semibold text-gray-900 dark:text-gray-100">
                   {formatCurrency(balanceSheet.assets.fixedAssets)}
                 </span>
               </div>
               {balanceSheet.assets.accumulatedDepreciation > 0 && (
                 <div className="flex justify-between py-2 pl-4">
-                  <span className="text-gray-500 dark:text-gray-400 italic">Akumulasi Penyusutan</span>
+                  <span className="text-gray-500 dark:text-gray-400 italic">{t.balanceSheetPage.accumulatedDepreciation}</span>
                   <span className="font-semibold text-red-500 dark:text-red-400">
                     ({formatCurrency(balanceSheet.assets.accumulatedDepreciation)})
                   </span>
@@ -223,7 +225,7 @@ function BalanceSheetPageInner() {
               )}
               <div className="flex justify-between py-2 pl-4 border-t border-gray-200 dark:border-gray-700 font-semibold">
                 <span className="text-gray-800 dark:text-gray-200">
-                  {balanceSheet.assets.accumulatedDepreciation > 0 ? 'Nilai Buku Aset Tetap' : 'Total Aset Tetap'}
+                  {balanceSheet.assets.accumulatedDepreciation > 0 ? t.balanceSheetPage.netFixedAssets : t.balanceSheetPage.fixedAssets}
                 </span>
                 <span className="text-gray-900 dark:text-gray-100">
                   {formatCurrency(balanceSheet.assets.totalFixedAssets)}
@@ -233,7 +235,7 @@ function BalanceSheetPageInner() {
 
             {/* Total Assets */}
             <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-bold border-t-2 border-gray-900 dark:border-gray-100 mt-4">
-              <span className="text-lg text-gray-800 dark:text-gray-100">Total Aset</span>
+              <span className="text-lg text-gray-800 dark:text-gray-100">{t.balanceSheetPage.totalAssets}</span>
               <span className="text-lg text-primary-600 dark:text-primary-400">
                 {formatCurrency(balanceSheet.assets.totalAssets)}
               </span>
@@ -245,22 +247,22 @@ function BalanceSheetPageInner() {
         <div className="card-static">
           <div className="border-b-2 border-gray-300 dark:border-gray-600 pb-3 mb-6">
             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">
-              LIABILITAS & EKUITAS
+              {t.balanceSheetPage.liabilitiesAndEquity}
             </h2>
           </div>
 
           <div className="space-y-6">
             {/* Liabilities */}
             <div>
-              <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Liabilitas (Utang)</h3>
+              <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">{t.balanceSheetPage.liabilities}</h3>
               <div className="flex justify-between py-2 pl-4">
-                <span className="text-gray-700 dark:text-gray-300">Pinjaman</span>
+                <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.loans}</span>
                 <span className="font-semibold text-gray-900 dark:text-gray-100">
                   {formatCurrency(balanceSheet.liabilities.loans)}
                 </span>
               </div>
               <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-2">
-                <span className="text-gray-800 dark:text-gray-100">Total Liabilitas</span>
+                <span className="text-gray-800 dark:text-gray-100">{t.balanceSheetPage.totalLiabilities}</span>
                 <span className="text-gray-800 dark:text-gray-100">
                   {formatCurrency(balanceSheet.liabilities.totalLiabilities)}
                 </span>
@@ -269,24 +271,24 @@ function BalanceSheetPageInner() {
 
             {/* Equity */}
             <div>
-              <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Ekuitas (Modal)</h3>
+              <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">{t.balanceSheetPage.equity}</h3>
               <div className="space-y-2">
                 <div className="flex justify-between py-2 pl-4">
-                  <span className="text-gray-700 dark:text-gray-300">Modal Disetor</span>
+                  <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.paidInCapital}</span>
                   <span className="font-semibold text-gray-900 dark:text-gray-100">
                     {formatCurrency(balanceSheet.equity.capital)}
                   </span>
                 </div>
                 {balanceSheet.equity.drawings > 0 && (
                   <div className="flex justify-between py-2 pl-4">
-                    <span className="text-gray-700 dark:text-gray-300">Prive / Dividen</span>
+                    <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.dividends}</span>
                     <span className="font-semibold text-red-500 dark:text-red-400">
                       ({formatCurrency(balanceSheet.equity.drawings)})
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between py-2 pl-4">
-                  <span className="text-gray-700 dark:text-gray-300">Laba Ditahan</span>
+                  <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.retainedEarnings}</span>
                   <span className={`font-semibold ${
                     balanceSheet.equity.retainedEarnings >= 0
                       ? 'text-emerald-500 dark:text-emerald-400'
@@ -299,7 +301,7 @@ function BalanceSheetPageInner() {
                 </div>
               </div>
               <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-2">
-                <span className="text-gray-800 dark:text-gray-100">Total Ekuitas</span>
+                <span className="text-gray-800 dark:text-gray-100">{t.balanceSheetPage.totalEquity}</span>
                 <span className="text-gray-800 dark:text-gray-100">
                   {formatCurrency(balanceSheet.equity.totalEquity)}
                 </span>
@@ -309,7 +311,7 @@ function BalanceSheetPageInner() {
             {/* Total Liabilities & Equity */}
             <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-bold border-t-2 border-gray-900 dark:border-gray-100 mt-4">
               <span className="text-lg text-gray-800 dark:text-gray-100">
-                Total Liabilitas & Ekuitas
+                {t.balanceSheetPage.totalLiabilitiesEquity}
               </span>
               <span className="text-lg text-primary-600 dark:text-primary-400">
                 {formatCurrency(
@@ -339,14 +341,14 @@ function BalanceSheetPageInner() {
                 ? 'text-emerald-900 dark:text-emerald-100'
                 : 'text-red-900 dark:text-red-100'
             }`}>
-              {isBalanced ? '\u2713 Neraca Seimbang' : '\u26A0\uFE0F Neraca Tidak Seimbang'}
+              {isBalanced ? `\u2713 ${t.balanceSheetPage.balanced}` : `\u26A0\uFE0F ${t.balanceSheetPage.notBalanced}`}
             </p>
             <p className={`text-sm mt-1 ${
               isBalanced
                 ? 'text-emerald-500 dark:text-emerald-300'
                 : 'text-red-500 dark:text-red-300'
             }`}>
-              Aset ({formatCurrency(balanceSheet.assets.totalAssets)}) = Liabilitas ({formatCurrency(balanceSheet.liabilities.totalLiabilities)}) + Ekuitas ({formatCurrency(balanceSheet.equity.totalEquity)})
+              {t.balanceSheetPage.totalAssets} ({formatCurrency(balanceSheet.assets.totalAssets)}) = {t.balanceSheetPage.totalLiabilities} ({formatCurrency(balanceSheet.liabilities.totalLiabilities)}) + {t.balanceSheetPage.totalEquity} ({formatCurrency(balanceSheet.equity.totalEquity)})
             </p>
           </div>
         </div>
