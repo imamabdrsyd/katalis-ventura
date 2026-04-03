@@ -248,8 +248,8 @@ function ScenarioModelingPageInner() {
     optimisticAssumptions,
     pessimisticAssumptions,
     customAssumptions,
-    set{t.scenario.optimistic}Assumptions,
-    set{t.scenario.pessimistic}Assumptions,
+    setOptimisticAssumptions,
+    setPessimisticAssumptions,
     setCustomAssumptions,
     projectionMonths,
     setProjectionMonths,
@@ -302,7 +302,7 @@ function ScenarioModelingPageInner() {
       <div className="card mb-6">
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
           <div className="flex-1">
-            <label className="label">Periode {t.scenario.baseline}</label>
+            <label className="label">{t.scenario.baselinePeriod}</label>
             <div className="flex gap-2">
               {(['month', 'quarter', 'year', 'custom'] as Period[]).map((p) => (
                 <button
@@ -389,64 +389,64 @@ function ScenarioModelingPageInner() {
 
           {/* Assumption Editors */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* {t.scenario.optimistic} Assumptions */}
+            {/* Optimistic Assumptions */}
             <div className="card">
               <div className="flex items-center gap-2 mb-4">
                 <TrendingUp className="w-5 h-5 text-emerald-500" />
-                <h3 className="font-bold text-gray-800 dark:text-gray-100">Asumsi {t.scenario.optimistic}</h3>
+                <h3 className="font-bold text-gray-800 dark:text-gray-100">{t.scenario.assumptionsOptimistic}</h3>
               </div>
               <div className="space-y-4">
                 <AssumptionSlider
                   label="Revenue Growth"
                   value={optimisticAssumptions.revenueGrowth}
-                  onChange={(v) => set{t.scenario.optimistic}Assumptions(prev => ({ ...prev, revenueGrowth: v }))}
+                  onChange={(v) => setOptimisticAssumptions(prev => ({ ...prev, revenueGrowth: v }))}
                 />
                 <AssumptionSlider
                   label="COGS Growth"
                   value={optimisticAssumptions.cogsGrowth}
-                  onChange={(v) => set{t.scenario.optimistic}Assumptions(prev => ({ ...prev, cogsGrowth: v }))}
+                  onChange={(v) => setOptimisticAssumptions(prev => ({ ...prev, cogsGrowth: v }))}
                 />
                 <AssumptionSlider
                   label="OpEx Growth"
                   value={optimisticAssumptions.opexGrowth}
-                  onChange={(v) => set{t.scenario.optimistic}Assumptions(prev => ({ ...prev, opexGrowth: v }))}
+                  onChange={(v) => setOptimisticAssumptions(prev => ({ ...prev, opexGrowth: v }))}
                 />
                 <AssumptionSlider
                   label="Tax Rate (% of EBT)"
                   value={optimisticAssumptions.taxRate}
-                  onChange={(v) => set{t.scenario.optimistic}Assumptions(prev => ({ ...prev, taxRate: v }))}
+                  onChange={(v) => setOptimisticAssumptions(prev => ({ ...prev, taxRate: v }))}
                   min={0}
                   max={50}
                 />
               </div>
             </div>
 
-            {/* {t.scenario.pessimistic} Assumptions */}
+            {/* Pessimistic Assumptions */}
             <div className="card">
               <div className="flex items-center gap-2 mb-4">
                 <TrendingDown className="w-5 h-5 text-red-500" />
-                <h3 className="font-bold text-gray-800 dark:text-gray-100">Asumsi {t.scenario.pessimistic}</h3>
+                <h3 className="font-bold text-gray-800 dark:text-gray-100">{t.scenario.assumptionsPessimistic}</h3>
               </div>
               <div className="space-y-4">
                 <AssumptionSlider
                   label="Revenue Growth"
                   value={pessimisticAssumptions.revenueGrowth}
-                  onChange={(v) => set{t.scenario.pessimistic}Assumptions(prev => ({ ...prev, revenueGrowth: v }))}
+                  onChange={(v) => setPessimisticAssumptions(prev => ({ ...prev, revenueGrowth: v }))}
                 />
                 <AssumptionSlider
                   label="COGS Growth"
                   value={pessimisticAssumptions.cogsGrowth}
-                  onChange={(v) => set{t.scenario.pessimistic}Assumptions(prev => ({ ...prev, cogsGrowth: v }))}
+                  onChange={(v) => setPessimisticAssumptions(prev => ({ ...prev, cogsGrowth: v }))}
                 />
                 <AssumptionSlider
                   label="OpEx Growth"
                   value={pessimisticAssumptions.opexGrowth}
-                  onChange={(v) => set{t.scenario.pessimistic}Assumptions(prev => ({ ...prev, opexGrowth: v }))}
+                  onChange={(v) => setPessimisticAssumptions(prev => ({ ...prev, opexGrowth: v }))}
                 />
                 <AssumptionSlider
                   label="Tax Rate (% of EBT)"
                   value={pessimisticAssumptions.taxRate}
-                  onChange={(v) => set{t.scenario.pessimistic}Assumptions(prev => ({ ...prev, taxRate: v }))}
+                  onChange={(v) => setPessimisticAssumptions(prev => ({ ...prev, taxRate: v }))}
                   min={0}
                   max={50}
                 />
