@@ -14,19 +14,12 @@ import { useRecurringTransactions } from '@/hooks/useRecurringTransactions';
 import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2, Calculator, RefreshCw } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
-const CATEGORY_LABELS_ID: Record<TransactionCategory, string> = {
-  EARN: 'Pendapatan',
-  OPEX: 'Beban Operasional',
-  VAR: 'Beban Variabel',
-  CAPEX: 'Belanja Modal',
-  TAX: 'Pajak',
-  FIN: 'Financing',
-};
-
 function TransactionsPageInner() {
+  const { t } = useLanguage();
   const router = useRouter();
   const {
     // Data
@@ -223,7 +216,7 @@ function TransactionsPageInner() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500 dark:text-gray-400">Memuat...</p>
+          <p className="text-gray-500 dark:text-gray-400">{t.common.loading}</p>
         </div>
       </div>
     );
@@ -237,10 +230,10 @@ function TransactionsPageInner() {
           <div className="w-16 h-16 bg-amber-50 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-3xl">&#9888;&#65039;</span>
           </div>
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">Bisnis Tidak Ditemukan</h2>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">{t.common.businessNotFound}</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">{businessError}</p>
           <a href="/setup-business" className="btn-primary">
-            Setup Bisnis
+            {t.common.setupBusiness}
           </a>
         </div>
       </div>
@@ -254,7 +247,7 @@ function TransactionsPageInner() {
         <div>
           <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
               <CreditCard className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
-              Kelola Transaksi
+              {t.transactions.manageTransactions}
             </h1>
         </div>
         {canManageTransactions && (
@@ -264,7 +257,7 @@ function TransactionsPageInner() {
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
             >
               <Upload className="h-4 w-4" />
-              Import Excel
+              {t.transactions.importExcel}
             </button>
 
             <button
@@ -272,7 +265,7 @@ function TransactionsPageInner() {
               className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors flex items-center gap-2 font-medium shadow-sm"
             >
               <BookOpen className="h-4 w-4" />
-              Journal Entry
+              {t.transactions.journalEntry}
             </button>
 
             {/* TEMPORARILY HIDDEN - To re-enable, uncomment this section */}
@@ -307,7 +300,7 @@ function TransactionsPageInner() {
         <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl">
           <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
           <button onClick={fetchTransactions} className="text-red-500 dark:text-red-400 underline text-sm mt-2">
-            Coba lagi
+            {t.common.retry}
           </button>
         </div>
       )}
@@ -326,7 +319,7 @@ function TransactionsPageInner() {
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
-              Semua
+              {t.transactions.allTab}
             </button>
             <button
               onClick={() => { setActiveView('transactions'); setStatusFilter('draft'); }}
@@ -336,7 +329,7 @@ function TransactionsPageInner() {
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
-              Draft
+              {t.transactions.draft}
               {draftCount > 0 && (
                 <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300">
                   {draftCount}
@@ -351,7 +344,7 @@ function TransactionsPageInner() {
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
-              Posted
+              {t.transactions.posted}
             </button>
             <button
               onClick={() => setActiveView('recurring')}
@@ -362,7 +355,7 @@ function TransactionsPageInner() {
               }`}
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              Berulang
+              {t.transactions.recurring}
               {recurringActiveCount > 0 && (
                 <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300">
                   {recurringActiveCount}
@@ -410,7 +403,7 @@ function TransactionsPageInner() {
           <div className="flex items-center justify-between mb-4 px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-600 rounded-lg">
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium text-indigo-500 dark:text-indigo-300">
-                {selectedIds.size} transaksi dipilih
+                {t.transactions.selected.replace('{n}', String(selectedIds.size))}
               </span>
               {selectedIds.size > 0 && (
                 <>
@@ -420,7 +413,7 @@ function TransactionsPageInner() {
                     className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
-                    Posting
+                    {t.transactions.posting}
                   </button>
                   <button
                     onClick={handleBulkDelete}
@@ -428,27 +421,27 @@ function TransactionsPageInner() {
                     className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    Hapus ({selectedIds.size})
+                    {t.common.delete} ({selectedIds.size})
                   </button>
                   <button
                     onClick={() => setShowSelectedSummary(!showSelectedSummary)}
                     className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 ${showSelectedSummary ? 'bg-indigo-500 text-white' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}
                   >
                     <Calculator className="w-3.5 h-3.5" />
-                    Ringkasan
+                    {t.transactions.summary}
                   </button>
                 </>
               )}
               {showSelectedSummary && selectedIds.size > 0 && (
                 <div className="flex items-center gap-3 ml-2 text-sm">
                   <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                    Masuk: {selectedSummary.masuk.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}
+                    {t.transactions.cashIn} {selectedSummary.masuk.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}
                   </span>
                   <span className="text-red-500 dark:text-red-400 font-medium">
-                    Keluar: {selectedSummary.keluar.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}
+                    {t.transactions.cashOut} {selectedSummary.keluar.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}
                   </span>
                   <span className={`font-semibold ${selectedSummary.selisih >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-600 dark:text-red-300'}`}>
-                    Selisih: {selectedSummary.selisih.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}
+                    {t.transactions.difference} {selectedSummary.selisih.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}
                   </span>
                 </div>
               )}
@@ -456,7 +449,7 @@ function TransactionsPageInner() {
             <button
               onClick={handleExitSelectMode}
               className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-              title="Batal"
+              title={t.common.cancel}
             >
               <X className="w-5 h-5" />
             </button>
@@ -569,7 +562,7 @@ function TransactionsPageInner() {
       <Modal
         isOpen={showQuickAddModal}
         onClose={() => setShowQuickAddModal(false)}
-        title="Tambah Transaksi"
+        title={t.transactions.addTransaction}
       >
         <QuickTransactionForm
           onSubmit={handleQuickAddTransaction}
@@ -586,10 +579,10 @@ function TransactionsPageInner() {
         isOpen={showAddModal}
         onClose={() => { setShowAddModal(false); setTransactionMode(null); setFollowUpPrefill(null); }}
         title={
-          followUpPrefill ? 'Buat Entry COGS' :
-          transactionMode === 'in' ? 'Uang Masuk' :
-          transactionMode === 'out' ? 'Uang Keluar' :
-          'Tambah Transaksi (Form Lengkap)'
+          followUpPrefill ? t.transactions.createCOGSEntry :
+          transactionMode === 'in' ? t.transactions.moneyIn :
+          transactionMode === 'out' ? t.transactions.moneyOut :
+          t.transactions.fullForm
         }
       >
         <TransactionForm
@@ -609,7 +602,7 @@ function TransactionsPageInner() {
       <Modal
         isOpen={!!editTransaction}
         onClose={() => setEditTransaction(null)}
-        title="Edit Transaksi"
+        title={t.transactions.editTransaction}
       >
         <TransactionForm
           transaction={editTransaction}

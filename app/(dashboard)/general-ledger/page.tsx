@@ -4,19 +4,13 @@ import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { BookOpenCheck, AlertCircle, FileText, X } from 'lucide-react';
 import { useGeneralLedger, type AccountTypeFilter } from '@/hooks/useGeneralLedger';
+import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
 import type { AccountType, Transaction } from '@/types';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 
-const ACCOUNT_TYPE_LABELS: Record<AccountTypeFilter, string> = {
-  ALL: 'Semua',
-  ASSET: 'Aset',
-  LIABILITY: 'Liabilitas',
-  EQUITY: 'Ekuitas',
-  REVENUE: 'Pendapatan',
-  EXPENSE: 'Beban',
-};
+// Account type labels are now dynamic via useLanguage - see component body
 
 const ACCOUNT_TYPE_COLORS: Record<AccountType, string> = {
   ASSET: 'text-blue-600 dark:text-blue-400',
@@ -32,13 +26,6 @@ const ACCOUNT_TYPE_BG: Record<AccountType, string> = {
   EQUITY: 'bg-purple-50 dark:bg-purple-900/20 text-purple-500 dark:text-purple-300',
   REVENUE: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300',
   EXPENSE: 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-300',
-};
-
-const PERIOD_LABELS: Record<Period, string> = {
-  month: 'Bulan Ini',
-  quarter: 'Kuartal Ini',
-  year: 'Tahun Ini',
-  custom: 'Kustom',
 };
 
 function GeneralLedgerPageInner() {
@@ -64,8 +51,25 @@ function GeneralLedgerPageInner() {
     filteredTransactions,
   } = useGeneralLedger();
 
+  const { t } = useLanguage();
   const [viewTransaction, setViewTransaction] = useState<Transaction | null>(null);
   const [legacyNoticeDismissed, setLegacyNoticeDismissed] = useState(false);
+
+  const ACCOUNT_TYPE_LABELS: Record<AccountTypeFilter, string> = {
+    ALL: t.generalLedger.allTypes,
+    ASSET: t.generalLedger.asset,
+    LIABILITY: t.generalLedger.liability,
+    EQUITY: t.generalLedger.equityLabel,
+    REVENUE: t.generalLedger.revenueLabel,
+    EXPENSE: t.generalLedger.expense,
+  };
+
+  const PERIOD_LABELS: Record<Period, string> = {
+    month: t.generalLedger.thisMonth,
+    quarter: t.generalLedger.thisQuarter,
+    year: t.generalLedger.thisYear,
+    custom: t.generalLedger.custom,
+  };
 
   // Reset legacy notice when switching accounts
   useEffect(() => { setLegacyNoticeDismissed(false); }, [selectedAccountId]);
@@ -118,10 +122,10 @@ function GeneralLedgerPageInner() {
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
           <BookOpenCheck className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
-          General Ledger
+          {t.generalLedger.title}
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Buku Besar — detail pergerakan setiap akun secara kronologis
+          {t.generalLedger.subtitle}
         </p>
       </div>
 
@@ -130,7 +134,7 @@ function GeneralLedgerPageInner() {
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
           <div className="flex-1">
             <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-              Periode
+              {t.period.period}
             </label>
             <div className="flex gap-2 flex-wrap">
               <button
@@ -141,7 +145,7 @@ function GeneralLedgerPageInner() {
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
-                All Time
+                {t.generalLedger.allTime}
               </button>
               {(['month', 'quarter', 'year', 'custom'] as Period[]).map((p) => (
                 <button
@@ -216,7 +220,7 @@ function GeneralLedgerPageInner() {
                 </div>
               ) : allLedgers.length === 0 ? (
                 <div className="p-6 text-center text-sm text-gray-500 dark:text-gray-400">
-                  Tidak ada akun ditemukan
+                  {t.generalLedger.noAccountsFound}
                 </div>
               ) : (
                 allLedgers.map((al) => {
@@ -279,7 +283,7 @@ function GeneralLedgerPageInner() {
             <div className="card-static flex flex-col items-center justify-center py-16 text-center">
               <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
               <p className="text-gray-500 dark:text-gray-400">
-                Pilih akun dari panel kiri untuk melihat detail ledger
+                {t.generalLedger.selectAccountHint}
               </p>
             </div>
           ) : (
@@ -310,19 +314,19 @@ function GeneralLedgerPageInner() {
                   {/* Summary Cards */}
                   <div className="flex gap-3">
                     <div className="text-center px-3 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Total Debit</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t.generalLedger.totalDebit}</p>
                       <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
                         {formatCurrency(ledger.totalDebits)}
                       </p>
                     </div>
                     <div className="text-center px-3 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Total Kredit</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t.generalLedger.totalCredit}</p>
                       <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
                         {formatCurrency(ledger.totalCredits)}
                       </p>
                     </div>
                     <div className="text-center px-3 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Saldo Akhir</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t.generalLedger.closingBalance}</p>
                       <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
                         {ledger.closingBalance < 0 ? '(' : ''}
                         {formatCurrency(Math.abs(ledger.closingBalance))}
@@ -370,7 +374,7 @@ function GeneralLedgerPageInner() {
                             Keterangan
                           </th>
                           <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            Akun Lawan
+                            {t.generalLedger.counterAccount}
                           </th>
                           <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
                             Debit
@@ -387,7 +391,7 @@ function GeneralLedgerPageInner() {
                         {/* Opening Balance Row */}
                         <tr className="bg-gray-50 dark:bg-gray-800/50">
                           <td className="py-2 px-3 text-xs text-gray-400 dark:text-gray-500" colSpan={5}>
-                            Saldo Awal Periode
+                            {t.generalLedger.openingBalance}
                           </td>
                           <td className="py-2 px-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400">
                             {formatCurrency(0)}

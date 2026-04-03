@@ -12,15 +12,12 @@ import { BudgetVsActualChart } from '@/components/budget/BudgetVsActualChart';
 import { BudgetTrendChart } from '@/components/budget/BudgetTrendChart';
 import { BudgetVarianceTable } from '@/components/budget/BudgetVarianceTable';
 import { formatCurrency } from '@/lib/utils';
+import { useLanguage } from '@/context/LanguageContext';
 
-const TABS: { value: BudgetTab; label: string }[] = [
-  { value: 'overview', label: 'Overview' },
-  { value: 'input', label: 'Input Budget' },
-  { value: 'variance', label: 'Analisis Variance' },
-  { value: 'projection', label: 'Proyeksi' },
-];
+const TAB_VALUES: BudgetTab[] = ['overview', 'input', 'variance', 'projection'];
 
 function BudgetForecastPageInner() {
+  const { t } = useLanguage();
   const {
     budgets,
     selectedBudget,
@@ -98,7 +95,7 @@ function BudgetForecastPageInner() {
               className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
-              Buat Budget
+              {t.budget.createBudget}
             </button>
           )}
         </div>
@@ -115,7 +112,7 @@ function BudgetForecastPageInner() {
       {budgets.length === 0 && (
         <div className="text-center py-20">
           <Target className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Belum ada budget</h2>
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">{t.budget.noBudget}</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
             Buat budget pertama untuk mulai merencanakan keuangan bisnis.
           </p>
@@ -125,7 +122,7 @@ function BudgetForecastPageInner() {
               className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
-              Buat Budget Pertama
+              {t.budget.createBudget} Pertama
             </button>
           )}
         </div>
@@ -171,35 +168,43 @@ function BudgetForecastPageInner() {
 
           {/* Tabs */}
           <div className="flex gap-1 overflow-x-auto bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
-            {TABS.map((tab) => (
-              <button
-                key={tab.value}
-                onClick={() => setActiveTab(tab.value)}
-                className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  activeTab === tab.value
-                    ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+            {TAB_VALUES.map((value) => {
+              const tabLabels: Record<BudgetTab, string> = {
+                overview: t.budget.overview,
+                input: t.budget.inputBudget,
+                variance: t.budget.varianceAnalysis,
+                projection: t.budget.projection,
+              };
+              return (
+                <button
+                  key={value}
+                  onClick={() => setActiveTab(value)}
+                  className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    activeTab === value
+                      ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {tabLabels[value]}
+                </button>
+              );
+            })}
           </div>
 
           {/* Tab content */}
           <div>
-            {/* Overview */}
+            {/* {t.budget.overview} */}
             {activeTab === 'overview' && (
               <div className="space-y-6">
                 {summaryKPI && <BudgetKPICards kpi={summaryKPI} />}
 
                 <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-5">
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">Budget vs Aktual</h3>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">{t.budget.budgetVsActual}</h3>
                   <BudgetVsActualChart rows={varianceRows} />
                 </div>
 
                 <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-5">
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">Proyeksi Tren</h3>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">{t.budget.projection} Tren</h3>
                   <BudgetTrendChart
                     projections={projections}
                     projectionMonths={projectionMonths}
@@ -212,7 +217,7 @@ function BudgetForecastPageInner() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Top over-budget */}
                     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
-                      <h4 className="text-xs font-semibold text-red-600 dark:text-red-400 mb-3">Over Budget</h4>
+                      <h4 className="text-xs font-semibold text-red-600 dark:text-red-400 mb-3">{t.budget.overBudget}</h4>
                       {(() => {
                         // Aggregate per account
                         const accountMap = new Map<string, { name: string; code: string; variance: number }>();
@@ -247,7 +252,7 @@ function BudgetForecastPageInner() {
 
                     {/* Top under-budget */}
                     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
-                      <h4 className="text-xs font-semibold text-green-600 dark:text-green-400 mb-3">Under Budget</h4>
+                      <h4 className="text-xs font-semibold text-green-600 dark:text-green-400 mb-3">{t.budget.underBudget}</h4>
                       {(() => {
                         const accountMap = new Map<string, { name: string; code: string; variance: number }>();
                         varianceRows.forEach((r) => {
@@ -284,14 +289,14 @@ function BudgetForecastPageInner() {
                 {varianceRows.length === 0 && (
                   <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
                     <p className="text-gray-400 dark:text-gray-500">
-                      Belum ada data budget. Masukkan target di tab &quot;Input Budget&quot;.
+                      Belum ada data budget. Masukkan target di tab &quot;{t.budget.inputBudget}&quot;.
                     </p>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Input Budget */}
+            {/* {t.budget.inputBudget} */}
             {activeTab === 'input' && (
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-5">
                 <BudgetInputGrid
@@ -308,7 +313,7 @@ function BudgetForecastPageInner() {
             {/* Variance Detail */}
             {activeTab === 'variance' && (
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-5">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">Analisis Variance per Akun</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">{t.budget.varianceAnalysis} per Akun</h3>
                 <BudgetVarianceTable rows={varianceRows} />
               </div>
             )}
@@ -317,7 +322,7 @@ function BudgetForecastPageInner() {
             {activeTab === 'projection' && (
               <div className="space-y-6">
                 <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-5">
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">Proyeksi Tren Keuangan</h3>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">{t.budget.projection} Tren Keuangan</h3>
                   <BudgetTrendChart
                     projections={projections}
                     projectionMonths={projectionMonths}
@@ -339,10 +344,10 @@ function BudgetForecastPageInner() {
                       const avgMonthly = futureMonths.length > 0 ? totalProjectedRevenue / futureMonths.length : 0;
 
                       const cards = [
-                        { label: 'Total Proyeksi', value: formatCurrency(totalProjectedRevenue) },
+                        { label: 'Total {t.budget.projection}', value: formatCurrency(totalProjectedRevenue) },
                         { label: 'Total Budget Target', value: formatCurrency(totalBudgeted) },
                         { label: 'Rata-rata/Bulan', value: formatCurrency(avgMonthly) },
-                        { label: 'Periode Proyeksi', value: `${futureMonths.length} bulan` },
+                        { label: 'Periode {t.budget.projection}', value: `${futureMonths.length} bulan` },
                       ];
 
                       return cards.map((card) => (

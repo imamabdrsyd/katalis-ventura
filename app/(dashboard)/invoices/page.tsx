@@ -8,18 +8,14 @@ import { InvoiceForm } from '@/components/invoices/InvoiceForm';
 import { InvoiceList } from '@/components/invoices/InvoiceList';
 import { InvoiceSettingsModal } from '@/components/invoices/InvoiceSettingsModal';
 import { Modal } from '@/components/ui/Modal';
+import { useLanguage } from '@/context/LanguageContext';
 import type { InvoicePaymentStatus } from '@/types';
 
-const STATUS_TABS: { value: '' | InvoicePaymentStatus; label: string }[] = [
-  { value: '', label: 'Semua' },
-  { value: 'draft', label: 'Draft' },
-  { value: 'unpaid', label: 'Belum Bayar' },
-  { value: 'paid', label: 'Lunas' },
-  { value: 'overdue', label: 'Jatuh Tempo' },
-];
+const STATUS_TAB_VALUES: ('' | InvoicePaymentStatus)[] = ['', 'draft', 'unpaid', 'paid', 'overdue'];
 
 function InvoicesPageInner() {
   const searchParams = useSearchParams();
+  const { t } = useLanguage();
   const {
     filteredInvoices,
     loading,
@@ -58,7 +54,7 @@ function InvoicesPageInner() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500 dark:text-gray-400">Memuat...</p>
+          <p className="text-gray-500 dark:text-gray-400">{t.common.loading}</p>
         </div>
       </div>
     );
@@ -94,14 +90,14 @@ function InvoicesPageInner() {
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
             >
               <Settings className="h-4 w-4" />
-              Pengaturan
+              {t.invoices.settings}
             </button>
             <button
               onClick={() => setShowAddModal(true)}
               className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors flex items-center gap-2 font-medium shadow-sm"
             >
               <Plus className="h-4 w-4" />
-              Buat Invoice
+              {t.invoices.createInvoice}
             </button>
           </div>
         )}
@@ -122,20 +118,27 @@ function InvoicesPageInner() {
 
         {/* Status Filter Tabs */}
         <div className="flex items-center gap-1 mb-4 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
-          {STATUS_TABS.map((tab) => {
-            const count = tab.value ? statusCounts[tab.value] : 0;
+          {STATUS_TAB_VALUES.map((value) => {
+            const statusLabels: Record<string, string> = {
+              '': t.invoices.allTab,
+              draft: t.invoices.draftTab,
+              unpaid: t.invoices.unpaid,
+              paid: t.invoices.paid,
+              overdue: t.invoices.overdue,
+            };
+            const count = value ? statusCounts[value] : 0;
             return (
               <button
-                key={tab.value}
-                onClick={() => setStatusFilter(tab.value)}
+                key={value}
+                onClick={() => setStatusFilter(value)}
                 className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
-                  statusFilter === tab.value
+                  statusFilter === value
                     ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                     : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
-                {tab.label}
-                {tab.value && count > 0 && (
+                {statusLabels[value]}
+                {value && count > 0 && (
                   <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300">
                     {count}
                   </span>
@@ -161,7 +164,7 @@ function InvoicesPageInner() {
       <Modal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        title="Buat Invoice"
+        title="{t.invoices.createInvoice}"
       >
         <InvoiceForm
           onSubmit={handleCreateInvoice}
@@ -175,11 +178,11 @@ function InvoicesPageInner() {
         />
       </Modal>
 
-      {/* Edit Invoice Modal */}
+      {/* {t.invoices.editInvoice} Modal */}
       <Modal
         isOpen={!!editInvoice}
         onClose={() => setEditInvoice(null)}
-        title="Edit Invoice"
+        title="{t.invoices.editInvoice}"
       >
         {editInvoice && (
           <InvoiceForm

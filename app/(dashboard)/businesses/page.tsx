@@ -9,6 +9,7 @@ import { BusinessForm, type BusinessFormData } from '@/components/business/Busin
 import { InviteCodeManager } from '@/components/business/InviteCodeManager';
 import { PeriodLockManager } from '@/components/business/PeriodLockManager';
 import { Building2, Archive, Lock } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 import * as businessesApi from '@/lib/api/businesses';
 import { calculateTotalCapex } from '@/lib/calculations';
 import { createClient } from '@/lib/supabase';
@@ -19,6 +20,7 @@ type TabType = 'active' | 'archived';
 export default function BusinessesPage() {
   const { user, userRole, isSuperadmin, businesses: contextBusinesses, activeBusiness, setActiveBusiness, refetch } =
     useBusinessContext();
+  const { t } = useLanguage();
   const isInvestor = userRole === 'investor';
   const canManage = userRole === 'business_manager' || userRole === 'both' || userRole === 'superadmin';
 
@@ -203,7 +205,7 @@ export default function BusinessesPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
-            {isInvestor ? `Portfolio ${firstName}` : 'Manage Business'}
+            {isInvestor ? `${t.businesses.portfolio} ${firstName}` : t.businesses.manageBusiness}
           </h1>
           {/* <p className="text-gray-500 mt-1">
             {isInvestor ? `Bisnis yang di invest ${firstName}` : `Bisnis yang dikelola ${firstName}`}
@@ -211,7 +213,7 @@ export default function BusinessesPage() {
         </div>
         {canManage && (
           <button onClick={() => setIsFormOpen(true)} className="btn-primary">
-            + Tambah Bisnis
+            + {t.businesses.addBusiness}
           </button>
         )}
       </div>
@@ -226,7 +228,7 @@ export default function BusinessesPage() {
               : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >
-          Aktif ({activeBusinesses.length})
+          {t.businesses.activeBusiness} ({activeBusinesses.length})
         </button>
         <button
           onClick={() => setActiveTab('archived')}
@@ -236,7 +238,7 @@ export default function BusinessesPage() {
               : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >
-          Diarsipkan ({archivedBusinesses.length})
+          {t.businesses.archivedBusiness} ({archivedBusinesses.length})
         </button>
       </div>
 
@@ -245,7 +247,7 @@ export default function BusinessesPage() {
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-500 dark:text-gray-400">Memuat data bisnis...</p>
+            <p className="text-gray-500 dark:text-gray-400">{t.businesses.loadingBusinesses}</p>
           </div>
         </div>
       ) : displayedBusinesses.length === 0 ? (
@@ -254,16 +256,16 @@ export default function BusinessesPage() {
             {activeTab === 'active' ? <Building2 className="w-10 h-10 text-gray-400" /> : <Archive className="w-10 h-10 text-gray-400" />}
           </div>
           <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">
-            {activeTab === 'active' ? 'Belum ada bisnis aktif' : 'Tidak ada bisnis diarsipkan'}
+            {activeTab === 'active' ? t.businesses.noActiveBusiness : t.businesses.noArchivedBusiness}
           </h3>
           <p className="text-gray-500 dark:text-gray-400 mb-4">
             {activeTab === 'active'
-              ? (isInvestor ? 'Anda belum bergabung dengan bisnis manapun' : 'Mulai dengan menambahkan bisnis pertama Anda')
-              : 'Bisnis yang diarsipkan akan muncul di sini'}
+              ? (isInvestor ? t.businesses.noBusinessJoined : t.businesses.startByAdding)
+              : t.businesses.archivedAppearHere}
           </p>
           {activeTab === 'active' && canManage && (
             <button onClick={() => setIsFormOpen(true)} className="btn-primary">
-              + Tambah Bisnis
+              + {t.businesses.addBusiness}
             </button>
           )}
         </div>
@@ -314,7 +316,7 @@ export default function BusinessesPage() {
         <Modal
           isOpen={!!periodLockBusiness}
           onClose={() => setPeriodLockBusiness(null)}
-          title={<span className="flex items-center gap-2"><Lock className="w-5 h-5 text-amber-500" />Kunci Periode</span>}
+          title={<span className="flex items-center gap-2"><Lock className="w-5 h-5 text-amber-500" />{t.businesses.periodLock}</span>}
         >
           <PeriodLockManager
             business={periodLockBusiness}
@@ -331,7 +333,7 @@ export default function BusinessesPage() {
       <Modal
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
-        title="Tambah Bisnis Baru"
+        title={t.businesses.addNewBusiness}
       >
         <BusinessForm
           onSubmit={handleCreateBusiness}
@@ -344,7 +346,7 @@ export default function BusinessesPage() {
       <Modal
         isOpen={!!editingBusiness}
         onClose={() => setEditingBusiness(null)}
-        title="Edit Bisnis"
+        title={t.businesses.editBusiness}
       >
         <BusinessForm
           business={editingBusiness}
@@ -361,16 +363,14 @@ export default function BusinessesPage() {
           setIsArchiveConfirmOpen(false);
           setArchivingBusiness(null);
         }}
-        title="Arsipkan Bisnis"
+        title={t.businesses.archiveBusiness}
       >
         <div className="space-y-4">
           <p className="text-gray-600 dark:text-gray-300">
-            Apakah Anda yakin ingin mengarsipkan bisnis{' '}
-            <strong>{archivingBusiness?.business_name}</strong>?
+            {t.businesses.archiveConfirm.replace('{name}', archivingBusiness?.business_name || '')}
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Bisnis yang diarsipkan masih dapat diakses dan di-restore kembali kapan saja. Data
-            transaksi tidak akan dihapus.
+            {t.businesses.archiveHint}
           </p>
           <div className="flex gap-3 pt-4">
             <button
@@ -381,14 +381,14 @@ export default function BusinessesPage() {
               className="btn-secondary flex-1"
               disabled={loading}
             >
-              Batal
+              {t.common.cancel}
             </button>
             <button
               onClick={handleArchiveBusiness}
               className="btn-danger flex-1"
               disabled={loading}
             >
-              {loading ? 'Mengarsipkan...' : 'Arsipkan'}
+              {loading ? t.businesses.archiving : t.businesses.archive}
             </button>
           </div>
         </div>

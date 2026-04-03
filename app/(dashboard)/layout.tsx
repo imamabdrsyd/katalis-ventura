@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { BusinessProvider, useBusinessContext } from '@/context/BusinessContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { BusinessForm, type BusinessFormData } from '@/components/business/BusinessForm';
 import { createClient } from '@/lib/supabase';
 import * as businessesApi from '@/lib/api/businesses';
@@ -58,13 +59,6 @@ const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { FloatingQuickAdd } from '@/components/transactions/FloatingQuickAdd';
 
-const ROLE_LABELS: Record<string, string> = {
-  business_manager: 'Business Manager',
-  investor: 'Investor',
-  both: 'Manager & Investor',
-  superadmin: 'Super Admin',
-};
-
 type NavItem = {
   href: string;
   label: string;
@@ -77,46 +71,58 @@ type NavSection = {
   items: NavItem[];
 };
 
-const navSections: NavSection[] = [
-  {
-    label: 'ACCOUNTING',
-    icon: Calculator,
-    items: [
-      { href: '/accounts', label: 'Chart of Accounts', icon: BookOpen },
-      { href: '/invoices', label: 'Invoice', icon: FileText },
-      { href: '/general-ledger', label: 'General Ledger', icon: BookOpenCheck },
-      { href: '/trial-balance', label: 'Trial Balance', icon: ClipboardCheck },
-      { href: '/ar-ap', label: 'Piutang & Hutang', icon: HandCoins },
-      { href: '/reconciliation', label: 'Rekonsiliasi Bank', icon: ScanSearch },
-      { href: '/closing-entry', label: 'Tutup Buku', icon: BookCheck },
-    ],
-  },
-  {
-    label: 'FINANCIAL REPORTS',
-    icon: BarChart3,
-    items: [
-      { href: '/income-statement', label: 'Profit & Loss', icon: DollarSign },
-      { href: '/balance-sheet', label: 'Balance Sheet', icon: Scale },
-      { href: '/cash-flow', label: 'Cash Flow', icon: ArrowLeftRight },
-    ],
-  },
-  {
-    label: 'ANALYTICS',
-    icon: LineChart,
-    items: [
-      { href: '/scenario-modeling', label: 'Scenario Modeling', icon: FlaskConical },
-      { href: '/roi-forecast', label: 'Budget & Forecast', icon: Target },
-    ],
-  },
-];
+function useNavData() {
+  const { t } = useLanguage();
 
-// Semua item navigasi yang bisa dicari
-const allNavItems: NavItem[] = [
-  ...navSections.flatMap((s) => s.items),
-  { href: '/transactions', label: 'Transactions', icon: CreditCard },
-  { href: '/transactions/journal-entry', label: 'Journal Entry', icon: Plus },
-  { href: '/settings', label: 'Settings', icon: Settings },
-];
+  const roleLabels: Record<string, string> = useMemo(() => ({
+    business_manager: t.roles.businessManager,
+    investor: t.roles.investor,
+    both: t.roles.managerInvestor,
+    superadmin: t.roles.superAdmin,
+  }), [t]);
+
+  const navSections: NavSection[] = useMemo(() => [
+    {
+      label: t.nav.accounting,
+      icon: Calculator,
+      items: [
+        { href: '/accounts', label: t.nav.chartOfAccounts, icon: BookOpen },
+        { href: '/invoices', label: t.nav.invoice, icon: FileText },
+        { href: '/general-ledger', label: t.nav.generalLedger, icon: BookOpenCheck },
+        { href: '/trial-balance', label: t.nav.trialBalance, icon: ClipboardCheck },
+        { href: '/ar-ap', label: t.nav.arAp, icon: HandCoins },
+        { href: '/reconciliation', label: t.nav.bankReconciliation, icon: ScanSearch },
+        { href: '/closing-entry', label: t.nav.closingEntry, icon: BookCheck },
+      ],
+    },
+    {
+      label: t.nav.financialReports,
+      icon: BarChart3,
+      items: [
+        { href: '/income-statement', label: t.nav.profitLoss, icon: DollarSign },
+        { href: '/balance-sheet', label: t.nav.balanceSheet, icon: Scale },
+        { href: '/cash-flow', label: t.nav.cashFlow, icon: ArrowLeftRight },
+      ],
+    },
+    {
+      label: t.nav.analytics,
+      icon: LineChart,
+      items: [
+        { href: '/scenario-modeling', label: t.nav.scenarioModeling, icon: FlaskConical },
+        { href: '/roi-forecast', label: t.nav.budgetForecast, icon: Target },
+      ],
+    },
+  ], [t]);
+
+  const allNavItems: NavItem[] = useMemo(() => [
+    ...navSections.flatMap((s) => s.items),
+    { href: '/transactions', label: t.nav.transactions, icon: CreditCard },
+    { href: '/transactions/journal-entry', label: t.nav.journalEntry, icon: Plus },
+    { href: '/settings', label: t.nav.settings, icon: Settings },
+  ], [navSections, t]);
+
+  return { roleLabels, navSections, allNavItems, t };
+}
 
 type SearchResult = {
   type: 'page' | 'transaction';
@@ -130,6 +136,7 @@ type SearchResult = {
 function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
   const { activeBusinessId } = useBusinessContext();
+  const { allNavItems, t } = useNavData();
   const [query, setQuery] = useState('');
   const [transactionResults, setTransactionResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -143,7 +150,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
         : allNavItems
             .filter((item) => item.label.toLowerCase().includes(query.toLowerCase()))
             .map((item) => ({ type: 'page' as const, label: item.label, href: item.href, icon: item.icon })),
-    [query]
+    [query, allNavItems]
   );
 
   // Search transactions with debounce
@@ -257,7 +264,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Cari halaman atau transaksi..."
+            placeholder={t.nav.searchPlaceholder}
             className="flex-1 bg-transparent text-base text-gray-800 dark:text-gray-200 placeholder-gray-400 outline-none"
           />
           <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded">
@@ -268,13 +275,13 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
         {/* Results */}
         <div className="max-h-80 overflow-y-auto">
           {allResults.length === 0 && !searching ? (
-            <p className="px-5 py-8 text-sm text-gray-400 text-center">Tidak ditemukan</p>
+            <p className="px-5 py-8 text-sm text-gray-400 text-center">{t.nav.notFound}</p>
           ) : (
             <>
               {/* Pages section */}
               {hasPages && (
                 <div>
-                  {query.trim() && <p className="px-5 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Halaman</p>}
+                  {query.trim() && <p className="px-5 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.nav.pages}</p>}
                   {filteredPages.map((item, i) => {
                     const Icon = item.icon!;
                     return (
@@ -301,7 +308,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
               {hasTransactions && (
                 <div>
                   {hasPages && <div className="border-t border-gray-100 dark:border-gray-700 my-1" />}
-                  <p className="px-5 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Transaksi</p>
+                  <p className="px-5 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.nav.transactions}</p>
                   {transactionResults.map((item, rawIdx) => {
                     const globalIdx = filteredPages.length + rawIdx;
                     const CATEGORY_COLORS: Record<string, string> = {
@@ -343,7 +350,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
               {searching && (
                 <div className="px-5 py-3 flex items-center gap-2 text-xs text-gray-400">
                   <div className="w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                  Mencari transaksi...
+                  {t.nav.searchingTransactions}
                 </div>
               )}
             </>
@@ -357,6 +364,8 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
 function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: () => void; onQuickAddClick: () => void; isCollapsed: boolean }) {
   const router = useRouter();
   const { user, businesses, activeBusiness, setActiveBusiness, userRole } = useBusinessContext();
+  const { roleLabels, t } = useNavData();
+  const { locale } = useLanguage();
   const supabase = createClient();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
@@ -462,7 +471,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           className="flex items-center gap-2 text-gray-800 dark:text-gray-200 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
         >
-          <span className="font-semibold">{activeBusiness?.business_name || 'Select Business'}</span>
+          <span className="font-semibold">{activeBusiness?.business_name || t.nav.selectBusiness}</span>
           <ChevronDown className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
         </button>
 
@@ -525,7 +534,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
                   >
                     <Plus className="w-5 h-5" />
                     <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                      Buat Bisnis Baru
+                      {t.nav.createNewBusiness}
                     </span>
                   </button>
                 )}
@@ -538,7 +547,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
                 >
                   <UserPlus className="w-5 h-5" />
                   <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                    Gabung Bisnis
+                    {t.nav.joinBusiness}
                   </span>
                 </button>
               </div>
@@ -555,7 +564,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
           className="hidden md:flex items-center gap-2 px-4 py-1.5 text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors border border-gray-200 dark:border-gray-600 min-w-[220px]"
         >
           <Search className="w-4 h-4" />
-          <span>Cari halaman atau transaksi...</span>
+          <span>{t.nav.searchPlaceholder}</span>
           <kbd className="ml-auto px-1.5 py-0.5 text-[10px] font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-500">
             ⌘K
           </kbd>
@@ -566,7 +575,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-xs text-gray-700 dark:text-gray-200">
             <Calendar className="w-4 h-4 text-primary-500 flex-shrink-0" />
             <span>
-              {currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              {currentTime.toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </span>
           </div>
         )}
@@ -578,7 +587,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
             className="hidden md:flex px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors items-center gap-2 font-medium shadow-sm"
           >
             <Zap className="h-4 w-4" />
-            Quick Entry
+            {t.nav.quickEntry}
           </button>
         )}
 
@@ -614,7 +623,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
                     ? 'bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 ring-1 ring-sky-500/20'
                     : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 ring-1 ring-indigo-500/20'
                 }`}>
-                  {ROLE_LABELS[userRole]}
+                  {roleLabels[userRole]}
                 </span>
               )}
             </div>
@@ -631,7 +640,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
                   className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <Settings className="w-4 h-4" />
-                  Settings
+                  {t.nav.settings}
                 </Link>
                 <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
                 <button
@@ -639,7 +648,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
                   className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
-                  Logout
+                  {t.nav.logout}
                 </button>
               </div>
             </>
@@ -688,6 +697,7 @@ function Sidebar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { navSections, t } = useNavData();
   const canManage = userRole === 'business_manager' || userRole === 'both' || userRole === 'superadmin';
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
@@ -806,7 +816,7 @@ function Sidebar({
                     href="/transactions/journal-entry"
                     onClick={onClose}
                     className="flex-shrink-0 p-0.5 rounded-md border border-indigo-400 dark:border-indigo-500 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-800/40 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
-                    title="Journal Entry"
+                    title={t.nav.journalEntry}
                   >
                     <Plus className="w-5 h-5" />
                   </Link>
@@ -815,18 +825,18 @@ function Sidebar({
                     onClick={onClose}
                     className={`whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out hover:text-indigo-500 dark:hover:text-indigo-400 ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}
                   >
-                    Transactions
+                    {t.nav.transactions}
                   </Link>
                 </div>
                 {isCollapsed && (
                   <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-[60] overflow-hidden">
                     <Link href="/transactions/journal-entry" onClick={onClose} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
                       <Plus className="w-3.5 h-3.5" />
-                      Journal Entry
+                      {t.nav.journalEntry}
                     </Link>
                     <Link href="/transactions" onClick={onClose} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
                       <CreditCard className="w-3.5 h-3.5" />
-                      View Transactions
+                      {t.nav.viewTransactions}
                     </Link>
                     <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
                   </div>
@@ -837,8 +847,8 @@ function Sidebar({
 
           {/* Dashboard & Manage Business — independent */}
           {[
-            { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-            { href: '/businesses', label: 'Manage Business', icon: Building2 },
+            { href: '/dashboard', label: t.nav.dashboard, icon: LayoutDashboard },
+            { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
           ].map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');

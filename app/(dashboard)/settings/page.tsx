@@ -3,27 +3,30 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { createClient } from '@/lib/supabase';
-import { Camera, User, Mail, Briefcase, Save } from 'lucide-react';
+import { LOCALE_LABELS, LOCALE_FLAGS, type Locale } from '@/lib/i18n';
+import { Camera, User, Mail, Briefcase, Save, Globe } from 'lucide-react';
 import Image from 'next/image';
-
-const ROLE_LABELS: Record<string, string> = {
-  business_manager: 'Business Manager',
-  investor: 'Investor',
-  both: 'Manager & Investor',
-  superadmin: 'Super Admin',
-};
-
-const SWITCHABLE_ROLES = [
-  { value: 'business_manager', label: 'Business Manager' },
-  { value: 'investor', label: 'Investor' },
-  { value: 'superadmin', label: 'Super Admin' },
-] as const;
 
 export default function SettingsPage() {
   const { user, userRole, isSuperadmin, switchRole, refetch } = useBusinessContext();
+  const { locale, setLocale, t } = useLanguage();
   const router = useRouter();
   const supabase = createClient();
+
+  const roleLabels: Record<string, string> = {
+    business_manager: t.roles.businessManager,
+    investor: t.roles.investor,
+    both: t.roles.managerInvestor,
+    superadmin: t.roles.superAdmin,
+  };
+
+  const switchableRoles = [
+    { value: 'business_manager', label: t.roles.businessManager },
+    { value: 'investor', label: t.roles.investor },
+    { value: 'superadmin', label: t.roles.superAdmin },
+  ];
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -76,10 +79,10 @@ export default function SettingsPage() {
       const { data } = supabase.storage.from('profiles').getPublicUrl(filePath);
 
       setAvatarUrl(data.publicUrl);
-      setSuccess('Foto berhasil diupload!');
+      setSuccess(t.settings.photoUploaded);
     } catch (error: any) {
       console.error('Error uploading avatar:', error);
-      setError(error.message || 'Gagal upload foto');
+      setError(error.message || t.settings.photoUploadFailed);
     } finally {
       setUploading(false);
     }
@@ -120,7 +123,7 @@ export default function SettingsPage() {
         switchRole(selectedRole as any);
       }
 
-      setSuccess('Profile berhasil diupdate!');
+      setSuccess(t.settings.profileUpdated);
       await refetch();
 
       // Refresh after 1.5s
@@ -129,7 +132,7 @@ export default function SettingsPage() {
       }, 1500);
     } catch (error: any) {
       console.error('Error updating profile:', error);
-      setError(error.message || 'Gagal update profile');
+      setError(error.message || t.settings.profileUpdateFailed);
     } finally {
       setSaving(false);
     }
@@ -140,7 +143,7 @@ export default function SettingsPage() {
       <div className="p-8 flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+          <p className="text-gray-500 dark:text-gray-400">{t.common.loading}</p>
         </div>
       </div>
     );
@@ -149,8 +152,8 @@ export default function SettingsPage() {
   return (
     <div className="p-8 max-w-4xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Settings</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">Kelola profil dan pengaturan akun Anda</p>
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">{t.settings.title}</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">{t.settings.subtitle}</p>
       </div>
 
       {error && (
@@ -166,7 +169,7 @@ export default function SettingsPage() {
       )}
 
       <div className="card">
-        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6">Profile Information</h2>
+        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6">{t.settings.profileInfo}</h2>
 
         {/* Avatar Upload */}
         <div className="flex items-center gap-6 mb-8">
@@ -196,12 +199,12 @@ export default function SettingsPage() {
             </label>
           </div>
           <div>
-            <p className="font-medium text-gray-800 dark:text-gray-100">Profile Photo</p>
+            <p className="font-medium text-gray-800 dark:text-gray-100">{t.settings.profilePhoto}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Click pada foto untuk mengubah
+              {t.settings.clickToChange}
             </p>
             {uploading && (
-              <p className="text-sm text-indigo-500 dark:text-indigo-400 mt-2">Uploading...</p>
+              <p className="text-sm text-indigo-500 dark:text-indigo-400 mt-2">{t.settings.uploading}</p>
             )}
           </div>
         </div>
@@ -212,14 +215,14 @@ export default function SettingsPage() {
           <div>
             <label className="label flex items-center gap-2">
               <User className="w-4 h-4" />
-              Nama Lengkap
+              {t.settings.fullName}
             </label>
             <input
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               className="input"
-              placeholder="Nama lengkap Anda"
+              placeholder={t.settings.fullNamePlaceholder}
             />
           </div>
 
@@ -227,17 +230,16 @@ export default function SettingsPage() {
           <div>
             <label className="label flex items-center gap-2">
               <Mail className="w-4 h-4" />
-              Email
+              {t.settings.email}
             </label>
             <input
               type="email"
               value={email}
               disabled
               className="input bg-gray-50 dark:bg-gray-700 cursor-not-allowed"
-              placeholder="Email Anda"
             />
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Email tidak bisa diubah
+              {t.settings.emailReadonly}
             </p>
           </div>
 
@@ -245,7 +247,7 @@ export default function SettingsPage() {
           <div>
             <label className="label flex items-center gap-2">
               <Briefcase className="w-4 h-4" />
-              Role
+              {t.settings.role}
             </label>
             {isSuperadmin ? (
               <>
@@ -254,29 +256,56 @@ export default function SettingsPage() {
                   onChange={(e) => setSelectedRole(e.target.value)}
                   className="input"
                 >
-                  {SWITCHABLE_ROLES.map((role) => (
+                  {switchableRoles.map((role) => (
                     <option key={role.value} value={role.value}>
                       {role.label}
                     </option>
                   ))}
                 </select>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Anda bisa berganti role karena memiliki akses Super Admin
+                  {t.settings.superadminRoleHint}
                 </p>
               </>
             ) : (
               <>
                 <input
                   type="text"
-                  value={userRole ? ROLE_LABELS[userRole] : '-'}
+                  value={userRole ? roleLabels[userRole] : '-'}
                   disabled
                   className="input bg-gray-50 dark:bg-gray-700 cursor-not-allowed"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Role tidak bisa diubah
+                  {t.settings.roleReadonly}
                 </p>
               </>
             )}
+          </div>
+
+          {/* Language Switcher */}
+          <div>
+            <label className="label flex items-center gap-2">
+              <Globe className="w-4 h-4" />
+              {t.settings.language}
+            </label>
+            <div className="flex gap-3">
+              {(Object.keys(LOCALE_LABELS) as Locale[]).map((loc) => (
+                <button
+                  key={loc}
+                  onClick={() => setLocale(loc)}
+                  className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border-2 transition-all text-sm font-medium ${
+                    locale === loc
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-500/20'
+                      : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  <span className="text-lg">{LOCALE_FLAGS[loc]}</span>
+                  <span>{LOCALE_LABELS[loc]}</span>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {t.settings.languageHint}
+            </p>
           </div>
         </div>
 
@@ -287,7 +316,7 @@ export default function SettingsPage() {
             className="btn-secondary flex-1"
             disabled={saving}
           >
-            Batal
+            {t.common.cancel}
           </button>
           <button
             onClick={handleSaveProfile}
@@ -295,7 +324,7 @@ export default function SettingsPage() {
             disabled={saving || uploading}
           >
             <Save className="w-4 h-4" />
-            {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+            {saving ? t.common.saving : t.settings.saveChanges}
           </button>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Calendar, TrendingUp, TrendingDown, Download, FileText, FileSpreadsheet, Info, DollarSign, ArrowUpCircle, ArrowDownCircle, ChevronDown, ChevronRight, Building2 } from 'lucide-react';
 import { useIncomeStatement } from '@/hooks/useIncomeStatement';
+import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
 import type { Transaction } from '@/types';
@@ -142,6 +143,7 @@ function IncomeStatementPageInner() {
     handleExportExcel,
   } = useIncomeStatement();
 
+  const { t } = useLanguage();
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   // Scroll to section from URL param (e.g., /income-statement?scrollTo=net-income)

@@ -4,6 +4,7 @@ import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { Calendar, TrendingUp, TrendingDown, Download, Wallet, FileText, FileSpreadsheet, ChevronDown, ChevronRight, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Info, ExternalLink, Building2 } from 'lucide-react';
 import { useCashFlow } from '@/hooks/useCashFlow';
+import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
 import type { CashFlowTransaction, Transaction } from '@/types';
@@ -142,6 +143,7 @@ function CashFlowPageInner() {
     handleExportExcel,
   } = useCashFlow();
 
+  const { t } = useLanguage();
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   const handleTransactionClick = (tx: CashFlowTransaction) => {
