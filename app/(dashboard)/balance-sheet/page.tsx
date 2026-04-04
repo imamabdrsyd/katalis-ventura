@@ -58,7 +58,7 @@ function BalanceSheetPageInner() {
           {t.balanceSheetPage.title}
         </h1>
         <p className="text-gray-500 dark:text-gray-400 mt-2">
-          {t.balanceSheetPage.reportTitle} - {activeBusiness?.business_name}
+          {t.balanceSheetPage.reportTitle.replace('{name}', activeBusiness?.business_name ?? '')}
         </p>
       </div>
 
@@ -150,7 +150,7 @@ function BalanceSheetPageInner() {
       {/* As of Date Display */}
       <div className="text-center mb-6">
         <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-          {t.balanceSheetPage.asOf} {new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+          {t.balanceSheetPage.asOf.replace('{date}', new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }))}
         </p>
       </div>
 

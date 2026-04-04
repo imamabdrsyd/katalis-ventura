@@ -88,7 +88,7 @@ function TrialBalancePageInner() {
           {t.trialBalance.title}
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {t.trialBalance.reportTitle} — {activeBusiness.business_name}
+          {t.trialBalance.reportTitle.replace('{name}', activeBusiness.business_name)}
         </p>
       </div>
 
