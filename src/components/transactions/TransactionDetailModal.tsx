@@ -631,33 +631,37 @@ export function TransactionDetailModal({
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Debit
                 </label>
-                <p className="mt-1 text-gray-900 dark:text-gray-100 font-medium flex items-center gap-1.5">
+                <div className="mt-1 flex items-center gap-1.5 mb-0.5">
                   {transaction.debit_account?.account_code && (
                     <span className="font-mono text-xs text-gray-400 dark:text-gray-500">{transaction.debit_account.account_code}</span>
                   )}
+                  {transaction.debit_account?.account_type && (
+                    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${ACCOUNT_TYPE_BG[transaction.debit_account.account_type] ?? 'bg-gray-100 text-gray-500'}`}>
+                      {ACCOUNT_TYPE_LABEL[transaction.debit_account.account_type] ?? transaction.debit_account.account_type}
+                    </span>
+                  )}
+                </div>
+                <p className="text-gray-900 dark:text-gray-100 font-medium">
                   {transaction.debit_account?.account_name || 'Unknown'}
                 </p>
-                {transaction.debit_account?.account_type && (
-                  <span className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full font-medium ${ACCOUNT_TYPE_BG[transaction.debit_account.account_type] ?? 'bg-gray-100 text-gray-500'}`}>
-                    {ACCOUNT_TYPE_LABEL[transaction.debit_account.account_type] ?? transaction.debit_account.account_type}
-                  </span>
-                )}
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Credit
                 </label>
-                <p className="mt-1 text-gray-900 dark:text-gray-100 font-medium flex items-center gap-1.5">
+                <div className="mt-1 flex items-center gap-1.5 mb-0.5">
                   {transaction.credit_account?.account_code && (
                     <span className="font-mono text-xs text-gray-400 dark:text-gray-500">{transaction.credit_account.account_code}</span>
                   )}
+                  {transaction.credit_account?.account_type && (
+                    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${ACCOUNT_TYPE_BG[transaction.credit_account.account_type] ?? 'bg-gray-100 text-gray-500'}`}>
+                      {ACCOUNT_TYPE_LABEL[transaction.credit_account.account_type] ?? transaction.credit_account.account_type}
+                    </span>
+                  )}
+                </div>
+                <p className="text-gray-900 dark:text-gray-100 font-medium">
                   {transaction.credit_account?.account_name || 'Unknown'}
                 </p>
-                {transaction.credit_account?.account_type && (
-                  <span className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full font-medium ${ACCOUNT_TYPE_BG[transaction.credit_account.account_type] ?? 'bg-gray-100 text-gray-500'}`}>
-                    {ACCOUNT_TYPE_LABEL[transaction.credit_account.account_type] ?? transaction.credit_account.account_type}
-                  </span>
-                )}
               </div>
             </div>
           ) : (
