@@ -221,6 +221,162 @@ export function calculateFinancialSummary(
   return summary;
 }
 
+/**
+ * Extract income statement line items grouped by account.
+ * Handles both simple double-entry and multi-line journal entries.
+ * Returns per-account totals for each P&L section + source transactions for drill-down.
+ */
+export interface AccountLineItem {
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  total: number;
+  /** Source transactions that contribute to this line item (for click-to-detail) */
+  transactions: Transaction[];
+}
+
+export interface IncomeStatementLineItems {
+  revenue: AccountLineItem[];
+  cogs: AccountLineItem[];
+  opex: AccountLineItem[];
+  tax: AccountLineItem[];
+  interest: AccountLineItem[];
+}
+
+export function extractIncomeStatementLineItems(
+  transactions: Transaction[]
+): IncomeStatementLineItems {
+  // Maps: accountId → { accountCode, accountName, total, transactions[] }
+  const revenueMap = new Map<string, AccountLineItem>();
+  const cogsMap = new Map<string, AccountLineItem>();
+  const opexMap = new Map<string, AccountLineItem>();
+  const taxMap = new Map<string, AccountLineItem>();
+  const interestMap = new Map<string, AccountLineItem>();
+
+  function addToMap(
+    map: Map<string, AccountLineItem>,
+    account: Account,
+    amount: number,
+    tx: Transaction
+  ) {
+    const existing = map.get(account.id);
+    if (existing) {
+      existing.total += amount;
+      if (!existing.transactions.includes(tx)) existing.transactions.push(tx);
+    } else {
+      map.set(account.id, {
+        accountId: account.id,
+        accountCode: account.account_code || '',
+        accountName: account.account_name,
+        total: amount,
+        transactions: [tx],
+      });
+    }
+  }
+
+  for (const t of transactions) {
+    const amount = Number(t.amount);
+
+    // --- Multi-line journal entry ---
+    if (t.is_multi_line && t.journal_lines && t.journal_lines.length > 0) {
+      for (const line of t.journal_lines) {
+        const acc = line.account;
+        if (!acc) continue;
+
+        // Revenue: credit to REVENUE account
+        if (line.credit_amount > 0 && acc.account_type === 'REVENUE') {
+          addToMap(revenueMap, acc, line.credit_amount, t);
+        }
+        // Contra-revenue: debit to REVENUE account
+        if (line.debit_amount > 0 && acc.account_type === 'REVENUE') {
+          addToMap(revenueMap, acc, -line.debit_amount, t);
+        }
+
+        // Expenses: debit to EXPENSE account
+        if (line.debit_amount > 0 && acc.account_type === 'EXPENSE') {
+          const cat = acc.default_category;
+          if (cat === 'VAR') {
+            addToMap(cogsMap, acc, line.debit_amount, t);
+          } else if (cat === 'TAX') {
+            addToMap(taxMap, acc, line.debit_amount, t);
+          } else if (t.category === 'FIN') {
+            addToMap(interestMap, acc, line.debit_amount, t);
+          } else {
+            addToMap(opexMap, acc, line.debit_amount, t);
+          }
+        }
+      }
+      continue;
+    }
+
+    // --- Simple double-entry ---
+    switch (t.category) {
+      case 'EARN': {
+        if (t.is_double_entry && t.credit_account?.account_type !== 'REVENUE') break;
+        const acc = t.credit_account;
+        if (acc) {
+          addToMap(revenueMap, acc, amount, t);
+        }
+        break;
+      }
+      case 'VAR': {
+        if (t.is_double_entry && t.debit_account?.account_type === 'ASSET') break;
+        const acc = t.debit_account;
+        if (acc) {
+          addToMap(cogsMap, acc, amount, t);
+        }
+        break;
+      }
+      case 'OPEX': {
+        const acc = t.debit_account;
+        if (acc) {
+          addToMap(opexMap, acc, amount, t);
+        }
+        break;
+      }
+      case 'TAX': {
+        const acc = t.debit_account;
+        if (acc) {
+          addToMap(taxMap, acc, amount, t);
+        }
+        break;
+      }
+      case 'FIN': {
+        if (t.is_double_entry && t.debit_account?.account_type === 'EXPENSE') {
+          addToMap(interestMap, t.debit_account, amount, t);
+        } else if (!t.is_double_entry && isInterestKeyword(t.name, t.description)) {
+          // Legacy FIN — create a synthetic account entry
+          addToMap(interestMap, {
+            id: '__legacy_interest',
+            account_code: '',
+            account_name: t.description || t.name || 'Beban Bunga',
+            account_type: 'EXPENSE',
+            normal_balance: 'DEBIT',
+            business_id: '',
+            is_active: true,
+            is_system: false,
+            sort_order: 0,
+          } as Account, amount, t);
+        }
+        break;
+      }
+    }
+  }
+
+  const toSortedArray = (map: Map<string, AccountLineItem>) =>
+    Array.from(map.values())
+      .filter((item) => Math.abs(item.total) > 0.001)
+      .sort((a, b) => a.accountCode.localeCompare(b.accountCode) || a.accountName.localeCompare(b.accountName));
+
+  return {
+    revenue: toSortedArray(revenueMap),
+    cogs: toSortedArray(cogsMap),
+    opex: toSortedArray(opexMap),
+    tax: toSortedArray(taxMap),
+    interest: toSortedArray(interestMap),
+  };
+}
+
 // Calculate derived income statement metrics from a financial summary
 export function calculateIncomeStatementMetrics(
   summary: FinancialSummary

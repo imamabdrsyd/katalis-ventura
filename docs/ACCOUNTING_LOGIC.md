@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 4 April 2026 | AR/AP Aging & Repayment: 29 Maret 2026
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 4 April 2026 (Income Statement per-account breakdown) | AR/AP Aging & Repayment: 29 Maret 2026
 
 ---
 
@@ -626,13 +626,40 @@ Operating Margin = (operatingIncome / totalEarn) × 100
 Net Margin       = (netProfit / totalEarn) × 100
 ```
 
-### 7.3 Period Filtering
+### 7.3 Per-Account Breakdown (Multi-line Aware)
+
+Income Statement menampilkan breakdown **per akun** di setiap section, bukan per transaksi. Ini penting karena satu transaksi multi-line bisa mengandung baris di beberapa section sekaligus (misalnya transaksi EARN yang juga mengandung debit ke akun beban/EXPENSE).
+
+**Fungsi utama:** `extractIncomeStatementLineItems()` di `src/lib/calculations.ts`
+
+Untuk setiap transaksi:
+- **Multi-line (`is_multi_line`)**: Iterasi `journal_lines`, klasifikasi per line berdasarkan `account.account_type` dan `account.default_category`
+- **Simple double-entry**: Klasifikasi berdasarkan `category` + `debit_account` / `credit_account`
+
+**Output**: `IncomeStatementLineItems` — object berisi array `AccountLineItem[]` per section:
+- `revenue`: Credit ke REVENUE account (debit ke REVENUE = contra-revenue)
+- `cogs`: Debit ke EXPENSE account dengan `default_category === 'VAR'`
+- `opex`: Debit ke EXPENSE account (bukan VAR, TAX, atau FIN interest)
+- `tax`: Debit ke EXPENSE account dengan `default_category === 'TAX'`
+- `interest`: Debit ke EXPENSE account dari transaksi `category === 'FIN'`
+
+Setiap `AccountLineItem` berisi: `accountId`, `accountCode`, `accountName`, `total`, `transactions[]` (source untuk drill-down).
+
+**Contoh:** Transaksi EARN multi-line:
+```
+Dr 1200 Bank          Rp 628.355  ← ASSET, tidak masuk income statement
+Dr 5900 Komisi Platform Rp 21.645  ← EXPENSE → opex
+Cr 4200 Short-term Rent Rp 650.000 ← REVENUE → revenue
+```
+Di income statement, akun 4200 muncul di Revenue section dan akun 5900 muncul di OPEX section.
+
+### 7.4 Period Filtering
 
 Income Statement menggunakan `filterTransactionsByDateRange()` → menunjukkan transaksi **dalam** periode tertentu (bukan kumulatif).
 
-### 7.4 Export
+### 7.5 Export
 
-- PDF via `jsPDF` + `jspdf-autotable`
+- PDF via `jsPDF` + `jspdf-autotable` — menggunakan `lineItems` untuk breakdown per akun
 - Excel via `xlsx` library
 
 ---

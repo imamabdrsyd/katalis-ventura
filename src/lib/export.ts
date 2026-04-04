@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import type { FinancialSummary, BalanceSheetData, CashFlowData, Transaction } from '@/types';
 import { formatCurrency } from './utils';
 import { calculateIncomeStatementMetrics } from './calculations';
+import type { IncomeStatementLineItems } from './calculations';
 
 // --- Income Statement PDF helpers ---
 
@@ -60,7 +61,8 @@ export async function exportIncomeStatementToPDF(
   businessName: string,
   period: string,
   summary: FinancialSummary,
-  transactionsByCategory?: TransactionsByCategory
+  transactionsByCategory?: TransactionsByCategory,
+  lineItems?: IncomeStatementLineItems
 ) {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -103,25 +105,36 @@ export async function exportIncomeStatementToPDF(
     rows.push({ cells: [`    ${label}`, `${pct.toFixed(2)}%`], kind: 'margin' });
   const blank = () => rows.push({ cells: ['', ''], kind: 'blank' });
 
+  // Helper: render line items from the new lineItems structure, fallback to old groupByAccount
+  const renderLineItems = (
+    sectionItems: { accountCode: string; accountName: string; total: number }[] | undefined,
+    fallbackTxs: Transaction[] | undefined,
+    fallbackSide: 'debit' | 'credit',
+    fallbackLabel: string,
+    fallbackTotal: number
+  ) => {
+    if (sectionItems?.length) {
+      for (const li of sectionItems) {
+        const label = li.accountCode ? `${li.accountCode} – ${li.accountName}` : li.accountName;
+        item(label, li.total);
+      }
+    } else if (fallbackTxs?.length) {
+      const grouped = groupByAccount(fallbackTxs, fallbackSide);
+      for (const g of grouped) item(g.name, g.total);
+    } else if (fallbackTotal > 0) {
+      item(fallbackLabel, fallbackTotal);
+    }
+  };
+
   // ── REVENUE ──
   section('PENDAPATAN');
-  if (transactionsByCategory?.revenue.length) {
-    const revenueItems = groupByAccount(transactionsByCategory.revenue, 'credit');
-    for (const r of revenueItems) item(r.name, r.total);
-  } else if (summary.totalEarn > 0) {
-    item('Pendapatan', summary.totalEarn);
-  }
+  renderLineItems(lineItems?.revenue, transactionsByCategory?.revenue, 'credit', 'Pendapatan', summary.totalEarn);
   subtotal('TOTAL PENDAPATAN', summary.totalEarn);
   blank();
 
   // ── COST OF SALES ──
   section('HARGA POKOK PENJUALAN');
-  if (transactionsByCategory?.cogs.length) {
-    const cogsItems = groupByAccount(transactionsByCategory.cogs, 'debit');
-    for (const c of cogsItems) item(c.name, c.total);
-  } else if (summary.totalVar > 0) {
-    item('Harga pokok penjualan', summary.totalVar);
-  }
+  renderLineItems(lineItems?.cogs, transactionsByCategory?.cogs, 'debit', 'Harga pokok penjualan', summary.totalVar);
   subtotal('TOTAL HARGA POKOK PENJUALAN', summary.totalVar, true);
   blank();
 
@@ -132,12 +145,7 @@ export async function exportIncomeStatementToPDF(
 
   // ── OPERATING EXPENSES ──
   section('BEBAN USAHA');
-  if (transactionsByCategory?.opex.length) {
-    const opexItems = groupByAccount(transactionsByCategory.opex, 'debit');
-    for (const o of opexItems) item(o.name, o.total);
-  } else if (summary.totalOpex > 0) {
-    item('Beban operasional', summary.totalOpex);
-  }
+  renderLineItems(lineItems?.opex, transactionsByCategory?.opex, 'debit', 'Beban operasional', summary.totalOpex);
   subtotal('TOTAL BEBAN USAHA', summary.totalOpex, true);
   blank();
 
@@ -157,12 +165,7 @@ export async function exportIncomeStatementToPDF(
   // ── OTHER INCOME / FINANCING ──
   if (summary.totalInterest > 0) {
     section('BEBAN LAIN-LAIN');
-    if (transactionsByCategory?.interest.length) {
-      const interestItems = groupByAccount(transactionsByCategory.interest, 'debit');
-      for (const f of interestItems) item(f.name, f.total);
-    } else {
-      item('Beban bunga & pembiayaan', summary.totalInterest);
-    }
+    renderLineItems(lineItems?.interest, transactionsByCategory?.interest, 'debit', 'Beban bunga & pembiayaan', summary.totalInterest);
     subtotal('TOTAL BEBAN LAIN-LAIN', summary.totalInterest, true);
     blank();
   }
@@ -174,12 +177,7 @@ export async function exportIncomeStatementToPDF(
   // ── TAX ──
   if (summary.totalTax > 0) {
     section('PAJAK');
-    if (transactionsByCategory?.tax.length) {
-      const taxItems = groupByAccount(transactionsByCategory.tax, 'debit');
-      for (const t of taxItems) item(t.name, t.total);
-    } else {
-      item('Pajak', summary.totalTax);
-    }
+    renderLineItems(lineItems?.tax, transactionsByCategory?.tax, 'debit', 'Pajak', summary.totalTax);
     subtotal('TOTAL PAJAK', summary.totalTax, true);
     blank();
   }

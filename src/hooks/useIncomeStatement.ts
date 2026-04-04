@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useReportData } from './useReportData';
-import { calculateFinancialSummary, calculateIncomeStatementMetrics, applyDepreciationToSummary } from '@/lib/calculations';
+import { calculateFinancialSummary, calculateIncomeStatementMetrics, applyDepreciationToSummary, extractIncomeStatementLineItems } from '@/lib/calculations';
 import { calculateDepreciationSummary } from '@/lib/accounting/depreciation';
 import * as accountsApi from '@/lib/api/accounts';
 import type { Transaction, Account } from '@/types';
+import type { IncomeStatementLineItems } from '@/lib/calculations';
 
 export interface TransactionsByCategory {
   revenue: Transaction[];
@@ -19,6 +20,7 @@ export interface UseIncomeStatementReturn extends ReturnType<typeof useReportDat
   summary: ReturnType<typeof calculateFinancialSummary>;
   metrics: ReturnType<typeof calculateIncomeStatementMetrics>;
   transactionsByCategory: TransactionsByCategory;
+  lineItems: IncomeStatementLineItems;
   handleExportPDF: () => Promise<void>;
   handleExportExcel: () => Promise<void>;
 }
@@ -76,6 +78,11 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
     [summary]
   );
 
+  const lineItems = useMemo(
+    () => extractIncomeStatementLineItems(filteredTransactions),
+    [filteredTransactions]
+  );
+
   const transactionsByCategory: TransactionsByCategory = useMemo(() => ({
     revenue: filteredTransactions.filter(t =>
       t.category === 'EARN' &&
@@ -101,9 +108,9 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
     if (!activeBusiness) return;
     const { exportIncomeStatementToPDF } = await import('@/lib/export');
     const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
-    await exportIncomeStatementToPDF(activeBusiness.business_name, periodLabel, summary, transactionsByCategory);
+    await exportIncomeStatementToPDF(activeBusiness.business_name, periodLabel, summary, transactionsByCategory, lineItems);
     setShowExportMenu(false);
-  }, [activeBusiness, startDate, endDate, summary, transactionsByCategory, setShowExportMenu]);
+  }, [activeBusiness, startDate, endDate, summary, transactionsByCategory, lineItems, setShowExportMenu]);
 
   const handleExportExcel = useCallback(async () => {
     if (!activeBusiness) return;
@@ -118,6 +125,7 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
     summary,
     metrics,
     transactionsByCategory,
+    lineItems,
     handleExportPDF,
     handleExportExcel,
   };

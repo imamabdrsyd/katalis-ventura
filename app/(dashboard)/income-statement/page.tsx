@@ -2,50 +2,29 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Calendar, TrendingUp, TrendingDown, Download, FileText, FileSpreadsheet, Info, DollarSign, ArrowUpCircle, ArrowDownCircle, ChevronDown, ChevronRight, Building2 } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, Download, FileText, FileSpreadsheet, Info, DollarSign, ChevronDown, ChevronRight, Building2 } from 'lucide-react';
 import { useIncomeStatement } from '@/hooks/useIncomeStatement';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
 import type { Transaction } from '@/types';
+import type { AccountLineItem } from '@/lib/calculations';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 
-const EXPENSE_CATEGORIES = new Set(['OPEX', 'VAR', 'TAX', 'CAPEX']);
-
 function TransactionRow({ tx, onClick }: { tx: Transaction; onClick: (tx: Transaction) => void }) {
-  const isExpense = EXPENSE_CATEGORIES.has(tx.category);
   return (
-    <div onClick={() => onClick(tx)} className="flex items-start gap-3 py-2.5 px-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer">
-      <div className="mt-0.5 flex-shrink-0">
-        {!isExpense ? (
-          <ArrowUpCircle className="w-4 h-4 text-green-500" />
-        ) : (
-          <ArrowDownCircle className="w-4 h-4 text-red-500" />
-        )}
-      </div>
+    <div onClick={() => onClick(tx)} className="flex items-start gap-3 py-2 px-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer">
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-start gap-2">
           <div className="min-w-0">
-            {isExpense && tx.description ? (
-              <>
-                <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{tx.description}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{tx.name}</p>
-              </>
-            ) : (
-              <>
-                <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{tx.name}</p>
-                {tx.description && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{tx.description}</p>
-                )}
-              </>
+            <p className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{tx.name}</p>
+            {tx.description && (
+              <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{tx.description}</p>
             )}
           </div>
           <div className="text-right flex-shrink-0">
-            <p className={`text-sm font-semibold ${tx.amount === 0 ? 'text-gray-500 dark:text-gray-400' : tx.amount > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
-              {tx.amount > 0 ? '+' : ''}{formatCurrency(tx.amount)}
-            </p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">
-              {new Date(tx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {new Date(tx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
             </p>
           </div>
         </div>
@@ -54,34 +33,66 @@ function TransactionRow({ tx, onClick }: { tx: Transaction; onClick: (tx: Transa
   );
 }
 
-function TransactionSection({ title, transactions, onTransactionClick }: { title: string; transactions: Transaction[]; onTransactionClick: (tx: Transaction) => void }) {
-  const [open, setOpen] = useState(false);
-  const sorted = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+function AccountBreakdownSection({
+  items,
+  onTransactionClick,
+  amountColor = 'default',
+}: {
+  items: AccountLineItem[];
+  onTransactionClick: (tx: Transaction) => void;
+  amountColor?: 'green' | 'red' | 'default';
+}) {
+  const [expandedAccount, setExpandedAccount] = useState<string | null>(null);
+
+  if (items.length === 0) {
+    return (
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+          Tidak ada transaksi
+        </p>
+      </div>
+    );
+  }
+
+  const colorClass = amountColor === 'green'
+    ? 'text-green-600 dark:text-green-400'
+    : amountColor === 'red'
+      ? 'text-red-500 dark:text-red-400'
+      : 'text-gray-800 dark:text-gray-100';
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm"
-      >
-        <div className="flex items-center gap-2">
-          {open ? <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
-          <span className="text-gray-800 dark:text-gray-200 font-medium">{title}</span>
-        </div>
-        <span className="text-xs text-gray-400 dark:text-gray-500">{transactions.length} transaksi</span>
-      </button>
+    <div className="space-y-0.5">
+      {items.map((item) => (
+        <div key={item.accountId} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+          <button
+            onClick={() => setExpandedAccount(expandedAccount === item.accountId ? null : item.accountId)}
+            className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm"
+          >
+            <div className="flex items-center gap-2">
+              {expandedAccount === item.accountId
+                ? <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                : <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
+              <span className="text-gray-800 dark:text-gray-200 font-medium">
+                {item.accountCode ? `${item.accountCode} – ${item.accountName}` : item.accountName}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-400 dark:text-gray-500">{item.transactions.length} transaksi</span>
+              <span className={`text-sm font-semibold ${colorClass}`}>
+                {formatCurrency(item.total)}
+              </span>
+            </div>
+          </button>
 
-      {open && (
-        <div className="divide-y divide-gray-100 dark:divide-gray-700/50 max-h-[400px] overflow-y-auto">
-          {sorted.length === 0 ? (
-            <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
-              Tidak ada transaksi
-            </p>
-          ) : (
-            sorted.map(tx => <TransactionRow key={tx.id} tx={tx} onClick={onTransactionClick} />)
+          {expandedAccount === item.accountId && (
+            <div className="divide-y divide-gray-100 dark:divide-gray-700/50 max-h-[300px] overflow-y-auto">
+              {item.transactions.map(tx => (
+                <TransactionRow key={tx.id} tx={tx} onClick={onTransactionClick} />
+              ))}
+            </div>
           )}
         </div>
-      )}
+      ))}
     </div>
   );
 }
@@ -138,7 +149,7 @@ function IncomeStatementPageInner() {
     handlePeriodChange,
     summary,
     metrics,
-    transactionsByCategory,
+    lineItems,
     handleExportPDF,
     handleExportExcel,
   } = useIncomeStatement();
@@ -384,7 +395,7 @@ function IncomeStatementPageInner() {
                 <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
                   <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Revenue</h3>
                 </div>
-                <TransactionSection title="Earnings" transactions={transactionsByCategory.revenue} onTransactionClick={setSelectedTransaction} />
+                <AccountBreakdownSection items={lineItems.revenue} onTransactionClick={setSelectedTransaction} amountColor="green" />
                 <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
                   <span className="text-gray-800 dark:text-gray-100">Total Revenue</span>
                   <span className={summary.totalEarn === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-green-600 dark:text-green-400'}>{formatCurrency(summary.totalEarn)}</span>
@@ -396,7 +407,7 @@ function IncomeStatementPageInner() {
                 <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
                   <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Cost of Goods Sold</h3>
                 </div>
-                <TransactionSection title="Variable Costs" transactions={transactionsByCategory.cogs} onTransactionClick={setSelectedTransaction} />
+                <AccountBreakdownSection items={lineItems.cogs} onTransactionClick={setSelectedTransaction} amountColor="red" />
                 <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
                   <span className="text-gray-800 dark:text-gray-100">Total COGS</span>
                   <span className={summary.totalVar === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-red-500 dark:text-red-400'}>({formatCurrency(summary.totalVar)})</span>
@@ -436,7 +447,7 @@ function IncomeStatementPageInner() {
                 <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
                   <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Operating Expenses</h3>
                 </div>
-                <TransactionSection title="Operating Expenses" transactions={transactionsByCategory.opex} onTransactionClick={setSelectedTransaction} />
+                <AccountBreakdownSection items={lineItems.opex} onTransactionClick={setSelectedTransaction} amountColor="red" />
                 <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
                   <span className="text-gray-800 dark:text-gray-100">Total Operating Expenses</span>
                   <span className={summary.totalOpex === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-red-500 dark:text-red-400'}>({formatCurrency(summary.totalOpex)})</span>
@@ -492,7 +503,7 @@ function IncomeStatementPageInner() {
                 <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
                   <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Financing Costs</h3>
                 </div>
-                <TransactionSection title="Interest & Financing Expenses" transactions={transactionsByCategory.interest} onTransactionClick={setSelectedTransaction} />
+                <AccountBreakdownSection items={lineItems.interest} onTransactionClick={setSelectedTransaction} amountColor="red" />
               </div>
 
               {/* EBT */}
@@ -520,7 +531,7 @@ function IncomeStatementPageInner() {
 
               {/* TAX */}
               <div>
-                <TransactionSection title="Tax" transactions={transactionsByCategory.tax} onTransactionClick={setSelectedTransaction} />
+                <AccountBreakdownSection items={lineItems.tax} onTransactionClick={setSelectedTransaction} amountColor="red" />
               </div>
 
               {/* NET INCOME */}
