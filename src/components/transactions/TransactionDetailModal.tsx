@@ -45,6 +45,22 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 const STOCK_COLOR = 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300';
 
+const ACCOUNT_TYPE_BG: Record<string, string> = {
+  ASSET: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300',
+  LIABILITY: 'bg-amber-50 dark:bg-amber-900/20 text-amber-500 dark:text-amber-300',
+  EQUITY: 'bg-purple-50 dark:bg-purple-900/20 text-purple-500 dark:text-purple-300',
+  REVENUE: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300',
+  EXPENSE: 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-300',
+};
+
+const ACCOUNT_TYPE_LABEL: Record<string, string> = {
+  ASSET: 'Aset',
+  LIABILITY: 'Liabilitas',
+  EQUITY: 'Ekuitas',
+  REVENUE: 'Pendapatan',
+  EXPENSE: 'Beban',
+};
+
 function isInventoryTransaction(transaction: Transaction): boolean {
   const debitCode = transaction.debit_account?.account_code || '';
   const debitName = transaction.debit_account?.account_name?.toLowerCase() || '';
@@ -622,9 +638,9 @@ export function TransactionDetailModal({
                   {transaction.debit_account?.account_name || 'Unknown'}
                 </p>
                 {transaction.debit_account?.account_type && (
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    {transaction.debit_account.account_type}
-                  </p>
+                  <span className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full font-medium ${ACCOUNT_TYPE_BG[transaction.debit_account.account_type] ?? 'bg-gray-100 text-gray-500'}`}>
+                    {ACCOUNT_TYPE_LABEL[transaction.debit_account.account_type] ?? transaction.debit_account.account_type}
+                  </span>
                 )}
               </div>
               <div>
@@ -638,9 +654,9 @@ export function TransactionDetailModal({
                   {transaction.credit_account?.account_name || 'Unknown'}
                 </p>
                 {transaction.credit_account?.account_type && (
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    {transaction.credit_account.account_type}
-                  </p>
+                  <span className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full font-medium ${ACCOUNT_TYPE_BG[transaction.credit_account.account_type] ?? 'bg-gray-100 text-gray-500'}`}>
+                    {ACCOUNT_TYPE_LABEL[transaction.credit_account.account_type] ?? transaction.credit_account.account_type}
+                  </span>
                 )}
               </div>
             </div>
