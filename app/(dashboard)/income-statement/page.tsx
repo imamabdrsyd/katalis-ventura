@@ -86,7 +86,7 @@ function AccountBreakdownSection({
             </div>
             <div className="flex items-center gap-3">
               <span className="text-xs text-gray-400 dark:text-gray-500">{item.transactions.length} transaksi</span>
-              <span className={`text-sm font-semibold ${colorClass}`}>
+              <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
                 {formatCurrency(item.total)}
               </span>
             </div>
