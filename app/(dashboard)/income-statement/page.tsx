@@ -23,7 +23,10 @@ function TransactionRow({ tx, onClick }: { tx: Transaction; onClick: (tx: Transa
             )}
           </div>
           <div className="text-right flex-shrink-0">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+              {formatCurrency(tx.amount)}
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">
               {new Date(tx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
             </p>
           </div>
