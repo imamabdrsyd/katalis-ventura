@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 3 April 2026 | AR/AP Aging & Repayment: 29 Maret 2026
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 4 April 2026 | AR/AP Aging & Repayment: 29 Maret 2026
 
 ---
 
@@ -279,7 +279,7 @@ Selain simple 2-line (1 debit + 1 credit), sistem mendukung **compound/multi-lin
 **UI:**
 - Tombol "Multi-Baris" di halaman transaksi → `MultiLineJournalForm.tsx` (tabel dinamis, validasi seimbang real-time).
 - **Embedded multi-line di Penjualan, Pengeluaran & Terima Pinjaman:** Di halaman Journal Entry (`journal-entry/page.tsx`), entry type "Penjualan", "Pengeluaran", dan "Terima Pinjaman" memiliki tombol "+ Tambah Baris" yang mengubah form single-line menjadi tabel multi-line (N debit + M credit). Baris pertama di-prefill dari state single-line. Account filtering diterapkan per entry type:
-  - Penjualan: debit → ASSET saja, kredit → REVENUE saja
+  - Penjualan: debit → ASSET atau EXPENSE (untuk komisi OTA, biaya bank, diskon penjualan yang dikurangkan dari pendapatan bruto — sesuai PSAK/IFRS gross revenue recording), kredit → REVENUE saja
   - Pengeluaran: debit → EXPENSE atau ASSET, kredit → ASSET atau LIABILITY
   - Terima Pinjaman: debit → ASSET atau EXPENSE (biaya layanan, admin fee, provisi), kredit → LIABILITY saja
 - Saat disimpan dalam mode multi-line, data dikirim via `createMultiLineTransaction()` (`is_multi_line: true`). Mode single-line tetap menggunakan `createTransaction()` (`is_double_entry: true`).

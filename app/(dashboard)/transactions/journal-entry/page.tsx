@@ -680,9 +680,10 @@ export default function JournalEntryPage() {
   const getMlAccountsForRow = (side: 'debit' | 'credit'): Account[] => {
     if (!selectedEntryType) return accounts;
     if (selectedEntryType.id === 'penjualan') {
-      // Debit rows → ASSET only; Credit rows → REVENUE only
+      // Debit rows → ASSET or EXPENSE (komisi OTA, biaya bank, diskon penjualan)
+      // Credit rows → REVENUE only
       return side === 'debit'
-        ? accounts.filter(a => a.account_type === 'ASSET')
+        ? accounts.filter(a => a.account_type === 'ASSET' || a.account_type === 'EXPENSE')
         : accounts.filter(a => a.account_type === 'REVENUE');
     }
     if (selectedEntryType.id === 'pengeluaran') {
@@ -1180,7 +1181,11 @@ export default function JournalEntryPage() {
                                   accounts={getMlAccountsForRow(side)}
                                   value={line.account_id || undefined}
                                   onChange={(accountId) => mlUpdateAccount(idx, accountId)}
-                                  placeholder="Pilih akun"
+                                  placeholder={
+                                    selectedEntryType?.id === 'penjualan' && side === 'debit'
+                                      ? 'Pilih akun aset atau beban...'
+                                      : 'Pilih akun'
+                                  }
                                   error={errors[`ml_${idx}_account`]}
                                 />
                               </td>
