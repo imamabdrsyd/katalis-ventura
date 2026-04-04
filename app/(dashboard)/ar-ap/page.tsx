@@ -289,10 +289,10 @@ function ArApPageInner() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
             <Users className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
-            Piutang & Hutang
+            {t.arAp.title}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Aging report — {activeBusiness.business_name}
+            {t.arAp.subtitle.replace('{name}', activeBusiness.business_name)}
           </p>
         </div>
 
