@@ -30,6 +30,7 @@ export type AccountTypeFilter = AccountType | 'ALL';
 /**
  * Pre-index transaksi per account ID untuk menghindari O(n) filter berulang.
  * Return Map<accountId, Transaction[]> — single pass O(n).
+ * Mendukung transaksi double-entry biasa DAN multi-line journal entries.
  */
 export function buildTransactionIndex(transactions: Transaction[]): {
   index: Map<string, Transaction[]>;
@@ -39,10 +40,25 @@ export function buildTransactionIndex(transactions: Transaction[]): {
   let legacyCount = 0;
 
   for (const t of transactions) {
+    // Multi-line: index per journal_line account_id
+    if (t.is_multi_line && t.journal_lines?.length) {
+      for (const line of t.journal_lines) {
+        if (line.account_id) {
+          const arr = index.get(line.account_id);
+          if (arr) arr.push(t);
+          else index.set(line.account_id, [t]);
+        }
+      }
+      continue;
+    }
+
+    // Legacy (bukan double-entry, bukan multi-line)
     if (!t.is_double_entry) {
       legacyCount++;
       continue;
     }
+
+    // Double-entry biasa
     if (t.debit_account_id) {
       const arr = index.get(t.debit_account_id);
       if (arr) arr.push(t);
@@ -59,8 +75,45 @@ export function buildTransactionIndex(transactions: Transaction[]): {
 }
 
 /**
+ * Bangun ledger entries dari satu transaksi multi-line untuk akun tertentu.
+ * Satu transaksi bisa menghasilkan >1 entry jika akun muncul di beberapa journal lines.
+ */
+function buildMultiLineEntries(
+  t: Transaction,
+  account: Account
+): Array<{ debitAmount: number; creditAmount: number; counterAccountName: string; counterAccountCode: string; description: string }> {
+  const lines = t.journal_lines || [];
+  const myLines = lines.filter((l) => l.account_id === account.id);
+  // Counter accounts = semua akun lain di jurnal ini
+  const counterLines = lines.filter((l) => l.account_id !== account.id);
+
+  // Rangkum counter accounts untuk ditampilkan
+  const counterNames: string[] = [];
+  const counterCodes: string[] = [];
+  for (const cl of counterLines) {
+    const name = cl.account?.account_name ?? '-';
+    const code = cl.account?.account_code ?? '-';
+    if (!counterNames.includes(name)) {
+      counterNames.push(name);
+      counterCodes.push(code);
+    }
+  }
+  const counterAccountName = counterNames.join(', ') || '-';
+  const counterAccountCode = counterCodes.join(', ') || '-';
+
+  return myLines.map((line) => ({
+    debitAmount: Number(line.debit_amount) || 0,
+    creditAmount: Number(line.credit_amount) || 0,
+    counterAccountName,
+    counterAccountCode,
+    description: line.description || t.description || t.name,
+  }));
+}
+
+/**
  * Hitung ledger untuk satu akun. Jika txIndex diberikan, gunakan indexed lookup O(1).
  * Fallback ke filter O(n) jika txIndex tidak ada (backward compat).
+ * Mendukung transaksi double-entry biasa DAN multi-line journal entries.
  */
 export function calculateAccountLedger(
   account: Account,
@@ -86,10 +139,13 @@ export function calculateAccountLedger(
   } else {
     relevant = transactions.filter(
       (t) =>
-        t.is_double_entry &&
-        (t.debit_account_id === account.id || t.credit_account_id === account.id)
+        // Double-entry biasa
+        (t.is_double_entry &&
+          (t.debit_account_id === account.id || t.credit_account_id === account.id)) ||
+        // Multi-line: cek apakah ada journal line yang menyentuh akun ini
+        (t.is_multi_line && t.journal_lines?.some((l) => l.account_id === account.id))
     );
-    legacyCount = transactions.filter((t) => !t.is_double_entry).length;
+    legacyCount = transactions.filter((t) => !t.is_double_entry && !t.is_multi_line).length;
   }
 
   // Sort ascending by date for running balance
@@ -102,16 +158,41 @@ export function calculateAccountLedger(
   let balance = 0;
   let totalDebits = 0;
   let totalCredits = 0;
+  const entries: LedgerEntry[] = [];
 
-  const entries: LedgerEntry[] = sorted.map((t) => {
+  for (const t of sorted) {
+    // Multi-line journal entry: ekstrak per journal line
+    if (t.is_multi_line && t.journal_lines?.length) {
+      const mlEntries = buildMultiLineEntries(t, account);
+      for (const ml of mlEntries) {
+        if (account.normal_balance === 'DEBIT') {
+          balance += ml.debitAmount - ml.creditAmount;
+        } else {
+          balance += ml.creditAmount - ml.debitAmount;
+        }
+        totalDebits += ml.debitAmount;
+        totalCredits += ml.creditAmount;
+
+        entries.push({
+          transactionId: t.id,
+          date: t.date,
+          description: ml.description,
+          counterAccountName: ml.counterAccountName,
+          counterAccountCode: ml.counterAccountCode,
+          debitAmount: ml.debitAmount,
+          creditAmount: ml.creditAmount,
+          balance,
+        });
+      }
+      continue;
+    }
+
+    // Double-entry biasa
     const isDebit = t.debit_account_id === account.id;
     const debitAmount = isDebit ? Number(t.amount) : 0;
     const creditAmount = !isDebit ? Number(t.amount) : 0;
     const counterAccount = isDebit ? t.credit_account : t.debit_account;
 
-    // Normal balance rule:
-    // DEBIT-normal accounts (ASSET, EXPENSE) increase with debit
-    // CREDIT-normal accounts (LIABILITY, EQUITY, REVENUE) increase with credit
     if (account.normal_balance === 'DEBIT') {
       balance += debitAmount - creditAmount;
     } else {
@@ -126,7 +207,7 @@ export function calculateAccountLedger(
       ? t.name
       : (t.description || t.debit_account?.account_name || t.name);
 
-    return {
+    entries.push({
       transactionId: t.id,
       date: t.date,
       description: keterangan,
@@ -135,8 +216,8 @@ export function calculateAccountLedger(
       debitAmount,
       creditAmount,
       balance,
-    };
-  });
+    });
+  }
 
   return {
     account,

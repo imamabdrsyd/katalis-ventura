@@ -56,7 +56,7 @@ function GeneralLedgerPageInner() {
   const [legacyNoticeDismissed, setLegacyNoticeDismissed] = useState(false);
   const [legacyExpanded, setLegacyExpanded] = useState(false);
 
-  const legacyTransactions = filteredTransactions.filter((t) => !t.is_double_entry);
+  const legacyTransactions = filteredTransactions.filter((t) => !t.is_double_entry && !t.is_multi_line);
 
   const ACCOUNT_TYPE_LABELS: Record<AccountTypeFilter, string> = {
     ALL: t.generalLedger.allTypes,
