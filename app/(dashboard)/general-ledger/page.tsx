@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { BookOpenCheck, AlertCircle, FileText, X } from 'lucide-react';
+import { BookOpenCheck, AlertCircle, FileText, X, ChevronDown, ChevronRight } from 'lucide-react';
 import { useGeneralLedger, type AccountTypeFilter } from '@/hooks/useGeneralLedger';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
@@ -54,6 +54,9 @@ function GeneralLedgerPageInner() {
   const { t } = useLanguage();
   const [viewTransaction, setViewTransaction] = useState<Transaction | null>(null);
   const [legacyNoticeDismissed, setLegacyNoticeDismissed] = useState(false);
+  const [legacyExpanded, setLegacyExpanded] = useState(false);
+
+  const legacyTransactions = filteredTransactions.filter((t) => !t.is_double_entry);
 
   const ACCOUNT_TYPE_LABELS: Record<AccountTypeFilter, string> = {
     ALL: t.generalLedger.allTypes,
@@ -72,7 +75,10 @@ function GeneralLedgerPageInner() {
   };
 
   // Reset legacy notice when switching accounts
-  useEffect(() => { setLegacyNoticeDismissed(false); }, [selectedAccountId]);
+  useEffect(() => {
+    setLegacyNoticeDismissed(false);
+    setLegacyExpanded(false);
+  }, [selectedAccountId]);
 
   // "All Time" = custom period with no date bounds
   const isAllTime = period === 'custom' && !startDate && !endDate;
@@ -339,17 +345,51 @@ function GeneralLedgerPageInner() {
 
               {/* Legacy Transactions Notice */}
               {ledger.legacyCount > 0 && !legacyNoticeDismissed && (
-                <div className="mx-4 md:mx-6 mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 flex-1">
-                    <strong>{ledger.legacyCount} transaksi lama</strong> tidak ditampilkan di sini karena tidak menggunakan sistem double-entry. Transaksi tersebut tetap dihitung di laporan keuangan.
-                  </p>
-                  <button
-                    onClick={() => setLegacyNoticeDismissed(true)}
-                    className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex-shrink-0"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+                <div className="mx-4 md:mx-6 mt-4 border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
+                  <div className="p-3 bg-gray-50 dark:bg-gray-700/50 flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 flex-1">
+                      <strong>{ledger.legacyCount} transaksi lama</strong> tidak ditampilkan di sini karena tidak menggunakan sistem double-entry. Transaksi tersebut tetap dihitung di laporan keuangan.{' '}
+                      {legacyTransactions.length > 0 && (
+                        <button
+                          onClick={() => setLegacyExpanded(!legacyExpanded)}
+                          className="inline-flex items-center gap-0.5 text-indigo-500 dark:text-indigo-400 hover:underline font-medium"
+                        >
+                          {legacyExpanded ? 'Sembunyikan' : 'Lihat transaksi'}
+                          {legacyExpanded
+                            ? <ChevronDown className="w-3 h-3" />
+                            : <ChevronRight className="w-3 h-3" />}
+                        </button>
+                      )}
+                    </p>
+                    <button
+                      onClick={() => setLegacyNoticeDismissed(true)}
+                      className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex-shrink-0"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {legacyExpanded && legacyTransactions.length > 0 && (
+                    <div className="divide-y divide-gray-100 dark:divide-gray-700/50 max-h-[240px] overflow-y-auto">
+                      {legacyTransactions.map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => setViewTransaction(t)}
+                          className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{t.name || t.description}</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{t.description || t.account}</p>
+                          </div>
+                          <div className="text-right flex-shrink-0 ml-4">
+                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{formatCurrency(t.amount)}</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500">{formatDateShort(t.date)}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
