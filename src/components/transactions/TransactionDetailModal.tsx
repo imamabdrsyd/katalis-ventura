@@ -576,8 +576,11 @@ export function TransactionDetailModal({
                     {transaction.journal_lines.map((line) => (
                       <tr key={line.id} className="bg-white dark:bg-gray-900">
                         <td className="px-3 py-2">
-                          <p className="font-medium text-gray-900 dark:text-gray-100">
-                            {line.account?.account_code} - {line.account?.account_name || 'Unknown'}
+                          <p className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
+                            {line.account?.account_code && (
+                              <span className="font-mono text-xs text-gray-400 dark:text-gray-500">{line.account.account_code}</span>
+                            )}
+                            {line.account?.account_name || 'Unknown'}
                           </p>
                           {line.description && (
                             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{line.description}</p>
@@ -612,8 +615,11 @@ export function TransactionDetailModal({
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Debit
                 </label>
-                <p className="mt-1 text-gray-900 dark:text-gray-100 font-medium">
-                  {transaction.debit_account?.account_code} - {transaction.debit_account?.account_name || 'Unknown'}
+                <p className="mt-1 text-gray-900 dark:text-gray-100 font-medium flex items-center gap-1.5">
+                  {transaction.debit_account?.account_code && (
+                    <span className="font-mono text-xs text-gray-400 dark:text-gray-500">{transaction.debit_account.account_code}</span>
+                  )}
+                  {transaction.debit_account?.account_name || 'Unknown'}
                 </p>
                 {transaction.debit_account?.account_type && (
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
@@ -625,8 +631,11 @@ export function TransactionDetailModal({
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Credit
                 </label>
-                <p className="mt-1 text-gray-900 dark:text-gray-100 font-medium">
-                  {transaction.credit_account?.account_code} - {transaction.credit_account?.account_name || 'Unknown'}
+                <p className="mt-1 text-gray-900 dark:text-gray-100 font-medium flex items-center gap-1.5">
+                  {transaction.credit_account?.account_code && (
+                    <span className="font-mono text-xs text-gray-400 dark:text-gray-500">{transaction.credit_account.account_code}</span>
+                  )}
+                  {transaction.credit_account?.account_name || 'Unknown'}
                 </p>
                 {transaction.credit_account?.account_type && (
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">

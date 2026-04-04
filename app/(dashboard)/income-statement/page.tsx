@@ -72,8 +72,13 @@ function AccountBreakdownSection({
               {expandedAccount === item.accountId
                 ? <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                 : <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
+              {item.accountCode && (
+                <span className="font-mono text-xs text-gray-400 dark:text-gray-500">
+                  {item.accountCode}
+                </span>
+              )}
               <span className="text-gray-800 dark:text-gray-200 font-medium">
-                {item.accountCode ? `${item.accountCode} – ${item.accountName}` : item.accountName}
+                {item.accountName}
               </span>
             </div>
             <div className="flex items-center gap-3">
