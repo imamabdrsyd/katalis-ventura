@@ -17,13 +17,13 @@ function TransactionRow({ tx, onClick }: { tx: Transaction; onClick: (tx: Transa
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-start gap-2">
           <div className="min-w-0">
-            <p className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{tx.name}</p>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{tx.name}</p>
             {tx.description && (
               <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{tx.description}</p>
             )}
           </div>
           <div className="text-right flex-shrink-0">
-            <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
               {formatCurrency(tx.amount)}
             </p>
             <p className="text-xs text-gray-400 dark:text-gray-500">
