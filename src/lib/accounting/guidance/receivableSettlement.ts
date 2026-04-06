@@ -7,11 +7,11 @@ import type { Transaction, TransactionCategory, Account } from '@/types';
 import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
 
 /**
- * Returns true if the transaction represents a trade receivable (piutang usaha):
+ * Returns true if the transaction represents a receivable (piutang):
  * - is double-entry
  * - debit account is ASSET type
- * - debit account has default_category === 'EARN' OR name contains "piutang usaha"/"receivable"
- * - explicitly excludes talangan/advance (default_category === 'FIN') — no settlement banner needed
+ * - debit account has default_category === 'EARN'/'FIN' OR name contains "piutang"/"receivable"/"talangan"/"advance"
+ * - includes piutang usaha (trade receivable) AND piutang talangan (advance receivable)
  */
 export function isReceivableTransaction(transaction: Transaction): boolean {
   // Single double-entry path
@@ -19,14 +19,10 @@ export function isReceivableTransaction(transaction: Transaction): boolean {
     if (!transaction.debit_account) return false;
     if (transaction.debit_account.account_type !== 'ASSET') return false;
 
-    // Talangan/advance accounts are NOT trade receivables — no settlement flow
-    if (transaction.debit_account.default_category === 'FIN') return false;
     const name = transaction.debit_account.account_name.toLowerCase();
-    if (/talangan|advance/i.test(name)) return false;
-
-    // Trade receivable: explicit EARN category or name-based match
     if (transaction.debit_account.default_category === 'EARN') return true;
-    return /piutang usaha|receivable/i.test(name);
+    if (transaction.debit_account.default_category === 'FIN') return /piutang|receivable|talangan|advance/i.test(name);
+    return /piutang|receivable|talangan|advance/i.test(name);
   }
 
   // Multi-line path
@@ -34,11 +30,10 @@ export function isReceivableTransaction(transaction: Transaction): boolean {
     return transaction.journal_lines.some((line) => {
       if (line.debit_amount <= 0 || !line.account) return false;
       if (line.account.account_type !== 'ASSET') return false;
-      if (line.account.default_category === 'FIN') return false;
       const name = line.account.account_name.toLowerCase();
-      if (/talangan|advance/i.test(name)) return false;
       if (line.account.default_category === 'EARN') return true;
-      return /piutang usaha|receivable/i.test(name);
+      if (line.account.default_category === 'FIN') return /piutang|receivable|talangan|advance/i.test(name);
+      return /piutang|receivable|talangan|advance/i.test(name);
     });
   }
 
@@ -124,15 +119,32 @@ function getReceivableAccountId(original: Transaction): string {
 }
 
 /**
+ * Returns the appropriate settlement category based on the receivable account type.
+ * - Talangan/advance (FIN) → FIN (penerimaan kembali dana, bukan revenue)
+ * - Piutang usaha (EARN) → EARN (pelunasan dari customer)
+ */
+function getSettlementCategory(original: Transaction): TransactionCategory {
+  if (original.is_multi_line && original.journal_lines) {
+    const line = original.journal_lines.find(
+      (l) => l.debit_amount > 0 && l.account?.account_type === 'ASSET'
+    );
+    if (line?.account?.default_category === 'FIN') return 'FIN';
+  }
+  if (original.debit_account?.default_category === 'FIN') return 'FIN';
+  return 'EARN';
+}
+
+/**
  * Builds the prefill data for a FULL settlement transaction.
  *
- * Correct journal: Dr Kas/Bank (1200/1100)  |  Cr Piutang Usaha
- * NOT a swap of the original entry.
+ * Piutang usaha:  Dr Kas/Bank (1200/1100)  |  Cr Piutang Usaha   (category: EARN)
+ * Piutang talangan: Dr Kas/Bank            |  Cr Piutang Talangan (category: FIN)
  */
 export function buildSettlementPrefill(original: Transaction, accounts: Account[]): SettlementPrefill {
   const outstanding = getOutstandingAmount(original);
   const cashAccount = findDefaultCashAccount(accounts);
   const receivableAccountId = getReceivableAccountId(original);
+  const category = getSettlementCategory(original);
 
   return {
     debit_account_id: cashAccount?.id ?? '',
@@ -141,7 +153,7 @@ export function buildSettlementPrefill(original: Transaction, accounts: Account[
     date: new Date().toISOString().slice(0, 10),
     name: original.name,
     description: `Pelunasan piutang: ${original.description}`,
-    category: 'EARN',
+    category,
     is_double_entry: true,
     account: '',
     status: 'posted',
@@ -162,7 +174,8 @@ export interface PartialSettlementPrefill extends SettlementPrefill {
 /**
  * Builds the prefill data for a PARTIAL settlement transaction.
  *
- * Correct journal: Dr Kas/Bank (1200/1100)  |  Cr Piutang Usaha
+ * Piutang usaha:    Dr Kas/Bank  |  Cr Piutang Usaha    (category: EARN)
+ * Piutang talangan: Dr Kas/Bank  |  Cr Piutang Talangan (category: FIN)
  */
 export function buildPartialSettlementPrefill(
   original: Transaction,
@@ -171,6 +184,7 @@ export function buildPartialSettlementPrefill(
 ): PartialSettlementPrefill {
   const cashAccount = findDefaultCashAccount(accounts);
   const receivableAccountId = getReceivableAccountId(original);
+  const category = getSettlementCategory(original);
 
   return {
     debit_account_id: cashAccount?.id ?? '',
@@ -179,7 +193,7 @@ export function buildPartialSettlementPrefill(
     date: new Date().toISOString().slice(0, 10),
     name: original.name,
     description: `Pelunasan sebagian piutang: ${original.description}`,
-    category: 'EARN',
+    category,
     is_double_entry: true,
     account: '',
     status: 'posted',
