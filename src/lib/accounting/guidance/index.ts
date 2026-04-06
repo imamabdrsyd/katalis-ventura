@@ -9,6 +9,7 @@ export { detectMatchingPrincipleWarning } from './matchingPrincipleWarning';
 export type { MatchingPrincipleWarning } from './matchingPrincipleWarning';
 export {
   isReceivableTransaction,
+  isTradeReceivableTransaction,
   isSettled,
   isPartiallySettled,
   isSettlementEntry,

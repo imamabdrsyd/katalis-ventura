@@ -41,6 +41,35 @@ export function isReceivableTransaction(transaction: Transaction): boolean {
 }
 
 /**
+ * Returns true if the transaction represents a TRADE receivable only (piutang usaha):
+ * - Excludes talangan/advance (default_category FIN)
+ * - Used for AR/AP aging report — talangan dipisah dari trade receivable
+ */
+export function isTradeReceivableTransaction(transaction: Transaction): boolean {
+  if (transaction.is_double_entry) {
+    if (!transaction.debit_account) return false;
+    if (transaction.debit_account.account_type !== 'ASSET') return false;
+    if (transaction.debit_account.default_category === 'FIN') return false;
+    if (/talangan|advance/i.test(transaction.debit_account.account_name)) return false;
+    if (transaction.debit_account.default_category === 'EARN') return true;
+    return /piutang usaha|receivable/i.test(transaction.debit_account.account_name);
+  }
+
+  if (transaction.is_multi_line && transaction.journal_lines) {
+    return transaction.journal_lines.some((line) => {
+      if (line.debit_amount <= 0 || !line.account) return false;
+      if (line.account.account_type !== 'ASSET') return false;
+      if (line.account.default_category === 'FIN') return false;
+      if (/talangan|advance/i.test(line.account.account_name)) return false;
+      if (line.account.default_category === 'EARN') return true;
+      return /piutang usaha|receivable/i.test(line.account.account_name);
+    });
+  }
+
+  return false;
+}
+
+/**
  * Returns true if the transaction has been fully settled.
  */
 export function isSettled(transaction: Transaction): boolean {

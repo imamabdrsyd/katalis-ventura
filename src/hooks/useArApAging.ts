@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useReportData } from './useReportData';
-import { isReceivableTransaction, isSettled, isSettlementEntry, getOutstandingAmount } from '@/lib/accounting/guidance/receivableSettlement';
+import { isTradeReceivableTransaction, isSettled, isSettlementEntry, getOutstandingAmount } from '@/lib/accounting/guidance/receivableSettlement';
 import { isPayableTransaction, isPayableSettled, isPayableSettlementEntry } from '@/lib/accounting/guidance/payableSettlement';
 import type { Transaction, ArApSummary, AgingRow, RepaymentRow, RepaymentSummary } from '@/types';
 
@@ -185,7 +185,7 @@ export function useArApAging() {
 
   // AR (Piutang) — receivable transactions that haven't been settled
   const arSummary = useMemo(
-    () => buildAgingSummary(transactions, referenceDate, isReceivableTransaction, isSettled, isSettlementEntry, getOutstandingAmount),
+    () => buildAgingSummary(transactions, referenceDate, isTradeReceivableTransaction, isSettled, isSettlementEntry, getOutstandingAmount),
     [transactions, referenceDate]
   );
 
