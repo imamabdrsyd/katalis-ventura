@@ -31,7 +31,7 @@ interface CurrencyInputWithCalculatorProps {
   error?: string;
   label?: string;
   required?: boolean;
-  colorVariant?: 'default' | 'green' | 'red' | 'amber' | 'purple';
+  colorVariant?: 'default' | 'green' | 'red' | 'amber' | 'purple' | 'primary';
 }
 
 type CalcOp = '+' | '-' | '×' | '÷' | null;
@@ -156,6 +156,7 @@ export function CurrencyInputWithCalculator({
     : colorVariant === 'red' ? 'border-red-500 dark:border-red-400 focus:ring-red-500'
     : colorVariant === 'amber' ? 'border-amber-500 dark:border-amber-400 focus:ring-amber-500'
     : colorVariant === 'purple' ? 'border-purple-500 dark:border-purple-400 focus:ring-purple-500'
+    : colorVariant === 'primary' ? 'border-indigo-500 dark:border-indigo-400 focus:ring-indigo-500'
     : '';
 
   // ── Calc actions ──

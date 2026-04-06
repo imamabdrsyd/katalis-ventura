@@ -1004,11 +1004,7 @@ export default function JournalEntryPage() {
                         if (errors.amount) setErrors(p => { const n = { ...p }; delete n.amount; return n; });
                       }}
                       inputClassName="text-2xl font-bold"
-                      colorVariant={
-                        selectedEntryType.id === 'penjualan' || selectedEntryType.id === 'pinjaman' || selectedEntryType.id === 'suntik_modal' || selectedEntryType.id === 'terima_kembali_talangan'
-                          ? 'green'
-                          : 'red'
-                      }
+                      colorVariant="primary"
                       error={errors.amount}
                       autoFocus
                     />
