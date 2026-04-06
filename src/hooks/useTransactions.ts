@@ -441,6 +441,7 @@ export function useTransactions() {
   return {
     // Data
     transactions,
+    allTransactions,
     filteredTransactions,
     visibleTransactions,
     loading,

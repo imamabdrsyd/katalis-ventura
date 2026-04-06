@@ -26,6 +26,7 @@ function TransactionsPageInner() {
     visibleTransactions,
     filteredTransactions,
     transactions,
+    allTransactions,
     loading,
     error,
     saving,
@@ -622,7 +623,7 @@ function TransactionsPageInner() {
         onDelete={canManageTransactions ? setDeleteTransaction : undefined}
         onPost={canManageTransactions ? handlePostTransaction : undefined}
         accounts={accounts}
-        allTransactions={transactions}
+        allTransactions={allTransactions}
         onCreateFollowUp={canManageTransactions ? handleCreateFollowUp : undefined}
         onTransactionUpdated={setDetailTransaction}
         allTags={allTags}
