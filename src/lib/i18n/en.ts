@@ -181,6 +181,14 @@ export const en: Translations = {
     categoryCapex: 'Capital Expenditure',
     categoryTax: 'Taxes',
     categoryFin: 'Financing',
+    tableNo: 'No',
+    tableCategory: 'Category',
+    tableSubject: 'Subject',
+    tableDescription: 'Description',
+    tableDate: 'Date',
+    tableAmount: 'Amount',
+    tableCashFlow: 'Cash Flow',
+    tableAction: 'Action',
   },
 
   quickForm: {

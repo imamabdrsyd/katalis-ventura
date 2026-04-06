@@ -188,6 +188,14 @@ export interface Translations {
     categoryCapex: string;
     categoryTax: string;
     categoryFin: string;
+    tableNo: string;
+    tableCategory: string;
+    tableSubject: string;
+    tableDescription: string;
+    tableDate: string;
+    tableAmount: string;
+    tableCashFlow: string;
+    tableAction: string;
   };
 
   // Quick Transaction Form

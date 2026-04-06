@@ -112,6 +112,7 @@ export async function exportIncomeStatementToPDF(
     fallbackSide: 'debit' | 'credit',
     fallbackLabel: string,
     fallbackTotal: number
+
   ) => {
     if (sectionItems?.length) {
       for (const li of sectionItems) {

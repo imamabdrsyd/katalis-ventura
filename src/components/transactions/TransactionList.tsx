@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Lock } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 import type { Transaction, TransactionCategory } from '@/types';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
 
@@ -125,6 +126,7 @@ export function TransactionList({
   onEnterSelectMode,
   closedUntilDate,
 }: TransactionListProps) {
+  const { t } = useLanguage();
   const showActions = (onEdit || onDelete || onEnterSelectMode) && !selectMode;
   const allSelected = selectMode && transactions.length > 0 && transactions.every((t) => selectedIds?.has(t.id));
 
@@ -155,7 +157,7 @@ export function TransactionList({
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-          <p className="text-gray-500 dark:text-gray-400">Memuat transaksi...</p>
+          <p className="text-gray-500 dark:text-gray-400">{t.transactions.loadingTransactions}</p>
         </div>
       </div>
     );
@@ -167,8 +169,8 @@ export function TransactionList({
         <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
           <ClipboardList className="w-8 h-8 text-gray-400 dark:text-gray-500" />
         </div>
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Belum ada transaksi</h3>
-        <p className="text-gray-500 dark:text-gray-400">Mulai dengan menambahkan transaksi pertama Anda</p>
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">{t.transactions.noTransactions}</h3>
+        <p className="text-gray-500 dark:text-gray-400">{t.transactions.noTransactionsHint}</p>
       </div>
     );
   }
@@ -199,7 +201,7 @@ export function TransactionList({
                 />
               </th>
             )}
-            <th className="text-left py-3 px-2 md:py-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">No</th>
+            <th className="text-left py-3 px-2 md:py-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t.transactions.tableNo}</th>
 
             {/* Kategori header with filter dropdown */}
             <th className="text-left py-3 pl-1 pr-2 md:py-4 md:pl-2 md:pr-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -208,7 +210,7 @@ export function TransactionList({
                   onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
                   className={`flex items-center gap-1 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${categoryFilter ? 'text-indigo-500 dark:text-indigo-400 font-medium' : ''}`}
                 >
-                  {categoryFilter || 'Kategori'}
+                  {categoryFilter || t.transactions.tableCategory}
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
@@ -219,7 +221,7 @@ export function TransactionList({
                       onClick={() => { onCategoryFilterChange?.(''); setShowCategoryDropdown(false); }}
                       className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${!categoryFilter ? 'text-indigo-500 dark:text-indigo-400 font-medium' : 'text-gray-700 dark:text-gray-300'}`}
                     >
-                      Semua
+                      {t.common.all}
                     </button>
                     {CATEGORIES.map((cat) => (
                       <button
@@ -236,8 +238,8 @@ export function TransactionList({
               </div>
             </th>
 
-            <th className="text-left py-3 px-2 md:py-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Subjek</th>
-            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Keterangan</th>
+            <th className="text-left py-3 px-2 md:py-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t.transactions.tableSubject}</th>
+            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t.transactions.tableDescription}</th>
 
             {/* Tanggal header with date filter dropdown */}
             <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -246,21 +248,21 @@ export function TransactionList({
                   onClick={() => setShowDateDropdown(!showDateDropdown)}
                   className={`flex items-center gap-1 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${dateRange?.start || dateRange?.end ? 'text-indigo-500 dark:text-indigo-400 font-medium' : ''}`}
                 >
-                  Tanggal
+                  {t.transactions.tableDate}
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
                 {showDateDropdown && (
                   <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 min-w-[220px] z-20">
-                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Dari</label>
+                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t.common.from}</label>
                     <input
                       type="date"
                       value={dateRange?.start || ''}
                       onChange={(e) => onDateRangeChange?.({ start: e.target.value, end: dateRange?.end || '' })}
                       className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 mb-2"
                     />
-                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Sampai</label>
+                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t.common.to}</label>
                     <input
                       type="date"
                       value={dateRange?.end || ''}
@@ -280,10 +282,10 @@ export function TransactionList({
               </div>
             </th>
 
-            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Jumlah</th>
-            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Arus Kas</th>
+            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t.transactions.tableAmount}</th>
+            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t.transactions.tableCashFlow}</th>
             {showActions && (
-              <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Aksi</th>
+              <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t.transactions.tableAction}</th>
             )}
           </tr>
         </thead>

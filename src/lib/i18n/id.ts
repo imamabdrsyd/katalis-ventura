@@ -181,6 +181,14 @@ export const id: Translations = {
     categoryCapex: 'Belanja Modal',
     categoryTax: 'Pajak',
     categoryFin: 'Pembiayaan',
+    tableNo: 'No',
+    tableCategory: 'Kategori',
+    tableSubject: 'Subjek',
+    tableDescription: 'Keterangan',
+    tableDate: 'Tanggal',
+    tableAmount: 'Jumlah',
+    tableCashFlow: 'Arus Kas',
+    tableAction: 'Aksi',
   },
 
   quickForm: {
