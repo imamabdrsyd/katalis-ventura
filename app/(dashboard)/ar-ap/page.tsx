@@ -113,7 +113,7 @@ function SummaryCards({ arSummary, apSummary, netArTotal, netApTotal }: {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       {/* Receivables */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
         <div className="flex items-center gap-2 mb-1">
           <TrendingUp className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t.arAp.receivables}</span>
@@ -123,7 +123,7 @@ function SummaryCards({ arSummary, apSummary, netArTotal, netApTotal }: {
       </div>
 
       {/* Payables */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
         <div className="flex items-center gap-2 mb-1">
           <TrendingDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t.arAp.payables}</span>
@@ -133,7 +133,7 @@ function SummaryCards({ arSummary, apSummary, netArTotal, netApTotal }: {
       </div>
 
       {/* Net Position */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
         <div className="flex items-center gap-2 mb-1">
           <Users className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t.arAp.netPosition}</span>
@@ -145,7 +145,7 @@ function SummaryCards({ arSummary, apSummary, netArTotal, netApTotal }: {
       </div>
 
       {/* Overdue */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
         <div className="flex items-center gap-2 mb-1">
           <AlertTriangle className="w-4 h-4 text-amber-500" />
           <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t.arAp.overdueLabel}</span>
@@ -344,8 +344,8 @@ function ArApPageInner() {
       <SummaryCards arSummary={arSummary} apSummary={apSummary} netArTotal={netArTotal} netApTotal={netApTotal} />
 
       {/* Tabs */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
-        <div className="border-b border-gray-200 dark:border-gray-800">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+        <div className="border-b border-gray-200 dark:border-gray-700">
           <div className="flex">
             <button
               onClick={() => setActiveTab('ar')}
