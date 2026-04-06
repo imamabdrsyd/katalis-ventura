@@ -177,15 +177,21 @@ function RepaymentTable({ summary }: { summary: RepaymentSummary }) {
   return (
     <div className="overflow-x-auto">
       {/* Summary bar */}
-      <div className="flex items-center gap-4 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 text-sm">
+      <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 text-sm flex-wrap">
         <span className="text-gray-500 dark:text-gray-400">{t.arAp.totalPaid}</span>
-        <span className="text-gray-500 dark:text-gray-400">
-          {t.arAp.payDebt}: <span className="font-semibold text-rose-600 dark:text-rose-400">{formatCurrency(summary.totalApRepaid)}</span>
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400">
+            {t.arAp.payDebt}
+          </span>
+          <span className="font-semibold text-gray-800 dark:text-gray-100">{formatCurrency(summary.totalApRepaid)}</span>
+        </div>
         <span className="text-gray-300 dark:text-gray-600">|</span>
-        <span className="text-gray-500 dark:text-gray-400">
-          {t.arAp.receivePayment}: <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(summary.totalArCollected)}</span>
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
+            {t.arAp.receivePayment}
+          </span>
+          <span className="font-semibold text-gray-800 dark:text-gray-100">{formatCurrency(summary.totalArCollected)}</span>
+        </div>
       </div>
 
       <table className="w-full text-sm">
