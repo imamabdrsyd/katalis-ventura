@@ -11,6 +11,7 @@ import { getRecordAuditHistory, getFieldChanges, formatFieldName, formatAuditVal
 import { detectMatchingPrincipleWarning, isReceivableTransaction, isSettled, isPartiallySettled, getOutstandingAmount, getPartialSettlementIds } from '@/lib/accounting/guidance';
 import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
 import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 import { updateTransaction } from '@/lib/api/transactions';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { formatFileSize, isImageType } from '@/lib/storage/attachments';
@@ -40,7 +41,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   CAPEX: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
   TAX: 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400',
   FIN: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
-  SETTLE: 'bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400',
+  SETTLE: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400',
 };
 
 const STOCK_COLOR = 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300';
@@ -130,6 +131,7 @@ export function TransactionDetailModal({
   settleLoading = false,
   onShowRelatedTransaction,
 }: TransactionDetailModalProps) {
+  const { t } = useLanguage();
   const [creatorName, setCreatorName] = useState<string | null>(null);
   const [loadingCreator, setLoadingCreator] = useState(false);
   const [updaterName, setUpdaterName] = useState<string | null>(null);
@@ -394,7 +396,7 @@ export function TransactionDetailModal({
               <span
                 className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${transaction.meta?.settlement_of_transaction_id ? CATEGORY_COLORS['SETTLE'] : CATEGORY_COLORS[transaction.category]}`}
               >
-                {transaction.meta?.settlement_of_transaction_id ? 'Pelunasan' : CATEGORY_LABELS[transaction.category]}
+                {transaction.meta?.settlement_of_transaction_id ? t.arAp.settlementBadge : CATEGORY_LABELS[transaction.category]}
               </span>
               {transaction.meta?.entry_type && (
                 <>

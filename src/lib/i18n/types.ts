@@ -499,6 +499,7 @@ export interface Translations {
     totalPaid: string;
     payDebt: string;
     receivePayment: string;
+    settlementBadge: string;
   };
 
   // Reconciliation

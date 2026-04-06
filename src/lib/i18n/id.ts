@@ -452,8 +452,8 @@ export const id: Translations = {
   },
 
   arAp: {
-    title: 'Piutang & Hutang',
-    subtitle: 'Aging report — {name}',
+    title: 'AR/AP',
+    subtitle: 'Aging Report (Piutang & Hutang) — {name}',
     receivables: 'Sisa Piutang',
     payables: 'Sisa Hutang',
     netPosition: 'Posisi Bersih',
@@ -480,6 +480,7 @@ export const id: Translations = {
     totalPaid: 'Total dibayar:',
     payDebt: 'Bayar Hutang',
     receivePayment: 'Terima Piutang',
+    settlementBadge: 'Pelunasan',
   },
 
   reconciliation: {

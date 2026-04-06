@@ -49,7 +49,7 @@ const CATEGORY_BADGE_COLORS: Record<string, string> = {
   CAPEX: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
   TAX: 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400',
   FIN: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
-  SETTLE: 'bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400',
+  SETTLE: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400',
 };
 
 function getInitials(name: string): string {

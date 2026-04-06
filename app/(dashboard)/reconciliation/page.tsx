@@ -22,7 +22,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   CAPEX: 'text-blue-600 dark:text-blue-400',
   TAX: 'text-yellow-600 dark:text-yellow-400',
   FIN: 'text-indigo-600 dark:text-indigo-400',
-  SETTLE: 'text-teal-600 dark:text-teal-400',
+  SETTLE: 'text-gray-500 dark:text-gray-400',
 };
 
 function getCashDirection(t: Transaction): 'in' | 'out' {

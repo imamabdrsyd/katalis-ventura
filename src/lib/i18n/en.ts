@@ -452,8 +452,8 @@ export const en: Translations = {
   },
 
   arAp: {
-    title: 'Accounts Receivable & Payable',
-    subtitle: 'Aging report — {name}',
+    title: 'AR/AP',
+    subtitle: 'Aging Report (Accounts Receivable & Payable) — {name}',
     receivables: 'Receivables Balance',
     payables: 'Payables Balance',
     netPosition: 'Net Position',
@@ -480,6 +480,7 @@ export const en: Translations = {
     totalPaid: 'Total paid:',
     payDebt: 'Pay Debt',
     receivePayment: 'Receive Payment',
+    settlementBadge: 'Settlement',
   },
 
   reconciliation: {
