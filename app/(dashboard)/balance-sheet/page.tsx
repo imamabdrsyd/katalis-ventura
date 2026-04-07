@@ -53,19 +53,10 @@ function BalanceSheetPageInner() {
     <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
-            <Scale className="w-8 h-8 text-primary-600 dark:text-primary-400" />
-            {t.balanceSheetPage.title}
-          </h1>
-          {activeBusiness.logo_url && (
-            <img
-              src={activeBusiness.logo_url}
-              alt=""
-              className="h-9 w-9 rounded-full object-cover"
-            />
-          )}
-        </div>
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
+          <Scale className="w-8 h-8 text-primary-600 dark:text-primary-400" />
+          {t.balanceSheetPage.title}
+        </h1>
 
         {/* Controls: date picker + export */}
         <div className="flex items-center gap-3 flex-shrink-0">
@@ -113,7 +104,14 @@ function BalanceSheetPageInner() {
       </div>
 
       {/* As of Date Display */}
-      <div className="text-center mb-6">
+      <div className="text-center mb-6 flex flex-col items-center gap-2">
+        {activeBusiness.logo_url && (
+          <img
+            src={activeBusiness.logo_url}
+            alt=""
+            className="h-10 w-10 rounded-full object-cover"
+          />
+        )}
         <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">
           {t.balanceSheetPage.asOf.replace('{date}', asOfLabel)}
         </p>
@@ -172,7 +170,7 @@ function BalanceSheetPageInner() {
             </div>
 
             {/* Fixed Assets */}
-            <div>
+            <div className="flex flex-col flex-1">
               <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">{t.balanceSheetPage.fixedAssets}</h3>
               <div className="flex justify-between py-2 pl-4">
                 <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.acquisitionValue}</span>
