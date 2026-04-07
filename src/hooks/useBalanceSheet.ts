@@ -1,12 +1,21 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useReportData } from './useReportData';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useBusinessContext } from '@/context/BusinessContext';
 import { calculateBalanceSheet, filterTransactionsUpToDate } from '@/lib/calculations';
 import * as accountsApi from '@/lib/api/accounts';
+import * as transactionsApi from '@/lib/api/transactions';
 import type { Account } from '@/types';
 
-export interface UseBalanceSheetReturn extends ReturnType<typeof useReportData> {
+export interface UseBalanceSheetReturn {
+  activeBusiness: ReturnType<typeof useBusinessContext>['activeBusiness'];
+  loading: boolean;
+  asOfDate: string;
+  setAsOfDate: React.Dispatch<React.SetStateAction<string>>;
+  showExportMenu: boolean;
+  setShowExportMenu: React.Dispatch<React.SetStateAction<boolean>>;
+  exportButtonRef: React.RefObject<HTMLDivElement>;
   balanceSheet: ReturnType<typeof calculateBalanceSheet>;
   isBalanced: boolean;
   handleExportPDF: () => Promise<void>;
@@ -14,8 +23,36 @@ export interface UseBalanceSheetReturn extends ReturnType<typeof useReportData> 
 }
 
 export function useBalanceSheet(): UseBalanceSheetReturn {
-  const reportData = useReportData();
-  const { activeBusiness, transactions, endDate, setShowExportMenu } = reportData;
+  const { activeBusiness } = useBusinessContext();
+  const activeBusinessId = activeBusiness?.id ?? null;
+  const queryClient = useQueryClient();
+
+  const today = new Date().toISOString().split('T')[0];
+  const [asOfDate, setAsOfDate] = useState<string>(today);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportButtonRef = useRef<HTMLDivElement>(null);
+
+  // Fetch all transactions (no period filter — balance sheet is cumulative)
+  const { data: allTransactions = [], isLoading: loading } = useQuery({
+    queryKey: ['transactions', activeBusinessId],
+    queryFn: () => transactionsApi.getTransactions(activeBusinessId!),
+    enabled: !!activeBusinessId,
+  });
+
+  // Only posted transactions
+  const transactions = useMemo(
+    () => allTransactions.filter((t) => t.status === 'posted'),
+    [allTransactions]
+  );
+
+  // Invalidate cache when FloatingQuickAdd saves a transaction
+  useEffect(() => {
+    const handler = () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions', activeBusinessId] });
+    };
+    window.addEventListener('transaction-saved', handler);
+    return () => window.removeEventListener('transaction-saved', handler);
+  }, [queryClient, activeBusinessId]);
 
   // Fetch accounts for depreciation calculation
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -27,13 +64,12 @@ export function useBalanceSheet(): UseBalanceSheetReturn {
       .catch((err) => console.error('[useBalanceSheet] Failed to load accounts for depreciation:', err));
   }, [activeBusiness]);
 
-  // Balance Sheet uses cumulative transactions up to endDate (not just within period)
-  const cumulativeTransactions = useMemo(() => {
-    if (!endDate) return transactions;
-    return filterTransactionsUpToDate(transactions, endDate);
-  }, [transactions, endDate]);
+  // Cumulative transactions up to asOfDate (inclusive)
+  const cumulativeTransactions = useMemo(
+    () => filterTransactionsUpToDate(transactions, asOfDate),
+    [transactions, asOfDate]
+  );
 
-  // Get capital from business settings
   const capital = activeBusiness?.capital_investment ?? 0;
 
   const balanceSheet = useMemo(
@@ -41,43 +77,61 @@ export function useBalanceSheet(): UseBalanceSheetReturn {
       cumulativeTransactions,
       capital,
       accounts,
-      endDate ? new Date(endDate) : undefined
+      new Date(asOfDate)
     ),
-    [cumulativeTransactions, capital, accounts, endDate]
+    [cumulativeTransactions, capital, accounts, asOfDate]
   );
 
-  // Check if accounting equation is balanced
   const isBalanced = useMemo(() => Math.abs(
     balanceSheet.assets.totalAssets -
     (balanceSheet.liabilities.totalLiabilities + balanceSheet.equity.totalEquity)
   ) < 0.01, [balanceSheet]);
 
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportButtonRef.current && !exportButtonRef.current.contains(event.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+    if (showExportMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showExportMenu]);
+
   const handleExportPDF = useCallback(async () => {
     if (!activeBusiness) return;
     const { exportBalanceSheetToPDF } = await import('@/lib/export');
-    const asOfDate = new Date(endDate).toLocaleDateString('id-ID', {
+    const dateLabel = new Date(asOfDate).toLocaleDateString('id-ID', {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
     });
-    exportBalanceSheetToPDF(activeBusiness.business_name, asOfDate, balanceSheet);
+    exportBalanceSheetToPDF(activeBusiness.business_name, dateLabel, balanceSheet);
     setShowExportMenu(false);
-  }, [activeBusiness, endDate, balanceSheet, setShowExportMenu]);
+  }, [activeBusiness, asOfDate, balanceSheet]);
 
   const handleExportExcel = useCallback(async () => {
     if (!activeBusiness) return;
     const { exportBalanceSheetToExcel } = await import('@/lib/export');
-    const asOfDate = new Date(endDate).toLocaleDateString('id-ID', {
+    const dateLabel = new Date(asOfDate).toLocaleDateString('id-ID', {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
     });
-    exportBalanceSheetToExcel(activeBusiness.business_name, asOfDate, balanceSheet);
+    exportBalanceSheetToExcel(activeBusiness.business_name, dateLabel, balanceSheet);
     setShowExportMenu(false);
-  }, [activeBusiness, endDate, balanceSheet, setShowExportMenu]);
+  }, [activeBusiness, asOfDate, balanceSheet]);
 
   return {
-    ...reportData,
+    activeBusiness,
+    loading,
+    asOfDate,
+    setAsOfDate,
+    showExportMenu,
+    setShowExportMenu,
+    exportButtonRef,
     balanceSheet,
     isBalanced,
     handleExportPDF,

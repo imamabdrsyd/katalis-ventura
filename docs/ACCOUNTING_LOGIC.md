@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 4 April 2026 (Income Statement per-account breakdown) | AR/AP Aging & Repayment: 29 Maret 2026
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 7 April 2026 (Balance Sheet asOfDate refactor) | AR/AP Aging & Repayment: 29 Maret 2026
 
 ---
 
@@ -506,6 +506,12 @@ CAPEX tidak masuk net profit karena bukan expense (beli aset). CAPEX hanya muncu
 ---
 
 ## 6. Balance Sheet Logic
+
+> **Titik Waktu (asOfDate), Bukan Period Range**
+> Balance Sheet menggunakan `asOfDate` (titik waktu tunggal), bukan `startDate`/`endDate` range.
+> Semua transaksi berstatus `posted` dengan tanggal ≤ `asOfDate` diikutsertakan dalam kalkulasi (kumulatif).
+> Ini sesuai PSAK/IFRS: Balance Sheet selalu mencerminkan posisi kumulatif pada tanggal tertentu.
+> Default `asOfDate` = hari ini. Dikelola oleh `useBalanceSheet.ts` secara independen (tidak inherit dari `useReportData`).
 
 ### 6.1 Dual-Mode Processing
 
@@ -1865,7 +1871,7 @@ useReportData
 | Hook | Extends | Adds |
 |------|---------|------|
 | `useIncomeStatement` | useReportData | summary, metrics, transactionsByCategory, export |
-| `useBalanceSheet` | useReportData | balanceSheet, isBalanced, export |
+| `useBalanceSheet` | — (standalone) | asOfDate, balanceSheet, isBalanced, export |
 | `useCashFlow` | useReportData | cashFlow, export |
 | `useGeneralLedger` | useReportData | accounts, selectedAccount, ledger, allLedgers |
 | `useTrialBalance` | useReportData | accounts, trialBalance |

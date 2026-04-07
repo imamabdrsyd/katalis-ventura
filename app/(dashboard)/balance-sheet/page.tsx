@@ -1,26 +1,21 @@
 'use client';
 
 import { Suspense } from 'react';
-import { Calendar, Scale, Download, FileText, FileSpreadsheet, CheckCircle, AlertCircle } from 'lucide-react';
+import { Scale, Download, FileText, FileSpreadsheet, CheckCircle, AlertCircle } from 'lucide-react';
 import { useBalanceSheet } from '@/hooks/useBalanceSheet';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
-import type { Period } from '@/hooks/useReportData';
 
 function BalanceSheetPageInner() {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const {
     activeBusiness,
     loading,
-    period,
-    startDate,
-    endDate,
+    asOfDate,
+    setAsOfDate,
     showExportMenu,
-    exportButtonRef,
-    setStartDate,
-    setEndDate,
     setShowExportMenu,
-    handlePeriodChange,
+    exportButtonRef,
     balanceSheet,
     isBalanced,
     handleExportPDF,
@@ -49,73 +44,39 @@ function BalanceSheetPageInner() {
     );
   }
 
+  const asOfLabel = new Date(asOfDate).toLocaleDateString(
+    locale === 'id' ? 'id-ID' : 'en-US',
+    { day: 'numeric', month: 'long', year: 'numeric' }
+  );
+
   return (
     <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
-          <Scale className="w-8 h-8 text-primary-600 dark:text-primary-400" />
-          {t.balanceSheetPage.title}
-        </h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-2">
-          {t.balanceSheetPage.reportTitle.replace('{name}', activeBusiness?.business_name ?? '')}
-        </p>
-      </div>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
+            <Scale className="w-8 h-8 text-primary-600 dark:text-primary-400" />
+            {t.balanceSheetPage.title}
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">
+            {t.balanceSheetPage.reportTitle.replace('{name}', activeBusiness.business_name)}
+          </p>
+        </div>
 
-      {/* Filters */}
-      <div className="card-static mb-6">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end justify-between">
-          {/* Period Selector */}
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t.period.period}</label>
-            <div className="flex gap-2 flex-wrap">
-              {(['month', 'quarter', 'year', 'custom'] as Period[]).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => handlePeriodChange(p)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    period === p
-                      ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  {p === 'month' ? t.period.thisMonth : p === 'quarter' ? t.period.quarter : p === 'year' ? t.period.thisYear : t.period.custom}
-                </button>
-              ))}
-            </div>
+        {/* Controls: date picker + export */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">
+              Per tanggal:
+            </label>
+            <input
+              type="date"
+              value={asOfDate}
+              onChange={(e) => setAsOfDate(e.target.value)}
+              className="input text-sm py-1.5 px-3"
+            />
           </div>
 
-          {/* Date Range (when custom is selected) */}
-          {period === 'custom' && (
-            <div className="flex gap-3 items-end">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
-                  <Calendar className="w-4 h-4" />
-                  {t.period.startDate}
-                </label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="input"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
-                  <Calendar className="w-4 h-4" />
-                  {t.period.endDate}
-                </label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="input"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Export Button */}
           <div className="relative" ref={exportButtonRef}>
             <button
               onClick={() => setShowExportMenu(!showExportMenu)}
@@ -150,21 +111,21 @@ function BalanceSheetPageInner() {
       {/* As of Date Display */}
       <div className="text-center mb-6">
         <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-          {t.balanceSheetPage.asOf.replace('{date}', new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }))}
+          {t.balanceSheetPage.asOf.replace('{date}', asOfLabel)}
         </p>
       </div>
 
       {/* Balance Sheet Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* ASSETS */}
-        <div className="card-static">
+        <div className="card-static flex flex-col">
           <div className="border-b-2 border-gray-300 dark:border-gray-600 pb-3 mb-6">
             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">
               {t.balanceSheetPage.assets}
             </h2>
           </div>
 
-          <div className="space-y-6">
+          <div className="flex flex-col flex-1 space-y-6">
             {/* Current Assets */}
             <div>
               <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">{t.balanceSheetPage.currentAssets}</h3>
@@ -234,7 +195,7 @@ function BalanceSheetPageInner() {
             </div>
 
             {/* Total Assets */}
-            <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-bold border-t-2 border-gray-900 dark:border-gray-100 mt-4">
+            <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-bold border-t-2 border-gray-900 dark:border-gray-100 mt-auto">
               <span className="text-lg text-gray-800 dark:text-gray-100">{t.balanceSheetPage.totalAssets}</span>
               <span className="text-lg text-primary-600 dark:text-primary-400">
                 {formatCurrency(balanceSheet.assets.totalAssets)}
@@ -244,14 +205,14 @@ function BalanceSheetPageInner() {
         </div>
 
         {/* LIABILITIES & EQUITY */}
-        <div className="card-static">
+        <div className="card-static flex flex-col">
           <div className="border-b-2 border-gray-300 dark:border-gray-600 pb-3 mb-6">
             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">
               {t.balanceSheetPage.liabilitiesAndEquity}
             </h2>
           </div>
 
-          <div className="space-y-6">
+          <div className="flex flex-col flex-1 space-y-6">
             {/* Liabilities */}
             <div>
               <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">{t.balanceSheetPage.liabilities}</h3>
@@ -309,7 +270,7 @@ function BalanceSheetPageInner() {
             </div>
 
             {/* Total Liabilities & Equity */}
-            <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-bold border-t-2 border-gray-900 dark:border-gray-100 mt-4">
+            <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-bold border-t-2 border-gray-900 dark:border-gray-100 mt-auto">
               <span className="text-lg text-gray-800 dark:text-gray-100">
                 {t.balanceSheetPage.totalLiabilitiesEquity}
               </span>
