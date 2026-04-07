@@ -244,11 +244,7 @@ function TrialBalancePageInner() {
 
       {/* Balance Check */}
       {trialBalance.rows.length > 0 && (
-        <div className={`card mt-4 ${
-          trialBalance.isBalanced
-            ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'
-            : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-        }`}>
+        <div className="card mt-4 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
             {trialBalance.isBalanced ? (
               <CheckCircle className="w-6 h-6 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
@@ -256,18 +252,10 @@ function TrialBalancePageInner() {
               <AlertCircle className="w-6 h-6 text-red-500 dark:text-red-400 flex-shrink-0" />
             )}
             <div className="flex-1">
-              <p className={`font-semibold ${
-                trialBalance.isBalanced
-                  ? 'text-emerald-900 dark:text-emerald-100'
-                  : 'text-red-900 dark:text-red-100'
-              }`}>
+              <p className="font-semibold text-gray-800 dark:text-gray-100">
                 {trialBalance.isBalanced ? `\u2713 ${t.trialBalance.balanced}` : `\u26A0\uFE0F ${t.trialBalance.notBalanced}`}
               </p>
-              <p className={`text-sm mt-1 ${
-                trialBalance.isBalanced
-                  ? 'text-emerald-500 dark:text-emerald-300'
-                  : 'text-red-500 dark:text-red-300'
-              }`}>
+              <p className="text-sm mt-1 text-gray-500 dark:text-gray-400">
                 {t.trialBalance.totalDebitEquals.replace('{amount}', formatCurrency(trialBalance.totalDebits))}
                 {trialBalance.isBalanced ? ' = ' : ' \u2260 '}
                 {t.generalLedger.totalCredit} ({formatCurrency(trialBalance.totalCredits)})

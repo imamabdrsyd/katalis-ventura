@@ -287,11 +287,7 @@ function BalanceSheetPageInner() {
       </div>
 
       {/* Accounting Equation Validation */}
-      <div className={`card ${
-        isBalanced
-          ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'
-          : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-      }`}>
+      <div className="card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-3">
           {isBalanced ? (
             <CheckCircle className="w-6 h-6 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
@@ -299,18 +295,10 @@ function BalanceSheetPageInner() {
             <AlertCircle className="w-6 h-6 text-red-500 dark:text-red-400 flex-shrink-0" />
           )}
           <div className="flex-1">
-            <p className={`font-semibold ${
-              isBalanced
-                ? 'text-emerald-900 dark:text-emerald-100'
-                : 'text-red-900 dark:text-red-100'
-            }`}>
+            <p className="font-semibold text-gray-800 dark:text-gray-100">
               {isBalanced ? `\u2713 ${t.balanceSheetPage.balanced}` : `\u26A0\uFE0F ${t.balanceSheetPage.notBalanced}`}
             </p>
-            <p className={`text-sm mt-1 ${
-              isBalanced
-                ? 'text-emerald-500 dark:text-emerald-300'
-                : 'text-red-500 dark:text-red-300'
-            }`}>
+            <p className="text-sm mt-1 text-gray-500 dark:text-gray-400">
               {t.balanceSheetPage.totalAssets} ({formatCurrency(balanceSheet.assets.totalAssets)}) = {t.balanceSheetPage.totalLiabilities} ({formatCurrency(balanceSheet.liabilities.totalLiabilities)}) + {t.balanceSheetPage.totalEquity} ({formatCurrency(balanceSheet.equity.totalEquity)})
             </p>
           </div>
