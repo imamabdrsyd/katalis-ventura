@@ -233,7 +233,7 @@ export const en: Translations = {
   businesses: {
     portfolio: '{name}\'s Portfolio',
     manageBusiness: 'Manage Business',
-    addBusiness: '+ Add Business',
+    addBusiness: 'Add Business',
     activeBusiness: 'Active',
     archivedBusiness: 'Archived',
     noActiveBusiness: 'No active businesses',
