@@ -104,7 +104,10 @@ function BalanceSheetPageInner() {
       </div>
 
       {/* As of Date Display */}
-      <div className="text-center mb-6 flex flex-col items-center gap-2">
+      <div className="mb-6 flex items-center justify-between">
+        <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+          {t.balanceSheetPage.asOf.replace('{date}', asOfLabel)}
+        </p>
         {activeBusiness.logo_url && (
           <img
             src={activeBusiness.logo_url}
@@ -112,9 +115,6 @@ function BalanceSheetPageInner() {
             className="h-10 w-10 rounded-full object-cover"
           />
         )}
-        <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-          {t.balanceSheetPage.asOf.replace('{date}', asOfLabel)}
-        </p>
       </div>
 
       {/* Balance Sheet Grid */}
