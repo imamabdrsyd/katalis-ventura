@@ -365,7 +365,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
   const router = useRouter();
   const { user, businesses, activeBusiness, setActiveBusiness, userRole } = useBusinessContext();
   const { roleLabels, t } = useNavData();
-  const { locale } = useLanguage();
+  const { locale, setLocale } = useLanguage();
   const supabase = createClient();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
@@ -633,7 +633,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
           {isProfileDropdownOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setIsProfileDropdownOpen(false)} />
-              <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden py-1">
+              <div className="absolute top-full right-0 mt-2 w-52 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden py-1">
                 <Link
                   href="/settings"
                   onClick={() => setIsProfileDropdownOpen(false)}
@@ -642,6 +642,25 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
                   <Settings className="w-4 h-4" />
                   {t.nav.settings}
                 </Link>
+                <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
+                {/* Language Toggle */}
+                <div className="px-4 py-2 flex items-center justify-between">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{t.settings.language}</span>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => setLocale('id')}
+                      className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${locale === 'id' ? 'bg-indigo-500 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                    >
+                      🇮🇩 ID
+                    </button>
+                    <button
+                      onClick={() => setLocale('en')}
+                      className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${locale === 'en' ? 'bg-indigo-500 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                    >
+                      🇺🇸 EN
+                    </button>
+                  </div>
+                </div>
                 <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
                 <button
                   onClick={handleLogout}
