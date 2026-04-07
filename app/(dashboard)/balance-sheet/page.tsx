@@ -231,7 +231,7 @@ function BalanceSheetPageInner() {
             </div>
 
             {/* Equity */}
-            <div>
+            <div className="flex flex-col flex-1">
               <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">{t.balanceSheetPage.equity}</h3>
               <div className="space-y-2">
                 <div className="flex justify-between py-2 pl-4">
