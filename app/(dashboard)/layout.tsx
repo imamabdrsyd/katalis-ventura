@@ -44,6 +44,7 @@ import {
   HandCoins,
   ScanSearch,
   BookCheck,
+  Languages,
 } from 'lucide-react';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -645,19 +646,19 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
                 <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
                 {/* Language Toggle */}
                 <div className="px-4 py-2 flex items-center justify-between">
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{t.settings.language}</span>
+                  <Languages className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                   <div className="flex gap-1">
                     <button
                       onClick={() => setLocale('id')}
                       className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${locale === 'id' ? 'bg-indigo-500 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
                     >
-                      🇮🇩 ID
+                      ID
                     </button>
                     <button
                       onClick={() => setLocale('en')}
                       className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${locale === 'en' ? 'bg-indigo-500 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
                     >
-                      🇺🇸 EN
+                      EN
                     </button>
                   </div>
                 </div>
