@@ -315,10 +315,10 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
                     const CATEGORY_COLORS: Record<string, string> = {
                       EARN: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400',
                       OPEX: 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400',
-                      VAR: 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400',
+                      VAR: 'bg-pink-100 dark:bg-pink-900/50 text-pink-600 dark:text-pink-400',
                       CAPEX: 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400',
-                      TAX: 'bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400',
-                      FIN: 'bg-pink-100 dark:bg-pink-900/50 text-pink-600 dark:text-pink-400',
+                      TAX: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-600 dark:text-yellow-400',
+                      FIN: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400',
                     };
                     return (
                       <button
