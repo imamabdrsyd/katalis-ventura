@@ -182,7 +182,7 @@ function InvoicesPageInner() {
       <Modal
         isOpen={!!editInvoice}
         onClose={() => setEditInvoice(null)}
-        title="{t.invoices.editInvoice}"
+        title={t.invoices.editInvoice}
       >
         {editInvoice && (
           <InvoiceForm
