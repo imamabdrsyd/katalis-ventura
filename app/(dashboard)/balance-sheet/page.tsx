@@ -53,10 +53,19 @@ function BalanceSheetPageInner() {
     <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
-          <Scale className="w-8 h-8 text-primary-600 dark:text-primary-400" />
-          {t.balanceSheetPage.title}
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
+            <Scale className="w-8 h-8 text-primary-600 dark:text-primary-400" />
+            {t.balanceSheetPage.title}
+          </h1>
+          {activeBusiness.logo_url && (
+            <img
+              src={activeBusiness.logo_url}
+              alt=""
+              className="h-9 w-9 rounded-full object-cover"
+            />
+          )}
+        </div>
 
         {/* Controls: date picker + export */}
         <div className="flex items-center gap-3 flex-shrink-0">
@@ -103,15 +112,8 @@ function BalanceSheetPageInner() {
         </div>
       </div>
 
-      {/* As of Date Display + Business Logo */}
-      <div className="text-center mb-6 flex flex-col items-center gap-3">
-        {activeBusiness.logo_url && (
-          <img
-            src={activeBusiness.logo_url}
-            alt=""
-            className="h-12 w-12 rounded-full object-cover"
-          />
-        )}
+      {/* As of Date Display */}
+      <div className="text-center mb-6">
         <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">
           {t.balanceSheetPage.asOf.replace('{date}', asOfLabel)}
         </p>
