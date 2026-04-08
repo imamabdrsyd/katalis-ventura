@@ -77,6 +77,9 @@ function getRowSubject(transaction: Transaction): string {
   if (isInventoryTransaction(transaction)) {
     return transaction.description || '';
   }
+  if (transaction.category === 'VAR') {
+    return transaction.name;
+  }
   if (transaction.is_double_entry && transaction.debit_account) {
     return transaction.debit_account.account_name;
   }
