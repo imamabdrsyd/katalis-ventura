@@ -401,9 +401,9 @@ function TransactionsPageInner() {
         {activeView === 'transactions' && <>
         {/* Select Mode Action Bar */}
         {selectMode && (
-          <div className="flex items-center justify-between mb-4 px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-600 rounded-lg">
+          <div className="flex items-center justify-between mb-4 px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
             <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-indigo-500 dark:text-indigo-300">
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
                 {t.transactions.selected.replace('{n}', String(selectedIds.size))}
               </span>
               {selectedIds.size > 0 && (
@@ -411,7 +411,7 @@ function TransactionsPageInner() {
                   <button
                     onClick={handleBulkPost}
                     disabled={saving}
-                    className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50 border border-gray-200 dark:border-gray-600"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     {t.transactions.posting}
@@ -419,7 +419,7 @@ function TransactionsPageInner() {
                   <button
                     onClick={handleBulkDelete}
                     disabled={saving}
-                    className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50 border border-gray-200 dark:border-gray-600"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     {t.common.delete} ({selectedIds.size})
@@ -435,13 +435,13 @@ function TransactionsPageInner() {
               )}
               {showSelectedSummary && selectedIds.size > 0 && (
                 <div className="flex items-center gap-3 ml-2 text-sm">
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                  <span className="text-gray-600 dark:text-gray-300 font-medium">
                     {t.transactions.cashIn} {selectedSummary.masuk.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}
                   </span>
-                  <span className="text-red-500 dark:text-red-400 font-medium">
+                  <span className="text-gray-600 dark:text-gray-300 font-medium">
                     {t.transactions.cashOut} {selectedSummary.keluar.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}
                   </span>
-                  <span className={`font-semibold ${selectedSummary.selisih >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-600 dark:text-red-300'}`}>
+                  <span className="font-semibold text-gray-700 dark:text-gray-200">
                     {t.transactions.difference} {selectedSummary.selisih.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}
                   </span>
                 </div>
