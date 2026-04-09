@@ -476,6 +476,7 @@ function TransactionsPageInner() {
             onDateRangeChange={setDateRange}
             onEnterSelectMode={canManageTransactions ? () => setSelectMode(true) : undefined}
             closedUntilDate={closedUntilDate}
+            rowOffset={(currentPage - 1) * rowsPerPage}
           />
         </div>
 

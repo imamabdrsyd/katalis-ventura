@@ -24,6 +24,7 @@ interface TransactionListProps {
   onDateRangeChange?: (range: { start: string; end: string }) => void;
   onEnterSelectMode?: () => void;
   closedUntilDate?: string | null;
+  rowOffset?: number;
 }
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
@@ -128,6 +129,7 @@ export function TransactionList({
   onDateRangeChange,
   onEnterSelectMode,
   closedUntilDate,
+  rowOffset = 0,
 }: TransactionListProps) {
   const { t } = useLanguage();
   const showActions = (onEdit || onDelete || onEnterSelectMode) && !selectMode;
@@ -328,7 +330,7 @@ export function TransactionList({
                 </td>
               )}
               <td className="py-3 px-2 md:py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                {index + 1}
+                {rowOffset + index + 1}
               </td>
               <td className="py-3 pl-1 pr-2 md:py-4 md:pl-2 md:pr-4">
                 <div className="flex items-center gap-1">
