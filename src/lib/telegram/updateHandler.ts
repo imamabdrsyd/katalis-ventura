@@ -84,6 +84,31 @@ async function handleTransactionMessage(chatId: number, text: string): Promise<v
   // Handle konfirmasi transaksi pending
   if (pendingValid && pending && !pending._type) {
     const lower = text.toLowerCase().trim();
+
+    // Koreksi kategori OPEX <-> VAR
+    const CATEGORY_CORRECTIONS: Record<string, 'OPEX' | 'VAR'> = {
+      'opex': 'OPEX', 'operasional': 'OPEX', 'beban operasional': 'OPEX',
+      'var': 'VAR', 'hpp': 'VAR', 'cogs': 'VAR', 'variabel': 'VAR', 'variable': 'VAR', 'variable cost': 'VAR', 'harga pokok': 'VAR',
+    };
+    const correctedCategory = CATEGORY_CORRECTIONS[lower];
+    if (correctedCategory && correctedCategory !== pending.category) {
+      const updatedPending = { ...pending, category: correctedCategory, confidence: 'high' as const };
+      await admin
+        .from('telegram_connections')
+        .update({
+          pending_transaction: updatedPending,
+          pending_expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+        })
+        .eq('telegram_chat_id', chatId);
+      const today = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      await sendMessage(
+        chatId,
+        `✏️ Kategori diubah ke *${correctedCategory}*\n\n${formatTransactionConfirmation(updatedPending as ParsedTransaction, today)}`,
+        { parse_mode: 'Markdown' }
+      );
+      return;
+    }
+
     if (['ya', 'y', 'yes', 'iya', 'ok', 'oke'].includes(lower)) {
       await saveTransaction(chatId, conn.user_id, conn.default_business_id, pending as ParsedTransaction);
       await admin
@@ -100,7 +125,7 @@ async function handleTransactionMessage(chatId: number, text: string): Promise<v
       await sendMessage(chatId, '❌ Transaksi dibatalkan.');
       return;
     }
-    // Jika bukan ya/tidak, proses sebagai transaksi baru (fall through)
+    // Jika bukan ya/tidak/koreksi, proses sebagai transaksi baru (fall through)
   }
 
   if (!conn.default_business_id) {
