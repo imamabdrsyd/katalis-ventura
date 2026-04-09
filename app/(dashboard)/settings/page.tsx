@@ -6,7 +6,7 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { createClient } from '@/lib/supabase';
 import { LOCALE_LABELS, LOCALE_FLAGS, type Locale } from '@/lib/i18n';
-import { Camera, User, Mail, Briefcase, Save, Globe } from 'lucide-react';
+import { Camera, User, Mail, Briefcase, Save, Globe, Send, CheckCircle2, XCircle, Copy, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
 
 export default function SettingsPage() {
@@ -38,14 +38,101 @@ export default function SettingsPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Telegram state
+  const [telegramConn, setTelegramConn] = useState<{
+    telegram_username: string | null;
+    telegram_first_name: string | null;
+    created_at: string;
+  } | null>(null);
+  const [telegramLoading, setTelegramLoading] = useState(true);
+  const [telegramToken, setTelegramToken] = useState<string | null>(null);
+  const [telegramTokenExpiry, setTelegramTokenExpiry] = useState<Date | null>(null);
+  const [telegramBotUsername, setTelegramBotUsername] = useState('');
+  const [telegramActionLoading, setTelegramActionLoading] = useState(false);
+  const [telegramCopied, setTelegramCopied] = useState(false);
+  const [telegramCountdown, setTelegramCountdown] = useState(0);
+
   useEffect(() => {
     if (user) {
       setFullName(user.user_metadata?.full_name || '');
       setEmail(user.email || '');
       setAvatarUrl(user.user_metadata?.avatar_url || null);
       setLoading(false);
+      // Fetch telegram connection status
+      fetchTelegramStatus();
     }
   }, [user]);
+
+  // Countdown timer untuk link token
+  useEffect(() => {
+    if (!telegramTokenExpiry) return;
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, Math.floor((telegramTokenExpiry.getTime() - Date.now()) / 1000));
+      setTelegramCountdown(remaining);
+      if (remaining === 0) {
+        setTelegramToken(null);
+        setTelegramTokenExpiry(null);
+        clearInterval(interval);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [telegramTokenExpiry]);
+
+  const fetchTelegramStatus = async () => {
+    setTelegramLoading(true);
+    try {
+      const res = await fetch('/api/telegram/link');
+      const data = await res.json();
+      setTelegramConn(data.connection ?? null);
+    } catch {
+      // silent
+    } finally {
+      setTelegramLoading(false);
+    }
+  };
+
+  const handleGenerateTelegramToken = async () => {
+    setTelegramActionLoading(true);
+    try {
+      const res = await fetch('/api/telegram/link', { method: 'POST' });
+      const data = await res.json();
+      setTelegramToken(data.token);
+      setTelegramTokenExpiry(new Date(data.expires_at));
+      setTelegramBotUsername(data.bot_username || '');
+    } catch {
+      setError('Gagal membuat token Telegram.');
+    } finally {
+      setTelegramActionLoading(false);
+    }
+  };
+
+  const handleDisconnectTelegram = async () => {
+    if (!confirm('Putuskan koneksi Telegram?')) return;
+    setTelegramActionLoading(true);
+    try {
+      await fetch('/api/telegram/link', { method: 'DELETE' });
+      setTelegramConn(null);
+      setTelegramToken(null);
+    } catch {
+      setError('Gagal memutuskan koneksi Telegram.');
+    } finally {
+      setTelegramActionLoading(false);
+    }
+  };
+
+  const handleCopyTelegramLink = () => {
+    if (!telegramToken || !telegramBotUsername) return;
+    const link = `https://t.me/${telegramBotUsername}?start=${telegramToken}`;
+    navigator.clipboard.writeText(link);
+    setTelegramCopied(true);
+    setTimeout(() => setTelegramCopied(false), 2000);
+  };
+
+  const formatCountdown = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
 
   useEffect(() => {
     if (userRole) setSelectedRole(userRole);
@@ -168,7 +255,121 @@ export default function SettingsPage() {
         </div>
       )}
 
-      <div className="card">
+      {/* Telegram Bot Section */}
+      <div className="card mt-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center">
+            <Send className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Telegram Bot</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Input transaksi langsung dari Telegram</p>
+          </div>
+        </div>
+
+        {telegramLoading ? (
+          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
+            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+            Memuat status koneksi...
+          </div>
+        ) : telegramConn ? (
+          /* Connected state */
+          <div>
+            <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl mb-4">
+              <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                  Terhubung{telegramConn.telegram_username ? ` sebagai @${telegramConn.telegram_username}` : telegramConn.telegram_first_name ? ` sebagai ${telegramConn.telegram_first_name}` : ''}
+                </p>
+                <p className="text-xs text-green-600 dark:text-green-500 mt-0.5">
+                  Sejak {new Date(telegramConn.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
+              </div>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 mb-4">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cara pakai:</p>
+              <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-disc list-inside">
+                <li>Ketik <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">jual kopi 150000</code> untuk catat pendapatan</li>
+                <li>Ketik <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">bayar gaji 2jt</code> untuk catat beban</li>
+                <li>Gunakan <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">/saldo</code> untuk lihat ringkasan</li>
+              </ul>
+            </div>
+            <button
+              onClick={handleDisconnectTelegram}
+              disabled={telegramActionLoading}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+            >
+              <XCircle className="w-4 h-4" />
+              Putuskan Koneksi Telegram
+            </button>
+          </div>
+        ) : (
+          /* Not connected state */
+          <div>
+            {telegramToken ? (
+              /* Token generated — show deep link */
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  <span className="text-sm text-amber-600 dark:text-amber-400 font-medium">
+                    Token berlaku {formatCountdown(telegramCountdown)}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Tap tombol di bawah untuk membuka Telegram dan menghubungkan akun secara otomatis.
+                </p>
+                <div className="flex gap-3 flex-wrap">
+                  <a
+                    href={`https://t.me/${telegramBotUsername}?start=${telegramToken}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium rounded-xl transition-colors"
+                  >
+                    <Send className="w-4 h-4" />
+                    Buka di Telegram
+                  </a>
+                  <button
+                    onClick={handleCopyTelegramLink}
+                    className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <Copy className="w-4 h-4" />
+                    {telegramCopied ? 'Tersalin!' : 'Salin Link'}
+                  </button>
+                  <button
+                    onClick={handleGenerateTelegramToken}
+                    disabled={telegramActionLoading}
+                    className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Perbarui Token
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Initial state — no token yet */
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Hubungkan akun Telegram kamu untuk bisa input transaksi langsung dari chat, tanpa buka aplikasi.
+                </p>
+                <button
+                  onClick={handleGenerateTelegramToken}
+                  disabled={telegramActionLoading}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
+                >
+                  {telegramActionLoading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                  Hubungkan Telegram
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="card mt-6">
         <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6">{t.settings.profileInfo}</h2>
 
         {/* Avatar Upload */}

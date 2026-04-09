@@ -46,6 +46,6 @@ export const config = {
      * - favicon.ico (favicon)
      * - images/ (public images)
      */
-    '/((?!_next/static|_next/image|favicon.ico|images/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|images/|api/telegram/webhook).*)',
   ],
 };
