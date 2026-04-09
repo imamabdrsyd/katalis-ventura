@@ -186,11 +186,11 @@ async function saveTransaction(
     business_id: businessId,
     date: today,
     category: parsed.category,
-    name: parsed.name,
+    name: 'Via AxionBot',
     amount: parsed.amount,
-    description: 'Via Telegram Bot',
+    description: parsed.name,
     account: '',
-    status: 'posted',
+    status: 'draft',
     created_by: userId,
   });
 
