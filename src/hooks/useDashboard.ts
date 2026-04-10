@@ -6,6 +6,11 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import { calculateFinancialSummary, calculateROI, calculateCategoryCounts, calculateBalanceSheet } from '@/lib/calculations';
 import * as transactionsApi from '@/lib/api/transactions';
 import { generateDueRecurringTransactions } from '@/lib/api/recurring';
+import {
+  getFinancialCache,
+  upsertFinancialCache,
+  type DashboardPayload,
+} from '@/lib/api/financialCache';
 import type { Transaction } from '@/types';
 
 export function useDashboard() {
@@ -21,6 +26,19 @@ export function useDashboard() {
     queryKey: ['transactions', businessId],
     queryFn: () => transactionsApi.getTransactions(businessId!),
     enabled: !!businessId,
+  });
+
+  // Hydrate dari DB cache (fast-path untuk dashboard KPIs)
+  // Kalau cache masih valid, initial render tidak perlu tunggu transactions
+  const { data: dashboardCache } = useQuery({
+    queryKey: ['financial-cache', businessId, 'dashboard'],
+    queryFn: () =>
+      getFinancialCache<DashboardPayload>({
+        businessId: businessId!,
+        cacheType: 'dashboard',
+      }),
+    enabled: !!businessId,
+    staleTime: 30_000,
   });
 
   // Auto-generate due recurring transactions on dashboard load (once per day)
@@ -67,6 +85,57 @@ export function useDashboard() {
     };
   }, [transactions, business?.capital_investment]);
 
+  // Write-through cache: simpan hasil kalkulasi ke DB setelah compute selesai.
+  // Dijalankan setiap kali transaksi berubah sehingga cache selalu fresh.
+  // Fire-and-forget — kegagalan tidak mempengaruhi UI.
+  useEffect(() => {
+    if (!businessId || !user) return;
+    if (transactionsLoading) return;
+    if (transactions.length === 0) return;
+
+    const capital = business?.capital_investment || 0;
+    const payload: DashboardPayload = {
+      summary,
+      roi,
+      categoryCounts,
+      balanceSheet,
+      capital,
+    };
+
+    upsertFinancialCache({
+      businessId,
+      cacheType: 'dashboard',
+      payload,
+      transactionCount: transactions.length,
+      computedBy: user.id,
+    }).catch((err) => console.error('[useDashboard] Failed to persist cache:', err));
+  }, [
+    businessId,
+    user,
+    transactionsLoading,
+    transactions.length,
+    summary,
+    roi,
+    categoryCounts,
+    balanceSheet,
+    business?.capital_investment,
+  ]);
+
+  // Hasil akhir: kalau transactions sudah loaded, pakai nilai computed;
+  // kalau belum loaded tapi cache valid, pakai cache payload
+  const effectiveSummary = transactionsLoading && dashboardCache?.payload
+    ? dashboardCache.payload.summary
+    : summary;
+  const effectiveRoi = transactionsLoading && dashboardCache?.payload
+    ? dashboardCache.payload.roi
+    : roi;
+  const effectiveCategoryCounts = transactionsLoading && dashboardCache?.payload
+    ? dashboardCache.payload.categoryCounts
+    : categoryCounts;
+  const effectiveBalanceSheet = transactionsLoading && dashboardCache?.payload
+    ? dashboardCache.payload.balanceSheet
+    : balanceSheet;
+
   return {
     business,
     businessId,
@@ -76,9 +145,12 @@ export function useDashboard() {
     firstName,
     transactions,
     transactionsLoading,
-    summary,
-    roi,
-    categoryCounts,
-    balanceSheet,
+    summary: effectiveSummary,
+    roi: effectiveRoi,
+    categoryCounts: effectiveCategoryCounts,
+    balanceSheet: effectiveBalanceSheet,
+    // Indikator "data dari cache" untuk UI (misalnya menampilkan "cached X menit lalu")
+    isHydratedFromCache: transactionsLoading && !!dashboardCache?.payload,
+    cacheComputedAt: dashboardCache?.computed_at ?? null,
   };
 }

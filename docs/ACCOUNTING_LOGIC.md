@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 7 April 2026 (Balance Sheet asOfDate refactor) | AR/AP Aging & Repayment: 29 Maret 2026
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 10 April 2026 (Persistence Layer: Import Batches, Reconciliation Sessions, Financial Cache) | AR/AP Aging & Repayment: 29 Maret 2026
 
 ---
 
@@ -1973,6 +1973,125 @@ Jenius cicilan:   Dr Flexi Cash (LIABILITY) Rp 7.875.504 / Cr Bank
 Widget:
   Sisa Hutang = 39.412.363 - 7.875.504 = Rp 31.536.859
 ```
+
+---
+
+## 23. Persistence Layer (Short-Term → Long-Term Memory)
+
+> **Ditambahkan 10 April 2026** — Sebelumnya beberapa data penting hanya hidup
+> di React state / localStorage dan hilang saat refresh. Berikut data yang
+> sekarang di-persist ke database.
+
+### 23.1 Import Batch History (Migration 038)
+
+**Masalah sebelumnya:** Saat user bulk-import Excel/CSV via `TransactionImportModal`,
+tidak ada jejak batch. Tidak bisa rollback, tidak bisa audit "siapa import apa kapan".
+
+**Solusi:**
+- Tabel `import_batches` menyimpan setiap operasi import: `file_name`, `file_size`,
+  `import_mode` ('smart'/'full'), `total_rows`, `inserted_count`, `failed_count`,
+  `status` ('pending'|'success'|'partial'|'failed'|'rolled_back'), `errors` (JSONB),
+  `imported_by`, `imported_at`, `rolled_back_at`.
+- Kolom baru `transactions.import_batch_id` (FK → `import_batches`) memberi linkage
+  1-to-many antar batch dan transaksi hasil.
+- API: `src/lib/api/importBatches.ts`
+  - `createImportBatch()` — buat record saat user mulai import (status 'pending')
+  - `finalizeImportBatch()` — update statistik & status setelah bulk insert selesai
+  - `getImportBatches()` / `getImportBatchById()` — query riwayat & detail
+  - `rollbackImportBatch()` — soft-delete semua transaksi dalam batch + set status 'rolled_back'
+- Integrasi di `TransactionImportModal.tsx`: create batch sebelum insert, tag
+  `import_batch_id` ke setiap `TransactionInsert`, finalize setelah result.
+  Fire-and-forget — kegagalan tracking tidak blokir import utama.
+
+**Dampak akuntansi:** Tidak ada. Ini pure infra: jurnal tetap dibuat dengan logic
+double-entry yang sama. Hanya menambahkan jejak audit & kemampuan rollback.
+
+### 23.2 Reconciliation Sessions (Migration 039)
+
+**Masalah sebelumnya:** `useReconciliation.ts` menyimpan `bankBalance` (saldo dari
+mutasi bank yang user ketik manual), `dateRange`, dan `selectedIds` hanya di React
+state. Setiap refresh halaman, user harus ketik ulang saldo bank dan memilih ulang
+transaksi yang mau di-match.
+
+**Solusi:**
+- Tabel `reconciliation_sessions`:
+  - `business_id`, `account_id`, `account_code`, `period_start`, `period_end`
+  - `bank_statement_balance` — saldo yang user ketik
+  - `book_balance_snapshot`, `difference` — hasil kalkulasi saat disimpan
+  - `status` ('in_progress'|'completed'|'discarded')
+  - Unique partial index: hanya satu sesi 'in_progress' per
+    `(business_id, account_id, period_start, period_end)` — supaya tidak ada
+    duplikasi sesi aktif.
+- Tabel pivot `reconciliation_session_matches` (`session_id`, `transaction_id`)
+  — menyimpan progres parsial user (transaksi yang sudah dicontreng tapi belum
+  di-commit ke flag `transactions.is_reconciled`).
+- API: `src/lib/api/reconciliationSessions.ts`
+  - `getActiveReconciliationSession()` — restore sesi saat hook mount
+  - `upsertActiveReconciliationSession()` — auto-save saldo bank (debounced 800ms)
+  - `saveSessionMatches()` — simpan progres parsial
+  - `completeReconciliationSession()` — finalize sesi
+- Integrasi di `useReconciliation.ts`:
+  - `useEffect` restore session saat `businessId` / `dateRange` berubah
+  - `useEffect` debounced auto-save saldo bank dengan 800ms delay
+  - Export baru: `saveProgress`, `finalizeSession`, `activeSession`, `sessionLoading`
+
+**Dampak akuntansi:** Tidak ada. Flag `transactions.is_reconciled` (Migration 033)
+masih final state-nya. Sesi hanya track "progress sementara" selama user kerjakan.
+
+### 23.3 Financial Summary Cache (Migration 040)
+
+**Masalah sebelumnya:** Setiap kali `useDashboard`, `useIncomeStatement`,
+`useBalanceSheet`, `useCashFlow` mount, mereka recompute dari raw transactions via
+`calculations.ts`. Dengan 10.000+ transaksi, setiap navigasi = recompute penuh.
+Tidak ada snapshot historis — laporan kemarin tidak bisa di-load dari cache.
+
+**Solusi:**
+- Tabel `financial_summary_cache`:
+  - `business_id`, `cache_type` ('summary'|'income_statement'|'balance_sheet'|'cash_flow'|'dashboard')
+  - `period_start`, `period_end` (NULL = all-time)
+  - `payload` JSONB — hasil kalkulasi (shape tergantung `cache_type`)
+  - `transaction_count` — jumlah baris input saat compute
+  - `cache_version` — snapshot dari `business_transaction_versions.transaction_version`
+  - `is_stale` — flag invalidasi
+- Tabel `business_transaction_versions`: counter monotonik per business.
+  Di-bump setiap insert/update/delete `transactions` lewat trigger
+  `trg_bump_transaction_version`. Trigger juga set `is_stale = TRUE` pada
+  semua cache business tsb.
+- Function `bump_business_transaction_version()` dibuat `SECURITY DEFINER`
+  supaya bisa bypass RLS saat bump counter.
+- API: `src/lib/api/financialCache.ts`
+  - `getFinancialCache()` — cek cache, return null kalau `is_stale` atau
+    `cache_version` tidak match dengan `getBusinessTransactionVersion()`
+  - `upsertFinancialCache()` — delete-then-insert dengan version terkini
+  - `invalidateAllFinancialCache()` — paksa hapus (manual refresh)
+- Integrasi:
+  - `useDashboard.ts`: paralel fetch cache + transactions. Write-through setelah
+    compute. Hydrate initial render dari cache kalau transactions belum loaded
+    — field baru `isHydratedFromCache`, `cacheComputedAt` untuk UI indikator.
+  - `useIncomeStatement.ts`: write-through cache setelah `summary` + `metrics`
+    selesai dikalkulasi. Di-key oleh `(businessId, period_start, period_end)`.
+
+**Dampak akuntansi:** Kalkulasi di `calculations.ts` TIDAK berubah sama sekali.
+Cache hanya snapshot hasil — bukan sumber kebenaran. Saat stale (setelah insert
+transaksi baru), cache di-invalidate otomatis lewat trigger → hook recompute
+dari raw transactions → write-through cache baru.
+
+**Invariant yang dijaga:**
+1. Cache selalu cocok dengan `transaction_version` saat compute.
+2. Setiap perubahan `transactions` pasti meng-invalidate cache.
+3. Consumer cek `is_stale` DAN version equality sebelum pakai cache.
+4. Write-through bersifat fire-and-forget — kegagalan persist tidak mempengaruhi UI.
+
+### 23.4 Migrasi Database Baru
+
+| Migration | Deskripsi |
+|-----------|-----------|
+| `038_import_batches.sql` | Tabel `import_batches` + kolom `transactions.import_batch_id` + RLS |
+| `039_reconciliation_sessions.sql` | Tabel `reconciliation_sessions` + `reconciliation_session_matches` + RLS |
+| `040_financial_summary_cache.sql` | Tabel `financial_summary_cache` + `business_transaction_versions` + trigger version-bump + RLS |
+
+Semua tabel mengikuti pola RLS existing (`get_my_business_ids()`, role check
+`business_manager`/`both`/`superadmin`).
 
 ---
 

@@ -18,6 +18,9 @@ export interface TransactionInsert {
   is_double_entry?: boolean;
   notes?: string;
   meta?: TransactionMeta | null;
+
+  // Import batch linkage (diisi saat dibuat via bulk import)
+  import_batch_id?: string;
 }
 
 export interface MultiLineTransactionInsert {

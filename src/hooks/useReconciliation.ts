@@ -1,9 +1,17 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { createClient } from '@/lib/supabase';
+import {
+  getActiveReconciliationSession,
+  upsertActiveReconciliationSession,
+  completeReconciliationSession,
+  saveSessionMatches,
+  getSessionMatchedTransactionIds,
+  type ReconciliationSession,
+} from '@/lib/api/reconciliationSessions';
 import type { Transaction } from '@/types';
 
 /**
@@ -65,12 +73,55 @@ export function useReconciliation() {
     };
   });
 
+  // Active reconciliation session (persisted in DB)
+  const [activeSession, setActiveSession] = useState<ReconciliationSession | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(false);
+  const hasRestoredSession = useRef(false);
+
   // Fetch transactions
   const { data: allTransactions = [], isLoading: loading } = useQuery({
     queryKey: ['transactions', businessId],
     queryFn: () => fetchTransactions(businessId!),
     enabled: !!businessId,
   });
+
+  // Restore active reconciliation session saat businessId atau dateRange berubah.
+  // Memuat saldo bank dan match progress yang sebelumnya sudah user kerjakan.
+  useEffect(() => {
+    if (!businessId) return;
+    let cancelled = false;
+    setSessionLoading(true);
+    (async () => {
+      try {
+        const session = await getActiveReconciliationSession(
+          businessId,
+          dateRange.start,
+          dateRange.end
+        );
+        if (cancelled) return;
+        setActiveSession(session);
+        if (session) {
+          // Restore saldo bank — sebelumnya hilang saat refresh
+          setBankBalance(String(session.bank_statement_balance ?? ''));
+          // Restore match progress
+          const matchedIds = await getSessionMatchedTransactionIds(session.id);
+          if (!cancelled) setSelectedIds(new Set(matchedIds));
+        } else {
+          setBankBalance('');
+          setSelectedIds(new Set());
+        }
+        hasRestoredSession.current = true;
+      } catch (err) {
+        console.error('Failed to restore reconciliation session:', err);
+      } finally {
+        if (!cancelled) setSessionLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      hasRestoredSession.current = false;
+    };
+  }, [businessId, dateRange.start, dateRange.end]);
 
   // Filter: only cash/bank transactions + date range
   const cashTransactions = useMemo(() => {
@@ -127,6 +178,41 @@ export function useReconciliation() {
   const bankBalanceNum = parseFloat(bankBalance) || 0;
   const difference = bankBalanceNum - bookBalance;
 
+  // Auto-save saldo bank ke DB (debounced) — agar tidak hilang saat refresh
+  useEffect(() => {
+    if (!businessId || !user) return;
+    if (!hasRestoredSession.current) return; // Jangan save sebelum selesai restore
+    if (bankBalance === '') return; // Jangan buat sesi kosong
+
+    const timeout = setTimeout(async () => {
+      try {
+        const session = await upsertActiveReconciliationSession({
+          business_id: businessId,
+          created_by: user.id,
+          period_start: dateRange.start,
+          period_end: dateRange.end,
+          bank_statement_balance: bankBalanceNum,
+          book_balance_snapshot: bookBalance,
+          difference,
+        });
+        setActiveSession(session);
+      } catch (err) {
+        console.error('Failed to auto-save reconciliation session:', err);
+      }
+    }, 800);
+
+    return () => clearTimeout(timeout);
+  }, [
+    bankBalance,
+    bankBalanceNum,
+    bookBalance,
+    difference,
+    businessId,
+    user,
+    dateRange.start,
+    dateRange.end,
+  ]);
+
   // Selected amount
   const selectedAmount = useMemo(() => {
     let total = 0;
@@ -175,6 +261,16 @@ export function useReconciliation() {
 
       if (error) throw error;
 
+      // Setelah di-reconcile ke flag transactions, bersihkan match rows di sesi
+      // (karena transaksi sudah permanen reconciled, tidak butuh progres)
+      if (activeSession) {
+        try {
+          await saveSessionMatches(activeSession.id, [], user.id);
+        } catch (err) {
+          console.error('Failed to clear session matches:', err);
+        }
+      }
+
       setSelectedIds(new Set());
       queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
     } catch (err: any) {
@@ -182,7 +278,57 @@ export function useReconciliation() {
     } finally {
       setSaving(false);
     }
-  }, [selectedIds, user, businessId, queryClient]);
+  }, [selectedIds, user, businessId, queryClient, activeSession]);
+
+  // Simpan progres pilihan ke DB (user klik "Simpan Progres")
+  const saveProgress = useCallback(async () => {
+    if (!user || !businessId) return;
+    setSaving(true);
+    try {
+      // Pastikan ada session — kalau belum ada, buat satu berdasarkan bankBalance saat ini
+      let session = activeSession;
+      if (!session) {
+        session = await upsertActiveReconciliationSession({
+          business_id: businessId,
+          created_by: user.id,
+          period_start: dateRange.start,
+          period_end: dateRange.end,
+          bank_statement_balance: bankBalanceNum,
+          book_balance_snapshot: bookBalance,
+          difference,
+        });
+        setActiveSession(session);
+      }
+      await saveSessionMatches(session.id, [...selectedIds], user.id);
+    } catch (err: any) {
+      alert(err.message || 'Gagal menyimpan progres');
+    } finally {
+      setSaving(false);
+    }
+  }, [
+    user,
+    businessId,
+    activeSession,
+    selectedIds,
+    dateRange,
+    bankBalanceNum,
+    bookBalance,
+    difference,
+  ]);
+
+  // Finalize session — tandai sesi sebagai completed
+  const finalizeSession = useCallback(async () => {
+    if (!activeSession || !user) return;
+    setSaving(true);
+    try {
+      const completed = await completeReconciliationSession(activeSession.id, user.id);
+      setActiveSession(completed);
+    } catch (err: any) {
+      alert(err.message || 'Gagal menyelesaikan sesi rekonsiliasi');
+    } finally {
+      setSaving(false);
+    }
+  }, [activeSession, user]);
 
   // Un-reconcile a single transaction
   const unreconcile = useCallback(async (id: string) => {
@@ -212,6 +358,7 @@ export function useReconciliation() {
     activeBusiness,
     loading,
     saving,
+    sessionLoading,
     // Transactions
     displayedTransactions,
     unreconciledTransactions,
@@ -233,6 +380,10 @@ export function useReconciliation() {
     toggleSelect,
     selectAll,
     selectedAmount,
+    // Session (persisted)
+    activeSession,
+    saveProgress,
+    finalizeSession,
     // Actions
     reconcileSelected,
     unreconcile,
