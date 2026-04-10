@@ -70,6 +70,8 @@ function TransactionsPageInner() {
     setDeleteTransaction,
     // Accounts (for smart guidance)
     accounts,
+    // Contacts (for contact icon in transaction list)
+    contacts,
     // Follow-up prefill (for COGS entry)
     followUpPrefill,
     setFollowUpPrefill,
@@ -477,6 +479,7 @@ function TransactionsPageInner() {
             onEnterSelectMode={canManageTransactions ? () => setSelectMode(true) : undefined}
             closedUntilDate={closedUntilDate}
             rowOffset={(currentPage - 1) * rowsPerPage}
+            contacts={contacts}
           />
         </div>
 

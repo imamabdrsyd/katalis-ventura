@@ -5,10 +5,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBusinessContext } from '@/context/BusinessContext';
 import * as transactionsApi from '@/lib/api/transactions';
 import * as recurringApi from '@/lib/api/recurring';
+import * as contactsApi from '@/lib/api/contacts';
 import { getAccounts } from '@/lib/api/accounts';
 import { findCogsAccount } from '@/lib/utils/inventoryHelper';
 import { buildSettlementPrefill, buildPartialSettlementPrefill, getOutstandingAmount } from '@/lib/accounting/guidance/receivableSettlement';
-import type { Transaction, TransactionCategory, TransactionStatus, Account } from '@/types';
+import type { Transaction, TransactionCategory, TransactionStatus, Account, Contact } from '@/types';
 import type { TransactionFormData } from '@/components/transactions/TransactionForm';
 import type { TransactionFilters } from '@/lib/api/transactions';
 
@@ -38,6 +39,9 @@ export function useTransactions() {
 
   // Accounts state (for smart guidance in detail modal)
   const [accounts, setAccounts] = useState<Account[]>([]);
+
+  // Contacts state (for contact icon in transaction list)
+  const [contacts, setContacts] = useState<Contact[]>([]);
 
   // Follow-up prefill state (for COGS entry guidance)
   const [followUpPrefill, setFollowUpPrefill] = useState<Partial<TransactionFormData> | null>(null);
@@ -106,11 +110,23 @@ export function useTransactions() {
     }
   }, [businessId]);
 
+  // Fetch contacts for contact icon in transaction list
+  const fetchContacts = useCallback(async () => {
+    if (!businessId) return;
+    try {
+      const data = await contactsApi.getContacts(businessId);
+      setContacts(data);
+    } catch (err) {
+      console.error('Failed to fetch contacts:', err);
+    }
+  }, [businessId]);
+
   useEffect(() => {
     if (businessId) {
       fetchAccounts();
+      fetchContacts();
     }
-  }, [businessId, fetchAccounts]);
+  }, [businessId, fetchAccounts, fetchContacts]);
 
   // Refetch ketika FloatingQuickAdd berhasil menyimpan transaksi
   useEffect(() => {
@@ -488,6 +504,8 @@ export function useTransactions() {
     setDeleteTransaction,
     // Accounts (for smart guidance)
     accounts,
+    // Contacts (for contact icon in transaction list)
+    contacts,
     // Follow-up prefill (for COGS entry)
     followUpPrefill,
     setFollowUpPrefill,

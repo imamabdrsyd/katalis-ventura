@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Lock } from 'lucide-react';
+import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Lock, Contact as ContactIcon } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import type { Transaction, TransactionCategory } from '@/types';
+import type { Transaction, TransactionCategory, Contact } from '@/types';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
 
 interface TransactionListProps {
@@ -25,6 +25,7 @@ interface TransactionListProps {
   onEnterSelectMode?: () => void;
   closedUntilDate?: string | null;
   rowOffset?: number;
+  contacts?: Contact[];
 }
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
@@ -111,6 +112,11 @@ function getAccountDisplay(transaction: Transaction): { accountName: string; isI
   }
 }
 
+// Helper function to check if subject is a contact
+function isSubjectContact(subject: string, contacts: Contact[]): boolean {
+  return contacts.some(c => c.name.toLowerCase() === subject.toLowerCase());
+}
+
 export function TransactionList({
   transactions,
   loading,
@@ -130,6 +136,7 @@ export function TransactionList({
   onEnterSelectMode,
   closedUntilDate,
   rowOffset = 0,
+  contacts = [],
 }: TransactionListProps) {
   const { t } = useLanguage();
   const showActions = (onEdit || onDelete || onEnterSelectMode) && !selectMode;
@@ -357,7 +364,19 @@ export function TransactionList({
                 </div>
               </td>
               <td className="py-3 px-2 md:py-4 text-sm font-medium text-gray-800 dark:text-gray-200 break-words">
-                {getRowSubject(transaction)}
+                <div className="flex items-center gap-2">
+                  <span>{getRowSubject(transaction)}</span>
+                  {isSubjectContact(getRowSubject(transaction), contacts) && (
+                    <div className="relative group">
+                      <ContactIcon className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                      <div className="absolute left-0 bottom-full mb-1 z-50 hidden group-hover:block whitespace-nowrap">
+                        <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs rounded px-2 py-1 shadow-lg">
+                          Kontak tersimpan
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </td>
               <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 max-w-[200px]">
                 <div className="relative group">
