@@ -134,12 +134,12 @@ function TransactionsPageInner() {
   }, [visibleTransactions, activeTagFilters]);
 
 
-  // Compute summary for selected transactions
+  // Compute summary for selected transactions (across all pages)
   const selectedSummary = useMemo(() => {
     if (selectedIds.size === 0) return { masuk: 0, keluar: 0, selisih: 0 };
     let masuk = 0;
     let keluar = 0;
-    for (const t of transactions) {
+    for (const t of allTransactions) {
       if (!selectedIds.has(t.id)) continue;
       if (t.category === 'EARN') {
         masuk += t.amount;
@@ -148,7 +148,7 @@ function TransactionsPageInner() {
       }
     }
     return { masuk, keluar, selisih: masuk - keluar };
-  }, [selectedIds, transactions]);
+  }, [selectedIds, allTransactions]);
 
   const [showSelectedSummary, setShowSelectedSummary] = useState(false);
 
