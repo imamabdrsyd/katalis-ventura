@@ -475,7 +475,7 @@ export function TransactionDetailModal({
             </label>
             <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               {contacts?.some((contact: Contact) => contact.name === transaction.name) && (
-                <ContactIcon className="w-5 h-5 text-primary-500 dark:text-primary-400 flex-shrink-0" />
+                <ContactIcon className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
               )}
               {transaction.name}
             </p>
