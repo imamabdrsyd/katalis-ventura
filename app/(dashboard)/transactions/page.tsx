@@ -635,6 +635,7 @@ function TransactionsPageInner() {
         onPartialSettleReceivable={canManageTransactions ? handlePartialSettleReceivable : undefined}
         settleLoading={saving}
         onShowRelatedTransaction={setDetailTransaction}
+        contacts={contacts}
       />
 
       {/* Delete Confirmation */}

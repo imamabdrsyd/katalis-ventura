@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Modal } from '@/components/ui/Modal';
-import type { Transaction, Account, AuditLog } from '@/types';
+import type { Transaction, Account, AuditLog, Contact } from '@/types';
 import type { TransactionFormData } from '@/components/transactions/TransactionForm';
 import { CATEGORY_LABELS } from '@/lib/calculations';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
@@ -10,7 +10,7 @@ import { getProfileName } from '@/lib/api/profiles';
 import { getRecordAuditHistory, getFieldChanges, formatFieldName, formatAuditValue } from '@/lib/api/audit';
 import { detectMatchingPrincipleWarning, isReceivableTransaction, isSettled, isPartiallySettled, getOutstandingAmount, getPartialSettlementIds } from '@/lib/accounting/guidance';
 import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
-import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History } from 'lucide-react';
+import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { updateTransaction } from '@/lib/api/transactions';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
@@ -32,6 +32,7 @@ interface TransactionDetailModalProps {
   onPartialSettleReceivable?: (transaction: Transaction, amount: number) => Promise<void>;
   settleLoading?: boolean;
   onShowRelatedTransaction?: (transaction: Transaction) => void;
+  contacts?: Contact[];
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -81,6 +82,7 @@ export function TransactionDetailModal({
   onPartialSettleReceivable,
   settleLoading = false,
   onShowRelatedTransaction,
+  contacts,
 }: TransactionDetailModalProps) {
   const { t } = useLanguage();
 
@@ -471,7 +473,10 @@ export function TransactionDetailModal({
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               {getNameLabel(transaction.category)}
             </label>
-            <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              {contacts?.some((contact: Contact) => contact.name === transaction.name) && (
+                <ContactIcon className="w-5 h-5 text-primary-500 dark:text-primary-400 flex-shrink-0" />
+              )}
               {transaction.name}
             </p>
           </div>

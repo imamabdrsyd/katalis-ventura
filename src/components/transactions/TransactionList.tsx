@@ -371,7 +371,6 @@ export function TransactionList({
               </td>
               <td className="py-3 px-2 md:py-4 text-sm font-medium text-gray-800 dark:text-gray-200 break-words">
                 <div className="flex items-center gap-2">
-                  <span>{getRowSubject(transaction)}</span>
                   {isSubjectContact(getTransactionContactName(transaction), contacts) && (
                     <div className="relative group">
                       <ContactIcon className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
@@ -382,6 +381,7 @@ export function TransactionList({
                       </div>
                     </div>
                   )}
+                  <span>{getRowSubject(transaction)}</span>
                 </div>
               </td>
               <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 max-w-[200px]">
