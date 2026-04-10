@@ -117,6 +117,12 @@ function isSubjectContact(subject: string, contacts: Contact[]): boolean {
   return contacts.some(c => c.name.toLowerCase() === subject.toLowerCase());
 }
 
+// Helper function to get transaction contact name for contact matching
+function getTransactionContactName(transaction: Transaction): string {
+  // Always check transaction.name for contact matching (this is where customer/vendor name is stored)
+  return transaction.name;
+}
+
 export function TransactionList({
   transactions,
   loading,
@@ -366,7 +372,7 @@ export function TransactionList({
               <td className="py-3 px-2 md:py-4 text-sm font-medium text-gray-800 dark:text-gray-200 break-words">
                 <div className="flex items-center gap-2">
                   <span>{getRowSubject(transaction)}</span>
-                  {isSubjectContact(getRowSubject(transaction), contacts) && (
+                  {isSubjectContact(getTransactionContactName(transaction), contacts) && (
                     <div className="relative group">
                       <ContactIcon className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                       <div className="absolute left-0 bottom-full mb-1 z-50 hidden group-hover:block whitespace-nowrap">
