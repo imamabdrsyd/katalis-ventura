@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet, Calendar, ClipboardList } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet, Calendar, ClipboardList, Database, Zap } from 'lucide-react';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useLanguage } from '@/context/LanguageContext';
 import { calculateFinancialSummary, calculateCategoryCounts } from '@/lib/calculations';
@@ -43,7 +43,23 @@ export default function DashboardPage() {
     transactionsLoading,
     balanceSheet,
     summary: allTimeSummary,
+    isHydratedFromCache,
+    cacheComputedAt,
   } = useDashboard();
+
+  // Format "cache indicator" — tampilkan sumber data (cache DB vs computed fresh)
+  const cacheStatusLabel = useMemo(() => {
+    if (!cacheComputedAt) return null;
+    const computed = new Date(cacheComputedAt);
+    const diffMs = Date.now() - computed.getTime();
+    const diffMin = Math.round(diffMs / 60000);
+    if (diffMin < 1) return 'baru saja';
+    if (diffMin < 60) return `${diffMin} menit lalu`;
+    const diffH = Math.round(diffMin / 60);
+    if (diffH < 24) return `${diffH} jam lalu`;
+    const diffD = Math.round(diffH / 24);
+    return `${diffD} hari lalu`;
+  }, [cacheComputedAt]);
 
   const router = useRouter();
   const { t } = useLanguage();
@@ -242,6 +258,30 @@ export default function DashboardPage() {
             {label}
           </button>
         ))}
+
+        {/* Cache status indicator */}
+        {cacheStatusLabel && (
+          <>
+            <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+            {isHydratedFromCache ? (
+              <span
+                className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg"
+                title={`Ditampilkan dari cache database (dihitung ${cacheStatusLabel}). Data fresh akan muncul setelah transaksi selesai dimuat.`}
+              >
+                <Database className="w-3 h-3" />
+                Cache • {cacheStatusLabel}
+              </span>
+            ) : (
+              <span
+                className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-gray-500 dark:text-gray-400"
+                title={`Cache database terakhir diperbarui ${cacheStatusLabel}`}
+              >
+                <Zap className="w-3 h-3" />
+                Live
+              </span>
+            )}
+          </>
+        )}
       </div>
       </div>
 

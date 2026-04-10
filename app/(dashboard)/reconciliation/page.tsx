@@ -9,6 +9,8 @@ import {
   Check,
   Undo2,
   AlertTriangle,
+  Cloud,
+  Loader2,
 } from 'lucide-react';
 import { useReconciliation } from '@/hooks/useReconciliation';
 import { formatCurrency } from '@/lib/utils';
@@ -59,6 +61,10 @@ function ReconciliationPageInner() {
     selectedAmount,
     reconcileSelected,
     unreconcile,
+    activeSession,
+    sessionLoading,
+    saveProgress,
+    finalizeSession,
   } = useReconciliation();
 
   if (loading) {
@@ -81,6 +87,19 @@ function ReconciliationPageInner() {
   }
 
   const isBalanced = Math.abs(difference) < 1;
+
+  // Format timestamp sesi terakhir kali di-save (auto-save)
+  const lastSavedLabel = React.useMemo(() => {
+    if (!activeSession?.updated_at) return null;
+    try {
+      return new Date(activeSession.updated_at).toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return null;
+    }
+  }, [activeSession?.updated_at]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
@@ -126,7 +145,23 @@ function ReconciliationPageInner() {
 
         {/* Bank Balance Input */}
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-1">{t.reconciliation.bankBalance}</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t.reconciliation.bankBalance}</p>
+            {sessionLoading ? (
+              <span className="inline-flex items-center gap-1 text-[10px] text-gray-400">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Memuat...
+              </span>
+            ) : activeSession && lastSavedLabel ? (
+              <span
+                className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400"
+                title={`Sesi tersimpan otomatis ke database • Terakhir ${lastSavedLabel}`}
+              >
+                <Cloud className="w-3 h-3" />
+                Tersimpan {lastSavedLabel}
+              </span>
+            ) : null}
+          </div>
           <input
             type="number"
             value={bankBalance}
@@ -205,17 +240,41 @@ function ReconciliationPageInner() {
             </div>
           </div>
 
-          {/* Reconcile button */}
-          {!showReconciled && selectedIds.size > 0 && (
-            <button
-              onClick={reconcileSelected}
-              disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
-            >
-              <Check className="w-4 h-4" />
-              Cocokkan {selectedIds.size} transaksi ({formatCurrency(selectedAmount)})
-            </button>
-          )}
+          {/* Action buttons */}
+          <div className="flex items-center gap-2">
+            {!showReconciled && selectedIds.size > 0 && activeSession && (
+              <button
+                onClick={saveProgress}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg disabled:opacity-50 transition-colors"
+                title="Simpan progres pilihan ke sesi aktif"
+              >
+                <Cloud className="w-3.5 h-3.5" />
+                Simpan Progres
+              </button>
+            )}
+            {!showReconciled && selectedIds.size > 0 && (
+              <button
+                onClick={reconcileSelected}
+                disabled={saving}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
+              >
+                <Check className="w-4 h-4" />
+                Cocokkan {selectedIds.size} transaksi ({formatCurrency(selectedAmount)})
+              </button>
+            )}
+            {activeSession && isBalanced && bankBalance && selectedIds.size === 0 && (
+              <button
+                onClick={finalizeSession}
+                disabled={saving}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
+                title="Tandai sesi rekonsiliasi ini sebagai selesai"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Selesaikan Sesi
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Transaction List */}

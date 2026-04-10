@@ -7,11 +7,12 @@ import { TransactionList } from '@/components/transactions/TransactionList';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import { DeleteConfirmModal } from '@/components/transactions/DeleteConfirmModal';
 import TransactionImportModal from '@/components/transactions/TransactionImportModal';
+import ImportBatchHistoryModal from '@/components/transactions/ImportBatchHistoryModal';
 import type { TransactionCategory } from '@/types';
 import { QuickTransactionForm } from '@/components/transactions/QuickTransactionForm';
 import { RecurringList } from '@/components/transactions/RecurringList';
 import { useRecurringTransactions } from '@/hooks/useRecurringTransactions';
-import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2, Calculator, RefreshCw } from 'lucide-react';
+import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2, Calculator, RefreshCw, History } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
@@ -151,6 +152,7 @@ function TransactionsPageInner() {
   }, [selectedIds, transactions]);
 
   const [showSelectedSummary, setShowSelectedSummary] = useState(false);
+  const [showImportHistoryModal, setShowImportHistoryModal] = useState(false);
 
   const toggleTagFilter = (tag: string) => {
     setActiveTagFilters((prev) =>
@@ -253,13 +255,22 @@ function TransactionsPageInner() {
         </div>
         {canManageTransactions && (
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowImportModal(true)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              {t.transactions.importExcel}
-            </button>
+            <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                {t.transactions.importExcel}
+              </button>
+              <button
+                onClick={() => setShowImportHistoryModal(true)}
+                className="px-3 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 border-l border-gray-300 dark:border-gray-600 transition-colors"
+                title="Riwayat import"
+              >
+                <History className="h-4 w-4" />
+              </button>
+            </div>
 
             <button
               onClick={() => router.push('/transactions/journal-entry')}
@@ -651,6 +662,17 @@ function TransactionsPageInner() {
           businessId={businessId}
           userId={user.id}
           onImportComplete={handleImportComplete}
+        />
+      )}
+
+      {/* Import History Modal */}
+      {businessId && user && (
+        <ImportBatchHistoryModal
+          isOpen={showImportHistoryModal}
+          onClose={() => setShowImportHistoryModal(false)}
+          businessId={businessId}
+          userId={user.id}
+          onRollbackComplete={fetchTransactions}
         />
       )}
 
