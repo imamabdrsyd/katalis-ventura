@@ -585,9 +585,9 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
         {canManage && activeBusiness && (
           <button
             onClick={onQuickAddClick}
-            className="hidden md:flex px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors items-center gap-2 font-medium shadow-sm"
+            className="hidden md:flex px-4 py-2 bg-white dark:bg-gray-800 border-2 border-primary-500 text-primary-500 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-gray-700 rounded-lg transition-colors items-center gap-2 font-medium shadow-sm"
           >
-            <Zap className="h-4 w-4" />
+            <Zap className="h-4 w-4 text-primary-500 dark:text-primary-400" />
             {t.nav.quickEntry}
           </button>
         )}
