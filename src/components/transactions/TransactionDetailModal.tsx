@@ -641,12 +641,12 @@ export function TransactionDetailModal({
               </div>
             </div>
           ) : transaction.is_double_entry && (transaction.debit_account || transaction.credit_account) ? (
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div className="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              <div className="p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                   {t.transactionDetail.debit}
                 </label>
-                <div className="mt-2 flex items-center gap-1.5 mb-0.5">
+                <div className="flex items-center gap-1.5">
                   {transaction.debit_account?.account_code && (
                     <span className="font-mono text-xs text-gray-400 dark:text-gray-500">{transaction.debit_account.account_code}</span>
                   )}
@@ -656,15 +656,15 @@ export function TransactionDetailModal({
                     </span>
                   )}
                 </div>
-                <p className="text-gray-900 dark:text-gray-100 font-semibold">
+                <p className="text-gray-900 dark:text-gray-100 font-semibold leading-tight">
                   {transaction.debit_account?.account_name || 'Unknown'}
                 </p>
               </div>
-              <div className="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <div className="p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                   {t.transactionDetail.credit}
                 </label>
-                <div className="mt-2 flex items-center gap-1.5 mb-0.5">
+                <div className="flex items-center gap-1.5">
                   {transaction.credit_account?.account_code && (
                     <span className="font-mono text-xs text-gray-400 dark:text-gray-500">{transaction.credit_account.account_code}</span>
                   )}
@@ -674,7 +674,7 @@ export function TransactionDetailModal({
                     </span>
                   )}
                 </div>
-                <p className="text-gray-900 dark:text-gray-100 font-semibold">
+                <p className="text-gray-900 dark:text-gray-100 font-semibold leading-tight">
                   {transaction.credit_account?.account_name || 'Unknown'}
                 </p>
               </div>
