@@ -11,11 +11,11 @@ import { AccountDeleteModal } from '@/components/accounts/AccountDeleteModal';
 import { Plus, Search, ChevronDown, ChevronRight, Lock, Pencil, XCircle, CheckCircle2, BookOpen as BookOpenIcon, Wallet, HandCoins, Scale, TrendingUp, Receipt } from 'lucide-react';
 
 const ACCOUNT_TYPE_ICONS: Record<AccountType, React.ReactNode> = {
-  ASSET: <Wallet className="w-4 h-4 text-blue-400 dark:text-blue-500" />,
-  LIABILITY: <HandCoins className="w-4 h-4 text-amber-400 dark:text-amber-500" />,
-  EQUITY: <Scale className="w-4 h-4 text-purple-400 dark:text-purple-500" />,
-  REVENUE: <TrendingUp className="w-4 h-4 text-emerald-400 dark:text-emerald-500" />,
-  EXPENSE: <Receipt className="w-4 h-4 text-red-400 dark:text-red-500" />,
+  ASSET: <Wallet className="w-4 h-4 text-gray-500 dark:text-gray-400" />,
+  LIABILITY: <HandCoins className="w-4 h-4 text-gray-500 dark:text-gray-400" />,
+  EQUITY: <Scale className="w-4 h-4 text-gray-500 dark:text-gray-400" />,
+  REVENUE: <TrendingUp className="w-4 h-4 text-gray-500 dark:text-gray-400" />,
+  EXPENSE: <Receipt className="w-4 h-4 text-gray-500 dark:text-gray-400" />,
 };
 
 const TYPE_COLORS: Record<AccountType, string> = {
@@ -24,6 +24,14 @@ const TYPE_COLORS: Record<AccountType, string> = {
   EQUITY: 'border-purple-400 dark:border-purple-500 text-purple-600 dark:text-purple-400',
   REVENUE: 'border-green-400 dark:border-green-500 text-green-600 dark:text-green-400',
   EXPENSE: 'border-red-400 dark:border-red-500 text-red-600 dark:text-red-400',
+};
+
+const TYPE_TEXT_COLORS: Record<AccountType, string> = {
+  ASSET: 'text-blue-600 dark:text-blue-400',
+  LIABILITY: 'text-amber-600 dark:text-amber-400',
+  EQUITY: 'text-purple-600 dark:text-purple-400',
+  REVENUE: 'text-green-600 dark:text-green-400',
+  EXPENSE: 'text-red-600 dark:text-red-400',
 };
 
 export default function AccountsPage() {
@@ -417,11 +425,11 @@ function ParentAccountCard({
           ) : (
             <ChevronRight className="w-5 h-5 text-gray-500 dark:text-gray-400" />
           )}
-          <div className={`w-10 h-10 rounded-lg border-2 ${TYPE_COLORS[parent.account_type]} flex items-center justify-center bg-white dark:bg-gray-800`}>
-            <span className="font-bold text-xs">{parent.account_code}</span>
+          <div className="w-10 h-10 rounded-lg border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center bg-white dark:bg-gray-800">
+            <span className="font-bold text-xs text-gray-600 dark:text-gray-400">{parent.account_code}</span>
           </div>
           <div className="text-left">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+            <h2 className={`text-lg font-bold ${TYPE_TEXT_COLORS[parent.account_type]}`}>
               {parent.account_name}
             </h2>
             <p className="text-xs text-gray-500 dark:text-gray-400">
