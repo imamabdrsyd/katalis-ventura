@@ -512,6 +512,7 @@ export interface Translations {
     cashBankTransactions: string;
     fromBankStatement: string;
     enterBankBalance: string;
+    enterBankBalancePlaceholder: string;
     balanceMatched: string;
     bankMinusBook: string;
     unreconciled: string;
@@ -544,11 +545,14 @@ export interface Translations {
     accountsCount: string;
     profitLabel: string;
     lossLabel: string;
+    periodLabel: string;
     revenueClosing: string;
     revenueClosingDesc: string;
     expenseClosing: string;
     expenseClosingDesc: string;
     accountName: string;
+    accountCode: string;
+    accountAmount: string;
     executeButton: string;
     processing: string;
     executeConfirm: string;
@@ -556,6 +560,9 @@ export interface Translations {
     noAccountsToCloseDesc: string;
     selectPeriodHint: string;
     selectPeriodDesc: string;
+    retainedEarningsAlert: string;
+    executeFailed: string;
+    loadingData: string;
   };
 
   // Budget & Forecast
@@ -639,5 +646,84 @@ export interface Translations {
     debitAccount: string;
     creditAccount: string;
     legacyAccount: string;
+    // Badges & labels
+    stock: string;
+    draft: string;
+    posted: string;
+    // Name labels per category
+    nameLabelCustomer: string;
+    nameLabelVendor: string;
+    nameLabelTaxAuthority: string;
+    nameLabelRelatedParty: string;
+    nameLabelDefault: string;
+    // Fields
+    keterangan: string;
+    tanggal: string;
+    debit: string;
+    credit: string;
+    chartOfAccount: string;
+    incomingTo: string;
+    outgoingFrom: string;
+    // Unit breakdown
+    pricePerUnit: string;
+    quantity: string;
+    // Journal lines
+    journalLines: string;
+    account: string;
+    total: string;
+    // Attachment / Sold stock
+    attachment: string;
+    soldInventory: string;
+    // Receivable settlement
+    paidInFull: string;
+    paidInFullDesc: string;
+    partiallyPaid: string;
+    remaining: string;
+    paymentHistory: string;
+    partialPayment: string;
+    totalPaid: string;
+    settleFull: string;
+    settlePartial: string;
+    confirmFullSettlement: string;
+    processing: string;
+    yesSettle: string;
+    cancel: string;
+    partialRemaining: string;
+    partialAmountLabel: string;
+    enterPaymentAmount: string;
+    mustBeLessThan: string;
+    failedRecordPayment: string;
+    recordPayment: string;
+    // Related transactions
+    relatedInfo: string;
+    settlementFrom: string;
+    settledBy: string;
+    // Metadata
+    additionalInfo: string;
+    txId: string;
+    status: string;
+    createdBy: string;
+    createdAt: string;
+    lastUpdated: string;
+    updatedBy: string;
+    loadingName: string;
+    // Audit history
+    changeHistory: string;
+    loadingHistory: string;
+    noHistory: string;
+    opCreated: string;
+    opUpdated: string;
+    opDeleted: string;
+    by: string;
+    before: string;
+    after: string;
+    // Warning panel
+    cogsAmountHint: string;
+    createCogsEntry: string;
+    closeAria: string;
+    // Action buttons
+    postBtn: string;
+    editBtn: string;
+    deleteBtn: string;
   };
 }

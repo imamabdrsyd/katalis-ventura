@@ -54,14 +54,6 @@ const ACCOUNT_TYPE_BG: Record<string, string> = {
   EXPENSE: 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-300',
 };
 
-const ACCOUNT_TYPE_LABEL: Record<string, string> = {
-  ASSET: 'Aset',
-  LIABILITY: 'Liabilitas',
-  EQUITY: 'Ekuitas',
-  REVENUE: 'Pendapatan',
-  EXPENSE: 'Beban',
-};
-
 function isInventoryTransaction(transaction: Transaction): boolean {
   const debitCode = transaction.debit_account?.account_code || '';
   const debitName = transaction.debit_account?.account_name?.toLowerCase() || '';
@@ -70,47 +62,6 @@ function isInventoryTransaction(transaction: Transaction): boolean {
     debitName.includes('inventory') ||
     debitName.includes('persediaan')
   );
-}
-
-// Helper function to format account display based on transaction type
-function getAccountDisplay(transaction: Transaction): string {
-  // For double-entry transactions
-  if (transaction.is_double_entry && (transaction.debit_account || transaction.credit_account)) {
-    if (transaction.category === 'EARN') {
-      // For earnings, money comes into the bank (debit account)
-      const accountName = transaction.debit_account?.account_name || 'Unknown';
-      return `Masuk ke ${accountName}`;
-    } else {
-      // For expenses, money goes out from the bank (credit account)
-      const accountName = transaction.credit_account?.account_name || 'Unknown';
-      return `Keluar dari ${accountName}`;
-    }
-  }
-
-  // For legacy transactions
-  if (transaction.category === 'EARN') {
-    return `Masuk ke ${transaction.account}`;
-  } else {
-    return `Keluar dari ${transaction.account}`;
-  }
-}
-
-// Smart label for the "Nama" field based on transaction category
-function getNameLabel(category: string): string {
-  switch (category) {
-    case 'EARN':
-      return 'Customer';
-    case 'OPEX':
-    case 'VAR':
-    case 'CAPEX':
-      return 'Vendor';
-    case 'TAX':
-      return 'Instansi Pajak';
-    case 'FIN':
-      return 'Pihak Terkait';
-    default:
-      return 'Nama';
-  }
 }
 
 
@@ -132,6 +83,49 @@ export function TransactionDetailModal({
   onShowRelatedTransaction,
 }: TransactionDetailModalProps) {
   const { t } = useLanguage();
+
+  const ACCOUNT_TYPE_LABEL: Record<string, string> = {
+    ASSET: t.generalLedger.asset,
+    LIABILITY: t.generalLedger.liability,
+    EQUITY: t.generalLedger.equityLabel,
+    REVENUE: t.generalLedger.revenueLabel,
+    EXPENSE: t.generalLedger.expense,
+  };
+
+  const getNameLabel = (category: string): string => {
+    switch (category) {
+      case 'EARN':
+        return t.transactionDetail.nameLabelCustomer;
+      case 'OPEX':
+      case 'VAR':
+      case 'CAPEX':
+        return t.transactionDetail.nameLabelVendor;
+      case 'TAX':
+        return t.transactionDetail.nameLabelTaxAuthority;
+      case 'FIN':
+        return t.transactionDetail.nameLabelRelatedParty;
+      default:
+        return t.transactionDetail.nameLabelDefault;
+    }
+  };
+
+  const getAccountDisplay = (tx: Transaction): string => {
+    if (tx.is_double_entry && (tx.debit_account || tx.credit_account)) {
+      if (tx.category === 'EARN') {
+        const accountName = tx.debit_account?.account_name || 'Unknown';
+        return t.transactionDetail.incomingTo.replace('{account}', accountName);
+      } else {
+        const accountName = tx.credit_account?.account_name || 'Unknown';
+        return t.transactionDetail.outgoingFrom.replace('{account}', accountName);
+      }
+    }
+    if (tx.category === 'EARN') {
+      return t.transactionDetail.incomingTo.replace('{account}', tx.account || '');
+    } else {
+      return t.transactionDetail.outgoingFrom.replace('{account}', tx.account || '');
+    }
+  };
+
   const [creatorName, setCreatorName] = useState<string | null>(null);
   const [loadingCreator, setLoadingCreator] = useState(false);
   const [updaterName, setUpdaterName] = useState<string | null>(null);
@@ -299,7 +293,7 @@ export function TransactionDetailModal({
           className="btn-primary flex-1 flex items-center justify-center gap-2"
         >
           <CheckCircle2 className="w-4 h-4" />
-          Posting
+          {t.transactionDetail.postBtn}
         </button>
       )}
       {onEdit && (
@@ -318,7 +312,7 @@ export function TransactionDetailModal({
               d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
             />
           </svg>
-          Edit
+          {t.transactionDetail.editBtn}
         </button>
       )}
       {onDelete && (
@@ -337,14 +331,14 @@ export function TransactionDetailModal({
               d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
             />
           </svg>
-          Hapus
+          {t.transactionDetail.deleteBtn}
         </button>
       )}
     </div>
   ) : undefined;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Detail Transaksi" footer={actionButtons}>
+    <Modal isOpen={isOpen} onClose={onClose} title={t.transactionDetail.title} footer={actionButtons}>
       <div className="space-y-6">
         {/* Matching Principle Warning — expanded panel */}
         {showWarning && matchingWarning && warningExpanded && (
@@ -363,20 +357,20 @@ export function TransactionDetailModal({
                     {matchingWarning.journalHint}
                   </div>
                   <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 italic">
-                    Jumlah HPP mungkin berbeda dari nilai penjualan. Isi jumlah yang tepat pada form berikutnya.
+                    {t.transactionDetail.cogsAmountHint}
                   </p>
                   <button
                     onClick={handleCreateCOGSEntry}
                     className="mt-3 px-3 py-1.5 bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 text-white text-sm font-medium rounded-lg transition-colors"
                   >
-                    Buat Entry COGS
+                    {t.transactionDetail.createCogsEntry}
                   </button>
                 </div>
               </div>
               <button
                 onClick={() => setWarningExpanded(false)}
                 className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
-                aria-label="Tutup"
+                aria-label={t.transactionDetail.closeAria}
               >
                 <X className="w-4 h-4 text-gray-400 dark:text-gray-500" />
               </button>
@@ -389,7 +383,7 @@ export function TransactionDetailModal({
           <div className="flex items-center gap-2">
           {isInventoryTransaction(transaction) ? (
             <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${STOCK_COLOR}`}>
-              Stock
+              {t.transactionDetail.stock}
             </span>
           ) : (
             <div className="relative group inline-flex items-center gap-1.5">
@@ -413,14 +407,14 @@ export function TransactionDetailModal({
           )}
           {isDraft ? (
             <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">
-              DRAFT
+              {t.transactionDetail.draft.toUpperCase()}
             </span>
           ) : (
             <div className="relative group inline-flex items-center">
               <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 cursor-help" />
               <div className="absolute left-0 top-full mt-1.5 z-50 hidden group-hover:block whitespace-nowrap">
                 <div className="bg-gray-900 dark:bg-gray-700 text-white rounded-lg px-3 py-2 shadow-lg">
-                  <p className="text-xs font-semibold">POSTED</p>
+                  <p className="text-xs font-semibold">{t.transactionDetail.posted.toUpperCase()}</p>
                 </div>
               </div>
             </div>
@@ -450,14 +444,14 @@ export function TransactionDetailModal({
         {transaction.meta?.unit_breakdown && (
           <div className="flex items-center gap-3 px-3 py-2.5 bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg text-sm">
             <div className="flex items-center gap-1.5">
-              <span className="text-gray-500 dark:text-gray-400">Harga/unit:</span>
+              <span className="text-gray-500 dark:text-gray-400">{t.transactionDetail.pricePerUnit}</span>
               <span className="font-semibold text-gray-800 dark:text-gray-100">
                 Rp {transaction.meta.unit_breakdown.price_per_unit.toLocaleString('id-ID')}
               </span>
             </div>
             <span className="text-gray-300 dark:text-gray-600">&times;</span>
             <div className="flex items-center gap-1.5">
-              <span className="text-gray-500 dark:text-gray-400">Qty:</span>
+              <span className="text-gray-500 dark:text-gray-400">{t.transactionDetail.quantity}</span>
               <span className="font-semibold text-gray-800 dark:text-gray-100">
                 {transaction.meta.unit_breakdown.quantity.toLocaleString('id-ID')}
               </span>
@@ -484,7 +478,7 @@ export function TransactionDetailModal({
 
           <div>
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Keterangan
+              {t.transactionDetail.keterangan}
             </label>
             <div className="mt-1 flex items-start gap-2 flex-wrap">
               <p className="text-gray-700 dark:text-gray-300 flex-1 min-w-0">
@@ -568,7 +562,7 @@ export function TransactionDetailModal({
 
           <div>
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Tanggal
+              {t.transactionDetail.tanggal}
             </label>
             <p className="mt-1 text-gray-900 dark:text-gray-100">
               {formatDate(transaction.date)}
@@ -579,15 +573,15 @@ export function TransactionDetailModal({
           {transaction.is_multi_line && transaction.journal_lines && transaction.journal_lines.length > 0 ? (
             <div className="mt-4">
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">
-                Baris Jurnal
+                {t.transactionDetail.journalLines}
               </label>
               <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
-                      <th className="text-left px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">Akun</th>
-                      <th className="text-right px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 w-28">Debit</th>
-                      <th className="text-right px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 w-28">Kredit</th>
+                      <th className="text-left px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t.transactionDetail.account}</th>
+                      <th className="text-right px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 w-28">{t.transactionDetail.debit}</th>
+                      <th className="text-right px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 w-28">{t.transactionDetail.credit}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -615,7 +609,7 @@ export function TransactionDetailModal({
                   </tbody>
                   <tfoot>
                     <tr className="bg-gray-50 dark:bg-gray-800 font-semibold">
-                      <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">TOTAL</td>
+                      <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">{t.transactionDetail.total}</td>
                       <td className="px-3 py-2 text-right text-gray-900 dark:text-gray-100">
                         {formatCurrency(transaction.journal_lines.reduce((s, l) => s + l.debit_amount, 0))}
                       </td>
@@ -631,7 +625,7 @@ export function TransactionDetailModal({
             <div className="grid grid-cols-2 gap-4 mt-4">
               <div>
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Debit
+                  {t.transactionDetail.debit}
                 </label>
                 <div className="mt-1 flex items-center gap-1.5 mb-0.5">
                   {transaction.debit_account?.account_code && (
@@ -649,7 +643,7 @@ export function TransactionDetailModal({
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Credit
+                  {t.transactionDetail.credit}
                 </label>
                 <div className="mt-1 flex items-center gap-1.5 mb-0.5">
                   {transaction.credit_account?.account_code && (
@@ -669,7 +663,7 @@ export function TransactionDetailModal({
           ) : (
             <div className="mt-4">
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Chart of Account
+                {t.transactionDetail.chartOfAccount}
               </label>
               <p className="mt-1 text-gray-900 dark:text-gray-100">
                 {getAccountDisplay(transaction)}
@@ -682,7 +676,7 @@ export function TransactionDetailModal({
         {transaction.meta?.attachment && (
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
             <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-              Lampiran
+              {t.transactionDetail.attachment}
             </h4>
             {isImageType(transaction.meta.attachment.mime_type) ? (
               <a
@@ -734,7 +728,7 @@ export function TransactionDetailModal({
         {soldStockTransactions.length > 0 && (
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
             <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-              Persediaan yang Terjual
+              {t.transactionDetail.soldInventory}
             </h4>
             <div className="space-y-2">
               {soldStockTransactions.map((stock) => (
@@ -780,9 +774,9 @@ export function TransactionDetailModal({
                 <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-lg">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-300">LUNAS</p>
+                    <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-300">{t.transactionDetail.paidInFull}</p>
                     <p className="text-xs text-emerald-500 dark:text-emerald-400">
-                      Piutang telah dilunasi sepenuhnya
+                      {t.transactionDetail.paidInFullDesc}
                     </p>
                   </div>
                 </div>
@@ -791,9 +785,9 @@ export function TransactionDetailModal({
                   <div className="flex items-center gap-2">
                     <History className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">TERBAYAR SEBAGIAN</p>
+                      <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">{t.transactionDetail.partiallyPaid}</p>
                       <p className="text-xs text-amber-600 dark:text-amber-400">
-                        Sisa: <span className="font-semibold">{formatCurrency(outstanding)}</span>
+                        {t.transactionDetail.remaining} <span className="font-semibold">{formatCurrency(outstanding)}</span>
                       </p>
                     </div>
                   </div>
@@ -806,7 +800,7 @@ export function TransactionDetailModal({
                   <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700/50 flex items-center gap-1.5">
                     <History className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
                     <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                      Riwayat Pembayaran
+                      {t.transactionDetail.paymentHistory}
                     </span>
                   </div>
                   <div className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -816,7 +810,7 @@ export function TransactionDetailModal({
                         <div key={pt.id} className="flex items-center justify-between px-3 py-2.5">
                           <div>
                             <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(pt.date)}</p>
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{pt.description || 'Pelunasan sebagian'}</p>
+                            <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{pt.description || t.transactionDetail.partialPayment}</p>
                           </div>
                           <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                             +{formatCurrency(pt.amount)}
@@ -825,7 +819,7 @@ export function TransactionDetailModal({
                       ))}
                     {/* Running total paid */}
                     <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-700/50">
-                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Total terbayar</span>
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">{t.transactionDetail.totalPaid}</span>
                       <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
                         {formatCurrency(transaction.amount - outstanding)}
                       </span>
@@ -842,7 +836,7 @@ export function TransactionDetailModal({
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg transition-colors"
                   >
                     <Banknote className="w-4 h-4" />
-                    Lunasi Piutang
+                    {t.transactionDetail.settleFull}
                   </button>
                   {onPartialSettleReceivable && (
                     <button
@@ -850,7 +844,7 @@ export function TransactionDetailModal({
                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-400 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                     >
                       <ChevronDown className="w-4 h-4" />
-                      Bayar Sebagian
+                      {t.transactionDetail.settlePartial}
                     </button>
                   )}
                 </div>
@@ -860,7 +854,7 @@ export function TransactionDetailModal({
               {showSettleConfirm && (
                 <div className="rounded-lg border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 p-4 space-y-3">
                   <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                    Konfirmasi Pelunasan Penuh
+                    {t.transactionDetail.confirmFullSettlement}
                   </p>
                   <div className="px-3 py-2 bg-white dark:bg-gray-800 rounded-md font-mono text-xs text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
                     {(() => {
@@ -880,14 +874,14 @@ export function TransactionDetailModal({
                       disabled={settleLoading}
                       className="flex-1 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
                     >
-                      {settleLoading ? 'Memproses...' : 'Ya, Lunasi'}
+                      {settleLoading ? t.transactionDetail.processing : t.transactionDetail.yesSettle}
                     </button>
                     <button
                       onClick={() => setShowSettleConfirm(false)}
                       disabled={settleLoading}
                       className="flex-1 px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
                     >
-                      Batal
+                      {t.transactionDetail.cancel}
                     </button>
                   </div>
                 </div>
@@ -897,10 +891,10 @@ export function TransactionDetailModal({
               {showPartialInput && onPartialSettleReceivable && (
                 <div className="rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50/50 dark:bg-indigo-900/10 p-4 space-y-3">
                   <p className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">
-                    Bayar Sebagian — Sisa {formatCurrency(outstanding)}
+                    {t.transactionDetail.partialRemaining.replace('{amount}', formatCurrency(outstanding))}
                   </p>
                   <CurrencyInputWithCalculator
-                    label="Jumlah Pembayaran (Rp)"
+                    label={t.transactionDetail.partialAmountLabel}
                     value={partialAmount}
                     displayValue={partialDisplayAmount}
                     onChange={(num, fmt) => {
@@ -917,11 +911,11 @@ export function TransactionDetailModal({
                     <button
                       onClick={async () => {
                         if (partialAmount <= 0) {
-                          setPartialError('Masukkan jumlah pembayaran');
+                          setPartialError(t.transactionDetail.enterPaymentAmount);
                           return;
                         }
                         if (partialAmount >= outstanding) {
-                          setPartialError(`Jumlah harus kurang dari sisa piutang (${formatCurrency(outstanding)}). Gunakan "Lunasi Piutang" untuk pelunasan penuh.`);
+                          setPartialError(t.transactionDetail.mustBeLessThan.replace('{amount}', formatCurrency(outstanding)));
                           return;
                         }
                         setPartialLoading(true);
@@ -932,7 +926,7 @@ export function TransactionDetailModal({
                           setPartialAmount(0);
                           setPartialDisplayAmount('');
                         } catch (err: any) {
-                          setPartialError(err.message || 'Gagal mencatat pembayaran');
+                          setPartialError(err.message || t.transactionDetail.failedRecordPayment);
                         } finally {
                           setPartialLoading(false);
                         }
@@ -940,14 +934,14 @@ export function TransactionDetailModal({
                       disabled={partialLoading}
                       className="flex-1 px-3 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
                     >
-                      {partialLoading ? 'Memproses...' : 'Catat Pembayaran'}
+                      {partialLoading ? t.transactionDetail.processing : t.transactionDetail.recordPayment}
                     </button>
                     <button
                       onClick={() => { setShowPartialInput(false); setPartialError(''); }}
                       disabled={partialLoading}
                       className="flex-1 px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
                     >
-                      Batal
+                      {t.transactionDetail.cancel}
                     </button>
                   </div>
                 </div>
@@ -960,10 +954,10 @@ export function TransactionDetailModal({
         {/* Related Transaction Section */}
         {(() => {
           const settlementOf = transaction.meta?.settlement_of_transaction_id
-            ? allTransactions?.find(t => t.id === transaction.meta!.settlement_of_transaction_id)
+            ? allTransactions?.find(tx => tx.id === transaction.meta!.settlement_of_transaction_id)
             : null;
           const settledBy = transaction.meta?.settled_by_transaction_id
-            ? allTransactions?.find(t => t.id === transaction.meta!.settled_by_transaction_id)
+            ? allTransactions?.find(tx => tx.id === transaction.meta!.settled_by_transaction_id)
             : null;
 
           if (!settlementOf && !settledBy) return null;
@@ -971,7 +965,7 @@ export function TransactionDetailModal({
           return (
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                Informasi Terkait
+                {t.transactionDetail.relatedInfo}
               </h4>
               <div className="space-y-2">
                 {settlementOf && (

@@ -75,7 +75,7 @@ function ReconciliationPageInner() {
   if (!activeBusiness) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-gray-500 dark:text-gray-400">Pilih bisnis terlebih dahulu.</p>
+        <p className="text-gray-500 dark:text-gray-400">{t.common.selectBusinessFirst}</p>
       </div>
     );
   }
@@ -89,10 +89,10 @@ function ReconciliationPageInner() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
             <ArrowLeftRight className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
-            Rekonsiliasi Bank
+            {t.reconciliation.title}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Cocokkan saldo buku dengan saldo bank — {activeBusiness.business_name}
+            {t.reconciliation.subtitle.replace('{name}', activeBusiness.business_name)}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -120,7 +120,7 @@ function ReconciliationPageInner() {
           <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-1">{t.reconciliation.bookBalance}</p>
           <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(bookBalance)}</p>
           <p className="text-xs text-gray-500 mt-1">
-            {unreconciledTransactions.length + reconciledTransactions.length} transaksi kas/bank
+            {t.reconciliation.cashBankTransactions.replace('{n}', String(unreconciledTransactions.length + reconciledTransactions.length))}
           </p>
         </div>
 
@@ -131,10 +131,10 @@ function ReconciliationPageInner() {
             type="number"
             value={bankBalance}
             onChange={(e) => setBankBalance(e.target.value)}
-            placeholder="Masukkan saldo bank..."
+            placeholder={t.reconciliation.enterBankBalancePlaceholder}
             className="w-full text-xl font-bold bg-transparent border-none outline-none text-gray-900 dark:text-gray-100 placeholder:text-gray-300 dark:placeholder:text-gray-600"
           />
-          <p className="text-xs text-gray-500 mt-1">Dari rekening koran / mutasi bank</p>
+          <p className="text-xs text-gray-500 mt-1">{t.reconciliation.fromBankStatement}</p>
         </div>
 
         {/* Difference */}
@@ -151,7 +151,7 @@ function ReconciliationPageInner() {
             ) : (
               <AlertTriangle className="w-4 h-4 text-amber-500" />
             )}
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Selisih</p>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t.reconciliation.difference}</p>
           </div>
           <p className={`text-xl font-bold ${
             !bankBalance ? 'text-gray-400' :
@@ -161,7 +161,7 @@ function ReconciliationPageInner() {
             {bankBalance ? formatCurrency(difference) : '—'}
           </p>
           <p className="text-xs text-gray-500 mt-1">
-            {!bankBalance ? 'Masukkan saldo bank' : isBalanced ? 'Saldo cocok!' : 'Bank - Buku'}
+            {!bankBalance ? t.reconciliation.enterBankBalance : isBalanced ? t.reconciliation.balanceMatched : t.reconciliation.bankMinusBook}
           </p>
         </div>
       </div>
@@ -213,7 +213,7 @@ function ReconciliationPageInner() {
               className="flex items-center gap-2 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
             >
               <Check className="w-4 h-4" />
-              Cocokkan {selectedIds.size} transaksi ({formatCurrency(selectedAmount)})
+              {t.reconciliation.reconcileButton.replace('{n}', String(selectedIds.size)).replace('{amount}', formatCurrency(selectedAmount))}
             </button>
           )}
         </div>
@@ -224,7 +224,7 @@ function ReconciliationPageInner() {
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
               <ArrowLeftRight className="w-12 h-12 mx-auto mb-3 opacity-40" />
               <p className="font-medium">
-                {showReconciled ? 'Belum ada transaksi yang dicocokkan' : 'Semua transaksi sudah dicocokkan'}
+                {showReconciled ? t.reconciliation.noReconciled : t.reconciliation.allReconciled}
               </p>
             </div>
           ) : (
@@ -239,14 +239,14 @@ function ReconciliationPageInner() {
                   </button>
                 </div>
               )}
-              {displayedTransactions.map((t) => (
+              {displayedTransactions.map((tx) => (
                 <ReconciliationRow
-                  key={t.id}
-                  transaction={t}
-                  isSelected={selectedIds.has(t.id)}
+                  key={tx.id}
+                  transaction={tx}
+                  isSelected={selectedIds.has(tx.id)}
                   isReconciled={showReconciled}
-                  onToggle={() => toggleSelect(t.id)}
-                  onUnreconcile={() => unreconcile(t.id)}
+                  onToggle={() => toggleSelect(tx.id)}
+                  onUnreconcile={() => unreconcile(tx.id)}
                   saving={saving}
                 />
               ))}
@@ -259,7 +259,7 @@ function ReconciliationPageInner() {
 }
 
 function ReconciliationRow({
-  transaction: t,
+  transaction,
   isSelected,
   isReconciled,
   onToggle,
@@ -273,8 +273,9 @@ function ReconciliationRow({
   onUnreconcile: () => void;
   saving: boolean;
 }) {
-  const direction = getCashDirection(t);
-  const amount = Number(t.amount);
+  const { t, locale } = useLanguage();
+  const direction = getCashDirection(transaction);
+  const amount = Number(transaction.amount);
 
   return (
     <div
@@ -297,19 +298,19 @@ function ReconciliationRow({
       {/* Date */}
       <div className="w-24 flex-shrink-0">
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          {new Date(t.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+          {new Date(transaction.date).toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-US', { day: '2-digit', month: 'short', year: 'numeric' })}
         </p>
       </div>
 
       {/* Name & Description */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{t.name}</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{t.description}</p>
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{transaction.name}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{transaction.description}</p>
       </div>
 
       {/* Category */}
-      <span className={`text-xs font-medium ${t.meta?.settlement_of_transaction_id ? CATEGORY_COLORS['SETTLE'] : (CATEGORY_COLORS[t.category] || 'text-gray-500')}`}>
-        {t.meta?.settlement_of_transaction_id ? 'SETTLE' : t.category}
+      <span className={`text-xs font-medium ${transaction.meta?.settlement_of_transaction_id ? CATEGORY_COLORS['SETTLE'] : (CATEGORY_COLORS[transaction.category] || 'text-gray-500')}`}>
+        {transaction.meta?.settlement_of_transaction_id ? 'SETTLE' : transaction.category}
       </span>
 
       {/* Amount */}
@@ -325,7 +326,7 @@ function ReconciliationRow({
           onClick={(e) => { e.stopPropagation(); onUnreconcile(); }}
           disabled={saving}
           className="flex-shrink-0 p-1.5 text-gray-400 hover:text-amber-500 transition-colors disabled:opacity-50"
-          title="Batalkan rekonsiliasi"
+          title={t.reconciliation.cancelReconciliation}
         >
           <Undo2 className="w-4 h-4" />
         </button>

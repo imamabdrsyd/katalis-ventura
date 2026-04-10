@@ -57,12 +57,16 @@ function ClosingEntryPageInner() {
   const handleExecute = useCallback(async () => {
     if (!preview || !businessId || !user) return;
     if (!preview.retainedEarningsAccountId) {
-      alert('Akun Laba Ditahan (kode 3200) tidak ditemukan. Silakan buat akun ekuitas "Laba Ditahan" terlebih dahulu.');
+      alert(t.closingEntry.retainedEarningsAlert);
       return;
     }
 
     const confirmed = window.confirm(
-      `Anda akan membuat ${preview.revenueLines.length + preview.expenseLines.length} jurnal penutup untuk periode ${startDate} s/d ${endDate}. Laba bersih ${formatCurrency(preview.netIncome)} akan ditransfer ke Laba Ditahan. Lanjutkan?`
+      t.closingEntry.executeConfirm
+        .replace('{count}', String(preview.revenueLines.length + preview.expenseLines.length))
+        .replace('{start}', startDate)
+        .replace('{end}', endDate)
+        .replace('{amount}', formatCurrency(preview.netIncome))
     );
     if (!confirmed) return;
 
@@ -73,19 +77,19 @@ function ClosingEntryPageInner() {
       setPreview(null);
       queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
     } catch (err: any) {
-      alert(err.message || 'Gagal membuat jurnal penutup');
+      alert(err.message || t.closingEntry.executeFailed);
       setResult({ success: false, count: 0 });
     } finally {
       setExecuting(false);
     }
-  }, [preview, businessId, user, startDate, endDate, queryClient]);
+  }, [preview, businessId, user, startDate, endDate, queryClient, t]);
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">Memuat data...</p>
+          <p className="text-gray-500 dark:text-gray-400">{t.closingEntry.loadingData}</p>
         </div>
       </div>
     );
@@ -94,7 +98,7 @@ function ClosingEntryPageInner() {
   if (!activeBusiness) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-gray-500 dark:text-gray-400">Pilih bisnis terlebih dahulu.</p>
+        <p className="text-gray-500 dark:text-gray-400">{t.common.selectBusinessFirst}</p>
       </div>
     );
   }
@@ -105,10 +109,10 @@ function ClosingEntryPageInner() {
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
           <BookCheck className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
-          Tutup Buku
+          {t.closingEntry.title}
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Generate jurnal penutup otomatis — tutup akun Revenue & Expense ke Laba Ditahan
+          {t.closingEntry.subtitle}
         </p>
       </div>
 
@@ -116,11 +120,11 @@ function ClosingEntryPageInner() {
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 mb-6">
         <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
           <Calendar className="w-4 h-4" />
-          Periode Tutup Buku
+          {t.closingEntry.period}
         </h2>
         <div className="flex flex-wrap items-end gap-4">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Tanggal Mulai</label>
+            <label className="block text-xs text-gray-500 mb-1">{t.closingEntry.startDate}</label>
             <input
               type="date"
               value={startDate}
@@ -129,7 +133,7 @@ function ClosingEntryPageInner() {
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Tanggal Akhir</label>
+            <label className="block text-xs text-gray-500 mb-1">{t.closingEntry.endDate}</label>
             <input
               type="date"
               value={endDate}
@@ -152,9 +156,12 @@ function ClosingEntryPageInner() {
         <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-6 mb-6 flex items-center gap-3">
           <CheckCircle2 className="w-6 h-6 text-emerald-500 flex-shrink-0" />
           <div>
-            <p className="font-semibold text-emerald-700 dark:text-emerald-300">Buku berhasil ditutup!</p>
+            <p className="font-semibold text-emerald-700 dark:text-emerald-300">{t.closingEntry.success}</p>
             <p className="text-sm text-emerald-600 dark:text-emerald-400">
-              {result.count} jurnal penutup telah dibuat untuk periode {startDate} s/d {endDate}.
+              {t.closingEntry.successDesc
+                .replace('{count}', String(result.count))
+                .replace('{start}', startDate)
+                .replace('{end}', endDate)}
             </p>
           </div>
         </div>
@@ -168,9 +175,9 @@ function ClosingEntryPageInner() {
             <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium text-amber-700 dark:text-amber-300">Akun Laba Ditahan tidak ditemukan</p>
+                <p className="font-medium text-amber-700 dark:text-amber-300">{t.closingEntry.retainedEarningsNotFound}</p>
                 <p className="text-sm text-amber-600 dark:text-amber-400">
-                  Silakan buat akun Ekuitas dengan kode 3200 dan nama &quot;Laba Ditahan&quot; di Chart of Accounts terlebih dahulu.
+                  {t.closingEntry.retainedEarningsHint}
                 </p>
               </div>
             </div>
@@ -181,19 +188,19 @@ function ClosingEntryPageInner() {
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
               <p className="text-xs text-gray-500 uppercase mb-1">{t.closingEntry.totalRevenue}</p>
               <p className={`text-xl font-bold ${preview.totalRevenue === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{formatCurrency(preview.totalRevenue)}</p>
-              <p className="text-xs text-gray-500">{preview.revenueLines.length} akun</p>
+              <p className="text-xs text-gray-500">{t.closingEntry.accountsCount.replace('{n}', String(preview.revenueLines.length))}</p>
             </div>
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
               <p className="text-xs text-gray-500 uppercase mb-1">{t.closingEntry.totalExpense}</p>
               <p className={`text-xl font-bold ${preview.totalExpense === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-red-500 dark:text-red-400'}`}>{formatCurrency(preview.totalExpense)}</p>
-              <p className="text-xs text-gray-500">{preview.expenseLines.length} akun</p>
+              <p className="text-xs text-gray-500">{t.closingEntry.accountsCount.replace('{n}', String(preview.expenseLines.length))}</p>
             </div>
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-              <p className="text-xs text-gray-500 uppercase mb-1">Laba Bersih → Laba Ditahan</p>
+              <p className="text-xs text-gray-500 uppercase mb-1">{t.closingEntry.netIncomeToRetained}</p>
               <p className={`text-xl font-bold ${preview.netIncome === 0 ? 'text-gray-500 dark:text-gray-400' : preview.netIncome > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
                 {formatCurrency(preview.netIncome)}
               </p>
-              <p className="text-xs text-gray-500">{preview.netIncome >= 0 ? 'Laba' : 'Rugi'} periode ini</p>
+              <p className="text-xs text-gray-500">{preview.netIncome >= 0 ? t.closingEntry.profitLabel : t.closingEntry.lossLabel} {t.closingEntry.periodLabel}</p>
             </div>
           </div>
 
@@ -202,14 +209,14 @@ function ClosingEntryPageInner() {
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
               <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t.closingEntry.revenueClosing}</h3>
-                <p className="text-xs text-gray-500">Dr Pendapatan / Cr Laba Ditahan</p>
+                <p className="text-xs text-gray-500">{t.closingEntry.revenueClosingDesc}</p>
               </div>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 dark:border-gray-800 text-left">
-                    <th className="py-2 px-4 text-xs font-medium text-gray-500">Kode</th>
+                    <th className="py-2 px-4 text-xs font-medium text-gray-500">{t.closingEntry.accountCode}</th>
                     <th className="py-2 px-4 text-xs font-medium text-gray-500">{t.closingEntry.accountName}</th>
-                    <th className="py-2 px-4 text-xs font-medium text-gray-500 text-right">Jumlah</th>
+                    <th className="py-2 px-4 text-xs font-medium text-gray-500 text-right">{t.closingEntry.accountAmount}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -229,14 +236,14 @@ function ClosingEntryPageInner() {
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
               <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t.closingEntry.expenseClosing}</h3>
-                <p className="text-xs text-gray-500">Dr Laba Ditahan / Cr Beban</p>
+                <p className="text-xs text-gray-500">{t.closingEntry.expenseClosingDesc}</p>
               </div>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 dark:border-gray-800 text-left">
-                    <th className="py-2 px-4 text-xs font-medium text-gray-500">Kode</th>
+                    <th className="py-2 px-4 text-xs font-medium text-gray-500">{t.closingEntry.accountCode}</th>
                     <th className="py-2 px-4 text-xs font-medium text-gray-500">{t.closingEntry.accountName}</th>
-                    <th className="py-2 px-4 text-xs font-medium text-gray-500 text-right">Jumlah</th>
+                    <th className="py-2 px-4 text-xs font-medium text-gray-500 text-right">{t.closingEntry.accountAmount}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -268,7 +275,7 @@ function ClosingEntryPageInner() {
                 ) : (
                   <>
                     <ArrowRight className="w-4 h-4" />
-                    Tutup Buku ({preview.revenueLines.length + preview.expenseLines.length} jurnal)
+                    {t.closingEntry.executeButton.replace('{n}', String(preview.revenueLines.length + preview.expenseLines.length))}
                   </>
                 )}
               </button>
@@ -279,9 +286,9 @@ function ClosingEntryPageInner() {
           {preview.revenueLines.length === 0 && preview.expenseLines.length === 0 && (
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-12 text-center">
               <BookCheck className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-              <p className="font-medium text-gray-500 dark:text-gray-400">Tidak ada akun untuk ditutup</p>
+              <p className="font-medium text-gray-500 dark:text-gray-400">{t.closingEntry.noAccountsToClose}</p>
               <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-                Tidak ada transaksi Revenue atau Expense di periode ini, atau buku sudah ditutup.
+                {t.closingEntry.noAccountsToCloseDesc}
               </p>
             </div>
           )}
@@ -292,9 +299,9 @@ function ClosingEntryPageInner() {
       {!preview && !result && (
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-12 text-center">
           <BookCheck className="w-16 h-16 mx-auto mb-4 text-gray-200 dark:text-gray-700" />
-          <p className="text-gray-500 dark:text-gray-400 font-medium">Pilih periode dan klik &quot;Preview&quot;</p>
+          <p className="text-gray-500 dark:text-gray-400 font-medium">{t.closingEntry.selectPeriodHint}</p>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-            Sistem akan menghitung saldo Revenue & Expense yang perlu ditutup ke Laba Ditahan.
+            {t.closingEntry.selectPeriodDesc}
           </p>
         </div>
       )}
