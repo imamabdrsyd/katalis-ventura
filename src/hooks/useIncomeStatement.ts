@@ -1,10 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useBusinessContext } from '@/context/BusinessContext';
 import { useReportData } from './useReportData';
 import { calculateFinancialSummary, calculateIncomeStatementMetrics, applyDepreciationToSummary, extractIncomeStatementLineItems } from '@/lib/calculations';
 import { calculateDepreciationSummary } from '@/lib/accounting/depreciation';
 import * as accountsApi from '@/lib/api/accounts';
+import {
+  upsertFinancialCache,
+  type IncomeStatementPayload,
+} from '@/lib/api/financialCache';
 import type { Transaction, Account } from '@/types';
 import type { IncomeStatementLineItems } from '@/lib/calculations';
 
@@ -28,6 +33,7 @@ export interface UseIncomeStatementReturn extends ReturnType<typeof useReportDat
 export function useIncomeStatement(): UseIncomeStatementReturn {
   const reportData = useReportData();
   const { activeBusiness, transactions, filteredTransactions, startDate, endDate, setShowExportMenu } = reportData;
+  const { user } = useBusinessContext();
 
   // Fetch accounts for depreciation calculation
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -103,6 +109,36 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
       )
     ),
   }), [filteredTransactions]);
+
+  // Write-through cache: simpan hasil income statement ke DB setelah compute.
+  // Di-key oleh business_id + period, sehingga laporan yang sama bisa di-load
+  // ulang dari cache tanpa recompute dari raw transactions.
+  useEffect(() => {
+    if (!activeBusiness || !user || !startDate || !endDate) return;
+    if (filteredTransactions.length === 0) return;
+
+    const payload: IncomeStatementPayload = { summary, metrics };
+
+    upsertFinancialCache({
+      businessId: activeBusiness.id,
+      cacheType: 'income_statement',
+      periodStart: startDate,
+      periodEnd: endDate,
+      payload,
+      transactionCount: filteredTransactions.length,
+      computedBy: user.id,
+    }).catch((err) =>
+      console.error('[useIncomeStatement] Failed to persist cache:', err)
+    );
+  }, [
+    activeBusiness,
+    user,
+    startDate,
+    endDate,
+    filteredTransactions.length,
+    summary,
+    metrics,
+  ]);
 
   const handleExportPDF = useCallback(async () => {
     if (!activeBusiness) return;

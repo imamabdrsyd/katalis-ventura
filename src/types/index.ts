@@ -199,6 +199,9 @@ export interface Transaction {
   reconciled_at?: string | null;
   reconciled_by?: string | null;
 
+  // Import batch (diisi saat dibuat via bulk import)
+  import_batch_id?: string | null;
+
   // Audit trail fields
   updated_by?: string;
   deleted_at?: string | null;

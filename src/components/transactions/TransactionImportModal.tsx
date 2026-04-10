@@ -7,6 +7,11 @@ import { validateRows, validateRowsSmart, sanitizeAmount, sanitizeText } from '@
 import { downloadTemplate, downloadSmartTemplate, downloadErrorReport } from '@/lib/import/templateGenerator';
 import { smartResolveTransaction, type SmartResolveResult } from '@/lib/import/smartResolver';
 import { createTransactionsBulk, type TransactionInsert } from '@/lib/api/transactions';
+import {
+  createImportBatch,
+  finalizeImportBatch,
+  type ImportBatchError,
+} from '@/lib/api/importBatches';
 import { getAccounts } from '@/lib/api/accounts';
 import type { ParsedRow, ValidationResult, ImportProgress, SmartResolvedRow, ImportMode } from '@/lib/import/types';
 import type { Account, TransactionCategory } from '@/types';
@@ -272,6 +277,25 @@ export default function TransactionImportModal({
     setImporting(true);
     const importedAt = new Date().toISOString();
 
+    // Buat import batch record dulu (status 'pending')
+    let batchId: string | null = null;
+    try {
+      const batch = await createImportBatch({
+        business_id: businessId,
+        imported_by: userId,
+        file_name: file?.name || 'unknown.xlsx',
+        file_size: file?.size,
+        mime_type: file?.type || undefined,
+        import_mode: 'smart',
+        total_rows: smartRows.length,
+      });
+      batchId = batch.id;
+    } catch (err) {
+      // Jangan blokir import kalau batch record gagal dibuat —
+      // user tetap bisa import, tapi tanpa history tracking.
+      console.error('Failed to create import batch:', err);
+    }
+
     try {
       setProgress({
         stage: 'importing',
@@ -303,6 +327,10 @@ export default function TransactionImportModal({
           amount: sanitizeAmount(row.amount),
           account: isDoubleEntry ? (debitAccount?.account_name || '') : '',
         };
+
+        if (batchId) {
+          transaction.import_batch_id = batchId;
+        }
 
         if (isDoubleEntry) {
           transaction.debit_account_id = debitAccount!.id;
@@ -336,6 +364,23 @@ export default function TransactionImportModal({
         });
       });
 
+      // Finalize batch status (best-effort, tidak mengganggu alur utama)
+      if (batchId) {
+        const batchErrors: ImportBatchError[] = result.errors.map((msg) => ({ message: msg }));
+        const batchStatus = result.success
+          ? 'success'
+          : result.inserted > 0
+          ? 'partial'
+          : 'failed';
+        finalizeImportBatch({
+          id: batchId,
+          inserted_count: result.inserted,
+          failed_count: result.failed,
+          errors: batchErrors,
+          status: batchStatus,
+        }).catch((err) => console.error('Failed to finalize import batch:', err));
+      }
+
       if (result.success) {
         setProgress({
           stage: 'success',
@@ -360,6 +405,16 @@ export default function TransactionImportModal({
         setImporting(false);
       }
     } catch (error) {
+      // Finalize batch sebagai failed jika ada exception
+      if (batchId) {
+        finalizeImportBatch({
+          id: batchId,
+          inserted_count: 0,
+          failed_count: smartRows.length,
+          errors: [{ message: error instanceof Error ? error.message : 'Import failed' }],
+          status: 'failed',
+        }).catch((err) => console.error('Failed to finalize import batch:', err));
+      }
       setProgress({
         stage: 'error',
         current: 0,
@@ -376,6 +431,23 @@ export default function TransactionImportModal({
 
     setImporting(true);
     const importedAt = new Date().toISOString();
+
+    // Buat import batch record dulu (status 'pending')
+    let batchId: string | null = null;
+    try {
+      const batch = await createImportBatch({
+        business_id: businessId,
+        imported_by: userId,
+        file_name: file?.name || 'unknown.xlsx',
+        file_size: file?.size,
+        mime_type: file?.type || undefined,
+        import_mode: 'full',
+        total_rows: validationResult.validCount,
+      });
+      batchId = batch.id;
+    } catch (err) {
+      console.error('Failed to create import batch:', err);
+    }
 
     try {
       setProgress({
@@ -409,6 +481,10 @@ export default function TransactionImportModal({
           account: sanitizeText(String(row.data.account)),
         };
 
+        if (batchId) {
+          transaction.import_batch_id = batchId;
+        }
+
         if (isDoubleEntry) {
           transaction.debit_account_id = debitAccount!.id;
           transaction.credit_account_id = creditAccount!.id;
@@ -427,6 +503,23 @@ export default function TransactionImportModal({
           message: `Importing row ${current}/${total}...`,
         });
       });
+
+      // Finalize batch status (best-effort)
+      if (batchId) {
+        const batchErrors: ImportBatchError[] = result.errors.map((msg) => ({ message: msg }));
+        const batchStatus = result.success
+          ? 'success'
+          : result.inserted > 0
+          ? 'partial'
+          : 'failed';
+        finalizeImportBatch({
+          id: batchId,
+          inserted_count: result.inserted,
+          failed_count: result.failed,
+          errors: batchErrors,
+          status: batchStatus,
+        }).catch((err) => console.error('Failed to finalize import batch:', err));
+      }
 
       if (result.success) {
         setProgress({
@@ -452,6 +545,16 @@ export default function TransactionImportModal({
         setImporting(false);
       }
     } catch (error) {
+      // Finalize batch sebagai failed jika ada exception
+      if (batchId) {
+        finalizeImportBatch({
+          id: batchId,
+          inserted_count: 0,
+          failed_count: validationResult?.validCount ?? 0,
+          errors: [{ message: error instanceof Error ? error.message : 'Import failed' }],
+          status: 'failed',
+        }).catch((err) => console.error('Failed to finalize import batch:', err));
+      }
       setProgress({
         stage: 'error',
         current: 0,
