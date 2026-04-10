@@ -210,7 +210,7 @@ function ReconciliationPageInner() {
             <button
               onClick={reconcileSelected}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
             >
               <Check className="w-4 h-4" />
               Cocokkan {selectedIds.size} transaksi ({formatCurrency(selectedAmount)})
