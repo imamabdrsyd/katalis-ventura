@@ -165,6 +165,7 @@ export interface JournalLineInput {
 
 export interface Transaction {
   id: string;
+  transaction_number?: string | null;
   business_id: string;
   date: string;
   category: TransactionCategory;

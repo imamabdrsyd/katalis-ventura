@@ -340,7 +340,21 @@ export function TransactionDetailModal({
   ) : undefined;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={t.transactionDetail.title} footer={actionButtons}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={
+        <div>
+          <div>{t.transactionDetail.title}</div>
+          {transaction.transaction_number && (
+            <div className="text-xs font-mono font-normal text-gray-400 dark:text-gray-500 mt-0.5">
+              #{transaction.transaction_number}
+            </div>
+          )}
+        </div>
+      }
+      footer={actionButtons}
+    >
       <div className="space-y-6">
         {/* Matching Principle Warning — expanded panel */}
         {showWarning && matchingWarning && warningExpanded && (
@@ -1027,9 +1041,9 @@ export function TransactionDetailModal({
           </h4>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500 dark:text-gray-400">ID Transaksi</span>
+              <span className="text-gray-500 dark:text-gray-400">No. Transaksi</span>
               <span className="text-gray-700 dark:text-gray-300 font-mono text-xs">
-                {transaction.id.slice(0, 8)}...
+                {transaction.transaction_number ?? `${transaction.id.slice(0, 8)}...`}
               </span>
             </div>
             <div className="flex justify-between">
