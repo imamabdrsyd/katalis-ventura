@@ -10,7 +10,7 @@ import { getProfileName } from '@/lib/api/profiles';
 import { getRecordAuditHistory, getFieldChanges, formatFieldName, formatAuditValue } from '@/lib/api/audit';
 import { detectMatchingPrincipleWarning, isReceivableTransaction, isSettled, isPartiallySettled, getOutstandingAmount, getPartialSettlementIds } from '@/lib/accounting/guidance';
 import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
-import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon } from 'lucide-react';
+import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { updateTransaction } from '@/lib/api/transactions';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
@@ -33,6 +33,10 @@ interface TransactionDetailModalProps {
   settleLoading?: boolean;
   onShowRelatedTransaction?: (transaction: Transaction) => void;
   contacts?: Contact[];
+  onNavigatePrev?: () => void;
+  onNavigateNext?: () => void;
+  hasPrev?: boolean;
+  hasNext?: boolean;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -83,6 +87,10 @@ export function TransactionDetailModal({
   settleLoading = false,
   onShowRelatedTransaction,
   contacts,
+  onNavigatePrev,
+  onNavigateNext,
+  hasPrev = false,
+  hasNext = false,
 }: TransactionDetailModalProps) {
   const { t } = useLanguage();
 
@@ -211,6 +219,22 @@ export function TransactionDetailModal({
     setWarningDismissed(false);
     setWarningExpanded(false);
   }, [transaction?.id]);
+
+  // Keyboard navigation: ArrowLeft = prev, ArrowRight = next
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft' && hasPrev && onNavigatePrev) {
+        e.preventDefault();
+        onNavigatePrev();
+      } else if (e.key === 'ArrowRight' && hasNext && onNavigateNext) {
+        e.preventDefault();
+        onNavigateNext();
+      }
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [isOpen, hasPrev, hasNext, onNavigatePrev, onNavigateNext]);
 
   // Matching Principle warning detection
   const matchingWarning = useMemo(() => {
@@ -344,13 +368,35 @@ export function TransactionDetailModal({
       isOpen={isOpen}
       onClose={onClose}
       title={
-        <div>
-          <div>{t.transactionDetail.title}</div>
-          {transaction.transaction_number && (
-            <div className="text-xs font-mono font-normal text-gray-400 dark:text-gray-500 mt-0.5">
-              #{transaction.transaction_number}
+        <div className="flex items-center gap-3">
+          {(onNavigatePrev || onNavigateNext) && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={onNavigatePrev}
+                disabled={!hasPrev}
+                className="p-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+                title="Transaksi sebelumnya (←)"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={onNavigateNext}
+                disabled={!hasNext}
+                className="p-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+                title="Transaksi berikutnya (→)"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           )}
+          <div>
+            <div>{t.transactionDetail.title}</div>
+            {transaction.transaction_number && (
+              <div className="text-xs font-mono font-normal text-gray-400 dark:text-gray-500 mt-0.5">
+                #{transaction.transaction_number}
+              </div>
+            )}
+          </div>
         </div>
       }
       footer={actionButtons}

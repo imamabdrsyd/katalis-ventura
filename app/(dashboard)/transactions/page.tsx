@@ -103,6 +103,18 @@ function TransactionsPageInner() {
     handleOpenOutModal,
   } = useTransactions();
 
+  // Navigation between transactions in detail modal
+  const detailIndex = useMemo(
+    () => visibleTransactions.findIndex((t) => t.id === detailTransaction?.id),
+    [visibleTransactions, detailTransaction]
+  );
+  const handleNavigatePrev = useCallback(() => {
+    if (detailIndex > 0) setDetailTransaction(visibleTransactions[detailIndex - 1]);
+  }, [detailIndex, visibleTransactions, setDetailTransaction]);
+  const handleNavigateNext = useCallback(() => {
+    if (detailIndex < visibleTransactions.length - 1) setDetailTransaction(visibleTransactions[detailIndex + 1]);
+  }, [detailIndex, visibleTransactions, setDetailTransaction]);
+
   // Recurring transactions
   const {
     recurringList,
@@ -636,6 +648,10 @@ function TransactionsPageInner() {
         settleLoading={saving}
         onShowRelatedTransaction={setDetailTransaction}
         contacts={contacts}
+        onNavigatePrev={handleNavigatePrev}
+        onNavigateNext={handleNavigateNext}
+        hasPrev={detailIndex > 0}
+        hasNext={detailIndex < visibleTransactions.length - 1}
       />
 
       {/* Delete Confirmation */}
