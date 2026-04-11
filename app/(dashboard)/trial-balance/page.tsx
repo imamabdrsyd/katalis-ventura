@@ -159,10 +159,10 @@ function TrialBalancePageInner() {
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   {t.trialBalance.accountName}
                 </th>
-                <th className="text-right py-3 px-4 text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider w-36">
+                <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-36">
                   {t.generalLedger.debit}
                 </th>
-                <th className="text-right py-3 px-4 text-xs font-semibold text-red-500 dark:text-red-400 uppercase tracking-wider w-36">
+                <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-36">
                   {t.generalLedger.credit}
                 </th>
               </tr>
@@ -199,7 +199,7 @@ function TrialBalancePageInner() {
                         </td>
                         <td className="py-2.5 px-4 text-right text-sm font-medium">
                           {row.debitBalance > 0 ? (
-                            <span className="text-blue-600 dark:text-blue-400">
+                            <span className="text-gray-700 dark:text-gray-300">
                               {formatCurrency(row.debitBalance)}
                             </span>
                           ) : (
@@ -208,7 +208,7 @@ function TrialBalancePageInner() {
                         </td>
                         <td className="py-2.5 px-4 text-right text-sm font-medium">
                           {row.creditBalance > 0 ? (
-                            <span className="text-red-500 dark:text-red-400">
+                            <span className="text-gray-700 dark:text-gray-300">
                               {formatCurrency(row.creditBalance)}
                             </span>
                           ) : (
@@ -229,10 +229,10 @@ function TrialBalancePageInner() {
                   <td colSpan={2} className="py-3 px-4 text-sm font-bold text-gray-700 dark:text-gray-300">
                     TOTAL
                   </td>
-                  <td className="py-3 px-4 text-right text-sm font-bold text-blue-700 dark:text-blue-300">
+                  <td className="py-3 px-4 text-right text-sm font-bold text-gray-700 dark:text-gray-300">
                     {formatCurrency(trialBalance.totalDebits)}
                   </td>
-                  <td className="py-3 px-4 text-right text-sm font-bold text-red-500 dark:text-red-300">
+                  <td className="py-3 px-4 text-right text-sm font-bold text-gray-700 dark:text-gray-300">
                     {formatCurrency(trialBalance.totalCredits)}
                   </td>
                 </tr>
