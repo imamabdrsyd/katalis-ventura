@@ -101,6 +101,7 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
   const [editingContact, setEditingContact] = useState<ContactType | null>(null);
   const [formData, setFormData] = useState<ContactFormData>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [savingStep, setSavingStep] = useState<'idle' | 'saving' | 'syncing'>('idle');
   const [formError, setFormError] = useState('');
 
   // Delete state
@@ -183,6 +184,7 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
     }
 
     setSaving(true);
+    setSavingStep('saving');
     setFormError('');
     try {
       if (editingContact) {
@@ -200,8 +202,8 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
         });
 
         if (nameChanged) {
-          // Client-side sync: update transactions.name yang masih pakai nama lama.
-          // Belt-and-suspenders selain DB trigger — memastikan sinkron meski trigger gagal.
+          // Fase 2: sync nama ke transaksi
+          setSavingStep('syncing');
           await contactsApi.syncContactNameInTransactions(businessId, oldName, newName);
         }
 
@@ -243,6 +245,7 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
       }
     } finally {
       setSaving(false);
+      setSavingStep('idle');
     }
   };
 
@@ -700,6 +703,25 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
             <p className="text-sm text-red-500 dark:text-red-400">{formError}</p>
           )}
 
+          {/* Progress indicator saat saving */}
+          {saving && (
+            <div className="flex items-center gap-3 px-3 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
+              <Loader2 className="w-4 h-4 text-indigo-500 animate-spin flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-indigo-700 dark:text-indigo-300">
+                  {savingStep === 'syncing'
+                    ? 'Menyinkronkan ke transaksi...'
+                    : 'Menyimpan kontak...'}
+                </p>
+                {savingStep === 'syncing' && (
+                  <p className="text-[10px] text-indigo-500 dark:text-indigo-400 mt-0.5">
+                    Memperbarui nama di semua transaksi terkait
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-3 pt-2">
             <button
               onClick={() => setShowForm(false)}
@@ -710,10 +732,13 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
             </button>
             <button
               onClick={handleSave}
-              className="btn-primary flex-1"
+              className="btn-primary flex-1 flex items-center justify-center gap-2"
               disabled={saving}
             >
-              {saving ? 'Menyimpan...' : editingContact ? 'Simpan' : 'Tambah'}
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+              {saving
+                ? savingStep === 'syncing' ? 'Menyinkronkan...' : 'Menyimpan...'
+                : editingContact ? 'Simpan' : 'Tambah'}
             </button>
           </div>
         </div>
