@@ -261,7 +261,9 @@ export function useGeneralLedger(): UseGeneralLedgerReturn {
         const subAccounts = data.filter((a) => a.parent_account_id != null);
         setAccounts(subAccounts);
         if (subAccounts.length > 0) {
-          setSelectedAccountId(subAccounts[0].id);
+          // Default ke akun Bank (1200), fallback ke akun pertama
+          const bankAccount = subAccounts.find((a) => a.account_code === '1200');
+          setSelectedAccountId((bankAccount ?? subAccounts[0]).id);
         }
       })
       .catch(console.error)
