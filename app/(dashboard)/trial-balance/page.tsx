@@ -10,10 +10,10 @@ import type { AccountType } from '@/types';
 
 const ACCOUNT_TYPE_BG: Record<AccountType, string> = {
   ASSET: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300',
-  LIABILITY: 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-300',
+  LIABILITY: 'bg-amber-50 dark:bg-amber-900/20 text-amber-500 dark:text-amber-300',
   EQUITY: 'bg-purple-50 dark:bg-purple-900/20 text-purple-500 dark:text-purple-300',
   REVENUE: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300',
-  EXPENSE: 'bg-amber-50 dark:bg-amber-900/20 text-amber-500 dark:text-amber-300',
+  EXPENSE: 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-300',
 };
 
 function TrialBalancePageInner() {
