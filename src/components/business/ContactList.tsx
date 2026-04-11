@@ -186,14 +186,41 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
     setFormError('');
     try {
       if (editingContact) {
+        const oldName = editingContact.name;
+        const newName = formData.name.trim();
+        const nameChanged = oldName.toLowerCase() !== newName.toLowerCase();
+
         await contactsApi.updateContact(editingContact.id, {
-          name: formData.name.trim(),
+          name: newName,
           type: formData.type,
           phone: formData.phone.trim() || null,
           email: formData.email.trim() || null,
           address: formData.address.trim() || null,
           notes: formData.notes.trim() || null,
         });
+
+        if (nameChanged) {
+          // Client-side sync: update transactions.name yang masih pakai nama lama.
+          // Belt-and-suspenders selain DB trigger — memastikan sinkron meski trigger gagal.
+          await contactsApi.syncContactNameInTransactions(businessId, oldName, newName);
+        }
+
+        // Update selectedContact state agar panel tidak stale
+        if (selectedContact?.id === editingContact.id) {
+          const updatedContact = { ...selectedContact, name: newName, type: formData.type };
+          setSelectedContact(updatedContact);
+
+          if (nameChanged) {
+            // Re-fetch transaksi dengan nama baru
+            setLoadingTransactions(true);
+            try {
+              const txns = await contactsApi.getContactTransactions(businessId, newName);
+              setContactTransactions(txns);
+            } finally {
+              setLoadingTransactions(false);
+            }
+          }
+        }
       } else {
         await contactsApi.createContact({
           business_id: businessId,

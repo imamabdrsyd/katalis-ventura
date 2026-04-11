@@ -62,6 +62,25 @@ export async function createContact(contact: ContactInsert): Promise<Contact> {
   return data as Contact;
 }
 
+/**
+ * Sync nama kontak ke transactions.name secara client-side.
+ * Dipanggil setelah updateContact jika nama berubah — belt-and-suspenders
+ * selain DB trigger 043_sync_contact_rename_to_transactions.
+ */
+export async function syncContactNameInTransactions(
+  businessId: string,
+  oldName: string,
+  newName: string
+): Promise<void> {
+  const supabase = createClient();
+  await supabase
+    .from('transactions')
+    .update({ name: newName })
+    .eq('business_id', businessId)
+    .ilike('name', oldName)
+    .is('deleted_at', null);
+}
+
 /** Update kontak */
 export async function updateContact(contactId: string, updates: ContactUpdate): Promise<Contact> {
   const supabase = createClient();
