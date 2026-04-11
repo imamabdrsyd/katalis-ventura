@@ -350,7 +350,7 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
           </div>
         ) : (
           /* Contact list */
-          <div className="space-y-2">
+          <div className="overflow-y-auto max-h-[calc(100vh-280px)] space-y-2 pr-1">
             {filteredContacts.map((contact) => {
               const typeConfig = CONTACT_TYPE_CONFIG[contact.type];
               const isSelected = selectedContact?.id === contact.id;
