@@ -39,6 +39,15 @@ const BADGE_CLASSES: Record<TransactionCategory, string> = {
   FIN: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
 };
 
+const CATEGORY_DOT: Record<TransactionCategory, string> = {
+  EARN: 'bg-emerald-500',
+  OPEX: 'bg-red-500',
+  VAR: 'bg-pink-500',
+  CAPEX: 'bg-blue-500',
+  TAX: 'bg-yellow-500',
+  FIN: 'bg-indigo-500',
+};
+
 const SETTLE_BADGE_CLASS = 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400';
 
 const STOCK_BADGE_CLASS = 'bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400';
@@ -245,10 +254,12 @@ export function TransactionList({
                       <button
                         key={cat}
                         onClick={() => { onCategoryFilterChange?.(cat); setShowCategoryDropdown(false); }}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${categoryFilter === cat ? 'text-indigo-500 dark:text-indigo-400 font-medium' : 'text-gray-700 dark:text-gray-300'}`}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 ${categoryFilter === cat ? 'font-semibold' : 'text-gray-700 dark:text-gray-300'}`}
                       >
-                        <span className={`inline-block w-2 h-2 rounded-full mr-2 ${BADGE_CLASSES[cat].split(' ')[0]}`}></span>
-                        {cat}
+                        <span className={`inline-block w-2.5 h-2.5 rounded-full flex-shrink-0 ${CATEGORY_DOT[cat]}`}></span>
+                        <span className={categoryFilter === cat ? BADGE_CLASSES[cat].split(' ').filter(c => c.startsWith('text-')).join(' ') : ''}>
+                          {cat}
+                        </span>
                       </button>
                     ))}
                   </div>
