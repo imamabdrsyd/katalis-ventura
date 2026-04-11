@@ -83,6 +83,56 @@ export function formatBusinessList(businesses: { id: string; business_name: stri
   return `🏢 *Daftar Bisnis Kamu*\n\n${lines.join('\n')}\n\nBalas dengan nomor untuk ganti bisnis aktif.`;
 }
 
+export interface TransactionListItem {
+  name: string;
+  description: string | null;
+  amount: number;
+  category: TransactionCategory;
+  status: string;
+}
+
+export function formatTransactionList(
+  items: TransactionListItem[],
+  dateLabel: string,
+  dateStr: string,
+  businessName: string
+): string {
+  if (items.length === 0) {
+    return `📋 *Transaksi ${dateLabel}* (${dateStr})\n🏢 ${businessName}\n\n_Tidak ada transaksi pada tanggal ini._`;
+  }
+
+  const lines = items.map((tx, i) => {
+    const emoji = CATEGORY_EMOJI[tx.category];
+    const desc = tx.description && tx.description !== 'Via Telegram Bot' && tx.description !== tx.name
+      ? tx.description
+      : tx.name;
+    const statusIcon = tx.status === 'draft' ? ' 📝' : '';
+    return `${i + 1}. ${emoji} ${desc}\n   ${formatRupiah(tx.amount)} — ${tx.category}${statusIcon}`;
+  });
+
+  let totalIn = 0;
+  let totalOut = 0;
+  for (const tx of items) {
+    if (tx.category === 'EARN') totalIn += tx.amount;
+    else if (['OPEX', 'VAR', 'TAX'].includes(tx.category)) totalOut += tx.amount;
+  }
+
+  const net = totalIn - totalOut;
+  const netSign = net >= 0 ? '+' : '';
+
+  return `📋 *Transaksi ${dateLabel}* (${dateStr})
+🏢 ${businessName}
+
+${lines.join('\n')}
+
+━━━━━━━━━━━━━━━
+💰 Masuk:   ${formatRupiah(totalIn)}
+📤 Keluar:  ${formatRupiah(totalOut)}
+*Net:       ${netSign}${formatRupiah(net)}*
+
+_📝 = draft_`;
+}
+
 export function formatHelp(): string {
   return `🤖 *AXION Bot — Cara Pakai*
 
@@ -92,6 +142,15 @@ Cukup ketik deskripsi + jumlah, contoh:
   \`bayar gaji 2jt\`
   \`beli bahan 500rb\`
   \`bayar pajak 1.5jt\`
+
+*Lihat Transaksi:*
+  \`lihat transaksi hari ini\`
+  \`lihat transaksi kemarin\`
+  \`lihat transaksi 10 april\`
+  \`lihat transaksi 10/04/2026\`
+
+*Koreksi Kategori:*
+Saat konfirmasi, balas \`OPEX\` atau \`VAR\` untuk mengubah kategori.
 
 *Perintah:*
 /saldo — Lihat ringkasan keuangan

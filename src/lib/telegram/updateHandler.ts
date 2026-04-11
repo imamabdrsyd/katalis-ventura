@@ -8,10 +8,12 @@ import {
   handleHelpCommand,
 } from './commands';
 import { parseTransactionMessage } from './parser';
+import { parseDateFromText, isListTransactionIntent } from './dateParser';
 import {
   formatTransactionConfirmation,
   formatTransactionSaved,
-  formatHelp,
+  formatTransactionList,
+  TransactionListItem,
 } from './formatter';
 import { TelegramUpdate, ParsedTransaction } from './types';
 
@@ -133,6 +135,21 @@ async function handleTransactionMessage(chatId: number, text: string): Promise<v
     return;
   }
 
+  // Deteksi intent "lihat transaksi [tanggal]"
+  if (isListTransactionIntent(text)) {
+    const parsedDate = parseDateFromText(text);
+    if (!parsedDate) {
+      await sendMessage(
+        chatId,
+        `Tanggal tidak dikenal. Coba:\n\`lihat transaksi kemarin\`\n\`lihat transaksi hari ini\`\n\`lihat transaksi 10 april\`\n\`lihat transaksi 10/04/2026\``,
+        { parse_mode: 'Markdown' }
+      );
+      return;
+    }
+    await showTransactionsByDate(chatId, conn.default_business_id, parsedDate.date, parsedDate.label);
+    return;
+  }
+
   const parsed = parseTransactionMessage(text);
   if (!parsed) {
     await sendMessage(
@@ -228,6 +245,52 @@ async function saveTransaction(
   await sendMessage(
     chatId,
     formatTransactionSaved(parsed.name, parsed.amount, parsed.category, biz?.business_name ?? 'Bisnis'),
+    { parse_mode: 'Markdown' }
+  );
+}
+
+async function showTransactionsByDate(
+  chatId: number,
+  businessId: string,
+  dateStr: string,
+  dateLabel: string
+): Promise<void> {
+  const admin = createAdminClient();
+
+  const { data: biz } = await admin
+    .from('businesses')
+    .select('business_name')
+    .eq('id', businessId)
+    .single();
+
+  const { data: txs, error } = await admin
+    .from('active_transactions')
+    .select('name, description, amount, category, status')
+    .eq('business_id', businessId)
+    .eq('date', dateStr)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('[telegram] fetch transactions error:', error);
+    await sendMessage(chatId, '❌ Gagal mengambil data transaksi.');
+    return;
+  }
+
+  const items: TransactionListItem[] = (txs ?? []).map((t) => ({
+    name: t.name,
+    description: t.description,
+    amount: t.amount,
+    category: t.category,
+    status: t.status,
+  }));
+
+  // Format tanggal jadi DD/MM/YYYY untuk display
+  const [y, m, d] = dateStr.split('-');
+  const displayDate = `${d}/${m}/${y}`;
+
+  await sendMessage(
+    chatId,
+    formatTransactionList(items, dateLabel, displayDate, biz?.business_name ?? 'Bisnis'),
     { parse_mode: 'Markdown' }
   );
 }
