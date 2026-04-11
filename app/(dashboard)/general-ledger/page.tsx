@@ -313,9 +313,9 @@ function GeneralLedgerPageInner() {
                       {selectedAccount.account_name}
                     </h2>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                      Periode: {isAllTime
-                        ? `Semua — ${formatDateShort(new Date().toISOString().slice(0, 10))}`
-                        : `${startDate ? formatDateShort(startDate) : '—'} — ${endDate ? formatDateShort(endDate) : '—'}`
+                      {isAllTime
+                        ? `As of ${formatDateShort(new Date().toISOString().slice(0, 10))}`
+                        : `Periode: ${startDate ? formatDateShort(startDate) : '—'} — ${endDate ? formatDateShort(endDate) : '—'}`
                       }
                     </p>
                   </div>
