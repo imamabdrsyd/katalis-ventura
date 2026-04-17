@@ -224,7 +224,7 @@ export function TransactionList({
                   type="checkbox"
                   checked={allSelected}
                   onChange={() => onSelectAll?.()}
-                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-500 focus:ring-indigo-500"
+                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 accent-indigo-500 focus:ring-indigo-500"
                 />
               </th>
             )}
@@ -349,7 +349,7 @@ export function TransactionList({
                       onToggleSelect?.(transaction.id);
                     }}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-500 focus:ring-indigo-500"
+                    className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 accent-indigo-500 focus:ring-indigo-500"
                   />
                 </td>
               )}
