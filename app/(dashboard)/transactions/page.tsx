@@ -43,6 +43,8 @@ function TransactionsPageInner() {
     draftCount,
     categoryFilter,
     setCategoryFilter,
+    contactFilter,
+    setContactFilter,
     dateRange,
     setDateRange,
     showFilterDropdown,
@@ -486,6 +488,8 @@ function TransactionsPageInner() {
             highlightIds={highlightIds}
             categoryFilter={categoryFilter}
             onCategoryFilterChange={setCategoryFilter}
+            contactFilter={contactFilter}
+            onContactFilterChange={setContactFilter}
             dateRange={dateRange}
             onDateRangeChange={setDateRange}
             onEnterSelectMode={canManageTransactions ? () => setSelectMode(true) : undefined}

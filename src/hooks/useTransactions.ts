@@ -20,7 +20,8 @@ export function useTransactions() {
 
   // Filter state
   const [statusFilter, setStatusFilter] = useState<TransactionStatus | 'all'>('all');
-  const [categoryFilter, setCategoryFilter] = useState<TransactionCategory | ''>('');
+  const [categoryFilter, setCategoryFilter] = useState<TransactionCategory | 'SETTLE' | ''>('');
+  const [contactFilter, setContactFilter] = useState<string>('');
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
@@ -56,9 +57,10 @@ export function useTransactions() {
   const filters: TransactionFilters = useMemo(() => ({
     status: statusFilter,
     category: categoryFilter,
+    contact: contactFilter,
     startDate: dateRange.start,
     endDate: dateRange.end,
-  }), [statusFilter, categoryFilter, dateRange]);
+  }), [statusFilter, categoryFilter, contactFilter, dateRange]);
 
   // Server-side paginated query — filters & pagination handled by Supabase
   const {
@@ -97,7 +99,7 @@ export function useTransactions() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, categoryFilter, rowsPerPage, dateRange]);
+  }, [statusFilter, categoryFilter, contactFilter, rowsPerPage, dateRange]);
 
   // Fetch accounts for smart guidance
   const fetchAccounts = useCallback(async () => {
@@ -477,6 +479,8 @@ export function useTransactions() {
     draftCount,
     categoryFilter,
     setCategoryFilter,
+    contactFilter,
+    setContactFilter,
     dateRange,
     setDateRange,
     showFilterDropdown,

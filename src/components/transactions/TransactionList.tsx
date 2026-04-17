@@ -18,8 +18,10 @@ interface TransactionListProps {
   onSelectAll?: () => void;
   highlightAfter?: string | null;
   highlightIds?: Set<string>;
-  categoryFilter?: '' | TransactionCategory;
-  onCategoryFilterChange?: (category: '' | TransactionCategory) => void;
+  categoryFilter?: '' | TransactionCategory | 'SETTLE';
+  onCategoryFilterChange?: (category: '' | TransactionCategory | 'SETTLE') => void;
+  contactFilter?: string;
+  onContactFilterChange?: (contact: string) => void;
   dateRange?: { start: string; end: string };
   onDateRangeChange?: (range: { start: string; end: string }) => void;
   onEnterSelectMode?: () => void;
@@ -146,6 +148,8 @@ export function TransactionList({
   highlightIds,
   categoryFilter,
   onCategoryFilterChange,
+  contactFilter,
+  onContactFilterChange,
   dateRange,
   onDateRangeChange,
   onEnterSelectMode,
@@ -161,6 +165,11 @@ export function TransactionList({
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Contact filter dropdown state
+  const [showContactDropdown, setShowContactDropdown] = useState(false);
+  const [contactSearch, setContactSearch] = useState('');
+  const contactDropdownRef = useRef<HTMLDivElement>(null);
+
   // Date filter dropdown state
   const [showDateDropdown, setShowDateDropdown] = useState(false);
   const dateDropdownRef = useRef<HTMLDivElement>(null);
@@ -170,6 +179,9 @@ export function TransactionList({
     function handleClickOutside(e: MouseEvent) {
       if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target as Node)) {
         setShowCategoryDropdown(false);
+      }
+      if (contactDropdownRef.current && !contactDropdownRef.current.contains(e.target as Node)) {
+        setShowContactDropdown(false);
       }
       if (dateDropdownRef.current && !dateDropdownRef.current.contains(e.target as Node)) {
         setShowDateDropdown(false);
@@ -262,12 +274,72 @@ export function TransactionList({
                         </span>
                       </button>
                     ))}
+                    <button
+                      onClick={() => { onCategoryFilterChange?.('SETTLE'); setShowCategoryDropdown(false); }}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 ${categoryFilter === 'SETTLE' ? 'font-semibold' : 'text-gray-700 dark:text-gray-300'}`}
+                    >
+                      <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0 bg-gray-400"></span>
+                      <span className={categoryFilter === 'SETTLE' ? 'text-gray-600 dark:text-gray-300' : ''}>
+                        SETTLE
+                      </span>
+                    </button>
                   </div>
                 )}
               </div>
             </th>
 
-            <th className="text-left py-3 px-2 md:py-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t.transactions.tableSubject}</th>
+            {/* Contact header with filter dropdown */}
+            <th className="text-left py-3 px-2 md:py-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+              <div className="relative" ref={contactDropdownRef}>
+                <button
+                  onClick={() => setShowContactDropdown(!showContactDropdown)}
+                  className={`flex items-center gap-1 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${contactFilter ? 'text-indigo-500 dark:text-indigo-400 font-medium normal-case' : ''}`}
+                >
+                  <span className={contactFilter ? 'normal-case truncate max-w-[140px]' : ''}>{contactFilter || t.transactions.tableSubject}</span>
+                  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {showContactDropdown && (
+                  <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[200px] max-h-80 overflow-hidden z-20 flex flex-col">
+                    <div className="px-2 pb-1 border-b border-gray-100 dark:border-gray-700">
+                      <input
+                        type="text"
+                        value={contactSearch}
+                        onChange={(e) => setContactSearch(e.target.value)}
+                        placeholder={t.common.search}
+                        className="w-full px-2 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded normal-case text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                      />
+                    </div>
+                    <div className="overflow-y-auto">
+                      <button
+                        onClick={() => { onContactFilterChange?.(''); setShowContactDropdown(false); setContactSearch(''); }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${!contactFilter ? 'text-indigo-500 dark:text-indigo-400 font-medium' : 'text-gray-700 dark:text-gray-300'}`}
+                      >
+                        {t.common.all}
+                      </button>
+                      {contacts
+                        .filter((c) => c.name.toLowerCase().includes(contactSearch.toLowerCase()))
+                        .map((c) => (
+                          <button
+                            key={c.id}
+                            onClick={() => { onContactFilterChange?.(c.name); setShowContactDropdown(false); setContactSearch(''); }}
+                            className={`w-full text-left px-3 py-2 text-sm normal-case hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 ${contactFilter === c.name ? 'text-indigo-500 dark:text-indigo-400 font-semibold' : 'text-gray-700 dark:text-gray-300'}`}
+                          >
+                            <ContactIcon className="w-3.5 h-3.5 flex-shrink-0 text-gray-400 dark:text-gray-500" />
+                            <span className="truncate">{c.name}</span>
+                          </button>
+                        ))}
+                      {contacts.filter((c) => c.name.toLowerCase().includes(contactSearch.toLowerCase())).length === 0 && (
+                        <div className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500 normal-case">
+                          {t.nav.notFound}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </th>
             <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t.transactions.tableDescription}</th>
 
             {/* Tanggal header with date filter dropdown */}

@@ -213,9 +213,10 @@ export interface PaginatedTransactions {
 
 export interface TransactionFilters {
   status?: TransactionStatus | 'all';
-  category?: TransactionCategory | '';
+  category?: TransactionCategory | 'SETTLE' | '';
   startDate?: string;
   endDate?: string;
+  contact?: string;
 }
 
 export async function getTransactionsPaginated(
@@ -242,8 +243,13 @@ export async function getTransactionsPaginated(
   if (filters?.status && filters.status !== 'all') {
     query = query.eq('status', filters.status);
   }
-  if (filters?.category) {
+  if (filters?.category === 'SETTLE') {
+    query = query.not('meta->>settlement_of_transaction_id', 'is', null);
+  } else if (filters?.category) {
     query = query.eq('category', filters.category);
+  }
+  if (filters?.contact) {
+    query = query.eq('name', filters.contact);
   }
   if (filters?.startDate) {
     query = query.gte('date', filters.startDate);
