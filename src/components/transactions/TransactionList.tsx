@@ -293,9 +293,9 @@ export function TransactionList({
               <div className="relative" ref={contactDropdownRef}>
                 <button
                   onClick={() => setShowContactDropdown(!showContactDropdown)}
-                  className={`flex items-center gap-1 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${contactFilter ? 'text-indigo-500 dark:text-indigo-400 font-medium normal-case' : ''}`}
+                  className={`flex items-center gap-1 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${contactFilter ? 'text-indigo-500 dark:text-indigo-400 font-medium' : ''}`}
                 >
-                  <span className={contactFilter ? 'normal-case truncate max-w-[140px]' : ''}>{contactFilter || t.transactions.tableSubject}</span>
+                  <span className={contactFilter ? 'truncate max-w-[140px]' : ''}>{contactFilter || t.transactions.tableSubject}</span>
                   <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
