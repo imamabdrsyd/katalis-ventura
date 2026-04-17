@@ -149,6 +149,14 @@ Cukup ketik deskripsi + jumlah, contoh:
   \`lihat transaksi 10 april\`
   \`lihat transaksi 10/04/2026\`
 
+*Laporan PDF:*
+  \`laba rugi bulan ini\`
+  \`laba rugi bulan lalu\`
+  \`neraca bulan ini\`
+  \`arus kas tahun ini\`
+  \`laba rugi Q1 2026\`
+  \`neraca januari 2026\`
+
 *Koreksi Kategori:*
 Saat konfirmasi, balas \`OPEX\` atau \`VAR\` untuk mengubah kategori.
 

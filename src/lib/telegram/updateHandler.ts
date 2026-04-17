@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase-server';
-import { sendMessage } from './api';
+import { sendMessage, sendDocument, sendChatAction } from './api';
 import {
   handleStartCommand,
   handleLinkWithToken,
@@ -9,6 +9,12 @@ import {
 } from './commands';
 import { parseTransactionMessage } from './parser';
 import { parseDateFromText, isListTransactionIntent } from './dateParser';
+import { parsePeriodFromText, detectReportType, ReportType } from './periodParser';
+import {
+  generateIncomeStatementPDF,
+  generateBalanceSheetPDF,
+  generateCashFlowPDF,
+} from './reportGenerator';
 import {
   formatTransactionConfirmation,
   formatTransactionSaved,
@@ -135,6 +141,22 @@ async function handleTransactionMessage(chatId: number, text: string): Promise<v
     return;
   }
 
+  // Deteksi intent laporan PDF: "[jenis report] [periode]"
+  const reportType = detectReportType(text);
+  if (reportType) {
+    const period = parsePeriodFromText(text);
+    if (!period) {
+      await sendMessage(
+        chatId,
+        `Periode tidak dikenal. Contoh:\n\`laba rugi bulan ini\`\n\`neraca bulan lalu\`\n\`arus kas tahun ini\`\n\`laba rugi januari 2026\`\n\`neraca Q1 2026\``,
+        { parse_mode: 'Markdown' }
+      );
+      return;
+    }
+    await handleReportRequest(chatId, conn.default_business_id, reportType, period);
+    return;
+  }
+
   // Deteksi intent "lihat transaksi [tanggal]"
   if (isListTransactionIntent(text)) {
     const parsedDate = parseDateFromText(text);
@@ -247,6 +269,40 @@ async function saveTransaction(
     formatTransactionSaved(parsed.name, parsed.amount, parsed.category, biz?.business_name ?? 'Bisnis'),
     { parse_mode: 'Markdown' }
   );
+}
+
+async function handleReportRequest(
+  chatId: number,
+  businessId: string,
+  reportType: ReportType,
+  period: { startDate: string; endDate: string; label: string }
+): Promise<void> {
+  await sendChatAction(chatId, 'upload_document');
+
+  try {
+    let pdfBuffer: Buffer;
+    let filename: string;
+    let caption: string;
+
+    if (reportType === 'income_statement') {
+      pdfBuffer = await generateIncomeStatementPDF(businessId, period.startDate, period.endDate, period.label);
+      filename = `laba-rugi-${period.startDate}-${period.endDate}.pdf`;
+      caption = `📊 *Laporan Laba Rugi*\nPeriode: ${period.label}`;
+    } else if (reportType === 'balance_sheet') {
+      pdfBuffer = await generateBalanceSheetPDF(businessId, period.endDate, period.label);
+      filename = `neraca-${period.endDate}.pdf`;
+      caption = `📋 *Neraca*\nPer ${period.label}`;
+    } else {
+      pdfBuffer = await generateCashFlowPDF(businessId, period.startDate, period.endDate, period.label);
+      filename = `arus-kas-${period.startDate}-${period.endDate}.pdf`;
+      caption = `💰 *Laporan Arus Kas*\nPeriode: ${period.label}`;
+    }
+
+    await sendDocument(chatId, pdfBuffer, filename, caption);
+  } catch (err) {
+    console.error('[telegram] report generation error:', err);
+    await sendMessage(chatId, '❌ Gagal membuat laporan. Coba lagi nanti.');
+  }
 }
 
 async function showTransactionsByDate(
