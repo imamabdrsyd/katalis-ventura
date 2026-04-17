@@ -88,7 +88,7 @@ function getRowSubject(transaction: Transaction): string {
   if (isInventoryTransaction(transaction)) {
     return transaction.description || '';
   }
-  if (transaction.category === 'VAR') {
+  if (transaction.category === 'VAR' || transaction.category === 'OPEX') {
     return transaction.name;
   }
   if (transaction.is_double_entry && transaction.debit_account) {
