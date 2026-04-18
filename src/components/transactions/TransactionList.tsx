@@ -99,6 +99,29 @@ function getRowSubject(transaction: Transaction): string {
   return transaction.name;
 }
 
+function DescriptionCell({ text }: { text: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (el) setIsOverflowing(el.scrollHeight > el.clientHeight + 1);
+  }, [text]);
+
+  return (
+    <div className="relative group">
+      <span ref={ref} className="block line-clamp-2 cursor-default">
+        {text}
+      </span>
+      {isOverflowing && (
+        <div className="absolute left-0 bottom-full mb-2 z-50 hidden group-hover:block w-64 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg p-3 shadow-xl pointer-events-none">
+          {text}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Helper function to format account display based on transaction type
 function getAccountDisplay(transaction: Transaction): { accountName: string; isInflow: boolean; tooltip: string } {
   const isInflow = transaction.category === 'EARN';
@@ -468,14 +491,7 @@ export function TransactionList({
                 </div>
               </td>
               <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 max-w-[200px]">
-                <div className="relative group">
-                  <span className="block truncate cursor-default">
-                    {isInventoryTransaction(transaction) ? transaction.name : transaction.description}
-                  </span>
-                  <div className="absolute left-0 bottom-full mb-2 z-50 hidden group-hover:block w-64 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg p-3 shadow-xl pointer-events-none">
-                    {isInventoryTransaction(transaction) ? transaction.name : transaction.description}
-                  </div>
-                </div>
+                <DescriptionCell text={isInventoryTransaction(transaction) ? transaction.name : transaction.description} />
               </td>
               <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
                 {formatDateShort(transaction.date)}
