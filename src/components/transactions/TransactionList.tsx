@@ -110,7 +110,7 @@ function DescriptionCell({ text }: { text: string }) {
 
   return (
     <div className="relative group">
-      <span ref={ref} className="block line-clamp-2 cursor-default">
+      <span ref={ref} className="line-clamp-2 cursor-default">
         {text}
       </span>
       {isOverflowing && (
