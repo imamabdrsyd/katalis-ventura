@@ -268,7 +268,7 @@ export default function AccountsPage() {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder={t.accounts.searchPlaceholder}
-              className="input pl-10 w-full"
+              className="input-search pl-10 w-full"
             />
           </div>
           <label className="flex items-center gap-2 cursor-pointer">

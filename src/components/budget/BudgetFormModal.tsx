@@ -117,7 +117,7 @@ export function BudgetFormModal({ isOpen, onClose, onSubmit, saving, editBudget 
           <button
             type="submit"
             disabled={saving}
-            className="px-4 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            className="btn-primary"
           >
             {saving ? 'Menyimpan...' : editBudget ? 'Update' : 'Buat Budget'}
           </button>

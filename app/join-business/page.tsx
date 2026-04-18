@@ -8,6 +8,7 @@ import * as businessesApi from '@/lib/api/businesses';
 import * as inviteCodesApi from '@/lib/api/inviteCodes';
 import { formatCurrency } from '@/lib/utils';
 import type { Business } from '@/types';
+import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 
 export default function JoinBusinessPage() {
   const [joinMode, setJoinMode] = useState<'list' | 'code'>('code');
@@ -144,35 +145,21 @@ export default function JoinBusinessPage() {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex gap-2 mb-6 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
-          <button
-            onClick={() => {
-              setJoinMode('code');
+        <div className="mb-6">
+          <SegmentedToggle
+            value={joinMode}
+            onChange={(mode) => {
+              setJoinMode(mode);
               setError(null);
               setSuccess(null);
             }}
-            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              joinMode === 'code'
-                ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-            }`}
-          >
-            Gunakan Kode
-          </button>
-          <button
-            onClick={() => {
-              setJoinMode('list');
-              setError(null);
-              setSuccess(null);
-            }}
-            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              joinMode === 'list'
-                ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-            }`}
-          >
-            Pilih dari Daftar
-          </button>
+            fullWidth
+            ariaLabel="Metode bergabung"
+            options={[
+              { value: 'code', label: 'Gunakan Kode' },
+              { value: 'list', label: 'Pilih dari Daftar' },
+            ]}
+          />
         </div>
 
         {error && (

@@ -151,45 +151,60 @@ export async function upsertFinancialCache<T = unknown>(
   const supabase = createClient();
   const version = await getBusinessTransactionVersion(input.businessId);
 
-  // Hapus cache lama untuk kombinasi yang sama (unique index handle-nya ribet
-  // karena COALESCE — lebih aman delete-then-insert)
-  let delQuery = supabase
+  const payload = {
+    business_id: input.businessId,
+    cache_type: input.cacheType,
+    period_start: input.periodStart ?? null,
+    period_end: input.periodEnd ?? null,
+    payload: input.payload as any,
+    transaction_count: input.transactionCount,
+    cache_version: version,
+    is_stale: false,
+    computed_by: input.computedBy ?? null,
+  };
+
+  // Bangun base query filter untuk period (null-safe)
+  const applyPeriodFilter = (q: any) => {
+    q = input.periodStart == null ? q.is('period_start', null) : q.eq('period_start', input.periodStart);
+    q = input.periodEnd == null ? q.is('period_end', null) : q.eq('period_end', input.periodEnd);
+    return q;
+  };
+
+  // Coba update dulu — kalau row sudah ada ini cukup dan atomic
+  let updateQuery = supabase
     .from('financial_summary_cache')
-    .delete()
+    .update(payload)
     .eq('business_id', input.businessId)
     .eq('cache_type', input.cacheType);
+  updateQuery = applyPeriodFilter(updateQuery);
+  const { data: updatedRows } = await updateQuery.select();
 
-  if (input.periodStart === null || input.periodStart === undefined) {
-    delQuery = delQuery.is('period_start', null);
-  } else {
-    delQuery = delQuery.eq('period_start', input.periodStart);
-  }
-  if (input.periodEnd === null || input.periodEnd === undefined) {
-    delQuery = delQuery.is('period_end', null);
-  } else {
-    delQuery = delQuery.eq('period_end', input.periodEnd);
+  if (updatedRows && updatedRows.length > 0) {
+    return updatedRows[0] as FinancialCacheRow<T>;
   }
 
-  const { error: delErr } = await delQuery;
-  if (delErr) throw new Error(delErr.message);
-
+  // Row belum ada — insert. Kalau race condition insert bersamaan, fallback ke update.
   const { data, error } = await supabase
     .from('financial_summary_cache')
-    .insert({
-      business_id: input.businessId,
-      cache_type: input.cacheType,
-      period_start: input.periodStart ?? null,
-      period_end: input.periodEnd ?? null,
-      payload: input.payload as any,
-      transaction_count: input.transactionCount,
-      cache_version: version,
-      is_stale: false,
-      computed_by: input.computedBy ?? null,
-    })
+    .insert(payload)
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (error.code === '23505') {
+      // Duplicate key: request lain sudah insert, retry dengan update
+      let retryQuery = supabase
+        .from('financial_summary_cache')
+        .update(payload)
+        .eq('business_id', input.businessId)
+        .eq('cache_type', input.cacheType);
+      retryQuery = applyPeriodFilter(retryQuery);
+      const { data: retryData, error: retryErr } = await retryQuery.select().single();
+      if (retryErr) throw new Error(retryErr.message);
+      return retryData as FinancialCacheRow<T>;
+    }
+    throw new Error(error.message);
+  }
   return data as FinancialCacheRow<T>;
 }
 

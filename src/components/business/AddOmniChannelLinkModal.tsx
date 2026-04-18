@@ -174,14 +174,14 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
         <div className="flex gap-3 pt-2">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
+            className="btn-ghost flex-1"
           >
             Batal
           </button>
           <button
             onClick={handleSave}
             disabled={saving || !url.trim() || !label.trim()}
-            className="flex-1 px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-xl transition-colors text-sm font-medium flex items-center justify-center gap-2"
+            className="btn-primary flex-1 flex items-center justify-center gap-2"
           >
             {saving ? (
               <>

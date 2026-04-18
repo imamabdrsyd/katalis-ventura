@@ -87,14 +87,15 @@ function InvoicesPageInner() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowSettingsModal(true)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
+              className="btn-icon"
+              title={t.invoices.settings}
+              aria-label={t.invoices.settings}
             >
-              <Settings className="h-4 w-4" />
-              {t.invoices.settings}
+              <Settings className="h-5 w-5" />
             </button>
             <button
               onClick={() => setShowAddModal(true)}
-              className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors flex items-center gap-2 font-medium shadow-sm"
+              className="btn-primary flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
               {t.invoices.createInvoice}

@@ -210,7 +210,7 @@ function ReconciliationPageInner() {
             <button
               onClick={reconcileSelected}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
+              className="btn-primary flex items-center gap-2"
             >
               <Check className="w-4 h-4" />
               {t.reconciliation.reconcileButton.replace('{n}', String(selectedIds.size)).replace('{amount}', formatCurrency(selectedAmount))}

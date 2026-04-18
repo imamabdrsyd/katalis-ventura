@@ -92,7 +92,7 @@ function BudgetForecastPageInner() {
           {canManage && (
             <button
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors"
+              className="btn-primary inline-flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               {t.budget.createBudget}
@@ -119,7 +119,7 @@ function BudgetForecastPageInner() {
           {canManage && (
             <button
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors"
+              className="btn-primary inline-flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               {t.budget.createBudget} Pertama

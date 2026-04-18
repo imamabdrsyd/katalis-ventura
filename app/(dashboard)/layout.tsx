@@ -562,7 +562,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
         {/* Search */}
         <button
           onClick={() => setIsSearchOpen(true)}
-          className="hidden md:flex items-center gap-2 px-4 py-1.5 text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors border border-gray-200 dark:border-gray-600 min-w-[220px]"
+          className="hidden md:flex items-center gap-2 px-4 py-1.5 text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-colors border border-gray-200 dark:border-gray-600 min-w-[220px]"
         >
           <Search className="w-4 h-4" />
           <span>{t.nav.searchPlaceholder}</span>
@@ -585,7 +585,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
         {canManage && activeBusiness && (
           <button
             onClick={onQuickAddClick}
-            className="hidden md:flex px-4 py-2 bg-white dark:bg-gray-800 border-2 border-primary-500 text-primary-500 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-gray-700 rounded-lg transition-colors items-center gap-2 font-medium shadow-sm"
+            className="hidden md:flex btn-outline items-center gap-2"
           >
             <Zap className="h-4 w-4 text-primary-500 dark:text-primary-400" />
             {t.nav.quickEntry}

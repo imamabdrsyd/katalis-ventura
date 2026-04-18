@@ -203,7 +203,7 @@ export function BudgetInputGrid({
           <button
             onClick={handleSave}
             disabled={saving || !hasChanges}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            className="btn-primary inline-flex items-center gap-2"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {saving ? 'Menyimpan...' : 'Simpan'}

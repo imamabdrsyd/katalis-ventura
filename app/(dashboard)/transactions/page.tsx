@@ -271,7 +271,7 @@ function TransactionsPageInner() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowImportModal(true)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
+              className="btn-ghost flex items-center gap-2"
             >
               <Upload className="h-4 w-4" />
               {t.transactions.importExcel}
@@ -279,7 +279,7 @@ function TransactionsPageInner() {
 
             <button
               onClick={() => router.push('/transactions/journal-entry')}
-              className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors flex items-center gap-2 font-medium shadow-sm"
+              className="btn-primary flex items-center gap-2"
             >
               <BookOpen className="h-4 w-4" />
               {t.transactions.journalEntry}

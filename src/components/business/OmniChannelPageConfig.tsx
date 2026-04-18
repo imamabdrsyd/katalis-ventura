@@ -351,7 +351,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
       <button
         onClick={handleSave}
         disabled={saving || !hasChanges || slugStatus === 'unavailable' || slugStatus === 'checking' || !title || !slug}
-        className="w-full px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2"
+        className="btn-primary w-full flex items-center justify-center gap-2"
       >
         {saving ? (
           <>

@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase';
 import { LOCALE_LABELS, LOCALE_FLAGS, type Locale } from '@/lib/i18n';
 import { Camera, User, Mail, Briefcase, Save, Globe, Send, CheckCircle2, XCircle, Copy, RefreshCw, FileEdit, CheckCheck } from 'lucide-react';
 import Image from 'next/image';
+import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 
 export default function SettingsPage() {
   const { user, userRole, isSuperadmin, switchRole, refetch } = useBusinessContext();
@@ -320,34 +321,16 @@ export default function SettingsPage() {
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
                 Pilih apakah transaksi yang masuk via Telegram disimpan sebagai <strong>Draft</strong> (perlu review dulu) atau <strong>Posted</strong> (langsung final).
               </p>
-              <div className="inline-flex rounded-xl border border-gray-300 dark:border-gray-600 p-1 bg-white dark:bg-gray-900">
-                <button
-                  type="button"
-                  disabled={telegramStatusSaving || telegramConn.default_transaction_status === 'draft'}
-                  onClick={() => handleUpdateTelegramStatus('draft')}
-                  className={`flex items-center gap-1.5 px-4 py-1.5 text-sm rounded-lg transition-colors ${
-                    telegramConn.default_transaction_status === 'draft'
-                      ? 'bg-primary-500 text-white'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                  }`}
-                >
-                  <FileEdit className="w-3.5 h-3.5" />
-                  Draft
-                </button>
-                <button
-                  type="button"
-                  disabled={telegramStatusSaving || telegramConn.default_transaction_status === 'posted'}
-                  onClick={() => handleUpdateTelegramStatus('posted')}
-                  className={`flex items-center gap-1.5 px-4 py-1.5 text-sm rounded-lg transition-colors ${
-                    telegramConn.default_transaction_status === 'posted'
-                      ? 'bg-primary-500 text-white'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                  }`}
-                >
-                  <CheckCheck className="w-3.5 h-3.5" />
-                  Posted
-                </button>
-              </div>
+              <SegmentedToggle
+                value={telegramConn.default_transaction_status}
+                onChange={handleUpdateTelegramStatus}
+                disabled={telegramStatusSaving}
+                ariaLabel="Status default transaksi dari bot"
+                options={[
+                  { value: 'draft', label: 'Draft', icon: <FileEdit className="w-3.5 h-3.5" /> },
+                  { value: 'posted', label: 'Posted', icon: <CheckCheck className="w-3.5 h-3.5" /> },
+                ]}
+              />
             </div>
 
             <button
@@ -386,7 +369,7 @@ export default function SettingsPage() {
                   </a>
                   <button
                     onClick={handleCopyTelegramLink}
-                    className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    className="btn-ghost flex items-center gap-2"
                   >
                     <Copy className="w-4 h-4" />
                     {telegramCopied ? 'Tersalin!' : 'Salin Link'}
@@ -394,7 +377,7 @@ export default function SettingsPage() {
                   <button
                     onClick={handleGenerateTelegramToken}
                     disabled={telegramActionLoading}
-                    className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+                    className="btn-ghost flex items-center gap-2"
                   >
                     <RefreshCw className="w-4 h-4" />
                     Perbarui Token

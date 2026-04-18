@@ -57,7 +57,7 @@ export const en: Translations = {
     manageBusiness: 'Manage Business',
     accounting: 'ACCOUNTING',
     chartOfAccounts: 'Chart of Accounts',
-    invoice: 'Invoice',
+    invoice: 'Invoicing',
     generalLedger: 'General Ledger',
     trialBalance: 'Trial Balance',
     arAp: 'AR & AP',
@@ -437,7 +437,7 @@ export const en: Translations = {
   },
 
   invoices: {
-    title: 'Invoice',
+    title: 'Invoicing',
     settings: 'Settings',
     createInvoice: 'Create Invoice',
     editInvoice: 'Edit Invoice',

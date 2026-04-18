@@ -685,7 +685,7 @@ export default function TransactionImportModal({
               </div>
               <button
                 onClick={handleDownloadTemplate}
-                className="px-4 py-2 rounded-lg flex items-center justify-center gap-2 w-full sm:w-auto whitespace-nowrap font-semibold bg-primary-500 text-white hover:bg-primary-600 transition-colors"
+                className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto whitespace-nowrap"
               >
                 <Download className="h-4 w-4" />
                 <span>Download Template</span>

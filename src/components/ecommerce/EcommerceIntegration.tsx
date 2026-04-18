@@ -309,7 +309,7 @@ export function EcommerceIntegration({ businessId, canManage }: Props) {
                     canManage && !config.comingSoon && (
                       <button
                         onClick={() => handleConnect(platform)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-500 hover:bg-indigo-600 rounded-lg transition-colors shadow-sm"
+                        className="btn-primary flex items-center gap-2"
                       >
                         <ExternalLink className="w-4 h-4" />
                         Hubungkan

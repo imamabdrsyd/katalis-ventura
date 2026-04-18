@@ -16,6 +16,7 @@ import {
 } from 'chart.js';
 import type { Transaction } from '@/types';
 import { formatCurrency } from '@/lib/utils';
+import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 
 ChartJS.register(
   CategoryScale,
@@ -259,28 +260,16 @@ export default function MonitoringChart({ transactions, loading = false, selecte
     <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Monitoring Overview</h3>
-        <div className="flex p-1 bg-gray-100 dark:bg-gray-700 rounded-full">
-          <button
-            onClick={() => setPeriod('monthly')}
-            className={`px-4 py-1.5 text-sm rounded-full transition-all ${
-              period === 'monthly'
-                ? 'bg-white dark:bg-gray-600 text-indigo-500 dark:text-indigo-400 font-semibold shadow-sm'
-                : 'bg-transparent text-gray-500 dark:text-gray-400 font-normal hover:text-gray-700 dark:hover:text-gray-200'
-            }`}
-          >
-            Monthly
-          </button>
-          <button
-            onClick={() => setPeriod('yearly')}
-            className={`px-4 py-1.5 text-sm rounded-full transition-all ${
-              period === 'yearly'
-                ? 'bg-white dark:bg-gray-600 text-indigo-500 dark:text-indigo-400 font-semibold shadow-sm'
-                : 'bg-transparent text-gray-500 dark:text-gray-400 font-normal hover:text-gray-700 dark:hover:text-gray-200'
-            }`}
-          >
-            Yearly
-          </button>
-        </div>
+        <SegmentedToggle
+          value={period}
+          onChange={setPeriod}
+          options={[
+            { value: 'monthly', label: 'Monthly' },
+            { value: 'yearly', label: 'Yearly' },
+          ]}
+          ariaLabel="Period"
+        />
+
       </div>
 
       {!hasData ? (

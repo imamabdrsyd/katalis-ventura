@@ -1,6 +1,7 @@
 'use client';
 
 import { TrendingUp, TrendingDown } from 'lucide-react';
+import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 
 interface CashFlowHeaderProps {
   totalBalance: number;
@@ -64,28 +65,15 @@ export default function CashFlowHeader({
       {/* Filters */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         {/* Filter Buttons */}
-        <div className="flex gap-3">
-          <button
-            onClick={() => onFilterChange('monthly')}
-            className={`px-6 py-2 rounded-xl font-semibold transition-all ${
-              filterType === 'monthly'
-                ? 'bg-primary-500 text-white shadow-md'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Monthly
-          </button>
-          <button
-            onClick={() => onFilterChange('yearly')}
-            className={`px-6 py-2 rounded-xl font-semibold transition-all ${
-              filterType === 'yearly'
-                ? 'bg-primary-500 text-white shadow-md'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Yearly
-          </button>
-        </div>
+        <SegmentedToggle
+          value={filterType}
+          onChange={onFilterChange}
+          options={[
+            { value: 'monthly', label: 'Monthly' },
+            { value: 'yearly', label: 'Yearly' },
+          ]}
+          ariaLabel="Filter period"
+        />
 
         {/* Dropdowns */}
         <div className="flex gap-3 items-center">

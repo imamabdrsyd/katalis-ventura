@@ -997,7 +997,7 @@ export function TransactionDetailModal({
                         }
                       }}
                       disabled={partialLoading}
-                      className="flex-1 px-3 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                      className="btn-primary flex-1"
                     >
                       {partialLoading ? t.transactionDetail.processing : t.transactionDetail.recordPayment}
                     </button>

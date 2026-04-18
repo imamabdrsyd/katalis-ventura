@@ -446,14 +446,14 @@ export function InvoiceForm({
           type="button"
           onClick={onCancel}
           disabled={loading}
-          className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+          className="btn-ghost flex-1"
         >
           Batal
         </button>
         <button
           type="submit"
           disabled={loading}
-          className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-indigo-500 hover:bg-indigo-600 rounded-xl transition-colors disabled:opacity-50"
+          className="btn-primary flex-1"
         >
           {loading ? 'Menyimpan...' : invoice ? 'Update Invoice' : 'Simpan Invoice'}
         </button>

@@ -57,7 +57,7 @@ export const id: Translations = {
     manageBusiness: 'Kelola Bisnis',
     accounting: 'AKUNTANSI',
     chartOfAccounts: 'Bagan Akun',
-    invoice: 'Invoice',
+    invoice: 'Invoicing',
     generalLedger: 'Buku Besar',
     trialBalance: 'Neraca Saldo',
     arAp: 'Piutang & Hutang',
@@ -437,7 +437,7 @@ export const id: Translations = {
   },
 
   invoices: {
-    title: 'Invoice',
+    title: 'Invoicing',
     settings: 'Pengaturan',
     createInvoice: 'Buat Invoice',
     editInvoice: 'Edit Invoice',
