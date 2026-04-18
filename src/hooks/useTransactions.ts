@@ -187,12 +187,12 @@ export function useTransactions() {
           end_date: data.recurring.end_date || null,
           created_by: user.id,
         });
-        queryClient.invalidateQueries({ queryKey: ['recurring-transactions', businessId] });
       }
 
       setShowAddModal(false);
       setTransactionMode(null);
       invalidateTransactions();
+      queryClient.invalidateQueries({ queryKey: ['recurring-transactions', businessId] });
     } catch (err: any) {
       alert(err.message || 'Gagal menambahkan transaksi');
     } finally {
