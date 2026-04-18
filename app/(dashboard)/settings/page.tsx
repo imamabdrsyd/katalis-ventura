@@ -6,7 +6,7 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { createClient } from '@/lib/supabase';
 import { LOCALE_LABELS, LOCALE_FLAGS, type Locale } from '@/lib/i18n';
-import { Camera, User, Mail, Briefcase, Save, Globe, Send, CheckCircle2, XCircle, Copy, RefreshCw } from 'lucide-react';
+import { Camera, User, Mail, Briefcase, Save, Globe, Send, CheckCircle2, XCircle, Copy, RefreshCw, FileEdit, CheckCheck } from 'lucide-react';
 import Image from 'next/image';
 
 export default function SettingsPage() {
@@ -325,25 +325,27 @@ export default function SettingsPage() {
                   type="button"
                   disabled={telegramStatusSaving || telegramConn.default_transaction_status === 'draft'}
                   onClick={() => handleUpdateTelegramStatus('draft')}
-                  className={`px-4 py-1.5 text-sm rounded-lg transition-colors ${
+                  className={`flex items-center gap-1.5 px-4 py-1.5 text-sm rounded-lg transition-colors ${
                     telegramConn.default_transaction_status === 'draft'
-                      ? 'bg-sky-500 text-white'
+                      ? 'bg-primary-500 text-white'
                       : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                 >
-                  📝 Draft
+                  <FileEdit className="w-3.5 h-3.5" />
+                  Draft
                 </button>
                 <button
                   type="button"
                   disabled={telegramStatusSaving || telegramConn.default_transaction_status === 'posted'}
                   onClick={() => handleUpdateTelegramStatus('posted')}
-                  className={`px-4 py-1.5 text-sm rounded-lg transition-colors ${
+                  className={`flex items-center gap-1.5 px-4 py-1.5 text-sm rounded-lg transition-colors ${
                     telegramConn.default_transaction_status === 'posted'
-                      ? 'bg-sky-500 text-white'
+                      ? 'bg-primary-500 text-white'
                       : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                 >
-                  ✅ Posted
+                  <CheckCheck className="w-3.5 h-3.5" />
+                  Posted
                 </button>
               </div>
             </div>
