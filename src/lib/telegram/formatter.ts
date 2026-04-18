@@ -170,6 +170,7 @@ Saat konfirmasi, balas \`OPEX\` atau \`VAR\` untuk mengubah kategori.
 *Perintah:*
 /saldo — Lihat ringkasan keuangan
 /bisnis — Lihat & ganti bisnis aktif
+/setting — Lihat pengaturan bot saat ini
 /help — Tampilkan panduan ini
 
 *Format angka yang didukung:*

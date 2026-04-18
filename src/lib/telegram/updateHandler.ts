@@ -6,6 +6,7 @@ import {
   handleSaldoCommand,
   handleBisnisCommand,
   handleHelpCommand,
+  handleSettingCommand,
 } from './commands';
 import { parseTransactionMessage } from './parser';
 import { parseDateFromText, isListTransactionIntent } from './dateParser';
@@ -40,7 +41,9 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
       case '/link':  await handleLinkWithToken(chatId, args[0] ?? '', from); break;
       case '/saldo': await handleSaldoCommand(chatId); break;
       case '/bisnis':await handleBisnisCommand(chatId); break;
-      case '/help':  await handleHelpCommand(chatId); break;
+      case '/help':    await handleHelpCommand(chatId); break;
+      case '/setting':
+      case '/settings': await handleSettingCommand(chatId); break;
       default:
         await sendMessage(chatId, `Perintah tidak dikenal. Ketik /help untuk panduan.`);
     }

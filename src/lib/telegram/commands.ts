@@ -250,3 +250,40 @@ export async function handleBisnisCommand(chatId: number): Promise<void> {
 export async function handleHelpCommand(chatId: number): Promise<void> {
   await sendMessage(chatId, formatHelp(), { parse_mode: 'Markdown' });
 }
+
+export async function handleSettingCommand(chatId: number): Promise<void> {
+  const admin = createAdminClient();
+
+  const { data: conn } = await admin
+    .from('telegram_connections')
+    .select('default_business_id, default_transaction_status')
+    .eq('telegram_chat_id', chatId)
+    .single();
+
+  if (!conn) {
+    await sendMessage(chatId, 'Akun belum terhubung. Ketik /start untuk instruksi.');
+    return;
+  }
+
+  let businessName = '_(belum dipilih)_';
+  if (conn.default_business_id) {
+    const { data: biz } = await admin
+      .from('businesses')
+      .select('business_name')
+      .eq('id', conn.default_business_id)
+      .single();
+    if (biz) businessName = biz.business_name;
+  }
+
+  const statusLabel = conn.default_transaction_status === 'posted'
+    ? '✅ Posted _(langsung final)_'
+    : '📝 Draft _(perlu review)_';
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://axion.app';
+
+  await sendMessage(
+    chatId,
+    `⚙️ *Pengaturan Telegram Bot*\n\n🏢 *Bisnis aktif:* ${businessName}\n📌 *Status transaksi:* ${statusLabel}\n\nUntuk mengubah, buka:\n${appUrl}/settings`,
+    { parse_mode: 'Markdown' }
+  );
+}
