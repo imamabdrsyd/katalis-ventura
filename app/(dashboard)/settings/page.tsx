@@ -42,8 +42,10 @@ export default function SettingsPage() {
   const [telegramConn, setTelegramConn] = useState<{
     telegram_username: string | null;
     telegram_first_name: string | null;
+    default_transaction_status: 'draft' | 'posted';
     created_at: string;
   } | null>(null);
+  const [telegramStatusSaving, setTelegramStatusSaving] = useState(false);
   const [telegramLoading, setTelegramLoading] = useState(true);
   const [telegramToken, setTelegramToken] = useState<string | null>(null);
   const [telegramTokenExpiry, setTelegramTokenExpiry] = useState<Date | null>(null);
@@ -117,6 +119,23 @@ export default function SettingsPage() {
       setError('Gagal memutuskan koneksi Telegram.');
     } finally {
       setTelegramActionLoading(false);
+    }
+  };
+
+  const handleUpdateTelegramStatus = async (newStatus: 'draft' | 'posted') => {
+    setTelegramStatusSaving(true);
+    try {
+      const res = await fetch('/api/telegram/link', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ default_transaction_status: newStatus }),
+      });
+      if (!res.ok) throw new Error('fail');
+      setTelegramConn((prev) => (prev ? { ...prev, default_transaction_status: newStatus } : prev));
+    } catch {
+      setError('Gagal menyimpan preferensi Telegram.');
+    } finally {
+      setTelegramStatusSaving(false);
     }
   };
 
@@ -294,6 +313,41 @@ export default function SettingsPage() {
                 <li>Gunakan <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">/saldo</code> untuk lihat ringkasan</li>
               </ul>
             </div>
+
+            {/* Default status transaksi dari bot */}
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 mb-4">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status default transaksi dari bot</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                Pilih apakah transaksi yang masuk via Telegram disimpan sebagai <strong>Draft</strong> (perlu review dulu) atau <strong>Posted</strong> (langsung final).
+              </p>
+              <div className="inline-flex rounded-xl border border-gray-300 dark:border-gray-600 p-1 bg-white dark:bg-gray-900">
+                <button
+                  type="button"
+                  disabled={telegramStatusSaving || telegramConn.default_transaction_status === 'draft'}
+                  onClick={() => handleUpdateTelegramStatus('draft')}
+                  className={`px-4 py-1.5 text-sm rounded-lg transition-colors ${
+                    telegramConn.default_transaction_status === 'draft'
+                      ? 'bg-sky-500 text-white'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  📝 Draft
+                </button>
+                <button
+                  type="button"
+                  disabled={telegramStatusSaving || telegramConn.default_transaction_status === 'posted'}
+                  onClick={() => handleUpdateTelegramStatus('posted')}
+                  className={`px-4 py-1.5 text-sm rounded-lg transition-colors ${
+                    telegramConn.default_transaction_status === 'posted'
+                      ? 'bg-sky-500 text-white'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  ✅ Posted
+                </button>
+              </div>
+            </div>
+
             <button
               onClick={handleDisconnectTelegram}
               disabled={telegramActionLoading}

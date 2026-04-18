@@ -39,10 +39,17 @@ ${emoji} ${formatRupiah(parsed.amount)}
 Ketik *YA* untuk simpan, *TIDAK* untuk batal.`;
 }
 
-export function formatTransactionSaved(name: string, amount: number, category: TransactionCategory, businessName: string): string {
+export function formatTransactionSaved(
+  name: string,
+  amount: number,
+  category: TransactionCategory,
+  businessName: string,
+  status: 'draft' | 'posted' = 'draft'
+): string {
   const emoji = CATEGORY_EMOJI[category];
   const label = CATEGORY_LABELS[category];
-  return `✅ *Transaksi berhasil dicatat!*
+  const statusBadge = status === 'posted' ? '✅ *Posted*' : '📝 *Draft*';
+  return `${statusBadge} — Transaksi tersimpan!
 
 📝 ${name}
 ${emoji} ${formatRupiah(amount)} — ${label}

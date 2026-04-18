@@ -55,7 +55,7 @@ async function handleTransactionMessage(chatId: number, text: string): Promise<v
 
   const { data: conn } = await admin
     .from('telegram_connections')
-    .select('user_id, default_business_id, pending_transaction, pending_expires_at')
+    .select('user_id, default_business_id, default_transaction_status, pending_transaction, pending_expires_at')
     .eq('telegram_chat_id', chatId)
     .single();
 
@@ -118,7 +118,9 @@ async function handleTransactionMessage(chatId: number, text: string): Promise<v
     }
 
     if (['ya', 'y', 'yes', 'iya', 'ok', 'oke'].includes(lower)) {
-      await saveTransaction(chatId, conn.user_id, conn.default_business_id, pending as ParsedTransaction);
+      const status: 'draft' | 'posted' =
+        conn.default_transaction_status === 'posted' ? 'posted' : 'draft';
+      await saveTransaction(chatId, conn.user_id, conn.default_business_id, pending as ParsedTransaction, status);
       await admin
         .from('telegram_connections')
         .update({ pending_transaction: null, pending_expires_at: null })
@@ -208,7 +210,8 @@ async function saveTransaction(
   chatId: number,
   userId: string,
   businessId: string | null,
-  parsed: ParsedTransaction
+  parsed: ParsedTransaction,
+  status: 'draft' | 'posted' = 'draft'
 ): Promise<void> {
   const admin = createAdminClient();
 
@@ -254,7 +257,7 @@ async function saveTransaction(
     amount: parsed.amount,
     description: parsed.name,
     account: '',
-    status: 'draft',
+    status,
     created_by: userId,
   });
 
@@ -266,7 +269,7 @@ async function saveTransaction(
 
   await sendMessage(
     chatId,
-    formatTransactionSaved(parsed.name, parsed.amount, parsed.category, biz?.business_name ?? 'Bisnis'),
+    formatTransactionSaved(parsed.name, parsed.amount, parsed.category, biz?.business_name ?? 'Bisnis', status),
     { parse_mode: 'Markdown' }
   );
 }
