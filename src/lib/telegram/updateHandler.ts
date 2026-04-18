@@ -11,6 +11,7 @@ import {
 import { parseTransactionMessage } from './parser';
 import { parseDateFromText, isListTransactionIntent } from './dateParser';
 import { parsePeriodFromText, detectReportType, ReportType } from './periodParser';
+import { smartResolveTransaction } from '@/lib/import/smartResolver';
 import {
   generateIncomeStatementPDF,
   generateBalanceSheetPDF,
@@ -252,16 +253,29 @@ async function saveTransaction(
     return;
   }
 
+  // Auto-resolve double-entry accounts
+  const { data: accounts } = await admin
+    .from('accounts')
+    .select('*')
+    .eq('business_id', businessId)
+    .eq('is_active', true);
+
+  const resolved = smartResolveTransaction(parsed.name, accounts ?? [], parsed.category);
+  const isDoubleEntry = !!(resolved.debit_account_id && resolved.credit_account_id);
+
   const { error } = await admin.from('transactions').insert({
     business_id: businessId,
     date: today,
-    category: parsed.category,
+    category: resolved.category,
     name: 'Via AxionBot',
     amount: parsed.amount,
     description: parsed.name,
     account: '',
     status,
     created_by: userId,
+    debit_account_id: resolved.debit_account_id || null,
+    credit_account_id: resolved.credit_account_id || null,
+    is_double_entry: isDoubleEntry,
   });
 
   if (error) {
