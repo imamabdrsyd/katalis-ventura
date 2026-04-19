@@ -11,7 +11,8 @@ import type { TransactionCategory } from '@/types';
 import { QuickTransactionForm } from '@/components/transactions/QuickTransactionForm';
 import { RecurringList } from '@/components/transactions/RecurringList';
 import { useRecurringTransactions } from '@/hooks/useRecurringTransactions';
-import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2, Calculator, RefreshCw } from 'lucide-react';
+import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2, Calculator, RefreshCw, Printer, Loader2 } from 'lucide-react';
+import { exportSelectedTransactionsToPDF } from '@/lib/export';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
@@ -33,6 +34,7 @@ function TransactionsPageInner() {
     // Business context
     user,
     businessId,
+    activeBusiness,
     businessLoading,
     businessError,
     canManageTransactions,
@@ -167,6 +169,29 @@ function TransactionsPageInner() {
   }, [selectedIds, allTransactions]);
 
   const [showSelectedSummary, setShowSelectedSummary] = useState(false);
+
+  // PDF export config for selected transactions
+  const [showPdfConfigModal, setShowPdfConfigModal] = useState(false);
+  const [pdfTitle, setPdfTitle] = useState('Daftar Transaksi');
+  const [pdfSubtitle, setPdfSubtitle] = useState('');
+  const [pdfExporting, setPdfExporting] = useState(false);
+
+  const handleExportSelectedPdf = useCallback(async () => {
+    if (selectedIds.size === 0 || !pdfTitle.trim()) return;
+    const selected = allTransactions.filter((t) => selectedIds.has(t.id));
+    setPdfExporting(true);
+    try {
+      await exportSelectedTransactionsToPDF(
+        activeBusiness?.business_name ?? 'Bisnis',
+        pdfTitle.trim(),
+        pdfSubtitle.trim() || undefined,
+        selected
+      );
+      setShowPdfConfigModal(false);
+    } finally {
+      setPdfExporting(false);
+    }
+  }, [selectedIds, allTransactions, activeBusiness, pdfTitle, pdfSubtitle]);
 
   const toggleTagFilter = (tag: string) => {
     setActiveTagFilters((prev) =>
@@ -447,6 +472,13 @@ function TransactionsPageInner() {
                     <Calculator className="w-3.5 h-3.5" />
                     {t.transactions.summary}
                   </button>
+                  <button
+                    onClick={() => setShowPdfConfigModal(true)}
+                    className="p-1.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                    title="Ekspor ke PDF"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                  </button>
                 </>
               )}
               {showSelectedSummary && selectedIds.size > 0 && (
@@ -677,6 +709,71 @@ function TransactionsPageInner() {
           onImportComplete={handleImportComplete}
         />
       )}
+
+      {/* PDF Export Config Modal */}
+      <Modal
+        isOpen={showPdfConfigModal}
+        onClose={() => { if (!pdfExporting) setShowPdfConfigModal(false); }}
+        title="Ekspor ke PDF"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {selectedIds.size} transaksi terpilih akan diekspor ke PDF.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Judul <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={pdfTitle}
+              onChange={(e) => setPdfTitle(e.target.value)}
+              placeholder="Daftar Transaksi"
+              disabled={pdfExporting}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Sub judul <span className="text-gray-400 text-xs">(opsional)</span>
+            </label>
+            <input
+              type="text"
+              value={pdfSubtitle}
+              onChange={(e) => setPdfSubtitle(e.target.value)}
+              placeholder="Contoh: Periode Januari 2026"
+              disabled={pdfExporting}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              onClick={() => setShowPdfConfigModal(false)}
+              disabled={pdfExporting}
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+            >
+              Batal
+            </button>
+            <button
+              onClick={handleExportSelectedPdf}
+              disabled={pdfExporting || !pdfTitle.trim()}
+              className="px-4 py-2 text-sm font-medium text-white bg-indigo-500 hover:bg-indigo-600 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              {pdfExporting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Memproses...
+                </>
+              ) : (
+                <>
+                  <Printer className="w-4 h-4" />
+                  Ekspor PDF
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
     </div>
   );

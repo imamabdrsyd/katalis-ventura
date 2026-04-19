@@ -604,6 +604,119 @@ export function exportCashFlowToExcel(
   XLSX.writeFile(wb, `Cash-Flow-${businessName}-${period}.xlsx`);
 }
 
+// Export selected transactions list to PDF (bulk-select feature)
+export async function exportSelectedTransactionsToPDF(
+  businessName: string,
+  title: string,
+  subtitle: string | undefined,
+  transactions: Transaction[]
+) {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  // ── Header ──
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text(title, pageWidth / 2, 18, { align: 'center' });
+
+  let cursorY = 24;
+  if (subtitle && subtitle.trim()) {
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    doc.text(subtitle, pageWidth / 2, cursorY, { align: 'center' });
+    doc.setTextColor(0, 0, 0);
+    cursorY += 6;
+  }
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(99, 102, 241);
+  doc.text(businessName, pageWidth / 2, cursorY, { align: 'center' });
+  doc.setTextColor(0, 0, 0);
+  cursorY += 5;
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(120, 120, 120);
+  doc.text(`Total transaksi: ${transactions.length}`, pageWidth / 2, cursorY, { align: 'center' });
+  doc.setTextColor(0, 0, 0);
+
+  // ── Table rows ──
+  const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date));
+  const body = sorted.map((tr, idx) => [
+    String(idx + 1),
+    tr.description ?? tr.name ?? '-',
+    new Date(tr.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+    formatCurrency(tr.amount),
+  ]);
+
+  const totalAmount = sorted.reduce((sum, tr) => sum + tr.amount, 0);
+
+  autoTable(doc, {
+    startY: cursorY + 6,
+    head: [['No.', 'Deskripsi', 'Tanggal', 'Jumlah (Rp)']],
+    body,
+    foot: [['', '', 'Total', formatCurrency(totalAmount)]],
+    theme: 'plain',
+    headStyles: {
+      fillColor: [245, 245, 245],
+      textColor: [40, 40, 40],
+      fontSize: 9,
+      fontStyle: 'bold',
+      cellPadding: { top: 3, bottom: 3, left: 4, right: 4 },
+    },
+    footStyles: {
+      fillColor: [245, 245, 245],
+      textColor: [40, 40, 40],
+      fontSize: 9.5,
+      fontStyle: 'bold',
+      cellPadding: { top: 3, bottom: 3, left: 4, right: 4 },
+    },
+    styles: {
+      fontSize: 9,
+      cellPadding: { top: 2.5, bottom: 2.5, left: 4, right: 4 },
+      lineColor: [220, 220, 220],
+      lineWidth: 0.1,
+      textColor: [40, 40, 40],
+    },
+    columnStyles: {
+      0: { cellWidth: 12, halign: 'right' },
+      1: { cellWidth: 'auto' },
+      2: { cellWidth: 30 },
+      3: { cellWidth: 40, halign: 'right' },
+    },
+  });
+
+  // ── Footer with AXION logo ──
+  const faviconBase64 = await loadImageAsBase64('/images/favicon.png');
+  const pageCount = (doc as any).internal.getNumberOfPages();
+  const footerY = 284;
+  const logoSize = 5;
+
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.text(
+      `Dicetak oleh AXION pada ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+      14,
+      footerY + 1
+    );
+
+    doc.text(`Halaman ${i} dari ${pageCount}`, pageWidth - 14, footerY + 1, { align: 'right' });
+
+    if (faviconBase64) {
+      doc.addImage(faviconBase64, 'PNG', (pageWidth - logoSize) / 2, footerY - 3, logoSize, logoSize);
+    }
+  }
+  doc.setTextColor(0, 0, 0);
+
+  const safeTitle = title.replace(/[^a-zA-Z0-9-_ ]/g, '').trim().replace(/\s+/g, '-') || 'Transaksi';
+  doc.save(`${safeTitle}-${businessName}.pdf`);
+}
+
 // Export Balance Sheet to PDF
 export async function exportBalanceSheetToPDF(
   businessName: string,

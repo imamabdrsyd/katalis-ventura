@@ -499,6 +499,7 @@ export function useTransactions() {
     // Business context
     user,
     businessId,
+    activeBusiness,
     businessLoading,
     businessError,
     canManageTransactions,
