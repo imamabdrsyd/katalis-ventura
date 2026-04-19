@@ -195,9 +195,9 @@ function GeneralLedgerPageInner() {
       </div>
 
       {/* Main Two-Panel Layout */}
-      <div className="flex flex-col lg:flex-row gap-4">
+      <div className="flex flex-col lg:flex-row gap-4 lg:items-start">
         {/* LEFT PANEL: Account List */}
-        <div className="lg:w-72 xl:w-80 flex-shrink-0">
+        <div className="lg:w-72 xl:w-80 flex-shrink-0 lg:sticky lg:top-4">
           <div className="card-static p-0 overflow-hidden">
             {/* Account Type Filter Tabs */}
             <div className="p-3 border-b border-gray-200 dark:border-gray-700">
@@ -293,9 +293,9 @@ function GeneralLedgerPageInner() {
               </p>
             </div>
           ) : (
-            <div className="card-static p-0 overflow-hidden">
-              {/* Ledger Header */}
-              <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="card-static p-0 overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+              {/* Ledger Header — sticky */}
+              <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
@@ -345,6 +345,9 @@ function GeneralLedgerPageInner() {
                   </div>
                 </div>
               </div>
+
+              {/* Scrollable body: legacy notice + table */}
+              <div className="overflow-y-auto flex-1 min-h-0">
 
               {/* Legacy Transactions Notice */}
               {ledger.legacyCount > 0 && !legacyNoticeDismissed && (
@@ -406,7 +409,7 @@ function GeneralLedgerPageInner() {
                     </p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                  <div className="overflow-x-auto">
                     <table className="w-full min-w-[640px]">
                       <thead>
                         <tr className="border-b-2 border-gray-200 dark:border-gray-600">
@@ -518,6 +521,8 @@ function GeneralLedgerPageInner() {
                   </div>
                 )}
               </div>
+
+              </div>{/* end scrollable body */}
             </div>
           )}
         </div>
