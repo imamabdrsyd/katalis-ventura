@@ -70,32 +70,8 @@ function isInventoryTransaction(transaction: Transaction): boolean {
   );
 }
 
-// Get the "Subjek" to display in the list row
-// EARN → customer/partner name (transaction.name)
-// FIN touching Equity (3xxx debit) → debit sub-account name
-// FIN other → transaction.name
-// STOCK → description (keterangan input)
-// Expenses → sub-account name (debit account) if double-entry, else transaction.name
+// Kolom Kontak selalu tampilkan inputan kontak (transaction.name) untuk semua kategori
 function getRowSubject(transaction: Transaction): string {
-  if (transaction.category === 'EARN') {
-    return transaction.name;
-  }
-  if (transaction.category === 'FIN') {
-    const debitCode = transaction.debit_account?.account_code || '';
-    if (debitCode.startsWith('3') && transaction.debit_account) {
-      return transaction.debit_account.account_name;
-    }
-    return transaction.name;
-  }
-  if (isInventoryTransaction(transaction)) {
-    return transaction.description || '';
-  }
-  if (transaction.category === 'VAR' || transaction.category === 'OPEX') {
-    return transaction.name;
-  }
-  if (transaction.is_double_entry && transaction.debit_account) {
-    return transaction.debit_account.account_name;
-  }
   return transaction.name;
 }
 
@@ -491,7 +467,7 @@ export function TransactionList({
                 </div>
               </td>
               <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 max-w-[200px]">
-                <DescriptionCell text={isInventoryTransaction(transaction) ? transaction.name : transaction.description} />
+                <DescriptionCell text={transaction.description || ''} />
               </td>
               <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
                 {formatDateShort(transaction.date)}
