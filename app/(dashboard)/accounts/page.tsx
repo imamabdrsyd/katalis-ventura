@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
 import type { Account, AccountType } from '@/types';
@@ -8,7 +8,7 @@ import * as accountsApi from '@/lib/api/accounts';
 import type { AccountTreeNode } from '@/lib/api/accounts';
 import { AccountForm, type AccountFormData } from '@/components/accounts/AccountForm';
 import { AccountDeleteModal } from '@/components/accounts/AccountDeleteModal';
-import { Plus, Search, ChevronDown, ChevronRight, Lock, Pencil, XCircle, CheckCircle2, BookOpen as BookOpenIcon, Wallet, HandCoins, Scale, TrendingUp, Receipt } from 'lucide-react';
+import { Plus, Search, ChevronDown, ChevronRight, Lock, CheckCircle2, BookOpen as BookOpenIcon, Wallet, HandCoins, Scale, TrendingUp, Receipt, MoreVertical } from 'lucide-react';
 
 const ACCOUNT_TYPE_ICONS: Record<AccountType, React.ReactNode> = {
   ASSET: <Wallet className="w-4 h-4 text-gray-500 dark:text-gray-400" />,
@@ -301,25 +301,50 @@ export default function AccountsPage() {
         </div>
       )}
 
-      {/* Account Tree */}
-      {!loading && (
-        <div className="space-y-4">
-          {accountTree.map(parent => (
-            <ParentAccountCard
-              key={parent.id}
-              parent={parent}
-              isExpanded={expandedGroups.has(parent.id)}
-              onToggle={() => toggleGroup(parent.id)}
-              onAddSub={() => handleAddSubAccount(parent.id)}
-              onEdit={canManageAccounts ? setEditAccount : undefined}
-              onDeactivate={canManageAccounts ? setDeleteAccount : undefined}
-              onActivate={canManageAccounts ? handleActivate : undefined}
-              canManage={canManageAccounts}
-              showInactive={showInactive}
-            />
-          ))}
-        </div>
-      )}
+      {/* Account Tree — dual panel */}
+      {!loading && (() => {
+        const leftTypes: AccountType[] = ['ASSET', 'LIABILITY', 'EQUITY'];
+        const rightTypes: AccountType[] = ['REVENUE', 'EXPENSE'];
+        const leftNodes = accountTree.filter(p => leftTypes.includes(p.account_type));
+        const rightNodes = accountTree.filter(p => rightTypes.includes(p.account_type));
+
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+            <div className="space-y-4">
+              {leftNodes.map(parent => (
+                <ParentAccountCard
+                  key={parent.id}
+                  parent={parent}
+                  isExpanded={expandedGroups.has(parent.id)}
+                  onToggle={() => toggleGroup(parent.id)}
+                  onAddSub={() => handleAddSubAccount(parent.id)}
+                  onEdit={canManageAccounts ? setEditAccount : undefined}
+                  onDeactivate={canManageAccounts ? setDeleteAccount : undefined}
+                  onActivate={canManageAccounts ? handleActivate : undefined}
+                  canManage={canManageAccounts}
+                  showInactive={showInactive}
+                />
+              ))}
+            </div>
+            <div className="space-y-4">
+              {rightNodes.map(parent => (
+                <ParentAccountCard
+                  key={parent.id}
+                  parent={parent}
+                  isExpanded={expandedGroups.has(parent.id)}
+                  onToggle={() => toggleGroup(parent.id)}
+                  onAddSub={() => handleAddSubAccount(parent.id)}
+                  onEdit={canManageAccounts ? setEditAccount : undefined}
+                  onDeactivate={canManageAccounts ? setDeleteAccount : undefined}
+                  onActivate={canManageAccounts ? handleActivate : undefined}
+                  canManage={canManageAccounts}
+                  showInactive={showInactive}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Add Account Modal */}
       {showAddModal && (
@@ -496,13 +521,31 @@ function SubAccountRow({
   onDeactivate?: (account: Account) => void;
   onActivate?: (account: Account) => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   const isSystem = account.is_system;
   const isInactive = !account.is_active;
   const canEdit = onEdit && !isSystem;
   const canToggle = (onDeactivate && !isSystem && account.is_active) || (onActivate && !account.is_active);
+  const hasMenu = canEdit || canToggle;
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpen]);
 
   return (
-    <div className={`flex items-center justify-between px-4 py-3 ${isInactive ? 'opacity-50' : ''}`}>
+    <div
+      className={`flex items-center justify-between px-4 py-3 ${isInactive ? 'opacity-50' : ''} ${canEdit ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40' : ''} transition-colors`}
+      onClick={() => { if (canEdit) onEdit!(account); }}
+    >
       <div className="flex items-center gap-3">
         <span className="text-gray-300 dark:text-gray-600 pl-2">|--</span>
         <span className="font-mono text-sm font-semibold text-gray-700 dark:text-gray-200">
@@ -521,44 +564,54 @@ function SubAccountRow({
         )}
       </div>
 
-      <div className="flex items-center gap-1">
-        {/* Normal Balance Badge */}
-        <span className={`text-xs px-2 py-0.5 rounded ${
-          account.normal_balance === 'DEBIT'
-            ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
-            : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-500 dark:text-emerald-400'
-        }`}>
+      <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+        {/* Normal Balance Badge — neutral */}
+        <span className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
           {account.normal_balance}
         </span>
 
-        {canEdit && (
-          <button
-            onClick={() => onEdit(account)}
-            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition-colors"
-            title="Edit"
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
+        {/* 3-dots menu */}
+        {hasMenu && (
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setMenuOpen(prev => !prev)}
+              className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-30">
+                {canEdit && (
+                  <button
+                    onClick={() => { setMenuOpen(false); onEdit!(account); }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Edit akun
+                  </button>
+                )}
+                {canToggle && account.is_active && onDeactivate && (
+                  <button
+                    onClick={() => { setMenuOpen(false); onDeactivate(account); }}
+                    className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                  >
+                    Nonaktifkan
+                  </button>
+                )}
+                {canToggle && !account.is_active && onActivate && (
+                  <button
+                    onClick={() => { setMenuOpen(false); onActivate(account); }}
+                    className="w-full text-left px-3 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 inline mr-1.5" />
+                    Aktifkan
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         )}
-        {canToggle && account.is_active && onDeactivate && (
-          <button
-            onClick={() => onDeactivate(account)}
-            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
-            title="Nonaktifkan"
-          >
-            <XCircle className="w-4 h-4" />
-          </button>
-        )}
-        {canToggle && !account.is_active && onActivate && (
-          <button
-            onClick={() => onActivate(account)}
-            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded transition-colors"
-            title="Aktifkan"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-          </button>
-        )}
-        {isSystem && !canEdit && (
+
+        {isSystem && !hasMenu && (
           <div className="p-1.5 text-gray-300 dark:text-gray-600" title="Akun sistem tidak bisa diubah">
             <Lock className="w-4 h-4" />
           </div>
