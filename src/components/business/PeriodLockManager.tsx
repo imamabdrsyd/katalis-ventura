@@ -128,7 +128,7 @@ export function PeriodLockManager({ business, onClose, onUpdated }: PeriodLockMa
             </button>
             <button
               onClick={() => setConfirmUnlock(false)}
-              className="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition-colors"
+              className="btn-ghost flex-1"
             >
               Batal
             </button>

@@ -1097,7 +1097,7 @@ export default function TransactionImportModal({
             <div className="flex gap-3">
               <button
                 onClick={handleClose}
-                className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="btn-ghost"
                 disabled={importing}
               >
                 Batal
@@ -1105,7 +1105,7 @@ export default function TransactionImportModal({
               <button
                 onClick={handleImport}
                 disabled={importCount === 0 || importing}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                className="btn-primary"
               >
                 {importing ? 'Importing...' : `Import ${importCount} Transaksi`}
               </button>

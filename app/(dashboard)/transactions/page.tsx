@@ -452,7 +452,7 @@ function TransactionsPageInner() {
                   <button
                     onClick={handleBulkPost}
                     disabled={saving}
-                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50 border border-gray-200 dark:border-gray-600"
+                    className="btn-secondary flex items-center gap-1.5"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     {t.transactions.posting}
@@ -460,7 +460,7 @@ function TransactionsPageInner() {
                   <button
                     onClick={handleBulkDelete}
                     disabled={saving}
-                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50 border border-gray-200 dark:border-gray-600"
+                    className="btn-secondary flex items-center gap-1.5"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     {t.common.delete} ({selectedIds.size})
@@ -750,7 +750,7 @@ function TransactionsPageInner() {
             <button
               onClick={() => setShowPdfConfigModal(false)}
               disabled={pdfExporting}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+              className="btn-secondary"
             >
               Batal
             </button>

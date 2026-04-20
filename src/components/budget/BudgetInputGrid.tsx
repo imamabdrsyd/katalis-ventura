@@ -211,7 +211,7 @@ export function BudgetInputGrid({
           {onCopyFromActual && (
             <button
               onClick={onCopyFromActual}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              className="btn-secondary inline-flex items-center gap-2"
             >
               <Copy className="w-4 h-4" />
               Copy dari Aktual
