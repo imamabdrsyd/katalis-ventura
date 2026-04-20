@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { MemberList } from '@/components/business/MemberList';
 import { InviteCodeManager } from '@/components/business/InviteCodeManager';
@@ -119,7 +119,9 @@ export default function BusinessMembersPage() {
   const business = businesses.find((b) => b.id === businessId);
   const isCreator = business?.created_by === user?.id || isSuperadmin;
 
-  const [activeTab, setActiveTab] = useState<'members' | 'contacts' | 'omni-channel' | 'integrations'>('members');
+  const searchParams = useSearchParams();
+  const initialTab = (searchParams.get('tab') as 'members' | 'contacts' | 'omni-channel' | 'integrations') || 'members';
+  const [activeTab, setActiveTab] = useState<'members' | 'contacts' | 'omni-channel' | 'integrations'>(initialTab);
   const [members, setMembers] = useState<BusinessMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInviteManager, setShowInviteManager] = useState(false);
