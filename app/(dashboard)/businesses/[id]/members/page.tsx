@@ -10,6 +10,7 @@ import Image from 'next/image';
 import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut, ShoppingBag, Contact } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
+import { Tabs } from '@/components/ui/Tabs';
 import { OmniChannelManager } from '@/components/business/OmniChannelManager';
 import * as businessesApi from '@/lib/api/businesses';
 import { EcommerceIntegration } from '@/components/ecommerce/EcommerceIntegration';
@@ -215,64 +216,42 @@ export default function BusinessMembersPage() {
         )}
       </div>
 
-      {/* Tab Switcher — horizontal scroll on mobile */}
-      <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 mb-6 scrollbar-hide">
-        <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 w-fit">
-          <button
-            onClick={() => setActiveTab('members')}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-              activeTab === 'members'
-                ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            <Users className="w-4 h-4 flex-shrink-0" />
-            Anggota
-            {!loading && (
+      {/* Tab Switcher */}
+      <Tabs<'members' | 'contacts' | 'omni-channel' | 'integrations'>
+        value={activeTab}
+        onChange={setActiveTab}
+        scrollable
+        className="mb-6"
+        tabs={[
+          {
+            value: 'members',
+            label: 'Anggota',
+            icon: <Users className="w-4 h-4" />,
+            badge: !loading ? (
               <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300 rounded-full text-xs">
                 {members.length}
               </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('contacts')}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-              activeTab === 'contacts'
-                ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            <Contact className="w-4 h-4 flex-shrink-0" />
-            Kontak
-          </button>
-          {!isInvestor && (
-            <button
-              onClick={() => setActiveTab('omni-channel')}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'omni-channel'
-                  ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              <Globe className="w-4 h-4 flex-shrink-0" />
-              Halaman Publik
-            </button>
-          )}
-          {!isInvestor && (
-            <button
-              onClick={() => setActiveTab('integrations')}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-                activeTab === 'integrations'
-                  ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              <ShoppingBag className="w-4 h-4 flex-shrink-0" />
-              Integrasi
-            </button>
-          )}
-        </div>
-      </div>
+            ) : undefined,
+          },
+          {
+            value: 'contacts',
+            label: 'Kontak',
+            icon: <Contact className="w-4 h-4" />,
+          },
+          {
+            value: 'omni-channel',
+            label: 'Halaman Publik',
+            icon: <Globe className="w-4 h-4" />,
+            hidden: isInvestor,
+          },
+          {
+            value: 'integrations',
+            label: 'Integrasi',
+            icon: <ShoppingBag className="w-4 h-4" />,
+            hidden: isInvestor,
+          },
+        ]}
+      />
 
       {/* Tab Content */}
       {activeTab === 'members' && (

@@ -10,6 +10,7 @@ import { InviteCodeManager } from '@/components/business/InviteCodeManager';
 import { PeriodLockManager } from '@/components/business/PeriodLockManager';
 import { Building2, Archive, Lock } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
+import { Tabs, type TabItem } from '@/components/ui/Tabs';
 import * as businessesApi from '@/lib/api/businesses';
 import { calculateTotalCapex } from '@/lib/calculations';
 import { createClient } from '@/lib/supabase';
@@ -219,28 +220,16 @@ export default function BusinessesPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setActiveTab('active')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            activeTab === 'active'
-              ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
-              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-          }`}
-        >
-          {t.businesses.activeBusiness} ({activeBusinesses.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('archived')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            activeTab === 'archived'
-              ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
-              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-          }`}
-        >
-          {t.businesses.archivedBusiness} ({archivedBusinesses.length})
-        </button>
-      </div>
+      <Tabs<TabType>
+        variant="underline"
+        className="mb-6"
+        value={activeTab}
+        onChange={setActiveTab}
+        tabs={[
+          { value: 'active', label: `${t.businesses.activeBusiness} (${activeBusinesses.length})` },
+          { value: 'archived', label: `${t.businesses.archivedBusiness} (${archivedBusinesses.length})` },
+        ]}
+      />
 
       {/* Business List */}
       {fetchLoading ? (
