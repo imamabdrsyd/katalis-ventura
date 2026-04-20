@@ -151,6 +151,7 @@ export interface Translations {
     arTrackerTitle: string;
     arTrackerSubtitle: string;
     arTrackerOutstandingLabel: string;
+    arTrackerFrom: string;
     arTrackerContactsLabel: string;
     arTrackerEmpty: string;
     arTrackerEmptyDesc: string;
