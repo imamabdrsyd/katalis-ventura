@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet, Calendar, ClipboardList, HandCoins, ArrowRight } from 'lucide-react';
@@ -53,6 +53,7 @@ export default function DashboardPage() {
   // --- Global year + month filter ---
   const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null); // null = Yearly, 0-11 = specific month
+  const userPickedYearRef = useRef(false);
 
   const MONTH_LABELS = t.dashboard.months;
 
@@ -63,6 +64,16 @@ export default function DashboardPage() {
     if (sorted.length === 0) sorted.push(new Date().getFullYear());
     return sorted;
   }, [transactions]);
+
+  // Kalau tahun sekarang tidak punya transaksi, snap ke tahun terbaru yang ada datanya.
+  // Hanya berlaku untuk initial render — setelah user ganti tahun manual, biarkan.
+  useEffect(() => {
+    if (userPickedYearRef.current) return;
+    if (transactions.length === 0) return;
+    if (!availableYears.includes(selectedYear)) {
+      setSelectedYear(availableYears[availableYears.length - 1]);
+    }
+  }, [availableYears, selectedYear, transactions.length]);
 
   const minYear = availableYears[0];
   const maxYear = availableYears[availableYears.length - 1];
@@ -230,7 +241,10 @@ export default function DashboardPage() {
       <div className="flex items-center gap-1.5 min-w-max">
         <div className="flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 shadow-sm">
           <button
-            onClick={() => setSelectedYear((y) => y - 1)}
+            onClick={() => {
+              userPickedYearRef.current = true;
+              setSelectedYear((y) => y - 1);
+            }}
             disabled={selectedYear <= minYear}
             className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
@@ -240,7 +254,10 @@ export default function DashboardPage() {
             {selectedYear}
           </span>
           <button
-            onClick={() => setSelectedYear((y) => y + 1)}
+            onClick={() => {
+              userPickedYearRef.current = true;
+              setSelectedYear((y) => y + 1);
+            }}
             disabled={selectedYear >= maxYear}
             className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
