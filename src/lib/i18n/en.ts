@@ -143,7 +143,7 @@ export const en: Translations = {
     noTransactionsDesc: 'Start by adding your first transaction to view financial statistics.',
     noTransactionsForBusiness: 'No transactions recorded for this business.',
     addFirstTransaction: 'Add First Transaction',
-    arTrackerTitle: 'Receivables Monitor',
+    arTrackerTitle: 'AR Tracker',
     arTrackerSubtitle: '{n} outstanding transactions from {c}+ contacts',
     arTrackerEmpty: 'No outstanding receivables',
     arTrackerEmptyDesc: 'All receivable transactions have been settled',
