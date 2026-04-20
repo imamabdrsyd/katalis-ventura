@@ -32,6 +32,7 @@ export interface MultiLineTransactionInsert {
   description: string;
   notes?: string;
   status?: TransactionStatus;
+  meta?: Record<string, unknown> | null;
   journal_lines: JournalLineInput[];
 }
 
@@ -152,6 +153,7 @@ export async function updateMultiLineTransaction(
     description: updates.description,
     notes: updates.notes ?? null,
     status: updates.status,
+    ...(updates.meta !== undefined ? { meta: updates.meta } : {}),
   };
 
   // Remove undefined keys

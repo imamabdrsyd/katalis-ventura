@@ -205,12 +205,16 @@ export function useTransactions() {
     if (!editTransaction || !businessId) return;
     setSaving(true);
     try {
+      const existingMeta = (editTransaction.meta as Record<string, unknown>) ?? {};
       await transactionsApi.updateMultiLineTransaction(editTransaction.id, {
         date: data.date,
         category: data.category,
         name: data.name,
         description: data.description,
         notes: data.notes,
+        meta: data.attachment !== undefined
+          ? { ...existingMeta, attachment: data.attachment ?? undefined }
+          : existingMeta,
         journal_lines: data.journal_lines,
       });
       setEditTransaction(null);

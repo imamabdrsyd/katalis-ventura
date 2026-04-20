@@ -679,6 +679,7 @@ function TransactionsPageInner() {
               name: editTransaction.name,
               description: editTransaction.description,
               notes: editTransaction.notes ?? undefined,
+              attachment: editTransaction.meta?.attachment ?? null,
               journal_lines: (editTransaction.journal_lines ?? []).map((l, i) => ({
                 account_id: l.account_id,
                 debit_amount: l.debit_amount,

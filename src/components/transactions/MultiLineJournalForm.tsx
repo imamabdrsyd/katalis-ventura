@@ -6,7 +6,8 @@ import { AccountDropdown } from './AccountDropdown';
 import { getAccounts } from '@/lib/api/accounts';
 import { useParams } from 'next/navigation';
 import { CATEGORY_LABELS } from '@/lib/calculations';
-import type { TransactionCategory, JournalLineInput, Account } from '@/types';
+import type { TransactionCategory, JournalLineInput, Account, TransactionAttachment } from '@/types';
+import { FileUpload } from '@/components/ui/FileUpload';
 
 export interface MultiLineFormData {
   date: string;
@@ -14,6 +15,7 @@ export interface MultiLineFormData {
   name: string;
   description: string;
   notes?: string;
+  attachment?: TransactionAttachment | null;
   journal_lines: JournalLineInput[];
 }
 
@@ -79,6 +81,9 @@ export function MultiLineJournalForm({
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [attachment, setAttachment] = useState<TransactionAttachment | null>(
+    initialData?.attachment ?? null
+  );
 
   useEffect(() => {
     if (!businessId) return;
@@ -189,7 +194,7 @@ export function MultiLineJournalForm({
       sort_order: i,
     }));
 
-    await onSubmit({ ...formData, journal_lines: cleanLines });
+    await onSubmit({ ...formData, attachment, journal_lines: cleanLines });
   }
 
   return (
@@ -385,6 +390,17 @@ export function MultiLineJournalForm({
           className="input"
           rows={2}
           placeholder="Catatan tambahan"
+        />
+      </div>
+
+      {/* Attachment */}
+      <div>
+        <label className="label">Lampiran (opsional)</label>
+        <FileUpload
+          businessId={businessId}
+          value={attachment}
+          onChange={setAttachment}
+          disabled={loading}
         />
       </div>
 
