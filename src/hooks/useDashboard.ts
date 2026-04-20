@@ -68,8 +68,9 @@ export function useDashboard() {
   }, [queryClient, businessId]);
 
   // Dashboard KPIs only use posted transactions
+  // Transaksi lama sebelum fitur draft/posted memiliki status=null — dianggap posted
   const transactions = useMemo(
-    () => allTransactions.filter((t: Transaction) => t.status === 'posted'),
+    () => allTransactions.filter((t: Transaction) => !t.status || t.status === 'posted'),
     [allTransactions]
   );
 

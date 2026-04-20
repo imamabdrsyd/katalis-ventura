@@ -39,9 +39,9 @@ export function useBalanceSheet(): UseBalanceSheetReturn {
     enabled: !!activeBusinessId,
   });
 
-  // Only posted transactions
+  // Only posted transactions — null status (transaksi lama) dianggap posted
   const transactions = useMemo(
-    () => allTransactions.filter((t) => t.status === 'posted'),
+    () => allTransactions.filter((t) => !t.status || t.status === 'posted'),
     [allTransactions]
   );
 

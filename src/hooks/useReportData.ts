@@ -66,9 +66,9 @@ export function useReportData(): UseReportDataReturn {
     enabled: !!activeBusinessId,
   });
 
-  // Reports only use posted transactions — drafts are excluded from all financial calculations
+  // Reports only use posted transactions — null status (transaksi lama) dianggap posted
   const transactions = useMemo(
-    () => allTransactions.filter((t) => t.status === 'posted'),
+    () => allTransactions.filter((t) => !t.status || t.status === 'posted'),
     [allTransactions]
   );
 

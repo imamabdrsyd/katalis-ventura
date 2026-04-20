@@ -106,7 +106,7 @@ export function useBudget() {
   const periodTransactions = useMemo(() => {
     if (!selectedBudget) return [];
     return transactions.filter((t) =>
-      t.status === 'posted' &&
+      (!t.status || t.status === 'posted') &&
       t.date >= selectedBudget.start_date &&
       t.date <= selectedBudget.end_date
     );
