@@ -9,6 +9,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { calculateFinancialSummary, calculateCategoryCounts } from '@/lib/calculations';
 import { formatCurrency, formatPercentage, formatDateShort } from '@/lib/utils';
 import { CategoryBadge } from '@/components/ui/CategoryBadge';
+import { CATEGORY_TEXT_CLASSES } from '@/lib/categoryColors';
 import { isTradeReceivableTransaction, isSettled, isSettlementEntry, getOutstandingAmount } from '@/lib/accounting/guidance/receivableSettlement';
 
 // Lazy-load chart components — chart.js (~6.2 MB) only loads when charts render
@@ -406,8 +407,8 @@ export default function DashboardPage() {
 
           {arData.total === 0 ? (
             <div className="text-center py-10">
-              <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center mb-3">
-                <HandCoins className="w-7 h-7 text-emerald-500 dark:text-emerald-400" />
+              <div className="w-14 h-14 mx-auto rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3">
+                <HandCoins className="w-7 h-7 text-gray-400 dark:text-gray-500" />
               </div>
               <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{t.dashboard.arTrackerEmpty}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t.dashboard.arTrackerEmptyDesc}</p>
@@ -501,16 +502,16 @@ export default function DashboardPage() {
             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">{t.dashboard.financialSummary}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {([
-                { label: t.dashboard.earnings, labelClass: 'text-emerald-600 dark:text-emerald-400', value: summary.totalEarn, count: categoryCounts.EARN },
-                { label: t.dashboard.opex, labelClass: 'text-red-500 dark:text-red-400', value: summary.totalOpex, count: categoryCounts.OPEX },
-                { label: t.dashboard.variable, labelClass: 'text-amber-600 dark:text-amber-400', value: summary.totalVar, count: categoryCounts.VAR },
-                { label: t.dashboard.capex, labelClass: 'text-primary-500 dark:text-primary-400', value: summary.totalCapex, count: categoryCounts.CAPEX },
-                { label: t.dashboard.taxes, labelClass: 'text-purple-500 dark:text-purple-400', value: summary.totalTax, count: categoryCounts.TAX },
-                { label: t.dashboard.financing, labelClass: 'text-pink-500 dark:text-pink-400', value: summary.totalFin, count: categoryCounts.FIN },
+                { label: t.dashboard.earnings, cat: 'EARN', value: summary.totalEarn, count: categoryCounts.EARN },
+                { label: t.dashboard.opex, cat: 'OPEX', value: summary.totalOpex, count: categoryCounts.OPEX },
+                { label: t.dashboard.variable, cat: 'VAR', value: summary.totalVar, count: categoryCounts.VAR },
+                { label: t.dashboard.capex, cat: 'CAPEX', value: summary.totalCapex, count: categoryCounts.CAPEX },
+                { label: t.dashboard.taxes, cat: 'TAX', value: summary.totalTax, count: categoryCounts.TAX },
+                { label: t.dashboard.financing, cat: 'FIN', value: summary.totalFin, count: categoryCounts.FIN },
               ] as const).map((item) => (
                 <div key={item.label} className="p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
                   <div className="flex items-center justify-between">
-                    <div className={`text-sm font-semibold ${item.labelClass}`}>{item.label}</div>
+                    <div className={`text-sm font-semibold ${CATEGORY_TEXT_CLASSES[item.cat]}`}>{item.label}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600/50 px-2 py-0.5 rounded-full">{t.dashboard.records.replace('{n}', String(item.count))}</div>
                   </div>
                   <div className="text-base font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(item.value)}</div>
