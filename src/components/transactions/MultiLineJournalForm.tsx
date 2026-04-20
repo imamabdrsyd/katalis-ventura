@@ -22,6 +22,8 @@ interface MultiLineJournalFormProps {
   onCancel: () => void;
   loading?: boolean;
   businessId?: string;
+  initialData?: MultiLineFormData;
+  submitLabel?: string;
 }
 
 const ALL_CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
@@ -46,26 +48,33 @@ export function MultiLineJournalForm({
   onCancel,
   loading = false,
   businessId: businessIdProp,
+  initialData,
+  submitLabel,
 }: MultiLineJournalFormProps) {
   const params = useParams();
   const businessId = businessIdProp || (params?.businessId as string);
 
   const [formData, setFormData] = useState<Omit<MultiLineFormData, 'journal_lines'>>({
-    date: new Date().toISOString().split('T')[0],
-    category: 'OPEX',
-    name: '',
-    description: '',
-    notes: '',
+    date: initialData?.date ?? new Date().toISOString().split('T')[0],
+    category: initialData?.category ?? 'OPEX',
+    name: initialData?.name ?? '',
+    description: initialData?.description ?? '',
+    notes: initialData?.notes ?? '',
   });
 
-  const [lines, setLines] = useState<JournalLineInput[]>([
-    emptyLine(0),
-    emptyLine(1),
-  ]);
+  const initialLines = initialData?.journal_lines && initialData.journal_lines.length >= 2
+    ? initialData.journal_lines
+    : [emptyLine(0), emptyLine(1)];
+
+  const [lines, setLines] = useState<JournalLineInput[]>(initialLines);
 
   // Display strings for debit/credit inputs (formatted with thousand separators)
-  const [displayDebit, setDisplayDebit] = useState<string[]>(['', '']);
-  const [displayCredit, setDisplayCredit] = useState<string[]>(['', '']);
+  const [displayDebit, setDisplayDebit] = useState<string[]>(
+    initialLines.map((l) => formatNumber(l.debit_amount))
+  );
+  const [displayCredit, setDisplayCredit] = useState<string[]>(
+    initialLines.map((l) => formatNumber(l.credit_amount))
+  );
 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
@@ -394,7 +403,7 @@ export function MultiLineJournalForm({
           className="btn-primary flex-1"
           disabled={loading || !isBalanced || totalDebit === 0}
         >
-          {loading ? 'Menyimpan...' : 'Simpan Jurnal'}
+          {loading ? 'Menyimpan...' : (submitLabel ?? 'Simpan Jurnal')}
         </button>
       </div>
     </form>

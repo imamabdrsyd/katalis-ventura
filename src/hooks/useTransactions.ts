@@ -11,6 +11,7 @@ import { findCogsAccount } from '@/lib/utils/inventoryHelper';
 import { buildSettlementPrefill, buildPartialSettlementPrefill, getOutstandingAmount } from '@/lib/accounting/guidance/receivableSettlement';
 import type { Transaction, TransactionCategory, TransactionStatus, Account, Contact } from '@/types';
 import type { TransactionFormData } from '@/components/transactions/TransactionForm';
+import type { MultiLineFormData } from '@/components/transactions/MultiLineJournalForm';
 import type { TransactionFilters } from '@/lib/api/transactions';
 
 export function useTransactions() {
@@ -199,6 +200,27 @@ export function useTransactions() {
       setSaving(false);
     }
   }, [businessId, user, invalidateTransactions, queryClient]);
+
+  const handleEditMultiLineTransaction = useCallback(async (data: MultiLineFormData) => {
+    if (!editTransaction || !businessId) return;
+    setSaving(true);
+    try {
+      await transactionsApi.updateMultiLineTransaction(editTransaction.id, {
+        date: data.date,
+        category: data.category,
+        name: data.name,
+        description: data.description,
+        notes: data.notes,
+        journal_lines: data.journal_lines,
+      });
+      setEditTransaction(null);
+      invalidateTransactions();
+    } catch (err: any) {
+      alert(err.message || 'Gagal mengupdate transaksi');
+    } finally {
+      setSaving(false);
+    }
+  }, [editTransaction, businessId, invalidateTransactions]);
 
   const handleEditTransaction = useCallback(async (data: TransactionFormData) => {
     if (!editTransaction || !businessId || !user) return;
@@ -566,6 +588,7 @@ export function useTransactions() {
     handleAddTransaction,
     handleQuickAddTransaction,
     handleEditTransaction,
+    handleEditMultiLineTransaction,
     handleDeleteTransaction,
     handlePrint,
     handleOpenInModal,

@@ -3,6 +3,8 @@
 import { useTransactions } from '@/hooks/useTransactions';
 import { Modal } from '@/components/ui/Modal';
 import { TransactionForm } from '@/components/transactions/TransactionForm';
+import { MultiLineJournalForm } from '@/components/transactions/MultiLineJournalForm';
+import type { MultiLineFormData } from '@/components/transactions/MultiLineJournalForm';
 import { TransactionList } from '@/components/transactions/TransactionList';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import { DeleteConfirmModal } from '@/components/transactions/DeleteConfirmModal';
@@ -101,6 +103,7 @@ function TransactionsPageInner() {
     handleAddTransaction,
     handleQuickAddTransaction,
     handleEditTransaction,
+    handleEditMultiLineTransaction,
     handleDeleteTransaction,
     handlePrint,
     handleOpenInModal,
@@ -668,13 +671,37 @@ function TransactionsPageInner() {
         onClose={() => setEditTransaction(null)}
         title={t.transactions.editTransaction}
       >
-        <TransactionForm
-          transaction={editTransaction}
-          onSubmit={handleEditTransaction}
-          onCancel={() => setEditTransaction(null)}
-          loading={saving}
-          businessId={businessId || undefined}
-        />
+        {editTransaction?.is_multi_line ? (
+          <MultiLineJournalForm
+            initialData={editTransaction ? {
+              date: editTransaction.date,
+              category: editTransaction.category,
+              name: editTransaction.name,
+              description: editTransaction.description,
+              notes: editTransaction.notes ?? undefined,
+              journal_lines: (editTransaction.journal_lines ?? []).map((l, i) => ({
+                account_id: l.account_id,
+                debit_amount: l.debit_amount,
+                credit_amount: l.credit_amount,
+                description: l.description ?? '',
+                sort_order: l.sort_order ?? i,
+              })),
+            } : undefined}
+            onSubmit={handleEditMultiLineTransaction as (data: MultiLineFormData) => Promise<void>}
+            onCancel={() => setEditTransaction(null)}
+            loading={saving}
+            businessId={businessId || undefined}
+            submitLabel="Update Jurnal"
+          />
+        ) : (
+          <TransactionForm
+            transaction={editTransaction}
+            onSubmit={handleEditTransaction}
+            onCancel={() => setEditTransaction(null)}
+            loading={saving}
+            businessId={businessId || undefined}
+          />
+        )}
       </Modal>
 
       {/* Transaction Detail Modal */}
