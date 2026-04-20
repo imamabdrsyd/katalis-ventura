@@ -26,6 +26,7 @@ import {
   UtensilsCrossed,
   Home,
   Menu,
+  PanelLeft,
   X,
   Settings,
   BookOpen,
@@ -736,36 +737,22 @@ function Sidebar({
         {/* Logo + Hamburger row */}
         <div className={`flex items-center border-b border-gray-200 dark:border-gray-700 h-16 flex-shrink-0 ${isCollapsed ? 'justify-center px-2' : 'gap-2 px-3'}`}>
           {isCollapsed ? (
-            /* Favicon sebagai tombol expand */
             <button
               onClick={onToggleCollapse}
-              className="hidden md:flex p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="hidden md:flex p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               title="Expand sidebar"
             >
-              <Image
-                src="/images/favicon.png"
-                alt="Expand sidebar"
-                width={28}
-                height={28}
-                className="object-contain dark:hidden"
-              />
-              <Image
-                src="/images/favicon-dark.png"
-                alt="Expand sidebar"
-                width={28}
-                height={28}
-                className="object-contain hidden dark:block"
-              />
+              <PanelLeft className="w-5 h-5" />
             </button>
           ) : (
             <>
-              {/* Hamburger collapse — desktop only */}
+              {/* Panel toggle — desktop only */}
               <button
                 onClick={onToggleCollapse}
                 className="hidden md:flex p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0"
                 title="Collapse sidebar"
               >
-                <Menu className="w-5 h-5" />
+                <PanelLeft className="w-5 h-5" />
               </button>
 
               {/* Logo — fade out saat collapsed */}
