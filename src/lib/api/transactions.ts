@@ -182,11 +182,9 @@ export async function updateMultiLineTransaction(
   if (txnError || !transaction) throw new Error(txnError?.message ?? 'Failed to update transaction');
 
   if (updates.journal_lines) {
-    // Delete old lines and re-insert
-    await supabase.from('journal_lines').delete().eq('transaction_id', id);
-
+    // Atomic replace via RPC — menghindari race condition deferred trigger
+    // antara 2 HTTP request terpisah (DELETE lalu INSERT)
     const lines = updates.journal_lines.map((l, i) => ({
-      transaction_id: id,
       account_id: l.account_id,
       debit_amount: l.debit_amount,
       credit_amount: l.credit_amount,
@@ -194,11 +192,12 @@ export async function updateMultiLineTransaction(
       sort_order: l.sort_order ?? i,
     }));
 
-    const { error: linesError } = await supabase
-      .from('journal_lines')
-      .insert(lines);
+    const { error: rpcError } = await supabase.rpc('replace_journal_lines', {
+      p_transaction_id: id,
+      p_lines: lines,
+    });
 
-    if (linesError) throw new Error(linesError.message);
+    if (rpcError) throw new Error(rpcError.message);
   }
 
   return transaction as Transaction;
