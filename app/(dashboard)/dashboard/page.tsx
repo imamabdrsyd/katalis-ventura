@@ -19,21 +19,21 @@ const ExpenseBreakdownChart = dynamic(() => import('@/components/charts/ExpenseB
   loading: () => <div className="animate-pulse h-80 bg-gray-200 dark:bg-gray-700 rounded-lg" />,
 });
 
-function isInventoryTransaction(t: Transaction): boolean {
-  const debitCode = t.debit_account?.account_code || '';
-  const debitName = t.debit_account?.account_name?.toLowerCase() || '';
-  return t.category === 'VAR' && (
-    debitCode.startsWith('13') ||
-    debitName.includes('inventory') ||
-    debitName.includes('persediaan')
-  );
-}
 
-function getRowSubject(t: Transaction): string {
-  if (t.category === 'EARN' || t.category === 'FIN') return t.name;
-  if (isInventoryTransaction(t)) return t.description || '';
-  if (t.is_double_entry && t.debit_account) return t.debit_account.account_name;
-  return t.name;
+function formatRelativeTime(createdAt: string, txDate: string): string {
+  const now = new Date();
+  const created = new Date(createdAt);
+  const diffMs = now.getTime() - created.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffSec < 60) return `${diffSec}s ago`;
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHour < 24) return `${diffHour}h ago`;
+  if (diffDay <= 3) return `${diffDay}d ago`;
+  return formatDateShort(txDate);
 }
 
 export default function DashboardPage() {
@@ -393,10 +393,10 @@ export default function DashboardPage() {
                 {recentTransactions.map((t) => (
                   <tr key={t.id}>
                     <td className="py-3 pr-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                      {formatDateShort(t.date)}
+                      {formatRelativeTime(t.created_at, t.date)}
                     </td>
                     <td className="py-3 pr-4 text-sm text-gray-800 dark:text-gray-200 font-medium truncate max-w-[200px]">
-                      {getRowSubject(t)}
+                      {t.description || t.name}
                     </td>
                     <td className="py-3 pr-4">
                       <CategoryBadge category={t.category} size="xs" />
