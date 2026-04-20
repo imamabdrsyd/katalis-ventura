@@ -383,9 +383,7 @@ export default function DashboardPage() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-8">
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
-                <HandCoins className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
-              </div>
+              <HandCoins className="w-6 h-6 text-primary-500 dark:text-primary-400" />
               <div>
                 <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.arTrackerTitle}</h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -503,16 +501,16 @@ export default function DashboardPage() {
             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">{t.dashboard.financialSummary}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {([
-                { label: t.dashboard.earnings, color: 'text-emerald-500 dark:text-emerald-400', value: summary.totalEarn, count: categoryCounts.EARN },
-                { label: t.dashboard.opex, color: 'text-red-500 dark:text-red-400', value: summary.totalOpex, count: categoryCounts.OPEX },
-                { label: t.dashboard.variable, color: 'text-amber-500 dark:text-amber-400', value: summary.totalVar, count: categoryCounts.VAR },
-                { label: t.dashboard.capex, color: 'text-indigo-500 dark:text-indigo-400', value: summary.totalCapex, count: categoryCounts.CAPEX },
-                { label: t.dashboard.taxes, color: 'text-purple-500 dark:text-purple-400', value: summary.totalTax, count: categoryCounts.TAX },
-                { label: t.dashboard.financing, color: 'text-pink-500 dark:text-pink-400', value: summary.totalFin, count: categoryCounts.FIN },
+                { label: t.dashboard.earnings, labelClass: 'text-emerald-600 dark:text-emerald-400', value: summary.totalEarn, count: categoryCounts.EARN },
+                { label: t.dashboard.opex, labelClass: 'text-red-500 dark:text-red-400', value: summary.totalOpex, count: categoryCounts.OPEX },
+                { label: t.dashboard.variable, labelClass: 'text-amber-600 dark:text-amber-400', value: summary.totalVar, count: categoryCounts.VAR },
+                { label: t.dashboard.capex, labelClass: 'text-primary-500 dark:text-primary-400', value: summary.totalCapex, count: categoryCounts.CAPEX },
+                { label: t.dashboard.taxes, labelClass: 'text-purple-500 dark:text-purple-400', value: summary.totalTax, count: categoryCounts.TAX },
+                { label: t.dashboard.financing, labelClass: 'text-pink-500 dark:text-pink-400', value: summary.totalFin, count: categoryCounts.FIN },
               ] as const).map((item) => (
                 <div key={item.label} className="p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
                   <div className="flex items-center justify-between">
-                    <div className={`text-sm font-semibold ${item.color}`}>{item.label}</div>
+                    <div className={`text-sm font-semibold ${item.labelClass}`}>{item.label}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600/50 px-2 py-0.5 rounded-full">{t.dashboard.records.replace('{n}', String(item.count))}</div>
                   </div>
                   <div className="text-base font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(item.value)}</div>
@@ -527,9 +525,10 @@ export default function DashboardPage() {
             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.recentTransactions}</h2>
             <button
               onClick={() => router.push('/transactions')}
-              className="text-sm text-indigo-500 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-medium"
+              className="flex items-center gap-1 text-sm text-primary-500 dark:text-primary-400 hover:text-primary-600 dark:hover:text-primary-300 font-medium transition-colors"
             >
               {t.dashboard.viewAll}
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
           <div className="overflow-x-auto">
