@@ -400,16 +400,18 @@ export default function DashboardPage() {
       {transactions.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-8">
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.arTrackerTitle}</h2>
               {arData.count > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 text-[10px] font-bold text-gray-700 dark:text-gray-300">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-300">
                     {arData.count}
                   </span>
-                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold">
+                  <span className="text-xs text-gray-600 dark:text-gray-400">{t.dashboard.arTrackerOutstandingLabel}</span>
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-500 dark:bg-indigo-600 text-xs font-semibold text-white">
                     {arData.topDebtors.length > 0 ? new Set(arData.topDebtors.map(d => d.name)).size : 0}
                   </span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">{t.dashboard.arTrackerContactsLabel}</span>
                 </div>
               )}
             </div>
