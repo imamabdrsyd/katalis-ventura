@@ -3,13 +3,13 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet, Calendar, ClipboardList } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet, Calendar, ClipboardList, HandCoins, ArrowRight } from 'lucide-react';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useLanguage } from '@/context/LanguageContext';
 import { calculateFinancialSummary, calculateCategoryCounts } from '@/lib/calculations';
 import { formatCurrency, formatPercentage, formatDateShort } from '@/lib/utils';
 import { CategoryBadge } from '@/components/ui/CategoryBadge';
-import type { Transaction } from '@/types';
+import { isTradeReceivableTransaction, isSettled, isSettlementEntry, getOutstandingAmount } from '@/lib/accounting/guidance/receivableSettlement';
 
 // Lazy-load chart components — chart.js (~6.2 MB) only loads when charts render
 const MonitoringChart = dynamic(() => import('@/components/charts/MonitoringChart'), {
@@ -80,6 +80,42 @@ export default function DashboardPage() {
 
   const summary = useMemo(() => calculateFinancialSummary(filteredTransactions), [filteredTransactions]);
   const categoryCounts = useMemo(() => calculateCategoryCounts(filteredTransactions), [filteredTransactions]);
+
+  // --- AR Tracker: outstanding piutang across all time, bucketed by age ---
+  const arData = useMemo(() => {
+    const today = new Date();
+    const outstanding = transactions.filter(
+      (tx) => isTradeReceivableTransaction(tx) && !isSettled(tx) && !isSettlementEntry(tx)
+    );
+
+    const buckets = { current: 0, b30: 0, b60: 0, b90: 0, over90: 0 };
+    const byContact = new Map<string, number>();
+    let total = 0;
+
+    for (const tx of outstanding) {
+      const amount = getOutstandingAmount(tx);
+      if (amount <= 0) continue;
+      total += amount;
+
+      const txDate = new Date(tx.date);
+      const days = Math.floor((today.getTime() - txDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (days <= 0) buckets.current += amount;
+      else if (days <= 30) buckets.b30 += amount;
+      else if (days <= 60) buckets.b60 += amount;
+      else if (days <= 90) buckets.b90 += amount;
+      else buckets.over90 += amount;
+
+      const contactName = tx.name || 'Tanpa Nama';
+      byContact.set(contactName, (byContact.get(contactName) || 0) + amount);
+    }
+
+    const topDebtors = Array.from(byContact.entries())
+      .map(([name, amt]) => ({ name, amount: amt }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 3);
+
+    return { total, buckets, topDebtors, count: outstanding.length };
+  }, [transactions]);
   // --- Revenue: growth comparison ---
   // Monthly filter: compare vs previous month
   // Yearly filter: compare total revenue this year vs total revenue last year
@@ -342,34 +378,147 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Financial Summary */}
+      {/* AR Tracker (Monitor Piutang) */}
       {transactions.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">{t.dashboard.financialSummary}</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {([
-              { label: t.dashboard.earnings, color: 'text-emerald-500 dark:text-emerald-400', value: summary.totalEarn, count: categoryCounts.EARN },
-              { label: t.dashboard.opex, color: 'text-red-500 dark:text-red-400', value: summary.totalOpex, count: categoryCounts.OPEX },
-              { label: t.dashboard.variable, color: 'text-amber-500 dark:text-amber-400', value: summary.totalVar, count: categoryCounts.VAR },
-              { label: t.dashboard.capex, color: 'text-indigo-500 dark:text-indigo-400', value: summary.totalCapex, count: categoryCounts.CAPEX },
-              { label: t.dashboard.taxes, color: 'text-purple-500 dark:text-purple-400', value: summary.totalTax, count: categoryCounts.TAX },
-              { label: t.dashboard.financing, color: 'text-pink-500 dark:text-pink-400', value: summary.totalFin, count: categoryCounts.FIN },
-            ] as const).map((item) => (
-              <div key={item.label} className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
-                <div className="flex items-center justify-between">
-                  <div className={`text-sm font-semibold ${item.color}`}>{item.label}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600/50 px-2 py-0.5 rounded-full">{t.dashboard.records.replace('{n}', String(item.count))}</div>
-                </div>
-                <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(item.value)}</div>
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
+                <HandCoins className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
               </div>
-            ))}
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Monitor Piutang</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  {arData.count > 0 ? `${arData.count} transaksi outstanding dari ${arData.topDebtors.length > 0 ? new Set(arData.topDebtors.map(d => d.name)).size : 0}+ kontak` : 'Semua piutang sudah lunas'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => router.push('/ar-ap')}
+              className="flex items-center gap-1 text-sm text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 font-medium transition-colors"
+            >
+              {t.dashboard.viewAll}
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
+
+          {arData.total === 0 ? (
+            <div className="text-center py-10">
+              <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center mb-3">
+                <HandCoins className="w-7 h-7 text-emerald-500 dark:text-emerald-400" />
+              </div>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Tidak ada piutang outstanding</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Semua transaksi piutang sudah dilunasi</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left: Total + aging breakdown */}
+              <div className="lg:col-span-2">
+                <div className="mb-4">
+                  <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Total Outstanding</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(arData.total)}</div>
+                </div>
+                {/* Aging bar */}
+                <div className="flex rounded-lg overflow-hidden h-2 bg-gray-100 dark:bg-gray-700 mb-3">
+                  {([
+                    { key: 'current', value: arData.buckets.current, color: 'bg-emerald-400 dark:bg-emerald-500' },
+                    { key: 'b30', value: arData.buckets.b30, color: 'bg-sky-400 dark:bg-sky-500' },
+                    { key: 'b60', value: arData.buckets.b60, color: 'bg-amber-400 dark:bg-amber-500' },
+                    { key: 'b90', value: arData.buckets.b90, color: 'bg-orange-400 dark:bg-orange-500' },
+                    { key: 'over90', value: arData.buckets.over90, color: 'bg-red-500 dark:bg-red-500' },
+                  ] as const)
+                    .filter((b) => b.value > 0)
+                    .map((b) => (
+                      <div
+                        key={b.key}
+                        className={b.color}
+                        style={{ width: `${(b.value / arData.total) * 100}%` }}
+                        title={formatCurrency(b.value)}
+                      />
+                    ))}
+                </div>
+                {/* Aging chips */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {([
+                    { label: t.arAp.current, value: arData.buckets.current, dot: 'bg-emerald-400 dark:bg-emerald-500' },
+                    { label: t.arAp.days1to30, value: arData.buckets.b30, dot: 'bg-sky-400 dark:bg-sky-500' },
+                    { label: t.arAp.days31to60, value: arData.buckets.b60, dot: 'bg-amber-400 dark:bg-amber-500' },
+                    { label: t.arAp.days61to90, value: arData.buckets.b90, dot: 'bg-orange-400 dark:bg-orange-500' },
+                    { label: t.arAp.daysOver90, value: arData.buckets.over90, dot: 'bg-red-500 dark:bg-red-500' },
+                  ] as const).map((bucket) => (
+                    <div key={bucket.label} className="p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <div className={`w-1.5 h-1.5 rounded-full ${bucket.dot}`} />
+                        <div className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{bucket.label}</div>
+                      </div>
+                      <div className={`text-sm font-bold ${bucket.value === 0 ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
+                        {bucket.value === 0 ? '—' : formatCurrency(bucket.value)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right: Top debtors */}
+              <div className="lg:col-span-1">
+                <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Top Debitur</div>
+                <div className="space-y-2">
+                  {arData.topDebtors.map((debtor, idx) => {
+                    const pct = (debtor.amount / arData.total) * 100;
+                    return (
+                      <div key={debtor.name} className="p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                              {idx + 1}
+                            </div>
+                            <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{debtor.name}</div>
+                          </div>
+                          <div className="text-sm font-bold text-gray-900 dark:text-gray-100 flex-shrink-0 ml-2">
+                            {formatCurrency(debtor.amount)}
+                          </div>
+                        </div>
+                        <div className="h-1 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                          <div className="h-full bg-indigo-500 dark:bg-indigo-400 rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Recent Transactions */}
+      {/* Dual Panel: Financial Summary + Recent Transactions */}
       {transactions.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Financial Summary */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">{t.dashboard.financialSummary}</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {([
+                { label: t.dashboard.earnings, color: 'text-emerald-500 dark:text-emerald-400', value: summary.totalEarn, count: categoryCounts.EARN },
+                { label: t.dashboard.opex, color: 'text-red-500 dark:text-red-400', value: summary.totalOpex, count: categoryCounts.OPEX },
+                { label: t.dashboard.variable, color: 'text-amber-500 dark:text-amber-400', value: summary.totalVar, count: categoryCounts.VAR },
+                { label: t.dashboard.capex, color: 'text-indigo-500 dark:text-indigo-400', value: summary.totalCapex, count: categoryCounts.CAPEX },
+                { label: t.dashboard.taxes, color: 'text-purple-500 dark:text-purple-400', value: summary.totalTax, count: categoryCounts.TAX },
+                { label: t.dashboard.financing, color: 'text-pink-500 dark:text-pink-400', value: summary.totalFin, count: categoryCounts.FIN },
+              ] as const).map((item) => (
+                <div key={item.label} className="p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <div className={`text-sm font-semibold ${item.color}`}>{item.label}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600/50 px-2 py-0.5 rounded-full">{t.dashboard.records.replace('{n}', String(item.count))}</div>
+                  </div>
+                  <div className="text-base font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(item.value)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Recent Transactions */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.recentTransactions}</h2>
             <button
@@ -410,6 +559,7 @@ export default function DashboardPage() {
                 ))}
               </tbody>
             </table>
+          </div>
           </div>
         </div>
       )}
