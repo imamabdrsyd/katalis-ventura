@@ -58,18 +58,19 @@ primary: {
 
 ### 1.3 Warna Kategori Transaksi
 
-Badge wajib konsisten dengan utility class di [globals.css](../app/globals.css):
+**Source of truth: [`src/lib/categoryColors.ts`](../src/lib/categoryColors.ts)** — `CATEGORY_BADGE_CLASSES` dan `CATEGORY_TEXT_CLASSES`.
+Gunakan `<CategoryBadge category={...} />` atau import langsung dari `categoryColors.ts`.
 
-| Kategori | Utility | Color |
-|----------|---------|-------|
-| EARN | `.badge-earn` | emerald |
-| OPEX | `.badge-opex` | red |
-| VAR | `.badge-var` | amber |
-| CAPEX | `.badge-capex` | indigo |
-| TAX | `.badge-tax` | purple |
-| FIN | `.badge-fin` | pink |
+| Kategori | Color | Text class |
+|----------|-------|------------|
+| EARN | emerald | `text-emerald-600 dark:text-emerald-400` |
+| OPEX | red | `text-red-600 dark:text-red-400` |
+| VAR | pink | `text-pink-600 dark:text-pink-400` |
+| CAPEX | blue | `text-blue-600 dark:text-blue-400` |
+| TAX | yellow | `text-yellow-600 dark:text-yellow-400` |
+| FIN | indigo | `text-indigo-600 dark:text-indigo-400` |
 
-> Dulu di memory pernah ada versi "VAR=pink, FIN=indigo" — **sudah di-deprecate**. Selalu rujuk `globals.css` sebagai source of truth.
+> `globals.css` punya `.badge-*` classes — **jangan dipakai**, isinya outdated dan tidak sinkron. Selalu pakai `categoryColors.ts`.
 
 ### 1.4 Warna Tipe Kontak
 
