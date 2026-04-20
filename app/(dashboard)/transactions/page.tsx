@@ -11,7 +11,7 @@ import type { TransactionCategory } from '@/types';
 import { QuickTransactionForm } from '@/components/transactions/QuickTransactionForm';
 import { RecurringList } from '@/components/transactions/RecurringList';
 import { useRecurringTransactions } from '@/hooks/useRecurringTransactions';
-import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2, Calculator, RefreshCw, Printer, Loader2, Users } from 'lucide-react';
+import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2, Calculator, RefreshCw, Printer, Loader2, Contact as ContactIcon } from 'lucide-react';
 import { exportSelectedTransactionsToPDF } from '@/lib/export';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
@@ -432,7 +432,7 @@ function TransactionsPageInner() {
               className="ml-2 mb-1 flex-shrink-0 p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
               title="Kelola kontak"
             >
-              <Users className="w-4 h-4" />
+              <ContactIcon className="w-4 h-4" />
             </button>
           )}
         </div>
