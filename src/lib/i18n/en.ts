@@ -145,8 +145,6 @@ export const en: Translations = {
     addFirstTransaction: 'Add First Transaction',
     arTrackerTitle: 'AR Tracker',
     arTrackerSubtitle: '{n} outstanding transactions from {c}+ contacts',
-    arTrackerOutstandingLabel: 'Outstanding',
-    arTrackerContactsLabel: 'Contacts',
     arTrackerEmpty: 'No outstanding receivables',
     arTrackerEmptyDesc: 'All receivable transactions have been settled',
     arTotalOutstanding: 'Total Outstanding',

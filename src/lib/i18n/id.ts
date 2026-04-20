@@ -145,8 +145,6 @@ export const id: Translations = {
     addFirstTransaction: 'Tambah Transaksi Pertama',
     arTrackerTitle: 'AR Tracker',
     arTrackerSubtitle: '{n} transaksi outstanding dari {c}+ kontak',
-    arTrackerOutstandingLabel: 'Outstanding',
-    arTrackerContactsLabel: 'Kontak',
     arTrackerEmpty: 'Tidak ada piutang outstanding',
     arTrackerEmptyDesc: 'Semua transaksi piutang sudah dilunasi',
     arTotalOutstanding: 'Total Outstanding',
