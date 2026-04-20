@@ -652,16 +652,16 @@ export interface Contact {
 
 // ==================== AR/AP AGING ====================
 
-export type AgingBucket = 'current' | '1-30' | '31-60' | '61-90' | '90+';
+export type AgingBucket = 'current' | '31-60' | '61-90' | '91-120' | '120+';
 
 export interface AgingRow {
   contactId: string | null;
   contactName: string;
   contactType: ContactType | null;
-  current: number;    // belum jatuh tempo
-  bucket30: number;   // 1-30 hari
-  bucket60: number;   // 31-60 hari
-  bucket90: number;   // 61-90 hari
+  current: number;    // 0-30 hari
+  bucket30: number;   // 31-60 hari
+  bucket60: number;   // 61-90 hari
+  bucket90: number;   // 91-120 hari
   bucketOver90: number; // >90 hari
   total: number;
   oldestDate: string | null;

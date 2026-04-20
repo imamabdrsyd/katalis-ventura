@@ -60,13 +60,13 @@ function buildAgingSummary(
       const amount = getAmountFn(t);
       const days = daysSince(t.date, referenceDate);
 
-      if (days <= 0) {
+      if (days <= 30) {
         row.current += amount;
-      } else if (days <= 30) {
-        row.bucket30 += amount;
       } else if (days <= 60) {
-        row.bucket60 += amount;
+        row.bucket30 += amount;
       } else if (days <= 90) {
+        row.bucket60 += amount;
+      } else if (days <= 120) {
         row.bucket90 += amount;
       } else {
         row.bucketOver90 += amount;
