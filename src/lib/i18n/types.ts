@@ -148,6 +148,12 @@ export interface Translations {
     noTransactionsDesc: string;
     noTransactionsForBusiness: string;
     addFirstTransaction: string;
+    arTrackerTitle: string;
+    arTrackerSubtitle: string;
+    arTrackerEmpty: string;
+    arTrackerEmptyDesc: string;
+    arTotalOutstanding: string;
+    arTopDebtors: string;
   };
 
   // Transactions

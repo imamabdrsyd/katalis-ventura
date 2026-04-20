@@ -387,9 +387,13 @@ export default function DashboardPage() {
                 <HandCoins className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Monitor Piutang</h2>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.arTrackerTitle}</h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  {arData.count > 0 ? `${arData.count} transaksi outstanding dari ${arData.topDebtors.length > 0 ? new Set(arData.topDebtors.map(d => d.name)).size : 0}+ kontak` : 'Semua piutang sudah lunas'}
+                  {arData.count > 0
+                    ? t.dashboard.arTrackerSubtitle
+                        .replace('{n}', String(arData.count))
+                        .replace('{c}', String(arData.topDebtors.length > 0 ? new Set(arData.topDebtors.map(d => d.name)).size : 0))
+                    : t.dashboard.arTrackerEmptyDesc}
                 </p>
               </div>
             </div>
@@ -407,15 +411,15 @@ export default function DashboardPage() {
               <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center mb-3">
                 <HandCoins className="w-7 h-7 text-emerald-500 dark:text-emerald-400" />
               </div>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Tidak ada piutang outstanding</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Semua transaksi piutang sudah dilunasi</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{t.dashboard.arTrackerEmpty}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t.dashboard.arTrackerEmptyDesc}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left: Total + aging breakdown */}
               <div className="lg:col-span-2">
                 <div className="mb-4">
-                  <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Total Outstanding</div>
+                  <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.arTotalOutstanding}</div>
                   <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(arData.total)}</div>
                 </div>
                 {/* Aging bar */}
@@ -461,7 +465,7 @@ export default function DashboardPage() {
 
               {/* Right: Top debtors */}
               <div className="lg:col-span-1">
-                <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Top Debitur</div>
+                <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">{t.dashboard.arTopDebtors}</div>
                 <div className="space-y-2">
                   {arData.topDebtors.map((debtor, idx) => {
                     const pct = (debtor.amount / arData.total) * 100;

@@ -143,6 +143,12 @@ export const id: Translations = {
     noTransactionsDesc: 'Mulai dengan menambahkan transaksi pertama Anda untuk melihat statistik keuangan.',
     noTransactionsForBusiness: 'Belum ada transaksi yang tercatat untuk bisnis ini.',
     addFirstTransaction: 'Tambah Transaksi Pertama',
+    arTrackerTitle: 'Monitor Piutang',
+    arTrackerSubtitle: '{n} transaksi outstanding dari {c}+ kontak',
+    arTrackerEmpty: 'Tidak ada piutang outstanding',
+    arTrackerEmptyDesc: 'Semua transaksi piutang sudah dilunasi',
+    arTotalOutstanding: 'Total Outstanding',
+    arTopDebtors: 'Top Debitur',
   },
 
   transactions: {
