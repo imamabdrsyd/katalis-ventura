@@ -403,12 +403,12 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3">
               <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.arTrackerTitle}</h2>
               {arData.count > 0 && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-700 text-[10px] font-bold text-gray-600 dark:text-gray-300">
                     {arData.count}
                   </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{t.dashboard.arTrackerOutstandingLabel}</span>
-                  <span className="text-xs text-gray-400 dark:text-gray-600">{t.dashboard.arTrackerFrom}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">{t.dashboard.arTrackerOutstandingLabel}</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-600 mr-1">{t.dashboard.arTrackerFrom}</span>
                   <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-700 text-[10px] font-bold text-gray-600 dark:text-gray-300">
                     {arData.contactCount}{arData.contactCount > 1 ? '+' : ''}
                   </span>
