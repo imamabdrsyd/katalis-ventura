@@ -436,25 +436,12 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
   return (
     <>
       <header className={`fixed top-0 left-0 right-0 h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-30 flex items-center justify-between px-4 md:px-6 transition-[left] duration-300 ease-in-out ${isCollapsed ? 'md:left-16' : 'md:left-56'}`}>
-      {/* Mobile Menu Button — favicon icon */}
+      {/* Mobile Menu Button */}
       <button
         onClick={onMenuClick}
-        className="md:hidden p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+        className="md:hidden p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-600 dark:text-gray-400"
       >
-        <Image
-          src="/images/favicon.png"
-          alt="Menu"
-          width={28}
-          height={28}
-          className="object-contain dark:hidden"
-        />
-        <Image
-          src="/images/favicon-dark.png"
-          alt="Menu"
-          width={28}
-          height={28}
-          className="object-contain hidden dark:block"
-        />
+        <Menu className="w-6 h-6" />
       </button>
 
       {/* Business Switcher */}
