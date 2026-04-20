@@ -150,6 +150,8 @@ export interface Translations {
     addFirstTransaction: string;
     arTrackerTitle: string;
     arTrackerSubtitle: string;
+    arTrackerOutstandingLabel: string;
+    arTrackerContactsLabel: string;
     arTrackerEmpty: string;
     arTrackerEmptyDesc: string;
     arTotalOutstanding: string;
