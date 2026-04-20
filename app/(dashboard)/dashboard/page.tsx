@@ -8,6 +8,7 @@ import { useDashboard } from '@/hooks/useDashboard';
 import { useLanguage } from '@/context/LanguageContext';
 import { calculateFinancialSummary, calculateCategoryCounts } from '@/lib/calculations';
 import { formatCurrency, formatPercentage, formatDateShort } from '@/lib/utils';
+import { CategoryBadge } from '@/components/ui/CategoryBadge';
 import type { Transaction } from '@/types';
 
 // Lazy-load chart components — chart.js (~6.2 MB) only loads when charts render
@@ -184,14 +185,6 @@ export default function DashboardPage() {
       ? (balanceSheet.assets.cash / summary.totalEarn) * 100
       : null;
 
-  const categoryBadgeStyles: Record<string, string> = {
-    EARN: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-500 dark:text-emerald-300',
-    OPEX: 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-300',
-    VAR: 'bg-amber-50 dark:bg-amber-900/30 text-amber-500 dark:text-amber-300',
-    CAPEX: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-300',
-    TAX: 'bg-purple-50 dark:bg-purple-900/30 text-purple-500 dark:text-purple-300',
-    FIN: 'bg-pink-50 dark:bg-pink-900/30 text-pink-500 dark:text-pink-300',
-  };
 
   return (
     <div className="p-8">
@@ -406,9 +399,7 @@ export default function DashboardPage() {
                       {getRowSubject(t)}
                     </td>
                     <td className="py-3 pr-4">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${categoryBadgeStyles[t.category] || ''}`}>
-                        {t.category}
-                      </span>
+                      <CategoryBadge category={t.category} size="xs" />
                     </td>
                     <td className={`py-3 text-sm font-semibold text-right whitespace-nowrap ${
                       t.amount === 0 ? 'text-gray-500 dark:text-gray-400' : t.category === 'EARN' ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'

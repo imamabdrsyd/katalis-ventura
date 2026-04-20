@@ -5,6 +5,8 @@ import { Modal } from '@/components/ui/Modal';
 import type { Transaction, Account, AuditLog, Contact } from '@/types';
 import type { TransactionFormData } from '@/components/transactions/TransactionForm';
 import { CATEGORY_LABELS } from '@/lib/calculations';
+import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
+import { CategoryBadge } from '@/components/ui/CategoryBadge';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import { getProfileName } from '@/lib/api/profiles';
 import { getRecordAuditHistory, getFieldChanges, formatFieldName, formatAuditValue } from '@/lib/api/audit';
@@ -39,15 +41,7 @@ interface TransactionDetailModalProps {
   hasNext?: boolean;
 }
 
-const CATEGORY_COLORS: Record<string, string> = {
-  EARN: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
-  OPEX: 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400',
-  VAR: 'bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400',
-  CAPEX: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
-  TAX: 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400',
-  FIN: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
-  SETTLE: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400',
-};
+const CATEGORY_COLORS = CATEGORY_BADGE_CLASSES;
 
 const STOCK_COLOR = 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300';
 

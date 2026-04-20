@@ -14,16 +14,9 @@ import { useReconciliation } from '@/hooks/useReconciliation';
 import { formatCurrency } from '@/lib/utils';
 import { useLanguage } from '@/context/LanguageContext';
 import type { Transaction } from '@/types';
+import { CATEGORY_TEXT_CLASSES } from '@/lib/categoryColors';
 
-const CATEGORY_COLORS: Record<string, string> = {
-  EARN: 'text-emerald-600 dark:text-emerald-400',
-  OPEX: 'text-red-600 dark:text-red-400',
-  VAR: 'text-pink-600 dark:text-pink-400',
-  CAPEX: 'text-blue-600 dark:text-blue-400',
-  TAX: 'text-yellow-600 dark:text-yellow-400',
-  FIN: 'text-indigo-600 dark:text-indigo-400',
-  SETTLE: 'text-gray-500 dark:text-gray-400',
-};
+const CATEGORY_COLORS = CATEGORY_TEXT_CLASSES;
 
 function getCashDirection(t: Transaction): 'in' | 'out' {
   if (t.is_double_entry) {

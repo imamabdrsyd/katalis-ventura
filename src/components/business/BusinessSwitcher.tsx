@@ -79,7 +79,7 @@ export function BusinessSwitcher() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors w-full"
+        className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors w-full"
       >
         <div className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden ${activeBusiness.logo_url ? 'bg-white' : 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'}`}>
           {activeBusiness.logo_url ? (
@@ -107,7 +107,7 @@ export function BusinessSwitcher() {
         <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
       )}
       {isOpen && (
-        <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150">
+        <div className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150">
           <div className="max-h-[60vh] overflow-y-auto py-1">
             {businesses.map((business) => (
               <button

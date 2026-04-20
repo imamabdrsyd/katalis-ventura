@@ -81,7 +81,7 @@ export default function CashFlowHeader({
             <select
               value={selectedMonth || new Date().getMonth()}
               onChange={(e) => onMonthChange(parseInt(e.target.value))}
-              className="input bg-white"
+              className="input"
             >
               {months.map((month, index) => (
                 <option key={index} value={index}>
@@ -94,7 +94,7 @@ export default function CashFlowHeader({
           <select
             value={selectedYear}
             onChange={(e) => onYearChange(parseInt(e.target.value))}
-            className="input bg-white"
+            className="input"
           >
             {years.map((year) => (
               <option key={year} value={year}>

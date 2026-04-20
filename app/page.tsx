@@ -129,7 +129,7 @@ export default function LandingPage() {
 
         {/* Features Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto mb-12">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
             <Briefcase className="w-6 h-6 text-indigo-500 mb-3" />
             <h3 className="text-base font-bold text-gray-900 mb-2">
               Business Manager
@@ -139,7 +139,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
             <TrendingUp className="w-6 h-6 text-blue-500 mb-3" />
             <h3 className="text-base font-bold text-gray-900 mb-2">
               Investor
@@ -149,7 +149,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
             <Shield className="w-6 h-6 text-pink-500 mb-3" />
             <h3 className="text-base font-bold text-gray-900 mb-2">
               Secure & Private

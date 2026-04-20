@@ -59,6 +59,7 @@ const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
 };
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { FloatingQuickAdd } from '@/components/transactions/FloatingQuickAdd';
+import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
 
 type NavItem = {
   href: string;
@@ -312,14 +313,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
                   <p className="px-5 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.nav.transactions}</p>
                   {transactionResults.map((item, rawIdx) => {
                     const globalIdx = filteredPages.length + rawIdx;
-                    const CATEGORY_COLORS: Record<string, string> = {
-                      EARN: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400',
-                      OPEX: 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400',
-                      VAR: 'bg-pink-100 dark:bg-pink-900/50 text-pink-600 dark:text-pink-400',
-                      CAPEX: 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400',
-                      TAX: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-600 dark:text-yellow-400',
-                      FIN: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400',
-                    };
+                    const CATEGORY_COLORS = CATEGORY_BADGE_CLASSES;
                     return (
                       <button
                         key={item.href + rawIdx}

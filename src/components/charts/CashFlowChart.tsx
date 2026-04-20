@@ -182,7 +182,7 @@ export default function CashFlowChart({ data, loading = false }: CashFlowChartPr
   }
 
   return (
-    <div className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+    <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
       <div style={{ height: 400 }}>
         <Line data={chartData} options={options} />
       </div>
