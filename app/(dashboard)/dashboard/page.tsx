@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet, Calendar, ClipboardList, HandCoins, ArrowRight } from 'lucide-react';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useLanguage } from '@/context/LanguageContext';
-import { calculateFinancialSummary, calculateCategoryCounts } from '@/lib/calculations';
+import { calculateFinancialSummary, calculateCategoryCounts, calculateIncomeStatementMetrics } from '@/lib/calculations';
 import { formatCurrency, formatPercentage, formatDateShort } from '@/lib/utils';
 import { CategoryBadge } from '@/components/ui/CategoryBadge';
 import { CATEGORY_TEXT_CLASSES } from '@/lib/categoryColors';
@@ -532,6 +532,57 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+
+            {/* Mini P&L Summary */}
+            {(() => {
+              const metrics = calculateIncomeStatementMetrics(summary);
+              const hasRevenue = summary.totalEarn > 0;
+              const rows = [
+                { label: 'Laba Kotor', value: summary.grossProfit, margin: hasRevenue ? metrics.grossMargin : null },
+                { label: 'Laba Usaha', value: metrics.operatingIncome, margin: hasRevenue ? metrics.operatingMargin : null },
+                { label: 'Laba Bersih', value: summary.netProfit, margin: hasRevenue ? metrics.netMargin : null, bold: true },
+              ];
+              return (
+                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                  <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Hasil</p>
+                  <div className="space-y-1.5">
+                    {rows.map((row) => {
+                      const isPositive = row.value >= 0;
+                      return (
+                        <div
+                          key={row.label}
+                          className={`flex items-center justify-between px-3 py-2 rounded-lg ${row.bold ? 'bg-gray-50 dark:bg-gray-700/40' : ''}`}
+                        >
+                          <span className={`text-sm ${row.bold ? 'font-bold text-gray-700 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}>
+                            {row.label}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            {row.margin !== null && (
+                              <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                                row.margin >= 0
+                                  ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                                  : 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'
+                              }`}>
+                                {formatPercentage(row.margin)}
+                              </span>
+                            )}
+                            <span className={`text-sm ${row.bold ? 'font-bold' : 'font-semibold'} ${
+                              isPositive
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-red-500 dark:text-red-400'
+                            }`}>
+                              {!isPositive && '('}
+                              {formatCurrency(Math.abs(row.value))}
+                              {!isPositive && ')'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Recent Transactions */}
