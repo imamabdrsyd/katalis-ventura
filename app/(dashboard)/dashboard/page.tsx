@@ -565,17 +565,19 @@ export default function DashboardPage() {
                           <div className="flex items-center gap-2">
                             {row.margin !== null && (
                               <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
-                                row.margin >= 0
-                                  ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-                                  : 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'
+                                row.bold
+                                  ? row.margin >= 0
+                                    ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                                    : 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'
+                                  : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
                               }`}>
                                 {formatPercentage(row.margin)}
                               </span>
                             )}
                             <span className={`text-sm ${row.bold ? 'font-bold' : 'font-semibold'} ${
-                              isPositive
-                                ? 'text-emerald-600 dark:text-emerald-400'
-                                : 'text-red-500 dark:text-red-400'
+                              row.bold
+                                ? isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
+                                : 'text-gray-700 dark:text-gray-200'
                             }`}>
                               {!isPositive && '('}
                               {formatCurrency(Math.abs(row.value))}
