@@ -72,7 +72,24 @@ export default function MonitoringChart({ transactions, loading = false, selecte
         }
       });
 
-      return monthData;
+      const now = new Date();
+      const isCurrentYear = selectedYear === now.getFullYear();
+      const upperBoundMonth = isCurrentYear ? now.getMonth() : 11;
+
+      const bounded = monthData.slice(0, upperBoundMonth + 1);
+
+      let firstIdx = bounded.findIndex((d) => d.earning > 0 || d.expense > 0);
+      if (firstIdx === -1) firstIdx = 0;
+
+      let lastIdx = bounded.length - 1;
+      for (let i = bounded.length - 1; i >= 0; i--) {
+        if (bounded[i].earning > 0 || bounded[i].expense > 0) {
+          lastIdx = i;
+          break;
+        }
+      }
+
+      return bounded.slice(firstIdx, lastIdx + 1);
     } else {
       const dataMap = new Map<string, ChartDataPoint>();
 
