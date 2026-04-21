@@ -315,10 +315,10 @@ export default function MonitoringChart({ transactions, loading = false, selecte
                 <button
                   key={iv}
                   onClick={() => setInterval(iv === interval ? '1m' : iv)}
-                  className={`text-sm font-semibold transition-colors ${
+                  className={`text-sm transition-colors ${
                     interval === iv
-                      ? 'text-blue-600 dark:text-blue-400'
-                      : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+                      ? 'font-semibold text-blue-600 dark:text-blue-400'
+                      : 'font-normal text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
                   }`}
                 >
                   {iv}
