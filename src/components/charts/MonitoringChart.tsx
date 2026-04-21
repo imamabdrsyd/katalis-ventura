@@ -60,6 +60,10 @@ export default function MonitoringChart({ transactions, loading = false, selecte
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (period === 'monthly') setInterval('1m');
+  }, [period]);
+
   const isDark = mounted && resolvedTheme === 'dark';
 
   const chartDataPoints = useMemo(() => {
@@ -306,15 +310,15 @@ export default function MonitoringChart({ transactions, loading = false, selecte
         <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Monitoring Overview</h3>
         <div className="flex items-center gap-2">
           {period === 'monthly' && (
-            <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-              {(['1m', '1d', '3d', '1w'] as IntervalType[]).map((iv) => (
+            <div className="flex items-center gap-3">
+              {(['1d', '3d', '1w'] as Exclude<IntervalType, '1m'>[]).map((iv) => (
                 <button
                   key={iv}
-                  onClick={() => setInterval(iv)}
-                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+                  onClick={() => setInterval(iv === interval ? '1m' : iv)}
+                  className={`text-sm font-semibold transition-colors ${
                     interval === iv
-                      ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                      ? 'text-violet-600 dark:text-violet-400'
+                      : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
                   }`}
                 >
                   {iv}
