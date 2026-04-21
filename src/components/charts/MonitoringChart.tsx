@@ -168,13 +168,13 @@ export default function MonitoringChart({ transactions, loading = false, selecte
           {
             label: 'Revenue',
             data: earningData,
-            borderColor: '#22c55e',
-            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
             borderWidth: 3,
             fill: true,
             tension: 0.4,
             pointRadius,
-            pointBackgroundColor: '#22c55e',
+            pointBackgroundColor: '#3b82f6',
             pointBorderColor: '#ffffff',
             pointBorderWidth: 2,
             pointHoverRadius,
@@ -242,7 +242,7 @@ export default function MonitoringChart({ transactions, loading = false, selecte
         boxPadding: 6,
         callbacks: {
           labelTextColor: function (context: any) {
-            return context.datasetIndex === 0 ? '#22c55e' : '#f87171';
+            return context.datasetIndex === 0 ? '#3b82f6' : '#f87171';
           },
           label: function (context: any) {
             return formatCurrency(context.parsed.y);
@@ -317,7 +317,7 @@ export default function MonitoringChart({ transactions, loading = false, selecte
                   onClick={() => setInterval(iv === interval ? '1m' : iv)}
                   className={`text-sm font-semibold transition-colors ${
                     interval === iv
-                      ? 'text-green-600 dark:text-green-400'
+                      ? 'text-blue-600 dark:text-blue-400'
                       : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
                   }`}
                 >
