@@ -30,6 +30,7 @@ ChartJS.register(
 );
 
 type PeriodType = 'monthly' | 'yearly';
+type IntervalType = '1d' | '3d' | '1w';
 
 interface MonitoringChartProps {
   transactions: Transaction[];
@@ -45,8 +46,13 @@ interface ChartDataPoint {
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+function dayOfYear(date: Date, yearStart: Date): number {
+  return Math.floor((date.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24));
+}
+
 export default function MonitoringChart({ transactions, loading = false, selectedYear }: MonitoringChartProps) {
   const [period, setPeriod] = useState<PeriodType>('monthly');
+  const [interval, setInterval] = useState<IntervalType>('1d');
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -58,38 +64,50 @@ export default function MonitoringChart({ transactions, loading = false, selecte
 
   const chartDataPoints = useMemo(() => {
     if (period === 'monthly') {
-      const monthData: ChartDataPoint[] = MONTH_NAMES.map((label) => ({ label, earning: 0, expense: 0 }));
+      const now = new Date();
+      const isCurrentYear = selectedYear === now.getFullYear();
+      const cutoff = isCurrentYear ? now : new Date(selectedYear, 11, 31);
+      const yearStart = new Date(selectedYear, 0, 1);
+
+      const dataMap = new Map<string, ChartDataPoint>();
 
       transactions.forEach((t) => {
         const date = new Date(t.date);
         if (date.getFullYear() !== selectedYear) return;
-        const idx = date.getMonth();
-        const amount = Number(t.amount);
-        if (t.category === 'EARN') {
-          monthData[idx].earning += amount;
-        } else if (t.category === 'OPEX' || t.category === 'VAR') {
-          monthData[idx].expense += amount;
+        if (date > cutoff) return;
+
+        const day = dayOfYear(date, yearStart);
+        let key: string;
+        let label: string;
+
+        if (interval === '1d') {
+          key = t.date;
+          label = `${date.getDate()} ${MONTH_NAMES[date.getMonth()]}`;
+        } else if (interval === '3d') {
+          const blockIdx = Math.floor(day / 3);
+          key = `${selectedYear}-3d-${blockIdx}`;
+          const blockStart = new Date(yearStart.getTime() + blockIdx * 3 * 24 * 60 * 60 * 1000);
+          label = `${blockStart.getDate()} ${MONTH_NAMES[blockStart.getMonth()]}`;
+        } else {
+          const weekIdx = Math.floor(day / 7);
+          key = `${selectedYear}-1w-${weekIdx}`;
+          const weekStart = new Date(yearStart.getTime() + weekIdx * 7 * 24 * 60 * 60 * 1000);
+          label = `${weekStart.getDate()} ${MONTH_NAMES[weekStart.getMonth()]}`;
         }
+
+        if (!dataMap.has(key)) {
+          dataMap.set(key, { label, earning: 0, expense: 0 });
+        }
+
+        const point = dataMap.get(key)!;
+        const amount = Number(t.amount);
+        if (t.category === 'EARN') point.earning += amount;
+        else if (t.category === 'OPEX' || t.category === 'VAR') point.expense += amount;
       });
 
-      const now = new Date();
-      const isCurrentYear = selectedYear === now.getFullYear();
-      const upperBoundMonth = isCurrentYear ? now.getMonth() : 11;
-
-      const bounded = monthData.slice(0, upperBoundMonth + 1);
-
-      let firstIdx = bounded.findIndex((d) => d.earning > 0 || d.expense > 0);
-      if (firstIdx === -1) firstIdx = 0;
-
-      let lastIdx = bounded.length - 1;
-      for (let i = bounded.length - 1; i >= 0; i--) {
-        if (bounded[i].earning > 0 || bounded[i].expense > 0) {
-          lastIdx = i;
-          break;
-        }
-      }
-
-      return bounded.slice(firstIdx, lastIdx + 1);
+      return Array.from(dataMap.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([, v]) => v);
     } else {
       const dataMap = new Map<string, ChartDataPoint>();
 
@@ -116,7 +134,10 @@ export default function MonitoringChart({ transactions, loading = false, selecte
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([, value]) => value);
     }
-  }, [transactions, period, selectedYear]);
+  }, [transactions, period, interval, selectedYear]);
+
+  const pointRadius = chartDataPoints.length > 30 ? 3 : 6;
+  const pointHoverRadius = chartDataPoints.length > 30 ? 5 : 8;
 
   const { chartData, maxValue } = useMemo(() => {
     const labels: string[] = [];
@@ -144,11 +165,11 @@ export default function MonitoringChart({ transactions, loading = false, selecte
             borderWidth: 3,
             fill: true,
             tension: 0.4,
-            pointRadius: 6,
+            pointRadius,
             pointBackgroundColor: '#3b82f6',
             pointBorderColor: '#ffffff',
             pointBorderWidth: 2,
-            pointHoverRadius: 8,
+            pointHoverRadius,
           },
           {
             label: 'Expenses',
@@ -159,17 +180,17 @@ export default function MonitoringChart({ transactions, loading = false, selecte
             borderDash: [5, 5],
             fill: true,
             tension: 0.4,
-            pointRadius: 6,
+            pointRadius,
             pointBackgroundColor: '#f87171',
             pointBorderColor: '#ffffff',
             pointBorderWidth: 2,
-            pointHoverRadius: 8,
+            pointHoverRadius,
           },
         ],
       },
       maxValue: max * 1.1 || 100000,
     };
-  }, [chartDataPoints]);
+  }, [chartDataPoints, pointRadius, pointHoverRadius]);
 
   const options = useMemo(() => ({
     responsive: true,
@@ -229,6 +250,8 @@ export default function MonitoringChart({ transactions, loading = false, selecte
         },
         ticks: {
           color: isDark ? '#9ca3af' : '#9ca3af',
+          maxTicksLimit: 12,
+          maxRotation: 0,
           font: {
             size: 12,
             family: "'Plus Jakarta Sans', sans-serif",
@@ -275,7 +298,7 @@ export default function MonitoringChart({ transactions, loading = false, selecte
 
   return (
     <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Monitoring Overview</h3>
         <SegmentedToggle
           value={period}
@@ -286,8 +309,27 @@ export default function MonitoringChart({ transactions, loading = false, selecte
           ]}
           ariaLabel="Period"
         />
-
       </div>
+
+      {period === 'monthly' && (
+        <div className="flex justify-end mb-3">
+          <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+            {(['1d', '3d', '1w'] as IntervalType[]).map((iv) => (
+              <button
+                key={iv}
+                onClick={() => setInterval(iv)}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+                  interval === iv
+                    ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              >
+                {iv}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {!hasData ? (
         <div className="h-80 flex items-center justify-center text-gray-400 dark:text-gray-500">
