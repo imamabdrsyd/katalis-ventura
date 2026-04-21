@@ -30,7 +30,7 @@ ChartJS.register(
 );
 
 type PeriodType = 'monthly' | 'yearly';
-type IntervalType = '1d' | '3d' | '1w';
+type IntervalType = '1m' | '1d' | '3d' | '1w';
 
 interface MonitoringChartProps {
   transactions: Transaction[];
@@ -52,7 +52,7 @@ function dayOfYear(date: Date, yearStart: Date): number {
 
 export default function MonitoringChart({ transactions, loading = false, selectedYear }: MonitoringChartProps) {
   const [period, setPeriod] = useState<PeriodType>('monthly');
-  const [interval, setInterval] = useState<IntervalType>('1d');
+  const [interval, setInterval] = useState<IntervalType>('1m');
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -80,7 +80,11 @@ export default function MonitoringChart({ transactions, loading = false, selecte
         let key: string;
         let label: string;
 
-        if (interval === '1d') {
+        if (interval === '1m') {
+          const m = date.getMonth();
+          key = `${selectedYear}-${String(m).padStart(2, '0')}`;
+          label = MONTH_NAMES[m];
+        } else if (interval === '1d') {
           key = t.date;
           label = `${date.getDate()} ${MONTH_NAMES[date.getMonth()]}`;
         } else if (interval === '3d') {
@@ -298,38 +302,37 @@ export default function MonitoringChart({ transactions, loading = false, selecte
 
   return (
     <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Monitoring Overview</h3>
-        <SegmentedToggle
-          value={period}
-          onChange={setPeriod}
-          options={[
-            { value: 'monthly', label: 'Monthly' },
-            { value: 'yearly', label: 'Yearly' },
-          ]}
-          ariaLabel="Period"
-        />
-      </div>
-
-      {period === 'monthly' && (
-        <div className="flex justify-end mb-3">
-          <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-            {(['1d', '3d', '1w'] as IntervalType[]).map((iv) => (
-              <button
-                key={iv}
-                onClick={() => setInterval(iv)}
-                className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
-                  interval === iv
-                    ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                }`}
-              >
-                {iv}
-              </button>
-            ))}
-          </div>
+        <div className="flex items-center gap-2">
+          {period === 'monthly' && (
+            <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+              {(['1m', '1d', '3d', '1w'] as IntervalType[]).map((iv) => (
+                <button
+                  key={iv}
+                  onClick={() => setInterval(iv)}
+                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+                    interval === iv
+                      ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+                >
+                  {iv}
+                </button>
+              ))}
+            </div>
+          )}
+          <SegmentedToggle
+            value={period}
+            onChange={setPeriod}
+            options={[
+              { value: 'monthly', label: 'Monthly' },
+              { value: 'yearly', label: 'Yearly' },
+            ]}
+            ariaLabel="Period"
+          />
         </div>
-      )}
+      </div>
 
       {!hasData ? (
         <div className="h-80 flex items-center justify-center text-gray-400 dark:text-gray-500">
