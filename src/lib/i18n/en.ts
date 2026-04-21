@@ -471,7 +471,7 @@ export const en: Translations = {
     moreReceived: 'More received',
     morePaid: 'More paid',
     contactName: 'Contact Name',
-    current: '0-30 Days',
+    current: 'Current',
     days1to30: '31-60 Days',
     days31to60: '61-90 Days',
     days61to90: '91-120 Days',

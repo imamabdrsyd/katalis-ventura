@@ -111,10 +111,10 @@ export default function DashboardPage() {
 
       const txDate = new Date(tx.date);
       const days = Math.floor((today.getTime() - txDate.getTime()) / (1000 * 60 * 60 * 24));
-      if (days <= 0) buckets.current += amount;
-      else if (days <= 30) buckets.b30 += amount;
-      else if (days <= 60) buckets.b60 += amount;
-      else if (days <= 90) buckets.b90 += amount;
+      if (days <= 30) buckets.current += amount;
+      else if (days <= 60) buckets.b30 += amount;
+      else if (days <= 90) buckets.b60 += amount;
+      else if (days <= 120) buckets.b90 += amount;
       else buckets.over90 += amount;
 
       const contactName = tx.name || 'Tanpa Nama';

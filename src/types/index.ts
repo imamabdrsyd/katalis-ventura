@@ -658,7 +658,7 @@ export interface AgingRow {
   contactId: string | null;
   contactName: string;
   contactType: ContactType | null;
-  current: number;    // 0-30 hari
+  current: number;    // current (0-30 hari)
   bucket30: number;   // 31-60 hari
   bucket60: number;   // 61-90 hari
   bucket90: number;   // 91-120 hari

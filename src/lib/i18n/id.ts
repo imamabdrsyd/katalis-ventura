@@ -471,7 +471,7 @@ export const id: Translations = {
     moreReceived: 'Lebih banyak diterima',
     morePaid: 'Lebih banyak dibayar',
     contactName: 'Nama Kontak',
-    current: '0-30 Hari',
+    current: 'Current',
     days1to30: '31-60 Hari',
     days31to60: '61-90 Hari',
     days61to90: '91-120 Hari',
