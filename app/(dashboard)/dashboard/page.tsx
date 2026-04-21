@@ -9,7 +9,6 @@ import { useLanguage } from '@/context/LanguageContext';
 import { calculateFinancialSummary, calculateCategoryCounts, calculateIncomeStatementMetrics } from '@/lib/calculations';
 import { formatCurrency, formatPercentage, formatDateShort } from '@/lib/utils';
 import { CategoryBadge } from '@/components/ui/CategoryBadge';
-import { CATEGORY_TEXT_CLASSES } from '@/lib/categoryColors';
 import { isTradeReceivableTransaction, isSettled, isSettlementEntry, getOutstandingAmount } from '@/lib/accounting/guidance/receivableSettlement';
 
 // Lazy-load chart components — chart.js (~6.2 MB) only loads when charts render
@@ -531,7 +530,7 @@ export default function DashboardPage() {
               ] as const).map((item) => (
                 <div key={item.label} className="p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
                   <div className="flex items-center justify-between">
-                    <div className={`text-sm font-semibold ${CATEGORY_TEXT_CLASSES[item.cat]}`}>{item.label}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">{item.label}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600/50 px-2 py-0.5 rounded-full">{t.dashboard.records.replace('{n}', String(item.count))}</div>
                   </div>
                   <div className="text-base font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(item.value)}</div>
