@@ -388,10 +388,10 @@ export default function DashboardPage() {
 
       {/* Monitoring Chart + Expense Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 flex flex-col">
           <MonitoringChart transactions={transactions} loading={transactionsLoading} selectedYear={selectedYear} />
         </div>
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 flex flex-col">
           <ExpenseBreakdownChart transactions={transactions} loading={transactionsLoading} selectedYear={selectedYear} selectedMonth={selectedMonth} />
         </div>
       </div>

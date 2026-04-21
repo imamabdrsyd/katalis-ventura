@@ -117,12 +117,12 @@ export default function ExpenseBreakdownChart({ transactions, loading = false, s
           <p>Belum ada data expense</p>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col">
           <div style={{ height: 200 }} className="mb-4">
             <Doughnut data={chartData} options={options} />
           </div>
 
-          <div className="overflow-y-auto space-y-2" style={{ maxHeight: `${PAGE_SIZE * 36}px` }}>
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
             {allExpenseData.map(([name, amount], index) => {
               const percentage = totalExpense > 0 ? ((amount / totalExpense) * 100).toFixed(1) : '0';
               return (
