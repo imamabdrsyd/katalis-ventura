@@ -317,7 +317,7 @@ export default function MonitoringChart({ transactions, loading = false, selecte
                   onClick={() => setInterval(iv === interval ? '1m' : iv)}
                   className={`text-sm transition-colors ${
                     interval === iv
-                      ? 'font-semibold text-blue-600 dark:text-blue-400'
+                      ? 'font-semibold text-indigo-600 dark:text-indigo-400'
                       : 'font-normal text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
                   }`}
                 >
