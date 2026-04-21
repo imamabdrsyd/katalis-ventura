@@ -3,7 +3,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { Doughnut } from 'react-chartjs-2';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Chart as ChartJS,
   ArcElement,
@@ -40,8 +39,6 @@ interface ExpenseBreakdownChartProps {
 export default function ExpenseBreakdownChart({ transactions, loading = false, selectedYear, selectedMonth = null }: ExpenseBreakdownChartProps) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const [page, setPage] = useState(0);
-
   useEffect(() => { setMounted(true); }, []);
 
   const isDark = mounted && resolvedTheme === 'dark';
@@ -63,30 +60,21 @@ export default function ExpenseBreakdownChart({ transactions, loading = false, s
     return Array.from(expenseMap.entries()).sort(([, a], [, b]) => b - a);
   }, [transactions, selectedYear, selectedMonth]);
 
-  const totalPages = Math.ceil(allExpenseData.length / PAGE_SIZE);
-
-  // Reset page when data changes
-  useEffect(() => { setPage(0); }, [allExpenseData]);
-
-  const pagedData = useMemo(() => {
-    const start = page * PAGE_SIZE;
-    return allExpenseData.slice(start, start + PAGE_SIZE);
-  }, [allExpenseData, page]);
 
   const totalExpense = useMemo(() => {
     return allExpenseData.reduce((sum, [, amount]) => sum + amount, 0);
   }, [allExpenseData]);
 
   const chartData = useMemo(() => ({
-    labels: pagedData.map(([name]) => name),
+    labels: allExpenseData.map(([name]) => name),
     datasets: [{
-      data: pagedData.map(([, amount]) => amount),
-      backgroundColor: pagedData.map((_, i) => EXPENSE_COLORS[(page * PAGE_SIZE + i) % EXPENSE_COLORS.length]),
+      data: allExpenseData.map(([, amount]) => amount),
+      backgroundColor: allExpenseData.map((_, i) => EXPENSE_COLORS[i % EXPENSE_COLORS.length]),
       borderColor: isDark ? '#1f2937' : '#ffffff',
       borderWidth: 2,
       hoverOffset: 6,
     }],
-  }), [pagedData, isDark, page]);
+  }), [allExpenseData, isDark]);
 
   const options = useMemo(() => ({
     responsive: true,
@@ -134,16 +122,15 @@ export default function ExpenseBreakdownChart({ transactions, loading = false, s
             <Doughnut data={chartData} options={options} />
           </div>
 
-          <div className="space-y-2 flex-1">
-            {pagedData.map(([name, amount], index) => {
-              const colorIndex = page * PAGE_SIZE + index;
+          <div className="overflow-y-auto space-y-2" style={{ maxHeight: `${PAGE_SIZE * 36}px` }}>
+            {allExpenseData.map(([name, amount], index) => {
               const percentage = totalExpense > 0 ? ((amount / totalExpense) * 100).toFixed(1) : '0';
               return (
                 <div key={name} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2 min-w-0">
                     <div
                       className="w-3 h-3 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: EXPENSE_COLORS[colorIndex % EXPENSE_COLORS.length] }}
+                      style={{ backgroundColor: EXPENSE_COLORS[index % EXPENSE_COLORS.length] }}
                     />
                     <span className="text-gray-700 dark:text-gray-300 truncate">{name}</span>
                   </div>
@@ -155,28 +142,6 @@ export default function ExpenseBreakdownChart({ transactions, loading = false, s
               );
             })}
           </div>
-
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-              <button
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <span className="text-xs text-gray-400 dark:text-gray-500">
-                {page + 1} / {totalPages}
-              </span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                disabled={page === totalPages - 1}
-                className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          )}
         </div>
       )}
     </div>
