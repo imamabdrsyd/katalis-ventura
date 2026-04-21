@@ -93,12 +93,12 @@ export default function MonitoringChart({ transactions, loading = false, selecte
           label = `${date.getDate()} ${MONTH_NAMES[date.getMonth()]}`;
         } else if (interval === '3d') {
           const blockIdx = Math.floor(day / 3);
-          key = `${selectedYear}-3d-${blockIdx}`;
+          key = `${selectedYear}-3d-${String(blockIdx).padStart(3, '0')}`;
           const blockStart = new Date(yearStart.getTime() + blockIdx * 3 * 24 * 60 * 60 * 1000);
           label = `${blockStart.getDate()} ${MONTH_NAMES[blockStart.getMonth()]}`;
         } else {
           const weekIdx = Math.floor(day / 7);
-          key = `${selectedYear}-1w-${weekIdx}`;
+          key = `${selectedYear}-1w-${String(weekIdx).padStart(3, '0')}`;
           const weekStart = new Date(yearStart.getTime() + weekIdx * 7 * 24 * 60 * 60 * 1000);
           label = `${weekStart.getDate()} ${MONTH_NAMES[weekStart.getMonth()]}`;
         }
