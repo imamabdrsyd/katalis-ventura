@@ -90,7 +90,7 @@ export function buildPayableSettlementPrefill(original: Transaction, accounts: A
     amount: original.amount,
     date: new Date().toISOString().slice(0, 10),
     name: original.name,
-    description: `Pelunasan hutang: ${original.description}`,
+    description: original.description,
     category: 'FIN',
     is_double_entry: true,
     account: '',
