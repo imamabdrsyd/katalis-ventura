@@ -320,7 +320,7 @@ function IncomeStatementPageInner() {
                 <span className={`font-medium ${summary.totalEarn === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-green-600 dark:text-green-400'}`}>{formatCurrency(summary.totalEarn)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400 pl-2">- COGS:</span>
+                <span className="text-gray-600 dark:text-gray-400 pl-2">- Cost of Revenue:</span>
                 <span className={`font-medium ${summary.totalVar === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-red-500 dark:text-red-400'}`}>({formatCurrency(summary.totalVar)})</span>
               </div>
               <div className="flex justify-between pt-1 border-t border-gray-200 dark:border-gray-600">
@@ -390,7 +390,7 @@ function IncomeStatementPageInner() {
           <div className="card-static">
             <div className="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
               <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
-                Profit & Loss
+                Income Statement
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 Period: {new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - {new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -413,11 +413,11 @@ function IncomeStatementPageInner() {
               {/* COST OF GOODS SOLD */}
               <div>
                 <div className="flex items-center justify-between py-3 border-b-2 border-gray-300 dark:border-gray-600">
-                  <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Cost of Goods Sold</h3>
+                  <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Cost of Revenue</h3>
                 </div>
                 <AccountBreakdownSection items={lineItems.cogs} onTransactionClick={setSelectedTransaction} amountColor="red" />
                 <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
-                  <span className="text-gray-800 dark:text-gray-100">Total COGS</span>
+                  <span className="text-gray-800 dark:text-gray-100">Total Cost of Revenue</span>
                   <span className={summary.totalVar === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-red-500 dark:text-red-400'}>({formatCurrency(summary.totalVar)})</span>
                 </div>
               </div>
@@ -444,7 +444,7 @@ function IncomeStatementPageInner() {
                   formula="Revenue − Variable Costs"
                   breakdown={[
                     { label: 'Revenue (Earnings)', value: summary.totalEarn, color: 'green' },
-                    { label: 'Variable Costs (COGS)', value: summary.totalVar, color: 'red' },
+                    { label: 'Variable Costs', value: summary.totalVar, color: 'red' },
                     { label: 'Gross Profit', value: summary.grossProfit, color: summary.grossProfit >= 0 ? 'green' : 'red' },
                   ]}
                 />
@@ -576,14 +576,14 @@ function IncomeStatementPageInner() {
                 <div className="absolute left-4 bottom-full mb-2 z-50 hidden group-hover:block w-80 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl pointer-events-none">
                   <p className="font-semibold mb-2 text-green-300">Net Income / Laba Bersih</p>
                   <p className="text-gray-400 mb-0.5">Formula:</p>
-                  <p className="text-white font-medium mb-2">Revenue − COGS − OpEx − Financing − Tax</p>
+                  <p className="text-white font-medium mb-2">Revenue − Cost of Revenue − OpEx − Financing − Tax</p>
                   <div className="space-y-1 text-[11px]">
                     <div className="flex justify-between">
                       <span className="text-gray-300">Revenue (Earnings)</span>
                       <span className="text-green-300">{formatCurrency(summary.totalEarn)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-300">Variable Costs (COGS)</span>
+                      <span className="text-gray-300">Cost of Revenue</span>
                       <span className="text-red-300">−{formatCurrency(summary.totalVar)}</span>
                     </div>
                     <div className="flex justify-between">
