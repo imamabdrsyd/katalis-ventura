@@ -12,7 +12,7 @@ import { getProfileName } from '@/lib/api/profiles';
 import { getRecordAuditHistory, getFieldChanges, formatFieldName, formatAuditValue } from '@/lib/api/audit';
 import { detectMatchingPrincipleWarning, isReceivableTransaction, isSettled, isPartiallySettled, getOutstandingAmount, getPartialSettlementIds } from '@/lib/accounting/guidance';
 import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
-import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { updateTransaction } from '@/lib/api/transactions';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
@@ -362,38 +362,18 @@ export function TransactionDetailModal({
       isOpen={isOpen}
       onClose={onClose}
       title={
-        <div className="flex items-center gap-3">
-          {(onNavigatePrev || onNavigateNext) && (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={onNavigatePrev}
-                disabled={!hasPrev}
-                className="p-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
-                title="Transaksi sebelumnya (←)"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={onNavigateNext}
-                disabled={!hasNext}
-                className="p-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
-                title="Transaksi berikutnya (→)"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+        <div>
+          <div>{t.transactionDetail.title}</div>
+          {transaction.transaction_number && (
+            <div className="text-xs font-mono font-normal text-gray-400 dark:text-gray-500 mt-0.5">
+              #{transaction.transaction_number}
             </div>
           )}
-          <div>
-            <div>{t.transactionDetail.title}</div>
-            {transaction.transaction_number && (
-              <div className="text-xs font-mono font-normal text-gray-400 dark:text-gray-500 mt-0.5">
-                #{transaction.transaction_number}
-              </div>
-            )}
-          </div>
         </div>
       }
       footer={actionButtons}
+      sideNavPrev={onNavigatePrev ? { onClick: onNavigatePrev, disabled: !hasPrev, title: 'Transaksi sebelumnya (←)' } : undefined}
+      sideNavNext={onNavigateNext ? { onClick: onNavigateNext, disabled: !hasNext, title: 'Transaksi berikutnya (→)' } : undefined}
     >
       <div className="space-y-6">
         {/* Matching Principle Warning — expanded panel */}
