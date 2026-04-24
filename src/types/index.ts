@@ -73,6 +73,7 @@ export interface Account {
   sort_order: number;
   description?: string;
   default_category?: TransactionCategory; // Optional: Auto-detected category for transactions
+  income_statement_section?: 'cost_of_revenue' | 'operating_expense' | null; // Override klasifikasi Income Statement
   // Depreciation fields (PSAK 16 / IAS 16) — only for ASSET + CAPEX accounts
   useful_life_months?: number;        // Masa manfaat dalam bulan
   residual_value?: number;            // Nilai residu

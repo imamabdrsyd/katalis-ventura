@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 10 April 2026 (Persistence Layer: Import Batches, Reconciliation Sessions, Financial Cache) | AR/AP Aging & Repayment: 29 Maret 2026
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 24 April 2026 (Income Statement Config Override — COGS vs OPEX per akun) | AR/AP Aging & Repayment: 29 Maret 2026
 
 ---
 
@@ -667,6 +667,25 @@ Income Statement menggunakan `filterTransactionsByDateRange()` → menunjukkan t
 
 - PDF via `jsPDF` + `jspdf-autotable` — menggunakan `lineItems` untuk breakdown per akun
 - Excel via `xlsx` library
+
+### 7.6 User Override: Income Statement Section
+
+User dapat override klasifikasi default COGS vs OPEX per akun expense melalui Config Modal di halaman Income Statement (icon `Settings2` di header panel kanan).
+
+**Kolom DB:** `accounts.income_statement_section` — TEXT, nullable
+- `'cost_of_revenue'` → paksa masuk Cost of Revenue
+- `'operating_expense'` → paksa masuk Operating Expenses
+- `NULL` → pakai default logic (`default_category === 'VAR'` → COGS, else OPEX)
+
+**Helper:** `resolveExpenseSection(account)` di `src/lib/calculations.ts` — dipanggil oleh:
+- `calculateFinancialSummary()` — saat akumulasi `totalVar` vs `totalOpex`
+- `extractIncomeStatementLineItems()` — saat routing line item ke `cogs` vs `opex` map
+
+**Scope:** Hanya berlaku untuk EXPENSE account non-TAX. TAX dan FIN interest tidak ikut override (punya section terpisah).
+
+**Migration:** `046_add_income_statement_section.sql`
+
+**Komponen UI:** `src/components/reports/IncomeStatementConfigModal.tsx` — 3-panel (COGS | Detail+Controls | OpEx), klik akun → tombol pindah section + reset-to-default. Save via `bulkUpdateIncomeStatementSection()` di `src/lib/api/accounts.ts`.
 
 ---
 

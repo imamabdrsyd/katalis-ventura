@@ -247,6 +247,25 @@ export async function updateAccount(
 }
 
 /**
+ * Batch update income_statement_section untuk banyak akun sekaligus.
+ * Digunakan oleh Income Statement Config modal.
+ * Pass null untuk reset ke default logic.
+ */
+export async function bulkUpdateIncomeStatementSection(
+  updates: Array<{ id: string; section: 'cost_of_revenue' | 'operating_expense' | null }>
+): Promise<void> {
+  const supabase = createClient();
+  await Promise.all(
+    updates.map(({ id, section }) =>
+      supabase
+        .from('accounts')
+        .update({ income_statement_section: section })
+        .eq('id', id)
+    )
+  );
+}
+
+/**
  * Deactivate an account (soft delete)
  * Cannot deactivate system accounts
  */

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Calendar, TrendingUp, TrendingDown, Download, FileText, FileSpreadsheet, Info, DollarSign, ChevronDown, ChevronRight, Building2 } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, Download, FileText, FileSpreadsheet, Info, DollarSign, ChevronDown, ChevronRight, Building2, Settings2 } from 'lucide-react';
 import { useIncomeStatement } from '@/hooks/useIncomeStatement';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
@@ -10,6 +10,7 @@ import type { Period } from '@/hooks/useReportData';
 import type { Transaction } from '@/types';
 import type { AccountLineItem } from '@/lib/calculations';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
+import { IncomeStatementConfigModal } from '@/components/reports/IncomeStatementConfigModal';
 
 function TransactionRow({ tx, onClick }: { tx: Transaction; onClick: (tx: Transaction) => void }) {
   return (
@@ -158,12 +159,15 @@ function IncomeStatementPageInner() {
     summary,
     metrics,
     lineItems,
+    accounts,
+    refetchAccounts,
     handleExportPDF,
     handleExportExcel,
   } = useIncomeStatement();
 
   const { t } = useLanguage();
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [showConfigModal, setShowConfigModal] = useState(false);
 
   // Scroll to section from URL param (e.g., /income-statement?scrollTo=net-income)
   const searchParams = useSearchParams();
@@ -388,13 +392,22 @@ function IncomeStatementPageInner() {
         {/* RIGHT COLUMN — Main Content */}
         <div className="flex-1 min-w-0">
           <div className="card-static">
-            <div className="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
-                Income Statement
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Period: {new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - {new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-              </p>
+            <div className="flex items-start justify-between border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+                  Income Statement
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Period: {new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - {new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowConfigModal(true)}
+                className="p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                title="Konfigurasi klasifikasi expense"
+              >
+                <Settings2 className="w-5 h-5" />
+              </button>
             </div>
 
             <div className="space-y-6">
@@ -621,6 +634,17 @@ function IncomeStatementPageInner() {
         transaction={selectedTransaction}
         isOpen={!!selectedTransaction}
         onClose={() => setSelectedTransaction(null)}
+      />
+
+      <IncomeStatementConfigModal
+        isOpen={showConfigModal}
+        onClose={() => setShowConfigModal(false)}
+        accounts={accounts}
+        onSaved={async () => {
+          await refetchAccounts();
+          // Refresh transactions cache supaya debit/credit account yang di-embed ikut ter-update
+          window.dispatchEvent(new Event('transaction-saved'));
+        }}
       />
     </div>
   );

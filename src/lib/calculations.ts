@@ -107,6 +107,25 @@ export const CATEGORY_COLORS: Record<TransactionCategory, string> = {
   FIN: '#4f46e5', // indigo
 };
 
+/**
+ * Resolve apakah sebuah expense account harus diklasifikasikan sebagai
+ * Cost of Revenue (VAR) atau Operating Expense (OPEX) di Income Statement.
+ *
+ * Logic:
+ *   1. Jika account.income_statement_section di-set → pakai override user
+ *   2. Jika tidak → fallback ke default: default_category === 'VAR' → COGS
+ *
+ * Hanya relevan untuk EXPENSE account yang bukan TAX/FIN (interest).
+ */
+function resolveExpenseSection(
+  account: Account | { default_category?: TransactionCategory; income_statement_section?: 'cost_of_revenue' | 'operating_expense' | null } | null | undefined
+): 'cost_of_revenue' | 'operating_expense' {
+  const override = account?.income_statement_section;
+  if (override === 'cost_of_revenue') return 'cost_of_revenue';
+  if (override === 'operating_expense') return 'operating_expense';
+  return account?.default_category === 'VAR' ? 'cost_of_revenue' : 'operating_expense';
+}
+
 // Calculate financial summary from transactions
 export function calculateFinancialSummary(
   transactions: Transaction[]
@@ -141,16 +160,19 @@ export function calculateFinancialSummary(
         if (line.debit_amount > 0) {
           if (acc.account_type === 'EXPENSE') {
             const cat = acc.default_category;
-            if (cat === 'VAR') {
-              summary.totalVar += line.debit_amount;
-            } else if (cat === 'TAX') {
+            if (cat === 'TAX') {
               summary.totalTax += line.debit_amount;
-            } else {
-              summary.totalOpex += line.debit_amount;
-            }
-            // Interest: FIN category with EXPENSE debit line
-            if (t.category === 'FIN') {
+            } else if (t.category === 'FIN') {
+              // Interest: FIN category with EXPENSE debit line — tidak masuk COGS/OPEX
               summary.totalInterest += line.debit_amount;
+            } else {
+              // Resolve via override; fallback default_category === 'VAR' → COGS
+              const section = resolveExpenseSection(acc);
+              if (section === 'cost_of_revenue') {
+                summary.totalVar += line.debit_amount;
+              } else {
+                summary.totalOpex += line.debit_amount;
+              }
             }
           } else if (acc.account_type === 'REVENUE') {
             // Debit to REVENUE = contra-revenue (sales return)
@@ -174,9 +196,20 @@ export function calculateFinancialSummary(
         if (t.is_double_entry && t.credit_account?.account_type !== 'REVENUE') break;
         summary.totalEarn += amount;
         break;
-      case 'OPEX':
-        summary.totalOpex += amount;
+      case 'OPEX': {
+        // Respect override if debit account has income_statement_section set
+        if (t.is_double_entry && t.debit_account?.account_type === 'EXPENSE') {
+          const section = resolveExpenseSection(t.debit_account);
+          if (section === 'cost_of_revenue') {
+            summary.totalVar += amount;
+          } else {
+            summary.totalOpex += amount;
+          }
+        } else {
+          summary.totalOpex += amount;
+        }
         break;
+      }
       case 'VAR':
         // For double-entry: only count as COGS if debit account is EXPENSE type
         // If debit is ASSET (inventory purchase), it's not COGS yet — still on balance sheet
@@ -184,7 +217,17 @@ export function calculateFinancialSummary(
           // Inventory purchase — skip from income statement COGS
           break;
         }
-        summary.totalVar += amount;
+        // Respect override: user may reclassify VAR account to Operating Expense
+        if (t.is_double_entry && t.debit_account?.account_type === 'EXPENSE') {
+          const section = resolveExpenseSection(t.debit_account);
+          if (section === 'operating_expense') {
+            summary.totalOpex += amount;
+          } else {
+            summary.totalVar += amount;
+          }
+        } else {
+          summary.totalVar += amount;
+        }
         break;
       case 'CAPEX':
         summary.totalCapex += amount;
@@ -295,14 +338,17 @@ export function extractIncomeStatementLineItems(
         // Expenses: debit to EXPENSE account
         if (line.debit_amount > 0 && acc.account_type === 'EXPENSE') {
           const cat = acc.default_category;
-          if (cat === 'VAR') {
-            addToMap(cogsMap, acc, line.debit_amount, t);
-          } else if (cat === 'TAX') {
+          if (cat === 'TAX') {
             addToMap(taxMap, acc, line.debit_amount, t);
           } else if (t.category === 'FIN') {
             addToMap(interestMap, acc, line.debit_amount, t);
           } else {
-            addToMap(opexMap, acc, line.debit_amount, t);
+            const section = resolveExpenseSection(acc);
+            if (section === 'cost_of_revenue') {
+              addToMap(cogsMap, acc, line.debit_amount, t);
+            } else {
+              addToMap(opexMap, acc, line.debit_amount, t);
+            }
           }
         }
       }
@@ -323,14 +369,24 @@ export function extractIncomeStatementLineItems(
         if (t.is_double_entry && t.debit_account?.account_type === 'ASSET') break;
         const acc = t.debit_account;
         if (acc) {
-          addToMap(cogsMap, acc, amount, t);
+          const section = resolveExpenseSection(acc);
+          if (section === 'operating_expense') {
+            addToMap(opexMap, acc, amount, t);
+          } else {
+            addToMap(cogsMap, acc, amount, t);
+          }
         }
         break;
       }
       case 'OPEX': {
         const acc = t.debit_account;
         if (acc) {
-          addToMap(opexMap, acc, amount, t);
+          const section = resolveExpenseSection(acc);
+          if (section === 'cost_of_revenue') {
+            addToMap(cogsMap, acc, amount, t);
+          } else {
+            addToMap(opexMap, acc, amount, t);
+          }
         }
         break;
       }

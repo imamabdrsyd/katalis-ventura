@@ -26,6 +26,8 @@ export interface UseIncomeStatementReturn extends ReturnType<typeof useReportDat
   metrics: ReturnType<typeof calculateIncomeStatementMetrics>;
   transactionsByCategory: TransactionsByCategory;
   lineItems: IncomeStatementLineItems;
+  accounts: Account[];
+  refetchAccounts: () => Promise<void>;
   handleExportPDF: () => Promise<void>;
   handleExportExcel: () => Promise<void>;
 }
@@ -35,15 +37,20 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
   const { activeBusiness, transactions, filteredTransactions, startDate, endDate, setShowExportMenu } = reportData;
   const { user } = useBusinessContext();
 
-  // Fetch accounts for depreciation calculation
+  // Fetch accounts for depreciation calculation + income statement config
   const [accounts, setAccounts] = useState<Account[]>([]);
-  useEffect(() => {
+  const refetchAccounts = useCallback(async () => {
     if (!activeBusiness) return;
-    accountsApi
-      .getAccounts(activeBusiness.id, false)
-      .then(setAccounts)
-      .catch((err) => console.error('[useIncomeStatement] Failed to load accounts for depreciation:', err));
+    try {
+      const data = await accountsApi.getAccounts(activeBusiness.id, false);
+      setAccounts(data);
+    } catch (err) {
+      console.error('[useIncomeStatement] Failed to load accounts:', err);
+    }
   }, [activeBusiness]);
+  useEffect(() => {
+    refetchAccounts();
+  }, [refetchAccounts]);
 
   // Base summary without depreciation
   const baseSummary = useMemo(
@@ -162,6 +169,8 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
     metrics,
     transactionsByCategory,
     lineItems,
+    accounts,
+    refetchAccounts,
     handleExportPDF,
     handleExportExcel,
   };
