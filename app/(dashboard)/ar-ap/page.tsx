@@ -312,7 +312,7 @@ function ArApPageInner() {
                 onClick={() => handlePeriodChange(p)}
                 className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   period === p
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                    ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >

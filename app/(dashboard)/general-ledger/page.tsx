@@ -166,10 +166,10 @@ function GeneralLedgerPageInner() {
             <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
               <button
                 onClick={handleAllTime}
-                className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   isAllTime
-                    ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 font-bold shadow-sm'
-                    : 'font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                    ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
                 {t.generalLedger.allTime}
@@ -178,10 +178,10 @@ function GeneralLedgerPageInner() {
                 <button
                   key={p}
                   onClick={() => handlePeriodChange(p)}
-                  className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                     period === p && !isAllTime
-                      ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 font-bold shadow-sm'
-                      : 'font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                      ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                   }`}
                 >
                   {PERIOD_LABELS[p]}
@@ -196,10 +196,10 @@ function GeneralLedgerPageInner() {
                   setStartDate(fmt(firstDay));
                   setEndDate(fmt(today));
                 }}
-                className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   period === 'custom' && !isAllTime
-                    ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 font-bold shadow-sm'
-                    : 'font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                    ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
                 {PERIOD_LABELS.custom}
