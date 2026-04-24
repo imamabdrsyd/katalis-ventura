@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser, createServerClient } from '@/lib/supabase-server';
 import { exchangeCodeForToken, getShopInfo } from '@/lib/ecommerce/shopee/auth';
+import { encryptToken } from '@/lib/utils/tokenCrypto';
 
 /**
  * GET /api/ecommerce/shopee/callback?code=...&shop_id=...&businessId=...
@@ -74,8 +75,8 @@ export async function GET(request: NextRequest) {
           shop_id: Number(shopId),
           shop_name: shopName,
           shop_logo: shopLogo,
-          access_token: tokenData.access_token,
-          refresh_token: tokenData.refresh_token,
+          access_token: encryptToken(tokenData.access_token),
+          refresh_token: encryptToken(tokenData.refresh_token),
           token_expires_at: tokenExpiresAt,
           is_active: true,
           created_by: user.id,

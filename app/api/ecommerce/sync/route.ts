@@ -4,6 +4,7 @@ import { businessIdSchema } from '@/lib/validations';
 import { getValidToken } from '@/lib/ecommerce/shopee/orders';
 import { fetchOrderList, fetchOrderDetails } from '@/lib/ecommerce/shopee/orders';
 import { mapOrdersToTransactions } from '@/lib/ecommerce/shopee/mapper';
+import { encryptToken, decryptToken, isEncrypted } from '@/lib/utils/tokenCrypto';
 
 /**
  * POST /api/ecommerce/sync
@@ -71,21 +72,29 @@ export async function POST(request: NextRequest) {
   const syncLogId = syncLog?.id;
 
   try {
+    // Decrypt tokens before use (support rows written before encryption was added)
+    const plainAccessToken = isEncrypted(connection.access_token)
+      ? decryptToken(connection.access_token)
+      : connection.access_token;
+    const plainRefreshToken = isEncrypted(connection.refresh_token)
+      ? decryptToken(connection.refresh_token)
+      : connection.refresh_token;
+
     // Refresh token jika perlu
     const tokenInfo = await getValidToken({
-      access_token: connection.access_token,
-      refresh_token: connection.refresh_token,
+      access_token: plainAccessToken,
+      refresh_token: plainRefreshToken,
       token_expires_at: connection.token_expires_at,
       shop_id: connection.shop_id,
     });
 
-    // Update token di DB jika di-refresh
+    // Update token di DB jika di-refresh (simpan terenkripsi)
     if (tokenInfo.refreshed) {
       await supabase
         .from('business_ecommerce_connections')
         .update({
-          access_token: tokenInfo.accessToken,
-          refresh_token: tokenInfo.refreshToken,
+          access_token: encryptToken(tokenInfo.accessToken),
+          refresh_token: encryptToken(tokenInfo.refreshToken),
           token_expires_at: tokenInfo.tokenExpiresAt,
         })
         .eq('id', connection.id);
