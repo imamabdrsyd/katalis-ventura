@@ -308,15 +308,34 @@ export default function MonitoringChart({ transactions, loading = false, selecte
     <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Monitoring Overview</h3>
-        <SegmentedToggle
-          value={period}
-          onChange={setPeriod}
-          options={[
-            { value: 'monthly', label: 'Monthly' },
-            { value: 'yearly', label: 'Yearly' },
-          ]}
-          ariaLabel="Period"
-        />
+        <div className="flex items-center gap-2">
+          {period === 'monthly' && (
+            <div className="flex items-center gap-3">
+              {(['1d', '3d', '1w'] as Exclude<IntervalType, '1m'>[]).map((iv) => (
+                <button
+                  key={iv}
+                  onClick={() => setInterval(iv === interval ? '1m' : iv)}
+                  className={`text-sm transition-colors ${
+                    interval === iv
+                      ? 'font-semibold text-indigo-600 dark:text-indigo-400'
+                      : 'font-normal text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {iv}
+                </button>
+              ))}
+            </div>
+          )}
+          <SegmentedToggle
+            value={period}
+            onChange={setPeriod}
+            options={[
+              { value: 'monthly', label: 'Monthly' },
+              { value: 'yearly', label: 'Yearly' },
+            ]}
+            ariaLabel="Period"
+          />
+        </div>
       </div>
 
       {!hasData ? (
@@ -326,24 +345,6 @@ export default function MonitoringChart({ transactions, loading = false, selecte
       ) : (
         <div style={{ height: 320 }}>
           <Line data={chartData} options={options} />
-        </div>
-      )}
-
-      {period === 'monthly' && (
-        <div className="flex justify-end mt-3 gap-3">
-          {(['1d', '3d', '1w'] as Exclude<IntervalType, '1m'>[]).map((iv) => (
-            <button
-              key={iv}
-              onClick={() => setInterval(iv === interval ? '1m' : iv)}
-              className={`text-sm transition-colors ${
-                interval === iv
-                  ? 'font-semibold text-indigo-600 dark:text-indigo-400'
-                  : 'font-normal text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
-              }`}
-            >
-              {iv}
-            </button>
-          ))}
         </div>
       )}
     </div>
