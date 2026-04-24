@@ -213,9 +213,9 @@ function GeneralLedgerPageInner() {
       <div className="flex flex-col lg:flex-row gap-4 lg:items-stretch">
         {/* LEFT PANEL: Account List */}
         <div className="lg:w-72 xl:w-80 flex-shrink-0 lg:sticky lg:top-4 lg:self-start">
-          <div className="card-static p-0 overflow-hidden">
+          <div className="card-static p-0 overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 280px)' }}>
             {/* Account Type Filter Tabs */}
-            <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
               <div className="flex flex-wrap gap-1">
                 {allFilterTypes.map((type) => (
                   <button
@@ -234,7 +234,7 @@ function GeneralLedgerPageInner() {
             </div>
 
             {/* Account List */}
-            <div className="overflow-y-auto max-h-[600px]">
+            <div className="overflow-y-auto flex-1 min-h-0">
               {loading || accountsLoading ? (
                 <div className="p-6 text-center">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500 mx-auto"></div>
