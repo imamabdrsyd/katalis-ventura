@@ -549,6 +549,7 @@ export interface Translations {
     successDesc: string;
     retainedEarningsNotFound: string;
     retainedEarningsHint: string;
+    retainedEarningsGoToCoa: string;
     totalRevenue: string;
     totalExpense: string;
     netIncomeToRetained: string;

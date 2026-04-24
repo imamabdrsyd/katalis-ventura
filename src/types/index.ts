@@ -70,6 +70,7 @@ export interface Account {
   normal_balance: NormalBalance;
   is_active: boolean;
   is_system: boolean;
+  is_retained_earnings: boolean;
   sort_order: number;
   description?: string;
   default_category?: TransactionCategory; // Optional: Auto-detected category for transactions

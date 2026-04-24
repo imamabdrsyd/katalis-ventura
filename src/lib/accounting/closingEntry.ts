@@ -32,26 +32,29 @@ export interface ClosingEntryPreview {
 }
 
 /**
- * Find or identify the Retained Earnings account.
- * Convention: account code 3200 or name containing "laba ditahan" / "retained earnings"
+ * Find the Retained Earnings account using a 3-tier cascade:
+ * 1. Semantic flag is_retained_earnings = true (primary — set by user in Chart of Accounts)
+ * 2. Account code 3200 (legacy fallback for data before migration 047)
+ * 3. Name matching regex (last resort for hand-migrated data)
  */
 function findRetainedEarningsAccount(accounts: Account[]): Account | null {
-  // Try by code first
+  const byFlag = accounts.find(
+    (a) => a.account_type === 'EQUITY' && a.is_retained_earnings === true && a.is_active
+  );
+  if (byFlag) return byFlag;
+
   const byCode = accounts.find(
     (a) => a.account_type === 'EQUITY' && a.account_code === '3200' && a.is_active
   );
   if (byCode) return byCode;
 
-  // Try by name
   const byName = accounts.find(
     (a) =>
       a.account_type === 'EQUITY' &&
       a.is_active &&
       /laba ditahan|retained earnings/i.test(a.account_name)
   );
-  if (byName) return byName;
-
-  return null;
+  return byName ?? null;
 }
 
 /**
@@ -168,7 +171,7 @@ export async function executeClosingEntries(
   preview: ClosingEntryPreview,
 ): Promise<string[]> {
   if (!preview.retainedEarningsAccountId) {
-    throw new Error('Akun Laba Ditahan (kode 3200) tidak ditemukan. Silakan buat akun ekuitas "Laba Ditahan" terlebih dahulu.');
+    throw new Error('Akun Laba Ditahan belum ditetapkan. Silakan tandai satu akun Ekuitas sebagai Laba Ditahan di Chart of Accounts terlebih dahulu.');
   }
 
   const supabase = createClient();

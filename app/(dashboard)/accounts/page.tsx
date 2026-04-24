@@ -8,7 +8,7 @@ import * as accountsApi from '@/lib/api/accounts';
 import type { AccountTreeNode } from '@/lib/api/accounts';
 import { AccountForm, type AccountFormData } from '@/components/accounts/AccountForm';
 import { AccountDeleteModal } from '@/components/accounts/AccountDeleteModal';
-import { Plus, Search, ChevronDown, ChevronRight, Lock, CheckCircle2, BookOpen as BookOpenIcon, Wallet, HandCoins, Scale, TrendingUp, Receipt, MoreVertical } from 'lucide-react';
+import { Plus, Search, ChevronDown, ChevronRight, Lock, CheckCircle2, BookOpen as BookOpenIcon, Wallet, HandCoins, Scale, TrendingUp, Receipt, MoreVertical, BookMarked } from 'lucide-react';
 
 const ACCOUNT_TYPE_ICONS: Record<AccountType, React.ReactNode> = {
   ASSET: <Wallet className="w-4 h-4 text-gray-500 dark:text-gray-400" />,
@@ -129,7 +129,7 @@ export default function AccountsPage() {
 
     setSaving(true);
     try {
-      await accountsApi.createAccount({
+      const newAccount = await accountsApi.createAccount({
         business_id: businessId,
         account_code: data.account_code,
         account_name: data.account_name,
@@ -138,10 +138,15 @@ export default function AccountsPage() {
         parent_account_id: data.parent_account_id || undefined,
         is_active: true,
         is_system: false,
+        is_retained_earnings: false,
         sort_order: data.sort_order,
         description: data.description,
         default_category: data.default_category,
       });
+
+      if (data.is_retained_earnings) {
+        await accountsApi.setRetainedEarningsAccount(businessId, newAccount.id);
+      }
 
       const updatedAccounts = await accountsApi.getAccounts(businessId);
       setAccounts(updatedAccounts);
@@ -167,6 +172,12 @@ export default function AccountsPage() {
         description: data.description,
         default_category: data.default_category,
       });
+
+      if (data.is_retained_earnings) {
+        await accountsApi.setRetainedEarningsAccount(businessId, editAccount.id);
+      } else if (editAccount.is_retained_earnings) {
+        await accountsApi.updateAccount(editAccount.id, { is_retained_earnings: false });
+      }
 
       const updatedAccounts = await accountsApi.getAccounts(businessId);
       setAccounts(updatedAccounts);
@@ -554,6 +565,12 @@ function SubAccountRow({
         <span className="text-sm text-gray-900 dark:text-gray-100">
           {account.account_name}
         </span>
+        {account.is_retained_earnings && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">
+            <BookMarked className="w-3 h-3" />
+            Laba Ditahan
+          </span>
+        )}
         {isSystem && (
           <span title="Akun sistem"><Lock className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" /></span>
         )}

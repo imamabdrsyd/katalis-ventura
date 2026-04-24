@@ -247,6 +247,38 @@ export async function updateAccount(
 }
 
 /**
+ * Designate an EQUITY account as the Retained Earnings account for this business.
+ * Clears the flag on any previous account in the same business, then sets it on accountId.
+ * The DB partial unique index (WHERE is_retained_earnings = TRUE) is the safety net.
+ */
+export async function setRetainedEarningsAccount(
+  businessId: string,
+  accountId: string
+): Promise<void> {
+  const supabase = createClient();
+
+  // Clear any existing designation in this business (except the target account)
+  const { error: clearError } = await supabase
+    .from('accounts')
+    .update({ is_retained_earnings: false })
+    .eq('business_id', businessId)
+    .eq('is_retained_earnings', true)
+    .neq('id', accountId);
+
+  if (clearError) throw new Error(clearError.message);
+
+  // Set the flag on the target account (must be EQUITY)
+  const { error: setError } = await supabase
+    .from('accounts')
+    .update({ is_retained_earnings: true })
+    .eq('id', accountId)
+    .eq('business_id', businessId)
+    .eq('account_type', 'EQUITY');
+
+  if (setError) throw new Error(setError.message);
+}
+
+/**
  * Batch update income_statement_section untuk banyak akun sekaligus.
  * Digunakan oleh Income Statement Config modal.
  * Pass null untuk reset ke default logic.
