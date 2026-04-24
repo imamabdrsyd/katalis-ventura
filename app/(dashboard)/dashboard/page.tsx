@@ -543,13 +543,13 @@ export default function DashboardPage() {
               const metrics = calculateIncomeStatementMetrics(summary);
               const hasRevenue = summary.totalEarn > 0;
               const rows = [
-                { label: 'Laba Kotor', value: summary.grossProfit, margin: hasRevenue ? metrics.grossMargin : null },
-                { label: 'Laba Usaha', value: metrics.operatingIncome, margin: hasRevenue ? metrics.operatingMargin : null },
-                { label: 'Laba Bersih', value: summary.netProfit, margin: hasRevenue ? metrics.netMargin : null, bold: true },
+                { label: t.incomeStatement.grossProfit, value: summary.grossProfit, margin: hasRevenue ? metrics.grossMargin : null },
+                { label: t.incomeStatement.operatingIncome, value: metrics.operatingIncome, margin: hasRevenue ? metrics.operatingMargin : null },
+                { label: t.incomeStatement.netIncome, value: summary.netProfit, margin: hasRevenue ? metrics.netMargin : null, bold: true },
               ];
               return (
                 <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                  <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Hasil</p>
+                  <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">{t.dashboard.financialResults}</p>
                   <div className="space-y-1.5">
                     {rows.map((row) => {
                       const isPositive = row.value >= 0;
@@ -627,9 +627,15 @@ export default function DashboardPage() {
                       <CategoryBadge category={t.category} size="xs" />
                     </td>
                     <td className={`py-3 text-sm font-semibold text-right whitespace-nowrap ${
-                      t.amount === 0 ? 'text-gray-500 dark:text-gray-400' : t.category === 'EARN' ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
+                      t.amount === 0
+                        ? 'text-gray-500 dark:text-gray-400'
+                        : t.category === 'EARN'
+                          ? 'text-emerald-500 dark:text-emerald-400'
+                          : (t.category === 'VAR' || t.category === 'OPEX')
+                            ? 'text-red-500 dark:text-red-400'
+                            : 'text-gray-800 dark:text-gray-200'
                     }`}>
-                      {t.amount === 0 ? '' : t.category === 'EARN' ? '+' : '-'}{formatCurrency(t.amount)}
+                      {t.category === 'EARN' ? '+' : ''}{formatCurrency(t.amount)}
                     </td>
                   </tr>
                 ))}

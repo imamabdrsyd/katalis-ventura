@@ -142,6 +142,7 @@ export interface Translations {
     taxes: string;
     financing: string;
     records: string;
+    financialResults: string;
     recentTransactions: string;
     viewAll: string;
     noTransactions: string;

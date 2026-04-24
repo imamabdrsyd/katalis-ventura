@@ -137,6 +137,7 @@ export const id: Translations = {
     taxes: 'Pajak',
     financing: 'Pembiayaan',
     records: '{n} record',
+    financialResults: 'Hasil',
     recentTransactions: 'Transaksi Terkini',
     viewAll: 'Lihat semua',
     noTransactions: 'Belum ada transaksi',

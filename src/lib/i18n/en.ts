@@ -137,6 +137,7 @@ export const en: Translations = {
     taxes: 'Taxes',
     financing: 'Financing',
     records: '{n} records',
+    financialResults: 'Results',
     recentTransactions: 'Recent Transactions',
     viewAll: 'View all',
     noTransactions: 'No transactions yet',
