@@ -365,7 +365,7 @@ export const en: Translations = {
 
   generalLedger: {
     title: 'General Ledger',
-    subtitle: 'General Ledger — detailed chronological movement of each account',
+    subtitle: 'Detailed chronological movement of each account',
     allTime: 'All Time',
     thisMonth: 'This Month',
     thisQuarter: 'This Quarter',

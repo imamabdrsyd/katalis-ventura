@@ -166,36 +166,53 @@ function GeneralLedgerPageInner() {
             <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
               <button
                 onClick={handleAllTime}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
                   isAllTime
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                    ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 font-bold shadow-sm'
+                    : 'font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
                 {t.generalLedger.allTime}
               </button>
-              {(['month', 'quarter', 'year', 'custom'] as Period[]).map((p) => (
+              {(['month', 'quarter', 'year'] as Period[]).map((p) => (
                 <button
                   key={p}
                   onClick={() => handlePeriodChange(p)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
                     period === p && !isAllTime
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                      ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 font-bold shadow-sm'
+                      : 'font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                   }`}
                 >
                   {PERIOD_LABELS[p]}
                 </button>
               ))}
+              <button
+                onClick={() => {
+                  const today = new Date();
+                  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+                  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+                  setPeriod('custom');
+                  setStartDate(fmt(firstDay));
+                  setEndDate(fmt(today));
+                }}
+                className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+                  period === 'custom' && !isAllTime
+                    ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 font-bold shadow-sm'
+                    : 'font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                {PERIOD_LABELS.custom}
+              </button>
             </div>
           )}
         </div>
       </div>
 
       {/* Main Two-Panel Layout */}
-      <div className="flex flex-col lg:flex-row gap-4 lg:items-start">
+      <div className="flex flex-col lg:flex-row gap-4 lg:items-stretch">
         {/* LEFT PANEL: Account List */}
-        <div className="lg:w-72 xl:w-80 flex-shrink-0 lg:sticky lg:top-4">
+        <div className="lg:w-72 xl:w-80 flex-shrink-0 lg:sticky lg:top-4 lg:self-start">
           <div className="card-static p-0 overflow-hidden">
             {/* Account Type Filter Tabs */}
             <div className="p-3 border-b border-gray-200 dark:border-gray-700">
@@ -282,16 +299,16 @@ function GeneralLedgerPageInner() {
         </div>
 
         {/* RIGHT PANEL: Ledger Detail */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 flex flex-col">
           {!selectedAccount || !ledger ? (
-            <div className="card-static flex flex-col items-center justify-center py-16 text-center">
+            <div className="card-static flex flex-col items-center justify-center py-16 text-center flex-1">
               <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
               <p className="text-gray-500 dark:text-gray-400">
                 {t.generalLedger.selectAccountHint}
               </p>
             </div>
           ) : (
-            <div className="card-static p-0 overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+            <div className="card-static p-0 overflow-hidden flex flex-col flex-1" style={{ maxHeight: 'calc(100vh - 280px)' }}>
               {/* Ledger Header — sticky */}
               <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

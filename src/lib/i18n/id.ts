@@ -365,7 +365,7 @@ export const id: Translations = {
 
   generalLedger: {
     title: 'Buku Besar',
-    subtitle: 'Buku Besar — detail pergerakan setiap akun secara kronologis',
+    subtitle: 'Detail pergerakan setiap akun secara kronologis',
     allTime: 'Semua Waktu',
     thisMonth: 'Bulan Ini',
     thisQuarter: 'Kuartal Ini',
