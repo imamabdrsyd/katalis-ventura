@@ -59,6 +59,7 @@ const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
   real_estate: <Building2 className="w-4 h-4" />,
 };
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import { FloatingQuickAdd } from '@/components/transactions/FloatingQuickAdd';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
 
@@ -629,20 +630,15 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
                 {/* Language Toggle */}
                 <div className="px-4 py-2 flex items-center justify-between">
                   <Languages className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => setLocale('id')}
-                      className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${locale === 'id' ? 'bg-indigo-500 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                    >
-                      ID
-                    </button>
-                    <button
-                      onClick={() => setLocale('en')}
-                      className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${locale === 'en' ? 'bg-indigo-500 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                    >
-                      EN
-                    </button>
-                  </div>
+                  <SegmentedToggle
+                    value={locale}
+                    onChange={(v) => setLocale(v as 'id' | 'en')}
+                    options={[
+                      { value: 'id', label: 'ID' },
+                      { value: 'en', label: 'EN' },
+                    ]}
+                    ariaLabel="Language"
+                  />
                 </div>
                 <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
                 <button
