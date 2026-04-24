@@ -210,7 +210,7 @@ function GeneralLedgerPageInner() {
       </div>
 
       {/* Main Two-Panel Layout */}
-      <div className="flex flex-col lg:flex-row gap-4 lg:items-stretch">
+      <div className="flex flex-col lg:flex-row gap-4 lg:items-start">
         {/* LEFT PANEL: Account List */}
         <div className="lg:w-72 xl:w-80 flex-shrink-0 lg:sticky lg:top-4 lg:self-start">
           <div className="card-static p-0 overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 160px)' }}>
@@ -299,16 +299,16 @@ function GeneralLedgerPageInner() {
         </div>
 
         {/* RIGHT PANEL: Ledger Detail */}
-        <div className="flex-1 min-w-0 flex flex-col">
+        <div className="flex-1 min-w-0">
           {!selectedAccount || !ledger ? (
-            <div className="card-static flex flex-col items-center justify-center py-16 text-center flex-1">
+            <div className="card-static flex flex-col items-center justify-center py-16 text-center">
               <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
               <p className="text-gray-500 dark:text-gray-400">
                 {t.generalLedger.selectAccountHint}
               </p>
             </div>
           ) : (
-            <div className="card-static p-0 overflow-hidden flex flex-col flex-1" style={{ maxHeight: 'calc(100vh - 160px)' }}>
+            <div className="card-static p-0 overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 160px)' }}>
               {/* Ledger Header — sticky */}
               <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
