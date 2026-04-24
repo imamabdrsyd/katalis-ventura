@@ -213,7 +213,7 @@ function GeneralLedgerPageInner() {
       <div className="flex flex-col lg:flex-row gap-4 lg:items-stretch">
         {/* LEFT PANEL: Account List */}
         <div className="lg:w-72 xl:w-80 flex-shrink-0 lg:sticky lg:top-4 lg:self-start">
-          <div className="card-static p-0 overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 160px)' }}>
+          <div className="card-static p-0 overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 160px)' }}>
             {/* Account Type Filter Tabs */}
             <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
               <div className="flex flex-wrap gap-1">
@@ -308,7 +308,7 @@ function GeneralLedgerPageInner() {
               </p>
             </div>
           ) : (
-            <div className="card-static p-0 overflow-hidden flex flex-col flex-1" style={{ maxHeight: 'calc(100vh - 160px)' }}>
+            <div className="card-static p-0 overflow-hidden flex flex-col flex-1" style={{ height: 'calc(100vh - 160px)' }}>
               {/* Ledger Header — sticky */}
               <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
