@@ -1,71 +1,73 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase-server';
+import { getAuthenticatedUser, createServerClient } from '@/lib/supabase-server';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * GET /api/users/profile?userId=<uuid>
+ *
+ * Returns the target user's public display name.
+ * Access is limited to:
+ *   - The requesting user themselves, OR
+ *   - A user who shares at least one business (via user_business_roles) with the target.
+ *
+ * Uses the session-scoped server client — RLS on `profiles` (read_public)
+ * + explicit shared-business check prevents enumeration of unrelated users.
+ */
 export async function GET(request: NextRequest) {
-  try {
-    // Note: This endpoint returns only public profile info (full_name)
-    // No sensitive data is exposed, so we skip auth check for better UX
-    const userId = request.nextUrl.searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'User ID is required' },
-        { status: 400 }
-      );
-    }
-
-    // Validate UUID format to prevent injection
-    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!UUID_REGEX.test(userId)) {
-      return NextResponse.json(
-        { error: 'Invalid user ID format' },
-        { status: 400 }
-      );
-    }
-
-    // Use admin client only after auth is verified
-    let supabaseAdmin;
-    try {
-      supabaseAdmin = createAdminClient();
-    } catch (envError) {
-      console.error('Admin client creation failed (missing env vars?):', envError);
-      return NextResponse.json({ full_name: 'Unknown' });
-    }
-
-    // Fetch user profile using service role (bypass RLS)
-    const { data, error } = await supabaseAdmin
-      .from('profiles')
-      .select('full_name, id')
-      .eq('id', userId)
-      .single();
-
-    if (error) {
-      console.error('Supabase profiles error for userId', userId, ':', error.message, error.code);
-      // Fallback: try to get from auth.users
-      try {
-        const { data: authData } = await supabaseAdmin.auth.admin.getUserById(userId);
-        if (authData?.user) {
-          const fullName = authData.user.user_metadata?.full_name ||
-            authData.user.email?.split('@')[0] ||
-            'Unknown';
-          console.log('Fallback to auth.users success:', fullName);
-          return NextResponse.json({ full_name: fullName });
-        }
-      } catch (authError) {
-        console.error('Auth fallback error:', authError);
-      }
-      // Return Unknown instead of throwing - graceful degradation
-      return NextResponse.json({ full_name: 'Unknown' });
-    }
-
-    return NextResponse.json({
-      full_name: data?.full_name || 'Unknown',
-    });
-  } catch (error) {
-    console.error('[Profile API] Uncaught error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch profile', full_name: 'Unknown' },
-      { status: 500 }
-    );
+  const user = await getAuthenticatedUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const userId = request.nextUrl.searchParams.get('userId');
+  if (!userId || !UUID_REGEX.test(userId)) {
+    return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
+  }
+
+  const supabase = await createServerClient();
+
+  if (userId !== user.id) {
+    // Must share a business with the target user
+    const { data: myBusinesses } = await supabase
+      .from('user_business_roles')
+      .select('business_id')
+      .eq('user_id', user.id);
+
+    const businessIds = (myBusinesses ?? []).map((r) => r.business_id);
+    if (businessIds.length === 0) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const [sharedRoleRes, createdBusinessRes] = await Promise.all([
+      supabase
+        .from('user_business_roles')
+        .select('user_id')
+        .eq('user_id', userId)
+        .in('business_id', businessIds)
+        .limit(1),
+      supabase
+        .from('businesses')
+        .select('id')
+        .eq('created_by', userId)
+        .in('id', businessIds)
+        .limit(1),
+    ]);
+
+    const shared =
+      (sharedRoleRes.data?.length ?? 0) > 0 ||
+      (createdBusinessRes.data?.length ?? 0) > 0;
+
+    if (!shared) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+  }
+
+  const { data } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', userId)
+    .maybeSingle();
+
+  return NextResponse.json({ full_name: data?.full_name || 'Unknown' });
 }
