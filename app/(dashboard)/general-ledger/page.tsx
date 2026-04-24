@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { BookOpenCheck, AlertCircle, FileText, X, ChevronDown, ChevronRight } from 'lucide-react';
+import { BookOpenCheck, AlertCircle, FileText, X, ChevronDown, ChevronRight, Calendar } from 'lucide-react';
 import { useGeneralLedger, type AccountTypeFilter } from '@/hooks/useGeneralLedger';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
@@ -124,71 +124,60 @@ function GeneralLedgerPageInner() {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
-          <BookOpenCheck className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
-          {t.generalLedger.title}
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {t.generalLedger.subtitle}
-        </p>
-      </div>
+      {/* Header + Period Filter inline */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
+            <BookOpenCheck className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
+            {t.generalLedger.title}
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {t.generalLedger.subtitle}
+          </p>
+        </div>
 
-      {/* Period Filter */}
-      <div className="card-static mb-6">
-        <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
-          <div className="flex-1">
-            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-              {t.period.period}
-            </label>
-            <div className="flex gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
+          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+            <button
+              onClick={handleAllTime}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                isAllTime
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              {t.generalLedger.allTime}
+            </button>
+            {(['month', 'quarter', 'year', 'custom'] as Period[]).map((p) => (
               <button
-                onClick={handleAllTime}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isAllTime
-                    ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-300'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                key={p}
+                onClick={() => handlePeriodChange(p)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  period === p && !isAllTime
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
-                {t.generalLedger.allTime}
+                {PERIOD_LABELS[p]}
               </button>
-              {(['month', 'quarter', 'year', 'custom'] as Period[]).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => handlePeriodChange(p)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    period === p && !isAllTime
-                      ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-300'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  {PERIOD_LABELS[p]}
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
-
           {period === 'custom' && (
-            <div className="flex gap-3 items-end">
-              <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Dari</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="input text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Sampai</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="input text-sm"
-                />
-              </div>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
+              />
+              <span className="text-xs text-gray-400">—</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
+              />
             </div>
           )}
         </div>
