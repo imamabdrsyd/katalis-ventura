@@ -458,6 +458,9 @@ function GeneralLedgerPageInner() {
                             </td>
                             <td className="py-2.5 px-3 text-sm text-gray-800 dark:text-gray-200 max-w-[200px]">
                               <p className="truncate font-medium">{entry.description}</p>
+                              {entry.subDescription && (
+                                <p className="truncate text-xs text-gray-400 dark:text-gray-500 mt-0.5">{entry.subDescription}</p>
+                              )}
                             </td>
                             <td className="py-2.5 px-3 text-sm text-gray-500 dark:text-gray-400">
                               <div className="flex items-center gap-1.5">

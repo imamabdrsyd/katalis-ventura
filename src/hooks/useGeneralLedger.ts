@@ -9,6 +9,7 @@ export interface LedgerEntry {
   transactionId: string;
   date: string;
   description: string;
+  subDescription?: string;
   counterAccountName: string;
   counterAccountCode: string;
   debitAmount: number;
@@ -203,14 +204,19 @@ export function calculateAccountLedger(
     totalCredits += creditAmount;
 
     // EARN/FIN → customer/pihak terkait name, expenses → keterangan (description)
-    const keterangan = (t.category === 'EARN' || t.category === 'FIN')
+    const isNameFirst = t.category === 'EARN' || t.category === 'FIN';
+    const keterangan = isNameFirst
       ? t.name
       : (t.description || t.debit_account?.account_name || t.name);
+    const subKeterangan = isNameFirst
+      ? (t.description || undefined)
+      : undefined;
 
     entries.push({
       transactionId: t.id,
       date: t.date,
       description: keterangan,
+      subDescription: subKeterangan,
       counterAccountName: counterAccount?.account_name ?? '-',
       counterAccountCode: counterAccount?.account_code ?? '-',
       debitAmount,
