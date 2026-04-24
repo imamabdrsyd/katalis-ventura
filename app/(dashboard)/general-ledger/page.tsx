@@ -136,34 +136,10 @@ function GeneralLedgerPageInner() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 shrink-0">
           <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
-          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
-            <button
-              onClick={handleAllTime}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                isAllTime
-                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              {t.generalLedger.allTime}
-            </button>
-            {(['month', 'quarter', 'year', 'custom'] as Period[]).map((p) => (
-              <button
-                key={p}
-                onClick={() => handlePeriodChange(p)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  period === p && !isAllTime
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                }`}
-              >
-                {PERIOD_LABELS[p]}
-              </button>
-            ))}
-          </div>
-          {period === 'custom' && (
+          {period === 'custom' && !isAllTime ? (
+            /* Custom mode: show date inputs only, pills hidden */
             <div className="flex items-center gap-1.5">
               <input
                 type="date"
@@ -178,6 +154,39 @@ function GeneralLedgerPageInner() {
                 onChange={(e) => setEndDate(e.target.value)}
                 className="px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
               />
+              <button
+                onClick={handleAllTime}
+                className="px-2 py-1.5 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            /* Normal mode: pill buttons */
+            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+              <button
+                onClick={handleAllTime}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  isAllTime
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                {t.generalLedger.allTime}
+              </button>
+              {(['month', 'quarter', 'year', 'custom'] as Period[]).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => handlePeriodChange(p)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    period === p && !isAllTime
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {PERIOD_LABELS[p]}
+                </button>
+              ))}
             </div>
           )}
         </div>
