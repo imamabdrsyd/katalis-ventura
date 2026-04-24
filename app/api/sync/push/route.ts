@@ -106,13 +106,21 @@ export async function POST(request: NextRequest) {
         const { id, ...updateData } = tx;
 
         // Check for conflicts (server-side updated_at > client-side updated_at)
+        // Also enforces business_id scope — only fetch if owned by this business
         const { data: existing } = await supabase
           .from('transactions')
           .select('updated_at')
           .eq('id', id)
+          .eq('business_id', parsed.data)
+          .is('deleted_at', null)
           .single();
 
-        if (existing && new Date(existing.updated_at).getTime() > new Date(updateData.updated_at).getTime()) {
+        if (!existing) {
+          conflicts.push({ id, error: 'Transaction not found in this business' });
+          continue;
+        }
+
+        if (new Date(existing.updated_at).getTime() > new Date(updateData.updated_at).getTime()) {
           conflicts.push({
             id,
             error: 'Conflict: server version is newer',
@@ -141,8 +149,22 @@ export async function POST(request: NextRequest) {
     // Handle deleted transactions (soft delete)
     if (changes.transactions.deleted && changes.transactions.deleted.length > 0) {
       for (const txId of changes.transactions.deleted) {
+        // Verify ownership before calling the SECURITY DEFINER RPC (which skips RLS)
+        const { data: owned } = await supabase
+          .from('transactions')
+          .select('id')
+          .eq('id', txId)
+          .eq('business_id', parsed.data)
+          .is('deleted_at', null)
+          .maybeSingle();
+
+        if (!owned) {
+          conflicts.push({ id: txId, error: 'Transaction not found in this business' });
+          continue;
+        }
+
         const { error: deleteError } = await supabase.rpc('soft_delete_transaction', {
-          p_id: txId,
+          transaction_id: txId,
         });
 
         if (deleteError) {
