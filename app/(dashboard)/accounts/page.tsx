@@ -8,6 +8,7 @@ import * as accountsApi from '@/lib/api/accounts';
 import type { AccountTreeNode } from '@/lib/api/accounts';
 import { AccountForm, type AccountFormData } from '@/components/accounts/AccountForm';
 import { AccountDeleteModal } from '@/components/accounts/AccountDeleteModal';
+import { Modal } from '@/components/ui/Modal';
 import { Plus, Search, ChevronDown, ChevronRight, Lock, CheckCircle2, BookOpen as BookOpenIcon, Wallet, HandCoins, Scale, TrendingUp, Receipt, MoreVertical, BookMarked } from 'lucide-react';
 
 const ACCOUNT_TYPE_ICONS: Record<AccountType, React.ReactNode> = {
@@ -47,6 +48,8 @@ export default function AccountsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [preselectedParentId, setPreselectedParentId] = useState<string | null>(null);
   const [editAccount, setEditAccount] = useState<Account | null>(null);
+  const [addSubmitDisabled, setAddSubmitDisabled] = useState(true);
+  const [editSubmitDisabled, setEditSubmitDisabled] = useState(false);
   const [deleteAccount, setDeleteAccount] = useState<Account | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -358,56 +361,84 @@ export default function AccountsPage() {
       })()}
 
       {/* Add Account Modal */}
-      {showAddModal && (
-        <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-          onClick={() => {
-            setShowAddModal(false);
-            setPreselectedParentId(null);
-          }}
-        >
-          <div
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <AccountForm
-              onSubmit={handleAddAccount}
-              onCancel={() => {
-                setShowAddModal(false);
-                setPreselectedParentId(null);
-              }}
-              loading={saving}
-              businessId={businessId}
-              existingCodes={existingCodes}
-              parentAccounts={parentAccounts}
-              parentAccountId={preselectedParentId || undefined}
-            />
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => { setShowAddModal(false); setPreselectedParentId(null); }}
+        title="Tambah Akun"
+        footer={
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => { setShowAddModal(false); setPreselectedParentId(null); }}
+              className="btn-secondary flex-1"
+              disabled={saving}
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              form="add-account-form"
+              className="btn-primary flex-1"
+              disabled={addSubmitDisabled}
+            >
+              {saving ? 'Menyimpan...' : 'Buat Akun'}
+            </button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <AccountForm
+          formId="add-account-form"
+          hideActions
+          onValidityChange={setAddSubmitDisabled}
+          onSubmit={handleAddAccount}
+          onCancel={() => { setShowAddModal(false); setPreselectedParentId(null); }}
+          loading={saving}
+          businessId={businessId}
+          existingCodes={existingCodes}
+          parentAccounts={parentAccounts}
+          parentAccountId={preselectedParentId || undefined}
+        />
+      </Modal>
 
       {/* Edit Account Modal */}
-      {editAccount && (
-        <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-          onClick={() => setEditAccount(null)}
-        >
-          <div
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <AccountForm
-              account={editAccount}
-              onSubmit={handleEditAccount}
-              onCancel={() => setEditAccount(null)}
-              loading={saving}
-              businessId={businessId}
-              existingCodes={existingCodes}
-              parentAccounts={parentAccounts}
-            />
+      <Modal
+        isOpen={!!editAccount}
+        onClose={() => setEditAccount(null)}
+        title="Edit Akun"
+        footer={
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setEditAccount(null)}
+              className="btn-secondary flex-1"
+              disabled={saving}
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              form="edit-account-form"
+              className="btn-primary flex-1"
+              disabled={editSubmitDisabled}
+            >
+              {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+            </button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <AccountForm
+          formId="edit-account-form"
+          hideActions
+          onValidityChange={setEditSubmitDisabled}
+          account={editAccount}
+          onSubmit={handleEditAccount}
+          onCancel={() => setEditAccount(null)}
+          loading={saving}
+          businessId={businessId}
+          existingCodes={existingCodes}
+          parentAccounts={parentAccounts}
+        />
+      </Modal>
 
       {/* Delete Confirmation Modal */}
       <AccountDeleteModal

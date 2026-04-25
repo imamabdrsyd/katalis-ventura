@@ -30,6 +30,9 @@ interface AccountFormProps {
   existingCodes: string[];
   parentAccounts: Account[]; // Main accounts (parent_account_id IS NULL)
   parentAccountId?: string; // Pre-selected parent (when adding sub-account from card)
+  formId?: string;      // Jika diisi, button submit di luar form bisa pakai form={formId}
+  hideActions?: boolean; // Sembunyikan button di dalam form (dipakai saat button di-render di luar via footer modal)
+  onValidityChange?: (isDisabled: boolean) => void; // Callback untuk sync disabled state ke footer luar
 }
 
 // Helper: suggest normal balance based on type
@@ -46,6 +49,9 @@ export function AccountForm({
   existingCodes,
   parentAccounts,
   parentAccountId,
+  formId,
+  hideActions = false,
+  onValidityChange,
 }: AccountFormProps) {
   const isEditMode = !!account;
 
@@ -75,6 +81,12 @@ export function AccountForm({
 
   // Get the selected parent for display and validation
   const selectedParent = parentAccounts.find(p => p.id === formData.parent_account_id);
+
+  // Emit submit disabled state ke parent (untuk footer button di luar form)
+  const isSubmitDisabled = loading || loadingCode || !!codeRangeError || (!isEditMode && !formData.parent_account_id) || (codeValidation !== null && !codeValidation.valid);
+  useEffect(() => {
+    onValidityChange?.(isSubmitDisabled);
+  }, [isSubmitDisabled, onValidityChange]);
 
   // Auto-generate code when parent changes (create mode only)
   useEffect(() => {
@@ -248,7 +260,7 @@ export function AccountForm({
 
 
   return (
-    <form onSubmit={handleSubmit} className="p-6 space-y-4 pb-2">
+    <form id={formId} onSubmit={handleSubmit} className="p-6 space-y-4 pb-2">
       <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
         {isEditMode ? 'Edit Akun' : 'Tambah Sub-Akun Baru'}
       </h2>
@@ -566,24 +578,26 @@ export function AccountForm({
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 pb-1 sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 mt-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="btn-secondary flex-1"
-          disabled={loading}
-        >
-          Batal
-        </button>
-        <button
-          type="submit"
-          className="btn-primary flex-1"
-          disabled={loading || loadingCode || !!codeRangeError || (!isEditMode && !formData.parent_account_id) || (codeValidation !== null && !codeValidation.valid)}
-        >
-          {loading ? 'Menyimpan...' : isEditMode ? 'Simpan Perubahan' : 'Buat Akun'}
-        </button>
-      </div>
+      {/* Actions — disembunyikan jika dirender via footer modal di luar form */}
+      {!hideActions && (
+        <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 pb-1 sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 mt-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="btn-secondary flex-1"
+            disabled={loading}
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            className="btn-primary flex-1"
+            disabled={isSubmitDisabled}
+          >
+            {loading ? 'Menyimpan...' : isEditMode ? 'Simpan Perubahan' : 'Buat Akun'}
+          </button>
+        </div>
+      )}
     </form>
   );
 }
