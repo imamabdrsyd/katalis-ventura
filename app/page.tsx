@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Briefcase, TrendingUp, Shield } from 'lucide-react';
 import { Inter } from 'next/font/google';
 import { OmnichannelSection } from '@/components/omnichannel/OmnichannelSection';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -61,6 +62,7 @@ export default function LandingPage() {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Link
               href="/login"
               className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors"
