@@ -3,6 +3,16 @@ import { getAuthenticatedUser, createAdminClient } from '@/lib/supabase-server';
 import { isReservedSlug, isValidSlugFormat } from '@/lib/utils/slugUtils';
 import { z } from 'zod';
 
+const widgetLabelsSchema = z.object({
+  date_label: z.string().optional(),
+  checkin_label: z.string().optional(),
+  checkout_label: z.string().optional(),
+  note_label: z.string().optional(),
+  note_placeholder: z.string().optional(),
+  cta_label: z.string().optional(),
+  action_label: z.string().optional(),
+}).optional().nullable();
+
 const upsertSchema = z.object({
   slug: z.string().min(3).max(64),
   is_published: z.boolean(),
@@ -13,6 +23,8 @@ const upsertSchema = z.object({
     (val) => (typeof val === 'string' && val.trim() === '' ? null : val),
     z.string().url().nullable().optional()
   ),
+  widget_date_mode: z.enum(['single', 'double']).optional().nullable(),
+  widget_labels: widgetLabelsSchema,
 });
 
 export async function GET(
