@@ -3,17 +3,26 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+const SIZE_CLASSES = {
+  sm: 'sm:max-w-sm',
+  md: 'sm:max-w-md',
+  lg: 'sm:max-w-lg',
+  xl: 'sm:max-w-xl',
+  '2xl': 'sm:max-w-2xl',
+};
+
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  size?: keyof typeof SIZE_CLASSES;
   sideNavPrev?: { onClick: () => void; disabled: boolean; title?: string };
   sideNavNext?: { onClick: () => void; disabled: boolean; title?: string };
 }
 
-export function Modal({ isOpen, onClose, title, children, footer, sideNavPrev, sideNavNext }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, footer, size = 'md', sideNavPrev, sideNavNext }: ModalProps) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -66,7 +75,7 @@ export function Modal({ isOpen, onClose, title, children, footer, sideNavPrev, s
         </button>
       )}
       <div
-        className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
+        className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-[calc(100vw-2rem)] ${SIZE_CLASSES[size]} max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700 shrink-0">

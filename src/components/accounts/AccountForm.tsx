@@ -261,9 +261,6 @@ export function AccountForm({
 
   return (
     <form id={formId} onSubmit={handleSubmit} className="p-6 space-y-4 pb-2">
-      <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-        {isEditMode ? 'Edit Akun' : 'Tambah Sub-Akun Baru'}
-      </h2>
 
       {/* Warning for edit mode */}
       {isEditMode && (

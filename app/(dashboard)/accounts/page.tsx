@@ -365,6 +365,7 @@ export default function AccountsPage() {
         isOpen={showAddModal}
         onClose={() => { setShowAddModal(false); setPreselectedParentId(null); }}
         title="Tambah Akun"
+        size="lg"
         footer={
           <div className="flex gap-3">
             <button
@@ -405,6 +406,7 @@ export default function AccountsPage() {
         isOpen={!!editAccount}
         onClose={() => setEditAccount(null)}
         title="Edit Akun"
+        size="lg"
         footer={
           <div className="flex gap-3">
             <button
