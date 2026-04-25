@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Briefcase, TrendingUp, Shield } from 'lucide-react';
 import { Inter } from 'next/font/google';
+import { OmnichannelSection } from '@/components/omnichannel/OmnichannelSection';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -46,25 +47,41 @@ export default function LandingPage() {
     <div className={`${inter.className} min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col`}>
       {/* Header */}
       <header className="container mx-auto px-6 py-5">
-        <nav className="flex items-center justify-between">
-          <Image
-            src="/images/axion.png"
-            alt="Axion Logo"
-            width={110}
-            height={36}
-            className="object-contain"
-          />
-          <Link
-            href="/signup"
-            className="btn-primary"
-          >
-            Get Started
-          </Link>
+        <nav className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 shrink-0">
+            <Image
+              src="/images/axion.png"
+              alt="Axion Logo"
+              width={110}
+              height={36}
+              className="object-contain"
+            />
+            <span className="hidden sm:block text-sm text-gray-400 font-medium border-l border-gray-200 pl-3">
+              Products and Services
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/login"
+              className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors"
+            >
+              Login
+            </Link>
+            <Link
+              href="/signup"
+              className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors"
+            >
+              Register
+            </Link>
+          </div>
         </nav>
       </header>
 
       {/* Hero + Features combined */}
-      <main className="flex-1 container mx-auto px-6 py-10 flex flex-col justify-center">
+      <main className="flex-1 container mx-auto px-6 pt-4 pb-10 flex flex-col">
+        {/* Omnichannel Widget — bisnis publik dengan widget WhatsApp untuk Jasa */}
+        <OmnichannelSection />
+
         {/* Hero */}
         <div className="max-w-3xl mx-auto text-center mb-12">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold mb-5">
@@ -183,6 +200,7 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
+
       </main>
 
       {/* Footer */}
