@@ -100,7 +100,7 @@ export function OmnichannelWidget({ business, index }: Props) {
     .join(' · ');
 
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+    <div className="rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-5 shadow-lg shadow-gray-200/60 dark:shadow-gray-900/60">
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         {business.logo_url ? (

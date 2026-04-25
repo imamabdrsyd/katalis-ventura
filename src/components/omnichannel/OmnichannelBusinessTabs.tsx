@@ -60,7 +60,7 @@ export function OmnichannelBusinessTabs({ businesses, activeIndex, onChange }: P
               }}
               type="button"
               onClick={() => onChange(i)}
-              className={`shrink-0 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition border-b-2 -mb-px ${
+              className={`shrink-0 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition border-b-[3px] -mb-px ${
                 isActive
                   ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
