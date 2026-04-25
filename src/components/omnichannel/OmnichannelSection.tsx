@@ -46,15 +46,15 @@ export function OmnichannelSection() {
   return (
     <section className="p-8 max-w-6xl mx-auto w-full">
       {/* Header: Storefront title */}
-      <div className="flex items-center gap-2 mb-6">
+      <div className="flex items-center gap-3 mb-6">
         <Image
           src="/images/favicon.png"
           alt="Storefront"
-          width={20}
-          height={20}
+          width={32}
+          height={32}
           className="object-contain"
         />
-        <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+        <span className="text-xl font-bold text-gray-800 dark:text-gray-100">
           Storefront
         </span>
       </div>
