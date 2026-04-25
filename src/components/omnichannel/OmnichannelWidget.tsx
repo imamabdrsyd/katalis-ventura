@@ -1,10 +1,16 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { ChevronDown } from 'lucide-react';
 import { BusinessInitialsAvatar } from './BusinessInitialsAvatar';
 import { PublicBusiness, formatCategory, formatSector } from './types';
+import {
+  computeRangePricing,
+  computeSinglePricing,
+  formatRupiahShort,
+  type PricingBreakdown,
+} from './pricing';
 
 interface Props {
   business: PublicBusiness | null;
@@ -61,6 +67,17 @@ export function OmnichannelWidget({ business, index, businesses = [], onSelectBu
   const dateMode = business.widget_date_mode ?? 'double';
   const labels = business.widget_labels ?? {};
 
+  // Hitung pricing breakdown sesuai mode
+  const pricing: PricingBreakdown = useMemo(() => {
+    if (!business.show_pricing) {
+      return { lines: [], total: 0, unit: null, has_price: false };
+    }
+    if (dateMode === 'single') {
+      return computeSinglePricing(business, date);
+    }
+    return computeRangePricing(business, checkin, checkout);
+  }, [business, dateMode, date, checkin, checkout]);
+
   const dateLabel = labels.date_label || 'Tanggal Kunjungan';
   const checkinLabel = labels.checkin_label || 'Check-in';
   const checkoutLabel = labels.checkout_label || 'Check-out';
@@ -97,6 +114,22 @@ export function OmnichannelWidget({ business, index, businesses = [], onSelectBu
       msg += `\n\n${dateLabel}: ${formatDate(date)}`;
     } else {
       msg += `\n\n${checkinLabel}: ${formatDate(checkin)}\n${checkoutLabel}: ${formatDate(checkout)}`;
+    }
+
+    // Sertakan rincian harga jika tersedia
+    if (pricing.has_price) {
+      msg += `\n\n*Estimasi Harga:*`;
+      pricing.lines.forEach((line) => {
+        const range = line.date_from === line.date_to
+          ? formatDate(line.date_from)
+          : `${formatDate(line.date_from)} – ${formatDate(line.date_to)}`;
+        const unitInfo = pricing.unit
+          ? `${line.units} ${pricing.unit} × Rp ${formatRupiahShort(line.unit_price)}`
+          : `${line.units} × Rp ${formatRupiahShort(line.unit_price)}`;
+        const labelStr = line.rule_label ? ` (${line.rule_label})` : '';
+        msg += `\n• ${range}${labelStr}: ${unitInfo} = Rp ${formatRupiahShort(line.subtotal)}`;
+      });
+      msg += `\n*Total: Rp ${formatRupiahShort(pricing.total)}*`;
     }
 
     if (note.trim()) msg += `\n\nCatatan: ${note.trim()}`;
@@ -245,6 +278,49 @@ export function OmnichannelWidget({ business, index, businesses = [], onSelectBu
               className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
             />
           </div>
+
+          {pricing.has_price && (
+            <div className="mb-4 rounded-lg border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-3">
+              <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-2">
+                Estimasi Harga
+              </p>
+              <div className="space-y-1.5">
+                {pricing.lines.map((line, idx) => {
+                  const range = line.date_from === line.date_to
+                    ? formatDate(line.date_from)
+                    : `${formatDate(line.date_from)} – ${formatDate(line.date_to)}`;
+                  return (
+                    <div key={idx} className="flex items-start justify-between gap-2 text-xs">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-gray-700 dark:text-gray-300 truncate">
+                          {range}
+                          {line.rule_label && (
+                            <span className="ml-1.5 inline-block px-1.5 py-0.5 text-[10px] rounded bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-medium">
+                              {line.rule_label}
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                          {pricing.unit
+                            ? `${line.units} ${pricing.unit} × Rp ${formatRupiahShort(line.unit_price)}`
+                            : `${line.units} × Rp ${formatRupiahShort(line.unit_price)}`}
+                        </p>
+                      </div>
+                      <p className="text-gray-900 dark:text-white font-medium whitespace-nowrap">
+                        Rp {formatRupiahShort(line.subtotal)}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Total</p>
+                <p className="text-sm font-bold text-primary-600 dark:text-primary-400">
+                  Rp {formatRupiahShort(pricing.total)}
+                </p>
+              </div>
+            </div>
+          )}
 
           {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
 

@@ -24,6 +24,14 @@ export interface PublicWidgetLabels {
   action_label?: string;
 }
 
+export interface PublicPricingRule {
+  id: string;
+  date_from: string;
+  date_to: string;
+  price: number;
+  label: string | null;
+}
+
 export interface PublicBusiness {
   id: string;
   business_name: string;
@@ -37,6 +45,10 @@ export interface PublicBusiness {
   links: PublicLink[];
   widget_date_mode?: 'single' | 'double';
   widget_labels?: PublicWidgetLabels;
+  show_pricing?: boolean;
+  default_price?: number | null;
+  price_unit?: string | null;
+  pricing_rules?: PublicPricingRule[];
 }
 
 interface RawOmniChannel {
@@ -45,6 +57,9 @@ interface RawOmniChannel {
   gallery_images: unknown;
   widget_date_mode: string | null;
   widget_labels: unknown;
+  show_pricing: boolean | null;
+  default_price: number | string | null;
+  price_unit: string | null;
   links: Array<{
     id: string;
     channel_type: string;
@@ -52,6 +67,13 @@ interface RawOmniChannel {
     url: string;
     is_active: boolean;
     sort_order: number;
+  }> | null;
+  pricing_rules: Array<{
+    id: string;
+    date_from: string;
+    date_to: string;
+    price: number | string;
+    label: string | null;
   }> | null;
 }
 
@@ -98,7 +120,9 @@ export async function GET() {
           city, whatsapp_number, widget_action_label, logo_url,
           omni_channel:business_omni_channels (
             id, is_published, gallery_images, widget_date_mode, widget_labels,
-            links:business_omni_channel_links ( id, channel_type, label, url, is_active, sort_order )
+            show_pricing, default_price, price_unit,
+            links:business_omni_channel_links ( id, channel_type, label, url, is_active, sort_order ),
+            pricing_rules:business_pricing_rules ( id, date_from, date_to, price, label )
           )
         `
       )
@@ -130,6 +154,17 @@ export async function GET() {
             }))
         : [];
 
+      const showPricing = isPublished && !!oc?.show_pricing;
+      const pricingRules: PublicPricingRule[] = showPricing
+        ? (oc?.pricing_rules ?? []).map((r) => ({
+            id: r.id,
+            date_from: r.date_from,
+            date_to: r.date_to,
+            price: typeof r.price === 'string' ? parseFloat(r.price) : r.price,
+            label: r.label,
+          }))
+        : [];
+
       return {
         id: row.id,
         business_name: row.business_name,
@@ -143,6 +178,12 @@ export async function GET() {
         links,
         widget_date_mode: (oc?.widget_date_mode as 'single' | 'double') ?? 'double',
         widget_labels: (oc?.widget_labels ?? {}) as PublicWidgetLabels,
+        show_pricing: showPricing,
+        default_price: showPricing && oc?.default_price != null
+          ? (typeof oc.default_price === 'string' ? parseFloat(oc.default_price) : oc.default_price)
+          : null,
+        price_unit: showPricing ? oc?.price_unit ?? null : null,
+        pricing_rules: pricingRules,
       };
     });
 

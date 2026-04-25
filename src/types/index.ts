@@ -392,6 +392,24 @@ export interface OmniChannelWidgetLabels {
   action_label?: string;
 }
 
+export interface PricingRule {
+  id: string;
+  omni_channel_id: string;
+  date_from: string; // YYYY-MM-DD
+  date_to: string;   // YYYY-MM-DD
+  price: number;
+  label?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UpsertPricingRuleData {
+  date_from: string;
+  date_to: string;
+  price: number;
+  label?: string | null;
+}
+
 export interface BusinessOmniChannel {
   id: string;
   business_id: string;
@@ -404,11 +422,15 @@ export interface BusinessOmniChannel {
   gallery_images?: OmniChannelGalleryImage[];
   widget_date_mode?: 'single' | 'double';
   widget_labels?: OmniChannelWidgetLabels;
+  show_pricing?: boolean;
+  default_price?: number | null;
+  price_unit?: string | null;
   created_at: string;
   updated_at: string;
   created_by: string;
   updated_by?: string;
   links?: OmniChannelLink[];
+  pricing_rules?: PricingRule[];
 }
 
 export interface UpsertOmniChannelData {
@@ -420,6 +442,9 @@ export interface UpsertOmniChannelData {
   logo_url?: string | null;
   widget_date_mode?: 'single' | 'double';
   widget_labels?: OmniChannelWidgetLabels;
+  show_pricing?: boolean;
+  default_price?: number | null;
+  price_unit?: string | null;
 }
 
 export interface UpsertOmniChannelLinkData {

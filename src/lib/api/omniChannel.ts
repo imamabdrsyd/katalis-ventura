@@ -3,8 +3,10 @@ import type {
   BusinessOmniChannel,
   OmniChannelGalleryImage,
   OmniChannelLink,
+  PricingRule,
   UpsertOmniChannelData,
   UpsertOmniChannelLinkData,
+  UpsertPricingRuleData,
 } from '@/types';
 
 // ─── READ (direct Supabase, SELECT RLS is permissive for members) ─────────────
@@ -13,7 +15,7 @@ export async function getOmniChannel(businessId: string): Promise<BusinessOmniCh
   const supabase = createClient();
   const { data, error } = await supabase
     .from('business_omni_channels')
-    .select('*, links:business_omni_channel_links(*)')
+    .select('*, links:business_omni_channel_links(*), pricing_rules:business_pricing_rules(*)')
     .eq('business_id', businessId)
     .single();
 
@@ -142,6 +144,50 @@ export async function reorderGalleryImages(
   const json = await res.json();
   if (!res.ok) throw new Error(json.error || 'Gagal reorder gallery');
   return json.gallery;
+}
+
+// ─── PRICING RULES ────────────────────────────────────────────────────────────
+
+export async function createPricingRule(
+  businessId: string,
+  payload: UpsertPricingRuleData
+): Promise<PricingRule> {
+  const res = await fetch(`/api/omni-channel/${businessId}/pricing-rules`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Gagal menambah aturan harga');
+  return json.data;
+}
+
+export async function updatePricingRule(
+  businessId: string,
+  ruleId: string,
+  payload: Partial<UpsertPricingRuleData>
+): Promise<PricingRule> {
+  const res = await fetch(`/api/omni-channel/${businessId}/pricing-rules/${ruleId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Gagal mengupdate aturan harga');
+  return json.data;
+}
+
+export async function deletePricingRule(
+  businessId: string,
+  ruleId: string
+): Promise<void> {
+  const res = await fetch(`/api/omni-channel/${businessId}/pricing-rules/${ruleId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const json = await res.json();
+    throw new Error(json.error || 'Gagal menghapus aturan harga');
+  }
 }
 
 // ─── SLUG CHECK ───────────────────────────────────────────────────────────────

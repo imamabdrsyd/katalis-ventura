@@ -7,6 +7,7 @@ import { getOmniChannel } from '@/lib/api/omniChannel';
 import { OmniChannelPageConfig } from './OmniChannelPageConfig';
 import { OmniChannelLinkList } from './OmniChannelLinkList';
 import { OmniChannelGallery } from './OmniChannelGallery';
+import { OmniChannelPricing } from './OmniChannelPricing';
 
 interface Props {
   businessId: string;
@@ -86,6 +87,14 @@ export function OmniChannelManager({ businessId, businessName, userId }: Props) 
         businessId={businessId}
         initialGallery={channel?.gallery_images ?? []}
         hasOmniChannel={!!channel}
+        onChanged={fetchChannel}
+      />
+
+      {/* Pricing Section */}
+      <OmniChannelPricing
+        businessId={businessId}
+        userId={userId}
+        channel={channel}
         onChanged={fetchChannel}
       />
 

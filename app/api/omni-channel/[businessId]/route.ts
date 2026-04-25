@@ -25,6 +25,9 @@ const upsertSchema = z.object({
   ),
   widget_date_mode: z.enum(['single', 'double']).optional().nullable(),
   widget_labels: widgetLabelsSchema,
+  show_pricing: z.boolean().optional(),
+  default_price: z.number().nonnegative().nullable().optional(),
+  price_unit: z.string().max(50).nullable().optional(),
 });
 
 export async function GET(
@@ -38,7 +41,7 @@ export async function GET(
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('business_omni_channels')
-    .select('*, links:business_omni_channel_links(*)')
+    .select('*, links:business_omni_channel_links(*), pricing_rules:business_pricing_rules(*)')
     .eq('business_id', businessId)
     .single();
 

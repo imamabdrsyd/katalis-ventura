@@ -21,6 +21,14 @@ export interface PublicWidgetLabels {
   action_label?: string;
 }
 
+export interface PublicPricingRule {
+  id: string;
+  date_from: string;
+  date_to: string;
+  price: number;
+  label: string | null;
+}
+
 export interface PublicBusiness {
   id: string;
   business_name: string;
@@ -34,6 +42,10 @@ export interface PublicBusiness {
   links: PublicLink[];
   widget_date_mode?: 'single' | 'double';
   widget_labels?: PublicWidgetLabels;
+  show_pricing?: boolean;
+  default_price?: number | null;
+  price_unit?: string | null;
+  pricing_rules?: PublicPricingRule[];
 }
 
 const SECTOR_LABELS: Record<string, string> = {
