@@ -8,20 +8,13 @@ import * as accountsApi from '@/lib/api/accounts';
 import type { AccountTreeNode } from '@/lib/api/accounts';
 import { AccountForm, type AccountFormData } from '@/components/accounts/AccountForm';
 import { AccountDeleteModal } from '@/components/accounts/AccountDeleteModal';
-import { Plus, Search, ChevronDown, ChevronRight, Lock, CheckCircle2, BookOpen as BookOpenIcon, Wallet, HandCoins, Scale, TrendingUp, Receipt, MoreVertical, BookMarked } from 'lucide-react';
+import { Plus, Search, ChevronDown, ChevronRight, Lock, CheckCircle2, BookOpen as BookOpenIcon, MoreVertical, BookMarked } from 'lucide-react';
 
-const ACCOUNT_TYPE_ICONS: Record<AccountType, React.ReactNode> = {
-  ASSET: <Wallet className="w-4 h-4 text-gray-500 dark:text-gray-400" />,
-  LIABILITY: <HandCoins className="w-4 h-4 text-gray-500 dark:text-gray-400" />,
-  EQUITY: <Scale className="w-4 h-4 text-gray-500 dark:text-gray-400" />,
-  REVENUE: <TrendingUp className="w-4 h-4 text-gray-500 dark:text-gray-400" />,
-  EXPENSE: <Receipt className="w-4 h-4 text-gray-500 dark:text-gray-400" />,
-};
 
 const TYPE_COLORS: Record<AccountType, string> = {
   ASSET: 'border-blue-400 dark:border-blue-500 text-blue-600 dark:text-blue-400',
   LIABILITY: 'border-amber-400 dark:border-amber-500 text-amber-600 dark:text-amber-400',
-  EQUITY: 'border-purple-400 dark:border-purple-500 text-purple-600 dark:text-purple-400',
+  EQUITY: 'border-indigo-400 dark:border-indigo-500 text-indigo-600 dark:text-indigo-400',
   REVENUE: 'border-green-400 dark:border-green-500 text-green-600 dark:text-green-400',
   EXPENSE: 'border-red-400 dark:border-red-500 text-red-600 dark:text-red-400',
 };
@@ -29,7 +22,7 @@ const TYPE_COLORS: Record<AccountType, string> = {
 const TYPE_TEXT_COLORS: Record<AccountType, string> = {
   ASSET: 'text-blue-600 dark:text-blue-400',
   LIABILITY: 'text-amber-600 dark:text-amber-400',
-  EQUITY: 'text-purple-600 dark:text-purple-400',
+  EQUITY: 'text-indigo-600 dark:text-indigo-400',
   REVENUE: 'text-green-600 dark:text-green-400',
   EXPENSE: 'text-red-600 dark:text-red-400',
 };
@@ -473,9 +466,6 @@ function ParentAccountCard({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {ACCOUNT_TYPE_ICONS[parent.account_type]}
-        </div>
       </button>
 
       {/* Children */}
@@ -566,8 +556,8 @@ function SubAccountRow({
           {account.account_name}
         </span>
         {account.is_retained_earnings && (
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">
-            <BookMarked className="w-3 h-3" />
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded bg-indigo-50 dark:bg-indigo-900/30 text-gray-500 dark:text-gray-400">
+            <BookMarked className="w-3 h-3 text-gray-400 dark:text-gray-500" />
             Laba Ditahan
           </span>
         )}
