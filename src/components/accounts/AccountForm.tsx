@@ -248,7 +248,7 @@ export function AccountForm({
 
 
   return (
-    <form onSubmit={handleSubmit} className="p-6 space-y-4">
+    <form onSubmit={handleSubmit} className="p-6 space-y-4 pb-2">
       <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
         {isEditMode ? 'Edit Akun' : 'Tambah Sub-Akun Baru'}
       </h2>
@@ -567,7 +567,7 @@ export function AccountForm({
       )}
 
       {/* Actions */}
-      <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+      <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 pb-1 sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 mt-2">
         <button
           type="button"
           onClick={onCancel}
