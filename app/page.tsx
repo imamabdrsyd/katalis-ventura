@@ -45,7 +45,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className={`${inter.className} min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col`}>
+    <div className={`${inter.className} min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col`}>
       {/* Header */}
       <header className="container mx-auto px-6 py-5">
         <nav className="flex items-center justify-between gap-4">
