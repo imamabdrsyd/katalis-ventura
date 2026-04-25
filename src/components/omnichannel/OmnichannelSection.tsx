@@ -44,7 +44,7 @@ export function OmnichannelSection() {
   const isJasa = (active.business_category ?? 'jasa') === 'jasa';
 
   return (
-    <section className="py-6 px-6 max-w-6xl mx-auto w-full">
+    <section className="p-8 max-w-6xl mx-auto w-full">
       {/* Tab navigation */}
       <div className="mb-6">
         <OmnichannelBusinessTabs
