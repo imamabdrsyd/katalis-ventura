@@ -66,7 +66,7 @@ export function OmnichannelSection() {
           alt={active.business_name}
         />
 
-        <div className="lg:sticky lg:top-24">
+        <div>
           {isJasa ? (
             <OmnichannelWidget
               business={active}

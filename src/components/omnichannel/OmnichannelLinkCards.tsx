@@ -108,7 +108,7 @@ export function OmnichannelLinkCards({ business, index, businesses = [], onSelec
               {business.business_name}
             </p>
           )}
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 truncate">
             {metaLine}
           </p>
 
