@@ -255,9 +255,9 @@ export function AccountForm({
 
       {/* Warning for edit mode */}
       {isEditMode && (
-        <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg">
-          <AlertCircle className="w-5 h-5 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-amber-800 dark:text-amber-200">
+        <div className="flex items-start gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg">
+          <AlertCircle className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Kode dan tipe akun tidak dapat diubah.
           </p>
         </div>
@@ -546,7 +546,7 @@ export function AccountForm({
               disabled={loading}
               className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
                 formData.is_retained_earnings
-                  ? 'bg-purple-600 dark:bg-purple-500'
+                  ? 'bg-indigo-600 dark:bg-indigo-500'
                   : 'bg-gray-200 dark:bg-gray-600'
               } disabled:opacity-50`}
             >
