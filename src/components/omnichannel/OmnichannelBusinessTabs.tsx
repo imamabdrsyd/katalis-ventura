@@ -48,7 +48,7 @@ export function OmnichannelBusinessTabs({ businesses, activeIndex, onChange }: P
 
       <div
         ref={scrollRef}
-        className="flex-1 flex overflow-x-auto scroll-smooth no-scrollbar border-b border-gray-200 dark:border-gray-700"
+        className="flex-1 flex overflow-x-auto scroll-smooth no-scrollbar border-b border-transparent"
       >
         {businesses.map((biz, i) => {
           const isActive = i === activeIndex;
