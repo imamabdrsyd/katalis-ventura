@@ -80,7 +80,9 @@ export default function LandingPage() {
       {/* Hero + Features combined */}
       <main className="flex-1 container mx-auto px-6 pt-4 pb-10 flex flex-col">
         {/* Omnichannel Widget — bisnis publik dengan widget WhatsApp untuk Jasa */}
-        <OmnichannelSection />
+        <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/60 border border-gray-100 mb-16 overflow-hidden">
+          <OmnichannelSection />
+        </div>
 
         {/* Hero */}
         <div className="max-w-3xl mx-auto text-center mb-12">
