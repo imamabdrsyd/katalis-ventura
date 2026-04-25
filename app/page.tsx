@@ -58,22 +58,22 @@ export default function LandingPage() {
               className="object-contain"
             />
             <span className="hidden sm:block text-sm text-gray-400 font-medium border-l border-gray-200 pl-3">
-              Products and Services
+              Omnichannel
             </span>
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <Link
               href="/login"
-              className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:border-primary-500 hover:text-primary-600 dark:hover:text-primary-400 rounded-xl transition-colors"
             >
-              Login
+              Enter Accounting
             </Link>
             <Link
               href="/signup"
-              className="px-4 py-2 text-sm font-semibold text-indigo-600 border border-indigo-500 hover:bg-indigo-50 rounded-xl transition-colors"
+              className="btn-primary px-4 py-2 text-sm"
             >
-              Register
+              Setup your Business
             </Link>
           </div>
         </nav>

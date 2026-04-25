@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { OmnichannelBusinessTabs } from './OmnichannelBusinessTabs';
+import Image from 'next/image';
 import { OmnichannelGalleryCarousel } from './OmnichannelGalleryCarousel';
 import { OmnichannelWidget } from './OmnichannelWidget';
 import { OmnichannelLinkCards } from './OmnichannelLinkCards';
@@ -45,13 +45,18 @@ export function OmnichannelSection() {
 
   return (
     <section className="p-8 max-w-6xl mx-auto w-full">
-      {/* Tab navigation */}
-      <div className="mb-6">
-        <OmnichannelBusinessTabs
-          businesses={businesses}
-          activeIndex={activeIndex}
-          onChange={setActiveIndex}
+      {/* Header: Storefront title */}
+      <div className="flex items-center gap-2 mb-6">
+        <Image
+          src="/images/favicon.png"
+          alt="Storefront"
+          width={20}
+          height={20}
+          className="object-contain"
         />
+        <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+          Storefront
+        </span>
       </div>
 
       {/* Gallery + Widget grid */}
@@ -63,9 +68,19 @@ export function OmnichannelSection() {
 
         <div className="lg:sticky lg:top-24">
           {isJasa ? (
-            <OmnichannelWidget business={active} index={activeIndex} />
+            <OmnichannelWidget
+              business={active}
+              index={activeIndex}
+              businesses={businesses}
+              onSelectBusiness={setActiveIndex}
+            />
           ) : (
-            <OmnichannelLinkCards business={active} index={activeIndex} />
+            <OmnichannelLinkCards
+              business={active}
+              index={activeIndex}
+              businesses={businesses}
+              onSelectBusiness={setActiveIndex}
+            />
           )}
         </div>
       </div>

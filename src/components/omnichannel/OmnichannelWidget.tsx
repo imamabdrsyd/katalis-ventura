@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import { ChevronDown } from 'lucide-react';
 import { BusinessInitialsAvatar } from './BusinessInitialsAvatar';
 import { PublicBusiness, formatCategory, formatSector } from './types';
 
 interface Props {
   business: PublicBusiness | null;
   index: number;
+  businesses?: PublicBusiness[];
+  onSelectBusiness?: (index: number) => void;
 }
 
 function formatDate(dateStr: string): string {
@@ -24,12 +27,24 @@ function WhatsAppIcon() {
   );
 }
 
-export function OmnichannelWidget({ business, index }: Props) {
+export function OmnichannelWidget({ business, index, businesses = [], onSelectBusiness }: Props) {
   const [date, setDate] = useState('');
   const [checkin, setCheckin] = useState('');
   const [checkout, setCheckout] = useState('');
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -117,13 +132,49 @@ export function OmnichannelWidget({ business, index }: Props) {
         ) : (
           <BusinessInitialsAvatar name={business.business_name} index={index} />
         )}
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-            {business.business_name}
-          </p>
+        <div className="min-w-0 flex-1 relative" ref={dropdownRef}>
+          {businesses.length > 1 && onSelectBusiness ? (
+            <button
+              type="button"
+              onClick={() => setDropdownOpen((v) => !v)}
+              className="flex items-center gap-1 text-sm font-medium text-gray-900 dark:text-white border-b-2 border-primary-500 pb-0.5 hover:text-primary-600 dark:hover:text-primary-400 transition-colors max-w-full"
+            >
+              <span className="truncate">{business.business_name}</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+          ) : (
+            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+              {business.business_name}
+            </p>
+          )}
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
             {metaLine}
           </p>
+
+          {/* Business switcher dropdown */}
+          {dropdownOpen && businesses.length > 1 && (
+            <div className="absolute left-0 top-full mt-2 z-50 w-56 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-md overflow-hidden">
+              {businesses.map((biz, i) => (
+                <button
+                  key={biz.id}
+                  type="button"
+                  onClick={() => {
+                    onSelectBusiness?.(i);
+                    setDropdownOpen(false);
+                  }}
+                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                    i === index
+                      ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 font-medium'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                  }`}
+                >
+                  {biz.business_name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
