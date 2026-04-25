@@ -52,9 +52,16 @@ export default function LandingPage() {
               alt="Axion Logo"
               width={110}
               height={36}
-              className="object-contain"
+              className="object-contain dark:hidden"
             />
-            <span className="hidden sm:block text-sm text-gray-400 font-medium border-l border-gray-200 pl-3">
+            <Image
+              src="/images/axion-dark.png"
+              alt="Axion Logo"
+              width={110}
+              height={36}
+              className="object-contain hidden dark:block"
+            />
+            <span className="hidden sm:block text-sm text-gray-400 dark:text-gray-500 font-medium border-l border-gray-200 dark:border-gray-700 pl-3">
               Omnichannel
             </span>
           </div>
@@ -62,13 +69,13 @@ export default function LandingPage() {
             <ThemeToggle />
             <Link
               href="/login"
-              className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
             >
               Login
             </Link>
             <Link
               href="/signup"
-              className="px-4 py-2 text-sm font-semibold text-indigo-600 border border-indigo-500 hover:bg-indigo-50 rounded-xl transition-colors"
+              className="px-4 py-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 border border-indigo-500 dark:border-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 rounded-xl transition-colors"
             >
               Register
             </Link>
@@ -78,19 +85,19 @@ export default function LandingPage() {
 
       {/* Hero + Features combined */}
       <main className="flex-1 container mx-auto px-6 pt-4 pb-10 flex flex-col">
-        {/* Omnichannel Widget — bisnis publik dengan widget WhatsApp untuk Jasa */}
-        <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/60 border border-gray-100 mb-16 overflow-hidden">
+        {/* Omnichannel Widget */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl shadow-gray-200/60 dark:shadow-gray-900/60 border border-gray-100 dark:border-gray-700 mb-16 overflow-hidden">
           <OmnichannelSection />
         </div>
 
         {/* Hero */}
         <div className="max-w-3xl mx-auto text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold mb-5">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-semibold mb-5">
             <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></span>
             Accounting Engine
           </div>
 
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-4 leading-tight">
             Make Data-driven Decisions
             <br />
             <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
@@ -98,7 +105,7 @@ export default function LandingPage() {
             </span>
           </h1>
 
-          <p className="text-base text-gray-600 mb-8 max-w-xl mx-auto">
+          <p className="text-base text-gray-600 dark:text-gray-400 mb-8 max-w-xl mx-auto">
             Acquire stakes in profitable small businesses.
             Track transactions, analyze performance, and make data-driven decisions.
           </p>
@@ -114,7 +121,7 @@ export default function LandingPage() {
         {/* Business Logo Marquee */}
         {stats.businessLogos.length > 0 && (
           <div className="max-w-5xl mx-auto w-full mb-12">
-            <p className="text-center text-sm text-gray-400 mb-4 font-medium">Assets Under Management</p>
+            <p className="text-center text-sm text-gray-400 dark:text-gray-500 mb-4 font-medium">Assets Under Management</p>
             <div
               className="relative overflow-hidden group"
               style={{
@@ -135,7 +142,7 @@ export default function LandingPage() {
                       height={40}
                       className="rounded-lg object-cover w-10 h-10"
                     />
-                    <span className="text-sm font-medium text-gray-500 whitespace-nowrap">
+                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
                       {biz.business_name}
                     </span>
                   </div>
@@ -149,30 +156,30 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto mb-12">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
             <Briefcase className="w-6 h-6 text-indigo-500 mb-3" />
-            <h3 className="text-base font-bold text-gray-900 mb-2">
+            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-2">
               Business Manager
             </h3>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Kelola keuangan bisnis secara profesional dengan double-entry bookkeeping, laporan otomatis, dan transparansi data untuk membangun kepercayaan investor.
             </p>
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
             <TrendingUp className="w-6 h-6 text-blue-500 mb-3" />
-            <h3 className="text-base font-bold text-gray-900 mb-2">
+            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-2">
               Investor
             </h3>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Pantau portofolio bisnis di bawah manajemen Katalis Ventura. Lihat laporan keuangan real, analisis ROI, dan metrik performa sebelum membuat keputusan.
             </p>
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
             <Shield className="w-6 h-6 text-pink-500 mb-3" />
-            <h3 className="text-base font-bold text-gray-900 mb-2">
+            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-2">
               Secure & Private
             </h3>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Kontrol akses per role (manager & investor), Row-Level Security di database, dan audit trail lengkap di setiap perubahan data.
             </p>
           </div>
@@ -205,21 +212,21 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="container mx-auto px-6 py-6 border-t border-gray-200">
-        <div className="flex flex-col md:flex-row items-center justify-between text-sm text-gray-500 gap-2">
+      <footer className="container mx-auto px-6 py-6 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col md:flex-row items-center justify-between text-sm text-gray-500 dark:text-gray-400 gap-2">
           <p>&copy; 2026 PT Imam Katalis Ventura. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <a
               href="https://instagram.com/imamabdrsyd"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-indigo-600 transition-colors"
+              className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
             >
               @imamabdrsyd
             </a>
             <a
               href="mailto:imam.isyida@gmail.com"
-              className="hover:text-indigo-600 transition-colors"
+              className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
             >
               imam.isyida@gmail.com
             </a>
