@@ -4,11 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Briefcase, TrendingUp, Shield } from 'lucide-react';
-import { Inter } from 'next/font/google';
 import { OmnichannelSection } from '@/components/omnichannel/OmnichannelSection';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
-
-const inter = Inter({ subsets: ['latin'] });
 
 interface BusinessLogo {
   id: string;
@@ -45,7 +42,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className={`${inter.className} min-h-screen bg-indigo-50 dark:bg-gray-900 flex flex-col`}>
+    <div className="min-h-screen bg-indigo-50 dark:bg-gray-900 flex flex-col">
       {/* Header */}
       <header className="container mx-auto px-6 py-5">
         <nav className="flex items-center justify-between gap-4">
