@@ -69,7 +69,7 @@ export default function LandingPage() {
             </Link>
             <Link
               href="/signup"
-              className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors"
+              className="px-4 py-2 text-sm font-semibold text-white bg-indigo-500 hover:bg-indigo-600 rounded-xl transition-colors"
             >
               Register
             </Link>

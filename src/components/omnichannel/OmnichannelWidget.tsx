@@ -200,7 +200,7 @@ export function OmnichannelWidget({ business, index }: Props) {
           <button
             onClick={handleSend}
             disabled={!hasWhatsApp}
-            className="w-full flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe5d] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-all"
+            className="w-full flex items-center justify-center gap-2 bg-indigo-500 hover:bg-indigo-600 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-all"
           >
             <WhatsAppIcon />
             {ctaLabel}
