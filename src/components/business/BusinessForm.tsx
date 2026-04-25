@@ -12,6 +12,11 @@ export interface BusinessFormData {
   property_address: string;
   capital_investment?: number;
   logo_url?: string;
+  // Omnichannel widget (landing page)
+  city?: string;
+  whatsapp_number?: string;
+  widget_action_label?: string;
+  is_public?: boolean;
   _logoFile?: File;
 }
 
@@ -55,6 +60,10 @@ export function BusinessForm({
     property_address: business?.property_address || '',
     capital_investment: business?.capital_investment || 0,
     logo_url: business?.logo_url || '',
+    city: business?.city || '',
+    whatsapp_number: business?.whatsapp_number || '',
+    widget_action_label: business?.widget_action_label || '',
+    is_public: business?.is_public ?? false,
   });
   const [customSector, setCustomSector] = useState(isCustomSector ? business?.business_type || '' : '');
   const [errors, setErrors] = useState<Partial<Record<keyof BusinessFormData, string>>>({});
@@ -116,6 +125,14 @@ export function BusinessForm({
     }
     if (formData.business_type === 'other' && !customSector.trim()) {
       newErrors.business_type = 'Sektor bisnis harus diisi';
+    }
+    // Validasi WhatsApp: hanya angka, minimal 10 digit (jika diisi)
+    const wa = (formData.whatsapp_number || '').trim();
+    if (wa && !/^\d{10,}$/.test(wa)) {
+      newErrors.whatsapp_number = 'Nomor WA harus angka saja, minimal 10 digit (contoh: 6281234567890)';
+    }
+    if (formData.is_public && formData.business_category === 'jasa' && !wa) {
+      newErrors.whatsapp_number = 'Nomor WhatsApp wajib diisi agar widget dapat aktif di landing page';
     }
 
     setErrors(newErrors);
@@ -299,6 +316,95 @@ export function BusinessForm({
           min="0"
         />
         <p className="text-xs text-gray-500 mt-1">Jumlah modal yang Anda investasikan ke bisnis ini</p>
+      </div>
+
+      {/* Omnichannel Widget — Landing Page */}
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-6 space-y-4">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+            Omnichannel Widget
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Tampilkan bisnis ini di landing page Axion. Untuk bisnis Jasa, visitor dapat
+            mengirim rencana kunjungan langsung via WhatsApp.
+          </p>
+        </div>
+
+        {/* Tampilkan di Landing Page */}
+        <div className="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-3">
+          <div className="pr-4">
+            <label
+              htmlFor="is_public"
+              className="text-sm font-medium text-gray-900 dark:text-white cursor-pointer"
+            >
+              Tampilkan di Landing Page
+            </label>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Bisnis akan muncul di halaman publik Axion
+            </p>
+          </div>
+          <input
+            id="is_public"
+            type="checkbox"
+            checked={formData.is_public ?? false}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, is_public: e.target.checked }))
+            }
+            className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+          />
+        </div>
+
+        {/* Kota */}
+        <div>
+          <label className="label">Kota</label>
+          <input
+            type="text"
+            name="city"
+            value={formData.city || ''}
+            onChange={handleChange}
+            className="input"
+            placeholder="cth: Bandung"
+          />
+        </div>
+
+        {/* Nomor WhatsApp & Label Aksi — hanya untuk Jasa */}
+        {formData.business_category === 'jasa' && (
+          <>
+            <div>
+              <label className="label">Nomor WhatsApp</label>
+              <input
+                type="text"
+                name="whatsapp_number"
+                value={formData.whatsapp_number || ''}
+                onChange={handleChange}
+                className="input"
+                placeholder="6281234567890 (tanpa +)"
+                inputMode="numeric"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Format internasional tanpa tanda +. Hanya angka.
+              </p>
+              {errors.whatsapp_number && (
+                <p className="text-sm text-red-500 mt-1">{errors.whatsapp_number}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="label">Label Aksi Widget</label>
+              <input
+                type="text"
+                name="widget_action_label"
+                value={formData.widget_action_label || ''}
+                onChange={handleChange}
+                className="input"
+                placeholder="cth: menginap, konsultasi, booking"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Kata kerja yang akan tampil di pesan WhatsApp pre-filled.
+              </p>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Buttons */}

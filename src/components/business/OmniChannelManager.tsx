@@ -6,6 +6,7 @@ import type { BusinessOmniChannel, OmniChannelLink } from '@/types';
 import { getOmniChannel } from '@/lib/api/omniChannel';
 import { OmniChannelPageConfig } from './OmniChannelPageConfig';
 import { OmniChannelLinkList } from './OmniChannelLinkList';
+import { OmniChannelGallery } from './OmniChannelGallery';
 
 interface Props {
   businessId: string;
@@ -78,6 +79,14 @@ export function OmniChannelManager({ businessId, businessName, userId }: Props) 
         userId={userId}
         channel={channel}
         onSaved={fetchChannel}
+      />
+
+      {/* Gallery Section */}
+      <OmniChannelGallery
+        businessId={businessId}
+        initialGallery={channel?.gallery_images ?? []}
+        hasOmniChannel={!!channel}
+        onChanged={fetchChannel}
       />
 
       {/* Links Section */}

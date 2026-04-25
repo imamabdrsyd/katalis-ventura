@@ -1,5 +1,11 @@
 import { createClient } from '@/lib/supabase';
-import type { BusinessOmniChannel, OmniChannelLink, UpsertOmniChannelData, UpsertOmniChannelLinkData } from '@/types';
+import type {
+  BusinessOmniChannel,
+  OmniChannelGalleryImage,
+  OmniChannelLink,
+  UpsertOmniChannelData,
+  UpsertOmniChannelLinkData,
+} from '@/types';
 
 // ─── READ (direct Supabase, SELECT RLS is permissive for members) ─────────────
 
@@ -92,6 +98,50 @@ export async function reorderOmniChannelLinks(
       })
     )
   );
+}
+
+// ─── GALLERY ──────────────────────────────────────────────────────────────────
+
+export async function uploadGalleryImage(
+  businessId: string,
+  url: string,
+  public_id: string
+): Promise<{ image: OmniChannelGalleryImage; gallery: OmniChannelGalleryImage[] }> {
+  const res = await fetch(`/api/omni-channel/${businessId}/gallery`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, public_id }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Gagal upload gambar gallery');
+  return { image: json.image, gallery: json.gallery };
+}
+
+export async function deleteGalleryImage(
+  businessId: string,
+  path: string
+): Promise<OmniChannelGalleryImage[]> {
+  const res = await fetch(
+    `/api/omni-channel/${businessId}/gallery?path=${encodeURIComponent(path)}`,
+    { method: 'DELETE' }
+  );
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Gagal menghapus gambar');
+  return json.gallery;
+}
+
+export async function reorderGalleryImages(
+  businessId: string,
+  paths: string[]
+): Promise<OmniChannelGalleryImage[]> {
+  const res = await fetch(`/api/omni-channel/${businessId}/gallery`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paths }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Gagal reorder gallery');
+  return json.gallery;
 }
 
 // ─── SLUG CHECK ───────────────────────────────────────────────────────────────

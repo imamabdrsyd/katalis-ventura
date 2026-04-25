@@ -1,0 +1,61 @@
+export interface PublicGalleryImage {
+  url: string;
+  sort_order: number;
+}
+
+export interface PublicLink {
+  id: string;
+  channel_type: string;
+  label: string;
+  url: string;
+  sort_order: number;
+}
+
+export interface PublicWidgetLabels {
+  date_label?: string;
+  checkin_label?: string;
+  checkout_label?: string;
+  note_label?: string;
+  note_placeholder?: string;
+  cta_label?: string;
+  action_label?: string;
+}
+
+export interface PublicBusiness {
+  id: string;
+  business_name: string;
+  business_category: 'jasa' | 'produk' | 'dagang' | null;
+  business_type: string | null;
+  city: string | null;
+  whatsapp_number: string | null;
+  widget_action_label: string | null;
+  logo_url: string | null;
+  gallery: PublicGalleryImage[];
+  links: PublicLink[];
+  widget_date_mode?: 'single' | 'double';
+  widget_labels?: PublicWidgetLabels;
+}
+
+const SECTOR_LABELS: Record<string, string> = {
+  agribusiness: 'Agribusiness',
+  personal_care: 'Personal Care',
+  accommodation: 'Akomodasi',
+  creative_agency: 'Creative Agency',
+  food_and_beverage: 'F&B',
+  finance: 'Finance',
+  short_term_rental: 'Short-Term Rental',
+  real_estate: 'Real Estate',
+  property_management: 'Property Management',
+};
+
+export function formatSector(sector: string | null | undefined): string {
+  if (!sector) return '';
+  return SECTOR_LABELS[sector] ?? sector;
+}
+
+export function formatCategory(
+  category: 'jasa' | 'produk' | 'dagang' | null | undefined
+): string {
+  if (!category) return 'Jasa';
+  return category.charAt(0).toUpperCase() + category.slice(1);
+}

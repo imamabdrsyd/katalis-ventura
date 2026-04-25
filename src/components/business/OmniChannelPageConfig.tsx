@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Check, X, Loader2, Eye, EyeOff, Camera, ImageIcon } from 'lucide-react';
-import type { BusinessOmniChannel } from '@/types';
+import { Check, X, Loader2, Eye, EyeOff, Camera, ImageIcon, CalendarDays, Calendar } from 'lucide-react';
+import type { BusinessOmniChannel, OmniChannelWidgetLabels } from '@/types';
 import { upsertOmniChannel, checkSlugAvailability, fetchAvailableSlugSuggestions } from '@/lib/api/omniChannel';
 import { generateSlugFromName, isValidSlugFormat, isReservedSlug, generateSlugSuggestions } from '@/lib/utils/slugUtils';
 
@@ -21,6 +21,8 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
   const [bio, setBio] = useState(channel?.bio ?? '');
   const [logoUrl, setLogoUrl] = useState(channel?.logo_url ?? '');
   const [isPublished, setIsPublished] = useState(channel?.is_published ?? false);
+  const [widgetDateMode, setWidgetDateMode] = useState<'single' | 'double'>(channel?.widget_date_mode ?? 'double');
+  const [widgetLabels, setWidgetLabels] = useState<OmniChannelWidgetLabels>(channel?.widget_labels ?? {});
 
   const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'unavailable'>('idle');
   const [slugError, setSlugError] = useState('');
@@ -136,6 +138,8 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
         bio: bio || undefined,
         logo_url: logoUrl || null,
         is_published: isPublished,
+        widget_date_mode: widgetDateMode,
+        widget_labels: widgetLabels,
       }, userId);
       onSaved();
     } catch (err: any) {
@@ -151,7 +155,9 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
     tagline !== (channel?.tagline ?? '') ||
     bio !== (channel?.bio ?? '') ||
     logoUrl !== (channel?.logo_url ?? '') ||
-    isPublished !== (channel?.is_published ?? false);
+    isPublished !== (channel?.is_published ?? false) ||
+    widgetDateMode !== (channel?.widget_date_mode ?? 'double') ||
+    JSON.stringify(widgetLabels) !== JSON.stringify(channel?.widget_labels ?? {});
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-5">
@@ -339,6 +345,145 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
             {uploadError && (
               <p className="text-xs text-red-500 mt-1">{uploadError}</p>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Widget Config — hanya untuk bisnis Jasa */}
+      <div className="border-t border-gray-100 dark:border-gray-700 pt-5 space-y-4">
+        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          Konfigurasi Widget Reservasi
+        </h4>
+
+        {/* Date mode toggle */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+            Mode Tanggal
+          </label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setWidgetDateMode('double')}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition ${
+                widgetDateMode === 'double'
+                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
+                  : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300'
+              }`}
+            >
+              <CalendarDays className="w-4 h-4" />
+              Check-in & Check-out
+            </button>
+            <button
+              type="button"
+              onClick={() => setWidgetDateMode('single')}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition ${
+                widgetDateMode === 'single'
+                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
+                  : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300'
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              Satu Tanggal
+            </button>
+          </div>
+        </div>
+
+        {/* Label fields */}
+        <div className="grid grid-cols-1 gap-3">
+          {widgetDateMode === 'single' ? (
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                Label Tanggal
+              </label>
+              <input
+                type="text"
+                value={widgetLabels.date_label ?? ''}
+                onChange={(e) => setWidgetLabels((l) => ({ ...l, date_label: e.target.value }))}
+                placeholder="Tanggal Kunjungan"
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  Label Check-in
+                </label>
+                <input
+                  type="text"
+                  value={widgetLabels.checkin_label ?? ''}
+                  onChange={(e) => setWidgetLabels((l) => ({ ...l, checkin_label: e.target.value }))}
+                  placeholder="Check-in"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  Label Check-out
+                </label>
+                <input
+                  type="text"
+                  value={widgetLabels.checkout_label ?? ''}
+                  onChange={(e) => setWidgetLabels((l) => ({ ...l, checkout_label: e.target.value }))}
+                  placeholder="Check-out"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                Label Catatan
+              </label>
+              <input
+                type="text"
+                value={widgetLabels.note_label ?? ''}
+                onChange={(e) => setWidgetLabels((l) => ({ ...l, note_label: e.target.value }))}
+                placeholder="Catatan (opsional)"
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                Placeholder Catatan
+              </label>
+              <input
+                type="text"
+                value={widgetLabels.note_placeholder ?? ''}
+                onChange={(e) => setWidgetLabels((l) => ({ ...l, note_placeholder: e.target.value }))}
+                placeholder="misal: 2 tamu, butuh parkir"
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                Label Tombol WA
+              </label>
+              <input
+                type="text"
+                value={widgetLabels.cta_label ?? ''}
+                onChange={(e) => setWidgetLabels((l) => ({ ...l, cta_label: e.target.value }))}
+                placeholder="Kirim rencana via WhatsApp"
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                Kata Aksi (di pesan WA)
+              </label>
+              <input
+                type="text"
+                value={widgetLabels.action_label ?? ''}
+                onChange={(e) => setWidgetLabels((l) => ({ ...l, action_label: e.target.value }))}
+                placeholder="kunjungan"
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
           </div>
         </div>
       </div>

@@ -135,6 +135,11 @@ export interface Business {
   logo_url?: string;
   invoice_settings?: InvoiceSettings | null;
   is_archived: boolean;
+  // Omnichannel widget (landing page)
+  city?: string | null;
+  whatsapp_number?: string | null;
+  widget_action_label?: string | null;
+  is_public?: boolean | null;
   closed_until_date?: string | null; // Period lock: transaksi <= tanggal ini tidak bisa diedit/dihapus
   created_at: string;
   created_by: string;
@@ -371,6 +376,22 @@ export interface OmniChannelLink {
   updated_at: string;
 }
 
+export interface OmniChannelGalleryImage {
+  path: string; // Storage path (untuk delete)
+  url: string;  // Public URL (untuk render)
+  sort_order: number;
+}
+
+export interface OmniChannelWidgetLabels {
+  date_label?: string;
+  checkin_label?: string;
+  checkout_label?: string;
+  note_label?: string;
+  note_placeholder?: string;
+  cta_label?: string;
+  action_label?: string;
+}
+
 export interface BusinessOmniChannel {
   id: string;
   business_id: string;
@@ -380,6 +401,9 @@ export interface BusinessOmniChannel {
   tagline?: string;
   bio?: string;
   logo_url?: string;
+  gallery_images?: OmniChannelGalleryImage[];
+  widget_date_mode?: 'single' | 'double';
+  widget_labels?: OmniChannelWidgetLabels;
   created_at: string;
   updated_at: string;
   created_by: string;
@@ -394,6 +418,8 @@ export interface UpsertOmniChannelData {
   tagline?: string;
   bio?: string;
   logo_url?: string | null;
+  widget_date_mode?: 'single' | 'double';
+  widget_labels?: OmniChannelWidgetLabels;
 }
 
 export interface UpsertOmniChannelLinkData {
