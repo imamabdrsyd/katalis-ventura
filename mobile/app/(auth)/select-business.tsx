@@ -52,7 +52,7 @@ export default function SelectBusinessScreen() {
                       <Text className="font-bold text-gray-900 text-lg">
                         {item.business_name}
                       </Text>
-                      <Text className="text-sm text-gray-500">{item.business_type}</Text>
+                      <Text className="text-sm text-gray-500">{item.business_sector}</Text>
                     </View>
                   </View>
                   <ChevronRight color="#9ca3af" size={20} />

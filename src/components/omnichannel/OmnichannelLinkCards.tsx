@@ -66,8 +66,8 @@ export function OmnichannelLinkCards({ business, index, businesses = [], onSelec
   }, []);
 
   const metaLine = [
-    formatCategory(business.business_category),
-    formatSector(business.business_type),
+    formatCategory(business.business_type),
+    formatSector(business.business_sector),
     business.city,
   ]
     .filter(Boolean)

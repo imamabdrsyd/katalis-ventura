@@ -35,8 +35,8 @@ export interface PublicPricingRule {
 export interface PublicBusiness {
   id: string;
   business_name: string;
-  business_category: 'jasa' | 'produk' | 'dagang' | null;
-  business_type: string | null;
+  business_type: 'jasa' | 'produk' | 'dagang' | null;
+  business_sector: string | null;
   city: string | null;
   whatsapp_number: string | null;
   widget_action_label: string | null;
@@ -80,8 +80,8 @@ interface RawOmniChannel {
 interface RawBusinessRow {
   id: string;
   business_name: string;
-  business_category: 'jasa' | 'produk' | 'dagang' | null;
-  business_type: string | null;
+  business_type: 'jasa' | 'produk' | 'dagang' | null;
+  business_sector: string | null;
   city: string | null;
   whatsapp_number: string | null;
   widget_action_label: string | null;
@@ -116,7 +116,7 @@ export async function GET() {
       .from('businesses')
       .select(
         `
-          id, business_name, business_category, business_type,
+          id, business_name, business_type, business_sector,
           city, whatsapp_number, widget_action_label, logo_url,
           omni_channel:business_omni_channels (
             id, is_published, gallery_images, widget_date_mode, widget_labels,
@@ -168,8 +168,8 @@ export async function GET() {
       return {
         id: row.id,
         business_name: row.business_name,
-        business_category: row.business_category,
         business_type: row.business_type,
+        business_sector: row.business_sector,
         city: row.city,
         whatsapp_number: row.whatsapp_number,
         widget_action_label: row.widget_action_label,

@@ -42,8 +42,8 @@ const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
 };
 
 function BusinessDetailCard({ business, onLeave }: { business: Business; onLeave?: () => void }) {
-  const icon = BUSINESS_TYPE_ICONS[business.business_type] || <Building2 className="w-6 h-6" />;
-  const typeLabel = BUSINESS_TYPE_LABELS[business.business_type] || business.business_type;
+  const icon = BUSINESS_TYPE_ICONS[business.business_sector ?? ''] || <Building2 className="w-6 h-6" />;
+  const typeLabel = BUSINESS_TYPE_LABELS[business.business_sector ?? ''] || business.business_sector;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 flex-1 self-stretch">
@@ -194,7 +194,7 @@ export default function BusinessMembersPage() {
             </div>
           ) : business ? (
             <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400">
-              {BUSINESS_TYPE_ICONS[business.business_type] || <Building2 className="w-6 h-6" />}
+              {BUSINESS_TYPE_ICONS[business.business_sector ?? ''] || <Building2 className="w-6 h-6" />}
             </div>
           ) : null}
           <div className="min-w-0">

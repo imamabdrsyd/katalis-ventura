@@ -32,8 +32,8 @@ export interface PublicPricingRule {
 export interface PublicBusiness {
   id: string;
   business_name: string;
-  business_category: 'jasa' | 'produk' | 'dagang' | null;
-  business_type: string | null;
+  business_type: 'jasa' | 'produk' | 'dagang' | null;
+  business_sector: string | null;
   city: string | null;
   whatsapp_number: string | null;
   widget_action_label: string | null;

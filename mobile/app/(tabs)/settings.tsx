@@ -89,7 +89,7 @@ export default function SettingsScreen() {
                       {activeBusiness?.business_name || 'Belum dipilih'}
                     </Text>
                     <Text className="text-xs text-gray-500">
-                      {activeBusiness?.business_type || ''}
+                      {activeBusiness?.business_sector || ''}
                     </Text>
                   </View>
                 </View>
@@ -117,7 +117,7 @@ export default function SettingsScreen() {
                     >
                       {biz.business_name}
                     </Text>
-                    <Text className="text-xs text-gray-500">{biz.business_type}</Text>
+                    <Text className="text-xs text-gray-500">{biz.business_sector}</Text>
                   </View>
                   {biz.id === activeBusiness?.id && (
                     <CheckCircle2 color="#2563eb" size={20} />

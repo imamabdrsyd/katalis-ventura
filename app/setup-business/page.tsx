@@ -69,7 +69,7 @@ export default function SetupBusinessPage() {
       await createBusiness(
         {
           business_name: businessName,
-          business_type: finalBusinessType,
+          business_sector: finalBusinessType,
           capital_investment: capitalInvestment,
           property_address: propertyAddress,
         },

@@ -383,7 +383,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
       await businessesApi.createBusiness(
         {
           business_name: formData.business_name,
-          business_type: formData.business_type,
+          business_sector: formData.business_sector,
           property_address: formData.property_address,
         },
         user?.id!
@@ -487,7 +487,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
                       {business.logo_url ? (
                         <Image src={business.logo_url} alt={business.business_name} width={32} height={32} className="w-full h-full object-cover" unoptimized />
                       ) : (
-                        BUSINESS_TYPE_ICONS[business.business_type] || <Building2 className="w-4 h-4" />
+                        BUSINESS_TYPE_ICONS[business.business_sector ?? ''] || <Building2 className="w-4 h-4" />
                       )}
                     </div>
                     <span

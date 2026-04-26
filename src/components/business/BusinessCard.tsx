@@ -130,13 +130,13 @@ export function BusinessCard({
             ) : business.is_archived ? (
               <PackageOpen className="w-6 h-6" />
             ) : (
-              BUSINESS_TYPE_ICONS[business.business_type] || <Building2 className="w-6 h-6" />
+              BUSINESS_TYPE_ICONS[business.business_sector ?? ''] || <Building2 className="w-6 h-6" />
             )}
           </div>
           <div>
             <h3 className="font-bold text-gray-800 dark:text-gray-100">{business.business_name}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              {BUSINESS_TYPE_LABELS[business.business_type] || business.business_type}
+              {BUSINESS_TYPE_LABELS[business.business_sector ?? ''] || (business.business_sector ?? '')}
             </p>
           </div>
         </div>

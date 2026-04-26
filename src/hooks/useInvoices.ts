@@ -140,7 +140,7 @@ export function useInvoices() {
       business: {
         business_name: activeBusiness?.business_name || '',
         property_address: activeBusiness?.property_address,
-        business_category: activeBusiness?.business_category,
+        business_type: activeBusiness?.business_type,
         logo_url: activeBusiness?.logo_url,
       },
       paymentDetails: invoiceSettings ? {

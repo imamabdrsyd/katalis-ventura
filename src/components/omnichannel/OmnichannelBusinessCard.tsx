@@ -18,9 +18,9 @@ const CATEGORY_BADGE: Record<string, string> = {
 };
 
 export function OmnichannelBusinessCard({ business, index, isSelected, onClick }: Props) {
-  const category = business.business_category ?? 'jasa';
+  const category = business.business_type ?? 'jasa';
   const badgeClass = CATEGORY_BADGE[category] ?? CATEGORY_BADGE.jasa;
-  const sectorLabel = formatSector(business.business_type);
+  const sectorLabel = formatSector(business.business_sector);
 
   return (
     <button
@@ -52,7 +52,7 @@ export function OmnichannelBusinessCard({ business, index, isSelected, onClick }
         <span
           className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${badgeClass}`}
         >
-          {formatCategory(business.business_category)}
+          {formatCategory(business.business_type)}
         </span>
         {sectorLabel && (
           <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">

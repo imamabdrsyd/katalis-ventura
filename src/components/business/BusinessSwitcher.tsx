@@ -46,7 +46,7 @@ export function BusinessSwitcher() {
       const newBusiness = await businessesApi.createBusiness(
         {
           business_name: businessData.business_name,
-          business_type: businessData.business_type,
+          business_sector: businessData.business_sector,
           property_address: businessData.property_address,
         },
         user?.id!
@@ -85,7 +85,7 @@ export function BusinessSwitcher() {
           {activeBusiness.logo_url ? (
             <Image src={activeBusiness.logo_url} alt={activeBusiness.business_name} width={32} height={32} className="w-full h-full object-cover" unoptimized />
           ) : (
-            BUSINESS_TYPE_ICONS[activeBusiness.business_type] || <Building2 className="w-4 h-4" />
+            BUSINESS_TYPE_ICONS[activeBusiness.business_sector ?? ''] || <Building2 className="w-4 h-4" />
           )}
         </div>
         <div className="flex-1 text-left min-w-0">
@@ -132,7 +132,7 @@ export function BusinessSwitcher() {
                   {business.logo_url ? (
                     <Image src={business.logo_url} alt={business.business_name} width={32} height={32} className="w-full h-full object-cover" unoptimized />
                   ) : (
-                    BUSINESS_TYPE_ICONS[business.business_type] || <Building2 className="w-4 h-4" />
+                    BUSINESS_TYPE_ICONS[business.business_sector ?? ''] || <Building2 className="w-4 h-4" />
                   )}
                 </div>
                 <span

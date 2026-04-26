@@ -9,8 +9,8 @@ type BusinessUpdate = Database['public']['Tables']['businesses']['Update'];
 // Form data type without created_by (will be set by the API)
 export interface CreateBusinessData {
   business_name: string;
-  business_type: string;
-  business_category?: string;
+  business_sector: string;
+  business_type?: string;
   capital_investment?: number; // Optional for backward compatibility
   property_address?: string;
   logo_url?: string;

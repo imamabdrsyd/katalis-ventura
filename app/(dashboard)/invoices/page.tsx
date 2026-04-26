@@ -175,7 +175,7 @@ function InvoicesPageInner() {
           defaultDueDays={invoiceSettings?.default_due_days ?? 7}
           defaultTaxRate={invoiceSettings?.default_tax_rate ?? 11}
           defaultTaxType={invoiceSettings?.default_tax_type ?? 'none'}
-          businessCategory={activeBusiness?.business_category}
+          businessCategory={activeBusiness?.business_type}
         />
       </Modal>
 
@@ -191,7 +191,7 @@ function InvoicesPageInner() {
             onCancel={() => setEditInvoice(null)}
             loading={saving}
             invoice={editInvoice}
-            businessCategory={activeBusiness?.business_category}
+            businessCategory={activeBusiness?.business_type}
           />
         )}
       </Modal>

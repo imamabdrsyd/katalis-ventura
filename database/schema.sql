@@ -12,7 +12,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS businesses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     business_name TEXT NOT NULL,
-    business_type TEXT DEFAULT 'short_term_rental',
+    business_sector TEXT DEFAULT 'short_term_rental',
+    business_type TEXT,
     capital_investment NUMERIC DEFAULT 0,
     property_address TEXT,
     property_details JSONB,
@@ -244,7 +245,7 @@ CREATE POLICY "Business managers can create invite codes"
 -- Uncomment below to insert sample data
 /*
 -- Sample business (you'll need to replace with actual user_id)
-INSERT INTO businesses (business_name, business_type, capital_investment, property_address, created_by)
+INSERT INTO businesses (business_name, business_sector, capital_investment, property_address, created_by)
 VALUES (
     'Katalis Studio',
     'short_term_rental',

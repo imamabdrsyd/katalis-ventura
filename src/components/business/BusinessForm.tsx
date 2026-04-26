@@ -7,8 +7,8 @@ import type { Business } from '@/types';
 
 export interface BusinessFormData {
   business_name: string;
+  business_sector: string;
   business_type: string;
-  business_category: string;
   property_address: string;
   capital_investment?: number;
   logo_url?: string;
@@ -49,14 +49,14 @@ export function BusinessForm({
   onCancel,
   loading = false,
 }: BusinessFormProps) {
-  // Check if existing business_type (sector) is custom (not in predefined list)
-  const isCustomSector = business?.business_type &&
-    !BUSINESS_SECTORS.some(s => s.value === business.business_type);
+  // Check if existing business_sector is custom (not in predefined list)
+  const isCustomSector = business?.business_sector &&
+    !BUSINESS_SECTORS.some(s => s.value === business.business_sector);
 
   const [formData, setFormData] = useState<BusinessFormData>({
     business_name: business?.business_name || '',
-    business_type: isCustomSector ? 'other' : (business?.business_type || 'agribusiness'),
-    business_category: business?.business_category || 'jasa',
+    business_sector: isCustomSector ? 'other' : (business?.business_sector || 'agribusiness'),
+    business_type: business?.business_type || 'jasa',
     property_address: business?.property_address || '',
     capital_investment: business?.capital_investment || 0,
     logo_url: business?.logo_url || '',
@@ -65,7 +65,7 @@ export function BusinessForm({
     widget_action_label: business?.widget_action_label || '',
     is_public: business?.is_public ?? false,
   });
-  const [customSector, setCustomSector] = useState(isCustomSector ? business?.business_type || '' : '');
+  const [customSector, setCustomSector] = useState(isCustomSector ? business?.business_sector || '' : '');
   const [errors, setErrors] = useState<Partial<Record<keyof BusinessFormData, string>>>({});
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
@@ -123,15 +123,15 @@ export function BusinessForm({
     if (!formData.business_name.trim()) {
       newErrors.business_name = 'Nama bisnis harus diisi';
     }
-    if (formData.business_type === 'other' && !customSector.trim()) {
-      newErrors.business_type = 'Sektor bisnis harus diisi';
+    if (formData.business_sector === 'other' && !customSector.trim()) {
+      newErrors.business_sector = 'Sektor bisnis harus diisi';
     }
     // Validasi WhatsApp: hanya angka, minimal 10 digit (jika diisi)
     const wa = (formData.whatsapp_number || '').trim();
     if (wa && !/^\d{10,}$/.test(wa)) {
       newErrors.whatsapp_number = 'Nomor WA harus angka saja, minimal 10 digit (contoh: 6281234567890)';
     }
-    if (formData.is_public && formData.business_category === 'jasa' && !wa) {
+    if (formData.is_public && formData.business_type === 'jasa' && !wa) {
       newErrors.whatsapp_number = 'Nomor WhatsApp wajib diisi agar widget dapat aktif di landing page';
     }
 
@@ -144,7 +144,7 @@ export function BusinessForm({
     if (validate()) {
       const submitData = {
         ...formData,
-        business_type: formData.business_type === 'other' ? customSector.trim() : formData.business_type,
+        business_sector: formData.business_sector === 'other' ? customSector.trim() : formData.business_sector,
       };
       await onSubmit(submitData);
     }
@@ -237,8 +237,8 @@ export function BusinessForm({
       <div>
         <label className="label">Tipe Bisnis</label>
         <select
-          name="business_category"
-          value={formData.business_category}
+          name="business_type"
+          value={formData.business_type}
           onChange={handleChange}
           className="input"
         >
@@ -254,8 +254,8 @@ export function BusinessForm({
       <div>
         <label className="label">Sektor</label>
         <select
-          name="business_type"
-          value={formData.business_type}
+          name="business_sector"
+          value={formData.business_sector}
           onChange={handleChange}
           className="input"
         >
@@ -265,22 +265,22 @@ export function BusinessForm({
             </option>
           ))}
         </select>
-        {formData.business_type === 'other' && (
+        {formData.business_sector === 'other' && (
           <input
             type="text"
             value={customSector}
             onChange={(e) => {
               setCustomSector(e.target.value);
-              if (errors.business_type) {
-                setErrors((prev) => ({ ...prev, business_type: undefined }));
+              if (errors.business_sector) {
+                setErrors((prev) => ({ ...prev, business_sector: undefined }));
               }
             }}
             className="input mt-3"
             placeholder="Masukkan sektor bisnis"
           />
         )}
-        {errors.business_type && (
-          <p className="text-sm text-red-500 mt-1">{errors.business_type}</p>
+        {errors.business_sector && (
+          <p className="text-sm text-red-500 mt-1">{errors.business_sector}</p>
         )}
       </div>
 
@@ -368,7 +368,7 @@ export function BusinessForm({
         </div>
 
         {/* Nomor WhatsApp & Label Aksi — hanya untuk Jasa */}
-        {formData.business_category === 'jasa' && (
+        {formData.business_type === 'jasa' && (
           <>
             <div>
               <label className="label">Nomor WhatsApp</label>

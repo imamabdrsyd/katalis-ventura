@@ -62,7 +62,7 @@ export function OmnichannelWidget({ business, index, businesses = [], onSelectBu
     );
   }
 
-  const isJasa = (business.business_category ?? 'jasa') === 'jasa';
+  const isJasa = (business.business_type ?? 'jasa') === 'jasa';
   const hasWhatsApp = !!business.whatsapp_number?.trim();
   const dateMode = business.widget_date_mode ?? 'double';
   const labels = business.widget_labels ?? {};
@@ -140,8 +140,8 @@ export function OmnichannelWidget({ business, index, businesses = [], onSelectBu
   }
 
   const metaLine = [
-    formatCategory(business.business_category),
-    formatSector(business.business_type),
+    formatCategory(business.business_type),
+    formatSector(business.business_sector),
     business.city,
   ]
     .filter(Boolean)

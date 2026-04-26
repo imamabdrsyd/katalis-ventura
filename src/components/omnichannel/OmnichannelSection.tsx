@@ -20,7 +20,7 @@ export function OmnichannelSection() {
         if (cancelled) return;
         const list: PublicBusiness[] = json.businesses ?? [];
         setBusinesses(list);
-        const firstJasa = list.findIndex((b) => (b.business_category ?? 'jasa') === 'jasa');
+        const firstJasa = list.findIndex((b) => (b.business_type ?? 'jasa') === 'jasa');
         setActiveIndex(firstJasa >= 0 ? firstJasa : 0);
       })
       .catch((err) => {
@@ -41,7 +41,7 @@ export function OmnichannelSection() {
 
   if (!loaded || businesses.length === 0 || !active) return null;
 
-  const isJasa = (active.business_category ?? 'jasa') === 'jasa';
+  const isJasa = (active.business_type ?? 'jasa') === 'jasa';
 
   return (
     <section className="p-8 max-w-6xl mx-auto w-full">

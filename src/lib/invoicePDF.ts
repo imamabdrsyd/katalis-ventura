@@ -72,7 +72,7 @@ export function exportInvoiceToPDF(params: {
   business: {
     business_name: string;
     property_address?: string | null;
-    business_category?: string | null;
+    business_type?: string | null;
     logo_url?: string | null;
   };
   paymentDetails?: {
@@ -199,7 +199,7 @@ export function exportInvoiceToPDF(params: {
 
   // ─────────────────── LINE ITEMS TABLE ───────────────────
 
-  const itemLabel = resolveItemLabel(invoice, business.business_category);
+  const itemLabel = resolveItemLabel(invoice, business.business_type);
   const lineItems = invoice.line_items ?? [];
 
   const tableBody = lineItems.map((item) => [
