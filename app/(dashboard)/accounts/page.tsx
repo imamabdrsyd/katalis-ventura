@@ -500,7 +500,7 @@ function ParentAccountCard({
                 className="flex items-center gap-2 text-sm text-indigo-500 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                Tambah sub-akun di {parent.account_name}
+                {t.accounts.addSubAccountIn.replace('{name}', parent.account_name)}
               </button>
             </div>
           )}
