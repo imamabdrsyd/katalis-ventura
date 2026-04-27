@@ -235,19 +235,20 @@ export function useTransactions() {
 
       const existingTemplateId = editTransaction.meta?.recurring_template_id;
       if (recurring) {
-        if (existingTemplateId) {
-          await recurringApi.updateRecurringTransaction(existingTemplateId, {
-            name: data.name,
-            description: data.description,
-            amount: data.amount,
-            category: data.category,
-            debit_account_id: data.debit_account_id,
-            credit_account_id: data.credit_account_id,
-            frequency: recurring.frequency,
-            interval_value: recurring.interval_value,
-            end_date: recurring.end_date || null,
-          });
-        } else {
+        const templateUpdated = existingTemplateId
+          ? await recurringApi.updateRecurringTransaction(existingTemplateId, {
+              name: data.name,
+              description: data.description,
+              amount: data.amount,
+              category: data.category,
+              debit_account_id: data.debit_account_id,
+              credit_account_id: data.credit_account_id,
+              frequency: recurring.frequency,
+              interval_value: recurring.interval_value,
+              end_date: recurring.end_date || null,
+            })
+          : false;
+        if (!templateUpdated) {
           const nextDue = recurringApi.computeNextDueDate(
             recurring.start_date,
             recurring.frequency,

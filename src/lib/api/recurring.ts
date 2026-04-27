@@ -135,20 +135,22 @@ export async function createRecurringTransaction(
 /**
  * Update a recurring transaction template.
  */
+/**
+ * Returns true if the row was found and updated, false if not found.
+ */
 export async function updateRecurringTransaction(
   id: string,
   updates: RecurringTransactionUpdate
-): Promise<RecurringTransaction> {
+): Promise<boolean> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from('recurring_transactions')
     .update(updates)
     .eq('id', id)
-    .select()
-    .single();
+    .select('id');
 
   if (error) throw new Error(error.message);
-  return data as RecurringTransaction;
+  return Array.isArray(data) && data.length > 0;
 }
 
 /**
