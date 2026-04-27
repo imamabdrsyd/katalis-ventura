@@ -109,7 +109,8 @@ export default function MonitoringChart({ transactions, loading = false, selecte
 
         const point = dataMap.get(key)!;
         const amount = Number(t.amount);
-        if (t.category === 'EARN') point.earning += amount;
+        const isSettlementEntry = t.is_double_entry && t.credit_account?.account_type !== 'REVENUE';
+        if (t.category === 'EARN' && !isSettlementEntry) point.earning += amount;
         else if (t.category === 'OPEX' || t.category === 'VAR') point.expense += amount;
       });
 
@@ -130,8 +131,9 @@ export default function MonitoringChart({ transactions, loading = false, selecte
 
         const point = dataMap.get(key)!;
         const amount = Number(t.amount);
+        const isSettlementEntry = t.is_double_entry && t.credit_account?.account_type !== 'REVENUE';
 
-        if (t.category === 'EARN') {
+        if (t.category === 'EARN' && !isSettlementEntry) {
           point.earning += amount;
         } else if (t.category === 'OPEX' || t.category === 'VAR') {
           point.expense += amount;
