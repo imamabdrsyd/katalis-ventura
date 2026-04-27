@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Briefcase, TrendingUp, Shield } from 'lucide-react';
+import { Briefcase, TrendingUp, Shield, Globe, BarChart3, ShoppingBag } from 'lucide-react';
 import { OmnichannelSection } from '@/components/omnichannel/OmnichannelSection';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
@@ -42,7 +42,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-indigo-50 dark:bg-gray-900 flex flex-col">
+    <div className="min-h-screen bg-indigo-50 dark:bg-gray-900 flex flex-col" style={{ scrollBehavior: 'smooth' }}>
       {/* Header */}
       <header className="container mx-auto px-6 py-5">
         <nav className="flex items-center justify-between gap-4">
@@ -61,9 +61,22 @@ export default function LandingPage() {
               height={36}
               className="object-contain hidden dark:block"
             />
-            <span className="hidden sm:block text-sm text-gray-400 dark:text-gray-500 font-medium border-l border-gray-200 dark:border-gray-700 pl-3">
-              Omnichannel
-            </span>
+            <nav className="hidden sm:flex items-center gap-0.5 border-l border-gray-200 dark:border-gray-700 pl-3">
+              {[
+                { label: 'Omnichannel', icon: Globe, href: '#section-omnichannel' },
+                { label: 'Accounting', icon: BarChart3, href: '#section-accounting' },
+                { label: 'Ecommerce', icon: ShoppingBag, href: '#section-ecommerce' },
+              ].map(({ label, icon: Icon, href }) => (
+                <a
+                  key={label}
+                  href={href}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {label}
+                </a>
+              ))}
+            </nav>
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
@@ -86,12 +99,12 @@ export default function LandingPage() {
       {/* Hero + Features combined */}
       <main className="flex-1 container mx-auto px-6 pt-4 pb-10 flex flex-col">
         {/* Omnichannel Widget */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl shadow-gray-200/60 dark:shadow-gray-900/60 border border-gray-100 dark:border-gray-700 mb-16 overflow-hidden">
+        <div id="section-omnichannel" className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl shadow-gray-200/60 dark:shadow-gray-900/60 border border-gray-100 dark:border-gray-700 mb-16 overflow-hidden">
           <OmnichannelSection />
         </div>
 
         {/* Hero */}
-        <div className="max-w-3xl mx-auto text-center mb-12">
+        <div id="section-accounting" className="max-w-3xl mx-auto text-center mb-12">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-semibold mb-5">
             <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></span>
             Accounting Engine
@@ -182,6 +195,46 @@ export default function LandingPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Kontrol akses per role (manager & investor), Row-Level Security di database, dan audit trail lengkap di setiap perubahan data.
             </p>
+          </div>
+        </div>
+
+        {/* Ecommerce Integration */}
+        <div id="section-ecommerce" className="max-w-5xl mx-auto w-full mb-12">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 md:p-10">
+            <div className="flex flex-col md:flex-row gap-8 md:gap-12 items-start md:items-center">
+              <div className="flex-1">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full text-xs font-semibold mb-4">
+                  <ShoppingBag className="w-3 h-3" />
+                  Omnichannel Ready
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
+                  Ecommerce Integration
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                  Hubungkan bisnis Anda dengan marketplace dan platform sosial terpopuler Indonesia. Tampilkan produk, terima pesanan, dan kelola semua saluran penjualan dari satu halaman publik — tanpa perlu website sendiri.
+                </p>
+              </div>
+              <div className="flex-shrink-0 w-full md:w-auto">
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { name: 'Shopee', bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-500', letter: 'S' },
+                    { name: 'Tokopedia', bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-600', letter: 'T' },
+                    { name: 'Instagram', bg: 'bg-pink-50 dark:bg-pink-900/20', text: 'text-pink-500', letter: 'IG' },
+                    { name: 'WhatsApp', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-500', letter: 'WA' },
+                    { name: 'TikTok', bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-800 dark:text-gray-200', letter: 'TT' },
+                    { name: 'Lazada', bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-500', letter: 'L' },
+                  ].map(({ name, bg, text, letter }) => (
+                    <div
+                      key={name}
+                      className={`flex flex-col items-center justify-center gap-1.5 ${bg} rounded-xl px-4 py-3`}
+                    >
+                      <span className={`text-sm font-bold ${text}`}>{letter}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
