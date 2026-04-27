@@ -162,8 +162,9 @@ export function TransactionForm({
   const [showBreakdown, setShowBreakdown] = useState(!!transaction?.meta?.unit_breakdown);
 
   // Attachment state
-  const [attachment, setAttachment] = useState<TransactionAttachment | null>(
-    transaction?.meta?.attachment || null
+  const [attachments, setAttachments] = useState<TransactionAttachment[]>(
+    transaction?.meta?.attachments ??
+    (transaction?.meta?.attachment ? [transaction.meta.attachment] : [])
   );
 
   // Fetch accounts on mount
@@ -249,7 +250,7 @@ export function TransactionForm({
         meta: {
           ...formData.meta,
           unit_breakdown: unitBreakdown && unitBreakdown.unit ? unitBreakdown : undefined,
-          attachment: attachment || undefined,
+          attachments: attachments.length > 0 ? attachments : undefined,
         },
       };
 
@@ -670,8 +671,8 @@ export function TransactionForm({
           <label className="label">Lampiran (opsional)</label>
           <FileUpload
             businessId={businessId}
-            value={attachment}
-            onChange={setAttachment}
+            value={attachments}
+            onChange={setAttachments}
             disabled={loading}
           />
         </div>

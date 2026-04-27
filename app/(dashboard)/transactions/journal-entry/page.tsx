@@ -404,7 +404,7 @@ export default function JournalEntryPage() {
   const [showBreakdown, setShowBreakdown] = useState(false);
 
   // attachment state
-  const [attachment, setAttachment] = useState<TransactionAttachment | null>(null);
+  const [attachments, setAttachments] = useState<TransactionAttachment[]>([]);
 
   // multi-line state
   const [isMultiLineMode, setIsMultiLineMode] = useState(false);
@@ -803,8 +803,8 @@ export default function JournalEntryPage() {
             description: selectedEntryType.description,
           };
         }
-        if (attachment) {
-          meta.attachment = attachment;
+        if (attachments.length > 0) {
+          meta.attachments = attachments;
         }
 
         await createTransaction({
@@ -833,7 +833,7 @@ export default function JournalEntryPage() {
       setSelectedStockIds([]);
       setUnitBreakdown(null);
       setShowBreakdown(false);
-      setAttachment(null);
+      setAttachments([]);
       setIsMultiLineMode(false);
       setMlLines([emptyLine(0), emptyLine(1)]);
       setMlDisplayDebit(['', '']);
@@ -1391,8 +1391,8 @@ export default function JournalEntryPage() {
                 </label>
                 <FileUpload
                   businessId={businessId}
-                  value={attachment}
-                  onChange={setAttachment}
+                  value={attachments}
+                  onChange={setAttachments}
                   disabled={saving}
                 />
               </div>

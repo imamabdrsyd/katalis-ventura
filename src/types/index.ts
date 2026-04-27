@@ -54,8 +54,10 @@ export interface TransactionMeta {
   remaining_amount?: number;
   /** Jumlah yang dilunasi pada transaksi settlement ini (untuk partial) */
   settlement_amount?: number;
-  /** Dokumen sumber / bukti transaksi (faktur, nota, kuitansi) */
+  /** Dokumen sumber / bukti transaksi (faktur, nota, kuitansi) — legacy single */
   attachment?: TransactionAttachment;
+  /** Dokumen sumber multi-file (maks 3) — menggantikan attachment */
+  attachments?: TransactionAttachment[];
   /** ID recurring template yang men-generate transaksi ini */
   recurring_template_id?: string;
 }

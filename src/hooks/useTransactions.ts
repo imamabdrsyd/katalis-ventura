@@ -212,8 +212,8 @@ export function useTransactions() {
         name: data.name,
         description: data.description,
         notes: data.notes,
-        meta: data.attachment !== undefined
-          ? { ...existingMeta, attachment: data.attachment ?? undefined }
+        meta: data.attachments !== undefined
+          ? { ...existingMeta, attachments: data.attachments }
           : existingMeta,
         journal_lines: data.journal_lines,
       });

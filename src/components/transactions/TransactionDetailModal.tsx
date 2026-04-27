@@ -712,56 +712,68 @@ export function TransactionDetailModal({
         </div>
 
         {/* Attachment / Dokumen Sumber */}
-        {transaction.meta?.attachment && (
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-            <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-              {t.transactionDetail.attachment}
-            </h4>
-            {isImageType(transaction.meta.attachment.mime_type) ? (
-              <a
-                href={transaction.meta.attachment.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block group"
-              >
-                <div className="relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-                  <img
-                    src={transaction.meta.attachment.url}
-                    alt={transaction.meta.attachment.filename}
-                    className="w-full max-h-64 object-contain bg-gray-50 dark:bg-gray-800 group-hover:opacity-90 transition-opacity"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
-                    <ExternalLink className="w-6 h-6 text-white drop-shadow-lg" />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 dark:text-gray-400">
-                  <span className="truncate">{transaction.meta.attachment.filename}</span>
-                  <span>{formatFileSize(transaction.meta.attachment.size)}</span>
-                </div>
-              </a>
-            ) : (
-              <a
-                href={transaction.meta.attachment.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
-              >
-                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-red-500 dark:text-red-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                    {transaction.meta.attachment.filename}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {formatFileSize(transaction.meta.attachment.size)}
-                  </p>
-                </div>
-                <Download className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors flex-shrink-0" />
-              </a>
-            )}
-          </div>
-        )}
+        {(() => {
+          const atts =
+            transaction.meta?.attachments ??
+            (transaction.meta?.attachment ? [transaction.meta.attachment] : []);
+          if (atts.length === 0) return null;
+          return (
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                {t.transactionDetail.attachment}
+              </h4>
+              <div className="space-y-2">
+                {atts.map((att) =>
+                  isImageType(att.mime_type) ? (
+                    <a
+                      key={att.path}
+                      href={att.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block group"
+                    >
+                      <div className="relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                        <img
+                          src={att.url}
+                          alt={att.filename}
+                          className="w-full max-h-64 object-contain bg-gray-50 dark:bg-gray-800 group-hover:opacity-90 transition-opacity"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                          <ExternalLink className="w-6 h-6 text-white drop-shadow-lg" />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        <span className="truncate">{att.filename}</span>
+                        <span>{formatFileSize(att.size)}</span>
+                      </div>
+                    </a>
+                  ) : (
+                    <a
+                      key={att.path}
+                      href={att.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
+                    >
+                      <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-red-500 dark:text-red-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                          {att.filename}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {formatFileSize(att.size)}
+                        </p>
+                      </div>
+                      <Download className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors flex-shrink-0" />
+                    </a>
+                  )
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Sold Stock Info */}
         {soldStockTransactions.length > 0 && (

@@ -1,20 +1,16 @@
-import { createClient } from '@/lib/supabase';
 import type { TransactionAttachment } from '@/types';
 
-const BUCKET = 'transaction-attachments';
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILES = 3;
 const ALLOWED_TYPES = [
   'image/jpeg',
   'image/png',
   'image/webp',
   'application/pdf',
 ];
-
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'pdf'];
 
-function generateId(): string {
-  return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
+export { MAX_FILES };
 
 function getExtension(filename: string): string {
   return filename.split('.').pop()?.toLowerCase() || 'file';
@@ -48,40 +44,37 @@ export async function uploadAttachment(
   const validationError = validateFile(file);
   if (validationError) throw new Error(validationError);
 
-  const supabase = createClient();
-  const ext = getExtension(file.name);
-  const path = `${businessId}/${generateId()}.${ext}`;
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
+  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!;
 
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, file, {
-      cacheControl: '31536000', // 1 year cache
-      upsert: false,
-    });
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', uploadPreset);
+  formData.append('folder', `axion/attachments/${businessId}`);
 
-  if (error) throw new Error(`Gagal mengupload file: ${error.message}`);
-
-  const { data: { publicUrl } } = supabase.storage
-    .from(BUCKET)
-    .getPublicUrl(path);
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+    { method: 'POST', body: formData }
+  );
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error?.message || 'Gagal upload ke Cloudinary');
+  }
+  const { secure_url, public_id } = await res.json();
 
   return {
-    path,
-    url: publicUrl,
+    path: public_id,
+    url: secure_url,
     filename: file.name,
     size: file.size,
-    mime_type: file.type || `image/${ext}`,
+    mime_type: file.type || `image/${getExtension(file.name)}`,
     uploaded_at: new Date().toISOString(),
   };
 }
 
-export async function deleteAttachment(path: string): Promise<void> {
-  const supabase = createClient();
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .remove([path]);
-
-  if (error) {
-    console.error('Failed to delete attachment:', error);
-  }
+export async function deleteAttachment(publicId: string, businessId: string): Promise<void> {
+  await fetch(
+    `/api/transactions/attachments?public_id=${encodeURIComponent(publicId)}&businessId=${encodeURIComponent(businessId)}`,
+    { method: 'DELETE' }
+  ).catch(() => {});
 }

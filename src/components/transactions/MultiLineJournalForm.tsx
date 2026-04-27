@@ -15,7 +15,7 @@ export interface MultiLineFormData {
   name: string;
   description: string;
   notes?: string;
-  attachment?: TransactionAttachment | null;
+  attachments?: TransactionAttachment[];
   journal_lines: JournalLineInput[];
 }
 
@@ -81,8 +81,8 @@ export function MultiLineJournalForm({
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [attachment, setAttachment] = useState<TransactionAttachment | null>(
-    initialData?.attachment ?? null
+  const [attachments, setAttachments] = useState<TransactionAttachment[]>(
+    initialData?.attachments ?? []
   );
 
   useEffect(() => {
@@ -194,7 +194,7 @@ export function MultiLineJournalForm({
       sort_order: i,
     }));
 
-    await onSubmit({ ...formData, attachment, journal_lines: cleanLines });
+    await onSubmit({ ...formData, attachments: attachments.length > 0 ? attachments : undefined, journal_lines: cleanLines });
   }
 
   return (
@@ -398,8 +398,8 @@ export function MultiLineJournalForm({
         <label className="label">Lampiran (opsional)</label>
         <FileUpload
           businessId={businessId}
-          value={attachment}
-          onChange={setAttachment}
+          value={attachments}
+          onChange={setAttachments}
           disabled={loading}
         />
       </div>

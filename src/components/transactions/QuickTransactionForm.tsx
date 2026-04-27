@@ -74,7 +74,7 @@ export function QuickTransactionForm({
   const [showNotes, setShowNotes] = useState(false);
 
   // Attachment state
-  const [attachment, setAttachment] = useState<TransactionAttachment | null>(null);
+  const [attachments, setAttachments] = useState<TransactionAttachment[]>([]);
 
   // Unit breakdown state
   const [unitBreakdown, setUnitBreakdown] = useState<UnitBreakdown | null>(null);
@@ -292,7 +292,7 @@ export function QuickTransactionForm({
     formData.meta = {
       ...(selectedStockIds.length > 0 ? { sold_stock_ids: selectedStockIds } : {}),
       unit_breakdown: unitBreakdown && unitBreakdown.unit ? unitBreakdown : undefined,
-      attachment: attachment || undefined,
+      attachments: attachments.length > 0 ? attachments : undefined,
     };
 
     await onSubmit(formData);
@@ -563,8 +563,8 @@ export function QuickTransactionForm({
       {businessId && (
         <FileUploadCompact
           businessId={businessId}
-          value={attachment}
-          onChange={setAttachment}
+          value={attachments}
+          onChange={setAttachments}
           disabled={loading}
         />
       )}
