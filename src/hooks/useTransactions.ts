@@ -233,31 +233,43 @@ export function useTransactions() {
       const { recurring, ...transactionData } = data;
       await transactionsApi.updateTransaction(editTransaction.id, transactionData);
 
-      // If recurring data is present and this transaction is not already linked to a template,
-      // create a new recurring template from the edited transaction.
       const existingTemplateId = editTransaction.meta?.recurring_template_id;
-      if (recurring && !existingTemplateId) {
-        const nextDue = recurringApi.computeNextDueDate(
-          recurring.start_date,
-          recurring.frequency,
-          recurring.interval_value
-        );
-        await recurringApi.createRecurringTransaction({
-          business_id: businessId,
-          name: data.name,
-          description: data.description,
-          amount: data.amount,
-          category: data.category,
-          account: data.account || '',
-          debit_account_id: data.debit_account_id,
-          credit_account_id: data.credit_account_id,
-          is_double_entry: data.is_double_entry,
-          frequency: recurring.frequency,
-          interval_value: recurring.interval_value,
-          next_due_date: nextDue,
-          end_date: recurring.end_date || null,
-          created_by: user.id,
-        });
+      if (recurring) {
+        if (existingTemplateId) {
+          await recurringApi.updateRecurringTransaction(existingTemplateId, {
+            name: data.name,
+            description: data.description,
+            amount: data.amount,
+            category: data.category,
+            debit_account_id: data.debit_account_id,
+            credit_account_id: data.credit_account_id,
+            frequency: recurring.frequency,
+            interval_value: recurring.interval_value,
+            end_date: recurring.end_date || null,
+          });
+        } else {
+          const nextDue = recurringApi.computeNextDueDate(
+            recurring.start_date,
+            recurring.frequency,
+            recurring.interval_value
+          );
+          await recurringApi.createRecurringTransaction({
+            business_id: businessId,
+            name: data.name,
+            description: data.description,
+            amount: data.amount,
+            category: data.category,
+            account: data.account || '',
+            debit_account_id: data.debit_account_id,
+            credit_account_id: data.credit_account_id,
+            is_double_entry: data.is_double_entry,
+            frequency: recurring.frequency,
+            interval_value: recurring.interval_value,
+            next_due_date: nextDue,
+            end_date: recurring.end_date || null,
+            created_by: user.id,
+          });
+        }
       }
 
       setEditTransaction(null);

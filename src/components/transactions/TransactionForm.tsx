@@ -17,6 +17,7 @@ import { saveContactFromTransaction } from '@/lib/api/contacts';
 import { useBusinessContext } from '@/context/BusinessContext';
 import type { UnitBreakdown } from '@/types';
 import { getTransactionTemplates, createTransactionTemplate, deleteTransactionTemplate } from '@/lib/api/transactionTemplates';
+import { getRecurringTransactions } from '@/lib/api/recurring';
 
 export interface RecurringFormData {
   frequency: 'weekly' | 'monthly' | 'yearly';
@@ -191,6 +192,19 @@ export function TransactionForm({
     getTransactionTemplates(businessId)
       .then(setTemplates)
       .catch(() => {/* silent */});
+  }, [businessId, transaction]);
+
+  // Populate recurring state from existing template when editing
+  useEffect(() => {
+    if (!businessId || !transaction?.meta?.recurring_template_id) return;
+    getRecurringTransactions(businessId).then((templates) => {
+      const tmpl = templates.find((t) => t.id === transaction.meta?.recurring_template_id);
+      if (!tmpl) return;
+      setRecurringEnabled(true);
+      setRecurringFrequency(tmpl.frequency);
+      setRecurringInterval(tmpl.interval_value);
+      setRecurringEndDate(tmpl.end_date ?? '');
+    }).catch(() => {/* silent */});
   }, [businessId, transaction]);
 
   // Get suggested account codes based on category
