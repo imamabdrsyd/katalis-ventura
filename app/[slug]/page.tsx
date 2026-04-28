@@ -5,7 +5,7 @@ import { isReservedSlug } from '@/lib/utils/slugUtils';
 import { PublicOmniChannelPage } from '@/components/public/PublicOmniChannelPage';
 import type { BusinessOmniChannel, OmniChannelLink } from '@/types';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300;
 
 interface Props {
   params: Promise<{ slug: string }>;
