@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { ChevronDown, ExternalLink, Link2 } from 'lucide-react';
+import { ChevronDown, ExternalLink, Link2, ShoppingCart } from 'lucide-react';
 import { CHANNEL_META } from '@/lib/omniChannelMeta';
 import type { OmniChannelType } from '@/types';
 import { BusinessInitialsAvatar } from './BusinessInitialsAvatar';
@@ -177,14 +177,7 @@ export function OmnichannelLinkCards({ business, index, businesses = [], onSelec
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2.5 w-full py-3.5 px-4 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-semibold text-sm transition-colors"
               >
-                {png ? (
-                  <Image src={png} alt={meta.label} width={20} height={20} className="object-contain rounded-sm brightness-0 invert" />
-                ) : (
-                  <span
-                    className="w-5 h-5"
-                    dangerouslySetInnerHTML={{ __html: meta.iconSvg.replace('<svg ', '<svg class="w-5 h-5" ') }}
-                  />
-                )}
+                <ShoppingCart className="w-4 h-4" />
                 {link.label || meta.defaultLabel}
               </a>
             );
