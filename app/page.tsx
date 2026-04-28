@@ -72,7 +72,7 @@ export default function LandingPage() {
                 <Fragment key={label}>
                   <a
                     href={href}
-                    className="px-1 py-1 text-[11px] font-semibold tracking-[0.12em] uppercase text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors border-b border-transparent hover:border-gray-900 dark:hover:border-gray-100"
+                    className="px-1 py-1 text-[11px] font-semibold tracking-[0.12em] uppercase text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors border-b border-transparent hover:border-indigo-600 dark:hover:border-indigo-400"
                   >
                     {label}
                   </a>
