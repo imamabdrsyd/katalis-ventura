@@ -229,7 +229,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="bg-gradient-to-r from-indigo-500 to-purple-500">
-        {/* Brand CTA */}
+        {/* Brand CTA + Stats satu baris */}
         <div className="container mx-auto px-6 pt-10 pb-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
             <p className="text-xs font-semibold tracking-[0.15em] uppercase text-indigo-200 mb-2">
@@ -239,6 +239,25 @@ export default function LandingPage() {
               Kelola bisnis lebih cerdas.
             </h2>
           </div>
+
+          {/* Stats inline di tengah */}
+          <div className="hidden md:flex items-center gap-6 text-sm">
+            <div className="text-center">
+              <div className="font-bold text-white text-lg">100%</div>
+              <div className="text-indigo-200">Data Privacy</div>
+            </div>
+            <span className="text-white/30">·</span>
+            <div className="text-center">
+              <div className="font-bold text-white text-lg">{loading ? '...' : stats.users}</div>
+              <div className="text-indigo-200">Users</div>
+            </div>
+            <span className="text-white/30">·</span>
+            <div className="text-center">
+              <div className="font-bold text-white text-lg">{loading ? '...' : stats.businesses}</div>
+              <div className="text-indigo-200">Businesses</div>
+            </div>
+          </div>
+
           <Link
             href="/login"
             className="shrink-0 px-8 py-3 bg-white text-indigo-700 font-semibold text-sm rounded-xl hover:bg-indigo-50 transition-colors"
@@ -247,30 +266,11 @@ export default function LandingPage() {
           </Link>
         </div>
 
-        {/* Copyright + Stats + Social — satu baris */}
+        {/* Copyright bar */}
         <div className="border-t border-white/20">
-          <div className="container mx-auto px-6 py-4 flex flex-col md:flex-row items-center justify-between text-sm text-indigo-100 gap-3">
-            <p className="shrink-0">&copy; 2026 PT Imam Katalis Ventura.</p>
-
-            {/* Stats inline di tengah */}
-            <div className="flex items-center gap-6">
-              <div className="text-center">
-                <span className="font-bold text-white">100%</span>
-                <span className="text-indigo-200 ml-1.5">Data Privacy</span>
-              </div>
-              <span className="text-white/30">·</span>
-              <div className="text-center">
-                <span className="font-bold text-white">{loading ? '...' : stats.users}</span>
-                <span className="text-indigo-200 ml-1.5">Users</span>
-              </div>
-              <span className="text-white/30">·</span>
-              <div className="text-center">
-                <span className="font-bold text-white">{loading ? '...' : stats.businesses}</span>
-                <span className="text-indigo-200 ml-1.5">Businesses</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 shrink-0">
+          <div className="container mx-auto px-6 py-4 flex flex-col md:flex-row items-center justify-between text-sm text-indigo-100 gap-2">
+            <p>&copy; 2026 PT Imam Katalis Ventura. All rights reserved.</p>
+            <div className="flex items-center gap-4">
               <a
                 href="https://instagram.com/imamabdrsyd"
                 target="_blank"
