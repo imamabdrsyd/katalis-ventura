@@ -51,17 +51,17 @@ export function OmnichannelSection() {
           Storefront
         </span>
         <Image
-          src="/images/axion.png"
+          src="/images/favicon.png"
           alt="AXION"
-          width={72}
-          height={24}
+          width={28}
+          height={28}
           className="object-contain opacity-40 dark:hidden"
         />
         <Image
-          src="/images/axion-dark.png"
+          src="/images/favicon-dark.png"
           alt="AXION"
-          width={72}
-          height={24}
+          width={28}
+          height={28}
           className="object-contain opacity-40 hidden dark:block"
         />
       </div>
