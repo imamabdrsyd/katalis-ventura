@@ -9,7 +9,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'AXION Ventura - Accounting & Private Equity',
-  description: 'Make Data-Driven Decisions with AXION - Your Ultimate Accounting & Private Equity Solution',
+  description: 'People lie, numbers don\'t and the numbers in your business are telling a story wether you are listening or not. AXION helps you listen so you can make data-driven decisions for your growing business.',
   icons: {
     icon: '/images/favicon.png',
     apple: '/images/favicon.png',
