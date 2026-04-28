@@ -102,16 +102,16 @@ export default function LandingPage() {
           </div>
 
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-gray-100 mb-4 leading-[1.1] tracking-tight">
-            People Lie
+            People, numbers don't.
             <br />
             <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              Numbers Don't
+              And the numbers in your business are telling a story
             </span>
           </h1>
 
           <p className="text-lg text-gray-500 dark:text-gray-400 mb-8 max-w-lg mx-auto leading-relaxed">
-            And the numbers in your business are telling a story whether you are listening or not.
-            AXION helps you listen.
+            Whether you are listening or not.
+            AXION helps you listen so you can make data-driven decisions for your growing business.
           </p>
 
           <Link
@@ -229,55 +229,48 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="bg-gradient-to-r from-indigo-500 to-purple-500">
-        {/* Stats + Brand block */}
-        <div className="container mx-auto px-6 pt-12 pb-10 flex flex-col gap-10">
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-6 text-white">
-            <div className="text-center">
-              <div className="text-3xl font-bold">100%</div>
-              <div className="text-indigo-100 text-sm mt-1">Data Privacy</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold">
-                {loading ? '...' : stats.users}
-              </div>
-              <div className="text-indigo-100 text-sm mt-1">Users Joined</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold">
-                {loading ? '...' : stats.businesses}
-              </div>
-              <div className="text-indigo-100 text-sm mt-1">Business Onboard</div>
-            </div>
+        {/* Brand CTA */}
+        <div className="container mx-auto px-6 pt-10 pb-8 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div>
+            <p className="text-xs font-semibold tracking-[0.15em] uppercase text-indigo-200 mb-2">
+              Platform Keuangan Bisnis
+            </p>
+            <h2 className="text-2xl md:text-3xl font-bold text-white">
+              Kelola bisnis lebih cerdas.
+            </h2>
           </div>
-
-          {/* Divider */}
-          <div className="border-t border-white/20" />
-
-          {/* Brand CTA */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div>
-              <p className="text-xs font-semibold tracking-[0.15em] uppercase text-indigo-200 mb-2">
-                Platform Keuangan Bisnis
-              </p>
-              <h2 className="text-2xl md:text-3xl font-bold text-white">
-                Kelola bisnis lebih cerdas.
-              </h2>
-            </div>
-            <Link
-              href="/login"
-              className="shrink-0 px-8 py-3 bg-white text-indigo-700 font-semibold text-sm rounded-xl hover:bg-indigo-50 transition-colors"
-            >
-              Enter AXION
-            </Link>
-          </div>
+          <Link
+            href="/login"
+            className="shrink-0 px-8 py-3 bg-white text-indigo-700 font-semibold text-sm rounded-xl hover:bg-indigo-50 transition-colors"
+          >
+            Enter AXION
+          </Link>
         </div>
 
-        {/* Copyright bar */}
+        {/* Copyright + Stats + Social — satu baris */}
         <div className="border-t border-white/20">
-          <div className="container mx-auto px-6 py-5 flex flex-col md:flex-row items-center justify-between text-sm text-indigo-100 gap-2">
-            <p>&copy; 2026 PT Imam Katalis Ventura. All rights reserved.</p>
-            <div className="flex items-center gap-4">
+          <div className="container mx-auto px-6 py-4 flex flex-col md:flex-row items-center justify-between text-sm text-indigo-100 gap-3">
+            <p className="shrink-0">&copy; 2026 PT Imam Katalis Ventura.</p>
+
+            {/* Stats inline di tengah */}
+            <div className="flex items-center gap-6">
+              <div className="text-center">
+                <span className="font-bold text-white">100%</span>
+                <span className="text-indigo-200 ml-1.5">Data Privacy</span>
+              </div>
+              <span className="text-white/30">·</span>
+              <div className="text-center">
+                <span className="font-bold text-white">{loading ? '...' : stats.users}</span>
+                <span className="text-indigo-200 ml-1.5">Users</span>
+              </div>
+              <span className="text-white/30">·</span>
+              <div className="text-center">
+                <span className="font-bold text-white">{loading ? '...' : stats.businesses}</span>
+                <span className="text-indigo-200 ml-1.5">Businesses</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 shrink-0">
               <a
                 href="https://instagram.com/imamabdrsyd"
                 target="_blank"
