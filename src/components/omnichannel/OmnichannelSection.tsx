@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { OmnichannelGalleryCarousel } from './OmnichannelGalleryCarousel';
 import { OmnichannelWidget } from './OmnichannelWidget';
@@ -54,37 +55,33 @@ export function OmnichannelSection() {
           </span>
           {active && (
             <>
-              <Image
-                src="/images/favicon.png"
-                alt="AXION"
-                width={20}
-                height={20}
-                className="object-contain dark:hidden opacity-40"
-              />
-              <Image
-                src="/images/favicon-dark.png"
-                alt="AXION"
-                width={20}
-                height={20}
-                className="object-contain hidden dark:block opacity-40"
-              />
-              <span className="text-base font-semibold text-indigo-600 dark:text-indigo-400 truncate max-w-[180px]">
-                {active.business_name}
-              </span>
-              {businesses.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => setActiveIndex((i) => (i + 1) % businesses.length)}
-                  className="flex items-center justify-center w-5 h-5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  title="Bisnis berikutnya"
+              <ChevronRight className="w-5 h-5 text-gray-300 dark:text-gray-600 shrink-0" />
+              {active.slug ? (
+                <Link
+                  href={`/${active.slug}`}
+                  className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 truncate max-w-[220px] hover:underline"
                 >
-                  <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                </button>
+                  {active.business_name}
+                </Link>
+              ) : (
+                <span className="text-2xl font-bold text-gray-800 dark:text-gray-100 truncate max-w-[220px]">
+                  {active.business_name}
+                </span>
               )}
             </>
           )}
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center gap-3">
+          {businesses.length > 1 && (
+            <button
+              type="button"
+              onClick={() => setActiveIndex((i) => (i + 1) % businesses.length)}
+              className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              title="Bisnis berikutnya"
+            >
+              <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+            </button>
+          )}
           <Image
             src="/images/favicon.png"
             alt="AXION"

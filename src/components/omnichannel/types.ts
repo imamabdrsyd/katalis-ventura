@@ -33,6 +33,7 @@ export interface PublicPricingRule {
 export interface PublicBusiness {
   id: string;
   business_name: string;
+  slug: string | null;
   business_type: 'jasa' | 'produk' | 'dagang' | null;
   business_sector: string | null;
   city: string | null;

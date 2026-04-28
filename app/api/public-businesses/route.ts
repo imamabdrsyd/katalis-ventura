@@ -36,6 +36,7 @@ export interface PublicPricingRule {
 export interface PublicBusiness {
   id: string;
   business_name: string;
+  slug: string | null;
   business_type: 'jasa' | 'produk' | 'dagang' | null;
   business_sector: string | null;
   city: string | null;
@@ -54,6 +55,7 @@ export interface PublicBusiness {
 
 interface RawOmniChannel {
   id: string;
+  slug: string | null;
   is_published: boolean;
   gallery_images: unknown;
   widget_date_mode: string | null;
@@ -121,7 +123,7 @@ export async function GET() {
           id, business_name, business_type, business_sector,
           city, whatsapp_number, widget_action_label, logo_url,
           omni_channel:business_omni_channels (
-            id, is_published, gallery_images, widget_date_mode, widget_labels,
+            id, slug, is_published, gallery_images, widget_date_mode, widget_labels,
             show_pricing, default_price, price_unit,
             links:business_omni_channel_links ( id, channel_type, label, url, is_active, is_primary, sort_order ),
             pricing_rules:business_pricing_rules ( id, date_from, date_to, price, label )
@@ -171,6 +173,7 @@ export async function GET() {
       return {
         id: row.id,
         business_name: row.business_name,
+        slug: oc?.slug ?? null,
         business_type: row.business_type,
         business_sector: row.business_sector,
         city: row.city,
