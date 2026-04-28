@@ -229,37 +229,37 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Stats Bar */}
-        <div className="max-w-5xl mx-auto w-full">
-          <div className="bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl px-8 py-6 text-white">
-            <div className="grid grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="text-3xl font-bold">100%</div>
-                <div className="text-indigo-100 text-sm">Data Privacy</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold">
-                  {loading ? '...' : stats.users}
-                </div>
-                <div className="text-indigo-100 text-sm">Users Joined</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold">
-                  {loading ? '...' : stats.businesses}
-                </div>
-                <div className="text-indigo-100 text-sm">Business Onboard</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
       </main>
 
       {/* Footer */}
-      <footer>
-        {/* Brand block */}
-        <div className="bg-indigo-600 dark:bg-indigo-700">
-          <div className="container mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-6">
+      <footer className="bg-gradient-to-r from-indigo-500 to-purple-500">
+        {/* Stats + Brand block */}
+        <div className="container mx-auto px-6 pt-12 pb-10 flex flex-col gap-10">
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-6 text-white">
+            <div className="text-center">
+              <div className="text-3xl font-bold">100%</div>
+              <div className="text-indigo-100 text-sm mt-1">Data Privacy</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold">
+                {loading ? '...' : stats.users}
+              </div>
+              <div className="text-indigo-100 text-sm mt-1">Users Joined</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold">
+                {loading ? '...' : stats.businesses}
+              </div>
+              <div className="text-indigo-100 text-sm mt-1">Business Onboard</div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-white/20" />
+
+          {/* Brand CTA */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
               <p className="text-xs font-semibold tracking-[0.15em] uppercase text-indigo-200 mb-2">
                 Platform Keuangan Bisnis
@@ -276,22 +276,23 @@ export default function LandingPage() {
             </Link>
           </div>
         </div>
+
         {/* Copyright bar */}
-        <div className="container mx-auto px-6 py-6 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex flex-col md:flex-row items-center justify-between text-sm text-gray-500 dark:text-gray-400 gap-2">
+        <div className="border-t border-white/20">
+          <div className="container mx-auto px-6 py-5 flex flex-col md:flex-row items-center justify-between text-sm text-indigo-100 gap-2">
             <p>&copy; 2026 PT Imam Katalis Ventura. All rights reserved.</p>
             <div className="flex items-center gap-4">
               <a
                 href="https://instagram.com/imamabdrsyd"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                className="hover:text-white transition-colors"
               >
                 @imamabdrsyd
               </a>
               <a
                 href="mailto:imam.isyida@gmail.com"
-                className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                className="hover:text-white transition-colors"
               >
                 imam.isyida@gmail.com
               </a>
