@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Briefcase, TrendingUp, Shield, Globe, BarChart3, ShoppingBag } from 'lucide-react';
+import { Briefcase, TrendingUp, Shield, ShoppingBag } from 'lucide-react';
 import { OmnichannelSection } from '@/components/omnichannel/OmnichannelSection';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
@@ -46,7 +46,7 @@ export default function LandingPage() {
       {/* Header */}
       <header className="container mx-auto px-6 py-5">
         <nav className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-6 shrink-0">
             <Image
               src="/images/axion.png"
               alt="Axion Logo"
@@ -61,37 +61,24 @@ export default function LandingPage() {
               height={36}
               className="object-contain hidden dark:block"
             />
-            <nav className="hidden sm:flex items-center gap-0.5 border-l border-gray-200 dark:border-gray-700 pl-3">
-              {[
-                { label: 'Omnichannel', icon: Globe, href: '#section-omnichannel' },
-                { label: 'Accounting', icon: BarChart3, href: '#section-accounting' },
-                { label: 'Ecommerce', icon: ShoppingBag, href: '#section-ecommerce' },
-              ].map(({ label, icon: Icon, href }) => (
-                <a
-                  key={label}
-                  href={href}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {label}
-                </a>
+            <nav className="hidden sm:flex items-center gap-1">
+              {(['OMNICHANNEL', 'ACCOUNTING', 'ECOMMERCE'] as const).map((label, i, arr) => (
+                <Fragment key={label}>
+                  <a
+                    href={`#section-${label.toLowerCase()}`}
+                    className="px-1 py-1 text-[11px] font-semibold tracking-[0.12em] uppercase text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors border-b border-transparent hover:border-gray-900 dark:hover:border-gray-100"
+                  >
+                    {label}
+                  </a>
+                  {i < arr.length - 1 && (
+                    <span className="text-gray-300 dark:text-gray-600 text-xs select-none px-1">|</span>
+                  )}
+                </Fragment>
               ))}
             </nav>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             <ThemeToggle />
-            <Link
-              href="/login"
-              className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-            >
-              Login
-            </Link>
-            <Link
-              href="/signup"
-              className="px-4 py-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 border border-indigo-500 dark:border-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 rounded-xl transition-colors"
-            >
-              Register
-            </Link>
           </div>
         </nav>
       </header>
@@ -265,24 +252,46 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="container mx-auto px-6 py-6 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex flex-col md:flex-row items-center justify-between text-sm text-gray-500 dark:text-gray-400 gap-2">
-          <p>&copy; 2026 PT Imam Katalis Ventura. All rights reserved.</p>
-          <div className="flex items-center gap-4">
-            <a
-              href="https://instagram.com/imamabdrsyd"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+      <footer>
+        {/* Brand block */}
+        <div className="bg-indigo-600 dark:bg-indigo-700">
+          <div className="container mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <p className="text-xs font-semibold tracking-[0.15em] uppercase text-indigo-200 mb-2">
+                Platform Keuangan Bisnis
+              </p>
+              <h2 className="text-2xl md:text-3xl font-bold text-white">
+                Kelola bisnis lebih cerdas.
+              </h2>
+            </div>
+            <Link
+              href="/login"
+              className="shrink-0 px-8 py-3 bg-white text-indigo-700 font-semibold text-sm rounded-xl hover:bg-indigo-50 transition-colors"
             >
-              @imamabdrsyd
-            </a>
-            <a
-              href="mailto:imam.isyida@gmail.com"
-              className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-            >
-              imam.isyida@gmail.com
-            </a>
+              Enter AXION
+            </Link>
+          </div>
+        </div>
+        {/* Copyright bar */}
+        <div className="container mx-auto px-6 py-6 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col md:flex-row items-center justify-between text-sm text-gray-500 dark:text-gray-400 gap-2">
+            <p>&copy; 2026 PT Imam Katalis Ventura. All rights reserved.</p>
+            <div className="flex items-center gap-4">
+              <a
+                href="https://instagram.com/imamabdrsyd"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              >
+                @imamabdrsyd
+              </a>
+              <a
+                href="mailto:imam.isyida@gmail.com"
+                className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              >
+                imam.isyida@gmail.com
+              </a>
+            </div>
           </div>
         </div>
       </footer>
