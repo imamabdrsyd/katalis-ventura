@@ -59,7 +59,7 @@ export function OmnichannelSection() {
               {active.slug ? (
                 <Link
                   href={`/${active.slug}`}
-                  className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 truncate max-w-[220px] hover:underline"
+                  className="text-2xl font-bold text-indigo-500 dark:text-indigo-400 truncate max-w-[220px] hover:underline"
                 >
                   {active.business_name}
                 </Link>
