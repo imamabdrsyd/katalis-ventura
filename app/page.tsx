@@ -3,7 +3,7 @@
 import { useState, useEffect, Fragment } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Briefcase, TrendingUp, Shield, ShoppingBag } from 'lucide-react';
+import { Briefcase, TrendingUp, Shield } from 'lucide-react';
 import { OmnichannelSection } from '@/components/omnichannel/OmnichannelSection';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
@@ -102,16 +102,16 @@ export default function LandingPage() {
           </div>
 
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-4 leading-tight">
-            Make Data-driven Decisions
+            People Lie
             <br />
             <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              for your growing business
+              Numbers Don't
             </span>
           </h1>
 
           <p className="text-base text-gray-600 dark:text-gray-400 mb-8 max-w-xl mx-auto">
-            People lie, numbers don't. And the numbers in your business 
-            are telling a story whether you are listening or not.
+            And the numbers in your business are telling a story whether you are listening or not.
+            AXION helps you listen so you can make data-driven decisions for your growing business.
           </p>
 
           <Link
@@ -194,8 +194,8 @@ export default function LandingPage() {
           <div className="bg-gray-50 dark:bg-gray-800/60 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 md:p-10">
             <div className="flex flex-col md:flex-row gap-8 md:gap-12 items-start md:items-center">
               <div className="flex-1">
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full text-xs font-semibold mb-4">
-                  <ShoppingBag className="w-3 h-3" />
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-semibold mb-4">
+                  <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></span>
                   Omnichannel Ready
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
