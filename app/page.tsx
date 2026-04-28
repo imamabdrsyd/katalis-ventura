@@ -46,7 +46,7 @@ export default function LandingPage() {
       {/* Header */}
       <header className="container mx-auto px-6 py-5">
         <nav className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-6 shrink-0">
+          <div className="shrink-0">
             <Image
               src="/images/axion.png"
               alt="Axion Logo"
@@ -61,11 +61,17 @@ export default function LandingPage() {
               height={36}
               className="object-contain hidden dark:block"
             />
-            <nav className="hidden sm:flex items-center gap-1">
-              {(['OMNICHANNEL', 'ACCOUNTING', 'ECOMMERCE'] as const).map((label, i, arr) => (
+          </div>
+          <div className="hidden sm:flex items-center gap-2">
+            <nav className="flex items-center gap-1">
+              {([
+                { label: 'Accounting Engine', href: '#section-accounting' },
+                { label: 'Omnichannel', href: '#section-omnichannel' },
+                { label: 'Ecommerce Integration', href: '#section-ecommerce' },
+              ]).map(({ label, href }, i, arr) => (
                 <Fragment key={label}>
                   <a
-                    href={`#section-${label.toLowerCase()}`}
+                    href={href}
                     className="px-1 py-1 text-[11px] font-semibold tracking-[0.12em] uppercase text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors border-b border-transparent hover:border-gray-900 dark:hover:border-gray-100"
                   >
                     {label}
@@ -76,8 +82,6 @@ export default function LandingPage() {
                 </Fragment>
               ))}
             </nav>
-          </div>
-          <div className="flex items-center">
             <ThemeToggle />
           </div>
         </nav>
@@ -106,8 +110,8 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-base text-gray-600 dark:text-gray-400 mb-8 max-w-xl mx-auto">
-            Acquire stakes in profitable small businesses.
-            Track transactions, analyze performance, and make data-driven decisions.
+            People lie, numbers don't. And the numbers in your business 
+            are telling a story whether you are listening or not.
           </p>
 
           <Link
