@@ -191,10 +191,10 @@ export default function LandingPage() {
 
         {/* Ecommerce Integration */}
         <div id="section-ecommerce" className="max-w-5xl mx-auto w-full mb-12">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 md:p-10">
+          <div className="bg-gray-50 dark:bg-gray-800/60 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 md:p-10">
             <div className="flex flex-col md:flex-row gap-8 md:gap-12 items-start md:items-center">
               <div className="flex-1">
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full text-xs font-semibold mb-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full text-xs font-semibold mb-4">
                   <ShoppingBag className="w-3 h-3" />
                   Omnichannel Ready
                 </div>
@@ -206,20 +206,16 @@ export default function LandingPage() {
                 </p>
               </div>
               <div className="flex-shrink-0 w-full md:w-auto">
-                <div className="grid grid-cols-3 gap-3">
+                <div className="flex gap-6 items-center justify-center md:justify-end">
                   {[
-                    { name: 'Shopee', bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-500', letter: 'S' },
-                    { name: 'Tokopedia', bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-600', letter: 'T' },
-                    { name: 'Instagram', bg: 'bg-pink-50 dark:bg-pink-900/20', text: 'text-pink-500', letter: 'IG' },
-                    { name: 'WhatsApp', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-500', letter: 'WA' },
-                    { name: 'TikTok', bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-800 dark:text-gray-200', letter: 'TT' },
-                    { name: 'Lazada', bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-500', letter: 'L' },
-                  ].map(({ name, bg, text, letter }) => (
-                    <div
-                      key={name}
-                      className={`flex flex-col items-center justify-center gap-1.5 ${bg} rounded-xl px-4 py-3`}
-                    >
-                      <span className={`text-sm font-bold ${text}`}>{letter}</span>
+                    { name: 'Shopee', src: '/images/ecommerce/Shopee.png' },
+                    { name: 'TikTok Shop', src: '/images/ecommerce/Tiktokshop.png' },
+                    { name: 'Tokopedia', src: '/images/ecommerce/Tokopedia.png' },
+                  ].map(({ name, src }) => (
+                    <div key={name} className="flex flex-col items-center gap-2">
+                      <div className="w-14 h-14 rounded-2xl bg-white dark:bg-gray-700 shadow-sm border border-gray-100 dark:border-gray-600 flex items-center justify-center overflow-hidden">
+                        <Image src={src} alt={name} width={40} height={40} className="object-contain" />
+                      </div>
                       <span className="text-xs text-gray-500 dark:text-gray-400">{name}</span>
                     </div>
                   ))}
