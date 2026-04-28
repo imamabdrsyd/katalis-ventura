@@ -101,16 +101,16 @@ export default function LandingPage() {
             Accounting Engine
           </div>
 
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-gray-100 mb-4 leading-[1.1] tracking-tight">
-            People, numbers don't.
+          <h1 className="text-5xl md:text-6xl font-bold mb-5 leading-[1.1] tracking-tight">
+            <span className="text-gray-900 dark:text-gray-100">People lie,</span>
             <br />
             <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              And the numbers in your business are telling a story
+              numbers don't.
             </span>
           </h1>
 
-          <p className="text-lg text-gray-500 dark:text-gray-400 mb-8 max-w-lg mx-auto leading-relaxed">
-            Whether you are listening or not.
+          <p className="text-base text-gray-500 dark:text-gray-400 mb-8 max-w-md mx-auto leading-relaxed">
+            And the numbers in your business are telling a story — whether you&apos;re listening or not.
             AXION helps you listen so you can make data-driven decisions for your growing business.
           </p>
 
