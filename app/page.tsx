@@ -111,7 +111,7 @@ export default function LandingPage() {
 
           <p className="text-base text-gray-500 dark:text-gray-400 mb-8 max-w-md mx-auto leading-relaxed">
             And the numbers in your business are telling a story — whether you&apos;re listening or not.
-            AXION helps you listen so you can make data-driven decisions for your growing business.
+            AXION helps you listen so you can make data-driven decision for your business.
           </p>
 
           <Link
@@ -139,13 +139,15 @@ export default function LandingPage() {
                     key={`${biz.id}-${i}`}
                     className="flex-shrink-0 flex items-center gap-3 px-2"
                   >
-                    <Image
-                      src={biz.logo_url}
-                      alt={biz.business_name}
-                      width={40}
-                      height={40}
-                      className="rounded-lg object-cover w-10 h-10"
-                    />
+                    <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex-shrink-0 overflow-hidden">
+                      <Image
+                        src={biz.logo_url}
+                        alt={biz.business_name}
+                        width={40}
+                        height={40}
+                        className="object-cover w-10 h-10"
+                      />
+                    </div>
                     <span className="text-sm font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
                       {biz.business_name}
                     </span>
@@ -260,9 +262,9 @@ export default function LandingPage() {
 
           <Link
             href="/login"
-            className="shrink-0 px-8 py-3 bg-white text-indigo-700 font-semibold text-sm rounded-xl hover:bg-indigo-50 transition-colors"
+            className="shrink-0 px-8 py-3 border border-white/60 text-white font-semibold text-sm rounded-xl hover:bg-white/10 transition-colors"
           >
-            Enter AXION
+            Limited Partner Login
           </Link>
         </div>
 
