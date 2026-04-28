@@ -13,6 +13,7 @@ const patchSchema = z.object({
   label: z.string().min(1).max(200).optional(),
   url: z.string().min(1).max(2048).optional(),
   is_active: z.boolean().optional(),
+  is_primary: z.boolean().optional(),
   sort_order: z.number().int().optional(),
 });
 
