@@ -46,17 +46,24 @@ export function OmnichannelSection() {
   return (
     <section className="p-8 max-w-6xl mx-auto w-full">
       {/* Header: Storefront title */}
-      <div className="flex items-center gap-3 mb-6">
-        <Image
-          src="/images/favicon.png"
-          alt="Storefront"
-          width={32}
-          height={32}
-          className="object-contain"
-        />
-        <span className="text-xl font-bold text-gray-800 dark:text-gray-100">
+      <div className="flex items-center justify-between mb-6">
+        <span className="text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">
           Storefront
         </span>
+        <Image
+          src="/images/axion.png"
+          alt="AXION"
+          width={72}
+          height={24}
+          className="object-contain opacity-40 dark:hidden"
+        />
+        <Image
+          src="/images/axion-dark.png"
+          alt="AXION"
+          width={72}
+          height={24}
+          className="object-contain opacity-40 hidden dark:block"
+        />
       </div>
 
       {/* Gallery + Widget grid */}
