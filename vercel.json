@@ -2,7 +2,7 @@
   "installCommand": "npm ci",
   "functions": {
     "app/api/**": {
-      "regions": ["sin1"],
+      "regions": ["hnd1"],
       "maxDuration": 30
     }
   }
