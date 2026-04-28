@@ -203,14 +203,8 @@ export function calculateAccountLedger(
     totalDebits += debitAmount;
     totalCredits += creditAmount;
 
-    // EARN/FIN → customer/pihak terkait name, expenses → keterangan (description)
-    const isNameFirst = t.category === 'EARN' || t.category === 'FIN';
-    const keterangan = isNameFirst
-      ? t.name
-      : (t.description || t.debit_account?.account_name || t.name);
-    const subKeterangan = isNameFirst
-      ? (t.description || undefined)
-      : undefined;
+    const keterangan = t.name || t.description || '-';
+    const subKeterangan = t.name && t.description ? t.description : undefined;
 
     entries.push({
       transactionId: t.id,
