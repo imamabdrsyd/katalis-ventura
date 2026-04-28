@@ -91,13 +91,13 @@ export function OmnichannelLinkCards({ business, index, businesses = [], onSelec
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         {business.logo_url ? (
-          <div className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0">
+          <div className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 bg-white">
             <Image
               src={business.logo_url}
               alt={business.business_name}
               width={44}
               height={44}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"
               unoptimized
             />
           </div>
@@ -109,7 +109,7 @@ export function OmnichannelLinkCards({ business, index, businesses = [], onSelec
             <button
               type="button"
               onClick={() => setDropdownOpen((v) => !v)}
-              className="flex items-center gap-1 text-sm font-medium text-gray-900 dark:text-white border-b-2 border-primary-500 pb-0.5 hover:text-primary-600 dark:hover:text-primary-400 transition-colors max-w-full"
+              className="flex items-center gap-1 text-sm font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors max-w-full"
             >
               <span className="truncate">{business.business_name}</span>
               <ChevronDown

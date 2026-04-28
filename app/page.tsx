@@ -62,8 +62,8 @@ export default function LandingPage() {
               className="object-contain hidden dark:block"
             />
           </div>
-          <div className="hidden sm:flex items-center gap-2">
-            <nav className="flex items-center gap-1">
+          <div className="hidden sm:flex items-center gap-6">
+            <nav className="flex items-center gap-2">
               {([
                 { label: 'Accounting Engine', href: '#section-accounting' },
                 { label: 'Omnichannel', href: '#section-omnichannel' },
@@ -72,7 +72,7 @@ export default function LandingPage() {
                 <Fragment key={label}>
                   <a
                     href={href}
-                    className="px-1 py-1 text-[11px] font-semibold tracking-[0.12em] uppercase text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors border-b border-transparent hover:border-indigo-600 dark:hover:border-indigo-400"
+                    className="px-2 py-1 text-[11px] font-semibold tracking-[0.12em] uppercase text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors border-b border-transparent hover:border-indigo-600 dark:hover:border-indigo-400"
                   >
                     {label}
                   </a>

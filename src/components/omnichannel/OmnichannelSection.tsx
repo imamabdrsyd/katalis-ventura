@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import { ChevronRight } from 'lucide-react';
 import { OmnichannelGalleryCarousel } from './OmnichannelGalleryCarousel';
 import { OmnichannelWidget } from './OmnichannelWidget';
 import { OmnichannelLinkCards } from './OmnichannelLinkCards';
@@ -47,23 +48,58 @@ export function OmnichannelSection() {
     <section className="p-8 max-w-6xl mx-auto w-full">
       {/* Header: Storefront title */}
       <div className="flex items-center justify-between mb-6">
-        <span className="text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">
-          Storefront
-        </span>
-        <Image
-          src="/images/favicon.png"
-          alt="AXION"
-          width={28}
-          height={28}
-          className="object-contain dark:hidden"
-        />
-        <Image
-          src="/images/favicon-dark.png"
-          alt="AXION"
-          width={28}
-          height={28}
-          className="object-contain hidden dark:block"
-        />
+        <div className="flex items-center gap-2">
+          <span className="text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">
+            Storefront
+          </span>
+          {active && (
+            <>
+              <Image
+                src="/images/favicon.png"
+                alt="AXION"
+                width={20}
+                height={20}
+                className="object-contain dark:hidden opacity-40"
+              />
+              <Image
+                src="/images/favicon-dark.png"
+                alt="AXION"
+                width={20}
+                height={20}
+                className="object-contain hidden dark:block opacity-40"
+              />
+              <span className="text-base font-semibold text-indigo-600 dark:text-indigo-400 truncate max-w-[180px]">
+                {active.business_name}
+              </span>
+              {businesses.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveIndex((i) => (i + 1) % businesses.length)}
+                  className="flex items-center justify-center w-5 h-5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  title="Bisnis berikutnya"
+                >
+                  <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                </button>
+              )}
+            </>
+          )}
+        </div>
+        <div className="flex items-center">
+          <Image
+            src="/images/favicon.png"
+            alt="AXION"
+            width={28}
+            height={28}
+            className="object-contain dark:hidden"
+          />
+          <Image
+            src="/images/favicon-dark.png"
+            alt="AXION"
+            width={28}
+            height={28}
+            className="object-contain hidden dark:block"
+          />
+        </div>
       </div>
 
       {/* Gallery + Widget grid */}
