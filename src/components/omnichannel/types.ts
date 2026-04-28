@@ -8,6 +8,7 @@ export interface PublicLink {
   channel_type: string;
   label: string;
   url: string;
+  is_primary: boolean;
   sort_order: number;
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronUp, ChevronDown, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { ChevronUp, ChevronDown, Pencil, Trash2, Loader2, Star } from 'lucide-react';
 import type { OmniChannelLink } from '@/types';
 import { updateOmniChannelLink, deleteOmniChannelLink } from '@/lib/api/omniChannel';
 import { CHANNEL_META } from '@/lib/omniChannelMeta';
@@ -18,6 +18,7 @@ interface Props {
 export function OmniChannelLinkItem({ link, index, total, onMove, onEdit, onChanged }: Props) {
   const [deleting, setDeleting] = useState(false);
   const [toggling, setToggling] = useState(false);
+  const [togglingPrimary, setTogglingPrimary] = useState(false);
   const meta = CHANNEL_META[link.channel_type];
 
   const handleToggle = async () => {
@@ -29,6 +30,18 @@ export function OmniChannelLinkItem({ link, index, total, onMove, onEdit, onChan
       console.error('Failed to toggle link:', err);
     } finally {
       setToggling(false);
+    }
+  };
+
+  const handleTogglePrimary = async () => {
+    setTogglingPrimary(true);
+    try {
+      await updateOmniChannelLink(link.id, { is_primary: !link.is_primary });
+      onChanged();
+    } catch (err) {
+      console.error('Failed to toggle primary:', err);
+    } finally {
+      setTogglingPrimary(false);
     }
   };
 
@@ -102,6 +115,20 @@ export function OmniChannelLinkItem({ link, index, total, onMove, onEdit, onChan
               link.is_active ? 'translate-x-4' : 'translate-x-0.5'
             }`}
           />
+        </button>
+
+        {/* Primary toggle */}
+        <button
+          onClick={handleTogglePrimary}
+          disabled={togglingPrimary}
+          title={link.is_primary ? 'Hapus sebagai primary button' : 'Set sebagai primary button'}
+          className="p-1 rounded hover:bg-yellow-50 dark:hover:bg-yellow-900/30 transition-colors ml-1"
+        >
+          {togglingPrimary ? (
+            <Loader2 className="w-3.5 h-3.5 text-yellow-400 animate-spin" />
+          ) : (
+            <Star className={`w-3.5 h-3.5 ${link.is_primary ? 'text-yellow-400 fill-yellow-400' : 'text-gray-400'}`} />
+          )}
         </button>
 
         {/* Edit */}

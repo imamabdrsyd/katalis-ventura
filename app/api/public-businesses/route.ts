@@ -11,6 +11,7 @@ export interface PublicLink {
   channel_type: string;
   label: string;
   url: string;
+  is_primary: boolean;
   sort_order: number;
 }
 
@@ -66,6 +67,7 @@ interface RawOmniChannel {
     label: string;
     url: string;
     is_active: boolean;
+    is_primary: boolean;
     sort_order: number;
   }> | null;
   pricing_rules: Array<{
@@ -121,7 +123,7 @@ export async function GET() {
           omni_channel:business_omni_channels (
             id, is_published, gallery_images, widget_date_mode, widget_labels,
             show_pricing, default_price, price_unit,
-            links:business_omni_channel_links ( id, channel_type, label, url, is_active, sort_order ),
+            links:business_omni_channel_links ( id, channel_type, label, url, is_active, is_primary, sort_order ),
             pricing_rules:business_pricing_rules ( id, date_from, date_to, price, label )
           )
         `
@@ -145,11 +147,12 @@ export async function GET() {
         ? (oc?.links ?? [])
             .filter((l) => l.is_active)
             .sort((a, b) => a.sort_order - b.sort_order)
-            .map(({ id, channel_type, label, url, sort_order }) => ({
+            .map(({ id, channel_type, label, url, is_primary, sort_order }) => ({
               id,
               channel_type,
               label,
               url,
+              is_primary: !!is_primary,
               sort_order,
             }))
         : [];

@@ -62,6 +62,7 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
           label: label.trim(),
           url: normalizedUrl,
           is_active: isActive,
+          is_primary: false,
           sort_order: nextSortOrder,
           businessId,
         });

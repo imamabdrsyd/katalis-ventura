@@ -15,12 +15,25 @@ interface Props {
   onSelectBusiness?: (index: number) => void;
 }
 
+const CHANNEL_PNG: Partial<Record<string, string>> = {
+  shopee: '/images/ecommerce/Shopee.png',
+  tiktok: '/images/ecommerce/Tiktokshop.png',
+  tokopedia: '/images/ecommerce/Tokopedia.png',
+};
+
 function ChannelIcon({ type }: { type: string }) {
   const meta = CHANNEL_META[type as OmniChannelType] ?? CHANNEL_META.custom;
+  const png = CHANNEL_PNG[type];
+  if (png) {
+    return (
+      <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 bg-white border border-gray-100">
+        <Image src={png} alt={meta.label} width={36} height={36} className="object-contain w-full h-full" />
+      </div>
+    );
+  }
   return (
     <div
       className={`w-9 h-9 rounded-lg flex items-center justify-center ${meta.bgColor} ${meta.textColor} flex-shrink-0`}
-      // SVG dari CHANNEL_META adalah string statis dari source code, aman untuk innerHTML
       dangerouslySetInnerHTML={{
         __html: meta.iconSvg.replace('<svg ', '<svg class="w-5 h-5" '),
       }}
@@ -152,7 +165,32 @@ export function OmnichannelLinkCards({ business, index, businesses = [], onSelec
         </p>
       ) : (
         <div className="space-y-2">
-          {business.links.map((link) => (
+          {/* Primary link as full-width button */}
+          {business.links.filter(l => l.is_primary).map((link) => {
+            const meta = CHANNEL_META[link.channel_type as OmniChannelType] ?? CHANNEL_META.custom;
+            const png = CHANNEL_PNG[link.channel_type];
+            return (
+              <a
+                key={`primary-${link.id}`}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2.5 w-full py-3.5 px-4 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-semibold text-sm transition-colors"
+              >
+                {png ? (
+                  <Image src={png} alt={meta.label} width={20} height={20} className="object-contain rounded-sm brightness-0 invert" />
+                ) : (
+                  <span
+                    className="w-5 h-5"
+                    dangerouslySetInnerHTML={{ __html: meta.iconSvg.replace('<svg ', '<svg class="w-5 h-5" ') }}
+                  />
+                )}
+                {link.label || meta.defaultLabel}
+              </a>
+            );
+          })}
+          {/* Secondary links */}
+          {business.links.filter(l => !l.is_primary).map((link) => (
             <LinkRow key={link.id} link={link} />
           ))}
         </div>

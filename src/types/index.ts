@@ -373,6 +373,7 @@ export interface OmniChannelLink {
   label: string;
   url: string;
   is_active: boolean;
+  is_primary: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -454,6 +455,7 @@ export interface UpsertOmniChannelLinkData {
   label: string;
   url: string;
   is_active: boolean;
+  is_primary: boolean;
   sort_order: number;
 }
 
