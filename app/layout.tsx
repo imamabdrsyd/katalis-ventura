@@ -8,8 +8,8 @@ import './globals.css';
 const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Katalis Ventura - Private Equity Manager',
-  description: 'Multi-role finance management platform for business managers and investors',
+  title: 'AXION Ventura - Accounting & Private Equity',
+  description: 'Make Data-Driven Decisions with AXION - Your Ultimate Accounting & Private Equity Solution',
   icons: {
     icon: '/images/favicon.png',
     apple: '/images/favicon.png',
