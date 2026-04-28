@@ -1,0 +1,9 @@
+{
+  "installCommand": "npm ci",
+  "functions": {
+    "app/api/**": {
+      "regions": ["sin1"],
+      "maxDuration": 30
+    }
+  }
+}
