@@ -21,6 +21,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
   const [bio, setBio] = useState(channel?.bio ?? '');
   const [logoUrl, setLogoUrl] = useState(channel?.logo_url ?? '');
   const [isPublished, setIsPublished] = useState(channel?.is_published ?? false);
+  const [publicUrlMode, setPublicUrlMode] = useState<'slug-only' | 'axion-only' | 'both'>(channel?.public_url_mode ?? 'both');
   const [widgetDateMode, setWidgetDateMode] = useState<'single' | 'double'>(channel?.widget_date_mode ?? 'double');
   const [widgetLabels, setWidgetLabels] = useState<OmniChannelWidgetLabels>(channel?.widget_labels ?? {});
 
@@ -138,6 +139,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
         bio: bio || undefined,
         logo_url: logoUrl || null,
         is_published: isPublished,
+        public_url_mode: publicUrlMode,
         widget_date_mode: widgetDateMode,
         widget_labels: widgetLabels,
       }, userId);
@@ -156,6 +158,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
     bio !== (channel?.bio ?? '') ||
     logoUrl !== (channel?.logo_url ?? '') ||
     isPublished !== (channel?.is_published ?? false) ||
+    publicUrlMode !== (channel?.public_url_mode ?? 'both') ||
     widgetDateMode !== (channel?.widget_date_mode ?? 'double') ||
     JSON.stringify(widgetLabels) !== JSON.stringify(channel?.widget_labels ?? {});
 
@@ -245,6 +248,72 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
         )}
       </div>
 
+      {/* Public URL Mode Selection */}
+      {channel && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            Mode Routing URL Halaman Publik
+          </label>
+          <div className="space-y-2">
+            <label className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+              <input
+                type="radio"
+                name="publicUrlMode"
+                value="both"
+                checked={publicUrlMode === 'both'}
+                onChange={() => setPublicUrlMode('both')}
+                className="w-4 h-4"
+              />
+              <div>
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                  Kedua URL Aktif
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Bisa diakses dari /{slug} dan /axion/{slug}
+                </p>
+              </div>
+            </label>
+
+            <label className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+              <input
+                type="radio"
+                name="publicUrlMode"
+                value="slug-only"
+                checked={publicUrlMode === 'slug-only'}
+                onChange={() => setPublicUrlMode('slug-only')}
+                className="w-4 h-4"
+              />
+              <div>
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                  Hanya /{slug}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  URL lama tetap aktif, /axion/{slug} tidak accessible
+                </p>
+              </div>
+            </label>
+
+            <label className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+              <input
+                type="radio"
+                name="publicUrlMode"
+                value="axion-only"
+                checked={publicUrlMode === 'axion-only'}
+                onChange={() => setPublicUrlMode('axion-only')}
+                className="w-4 h-4"
+              />
+              <div>
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                  Hanya /axion/{slug}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  URL lama /{slug} tidak accessible, gunakan URL baru
+                </p>
+              </div>
+            </label>
+          </div>
+        </div>
+      )}
       {/* Title */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

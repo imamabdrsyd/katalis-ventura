@@ -428,6 +428,7 @@ export interface BusinessOmniChannel {
   show_pricing?: boolean;
   default_price?: number | null;
   price_unit?: string | null;
+  public_url_mode?: 'slug-only' | 'axion-only' | 'both';
   created_at: string;
   updated_at: string;
   created_by: string;
@@ -448,6 +449,7 @@ export interface UpsertOmniChannelData {
   show_pricing?: boolean;
   default_price?: number | null;
   price_unit?: string | null;
+  public_url_mode?: 'slug-only' | 'axion-only' | 'both';
 }
 
 export interface UpsertOmniChannelLinkData {

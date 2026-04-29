@@ -58,6 +58,10 @@ export default async function PublicSlugPage({ params }: Props) {
 
   if (error || !data) notFound();
 
+  // Check if this route is allowed based on public_url_mode
+  const urlMode = data.public_url_mode || 'both';
+  if (urlMode === 'axion-only') notFound(); // Only /axion/slug allowed
+
   const channel = data as BusinessOmniChannel;
   const activeLinks = (channel.links ?? [])
     .filter((l: OmniChannelLink) => l.is_active)

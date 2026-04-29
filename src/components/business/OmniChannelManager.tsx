@@ -62,7 +62,7 @@ export function OmniChannelManager({ businessId, businessName, userId }: Props) 
 
         {channel?.is_published && channel.slug && (
           <a
-            href={`/${channel.slug}`}
+            href={channel.public_url_mode === 'slug-only' ? `/${channel.slug}` : `/axion/${channel.slug}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
