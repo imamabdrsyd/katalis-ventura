@@ -59,9 +59,11 @@ const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
   real_estate: <Building2 className="w-4 h-4" />,
 };
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { NotificationBell } from '@/components/ui/NotificationBell';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import { FloatingQuickAdd } from '@/components/transactions/FloatingQuickAdd';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
+import { useNotifications } from '@/hooks/useNotifications';
 
 type NavItem = {
   href: string;
@@ -377,6 +379,9 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
   const isInvestor = userRole === 'investor';
   const canManage = userRole === 'business_manager' || userRole === 'both' || userRole === 'superadmin';
 
+  const businessIds = businesses.map((b) => b.id);
+  const { pendingCount } = useNotifications(businessIds, canManage);
+
   const handleAddBusiness = async (formData: BusinessFormData) => {
     setIsSubmitting(true);
     try {
@@ -575,8 +580,13 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
           </button>
         )}
 
-        {/* Theme Toggle */}
-        <ThemeToggle />
+        {/* Notification Bell — hanya untuk manager/both/superadmin */}
+        {canManage && (
+          <NotificationBell
+            count={pendingCount}
+            href="/businesses"
+          />
+        )}
 
         {/* Profile Dropdown */}
         <div className="relative" ref={profileDropdownRef}>
@@ -627,6 +637,10 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
                   {t.nav.settings}
                 </Link>
                 <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
+                {/* Theme Toggle */}
+                <div className="px-4 py-2 flex items-center justify-between">
+                  <ThemeToggle inDropdown />
+                </div>
                 {/* Language Toggle */}
                 <div className="px-4 py-2 flex items-center justify-between">
                   <Languages className="w-4 h-4 text-gray-400 dark:text-gray-500" />

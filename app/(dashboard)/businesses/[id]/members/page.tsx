@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { MemberList } from '@/components/business/MemberList';
 import { InviteCodeManager } from '@/components/business/InviteCodeManager';
+import { JoinRequestList } from '@/components/business/JoinRequestList';
 import { getBusinessMembers, type BusinessMember } from '@/lib/api/members';
 import Image from 'next/image';
 import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut, ShoppingBag, Contact } from 'lucide-react';
@@ -258,8 +259,22 @@ export default function BusinessMembersPage() {
       {/* Tab Content */}
       {activeTab === 'members' && (
         <div className="flex flex-col lg:flex-row items-stretch gap-6 lg:gap-8">
-          <div className="max-w-2xl w-full">
+          <div className="max-w-2xl w-full space-y-8">
             <MemberList members={members} loading={loading} />
+
+            {/* Join Requests — hanya tampil untuk creator/superadmin */}
+            {isCreator && user && business && (
+              <div>
+                <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100 mb-4">
+                  Permintaan Bergabung
+                </h2>
+                <JoinRequestList
+                  businessId={business.id}
+                  reviewerId={user.id}
+                  onApproved={fetchMembers}
+                />
+              </div>
+            )}
           </div>
           {business && (
             <BusinessDetailCard

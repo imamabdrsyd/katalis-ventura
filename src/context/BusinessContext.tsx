@@ -133,6 +133,8 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
           ? localStorage.getItem(ACTIVE_ROLE_KEY) as UserRole | null
           : null;
         primaryRole = savedRole || 'superadmin';
+        // isSuperadmin hanya true jika sedang aktif sebagai superadmin (bukan switch ke role lain)
+        setIsSuperadmin(primaryRole === 'superadmin');
       } else {
         // Extract businesses and determine user role
         businessList = (rolesData || [])
@@ -197,6 +199,8 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
   const switchRole = useCallback(
     (role: UserRole) => {
       setUserRole(role);
+      // isSuperadmin selalu mencerminkan apakah user ini superadmin sejati,
+      // tidak berubah saat switch role — superadmin tetap bisa akses semua
       if (typeof window !== 'undefined') {
         localStorage.setItem(ACTIVE_ROLE_KEY, role);
       }
