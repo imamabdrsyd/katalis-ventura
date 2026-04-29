@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { QueryProvider } from '@/components/providers/QueryProvider';
 import { LanguageProvider } from '@/context/LanguageContext';
@@ -31,6 +32,7 @@ export default function RootLayout({
           </LanguageProvider>
         </QueryProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
