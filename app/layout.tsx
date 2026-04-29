@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/next';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { QueryProvider } from '@/components/providers/QueryProvider';
 import { LanguageProvider } from '@/context/LanguageContext';
@@ -29,6 +30,7 @@ export default function RootLayout({
             <ThemeProvider>{children}</ThemeProvider>
           </LanguageProvider>
         </QueryProvider>
+        <Analytics />
       </body>
     </html>
   );
