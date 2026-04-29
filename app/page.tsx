@@ -171,7 +171,7 @@ export default function LandingPage() {
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
-            <TrendingUp className="w-6 h-6 text-blue-500 mb-3" />
+            <TrendingUp className="w-6 h-6 text-indigo-500 mb-3" />
             <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-2">
               Investor
             </h3>
@@ -181,7 +181,7 @@ export default function LandingPage() {
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
-            <Shield className="w-6 h-6 text-pink-500 mb-3" />
+            <Shield className="w-6 h-6 text-indigo-500 mb-3" />
             <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-2">
               Secure & Private
             </h3>
