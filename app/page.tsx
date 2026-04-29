@@ -110,7 +110,8 @@ export default function LandingPage() {
 
           <p className="text-base text-gray-500 dark:text-gray-400 mb-8 max-w-xl mx-auto leading-relaxed">
             And the numbers in your business are telling a story whether you&apos;re listening or not.
-            AXION helps you listen so you can make data-driven decisions for your growing business.
+            <br />
+            AXION helps you listen so you can make data-driven decisions for your business.
           </p>
 
           <Link
