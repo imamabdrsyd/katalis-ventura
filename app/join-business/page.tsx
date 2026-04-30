@@ -241,13 +241,6 @@ export default function JoinBusinessPage() {
         {/* Business List Mode */}
         {joinMode === 'list' && (
           <>
-            {/* Info banner */}
-            <div className="mb-4 p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-xl">
-              <p className="text-xs text-indigo-600 dark:text-indigo-400">
-                Permintaan bergabung akan dikirim ke pemilik bisnis untuk disetujui. Kamu akan mendapat notifikasi setelah diproses.
-              </p>
-            </div>
-
             {/* Search */}
             <div className="mb-4">
               <input
