@@ -380,7 +380,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
   const canManage = userRole === 'business_manager' || userRole === 'both' || userRole === 'superadmin';
 
   const businessIds = businesses.map((b) => b.id);
-  const { pendingCount } = useNotifications(businessIds, canManage);
+  const { pendingCount } = useNotifications(businessIds, canManage, user?.id);
 
   const handleAddBusiness = async (formData: BusinessFormData) => {
     setIsSubmitting(true);

@@ -1,19 +1,26 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getPendingRequestsCount } from '@/lib/api/joinRequests';
 
-export function useNotifications(businessIds: string[], isManager: boolean) {
+export function useNotifications(businessIds: string[], isManager: boolean, userId?: string) {
   const [pendingCount, setPendingCount] = useState(0);
 
   const refresh = useCallback(async () => {
-    if (!isManager || !businessIds.length) {
+    if (!isManager || !userId) {
       setPendingCount(0);
       return;
     }
-    const count = await getPendingRequestsCount(businessIds);
-    setPendingCount(count);
-  }, [businessIds, isManager]);
+
+    try {
+      // Fetch count from API which uses created_by to find businesses
+      const response = await fetch(`/api/notifications/pending-requests?userId=${userId}`);
+      const data = await response.json();
+      setPendingCount(data.requests?.length || 0);
+    } catch (error) {
+      console.error('Failed to fetch pending count:', error);
+      setPendingCount(0);
+    }
+  }, [userId, isManager]);
 
   useEffect(() => {
     refresh();
