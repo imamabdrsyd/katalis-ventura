@@ -15,20 +15,19 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
 
-    // Get all businesses owned by the user
-    const { data: userBusinesses, error: businessesError } = await supabase
-      .from('user_business_roles')
-      .select('business_id')
-      .eq('user_id', userId)
-      .eq('role', 'owner');
+    // Get all businesses created by the user
+    const { data: businesses, error: businessesError } = await supabase
+      .from('businesses')
+      .select('id')
+      .eq('created_by', userId);
 
     if (businessesError) throw businessesError;
 
-    if (!userBusinesses || userBusinesses.length === 0) {
+    if (!businesses || businesses.length === 0) {
       return NextResponse.json({ requests: [] });
     }
 
-    const businessIds = userBusinesses.map(b => b.business_id);
+    const businessIds = businesses.map(b => b.id);
 
     // Get all pending join requests for these businesses
     const { data: requests, error: requestsError } = await supabase
