@@ -260,7 +260,13 @@ export default function BusinessMembersPage() {
       {activeTab === 'members' && (
         <div className="flex flex-col lg:flex-row items-stretch gap-6 lg:gap-8">
           <div className="max-w-2xl w-full space-y-8">
-            <MemberList members={members} loading={loading} />
+            <MemberList 
+              members={members} 
+              loading={loading}
+              businessId={business?.id}
+              isCreator={isCreator}
+              onMemberRemoved={fetchMembers}
+            />
 
             {/* Join Requests — hanya tampil untuk creator/superadmin */}
             {isCreator && user && business && (
