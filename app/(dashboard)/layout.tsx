@@ -585,6 +585,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
           <NotificationBell
             count={pendingCount}
             href="/businesses"
+            userId={user?.id || ''}
           />
         )}
 
