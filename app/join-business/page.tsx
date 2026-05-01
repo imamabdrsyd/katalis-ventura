@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Building2, Clock, CheckCircle, XCircle, X } from 'lucide-react';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase';
 import * as businessesApi from '@/lib/api/businesses';
 import * as inviteCodesApi from '@/lib/api/inviteCodes';
@@ -323,10 +324,21 @@ export default function JoinBusinessPage() {
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg flex-shrink-0 ${
-                          isSelected ? 'bg-indigo-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden ${
+                          business.logo_url ? '' : isSelected ? 'bg-indigo-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                         }`}>
-                          <Building2 className="w-5 h-5" />
+                          {business.logo_url ? (
+                            <Image
+                              src={business.logo_url}
+                              alt={business.business_name}
+                              width={40}
+                              height={40}
+                              className="w-full h-full object-cover"
+                              unoptimized
+                            />
+                          ) : (
+                            <Building2 className="w-5 h-5" />
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-gray-800 dark:text-gray-100 truncate">
