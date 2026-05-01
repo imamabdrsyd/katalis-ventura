@@ -431,7 +431,7 @@ function TransactionsPageInner() {
           {/* Contact management shortcut */}
           {businessId && (
             <button
-              onClick={() => router.push(`/businesses/${businessId}/members?tab=contacts`)}
+              onClick={() => router.push(`/businesses/${businessId}/config?tab=contacts`)}
               className="ml-2 mb-1 flex-shrink-0 p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
               title="Kelola kontak"
             >

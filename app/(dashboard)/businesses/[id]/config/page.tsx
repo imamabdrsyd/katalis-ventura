@@ -150,7 +150,7 @@ export default function BusinessMembersPage() {
   // Saat user switch bisnis via BusinessSwitcher, redirect ke detail bisnis yang baru
   useEffect(() => {
     if (activeBusiness && activeBusiness.id !== businessId) {
-      router.replace(`/businesses/${activeBusiness.id}/members`);
+      router.replace(`/businesses/${activeBusiness.id}/config`);
     }
   }, [activeBusiness, businessId, router]);
 

@@ -3,11 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { CheckCircle, XCircle, Clock, UserCheck } from 'lucide-react';
-import { getBusinessJoinRequests, approveJoinRequest, rejectJoinRequest, type JoinRequest } from '@/lib/api/joinRequests';
+import { getBusinessJoinRequests, type JoinRequest } from '@/lib/api/joinRequests';
 
 interface JoinRequestListProps {
   businessId: string;
-  reviewerId: string;
+  reviewerId?: string;
   onApproved?: () => void;
 }
 
@@ -33,11 +33,17 @@ export function JoinRequestList({ businessId, reviewerId, onApproved }: JoinRequ
   const handleApprove = async (requestId: string) => {
     setProcessingId(requestId);
     try {
-      await approveJoinRequest(requestId, reviewerId);
-      setRequests((prev) => prev.map((r) => r.id === requestId ? { ...r, status: 'approved' } : r));
-      onApproved?.();
+      const res = await fetch(`/api/business-join-requests/${requestId}/approve`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (res.ok) {
+        setRequests((prev) => prev.map((r) => r.id === requestId ? { ...r, status: 'approved' as const } : r));
+        onApproved?.();
+      }
     } catch {
-      // silently fail — could show toast in future
+      // silent
     } finally {
       setProcessingId(null);
     }
@@ -46,10 +52,16 @@ export function JoinRequestList({ businessId, reviewerId, onApproved }: JoinRequ
   const handleReject = async (requestId: string) => {
     setProcessingId(requestId);
     try {
-      await rejectJoinRequest(requestId, reviewerId);
-      setRequests((prev) => prev.map((r) => r.id === requestId ? { ...r, status: 'rejected' } : r));
+      const res = await fetch(`/api/business-join-requests/${requestId}/reject`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (res.ok) {
+        setRequests((prev) => prev.map((r) => r.id === requestId ? { ...r, status: 'rejected' as const } : r));
+      }
     } catch {
-      // silently fail
+      // silent
     } finally {
       setProcessingId(null);
     }

@@ -138,7 +138,7 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
               {/* Badges */}
               <div className="flex items-center gap-1.5">
                 {member.is_creator && (
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-900/50 text-amber-500 dark:text-amber-400">
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
                     Creator
                   </span>
                 )}
