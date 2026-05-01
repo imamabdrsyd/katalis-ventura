@@ -122,10 +122,10 @@ export default function JoinBusinessPage() {
     setError(null);
 
     try {
-      await joinRequestsApi.submitJoinRequest(selectedBusiness.id, userId);
+      const newRequest = await joinRequestsApi.submitJoinRequest(selectedBusiness.id, userId);
       setBusinesses((prev) =>
         prev.map((b) =>
-          b.id === selectedBusiness.id ? { ...b, requestStatus: 'pending' } : b
+          b.id === selectedBusiness.id ? { ...b, requestId: newRequest.id, requestStatus: 'pending' } : b
         )
       );
       setSuccess(`Permintaan bergabung ke "${selectedBusiness.business_name}" telah dikirim. Tunggu persetujuan dari pemilik bisnis.`);
