@@ -4,6 +4,12 @@ import { createAdminClient } from '@/lib/supabase-server';
 import { isReservedSlug } from '@/lib/utils/slugUtils';
 import { PublicOmniChannelPage } from '@/components/public/PublicOmniChannelPage';
 import type { BusinessOmniChannel, OmniChannelLink } from '@/types';
+import type {
+  PublicBusiness,
+  PublicGalleryImage,
+  PublicLink,
+  PublicPricingRule,
+} from '@/components/omnichannel/types';
 
 export const revalidate = 300;
 
@@ -43,25 +49,99 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+function normalizeGallery(raw: unknown): PublicGalleryImage[] {
+  if (!Array.isArray(raw)) return [];
+  return (raw as Array<{ url?: string; sort_order?: number }>)
+    .filter((x) => x != null && typeof x.url === 'string')
+    .map((x, i) => ({ url: x.url as string, sort_order: typeof x.sort_order === 'number' ? x.sort_order : i }))
+    .sort((a, b) => a.sort_order - b.sort_order);
+}
+
 export default async function PublicSlugPage({ params }: Props) {
   const { slug } = await params;
 
   if (isReservedSlug(slug)) notFound();
 
   const supabase = createAdminClient();
-  const { data, error } = await supabase
+
+  // Fetch omni-channel config lengkap
+  const { data: ocData, error: ocError } = await supabase
     .from('business_omni_channels')
-    .select('*, links:business_omni_channel_links(*)')
+    .select(`
+      id, business_id, slug, is_published, title, tagline, bio, logo_url,
+      gallery_images, widget_date_mode, widget_labels,
+      show_pricing, default_price, price_unit,
+      links:business_omni_channel_links ( id, channel_type, label, url, is_active, is_primary, sort_order ),
+      pricing_rules:business_pricing_rules ( id, date_from, date_to, price, label )
+    `)
     .eq('slug', slug)
     .eq('is_published', true)
     .single();
 
-  if (error || !data) notFound();
+  if (ocError || !ocData) notFound();
 
-  const channel = data as BusinessOmniChannel;
-  const activeLinks = (channel.links ?? [])
-    .filter((l: OmniChannelLink) => l.is_active)
-    .sort((a: OmniChannelLink, b: OmniChannelLink) => a.sort_order - b.sort_order);
+  // Fetch bisnis untuk data widget (business_type, city, dll)
+  const { data: bizData } = await supabase
+    .from('businesses')
+    .select('id, business_name, business_type, business_sector, city, whatsapp_number, widget_action_label, logo_url')
+    .eq('id', (ocData as any).business_id)
+    .single();
 
-  return <PublicOmniChannelPage channel={channel} links={activeLinks} />;
+  const oc = ocData as any;
+  const biz = bizData as any;
+
+  const channel = ocData as unknown as BusinessOmniChannel;
+  const activeLinks = ((oc.links ?? []) as OmniChannelLink[])
+    .filter((l) => l.is_active)
+    .sort((a, b) => a.sort_order - b.sort_order);
+
+  const showPricing = !!oc.show_pricing;
+
+  const publicLinks: PublicLink[] = activeLinks.map((l) => ({
+    id: l.id,
+    channel_type: l.channel_type,
+    label: l.label,
+    url: l.url,
+    is_primary: !!l.is_primary,
+    sort_order: l.sort_order,
+  }));
+
+  const pricingRules: PublicPricingRule[] = showPricing
+    ? ((oc.pricing_rules ?? []) as Array<{ id: string; date_from: string; date_to: string; price: number | string; label: string | null }>).map((r) => ({
+        id: r.id,
+        date_from: r.date_from,
+        date_to: r.date_to,
+        price: typeof r.price === 'string' ? parseFloat(r.price) : r.price,
+        label: r.label,
+      }))
+    : [];
+
+  const publicBusiness: PublicBusiness = {
+    id: biz?.id ?? '',
+    business_name: biz?.business_name ?? oc.title,
+    slug: oc.slug,
+    business_type: biz?.business_type ?? null,
+    business_sector: biz?.business_sector ?? null,
+    city: biz?.city ?? null,
+    whatsapp_number: biz?.whatsapp_number ?? null,
+    widget_action_label: biz?.widget_action_label ?? null,
+    logo_url: oc.logo_url ?? biz?.logo_url ?? null,
+    gallery: normalizeGallery(oc.gallery_images),
+    links: publicLinks,
+    widget_date_mode: (oc.widget_date_mode as 'single' | 'double') ?? 'double',
+    widget_labels: (oc.widget_labels ?? {}) as PublicBusiness['widget_labels'],
+    show_pricing: showPricing,
+    default_price: showPricing && oc.default_price != null
+      ? (typeof oc.default_price === 'string' ? parseFloat(oc.default_price) : oc.default_price)
+      : null,
+    price_unit: showPricing ? oc.price_unit ?? null : null,
+    pricing_rules: pricingRules,
+  };
+
+  return (
+    <PublicOmniChannelPage
+      channel={channel}
+      business={publicBusiness}
+    />
+  );
 }
