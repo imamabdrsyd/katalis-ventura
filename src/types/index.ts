@@ -442,8 +442,8 @@ export interface UpsertOmniChannelData {
   slug: string;
   is_published: boolean;
   title: string;
-  tagline?: string;
-  bio?: string;
+  tagline?: string | null;
+  bio?: string | null;
   logo_url?: string | null;
   widget_date_mode?: 'single' | 'double';
   widget_labels?: OmniChannelWidgetLabels;
