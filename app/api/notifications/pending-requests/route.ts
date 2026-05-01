@@ -1,25 +1,19 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient, getAuthenticatedUser } from '@/lib/supabase-server';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 });
     }
 
-    // Get all businesses created by the user
+    const supabase = createAdminClient();
+
     const { data: businesses, error: businessesError } = await supabase
       .from('businesses')
       .select('id')
-      .eq('created_by', userId);
+      .eq('created_by', user.id);
 
     if (businessesError) throw businessesError;
 
@@ -27,9 +21,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ requests: [] });
     }
 
-    const businessIds = businesses.map(b => b.id);
+    const businessIds = businesses.map((b) => b.id);
 
-    // Get all pending join requests for these businesses
     const { data: requests, error: requestsError } = await supabase
       .from('business_join_requests')
       .select(`
@@ -37,6 +30,7 @@ export async function GET(request: Request) {
         business_id,
         requester_id,
         status,
+        message,
         created_at,
         requester:profiles(id, full_name, avatar_url),
         business:businesses(id, business_name)

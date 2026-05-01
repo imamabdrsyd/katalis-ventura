@@ -48,31 +48,69 @@ export default function JoinBusinessPage() {
     checkAuth();
   }, [router, supabase]);
 
+  const fetchBusinesses = async () => {
+    if (!userId) return;
+    setLoading(true);
+    try {
+      const [data, myRequests] = await Promise.all([
+        businessesApi.getAvailableBusinesses(userId),
+        joinRequestsApi.getMyJoinRequests(),
+      ]);
+
+      const requestMap = new Map(myRequests.map((r) => [r.business_id, r]));
+      const enriched: BusinessWithRequest[] = data.map((b) => {
+        const req = requestMap.get(b.id);
+        return { ...b, requestId: req?.id, requestStatus: req?.status ?? null };
+      });
+      setBusinesses(enriched);
+    } catch {
+      setError('Gagal memuat daftar bisnis');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchBusinesses = async () => {
-      if (!userId) return;
-      setLoading(true);
-      try {
-        const [data, myRequests] = await Promise.all([
-          businessesApi.getAvailableBusinesses(userId),
-          joinRequestsApi.getMyJoinRequests(),
-        ]);
-
-        const requestMap = new Map(myRequests.map((r) => [r.business_id, r]));
-        const enriched: BusinessWithRequest[] = data.map((b) => {
-          const req = requestMap.get(b.id);
-          return { ...b, requestId: req?.id, requestStatus: req?.status ?? null };
-        });
-        setBusinesses(enriched);
-      } catch {
-        setError('Gagal memuat daftar bisnis');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (!isCheckingAuth && userId) fetchBusinesses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCheckingAuth, userId]);
+
+  // Realtime: dengarkan perubahan status request user → update badge / redirect saat approved
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel(`my-join-requests-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'business_join_requests',
+          filter: `requester_id=eq.${userId}`,
+        },
+        (payload) => {
+          const updated = payload.new as { business_id: string; status: 'pending' | 'approved' | 'rejected' };
+          if (updated.status === 'approved') {
+            setSuccess('Permintaan Anda telah disetujui! Mengarahkan ke dashboard...');
+            setTimeout(() => router.push('/dashboard'), 1500);
+            return;
+          }
+          setBusinesses((prev) =>
+            prev.map((b) =>
+              b.id === updated.business_id ? { ...b, requestStatus: updated.status } : b
+            )
+          );
+          if (updated.status === 'rejected') {
+            setError('Permintaan bergabung Anda ditolak oleh pemilik bisnis.');
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, supabase, router]);
 
   const filteredBusinesses = businesses.filter((b) =>
     b.business_name.toLowerCase().includes(searchQuery.toLowerCase())

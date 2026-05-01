@@ -1,14 +1,16 @@
 'use client';
 
-import { Bell, X, CheckCircle2, XCircle } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
+import { Bell, X, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
+import { createClient } from '@/lib/supabase';
 
 interface JoinRequest {
   id: string;
   business_id: string;
   requester_id: string;
   status: string;
+  message?: string | null;
   created_at: string;
   requester: {
     id: string;
@@ -25,25 +27,24 @@ interface NotificationBellProps {
   count: number;
   href: string;
   userId: string;
+  onChange?: () => void;
 }
 
-export function NotificationBell({ count, href, userId }: NotificationBellProps) {
+export function NotificationBell({ count, userId, onChange }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [requests, setRequests] = useState<JoinRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const supabaseRef = useRef(createClient());
 
-  useEffect(() => {
-    if (isOpen && count > 0) {
-      fetchRequests();
-    }
-  }, [isOpen, count]);
-
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/notifications/pending-requests?userId=${userId}`);
+      const response = await fetch('/api/notifications/pending-requests', {
+        credentials: 'include',
+      });
       const data = await response.json();
       setRequests(data.requests || []);
     } catch (error) {
@@ -51,22 +52,52 @@ export function NotificationBell({ count, href, userId }: NotificationBellProps)
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchRequests();
+      setActionError(null);
+    }
+  }, [isOpen, fetchRequests]);
+
+  // Realtime refresh saat dropdown terbuka
+  useEffect(() => {
+    if (!isOpen || !userId) return;
+    const supabase = supabaseRef.current;
+    const channel = supabase
+      .channel(`bell-${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'business_join_requests' },
+        () => fetchRequests()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isOpen, userId, fetchRequests]);
 
   const handleApprove = async (requestId: string) => {
     setProcessingId(requestId);
+    setActionError(null);
     try {
       const response = await fetch(`/api/business-join-requests/${requestId}/approve`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reviewerId: userId }),
       });
-      
+
       if (response.ok) {
         setRequests((prev) => prev.filter((r) => r.id !== requestId));
+        onChange?.();
+      } else {
+        const data = await response.json().catch(() => ({}));
+        setActionError(data.error || 'Gagal menyetujui permintaan');
       }
     } catch (error) {
       console.error('Failed to approve request:', error);
+      setActionError('Gagal menyetujui permintaan. Coba lagi.');
     } finally {
       setProcessingId(null);
     }
@@ -74,18 +105,24 @@ export function NotificationBell({ count, href, userId }: NotificationBellProps)
 
   const handleReject = async (requestId: string) => {
     setProcessingId(requestId);
+    setActionError(null);
     try {
       const response = await fetch(`/api/business-join-requests/${requestId}/reject`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reviewerId: userId }),
       });
-      
+
       if (response.ok) {
         setRequests((prev) => prev.filter((r) => r.id !== requestId));
+        onChange?.();
+      } else {
+        const data = await response.json().catch(() => ({}));
+        setActionError(data.error || 'Gagal menolak permintaan');
       }
     } catch (error) {
       console.error('Failed to reject request:', error);
+      setActionError('Gagal menolak permintaan. Coba lagi.');
     } finally {
       setProcessingId(null);
     }
@@ -129,6 +166,13 @@ export function NotificationBell({ count, href, userId }: NotificationBellProps)
             </button>
           </div>
 
+          {actionError && (
+            <div className="mx-4 mt-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-red-700 dark:text-red-400">{actionError}</p>
+            </div>
+          )}
+
           <div className="max-h-96 overflow-y-auto">
             {loading ? (
               <div className="p-8 text-center">
@@ -139,7 +183,6 @@ export function NotificationBell({ count, href, userId }: NotificationBellProps)
                 {requests.map((req) => (
                   <div key={req.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                     <div className="flex items-start gap-3">
-                      {/* Avatar */}
                       <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0 overflow-hidden">
                         {req.requester.avatar_url ? (
                           <Image
@@ -151,21 +194,25 @@ export function NotificationBell({ count, href, userId }: NotificationBellProps)
                             unoptimized
                           />
                         ) : (
-                          req.requester.full_name.charAt(0).toUpperCase()
+                          (req.requester.full_name || '?').charAt(0).toUpperCase()
                         )}
                       </div>
 
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {req.requester.full_name}
+                          {req.requester.full_name || 'Pengguna'}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          ingin bergabung dengan {req.business.business_name}
+                          ingin bergabung dengan <span className="font-medium">{req.business.business_name}</span>
                         </p>
+                        {req.message && (
+                          <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 italic">
+                            &ldquo;{req.message}&rdquo;
+                          </p>
+                        )}
                       </div>
                     </div>
 
-                    {/* Action buttons */}
                     <div className="mt-3 flex gap-2">
                       <button
                         onClick={() => handleReject(req.id)}
@@ -173,7 +220,7 @@ export function NotificationBell({ count, href, userId }: NotificationBellProps)
                         className="flex-1 px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 disabled:opacity-50 transition-colors flex items-center justify-center gap-1"
                       >
                         <XCircle className="w-3.5 h-3.5" />
-                        Tolak
+                        {processingId === req.id ? 'Memproses...' : 'Tolak'}
                       </button>
                       <button
                         onClick={() => handleApprove(req.id)}
@@ -181,7 +228,7 @@ export function NotificationBell({ count, href, userId }: NotificationBellProps)
                         className="flex-1 px-3 py-2 text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 disabled:opacity-50 transition-colors flex items-center justify-center gap-1"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        Setuju
+                        {processingId === req.id ? 'Memproses...' : 'Setuju'}
                       </button>
                     </div>
                   </div>
