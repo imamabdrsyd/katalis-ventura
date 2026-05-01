@@ -34,6 +34,18 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
   const [uploadError, setUploadError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Snapshot terakhir yang berhasil disimpan — dipakai sebagai baseline hasChanges
+  const savedRef = useRef({
+    slug: channel?.slug ?? generateSlugFromName(businessName),
+    title: channel?.title ?? businessName,
+    tagline: channel?.tagline ?? '',
+    bio: channel?.bio ?? '',
+    logoUrl: channel?.logo_url ?? '',
+    isPublished: channel?.is_published ?? false,
+    widgetDateMode: channel?.widget_date_mode ?? 'double',
+    widgetLabels: JSON.stringify(channel?.widget_labels ?? {}),
+  });
+
   // Debounced slug check
   useEffect(() => {
     setSuggestions([]);
@@ -143,6 +155,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
         widget_date_mode: widgetDateMode,
         widget_labels: widgetLabels,
       }, userId);
+      savedRef.current = { slug, title, tagline, bio, logoUrl, isPublished, widgetDateMode, widgetLabels: JSON.stringify(widgetLabels) };
       onSaved();
     } catch (err: any) {
       setSaveError(err.message || 'Gagal menyimpan');
@@ -151,15 +164,16 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
     }
   };
 
+  const saved = savedRef.current;
   const hasChanges =
-    slug !== (channel?.slug ?? '') ||
-    title !== (channel?.title ?? '') ||
-    tagline !== (channel?.tagline ?? '') ||
-    bio !== (channel?.bio ?? '') ||
-    logoUrl !== (channel?.logo_url ?? '') ||
-    isPublished !== (channel?.is_published ?? false) ||
-    widgetDateMode !== (channel?.widget_date_mode ?? 'double') ||
-    JSON.stringify(widgetLabels) !== JSON.stringify(channel?.widget_labels ?? {});
+    slug !== saved.slug ||
+    title !== saved.title ||
+    tagline !== saved.tagline ||
+    bio !== saved.bio ||
+    logoUrl !== saved.logoUrl ||
+    isPublished !== saved.isPublished ||
+    widgetDateMode !== saved.widgetDateMode ||
+    JSON.stringify(widgetLabels) !== saved.widgetLabels;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-5">
