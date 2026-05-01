@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, X, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { Bell, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase';
@@ -156,14 +156,8 @@ export function NotificationBell({ count, userId, onChange }: NotificationBellPr
 
       {isOpen && (
         <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <h3 className="font-semibold text-gray-900 dark:text-white">Permintaan Bergabung</h3>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
 
           {actionError && (

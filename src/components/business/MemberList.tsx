@@ -1,7 +1,7 @@
 'use client';
 
-import { Users, X } from 'lucide-react';
-import { useState } from 'react';
+import { Users, MoreVertical, UserPlus, UserMinus } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 import type { BusinessMember } from '@/lib/api/members';
 import { formatDate } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
@@ -36,6 +36,59 @@ interface MemberListProps {
   businessId?: string;
   isCreator?: boolean;
   onMemberRemoved?: () => void;
+}
+
+function KebabMenu({ member, onRemove }: { member: BusinessMember; onRemove: () => void }) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const name = member.profile?.full_name || 'Unknown User';
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
+
+  const handleAddToContact = () => {
+    setOpen(false);
+    // TODO: implement add to contact
+    alert(`Tambah ${name} ke kontak (belum diimplementasikan)`);
+  };
+
+  return (
+    <div ref={menuRef} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+        title="Opsi anggota"
+      >
+        <MoreVertical className="w-4 h-4" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-10 py-1 overflow-hidden">
+          <button
+            onClick={handleAddToContact}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+          >
+            <UserPlus className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+            Tambah ke Kontak
+          </button>
+          <button
+            onClick={() => { setOpen(false); onRemove(); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          >
+            <UserMinus className="w-4 h-4" />
+            Keluarkan Anggota
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function MemberList({ members, loading, businessId, isCreator, onMemberRemoved }: MemberListProps) {
@@ -147,15 +200,12 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
                 </span>
               </div>
 
-              {/* Remove button */}
+              {/* Kebab menu */}
               {canRemove && (
-                <button
-                  onClick={() => setRemoveConfirm({ memberId: member.id, memberName: name })}
-                  className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                  title="Keluarkan anggota"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <KebabMenu
+                  member={member}
+                  onRemove={() => setRemoveConfirm({ memberId: member.id, memberName: name })}
+                />
               )}
             </div>
           );
