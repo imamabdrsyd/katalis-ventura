@@ -217,7 +217,7 @@ export function NotificationBell({ count, userId, onChange }: NotificationBellPr
                       <button
                         onClick={() => handleReject(req.id)}
                         disabled={processingId === req.id}
-                        className="flex-1 px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 disabled:opacity-50 transition-colors flex items-center justify-center gap-1"
+                        className="flex-1 px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-indigo-500 dark:hover:bg-indigo-500 hover:text-white dark:hover:text-white disabled:opacity-50 transition-colors flex items-center justify-center gap-1"
                       >
                         <XCircle className="w-3.5 h-3.5" />
                         {processingId === req.id ? 'Memproses...' : 'Tolak'}
@@ -225,7 +225,7 @@ export function NotificationBell({ count, userId, onChange }: NotificationBellPr
                       <button
                         onClick={() => handleApprove(req.id)}
                         disabled={processingId === req.id}
-                        className="flex-1 px-3 py-2 text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 disabled:opacity-50 transition-colors flex items-center justify-center gap-1"
+                        className="flex-1 px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-indigo-500 dark:hover:bg-indigo-500 hover:text-white dark:hover:text-white disabled:opacity-50 transition-colors flex items-center justify-center gap-1"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         {processingId === req.id ? 'Memproses...' : 'Setuju'}

@@ -178,7 +178,7 @@ function RequestCard({
           <button
             onClick={onReject}
             disabled={processing}
-            className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
+            className="p-2 rounded-lg text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors disabled:opacity-50"
             title="Tolak"
           >
             <XCircle className="w-5 h-5" />
@@ -186,10 +186,10 @@ function RequestCard({
           <button
             onClick={onApprove}
             disabled={processing}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-indigo-500 dark:hover:bg-indigo-500 hover:text-white dark:hover:text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
           >
             {processing ? (
-              <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
             ) : (
               <CheckCircle className="w-3.5 h-3.5" />
             )}
