@@ -58,7 +58,7 @@ export function OmnichannelSection() {
               <ChevronRight className="w-5 h-5 text-gray-300 dark:text-gray-600 shrink-0" />
               {active.slug ? (
                 <Link
-                  href={`/axion/${active.slug}`}
+                  href={`/${active.slug}`}
                   className="text-2xl font-bold text-indigo-500 dark:text-indigo-400 truncate max-w-[220px] hover:underline"
                 >
                   {active.business_name}
