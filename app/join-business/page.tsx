@@ -240,8 +240,8 @@ export default function JoinBusinessPage() {
         )}
 
         {success && (
-          <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-xl">
-            <p className="text-sm text-green-700 dark:text-green-400">{success}</p>
+          <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-xl">
+            <p className="text-sm text-gray-700 dark:text-gray-400">{success}</p>
           </div>
         )}
 
