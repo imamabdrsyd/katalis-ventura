@@ -66,17 +66,27 @@ export async function getMyJoinRequests(): Promise<JoinRequest[]> {
 
 export async function getBusinessJoinRequests(businessId: string): Promise<JoinRequest[]> {
   const supabase = createClient();
-  const { data, error } = await supabase
+  const { data: requests, error } = await supabase
     .from('business_join_requests')
-    .select(`
-      *,
-      requester:profiles!business_join_requests_requester_id_fkey(id, full_name, avatar_url)
-    `)
+    .select('*')
     .eq('business_id', businessId)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return (data || []) as JoinRequest[];
+  if (!requests || requests.length === 0) return [];
+
+  const requesterIds = Array.from(new Set(requests.map((r) => r.requester_id)));
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, full_name, avatar_url')
+    .in('id', requesterIds);
+
+  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+
+  return requests.map((r) => ({
+    ...r,
+    requester: profileMap.get(r.requester_id) || { id: r.requester_id, full_name: null, avatar_url: null },
+  })) as JoinRequest[];
 }
 
 export async function getPendingRequestsCount(businessIds: string[]): Promise<number> {
