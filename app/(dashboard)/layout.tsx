@@ -7,6 +7,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { BusinessProvider, useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { BusinessForm, type BusinessFormData } from '@/components/business/BusinessForm';
+import { Modal } from '@/components/ui/Modal';
 import { createClient } from '@/lib/supabase';
 import * as businessesApi from '@/lib/api/businesses';
 import {
@@ -675,22 +676,18 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
     <SearchDialog open={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
 
     {/* Add Business Modal */}
-    {showAddBusiness && !isInvestor && (
-      <div
-        className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-        onClick={() => setShowAddBusiness(false)}
+    {!isInvestor && (
+      <Modal
+        isOpen={showAddBusiness}
+        onClose={() => setShowAddBusiness(false)}
+        title={t.businesses.addNewBusiness}
       >
-        <div
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <BusinessForm
-            onSubmit={handleAddBusiness}
-            onCancel={() => setShowAddBusiness(false)}
-            loading={isSubmitting}
-          />
-        </div>
-      </div>
+        <BusinessForm
+          onSubmit={handleAddBusiness}
+          onCancel={() => setShowAddBusiness(false)}
+          loading={isSubmitting}
+        />
+      </Modal>
     )}
     </>
   );
