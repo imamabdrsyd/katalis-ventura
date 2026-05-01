@@ -319,31 +319,43 @@ export default function BusinessesPage() {
       )}
 
       {/* Add Business Modal */}
-      <Modal
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        title={t.businesses.addNewBusiness}
-      >
-        <BusinessForm
-          onSubmit={handleCreateBusiness}
-          onCancel={() => setIsFormOpen(false)}
-          loading={loading}
-        />
-      </Modal>
+      {isFormOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          onClick={() => setIsFormOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <BusinessForm
+              onSubmit={handleCreateBusiness}
+              onCancel={() => setIsFormOpen(false)}
+              loading={loading}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Edit Business Modal */}
-      <Modal
-        isOpen={!!editingBusiness}
-        onClose={() => setEditingBusiness(null)}
-        title={t.businesses.editBusiness}
-      >
-        <BusinessForm
-          business={editingBusiness}
-          onSubmit={handleUpdateBusiness}
-          onCancel={() => setEditingBusiness(null)}
-          loading={loading}
-        />
-      </Modal>
+      {!!editingBusiness && (
+        <div
+          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          onClick={() => setEditingBusiness(null)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <BusinessForm
+              business={editingBusiness}
+              onSubmit={handleUpdateBusiness}
+              onCancel={() => setEditingBusiness(null)}
+              loading={loading}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Archive Confirm Modal */}
       <Modal
