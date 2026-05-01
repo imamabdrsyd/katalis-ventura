@@ -311,16 +311,23 @@ export default function JoinBusinessPage() {
                   const hasRequest = !!business.requestStatus;
 
                   return (
-                    <button
+                    <div
                       key={business.id}
+                      role={hasRequest ? undefined : 'button'}
+                      tabIndex={hasRequest ? -1 : 0}
                       onClick={() => !hasRequest && setSelectedBusiness(isSelected ? null : business)}
-                      disabled={hasRequest}
+                      onKeyDown={(e) => {
+                        if (!hasRequest && (e.key === 'Enter' || e.key === ' ')) {
+                          e.preventDefault();
+                          setSelectedBusiness(isSelected ? null : business);
+                        }
+                      }}
                       className={`w-full p-4 border-2 rounded-xl text-left transition-all ${
                         hasRequest
-                          ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 cursor-default opacity-80'
+                          ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 opacity-80'
                           : isSelected
-                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 cursor-pointer'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -366,7 +373,7 @@ export default function JoinBusinessPage() {
                           )}
                         </div>
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
