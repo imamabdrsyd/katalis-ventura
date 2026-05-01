@@ -21,13 +21,22 @@ const CHANNEL_PNG: Partial<Record<string, string>> = {
   tokopedia: '/images/ecommerce/Tokopedia.png',
 };
 
-function ChannelIcon({ type }: { type: string }) {
+function ChannelIcon({ type, customIconUrl }: { type: string; customIconUrl?: string | null }) {
   const meta = CHANNEL_META[type as OmniChannelType] ?? CHANNEL_META.custom;
-  const png = CHANNEL_PNG[type];
-  if (png) {
+
+  const pngUrl = CHANNEL_PNG[type];
+
+  if (customIconUrl) {
+    return (
+      <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 bg-white border border-gray-100 dark:border-gray-700">
+        <Image src={customIconUrl} alt={meta.label} width={36} height={36} className="object-contain w-full h-full" unoptimized />
+      </div>
+    );
+  }
+  if (pngUrl) {
     return (
       <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 bg-white border border-gray-100">
-        <Image src={png} alt={meta.label} width={36} height={36} className="object-contain w-full h-full" />
+        <Image src={pngUrl} alt={meta.label} width={36} height={36} className="object-contain w-full h-full" />
       </div>
     );
   }
@@ -50,7 +59,7 @@ function LinkRow({ link }: { link: PublicLink }) {
       rel="noopener noreferrer"
       className="group flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
     >
-      <ChannelIcon type={link.channel_type} />
+      <ChannelIcon type={link.channel_type} customIconUrl={link.custom_icon_url} />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
           {link.label || meta.label}

@@ -20,6 +20,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
   const [tagline, setTagline] = useState(channel?.tagline ?? '');
   const [bio, setBio] = useState(channel?.bio ?? '');
   const [logoUrl, setLogoUrl] = useState(channel?.logo_url ?? '');
+  const [bannerUrl, setBannerUrl] = useState(channel?.banner_url ?? '');
   const [isPublished, setIsPublished] = useState(channel?.is_published ?? false);
   const publicUrlMode: 'slug-only' | 'axion-only' | 'both' = 'slug-only';
   const [widgetDateMode, setWidgetDateMode] = useState<'single' | 'double'>(channel?.widget_date_mode ?? 'double');
@@ -32,7 +33,10 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
   const [saveError, setSaveError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [bannerUploadError, setBannerUploadError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   // Snapshot terakhir yang berhasil disimpan — dipakai sebagai baseline hasChanges
   const savedRef = useRef({
@@ -41,6 +45,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
     tagline: channel?.tagline ?? '',
     bio: channel?.bio ?? '',
     logoUrl: channel?.logo_url ?? '',
+    bannerUrl: channel?.banner_url ?? '',
     isPublished: channel?.is_published ?? false,
     widgetDateMode: channel?.widget_date_mode ?? 'double',
     widgetLabels: JSON.stringify(channel?.widget_labels ?? {}),
@@ -150,17 +155,49 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
         tagline: tagline || null,
         bio: bio || null,
         logo_url: logoUrl || null,
+        banner_url: bannerUrl || null,
         is_published: isPublished,
         public_url_mode: publicUrlMode,
         widget_date_mode: widgetDateMode,
         widget_labels: widgetLabels,
       }, userId);
-      savedRef.current = { slug, title, tagline, bio, logoUrl, isPublished, widgetDateMode, widgetLabels: JSON.stringify(widgetLabels) };
+      savedRef.current = { slug, title, tagline, bio, logoUrl, bannerUrl, isPublished, widgetDateMode, widgetLabels: JSON.stringify(widgetLabels) };
       onSaved();
     } catch (err: any) {
       setSaveError(err.message || 'Gagal menyimpan');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setBannerUploadError('Hanya file gambar yang diperbolehkan');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setBannerUploadError('Ukuran file maksimal 5MB');
+      return;
+    }
+    setUploadingBanner(true);
+    setBannerUploadError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`/api/omni-channel/${businessId}/banner`, {
+        method: 'POST',
+        body: formData,
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Gagal upload banner');
+      setBannerUrl(json.url);
+    } catch (err: any) {
+      setBannerUploadError(err.message || 'Gagal upload banner');
+    } finally {
+      setUploadingBanner(false);
+      if (bannerInputRef.current) bannerInputRef.current.value = '';
     }
   };
 
@@ -171,6 +208,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
     tagline !== saved.tagline ||
     bio !== saved.bio ||
     logoUrl !== saved.logoUrl ||
+    bannerUrl !== saved.bannerUrl ||
     isPublished !== saved.isPublished ||
     widgetDateMode !== saved.widgetDateMode ||
     JSON.stringify(widgetLabels) !== saved.widgetLabels;
@@ -364,6 +402,40 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
             )}
           </div>
         </div>
+      </div>
+
+      {/* Banner Upload */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Banner <span className="text-gray-400 font-normal">(opsional)</span>
+        </label>
+        <div className="relative group rounded-xl overflow-hidden border-2 border-dashed border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 cursor-pointer h-28 flex items-center justify-center">
+          {bannerUrl ? (
+            <img src={bannerUrl} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
+          ) : (
+            <div className="flex flex-col items-center gap-1 text-gray-400">
+              <ImageIcon className="w-7 h-7" />
+              <span className="text-xs">Klik untuk upload banner</span>
+            </div>
+          )}
+          <label className={`absolute inset-0 flex items-center justify-center bg-black/50 cursor-pointer transition-opacity ${uploadingBanner ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+            {uploadingBanner ? <Loader2 className="w-6 h-6 text-white animate-spin" /> : <Camera className="w-6 h-6 text-white" />}
+            <input ref={bannerInputRef} type="file" accept="image/*" onChange={handleBannerUpload} disabled={uploadingBanner} className="hidden" />
+          </label>
+          {bannerUrl && !uploadingBanner && (
+            <button
+              type="button"
+              onClick={() => { setBannerUrl(''); setBannerUploadError(''); }}
+              className="absolute top-2 right-2 w-7 h-7 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+          Rasio 3:1 direkomendasikan · JPG, PNG, WebP · Maks. 5MB
+        </p>
+        {bannerUploadError && <p className="text-xs text-red-500 mt-1">{bannerUploadError}</p>}
       </div>
 
       {/* Widget Config — hanya untuk bisnis Jasa */}

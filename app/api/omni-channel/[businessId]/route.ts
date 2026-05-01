@@ -13,6 +13,16 @@ const widgetLabelsSchema = z.object({
   action_label: z.string().optional(),
 }).optional().nullable();
 
+const featuredProductSchema = z.object({
+  show: z.boolean(),
+  name: z.string().max(200),
+  description: z.string().max(500).optional(),
+  image_url: z.string().url().optional().or(z.literal('')),
+  price_label: z.string().max(100).optional(),
+  link_url: z.string().url().optional().or(z.literal('')),
+  link_label: z.string().max(100).optional(),
+}).optional().nullable();
+
 const upsertSchema = z.object({
   slug: z.string().min(3).max(64),
   is_published: z.boolean(),
@@ -23,11 +33,16 @@ const upsertSchema = z.object({
     (val) => (typeof val === 'string' && val.trim() === '' ? null : val),
     z.string().url().nullable().optional()
   ),
+  banner_url: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim() === '' ? null : val),
+    z.string().url().nullable().optional()
+  ),
   widget_date_mode: z.enum(['single', 'double']).optional().nullable(),
   widget_labels: widgetLabelsSchema,
   show_pricing: z.boolean().optional(),
   default_price: z.number().nonnegative().nullable().optional(),
   price_unit: z.string().max(50).nullable().optional(),
+  featured_product: featuredProductSchema,
 });
 
 export async function GET(

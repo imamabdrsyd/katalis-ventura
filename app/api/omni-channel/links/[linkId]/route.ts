@@ -15,6 +15,10 @@ const patchSchema = z.object({
   is_active: z.boolean().optional(),
   is_primary: z.boolean().optional(),
   sort_order: z.number().int().optional(),
+  custom_icon_url: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim() === '' ? null : val),
+    z.string().url().nullable().optional()
+  ),
 });
 
 async function verifyManagerOwnsLink(userId: string, linkId: string): Promise<boolean> {

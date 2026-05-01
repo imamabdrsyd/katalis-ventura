@@ -8,6 +8,7 @@ import { OmniChannelPageConfig } from './OmniChannelPageConfig';
 import { OmniChannelLinkList } from './OmniChannelLinkList';
 import { OmniChannelGallery } from './OmniChannelGallery';
 import { OmniChannelPricing } from './OmniChannelPricing';
+import { OmniChannelFeaturedProductConfig } from './OmniChannelFeaturedProductConfig';
 
 interface Props {
   businessId: string;
@@ -97,6 +98,16 @@ export function OmniChannelManager({ businessId, businessName, userId }: Props) 
         channel={channel}
         onChanged={fetchChannel}
       />
+
+      {/* Featured Product Section */}
+      {channel && (
+        <OmniChannelFeaturedProductConfig
+          businessId={businessId}
+          userId={userId}
+          channel={channel}
+          onChanged={fetchChannel}
+        />
+      )}
 
       {/* Links Section */}
       {channel && (

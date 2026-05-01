@@ -10,6 +10,17 @@ export interface PublicLink {
   url: string;
   is_primary: boolean;
   sort_order: number;
+  custom_icon_url?: string | null;
+}
+
+export interface PublicFeaturedProduct {
+  show: boolean;
+  name: string;
+  description?: string;
+  image_url?: string;
+  price_label?: string;
+  link_url?: string;
+  link_label?: string;
 }
 
 export interface PublicWidgetLabels {
@@ -41,6 +52,7 @@ export interface PublicBusiness {
   whatsapp_number: string | null;
   widget_action_label: string | null;
   logo_url: string | null;
+  banner_url?: string | null;
   gallery: PublicGalleryImage[];
   links: PublicLink[];
   widget_date_mode?: 'single' | 'double';
@@ -49,6 +61,7 @@ export interface PublicBusiness {
   default_price?: number | null;
   price_unit?: string | null;
   pricing_rules?: PublicPricingRule[];
+  featured_product?: PublicFeaturedProduct | null;
 }
 
 const SECTOR_LABELS: Record<string, string> = {

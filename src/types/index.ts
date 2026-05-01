@@ -376,6 +376,7 @@ export interface OmniChannelLink {
   is_active: boolean;
   is_primary: boolean;
   sort_order: number;
+  custom_icon_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -415,6 +416,16 @@ export interface UpsertPricingRuleData {
   label?: string | null;
 }
 
+export interface FeaturedProduct {
+  show: boolean;
+  name: string;
+  description?: string;
+  image_url?: string;
+  price_label?: string;
+  link_url?: string;
+  link_label?: string;
+}
+
 export interface BusinessOmniChannel {
   id: string;
   business_id: string;
@@ -424,6 +435,7 @@ export interface BusinessOmniChannel {
   tagline?: string;
   bio?: string;
   logo_url?: string;
+  banner_url?: string | null;
   gallery_images?: OmniChannelGalleryImage[];
   widget_date_mode?: 'single' | 'double';
   widget_labels?: OmniChannelWidgetLabels;
@@ -431,6 +443,7 @@ export interface BusinessOmniChannel {
   default_price?: number | null;
   price_unit?: string | null;
   public_url_mode?: 'slug-only' | 'axion-only' | 'both';
+  featured_product?: FeaturedProduct | null;
   created_at: string;
   updated_at: string;
   created_by: string;
@@ -446,12 +459,14 @@ export interface UpsertOmniChannelData {
   tagline?: string | null;
   bio?: string | null;
   logo_url?: string | null;
+  banner_url?: string | null;
   widget_date_mode?: 'single' | 'double';
   widget_labels?: OmniChannelWidgetLabels;
   show_pricing?: boolean;
   default_price?: number | null;
   price_unit?: string | null;
   public_url_mode?: 'slug-only' | 'axion-only' | 'both';
+  featured_product?: FeaturedProduct | null;
 }
 
 export interface UpsertOmniChannelLinkData {
@@ -461,6 +476,7 @@ export interface UpsertOmniChannelLinkData {
   is_active: boolean;
   is_primary: boolean;
   sort_order: number;
+  custom_icon_url?: string | null;
 }
 
 // Audit trail types
