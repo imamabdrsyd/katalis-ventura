@@ -147,8 +147,8 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
       await upsertOmniChannel(businessId, {
         slug,
         title,
-        tagline: tagline || undefined,
-        bio: bio || undefined,
+        tagline: tagline || null,
+        bio: bio || null,
         logo_url: logoUrl || null,
         is_published: isPublished,
         public_url_mode: publicUrlMode,
