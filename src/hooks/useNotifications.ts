@@ -18,6 +18,8 @@ export function useNotifications(_businessIds: string[], isManager: boolean, use
         credentials: 'include',
       });
       if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        console.warn('[useNotifications] non-ok:', response.status, data);
         setPendingCount(0);
         return;
       }

@@ -65,13 +65,15 @@ export async function getBusinessMembers(businessId: string): Promise<BusinessMe
   const profileMap = new Map<string, { full_name: string; avatar_url?: string }>();
   (profiles || []).forEach((p: any) => profileMap.set(p.id, p));
 
+  const creatorId = business?.created_by;
+
   return memberList.map((item: any) => ({
     id: item.id,
     user_id: item.user_id,
     role: item.role,
     joined_at: item.joined_at,
     invited_by: item.invited_by,
-    is_creator: item.is_creator ?? false,
+    is_creator: item.is_creator ?? (creatorId ? item.user_id === creatorId : false),
     profile: profileMap.get(item.user_id) || null,
   }));
 }

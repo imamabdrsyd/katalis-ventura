@@ -1,64 +1,62 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { createAdminClient, getAuthenticatedUser } from '@/lib/supabase-server';
 
 export async function DELETE(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ businessId: string; memberId: string }> }
 ) {
   try {
     const { businessId, memberId } = await params;
 
-    // Verify the user is the creator of the business
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser();
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 });
     }
 
-    // Check if user is the creator
-    const { data: business, error: businessError } = await supabase
+    const admin = createAdminClient();
+
+    const { data: business, error: businessError } = await admin
       .from('businesses')
       .select('created_by')
       .eq('id', businessId)
       .single();
 
-    if (businessError || !business || business.created_by !== user.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    if (businessError || !business) {
+      return NextResponse.json({ error: 'Bisnis tidak ditemukan' }, { status: 404 });
     }
 
-    // Check if member exists
-    const { data: member, error: memberError } = await supabase
+    if (business.created_by !== user.id) {
+      return NextResponse.json({ error: 'Anda bukan pemilik bisnis ini' }, { status: 403 });
+    }
+
+    // memberId dari URL = id row di user_business_roles (PK)
+    const { data: member, error: memberError } = await admin
       .from('user_business_roles')
-      .select('id, is_creator')
+      .select('id, user_id')
+      .eq('id', memberId)
       .eq('business_id', businessId)
-      .eq('user_id', memberId)
       .single();
 
     if (memberError || !member) {
-      return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Anggota tidak ditemukan' }, { status: 404 });
     }
 
-    // Cannot kick the creator
-    if (member.is_creator) {
-      return NextResponse.json({ error: 'Cannot remove the creator' }, { status: 400 });
+    // Cegah creator mengeluarkan dirinya sendiri
+    if (member.user_id === business.created_by) {
+      return NextResponse.json({ error: 'Pemilik bisnis tidak bisa dikeluarkan' }, { status: 400 });
     }
 
-    // Remove the member
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await admin
       .from('user_business_roles')
       .delete()
-      .eq('business_id', businessId)
-      .eq('user_id', memberId);
+      .eq('id', memberId);
 
     if (deleteError) throw deleteError;
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error removing member:', error);
-    return NextResponse.json({ error: 'Failed to remove member' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Gagal mengeluarkan anggota';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

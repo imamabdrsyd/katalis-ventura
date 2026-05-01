@@ -41,22 +41,29 @@ interface MemberListProps {
 export function MemberList({ members, loading, businessId, isCreator, onMemberRemoved }: MemberListProps) {
   const [removeConfirm, setRemoveConfirm] = useState<{ memberId: string; memberName: string } | null>(null);
   const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
   const handleRemoveMember = async () => {
     if (!removeConfirm || !businessId) return;
 
     setRemoving(true);
+    setRemoveError(null);
     try {
       const response = await fetch(`/api/businesses/${businessId}/members/${removeConfirm.memberId}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
 
       if (response.ok) {
         setRemoveConfirm(null);
         onMemberRemoved?.();
+      } else {
+        const data = await response.json().catch(() => ({}));
+        setRemoveError(data.error || 'Gagal mengeluarkan anggota');
       }
     } catch (error) {
       console.error('Failed to remove member:', error);
+      setRemoveError('Gagal mengeluarkan anggota. Coba lagi.');
     } finally {
       setRemoving(false);
     }
@@ -159,13 +166,18 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
       {removeConfirm && (
         <Modal
           isOpen={true}
-          onClose={() => !removing && setRemoveConfirm(null)}
+          onClose={() => { if (!removing) { setRemoveConfirm(null); setRemoveError(null); } }}
           title="Keluarkan Anggota"
         >
           <div className="space-y-4">
             <p className="text-gray-600 dark:text-gray-300">
               Apakah Anda yakin ingin mengeluarkan <span className="font-semibold">{removeConfirm.memberName}</span> dari bisnis ini?
             </p>
+            {removeError && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-700 dark:text-red-400">{removeError}</p>
+              </div>
+            )}
             <div className="flex gap-3">
               <button
                 onClick={() => setRemoveConfirm(null)}
