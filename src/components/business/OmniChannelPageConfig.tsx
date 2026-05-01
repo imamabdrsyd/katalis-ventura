@@ -488,6 +488,19 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
               />
             </div>
           </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              Label Dibawah Tombol Reservasi
+            </label>
+            <input
+              type="text"
+              value={widgetLabels.reservation_subtitle ?? ''}
+              onChange={(e) => setWidgetLabels((l) => ({ ...l, reservation_subtitle: e.target.value }))}
+              placeholder="Tidak ada komitmen — pemilik akan konfirmasi ketersediaan"
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
         </div>
       </div>
 

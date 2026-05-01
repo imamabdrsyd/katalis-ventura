@@ -393,6 +393,7 @@ export interface OmniChannelWidgetLabels {
   note_placeholder?: string;
   cta_label?: string;
   action_label?: string;
+  reservation_subtitle?: string;
 }
 
 export interface PricingRule {

@@ -65,7 +65,7 @@ export function PublicOmniChannelPage({ channel, links }: Props) {
         {/* Footer */}
         <div className="mt-12 text-center">
           <p className="text-xs text-gray-400 dark:text-gray-600">
-            Dibuat dengan Katalis Ventura
+            Made by AXION
           </p>
         </div>
       </div>

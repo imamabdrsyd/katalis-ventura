@@ -334,7 +334,7 @@ export function OmnichannelWidget({ business, index, businesses = [], onSelectBu
           </button>
           <p className="text-[11px] text-center text-gray-400 mt-2.5">
             {hasWhatsApp
-              ? 'Tidak ada komitmen — pemilik akan konfirmasi ketersediaan'
+              ? labels.reservation_subtitle ?? 'Tidak ada komitmen — pemilik akan konfirmasi ketersediaan'
               : 'Nomor WhatsApp belum dikonfigurasi'}
           </p>
         </>
