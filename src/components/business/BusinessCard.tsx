@@ -265,7 +265,7 @@ export function BusinessCard({
         </div>
       )}
 
-      <div className="flex items-center justify-between text-sm mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
+      <div className="flex items-center justify-between text-sm mt-auto pt-4">
         <div className="text-gray-500 dark:text-gray-400">
           <span className="text-xs">Created by: </span>
           <span className="font-medium text-gray-700 dark:text-gray-300">
