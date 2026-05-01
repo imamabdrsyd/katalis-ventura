@@ -12,6 +12,7 @@ export interface BusinessFormData {
   property_address: string;
   capital_investment?: number;
   logo_url?: string;
+  logo_fit?: 'cover' | 'contain';
   // Omnichannel widget (landing page)
   city?: string;
   whatsapp_number?: string;
@@ -60,6 +61,7 @@ export function BusinessForm({
     property_address: business?.property_address || '',
     capital_investment: business?.capital_investment || 0,
     logo_url: business?.logo_url || '',
+    logo_fit: (business?.logo_fit as 'cover' | 'contain') || 'cover',
     city: business?.city || '',
     whatsapp_number: business?.whatsapp_number || '',
     widget_action_label: business?.widget_action_label || '',
@@ -182,7 +184,7 @@ export function BusinessForm({
                   alt="Logo bisnis"
                   width={80}
                   height={80}
-                  className="w-full h-full object-cover"
+                  className={`w-full h-full ${formData.logo_fit === 'contain' ? 'object-contain p-1' : 'object-cover'}`}
                   unoptimized
                 />
               ) : (
@@ -199,9 +201,29 @@ export function BusinessForm({
               </button>
             )}
           </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            <p>Klik untuk upload logo</p>
-            <p className="text-xs mt-1">JPG, PNG, WebP, GIF. Maks 2MB</p>
+          <div className="flex flex-col gap-2">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              <p>Klik untuk upload logo</p>
+              <p className="text-xs mt-0.5">JPG, PNG, WebP, GIF. Maks 2MB</p>
+            </div>
+            {formData.logo_url && (
+              <div className="flex items-center gap-1 p-0.5 bg-gray-100 dark:bg-gray-700 rounded-lg w-fit">
+                {(['cover', 'contain'] as const).map((fit) => (
+                  <button
+                    key={fit}
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, logo_fit: fit }))}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                      formData.logo_fit === fit
+                        ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    {fit === 'cover' ? 'Penuh' : 'Fit'}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <input

@@ -49,13 +49,13 @@ export function OmnichannelSection() {
     <section className="p-8 max-w-6xl mx-auto w-full">
       {/* Header: Storefront title */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <span className="text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">
             Storefront
           </span>
           {active && (
             <>
-              <ChevronRight className="w-5 h-5 text-gray-300 dark:text-gray-600 shrink-0" />
+              <ChevronRight className="w-5 h-5 text-gray-300 dark:text-gray-600 shrink-0 mx-1" />
               {active.slug ? (
                 <Link
                   href={`/${active.slug}`}
@@ -71,7 +71,7 @@ export function OmnichannelSection() {
             </>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {businesses.length > 1 && (
             <button
               type="button"

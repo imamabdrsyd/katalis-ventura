@@ -11,6 +11,7 @@ interface BusinessLogo {
   id: string;
   business_name: string;
   logo_url: string;
+  logo_fit?: 'cover' | 'contain' | null;
 }
 
 interface Stats {
@@ -22,6 +23,7 @@ interface Stats {
 export default function LandingPage() {
   const [stats, setStats] = useState<Stats>({ users: 0, businesses: 0, businessLogos: [] });
   const [loading, setLoading] = useState(true);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -41,25 +43,51 @@ export default function LandingPage() {
     fetchStats();
   }, []);
 
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <div className="min-h-screen bg-indigo-50 dark:bg-gray-900 flex flex-col" style={{ scrollBehavior: 'smooth' }}>
       {/* Header */}
-      <header className="container mx-auto px-6 py-5">
-        <nav className="flex items-center justify-between gap-4">
-          <div className="shrink-0">
+      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? 'bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 py-3'
+          : 'bg-indigo-50 dark:bg-gray-900 py-5'
+      }`}>
+        <nav className="container mx-auto px-6 flex items-center justify-between gap-4">
+          <div className="shrink-0 relative h-9 flex items-center">
+            {/* Favicon logo (scrolled) */}
+            <Image
+              src="/images/favicon.png"
+              alt="Axion Logo"
+              width={36}
+              height={36}
+              className={`object-contain dark:hidden transition-all duration-300 ${scrolled ? 'opacity-100 scale-100' : 'opacity-0 scale-75 absolute pointer-events-none'}`}
+            />
+            <Image
+              src="/images/favicon-dark.png"
+              alt="Axion Logo"
+              width={36}
+              height={36}
+              className={`object-contain hidden transition-all duration-300 ${scrolled ? 'dark:block opacity-100 scale-100' : 'opacity-0 scale-75 absolute pointer-events-none'}`}
+            />
+            {/* Full logo (not scrolled) */}
             <Image
               src="/images/axion.png"
               alt="Axion Logo"
               width={110}
               height={36}
-              className="object-contain dark:hidden"
+              className={`object-contain dark:hidden transition-all duration-300 ${scrolled ? 'opacity-0 scale-75 absolute pointer-events-none' : 'opacity-100 scale-100'}`}
             />
             <Image
               src="/images/axion-dark.png"
               alt="Axion Logo"
               width={110}
               height={36}
-              className="object-contain hidden dark:block"
+              className={`object-contain hidden transition-all duration-300 ${scrolled ? 'opacity-0 scale-75 absolute pointer-events-none' : 'dark:block opacity-100 scale-100'}`}
             />
           </div>
           <div className="hidden sm:flex items-center gap-6">
@@ -88,7 +116,7 @@ export default function LandingPage() {
       </header>
 
       {/* Hero + Features combined */}
-      <main className="flex-1 container mx-auto px-6 pt-4 pb-10 flex flex-col">
+      <main className="flex-1 container mx-auto px-6 pt-24 pb-10 flex flex-col">
         {/* Omnichannel Widget */}
         <div id="section-omnichannel" className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl shadow-gray-200/60 dark:shadow-gray-900/60 border border-gray-100 dark:border-gray-700 mb-16 overflow-hidden">
           <OmnichannelSection />
@@ -139,14 +167,20 @@ export default function LandingPage() {
                     key={`${biz.id}-${i}`}
                     className="flex-shrink-0 flex items-center gap-3 px-2"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex-shrink-0 overflow-hidden">
-                      <Image
-                        src={biz.logo_url}
-                        alt={biz.business_name}
-                        width={40}
-                        height={40}
-                        className="object-cover w-10 h-10"
-                      />
+                    <div className="w-10 h-10 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center">
+                      {biz.logo_url ? (
+                        <Image
+                          src={biz.logo_url}
+                          alt={biz.business_name}
+                          width={40}
+                          height={40}
+                          className={`w-10 h-10 ${biz.logo_fit === 'contain' ? 'object-contain p-1' : 'object-cover'}`}
+                        />
+                      ) : (
+                        <span className="text-xs font-bold text-gray-400">
+                          {biz.business_name.slice(0, 2).toUpperCase()}
+                        </span>
+                      )}
                     </div>
                     <span className="text-sm font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
                       {biz.business_name}

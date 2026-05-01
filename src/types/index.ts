@@ -135,6 +135,7 @@ export interface Business {
   property_address?: string;
   property_details?: Record<string, any>;
   logo_url?: string;
+  logo_fit?: 'cover' | 'contain' | null;
   invoice_settings?: InvoiceSettings | null;
   is_archived: boolean;
   // Omnichannel widget (landing page)

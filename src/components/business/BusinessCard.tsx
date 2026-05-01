@@ -124,7 +124,7 @@ export function BusinessCard({
                 alt={business.business_name}
                 width={48}
                 height={48}
-                className="w-full h-full object-cover"
+                className={`w-full h-full ${business.logo_fit === 'contain' ? 'object-contain p-1' : 'object-cover'}`}
                 unoptimized
               />
             ) : business.is_archived ? (

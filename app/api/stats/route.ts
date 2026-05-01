@@ -33,7 +33,7 @@ export async function GET() {
     // Get business logos for landing page marquee
     const { data: businessLogos, error: logosError } = await supabaseAdmin
       .from('businesses')
-      .select('id, business_name, logo_url')
+      .select('id, business_name, logo_url, logo_fit')
       .eq('is_archived', false)
       .not('logo_url', 'is', null)
       .order('created_at', { ascending: true });

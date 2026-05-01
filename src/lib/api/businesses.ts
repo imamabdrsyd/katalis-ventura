@@ -4,7 +4,9 @@ import { getAccountByCode } from './accounts';
 import { createTransaction } from './transactions';
 
 type BusinessInsert = Database['public']['Tables']['businesses']['Insert'];
-type BusinessUpdate = Database['public']['Tables']['businesses']['Update'];
+type BusinessUpdate = Database['public']['Tables']['businesses']['Update'] & {
+  logo_fit?: 'cover' | 'contain' | null;
+};
 
 // Form data type without created_by (will be set by the API)
 export interface CreateBusinessData {
@@ -14,6 +16,11 @@ export interface CreateBusinessData {
   capital_investment?: number; // Optional for backward compatibility
   property_address?: string;
   logo_url?: string;
+  logo_fit?: 'cover' | 'contain';
+  city?: string;
+  whatsapp_number?: string;
+  widget_action_label?: string;
+  is_public?: boolean;
 }
 
 /**

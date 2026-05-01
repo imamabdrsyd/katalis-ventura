@@ -83,7 +83,7 @@ export function BusinessSwitcher() {
       >
         <div className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden ${activeBusiness.logo_url ? 'bg-white' : 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'}`}>
           {activeBusiness.logo_url ? (
-            <Image src={activeBusiness.logo_url} alt={activeBusiness.business_name} width={32} height={32} className="w-full h-full object-cover" unoptimized />
+            <Image src={activeBusiness.logo_url} alt={activeBusiness.business_name} width={32} height={32} className={`w-full h-full ${activeBusiness.logo_fit === 'contain' ? 'object-contain p-0.5' : 'object-cover'}`} unoptimized />
           ) : (
             BUSINESS_TYPE_ICONS[activeBusiness.business_sector ?? ''] || <Building2 className="w-4 h-4" />
           )}
@@ -130,7 +130,7 @@ export function BusinessSwitcher() {
                   }`}
                 >
                   {business.logo_url ? (
-                    <Image src={business.logo_url} alt={business.business_name} width={32} height={32} className="w-full h-full object-cover" unoptimized />
+                    <Image src={business.logo_url} alt={business.business_name} width={32} height={32} className={`w-full h-full ${business.logo_fit === 'contain' ? 'object-contain p-0.5' : 'object-cover'}`} unoptimized />
                   ) : (
                     BUSINESS_TYPE_ICONS[business.business_sector ?? ''] || <Building2 className="w-4 h-4" />
                   )}

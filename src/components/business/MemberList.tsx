@@ -5,6 +5,9 @@ import { useState, useRef, useEffect } from 'react';
 import type { BusinessMember } from '@/lib/api/members';
 import { formatDate } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
+import { createClient } from '@/lib/supabase';
+import { saveContactFromTransaction } from '@/lib/api/contacts';
+import type { ContactType } from '@/types';
 
 const ROLE_BADGE: Record<string, { label: string; className: string }> = {
   business_manager: {
@@ -38,7 +41,17 @@ interface MemberListProps {
   onMemberRemoved?: () => void;
 }
 
-function KebabMenu({ member, onRemove }: { member: BusinessMember; onRemove: () => void }) {
+function KebabMenu({
+  member,
+  businessId,
+  onRemove,
+  onContactResult,
+}: {
+  member: BusinessMember;
+  businessId: string;
+  onRemove: () => void;
+  onContactResult: (msg: string, isError?: boolean) => void;
+}) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const name = member.profile?.full_name || 'Unknown User';
@@ -54,10 +67,27 @@ function KebabMenu({ member, onRemove }: { member: BusinessMember; onRemove: () 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open]);
 
-  const handleAddToContact = () => {
+  const handleAddToContact = async () => {
     setOpen(false);
-    // TODO: implement add to contact
-    alert(`Tambah ${name} ke kontak (belum diimplementasikan)`);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Tidak terautentikasi');
+
+      const contactType: ContactType =
+        member.role === 'investor' ? 'investor'
+        : member.role === 'business_manager' ? 'partner'
+        : 'partner';
+
+      const result = await saveContactFromTransaction(businessId, name, contactType, user.id);
+      if (result === null) {
+        onContactResult(`${name} sudah ada di daftar kontak`);
+      } else {
+        onContactResult(`${name} berhasil ditambahkan ke kontak`);
+      }
+    } catch {
+      onContactResult('Gagal menambahkan kontak. Coba lagi.', true);
+    }
   };
 
   return (
@@ -95,6 +125,12 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
   const [removeConfirm, setRemoveConfirm] = useState<{ memberId: string; memberName: string } | null>(null);
   const [removing, setRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ msg: string; isError: boolean } | null>(null);
+
+  const showToast = (msg: string, isError = false) => {
+    setToast({ msg, isError });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const handleRemoveMember = async () => {
     if (!removeConfirm || !businessId) return;
@@ -152,6 +188,16 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
 
   return (
     <>
+      {/* Toast notification */}
+      {toast && (
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${
+          toast.isError
+            ? 'bg-red-500 text-white'
+            : 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
+        }`}>
+          {toast.msg}
+        </div>
+      )}
       <div className="space-y-3">
         {members.map((member) => {
           const name = member.profile?.full_name || 'Unknown User';
@@ -201,10 +247,12 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
               </div>
 
               {/* Kebab menu */}
-              {canRemove && (
+              {canRemove && businessId && (
                 <KebabMenu
                   member={member}
+                  businessId={businessId}
                   onRemove={() => setRemoveConfirm({ memberId: member.id, memberName: name })}
+                  onContactResult={showToast}
                 />
               )}
             </div>
