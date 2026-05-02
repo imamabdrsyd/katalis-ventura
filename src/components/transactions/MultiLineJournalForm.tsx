@@ -3,8 +3,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { PlusCircle, Trash2, AlertCircle } from 'lucide-react';
 import { AccountDropdown } from './AccountDropdown';
+import { ContactAutocomplete } from './ContactAutocomplete';
 import { getAccounts } from '@/lib/api/accounts';
+import { saveContactFromTransaction } from '@/lib/api/contacts';
 import { useParams } from 'next/navigation';
+import { useBusinessContext } from '@/context/BusinessContext';
 import { CATEGORY_LABELS } from '@/lib/calculations';
 import type { TransactionCategory, JournalLineInput, Account, TransactionAttachment } from '@/types';
 import { FileUpload } from '@/components/ui/FileUpload';
@@ -55,6 +58,7 @@ export function MultiLineJournalForm({
 }: MultiLineJournalFormProps) {
   const params = useParams();
   const businessId = businessIdProp || (params?.businessId as string);
+  const { user } = useBusinessContext();
 
   const [formData, setFormData] = useState<Omit<MultiLineFormData, 'journal_lines'>>({
     date: initialData?.date ?? new Date().toISOString().split('T')[0],
@@ -228,13 +232,20 @@ export function MultiLineJournalForm({
 
       <div>
         <label className="label">Nama / Referensi *</label>
-        <input
-          type="text"
+        <ContactAutocomplete
+          businessId={businessId}
           value={formData.name}
-          onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-          className="input"
+          onChange={(val) => setFormData((p) => ({ ...p, name: val }))}
           placeholder="cth: Bayar Gaji Karyawan Maret 2026"
           required
+          onSaveAsContact={async (name) => {
+            if (!businessId || !user) return;
+            try {
+              await saveContactFromTransaction(businessId, name, 'other', user.id);
+            } catch (err) {
+              console.error('Failed to save contact:', err);
+            }
+          }}
         />
         {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
       </div>

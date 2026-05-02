@@ -13,6 +13,7 @@ import { updateTransaction } from '@/lib/api/transactions';
 import { InventoryPicker } from '@/components/transactions/InventoryPicker';
 import { AccountDropdown } from '@/components/transactions/AccountDropdown';
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
+import { saveContactFromTransaction } from '@/lib/api/contacts';
 import { validateCategoryConsistency } from '@/lib/accounting/validators/transactionValidator';
 import type { Account, AccountType, TransactionCategory, Transaction, UnitBreakdown, TransactionAttachment, JournalLineInput } from '@/types';
 import {
@@ -1326,6 +1327,17 @@ export default function JournalEntryPage() {
                     if (errors.name) setErrors(p => { const n = { ...p }; delete n.name; return n; });
                   }}
                   placeholder={selectedEntryType.namePlaceholder}
+                  onSaveAsContact={async (contactName) => {
+                    if (!businessId || !user) return;
+                    try {
+                      const contactType = selectedEntryType.suggestedCategory === 'EARN' ? 'customer'
+                        : ['OPEX', 'VAR', 'CAPEX', 'TAX'].includes(selectedEntryType.suggestedCategory) ? 'vendor'
+                        : 'other';
+                      await saveContactFromTransaction(businessId, contactName, contactType, user.id);
+                    } catch (err) {
+                      console.error('Failed to save contact:', err);
+                    }
+                  }}
                 />
                 {errors.name && (
                   <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.name}</p>
