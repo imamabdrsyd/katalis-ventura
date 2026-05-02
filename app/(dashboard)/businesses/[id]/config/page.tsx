@@ -51,7 +51,7 @@ function BusinessDetailCard({ business, onLeave }: { business: Business; onLeave
       {/* Business icon/logo */}
       <div className={`w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden mb-4 ${business.logo_url ? 'bg-white' : 'text-indigo-500 dark:text-indigo-400'}`}>
         {business.logo_url ? (
-          <Image src={business.logo_url} alt={business.business_name} width={48} height={48} className="w-full h-full object-cover" unoptimized />
+          <Image src={business.logo_url} alt={business.business_name} width={48} height={48} className={`w-full h-full ${business.logo_fit === 'contain' ? 'object-contain p-0.5' : 'object-cover'}`} unoptimized />
         ) : (
           icon
         )}
@@ -191,7 +191,7 @@ export default function BusinessMembersPage() {
           </button>
           {business?.logo_url ? (
             <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-white border border-gray-200 dark:border-gray-700">
-              <Image src={business.logo_url} alt={business.business_name} width={48} height={48} className="w-full h-full object-cover" unoptimized />
+              <Image src={business.logo_url} alt={business.business_name} width={48} height={48} className={`w-full h-full ${business.logo_fit === 'contain' ? 'object-contain p-0.5' : 'object-cover'}`} unoptimized />
             </div>
           ) : business ? (
             <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400">
