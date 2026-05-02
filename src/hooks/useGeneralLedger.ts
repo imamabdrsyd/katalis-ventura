@@ -105,9 +105,7 @@ function buildMultiLineEntries(
   return myLines.map((line) => {
     // Sama seperti double-entry: description = nama kontak/referensi, subDescription = keterangan
     const description = t.name || t.description || '-';
-    const subDescription = t.name
-      ? (line.description || t.description || undefined)
-      : undefined;
+    const subDescription = t.name && t.description ? t.description : undefined;
     return {
       debitAmount: Number(line.debit_amount) || 0,
       creditAmount: Number(line.credit_amount) || 0,
