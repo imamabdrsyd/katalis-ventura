@@ -12,14 +12,6 @@ import { TransactionDetailModal } from '@/components/transactions/TransactionDet
 
 // Account type labels are now dynamic via useLanguage - see component body
 
-const ACCOUNT_TYPE_COLORS: Record<AccountType, string> = {
-  ASSET: 'text-blue-600 dark:text-blue-400',
-  LIABILITY: 'text-amber-500 dark:text-amber-400',
-  EQUITY: 'text-purple-500 dark:text-purple-400',
-  REVENUE: 'text-green-600 dark:text-green-400',
-  EXPENSE: 'text-red-500 dark:text-red-400',
-};
-
 const ACCOUNT_TYPE_BG: Record<AccountType, string> = {
   ASSET: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300',
   LIABILITY: 'bg-amber-50 dark:bg-amber-900/20 text-amber-500 dark:text-amber-300',
@@ -107,7 +99,7 @@ function GeneralLedgerPageInner() {
 
   if (!activeBusiness && !loading) {
     return (
-      <div className="p-8 max-w-7xl mx-auto">
+      <div className="p-4 md:p-6">
         <div className="card-static text-center py-12">
           <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500 dark:text-gray-400">
@@ -123,7 +115,7 @@ function GeneralLedgerPageInner() {
   ];
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-6">
       {/* Header + Period Filter inline */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
@@ -212,7 +204,7 @@ function GeneralLedgerPageInner() {
       {/* Main Two-Panel Layout */}
       <div className="flex flex-col lg:flex-row gap-4 lg:items-start">
         {/* LEFT PANEL: Account List */}
-        <div className="lg:w-72 xl:w-80 flex-shrink-0 lg:sticky lg:top-4 lg:self-start">
+        <div className="lg:w-72 xl:w-80 flex-shrink-0 lg:sticky lg:top-[4.5rem] lg:self-start">
           <div className="card-static p-0 overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 160px)' }}>
             {/* Account Type Filter Tabs */}
             <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
