@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, PackageOpen, Home, UserPlus, Coins, Lock, MoreVertical, Pencil, Archive, RotateCcw, CalendarDays } from 'lucide-react';
+import { MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, PackageOpen, Home, UserPlus, Coins, Lock, MoreVertical, Pencil, Archive, RotateCcw } from 'lucide-react';
 import type { Business } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 
@@ -20,7 +20,7 @@ interface BusinessCardProps {
   showActions?: boolean;
 }
 
-const BUSINESS_SECTOR_LABELS: Record<string, string> = {
+const BUSINESS_TYPE_LABELS: Record<string, string> = {
   agribusiness: 'Agribusiness',
   personal_care: 'Personal Care',
   accommodation: 'Accommodation',
@@ -31,12 +31,6 @@ const BUSINESS_SECTOR_LABELS: Record<string, string> = {
   short_term_rental: 'Short-term Rental',
   property_management: 'Property Management',
   real_estate: 'Real Estate',
-};
-
-const BUSINESS_TYPE_LABELS: Record<string, string> = {
-  jasa: 'Jasa',
-  produk: 'Produk',
-  dagang: 'Dagang',
 };
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -141,18 +135,9 @@ export function BusinessCard({
           </div>
           <div>
             <h3 className="font-bold text-gray-800 dark:text-gray-100">{business.business_name}</h3>
-            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-              {business.business_sector && (
-                <span className="badge bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                  {BUSINESS_SECTOR_LABELS[business.business_sector] || business.business_sector}
-                </span>
-              )}
-              {business.business_type && BUSINESS_TYPE_LABELS[business.business_type] && (
-                <span className="badge bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                  {BUSINESS_TYPE_LABELS[business.business_type]}
-                </span>
-              )}
-            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {BUSINESS_TYPE_LABELS[business.business_sector ?? ''] || (business.business_sector ?? '')}
+            </p>
           </div>
         </div>
         {/* Kebab Menu */}
@@ -233,21 +218,15 @@ export function BusinessCard({
 
       <div className="space-y-2 mb-4">
         <div className="flex justify-between text-sm">
-          <span className="text-gray-500 dark:text-gray-400">Modal Bisnis</span>
+          <span className="text-gray-500 dark:text-gray-400">Business Capital</span>
           <span className="font-semibold text-gray-800 dark:text-gray-100">
             {formatCurrency(totalCapex)}
           </span>
         </div>
-        {(business.city || business.property_address) && (
+        {business.property_address && (
           <div className="text-sm text-gray-500 dark:text-gray-400 flex items-start gap-2">
             <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
-            <span className="line-clamp-1">{business.city || business.property_address}</span>
-          </div>
-        )}
-        {business.created_at && (
-          <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
-            <CalendarDays className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-            <span>Dibuat {new Date(business.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+            <span>{business.property_address}</span>
           </div>
         )}
       </div>

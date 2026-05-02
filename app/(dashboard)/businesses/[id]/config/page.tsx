@@ -8,7 +8,7 @@ import { InviteCodeManager } from '@/components/business/InviteCodeManager';
 import { JoinRequestList } from '@/components/business/JoinRequestList';
 import { getBusinessMembers, type BusinessMember } from '@/lib/api/members';
 import Image from 'next/image';
-import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut, ShoppingBag, Contact } from 'lucide-react';
+import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut, ShoppingBag, Contact, CalendarDays } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { Tabs } from '@/components/ui/Tabs';
@@ -18,7 +18,7 @@ import { EcommerceIntegration } from '@/components/ecommerce/EcommerceIntegratio
 import { ContactList } from '@/components/business/ContactList';
 import type { Business } from '@/types';
 
-const BUSINESS_TYPE_LABELS: Record<string, string> = {
+const BUSINESS_SECTOR_LABELS: Record<string, string> = {
   agribusiness: 'Agribusiness',
   personal_care: 'Personal Care',
   accommodation: 'Accommodation',
@@ -28,6 +28,12 @@ const BUSINESS_TYPE_LABELS: Record<string, string> = {
   short_term_rental: 'Short-term Rental',
   property_management: 'Property Management',
   real_estate: 'Real Estate',
+};
+
+const BUSINESS_TYPE_LABELS: Record<string, string> = {
+  jasa: 'Jasa',
+  produk: 'Produk',
+  dagang: 'Dagang',
 };
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -44,7 +50,8 @@ const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
 
 function BusinessDetailCard({ business, onLeave }: { business: Business; onLeave?: () => void }) {
   const icon = BUSINESS_TYPE_ICONS[business.business_sector ?? ''] || <Building2 className="w-6 h-6" />;
-  const typeLabel = BUSINESS_TYPE_LABELS[business.business_sector ?? ''] || business.business_sector;
+  const sectorLabel = BUSINESS_SECTOR_LABELS[business.business_sector ?? ''] || business.business_sector;
+  const typeLabel = business.business_type ? BUSINESS_TYPE_LABELS[business.business_type] : null;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 flex-1 self-stretch">
@@ -58,16 +65,25 @@ function BusinessDetailCard({ business, onLeave }: { business: Business; onLeave
       </div>
 
       {/* Business name */}
-      <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
+      <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
         {business.business_name}
       </h2>
 
-      {/* Business type */}
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 mb-4">
-        {typeLabel}
-      </span>
+      {/* Badges: sector + type */}
+      <div className="flex items-center gap-1.5 flex-wrap mb-4">
+        {sectorLabel && (
+          <span className="badge bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+            {sectorLabel}
+          </span>
+        )}
+        {typeLabel && (
+          <span className="badge bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+            {typeLabel}
+          </span>
+        )}
+      </div>
 
-      <div className="space-y-3 mt-2">
+      <div className="space-y-3">
         {/* Capital */}
         <div className="flex items-start gap-3">
           <Banknote className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
@@ -80,13 +96,26 @@ function BusinessDetailCard({ business, onLeave }: { business: Business; onLeave
         </div>
 
         {/* Address */}
-        {business.property_address && (
+        {(business.city || business.property_address) && (
           <div className="flex items-start gap-3">
             <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Alamat</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Lokasi</p>
               <p className="text-sm text-gray-800 dark:text-gray-200 leading-snug">
-                {business.property_address}
+                {business.city || business.property_address}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Created at */}
+        {business.created_at && (
+          <div className="flex items-start gap-3">
+            <CalendarDays className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Dibuat</p>
+              <p className="text-sm text-gray-800 dark:text-gray-200">
+                {new Date(business.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
               </p>
             </div>
           </div>
