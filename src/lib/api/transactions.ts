@@ -33,6 +33,7 @@ export interface MultiLineTransactionInsert {
   notes?: string;
   status?: TransactionStatus;
   meta?: Record<string, unknown> | null;
+  attachments?: import('@/types').TransactionAttachment[];
   journal_lines: JournalLineInput[];
 }
 
@@ -94,6 +95,12 @@ export async function createMultiLineTransaction(
     throw new Error('Jurnal tidak seimbang: total debit harus sama dengan total kredit');
   }
 
+  // Build meta: merge caller-supplied meta with attachments
+  const meta: Record<string, unknown> = { ...(insert.meta ?? {}) };
+  if (insert.attachments && insert.attachments.length > 0) {
+    meta.attachments = insert.attachments;
+  }
+
   // Insert transaction header
   const { data: transaction, error: txnError } = await supabase
     .from('transactions')
@@ -110,6 +117,7 @@ export async function createMultiLineTransaction(
       status: insert.status ?? 'draft',
       is_multi_line: true,
       is_double_entry: false,
+      meta: Object.keys(meta).length > 0 ? meta : null,
     })
     .select()
     .single();

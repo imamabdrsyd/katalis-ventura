@@ -776,6 +776,7 @@ export default function JournalEntryPage() {
           name,
           description: description || (selectedEntryType?.label ?? ''),
           notes: description || undefined,
+          attachments: attachments.length > 0 ? attachments : undefined,
           journal_lines: journalLines,
         });
       } else {
