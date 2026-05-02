@@ -264,7 +264,7 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-gradient-to-r from-indigo-500 to-purple-500">
+      <footer className="bg-indigo-600">
         {/* Brand CTA + Stats satu baris */}
         <div className="container mx-auto px-6 pt-10 pb-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
@@ -282,12 +282,12 @@ export default function LandingPage() {
               <div className="font-bold text-white text-lg">100%</div>
               <div className="text-indigo-200">Data Privacy</div>
             </div>
-            <span className="text-white/30">·</span>
+            <span className="w-px h-8 bg-white/30"></span>
             <div className="text-center">
               <div className="font-bold text-white text-lg">{loading ? '...' : stats.users}</div>
               <div className="text-indigo-200">Users</div>
             </div>
-            <span className="text-white/30">·</span>
+            <span className="w-px h-8 bg-white/30"></span>
             <div className="text-center">
               <div className="font-bold text-white text-lg">{loading ? '...' : stats.businesses}</div>
               <div className="text-indigo-200">Businesses</div>
