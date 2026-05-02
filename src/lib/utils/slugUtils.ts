@@ -19,6 +19,7 @@ export const RESERVED_SLUGS = new Set([
   'roi-forecast',
   'settings',
   'api',
+  'blog',
 ]);
 
 /**
