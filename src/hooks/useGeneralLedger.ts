@@ -82,7 +82,7 @@ export function buildTransactionIndex(transactions: Transaction[]): {
 function buildMultiLineEntries(
   t: Transaction,
   account: Account
-): Array<{ debitAmount: number; creditAmount: number; counterAccountName: string; counterAccountCode: string; description: string }> {
+): Array<{ debitAmount: number; creditAmount: number; counterAccountName: string; counterAccountCode: string; description: string; subDescription?: string }> {
   const lines = t.journal_lines || [];
   const myLines = lines.filter((l) => l.account_id === account.id);
   // Counter accounts = semua akun lain di jurnal ini
@@ -102,13 +102,21 @@ function buildMultiLineEntries(
   const counterAccountName = counterNames.join(', ') || '-';
   const counterAccountCode = counterCodes.join(', ') || '-';
 
-  return myLines.map((line) => ({
-    debitAmount: Number(line.debit_amount) || 0,
-    creditAmount: Number(line.credit_amount) || 0,
-    counterAccountName,
-    counterAccountCode,
-    description: line.description || t.description || t.name,
-  }));
+  return myLines.map((line) => {
+    // Sama seperti double-entry: description = nama kontak/referensi, subDescription = keterangan
+    const description = t.name || t.description || '-';
+    const subDescription = t.name
+      ? (line.description || t.description || undefined)
+      : undefined;
+    return {
+      debitAmount: Number(line.debit_amount) || 0,
+      creditAmount: Number(line.credit_amount) || 0,
+      counterAccountName,
+      counterAccountCode,
+      description,
+      subDescription,
+    };
+  });
 }
 
 /**
@@ -178,6 +186,7 @@ export function calculateAccountLedger(
           transactionId: t.id,
           date: t.date,
           description: ml.description,
+          subDescription: ml.subDescription,
           counterAccountName: ml.counterAccountName,
           counterAccountCode: ml.counterAccountCode,
           debitAmount: ml.debitAmount,
