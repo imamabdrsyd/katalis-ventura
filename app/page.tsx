@@ -307,6 +307,12 @@ export default function LandingPage() {
           <div className="container mx-auto px-6 py-4 flex flex-col md:flex-row items-center justify-between text-sm text-indigo-100 gap-2">
             <p>&copy; 2026 PT Imam Katalis Ventura. All rights reserved.</p>
             <div className="flex items-center gap-4">
+              <Link
+                href="/blog"
+                className="hover:text-white transition-colors"
+              >
+                Blog
+              </Link>
               <a
                 href="https://instagram.com/imamabdrsyd"
                 target="_blank"
