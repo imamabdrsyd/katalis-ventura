@@ -15,6 +15,8 @@ export interface AccountFormData {
   sort_order: number;
   default_category?: TransactionCategory;
   is_retained_earnings?: boolean;
+  is_dividend?: boolean;          // EQUITY: tandai akun Dividen / Prive
+  is_dividend_payable?: boolean;  // LIABILITY: tandai akun Hutang Dividen
   // Depreciation fields (PSAK 16) — only for ASSET + CAPEX
   useful_life_months?: number;
   residual_value?: number;
@@ -59,6 +61,8 @@ export function AccountForm({
     sort_order: account?.sort_order || 0,
     default_category: account?.default_category,
     is_retained_earnings: account?.is_retained_earnings ?? false,
+    is_dividend: account?.is_dividend ?? false,
+    is_dividend_payable: account?.is_dividend_payable ?? false,
     useful_life_months: account?.useful_life_months,
     residual_value: account?.residual_value,
     acquisition_date: account?.acquisition_date,
@@ -561,6 +565,84 @@ export function AccountForm({
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 flex items-center gap-1">
               <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
               Jika bisnis sudah memiliki akun Laba Ditahan lain, penanda tersebut akan dipindah ke akun ini.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Dividen / Prive designation — hanya untuk EQUITY accounts */}
+      {formData.account_type === 'EQUITY' && !formData.is_retained_earnings && (
+        <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700/50">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                Akun Dividen / Prive (Penarikan Pemilik)
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Tandai akun ini sebagai Dividen / Prive / Drawing. Saat dipilih di transaksi, sistem menawarkan mode <strong>Declare</strong> (vs Hutang Dividen) atau <strong>Cashout</strong> langsung (vs Kas/Bank).
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={formData.is_dividend}
+              onClick={() =>
+                setFormData(prev => ({ ...prev, is_dividend: !prev.is_dividend }))
+              }
+              disabled={loading}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+                formData.is_dividend
+                  ? 'bg-indigo-600 dark:bg-indigo-500'
+                  : 'bg-gray-200 dark:bg-gray-600'
+              } disabled:opacity-50`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                  formData.is_dividend ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Hutang Dividen designation — hanya untuk LIABILITY accounts */}
+      {formData.account_type === 'LIABILITY' && (
+        <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700/50">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                Akun Hutang Dividen (Dividend Payable)
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Tandai akun ini sebagai tujuan kredit otomatis saat dividen di-<em>declare</em> (commitment). Hanya satu akun per bisnis.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={formData.is_dividend_payable}
+              onClick={() =>
+                setFormData(prev => ({ ...prev, is_dividend_payable: !prev.is_dividend_payable }))
+              }
+              disabled={loading}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+                formData.is_dividend_payable
+                  ? 'bg-indigo-600 dark:bg-indigo-500'
+                  : 'bg-gray-200 dark:bg-gray-600'
+              } disabled:opacity-50`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                  formData.is_dividend_payable ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+          {formData.is_dividend_payable && (
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 flex items-center gap-1">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+              Jika bisnis sudah memiliki akun Hutang Dividen lain, penanda tersebut akan dipindah ke akun ini.
             </p>
           )}
         </div>

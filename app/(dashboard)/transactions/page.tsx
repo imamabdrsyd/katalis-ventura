@@ -98,6 +98,8 @@ function TransactionsPageInner() {
     handlePostTransaction,
     handleSettleReceivable,
     handlePartialSettleReceivable,
+    handleSettleDividend,
+    handlePartialSettleDividend,
     // Actions
     fetchTransactions,
     handleAddTransaction,
@@ -720,6 +722,8 @@ function TransactionsPageInner() {
         allTags={allTags}
         onSettleReceivable={canManageTransactions ? handleSettleReceivable : undefined}
         onPartialSettleReceivable={canManageTransactions ? handlePartialSettleReceivable : undefined}
+        onSettleDividend={canManageTransactions ? handleSettleDividend : undefined}
+        onPartialSettleDividend={canManageTransactions ? handlePartialSettleDividend : undefined}
         settleLoading={saving}
         onShowRelatedTransaction={setDetailTransaction}
         contacts={contacts}

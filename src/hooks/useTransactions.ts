@@ -9,6 +9,11 @@ import * as contactsApi from '@/lib/api/contacts';
 import { getAccounts } from '@/lib/api/accounts';
 import { findCogsAccount } from '@/lib/utils/inventoryHelper';
 import { buildSettlementPrefill, buildPartialSettlementPrefill, getOutstandingAmount } from '@/lib/accounting/guidance/receivableSettlement';
+import {
+  buildDividendSettlementPrefill,
+  buildDividendPartialSettlementPrefill,
+  getDividendOutstanding,
+} from '@/lib/accounting/guidance/dividendSettlement';
 import type { Transaction, TransactionCategory, TransactionStatus, Account, Contact } from '@/types';
 import type { TransactionFormData } from '@/components/transactions/TransactionForm';
 import type { MultiLineFormData } from '@/components/transactions/MultiLineJournalForm';
@@ -525,6 +530,86 @@ export function useTransactions() {
     }
   }, [businessId, user, accounts, invalidateTransactions]);
 
+  // === Dividend settlement (mirror of receivable settlement) ===
+  // Lunasi dividen yang sudah di-declare: Dr Hutang Dividen / Cr Kas/Bank,
+  // lalu tandai transaksi declaration sebagai LUNAS lewat meta.
+  const handleSettleDividend = useCallback(async (original: Transaction) => {
+    if (!businessId || !user) return;
+    setSaving(true);
+    try {
+      const outstanding = getDividendOutstanding(original);
+      const settlement = await transactionsApi.createTransaction({
+        ...buildDividendSettlementPrefill(original, accounts),
+        business_id: businessId,
+        created_by: user.id,
+        amount: outstanding,
+      });
+
+      const updated = await transactionsApi.updateTransaction(original.id, {
+        meta: {
+          ...original.meta,
+          settled_by_transaction_id: settlement.id,
+          remaining_amount: 0,
+        },
+      });
+
+      setDetailTransaction({
+        ...original,
+        ...updated,
+        debit_account: original.debit_account,
+        credit_account: original.credit_account,
+      });
+
+      invalidateTransactions();
+    } catch (err: any) {
+      alert(err.message || 'Gagal melunasi dividen');
+    } finally {
+      setSaving(false);
+    }
+  }, [businessId, user, accounts, invalidateTransactions]);
+
+  const handlePartialSettleDividend = useCallback(async (
+    original: Transaction,
+    partialAmount: number
+  ) => {
+    if (!businessId || !user) return;
+    const outstanding = getDividendOutstanding(original);
+    if (partialAmount <= 0 || partialAmount >= outstanding) {
+      throw new Error('Jumlah tidak valid untuk pelunasan sebagian');
+    }
+    setSaving(true);
+    try {
+      const settlement = await transactionsApi.createTransaction({
+        ...buildDividendPartialSettlementPrefill(original, partialAmount, accounts),
+        business_id: businessId,
+        created_by: user.id,
+      });
+
+      const prevPartials = original.meta?.partial_settlements ?? [];
+      const newRemaining = outstanding - partialAmount;
+      const updated = await transactionsApi.updateTransaction(original.id, {
+        meta: {
+          ...original.meta,
+          partial_settlements: [...prevPartials, settlement.id],
+          remaining_amount: newRemaining,
+        },
+      });
+
+      setDetailTransaction({
+        ...original,
+        ...updated,
+        debit_account: original.debit_account,
+        credit_account: original.credit_account,
+      });
+
+      invalidateTransactions();
+    } catch (err: any) {
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  }, [businessId, user, accounts, invalidateTransactions]);
+
   return {
     // Data
     transactions,
@@ -586,6 +671,8 @@ export function useTransactions() {
     handleCreateFollowUp,
     handleSettleReceivable,
     handlePartialSettleReceivable,
+    handleSettleDividend,
+    handlePartialSettleDividend,
     handleConvertStockToCOGS,
     // Kebab menu & select mode
     showKebabMenu,

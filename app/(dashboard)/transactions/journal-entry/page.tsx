@@ -7,7 +7,13 @@ import { getAccounts } from '@/lib/api/accounts';
 import { createTransaction, createMultiLineTransaction } from '@/lib/api/transactions';
 import { getTransactions } from '@/lib/api/transactions';
 import { detectCategory } from '@/lib/utils/transactionHelpers';
-import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
+import {
+  findDefaultCashAccount,
+  isDividendChoiceAccount,
+  type DividendEntryMode,
+} from '@/lib/utils/quickTransactionHelper';
+import { findDividendPayableAccount } from '@/lib/accounting/guidance/dividendSettlement';
+import { DividendEntryModeModal } from '@/components/transactions/DividendEntryModeModal';
 import { getStockTransactions, findCogsAccount } from '@/lib/utils/inventoryHelper';
 import { updateTransaction } from '@/lib/api/transactions';
 import { InventoryPicker } from '@/components/transactions/InventoryPicker';
@@ -374,6 +380,10 @@ export default function JournalEntryPage() {
   // step state
   const [selectedEntryType, setSelectedEntryType] = useState<EntryType | null>(null);
 
+  // dividend entry mode (only relevant when selectedEntryType.id === 'tarik_dividen')
+  const [dividendEntryMode, setDividendEntryMode] = useState<DividendEntryMode | null>(null);
+  const [showDividendModeModal, setShowDividendModeModal] = useState(false);
+
   // entry type grid expand/collapse — persisted to localStorage
   const [entryTypesExpanded, setEntryTypesExpanded] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -455,9 +465,12 @@ export default function JournalEntryPage() {
   // derived
   const cashAccount = useMemo(() => findDefaultCashAccount(accounts), [accounts]);
 
+  const dividendPayableAccount = useMemo(() => findDividendPayableAccount(accounts), [accounts]);
+
   // Auto-set default accounts & category when entry type is selected
   const handleSelectEntryType = useCallback((entryType: EntryType) => {
     setSelectedEntryType(entryType);
+    setDividendEntryMode(null);
     setErrors({});
 
     // Auto-fill debit: prefer cash/bank for ASSET type
@@ -484,6 +497,29 @@ export default function JournalEntryPage() {
     setShowCancelConfirm(false);
   }, [cashAccount]);
 
+  // Munculkan popup pilihan saat user memilih akun Dividen sebagai DEBIT
+  // (di entry type 'tarik_dividen' atau lainnya yang debit-nya EQUITY).
+  // Setelah user pilih mode, override credit account sesuai mode.
+  const handleDividendModeSelect = useCallback(
+    (mode: DividendEntryMode) => {
+      setDividendEntryMode(mode);
+      setShowDividendModeModal(false);
+      if (mode === 'declare' && dividendPayableAccount) {
+        setCreditAccountId(dividendPayableAccount.id);
+      } else if (mode === 'cashout' && cashAccount) {
+        setCreditAccountId(cashAccount.id);
+      }
+    },
+    [dividendPayableAccount, cashAccount]
+  );
+
+  const handleDividendModeCancel = useCallback(() => {
+    setShowDividendModeModal(false);
+    // Bila batal, kosongkan debit agar user bisa pilih ulang.
+    setDebitAccountId('');
+    setDividendEntryMode(null);
+  }, []);
+
   // Auto-detect category when debit/credit accounts change (skip if locked)
   useEffect(() => {
     if (selectedEntryType?.lockCategory) return;
@@ -494,6 +530,19 @@ export default function JournalEntryPage() {
     const detected = detectCategory(debitAcc.account_code, creditAcc.account_code, debitAcc, creditAcc);
     setCategory(detected);
   }, [debitAccountId, creditAccountId, accounts, selectedEntryType]);
+
+  // Trigger popup pilihan declare/cashout saat user memilih akun Dividen
+  // sebagai DEBIT — relevan terutama untuk entry type 'tarik_dividen'.
+  useEffect(() => {
+    if (!debitAccountId) return;
+    if (dividendEntryMode) return; // user sudah pilih
+    const debitAcc = accounts.find(a => a.id === debitAccountId);
+    if (!debitAcc) return;
+    if (isDividendChoiceAccount(debitAcc)) {
+      setShowDividendModeModal(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debitAccountId]);
 
   // Inventory picker
   const debitAccount = accounts.find(a => a.id === debitAccountId);
@@ -1064,11 +1113,19 @@ export default function JournalEntryPage() {
                   <div>
                     <AccountDropdown
                       label="Akun Kredit"
-                      accounts={accounts.filter(a =>
-                        selectedEntryType.creditFilter === 'ALL'
+                      accounts={accounts.filter(a => {
+                        // Override filter untuk tarik_dividen mode 'declare':
+                        // credit harus akun Hutang Dividen (LIABILITY) bukan ASSET
+                        if (
+                          selectedEntryType.id === 'tarik_dividen' &&
+                          dividendEntryMode === 'declare'
+                        ) {
+                          return a.account_type === 'LIABILITY' && a.is_dividend_payable;
+                        }
+                        return selectedEntryType.creditFilter === 'ALL'
                           ? true
-                          : a.account_type === selectedEntryType.creditFilter
-                      )}
+                          : a.account_type === selectedEntryType.creditFilter;
+                      })}
                       subFilter={selectedEntryType.creditSubFilter}
                       value={creditAccountId}
                       onChange={(id, _code) => {
@@ -1079,6 +1136,24 @@ export default function JournalEntryPage() {
                       error={errors.credit}
                       required
                     />
+                    {selectedEntryType.id === 'tarik_dividen' && dividendEntryMode && (
+                      <div className="mt-1.5 flex items-center gap-2 text-xs">
+                        <span className={`px-2 py-0.5 rounded font-semibold ${
+                          dividendEntryMode === 'declare'
+                            ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                            : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                        }`}>
+                          Mode: {dividendEntryMode === 'declare' ? 'Declare (commitment)' : 'Cashout langsung'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowDividendModeModal(true)}
+                          className="text-indigo-600 dark:text-indigo-400 underline hover:no-underline"
+                        >
+                          Ganti
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1445,6 +1520,15 @@ export default function JournalEntryPage() {
           </form>
         </div>
       )}
+
+      {/* Dividend entry mode picker — muncul saat user pilih akun Dividen */}
+      <DividendEntryModeModal
+        isOpen={showDividendModeModal}
+        onClose={handleDividendModeCancel}
+        onSelect={handleDividendModeSelect}
+        selectedAccount={accounts.find(a => a.id === debitAccountId) ?? null}
+        accounts={accounts}
+      />
     </div>
   );
 }

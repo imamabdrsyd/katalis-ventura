@@ -73,6 +73,8 @@ export interface Account {
   is_active: boolean;
   is_system: boolean;
   is_retained_earnings: boolean;
+  is_dividend: boolean;          // EQUITY: tandai akun Dividen / Prive / Drawing
+  is_dividend_payable: boolean;  // LIABILITY: tandai akun Hutang Dividen
   sort_order: number;
   description?: string;
   default_category?: TransactionCategory; // Optional: Auto-detected category for transactions

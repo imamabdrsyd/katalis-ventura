@@ -19,3 +19,14 @@ export {
   getPartialSettlementIds,
 } from './receivableSettlement';
 export type { SettlementPrefill, PartialSettlementPrefill } from './receivableSettlement';
+export {
+  findDividendPayableAccount,
+  isDividendAccount,
+  isDividendDeclaration,
+  isDividendSettled,
+  getDividendOutstanding,
+  getDividendPartialSettlementIds,
+  buildDividendSettlementPrefill,
+  buildDividendPartialSettlementPrefill,
+} from './dividendSettlement';
+export type { DividendSettlementPrefill } from './dividendSettlement';

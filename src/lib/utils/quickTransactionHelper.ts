@@ -12,12 +12,22 @@ import { detectCategory } from './transactionHelpers';
  *   3. The transaction category (EARN, OPEX, VAR, CAPEX, TAX, FIN)
  */
 
+/**
+ * Entry mode untuk akun Dividen / Prive:
+ *   - 'cashout': bayar langsung dari Kas/Bank   → Dr Dividen / Cr Bank
+ *   - 'declare': commitment, belum dibayar       → Dr Dividen / Cr Hutang Dividen
+ *   - undefined: bukan akun dividen, abaikan
+ */
+export type DividendEntryMode = 'cashout' | 'declare';
+
 export interface QuickTransactionInput {
   amount: number;
   selectedAccountId: string;
   name: string;
   date: string;
   notes?: string;
+  /** Wajib di-set saat selected account adalah akun is_dividend */
+  dividendEntryMode?: DividendEntryMode;
 }
 
 export interface ResolvedTransaction {
@@ -59,6 +69,23 @@ export function findDefaultCashAccount(accounts: Account[]): Account | null {
 }
 
 /**
+ * True kalau akun ini adalah Dividen / Prive — pakai flag persistent
+ * `is_dividend` (set di Chart of Accounts), dengan fallback ke string match
+ * untuk akun lama yang belum di-tag.
+ */
+function isDividendDrawingAccount(acc: Account): boolean {
+  if (acc.account_type !== 'EQUITY') return false;
+  if (acc.is_dividend) return true;
+  const name = acc.account_name.toLowerCase();
+  return (
+    name.includes('prive') ||
+    name.includes('drawing') ||
+    name.includes('dividen') ||
+    name.includes('dividend')
+  );
+}
+
+/**
  * Determines the debit and credit side based on the selected account type.
  *
  * Rules:
@@ -75,14 +102,13 @@ function resolveDebitCredit(
 ): { debitAccountId: string; creditAccountId: string; debitCode: string; creditCode: string } {
   const code = selectedAccount.account_code;
   const type = selectedAccount.account_type;
-  const name = selectedAccount.account_name.toLowerCase();
 
   // EXPENSE -> money goes OUT from cash
   // EQUITY Drawings/Prive -> money goes OUT from cash
   // ASSET (non-cash like fixed assets) -> money goes OUT from cash (purchase)
   if (
     type === 'EXPENSE' ||
-    (type === 'EQUITY' && (name.includes('prive') || name.includes('drawing') || name.includes('dividen') || name.includes('dividend'))) ||
+    isDividendDrawingAccount(selectedAccount) ||
     (type === 'ASSET' && code !== '1100' && code !== '1200') // Non-cash assets
   ) {
     return {
@@ -107,12 +133,11 @@ function resolveDebitCredit(
  */
 export function getFlowLabel(account: Account): string {
   const type = account.account_type;
-  const name = account.account_name.toLowerCase();
 
   if (type === 'REVENUE') return 'Uang Masuk';
   if (type === 'EXPENSE') return 'Uang Keluar';
   if (type === 'LIABILITY') return 'Terima Pinjaman';
-  if (type === 'EQUITY' && (name.includes('prive') || name.includes('drawing') || name.includes('dividen') || name.includes('dividend'))) return 'Penarikan Prive';
+  if (isDividendDrawingAccount(account)) return 'Penarikan Prive';
   if (type === 'EQUITY') return 'Suntik Modal';
   if (type === 'ASSET' && account.account_code !== '1100' && account.account_code !== '1200') return 'Beli Aset';
   return 'Transaksi';
@@ -123,16 +148,23 @@ export function getFlowLabel(account: Account): string {
  */
 export function getFlowDirection(account: Account): 'in' | 'out' {
   const type = account.account_type;
-  const name = account.account_name.toLowerCase();
 
   if (
     type === 'EXPENSE' ||
-    (type === 'EQUITY' && (name.includes('prive') || name.includes('drawing') || name.includes('dividen') || name.includes('dividend'))) ||
+    isDividendDrawingAccount(account) ||
     (type === 'ASSET' && account.account_code !== '1100' && account.account_code !== '1200')
   ) {
     return 'out';
   }
   return 'in';
+}
+
+/**
+ * Returns true kalau akun ini akan memicu popup pilihan declare/cashout
+ * di Quick Add maupun complete form. Eksport untuk dipakai UI.
+ */
+export function isDividendChoiceAccount(account: Account): boolean {
+  return isDividendDrawingAccount(account);
 }
 
 /**
@@ -154,9 +186,35 @@ export function resolveQuickTransaction(
   }
 
   // Don't allow selecting cash/bank as the category (it would be same-account)
-  // Check if it's the same as the default cash account
   if (selectedAccount.id === cashAccount.id) {
     return { error: 'Tidak bisa memilih akun kas/bank sebagai kategori. Gunakan form lengkap untuk transfer antar rekening.' };
+  }
+
+  // === Special path: Dividen / Prive dengan mode 'declare' ===
+  // Counter-account = akun Hutang Dividen (LIABILITY dengan is_dividend_payable=TRUE),
+  // bukan Kas/Bank.
+  if (isDividendDrawingAccount(selectedAccount) && input.dividendEntryMode === 'declare') {
+    const payableAccount = accounts.find(
+      (acc) => acc.is_active && acc.account_type === 'LIABILITY' && acc.is_dividend_payable
+    );
+    if (!payableAccount) {
+      return {
+        error:
+          'Akun Hutang Dividen belum tersedia. Silakan buat akun LIABILITY lalu aktifkan toggle "Akun Hutang Dividen" di Chart of Accounts.',
+      };
+    }
+
+    return {
+      date: input.date,
+      category: 'FIN',
+      name: input.name,
+      description: input.notes || selectedAccount.description || selectedAccount.account_name,
+      amount: input.amount,
+      account: 'Double-entry transaction',
+      debit_account_id: selectedAccount.id,
+      credit_account_id: payableAccount.id,
+      is_double_entry: true,
+    };
   }
 
   const { debitAccountId, creditAccountId, debitCode, creditCode } = resolveDebitCredit(
@@ -220,6 +278,9 @@ export function getQuickAddAccounts(accounts: Account[]): Account[] {
     if (acc.account_code === '1100' || acc.account_code === '1200') return false;
     // Exclude receivable/advance accounts — must use Full Double-Entry or Multi-line Journal
     if (isReceivableOrAdvanceAccount(acc)) return false;
+    // Exclude Hutang Dividen — hanya boleh dipakai lewat tombol "Bayar Dividen"
+    // di TransactionDetailModal, bukan di-pilih langsung sebagai kategori.
+    if (acc.is_dividend_payable) return false;
     return true;
   });
 }

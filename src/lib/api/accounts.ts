@@ -279,6 +279,36 @@ export async function setRetainedEarningsAccount(
 }
 
 /**
+ * Designate a LIABILITY account as the Hutang Dividen (Dividend Payable) account
+ * for this business. Clears the flag on any previous account in the same business,
+ * then sets it on accountId. Mirror of setRetainedEarningsAccount.
+ */
+export async function setDividendPayableAccount(
+  businessId: string,
+  accountId: string
+): Promise<void> {
+  const supabase = createClient();
+
+  const { error: clearError } = await supabase
+    .from('accounts')
+    .update({ is_dividend_payable: false })
+    .eq('business_id', businessId)
+    .eq('is_dividend_payable', true)
+    .neq('id', accountId);
+
+  if (clearError) throw new Error(clearError.message);
+
+  const { error: setError } = await supabase
+    .from('accounts')
+    .update({ is_dividend_payable: true })
+    .eq('id', accountId)
+    .eq('business_id', businessId)
+    .eq('account_type', 'LIABILITY');
+
+  if (setError) throw new Error(setError.message);
+}
+
+/**
  * Batch update income_statement_section untuk banyak akun sekaligus.
  * Digunakan oleh Income Statement Config modal.
  * Pass null untuk reset ke default logic.

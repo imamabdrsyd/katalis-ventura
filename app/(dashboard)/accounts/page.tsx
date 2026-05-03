@@ -132,6 +132,8 @@ export default function AccountsPage() {
         is_active: true,
         is_system: false,
         is_retained_earnings: false,
+        is_dividend: data.is_dividend ?? false,
+        is_dividend_payable: false,
         sort_order: data.sort_order,
         description: data.description,
         default_category: data.default_category,
@@ -139,6 +141,9 @@ export default function AccountsPage() {
 
       if (data.is_retained_earnings) {
         await accountsApi.setRetainedEarningsAccount(businessId, newAccount.id);
+      }
+      if (data.is_dividend_payable) {
+        await accountsApi.setDividendPayableAccount(businessId, newAccount.id);
       }
 
       const updatedAccounts = await accountsApi.getAccounts(businessId);
@@ -164,12 +169,19 @@ export default function AccountsPage() {
         normal_balance: data.normal_balance,
         description: data.description,
         default_category: data.default_category,
+        is_dividend: data.is_dividend ?? false,
       });
 
       if (data.is_retained_earnings) {
         await accountsApi.setRetainedEarningsAccount(businessId, editAccount.id);
       } else if (editAccount.is_retained_earnings) {
         await accountsApi.updateAccount(editAccount.id, { is_retained_earnings: false });
+      }
+
+      if (data.is_dividend_payable) {
+        await accountsApi.setDividendPayableAccount(businessId, editAccount.id);
+      } else if (editAccount.is_dividend_payable) {
+        await accountsApi.updateAccount(editAccount.id, { is_dividend_payable: false });
       }
 
       const updatedAccounts = await accountsApi.getAccounts(businessId);

@@ -12,7 +12,11 @@ import {
   getFlowLabel,
   getFlowDirection,
   findDefaultCashAccount,
+  isDividendChoiceAccount,
+  type DividendEntryMode,
 } from '@/lib/utils/quickTransactionHelper';
+import { DividendEntryModeModal } from './DividendEntryModeModal';
+import { findDividendPayableAccount } from '@/lib/accounting/guidance/dividendSettlement';
 import { getStockTransactions } from '@/lib/utils/inventoryHelper';
 import { InventoryPicker } from './InventoryPicker';
 import { UnitBreakdownSection } from './UnitBreakdownSection';
@@ -112,6 +116,10 @@ export function QuickTransactionForm({
   // Inventory selection state
   const [selectedStockIds, setSelectedStockIds] = useState<string[]>([]);
 
+  // Dividend entry mode state
+  const [dividendEntryMode, setDividendEntryMode] = useState<DividendEntryMode | null>(null);
+  const [showDividendModeModal, setShowDividendModeModal] = useState(false);
+
   // Data state
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
@@ -175,6 +183,16 @@ export function QuickTransactionForm({
   const flowDirection = selectedAccount ? getFlowDirection(selectedAccount) : null;
   const flowLabel = selectedAccount ? getFlowLabel(selectedAccount) : null;
 
+  // Override counter-account untuk dividen mode 'declare'
+  const dividendPayableAccount = useMemo(
+    () => findDividendPayableAccount(accounts),
+    [accounts]
+  );
+  const isDividendDeclareMode =
+    selectedAccount &&
+    isDividendChoiceAccount(selectedAccount) &&
+    dividendEntryMode === 'declare';
+
   // Detect if this is a revenue/sales transaction and show inventory picker
   const isRevenueSelected = selectedAccount?.account_type === 'REVENUE';
   const stockTransactions = useMemo(
@@ -198,6 +216,12 @@ export function QuickTransactionForm({
     setSelectedStockIds([]);
     setDropdownOpen(false);
     setSearchTerm('');
+    // Reset dividend mode bila ganti akun
+    setDividendEntryMode(null);
+    // Trigger popup pilihan declare/cashout untuk akun Dividen / Prive
+    if (isDividendChoiceAccount(account)) {
+      setShowDividendModeModal(true);
+    }
     if (errors.selectedAccountId) {
       setErrors((prev) => {
         const next = { ...prev };
@@ -205,6 +229,18 @@ export function QuickTransactionForm({
         return next;
       });
     }
+  };
+
+  const handleDividendModeSelect = (mode: DividendEntryMode) => {
+    setDividendEntryMode(mode);
+    setShowDividendModeModal(false);
+  };
+
+  const handleDividendModeCancel = () => {
+    setShowDividendModeModal(false);
+    // Bila user batal, reset selection agar tidak terkunci di mode tak dipilih
+    setSelectedAccountId('');
+    setDividendEntryMode(null);
   };
 
   // Unit breakdown handlers
@@ -256,6 +292,9 @@ export function QuickTransactionForm({
     if (amount <= 0) newErrors.amount = 'Jumlah harus lebih dari 0';
     if (!selectedAccountId) newErrors.selectedAccountId = 'Kategori harus dipilih';
     if (!date) newErrors.date = 'Tanggal harus diisi';
+    if (selectedAccount && isDividendChoiceAccount(selectedAccount) && !dividendEntryMode) {
+      newErrors.selectedAccountId = 'Pilih cara pencatatan dividen (Declare atau Cashout)';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -268,7 +307,14 @@ export function QuickTransactionForm({
     const resolvedName = name.trim() || selectedAccount?.description || selectedAccount?.account_name || '';
 
     const result = resolveQuickTransaction(
-      { amount, selectedAccountId, name: resolvedName, date, notes },
+      {
+        amount,
+        selectedAccountId,
+        name: resolvedName,
+        date,
+        notes,
+        dividendEntryMode: dividendEntryMode ?? undefined,
+      },
       accounts
     );
 
@@ -457,27 +503,66 @@ export function QuickTransactionForm({
 
         {/* Flow preview badge */}
         {selectedAccount && cashAccount && (
-          <div
-            className={`mt-2 flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
-              flowDirection === 'in'
-                ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 dark:text-emerald-300'
-                : 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-300'
-            }`}
-          >
-            {flowDirection === 'in' ? (
-              <ArrowDownLeft className="w-4 h-4 flex-shrink-0" />
-            ) : (
-              <ArrowUpRight className="w-4 h-4 flex-shrink-0" />
-            )}
-            <span className="font-medium">{flowLabel}</span>
-            <span className="text-xs opacity-75">
-              {flowDirection === 'in'
-                ? `${selectedAccount.account_name} → ${cashAccount.account_name}`
-                : `${cashAccount.account_name} → ${selectedAccount.account_name}`}
-            </span>
-          </div>
+          isDividendDeclareMode && dividendPayableAccount ? (
+            <div className="mt-2 flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300">
+              <div className="flex items-center gap-2">
+                <ArrowUpRight className="w-4 h-4 flex-shrink-0" />
+                <span className="font-medium">Declare Dividen</span>
+                <span className="text-xs opacity-75">
+                  {selectedAccount.account_name} → {dividendPayableAccount.account_name}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDividendModeModal(true)}
+                className="text-xs underline hover:no-underline"
+              >
+                Ganti
+              </button>
+            </div>
+          ) : (
+            <div
+              className={`mt-2 flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm ${
+                flowDirection === 'in'
+                  ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 dark:text-emerald-300'
+                  : 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-300'
+              }`}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                {flowDirection === 'in' ? (
+                  <ArrowDownLeft className="w-4 h-4 flex-shrink-0" />
+                ) : (
+                  <ArrowUpRight className="w-4 h-4 flex-shrink-0" />
+                )}
+                <span className="font-medium">{flowLabel}</span>
+                <span className="text-xs opacity-75 truncate">
+                  {flowDirection === 'in'
+                    ? `${selectedAccount.account_name} → ${cashAccount.account_name}`
+                    : `${cashAccount.account_name} → ${selectedAccount.account_name}`}
+                </span>
+              </div>
+              {selectedAccount && isDividendChoiceAccount(selectedAccount) && (
+                <button
+                  type="button"
+                  onClick={() => setShowDividendModeModal(true)}
+                  className="text-xs underline hover:no-underline flex-shrink-0"
+                >
+                  Ganti
+                </button>
+              )}
+            </div>
+          )
         )}
       </div>
+
+      {/* Dividend entry mode picker modal */}
+      <DividendEntryModeModal
+        isOpen={showDividendModeModal}
+        onClose={handleDividendModeCancel}
+        onSelect={handleDividendModeSelect}
+        selectedAccount={selectedAccount}
+        accounts={accounts}
+      />
 
       {/* Inventory Picker - shown when revenue account selected and stock exists */}
       {showInventoryPicker && (

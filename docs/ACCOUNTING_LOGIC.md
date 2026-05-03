@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 24 April 2026 (Income Statement Config Override — COGS vs OPEX per akun) | AR/AP Aging & Repayment: 29 Maret 2026
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 03 Mei 2026 (Dividend Settlement — declare vs cashout, Hutang Dividen flag, popup mode picker) | AR/AP Aging & Repayment: 29 Maret 2026
 
 ---
 
@@ -1113,6 +1113,55 @@ meta.settled_by_transaction_id = settlement.id
 - **Balance Sheet**: Piutang asli menambah ASSET (piutang). Settlement memindahkan dari piutang ke kas — net ASSET tetap sama.
 - **Cash Flow**: Piutang asli TIDAK muncul (non-cash). Settlement (Dr Kas / Cr Piutang) muncul sebagai **Operating (+)** karena counter-account piutang dikenali sebagai trade receivable (per IAS 7.14 sub-classification: `default_category='EARN'` atau nama mengandung "piutang"/"receivable").
 - **Income Statement**: Revenue sudah diakui saat piutang dicatat. Settlement TIDAK menambah revenue lagi.
+
+### 14.6 Dividend Settlement (Pelunasan Dividen)
+
+File: `src/lib/accounting/guidance/dividendSettlement.ts`
+
+Mirror dari receivable settlement, tapi untuk dividen yang di-declare (commitment) lalu dibayar terpisah.
+
+**Penanda Akun (persistent flags di tabel `accounts`):**
+- `is_dividend BOOLEAN` — menandai akun EQUITY sebagai Dividen / Prive / Drawing
+- `is_dividend_payable BOOLEAN` — menandai akun LIABILITY sebagai Hutang Dividen (partial unique index: max 1 per bisnis)
+
+User mengaktifkan flag ini lewat toggle di **AccountForm** (Chart of Accounts → Edit Akun).
+
+**Dua Mode Pencatatan Dividen:**
+
+| Mode | Jurnal | Kapan dipakai |
+|------|--------|---------------|
+| **Cashout langsung** | Dr Dividen / Cr Kas/Bank | Penarikan tunai langsung tanpa formal declaration |
+| **Declare** (commitment) | Dr Dividen / Cr Hutang Dividen | RUPS putuskan bagi dividen tapi belum bayar |
+| **Pay** (lunasi declaration) | Dr Hutang Dividen / Cr Kas/Bank | Bayar dividen yang sudah di-declare |
+
+**Trigger Popup `DividendEntryModeModal`:**
+- **QuickTransactionForm**: saat user pilih akun dengan `is_dividend=true` di dropdown kategori
+- **Journal Entry (`/transactions/journal-entry`)**: saat user pilih akun dengan `is_dividend=true` sebagai Akun Debit (terutama via entry type `tarik_dividen`)
+
+Kalau akun Hutang Dividen belum ada di CoA, opsi **Declare** disabled dengan instruksi user untuk membuat akun LIABILITY dan mengaktifkan toggle di Chart of Accounts.
+
+**Detection di TransactionDetailModal:**
+```
+isDividendDeclaration(transaction) = true jika:
+  - is_double_entry = true
+  - debit_account.account_type = 'EQUITY' AND is_dividend = true
+  - credit_account.account_type = 'LIABILITY' AND is_dividend_payable = true
+```
+
+Kalau true, render section "Pelunasan Dividen" dengan dua tombol:
+- **Bayar Dividen Penuh** → `handleSettleDividend` → `Dr Hutang Dividen / Cr Bank`, mark settled via `meta.settled_by_transaction_id`
+- **Bayar Sebagian** → `handlePartialSettleDividend` → push ke `meta.partial_settlements[]` + decrement `meta.remaining_amount`
+
+**Reuse meta fields yang sama dengan receivable settlement:**
+- `meta.settled_by_transaction_id`, `meta.settlement_of_transaction_id`
+- `meta.partial_settlements[]`, `meta.remaining_amount`
+
+**Dampak ke Laporan:**
+- **Cashout langsung**: Equity berkurang, Kas berkurang (1 langkah)
+- **Declare**: Equity berkurang, Liability bertambah (Income Statement & Balance Sheet langsung kena)
+- **Pay setelah declare**: Liability berkurang, Kas berkurang — Equity TIDAK kena lagi (sudah berkurang saat declare)
+
+⚠️ **Common pitfall yang dicegah**: Kalau user pakai pola lama (Dr Dividen / Cr Bank) untuk pay setelah declare, equity akan berkurang 2× dan Hutang Dividen tetap tertinggal di neraca selamanya. Flow declare → pay yang benar adalah `Dr Hutang Dividen / Cr Bank`.
 
 ---
 
