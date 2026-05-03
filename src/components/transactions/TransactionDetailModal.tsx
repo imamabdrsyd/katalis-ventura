@@ -1040,23 +1040,23 @@ export function TransactionDetailModal({
                   </div>
                 </div>
               ) : hasPartials ? (
-                <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <History className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0" />
+                    <History className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">Dividen sebagian dibayar</p>
-                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Dividen sebagian dibayar</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         Sisa: <span className="font-semibold">{formatCurrency(outstanding)}</span>
                       </p>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
-                  <FileText className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0" />
+                <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg">
+                  <FileText className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">Dividen di-declare (belum dibayar)</p>
-                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Dividen di-declare (belum dibayar)</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       Klik tombol di bawah untuk mencatat pembayaran ke pemilik.
                     </p>
                   </div>

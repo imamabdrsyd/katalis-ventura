@@ -127,6 +127,12 @@ export const VALID_COMBINATIONS: AccountCombination[] = [
     credit: ['LIABILITY'],
     description: 'Pendapatan diterima dimuka (unearned revenue)',
   },
+  // Dividend declaration (Dr Retained Earnings/Equity / Cr Dividend Payable/Liability)
+  {
+    debit: ['EQUITY'],
+    credit: ['LIABILITY'],
+    description: 'Deklarasi dividen (Dr Laba Ditahan / Cr Hutang Dividen)',
+  },
 ];
 
 // ============================================

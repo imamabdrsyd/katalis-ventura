@@ -51,8 +51,8 @@ export function DividendEntryModeModal({
           className="w-full text-left p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-all group"
         >
           <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-              <Banknote className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            <div className="flex-shrink-0 flex items-center justify-center">
+              <Banknote className="w-6 h-6 text-indigo-500 dark:text-indigo-400" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-gray-900 dark:text-gray-100">
@@ -81,8 +81,8 @@ export function DividendEntryModeModal({
           }`}
         >
           <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <div className="flex-shrink-0 flex items-center justify-center">
+              <FileText className="w-6 h-6 text-indigo-500 dark:text-indigo-400" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-gray-900 dark:text-gray-100">
