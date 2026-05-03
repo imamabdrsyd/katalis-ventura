@@ -21,7 +21,7 @@ import { getStockTransactions } from '@/lib/utils/inventoryHelper';
 import { InventoryPicker } from './InventoryPicker';
 import { UnitBreakdownSection } from './UnitBreakdownSection';
 import { FileUploadCompact } from '@/components/ui/FileUpload';
-import { ChevronDown, StickyNote, Zap, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { ChevronDown, StickyNote, Paperclip, Zap, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
 import { saveContactFromTransaction } from '@/lib/api/contacts';
@@ -345,7 +345,7 @@ export function QuickTransactionForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {/* Submit error */}
       {errors.submit && (
         <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -618,44 +618,58 @@ export function QuickTransactionForm({
         />
       </div>
 
-      {/* 5. NOTES (Expandable) */}
-      <div>
-        {!showNotes ? (
-          <button
-            type="button"
-            onClick={() => setShowNotes(true)}
-            className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
-          >
-            <StickyNote className="w-4 h-4" />
-            <span>+ Tambah catatan</span>
-          </button>
-        ) : (
-          <div>
-            <label className="label text-sm text-gray-500 dark:text-gray-400">Notes (opsional)</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="input"
-              rows={2}
-              placeholder="Penjelasan singkat..."
-              autoFocus
-            />
+      {/* 5. CATATAN + LAMPIRAN (Collapsible) */}
+      <div className="border border-gray-100 dark:border-gray-700 rounded-lg overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowNotes((prev) => !prev)}
+          className="w-full flex items-center justify-between px-3 py-2.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <StickyNote className="w-4 h-4" />
+              <span>Tambah catatan</span>
+            </div>
+            {businessId && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-gray-300 dark:text-gray-600">·</span>
+                <Paperclip className="w-4 h-4" />
+                <span>lampiran</span>
+              </div>
+            )}
+          </div>
+          <ChevronDown
+            className={`w-4 h-4 transition-transform ${showNotes ? 'rotate-180' : ''}`}
+          />
+        </button>
+
+        {showNotes && (
+          <div className="px-3 pb-3 space-y-3 border-t border-gray-100 dark:border-gray-700 pt-3">
+            <div>
+              <label className="label text-sm text-gray-500 dark:text-gray-400">Catatan (opsional)</label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="input"
+                rows={2}
+                placeholder="Penjelasan singkat..."
+                autoFocus
+              />
+            </div>
+            {businessId && (
+              <FileUploadCompact
+                businessId={businessId}
+                value={attachments}
+                onChange={setAttachments}
+                disabled={loading}
+              />
+            )}
           </div>
         )}
       </div>
 
-      {/* 6. LAMPIRAN (Expandable) */}
-      {businessId && (
-        <FileUploadCompact
-          businessId={businessId}
-          value={attachments}
-          onChange={setAttachments}
-          disabled={loading}
-        />
-      )}
-
       {/* Action Buttons */}
-      <div className="flex gap-3 pt-2">
+      <div className="flex gap-3">
         <button
           type="button"
           onClick={onCancel}
