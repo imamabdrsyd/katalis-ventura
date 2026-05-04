@@ -64,7 +64,7 @@ export default function LandingPage() {
               <span className={`inline-block overflow-hidden transition-[max-width,opacity] duration-500 ease-in-out whitespace-nowrap ${scrolled ? 'max-w-0 opacity-0' : 'max-w-[1.5rem] opacity-100'}`}>A</span>
               <span>X</span>
               <span className={`inline-block overflow-hidden transition-[max-width,opacity] duration-500 ease-in-out whitespace-nowrap ${scrolled ? 'max-w-0 opacity-0' : 'max-w-[0.9rem] opacity-100'}`}>I</span>
-              <span style={{ color: '#6566f1' }}>O</span>
+              <span style={{ color: '#6566f1', textDecoration: 'underline', textDecorationColor: '#6566f1', textDecorationThickness: '3px', textUnderlineOffset: '3px' }}>O</span>
               <span className={`inline-block overflow-hidden transition-[max-width,opacity] duration-500 ease-in-out whitespace-nowrap ${scrolled ? 'max-w-0 opacity-0' : 'max-w-[1.5rem] opacity-100'}`}>N</span>
             </div>
           </div>
