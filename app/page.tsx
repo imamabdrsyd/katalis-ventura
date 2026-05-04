@@ -264,11 +264,11 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-indigo-600">
+      <footer className="bg-gray-900 dark:bg-gray-950">
         {/* Brand CTA + Stats satu baris */}
         <div className="container mx-auto px-6 pt-10 pb-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
-            <p className="text-xs font-semibold tracking-[0.15em] uppercase text-indigo-200 mb-2">
+            <p className="text-xs font-semibold tracking-[0.15em] uppercase text-gray-400 mb-2">
               Platform Keuangan Bisnis
             </p>
             <h2 className="text-2xl md:text-3xl font-bold text-white">
@@ -280,36 +280,36 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center gap-6 text-sm">
             <div className="text-center">
               <div className="font-bold text-white text-lg">100%</div>
-              <div className="text-indigo-200">Data Privacy</div>
+              <div className="text-gray-400">Data Privacy</div>
             </div>
-            <span className="w-px h-8 bg-white/30"></span>
+            <span className="w-px h-8 bg-gray-700"></span>
             <div className="text-center">
               <div className="font-bold text-white text-lg">{loading ? '...' : stats.users}</div>
-              <div className="text-indigo-200">Users</div>
+              <div className="text-gray-400">Users</div>
             </div>
-            <span className="w-px h-8 bg-white/30"></span>
+            <span className="w-px h-8 bg-gray-700"></span>
             <div className="text-center">
               <div className="font-bold text-white text-lg">{loading ? '...' : stats.businesses}</div>
-              <div className="text-indigo-200">Businesses</div>
+              <div className="text-gray-400">Businesses</div>
             </div>
           </div>
 
           <Link
             href="/login"
-            className="shrink-0 px-8 py-3 border border-white/60 text-white font-semibold text-sm rounded-xl hover:bg-white/10 transition-colors"
+            className="shrink-0 px-8 py-3 border border-gray-600 text-gray-200 font-semibold text-sm rounded-xl hover:border-gray-400 hover:text-white transition-colors"
           >
             Limited Partner Login
           </Link>
         </div>
 
         {/* Copyright bar */}
-        <div className="border-t border-white/20">
-          <div className="container mx-auto px-6 py-4 flex flex-col md:flex-row items-center justify-between text-sm text-indigo-100 gap-2">
+        <div className="border-t border-gray-800">
+          <div className="container mx-auto px-6 py-4 flex flex-col md:flex-row items-center justify-between text-sm text-gray-500 gap-2">
             <p>&copy; 2026 PT Imam Katalis Ventura. All rights reserved.</p>
             <div className="flex items-center gap-4">
               <Link
                 href="/blog"
-                className="hover:text-white transition-colors"
+                className="hover:text-gray-300 transition-colors"
               >
                 Blog
               </Link>
@@ -317,13 +317,13 @@ export default function LandingPage() {
                 href="https://instagram.com/imamabdrsyd"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-white transition-colors"
+                className="hover:text-gray-300 transition-colors"
               >
                 @imamabdrsyd
               </a>
               <a
                 href="mailto:imam.isyida@gmail.com"
-                className="hover:text-white transition-colors"
+                className="hover:text-gray-300 transition-colors"
               >
                 imam.isyida@gmail.com
               </a>
