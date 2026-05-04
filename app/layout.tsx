@@ -67,8 +67,12 @@ export const metadata: Metadata = {
     creator: '@imamabdrsyd',
   },
   icons: {
-    icon: '/images/favicon.png',
-    apple: '/images/favicon.png',
+    icon: [
+      { url: '/favicon.ico', sizes: '48x48' },
+      { url: '/favicon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/favicon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: '/favicon-192.png',
   },
   alternates: {
     canonical: baseUrl,
