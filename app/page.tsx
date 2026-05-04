@@ -3,7 +3,7 @@
 import { useState, useEffect, Fragment } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Briefcase, TrendingUp, Shield } from 'lucide-react';
+import { Monitor, TrendingUp, Shield } from 'lucide-react';
 import { OmnichannelSection } from '@/components/omnichannel/OmnichannelSection';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
@@ -194,34 +194,55 @@ export default function LandingPage() {
 
         {/* Features Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto mb-12">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
-            <Briefcase className="w-6 h-6 text-indigo-500 mb-3" />
-            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-2">
-              Business Manager
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col">
+            <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center mb-5">
+              <Monitor className="w-6 h-6 text-blue-500" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">
+              Semua entitas bisnis Anda, satu dashboard
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Kelola keuangan bisnis secara profesional dengan double-entry bookkeeping, laporan otomatis, dan transparansi data untuk membangun kepercayaan investor.
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed flex-1">
+              Berhenti berpindah-pindah antara file Excel, aplikasi terpisah, dan laporan yang tidak sinkron. Axion menarik data dari seluruh perusahaan Anda — properti, trading, jasa — ke dalam satu tampilan konsolidasi yang selalu real-time.
             </p>
+            <div className="mt-5">
+              <span className="inline-block px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-semibold rounded-lg">
+                Konsolidasi otomatis
+              </span>
+            </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
-            <TrendingUp className="w-6 h-6 text-indigo-500 mb-3" />
-            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-2">
-              Investor
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col">
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center mb-5">
+              <TrendingUp className="w-6 h-6 text-emerald-500" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">
+              Laporan investor yang selama ini Anda buat manual — kini otomatis
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Pantau portofolio bisnis di bawah manajemen Katalis Ventura. Lihat laporan keuangan real, analisis ROI, dan metrik performa sebelum membuat keputusan.
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed flex-1">
+              IRR, MOIC, cash position, dan burn rate per entitas — tersedia setiap saat tanpa harus menunggu laporan dari akuntan. Bagikan akses baca kepada investor atau LP Anda dengan satu klik, tanpa risiko data bocor.
             </p>
+            <div className="mt-5">
+              <span className="inline-block px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold rounded-lg">
+                PE-grade metrics
+              </span>
+            </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
-            <Shield className="w-6 h-6 text-indigo-500 mb-3" />
-            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-2">
-              Secure & Private
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col">
+            <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center mb-5">
+              <Shield className="w-6 h-6 text-amber-500" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">
+              Akuntansi PSAK yang benar — tanpa perlu belajar akuntansi
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Kontrol akses per role (manager & investor), Row-Level Security di database, dan audit trail lengkap di setiap perubahan data.
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed flex-1">
+              Di balik antarmuka yang sederhana, setiap transaksi dicatat dengan double-entry yang patuh PSAK dan IFRS. Anda cukup input uang masuk dan keluar. Axion yang mengurus jurnal, neraca, dan laporan laba rugi.
             </p>
+            <div className="mt-5">
+              <span className="inline-block px-3 py-1.5 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-xs font-semibold rounded-lg">
+                PSAK &amp; IFRS compliant
+              </span>
+            </div>
           </div>
         </div>
 
