@@ -60,11 +60,11 @@ export default function LandingPage() {
         <nav className="container mx-auto px-6 flex items-center justify-between gap-4">
           {/* Logo: AXION → XO smooth collapse per-letter */}
           <div className="shrink-0 flex items-center h-9">
-            <div className="flex items-baseline font-black text-[1.35rem] tracking-tight leading-none select-none text-gray-900 dark:text-white">
+            <div className="flex items-baseline font-black text-[1.35rem] tracking-tight leading-none select-none" style={{ color: '#474443' }}>
               <span className={`inline-block overflow-hidden transition-[max-width,opacity] duration-500 ease-in-out whitespace-nowrap ${scrolled ? 'max-w-0 opacity-0' : 'max-w-[1.5rem] opacity-100'}`}>A</span>
               <span>X</span>
               <span className={`inline-block overflow-hidden transition-[max-width,opacity] duration-500 ease-in-out whitespace-nowrap ${scrolled ? 'max-w-0 opacity-0' : 'max-w-[0.9rem] opacity-100'}`}>I</span>
-              <span>O</span>
+              <span style={{ color: '#6566f1' }}>O</span>
               <span className={`inline-block overflow-hidden transition-[max-width,opacity] duration-500 ease-in-out whitespace-nowrap ${scrolled ? 'max-w-0 opacity-0' : 'max-w-[1.5rem] opacity-100'}`}>N</span>
             </div>
           </div>
