@@ -58,37 +58,15 @@ export default function LandingPage() {
           : 'bg-indigo-50 dark:bg-gray-900 py-5'
       }`}>
         <nav className="container mx-auto px-6 flex items-center justify-between gap-4">
-          <div className="shrink-0 relative h-9 flex items-center">
-            {/* Favicon logo (scrolled) */}
-            <Image
-              src="/images/favicon.png"
-              alt="Axion Logo"
-              width={36}
-              height={36}
-              className={`object-contain dark:hidden transition-all duration-300 ${scrolled ? 'opacity-100 scale-100' : 'opacity-0 scale-75 absolute pointer-events-none'}`}
-            />
-            <Image
-              src="/images/favicon-dark.png"
-              alt="Axion Logo"
-              width={36}
-              height={36}
-              className={`object-contain hidden transition-all duration-300 ${scrolled ? 'dark:block opacity-100 scale-100' : 'opacity-0 scale-75 absolute pointer-events-none'}`}
-            />
-            {/* Full logo (not scrolled) */}
-            <Image
-              src="/images/axion.png"
-              alt="Axion Logo"
-              width={110}
-              height={36}
-              className={`object-contain dark:hidden transition-all duration-300 ${scrolled ? 'opacity-0 scale-75 absolute pointer-events-none' : 'opacity-100 scale-100'}`}
-            />
-            <Image
-              src="/images/axion-dark.png"
-              alt="Axion Logo"
-              width={110}
-              height={36}
-              className={`object-contain hidden transition-all duration-300 ${scrolled ? 'opacity-0 scale-75 absolute pointer-events-none' : 'dark:block opacity-100 scale-100'}`}
-            />
+          {/* Logo: AXION → XO smooth collapse per-letter */}
+          <div className="shrink-0 flex items-center h-9">
+            <div className="flex items-baseline font-black text-[1.35rem] tracking-tight leading-none select-none text-gray-900 dark:text-white">
+              <span className={`inline-block overflow-hidden transition-[max-width,opacity] duration-500 ease-in-out whitespace-nowrap ${scrolled ? 'max-w-0 opacity-0' : 'max-w-[1.5rem] opacity-100'}`}>A</span>
+              <span>X</span>
+              <span className={`inline-block overflow-hidden transition-[max-width,opacity] duration-500 ease-in-out whitespace-nowrap ${scrolled ? 'max-w-0 opacity-0' : 'max-w-[0.9rem] opacity-100'}`}>I</span>
+              <span>O</span>
+              <span className={`inline-block overflow-hidden transition-[max-width,opacity] duration-500 ease-in-out whitespace-nowrap ${scrolled ? 'max-w-0 opacity-0' : 'max-w-[1.5rem] opacity-100'}`}>N</span>
+            </div>
           </div>
           <div className="hidden sm:flex items-center gap-6">
             <nav className="flex items-center gap-2">
