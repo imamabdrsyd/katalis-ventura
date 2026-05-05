@@ -7,6 +7,7 @@ import { getOmniChannel } from '@/lib/api/omniChannel';
 import { OmniChannelPageConfig } from './OmniChannelPageConfig';
 import { OmniChannelLinkList } from './OmniChannelLinkList';
 import { OmniChannelGallery } from './OmniChannelGallery';
+import { OmniChannelShowcase } from './OmniChannelShowcase';
 import { OmniChannelPricing } from './OmniChannelPricing';
 import { OmniChannelFeaturedProductConfig } from './OmniChannelFeaturedProductConfig';
 
@@ -87,6 +88,14 @@ export function OmniChannelManager({ businessId, businessName, userId }: Props) 
       <OmniChannelGallery
         businessId={businessId}
         initialGallery={channel?.gallery_images ?? []}
+        hasOmniChannel={!!channel}
+        onChanged={fetchChannel}
+      />
+
+      {/* Showcase Section — gambar dengan ratio asli (tanpa crop) */}
+      <OmniChannelShowcase
+        businessId={businessId}
+        initialShowcase={channel?.showcase_images ?? []}
         hasOmniChannel={!!channel}
         onChanged={fetchChannel}
       />

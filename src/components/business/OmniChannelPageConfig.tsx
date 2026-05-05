@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Check, X, Loader2, Eye, EyeOff, Camera, ImageIcon, CalendarDays, Calendar } from 'lucide-react';
-import type { BusinessOmniChannel, OmniChannelWidgetLabels } from '@/types';
+import { Check, X, Loader2, Eye, EyeOff, Camera, ImageIcon, CalendarDays, Calendar, LayoutTemplate } from 'lucide-react';
+import type { BusinessOmniChannel, OmniChannelLayoutMode, OmniChannelWidgetLabels } from '@/types';
 import { upsertOmniChannel, checkSlugAvailability, fetchAvailableSlugSuggestions } from '@/lib/api/omniChannel';
 import { generateSlugFromName, isValidSlugFormat, isReservedSlug, generateSlugSuggestions } from '@/lib/utils/slugUtils';
 
@@ -23,6 +23,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
   const [bannerUrl, setBannerUrl] = useState(channel?.banner_url ?? '');
   const [isPublished, setIsPublished] = useState(channel?.is_published ?? false);
   const publicUrlMode: 'slug-only' | 'axion-only' | 'both' = 'slug-only';
+  const [layoutMode, setLayoutMode] = useState<OmniChannelLayoutMode>(channel?.layout_mode ?? 'classic');
   const [widgetDateMode, setWidgetDateMode] = useState<'single' | 'double'>(channel?.widget_date_mode ?? 'double');
   const [widgetLabels, setWidgetLabels] = useState<OmniChannelWidgetLabels>(channel?.widget_labels ?? {});
 
@@ -47,6 +48,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
     logoUrl: channel?.logo_url ?? '',
     bannerUrl: channel?.banner_url ?? '',
     isPublished: channel?.is_published ?? false,
+    layoutMode: channel?.layout_mode ?? 'classic',
     widgetDateMode: channel?.widget_date_mode ?? 'double',
     widgetLabels: JSON.stringify(channel?.widget_labels ?? {}),
   });
@@ -158,10 +160,11 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
         banner_url: bannerUrl || null,
         is_published: isPublished,
         public_url_mode: publicUrlMode,
+        layout_mode: layoutMode,
         widget_date_mode: widgetDateMode,
         widget_labels: widgetLabels,
       }, userId);
-      savedRef.current = { slug, title, tagline, bio, logoUrl, bannerUrl, isPublished, widgetDateMode, widgetLabels: JSON.stringify(widgetLabels) };
+      savedRef.current = { slug, title, tagline, bio, logoUrl, bannerUrl, isPublished, layoutMode, widgetDateMode, widgetLabels: JSON.stringify(widgetLabels) };
       onSaved();
     } catch (err: any) {
       setSaveError(err.message || 'Gagal menyimpan');
@@ -210,6 +213,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
     logoUrl !== saved.logoUrl ||
     bannerUrl !== saved.bannerUrl ||
     isPublished !== saved.isPublished ||
+    layoutMode !== saved.layoutMode ||
     widgetDateMode !== saved.widgetDateMode ||
     JSON.stringify(widgetLabels) !== saved.widgetLabels;
 
@@ -436,6 +440,80 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
           Rasio 3:1 direkomendasikan · JPG, PNG, WebP · Maks. 5MB
         </p>
         {bannerUploadError && <p className="text-xs text-red-500 mt-1">{bannerUploadError}</p>}
+      </div>
+
+      {/* Layout Selector — tata letak header halaman publik */}
+      <div className="border-t border-gray-100 dark:border-gray-700 pt-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <LayoutTemplate className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            Layout
+          </h4>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Tata letak header halaman publik kamu.
+        </p>
+        <div className="grid grid-cols-3 gap-3">
+          {([
+            {
+              id: 'classic' as const,
+              label: 'Classic',
+              preview: (
+                <svg viewBox="0 0 100 100" className="w-full h-full" aria-hidden>
+                  <rect x="6" y="6" width="88" height="88" rx="6" className="fill-white dark:fill-gray-700 stroke-gray-200 dark:stroke-gray-600" strokeWidth="1.5" />
+                  <rect x="14" y="22" width="72" height="44" rx="3" className="fill-gray-300 dark:fill-gray-500" />
+                  <circle cx="50" cy="74" r="9" className="fill-gray-200 dark:fill-gray-600 stroke-white dark:stroke-gray-700" strokeWidth="2" />
+                  <rect x="38" y="86" width="24" height="2.5" rx="1" className="fill-gray-300 dark:fill-gray-500" />
+                </svg>
+              ),
+            },
+            {
+              id: 'modern' as const,
+              label: 'Modern (tanpa bar)',
+              preview: (
+                <svg viewBox="0 0 100 100" className="w-full h-full" aria-hidden>
+                  <rect x="6" y="6" width="88" height="88" rx="6" className="fill-white dark:fill-gray-700 stroke-gray-200 dark:stroke-gray-600" strokeWidth="1.5" />
+                  <rect x="14" y="14" width="72" height="58" rx="3" className="fill-gray-300 dark:fill-gray-500" />
+                  <circle cx="50" cy="72" r="9" className="fill-gray-200 dark:fill-gray-600 stroke-white dark:stroke-gray-700" strokeWidth="2" />
+                  <rect x="38" y="86" width="24" height="2.5" rx="1" className="fill-gray-300 dark:fill-gray-500" />
+                </svg>
+              ),
+            },
+            {
+              id: 'clean' as const,
+              label: 'Clean (tanpa foto profil)',
+              preview: (
+                <svg viewBox="0 0 100 100" className="w-full h-full" aria-hidden>
+                  <rect x="6" y="6" width="88" height="88" rx="6" className="fill-white dark:fill-gray-700 stroke-gray-200 dark:stroke-gray-600" strokeWidth="1.5" />
+                  <rect x="14" y="14" width="72" height="58" rx="3" className="fill-gray-300 dark:fill-gray-500" />
+                  <rect x="32" y="80" width="36" height="3" rx="1.5" className="fill-gray-300 dark:fill-gray-500" />
+                  <rect x="38" y="86" width="24" height="2.5" rx="1" className="fill-gray-200 dark:fill-gray-600" />
+                </svg>
+              ),
+            },
+          ]).map(({ id, label, preview }) => {
+            const active = layoutMode === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setLayoutMode(id)}
+                className={`group flex flex-col items-center gap-2 p-2 rounded-xl border-2 transition ${
+                  active
+                    ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20 shadow-sm'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'
+                }`}
+              >
+                <div className="aspect-square w-full">{preview}</div>
+                <span className={`text-xs font-medium text-center leading-tight ${
+                  active ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-400'
+                }`}>
+                  {label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Widget Config — hanya untuk bisnis Jasa */}

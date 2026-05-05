@@ -59,6 +59,8 @@ interface RawOmniChannel {
   slug: string | null;
   is_published: boolean;
   gallery_images: unknown;
+  showcase_images: unknown;
+  layout_mode: string | null;
   widget_date_mode: string | null;
   widget_labels: unknown;
   show_pricing: boolean | null;
@@ -107,6 +109,10 @@ function normalizeGallery(raw: unknown): PublicGalleryImage[] {
     .sort((a, b) => a.sort_order - b.sort_order);
 }
 
+function normalizeLayoutMode(raw: unknown): 'classic' | 'modern' | 'clean' {
+  return raw === 'modern' || raw === 'clean' ? raw : 'classic';
+}
+
 /**
  * GET /api/public-businesses
  * Public endpoint — intentionally unauthenticated.
@@ -124,7 +130,8 @@ export async function GET() {
           id, business_name, business_type, business_sector,
           city, whatsapp_number, widget_action_label, logo_url,
           omni_channel:business_omni_channels (
-            id, slug, is_published, gallery_images, widget_date_mode, widget_labels,
+            id, slug, is_published, gallery_images, showcase_images, layout_mode,
+            widget_date_mode, widget_labels,
             show_pricing, default_price, price_unit,
             links:business_omni_channel_links ( id, channel_type, label, url, is_active, is_primary, sort_order ),
             pricing_rules:business_pricing_rules ( id, date_from, date_to, price, label )
@@ -146,6 +153,8 @@ export async function GET() {
       const isPublished = !!oc?.is_published;
 
       const gallery = isPublished ? normalizeGallery(oc?.gallery_images) : [];
+      const showcase = isPublished ? normalizeGallery(oc?.showcase_images) : [];
+      const layoutMode = normalizeLayoutMode(oc?.layout_mode);
       const links: PublicLink[] = isPublished
         ? (oc?.links ?? [])
             .filter((l) => l.is_active)
@@ -182,6 +191,8 @@ export async function GET() {
         widget_action_label: row.widget_action_label,
         logo_url: row.logo_url,
         gallery,
+        showcase,
+        layout_mode: layoutMode,
         links,
         widget_date_mode: (oc?.widget_date_mode as 'single' | 'double') ?? 'double',
         widget_labels: (oc?.widget_labels ?? {}) as PublicWidgetLabels,

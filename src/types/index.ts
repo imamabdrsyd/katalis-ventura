@@ -389,6 +389,14 @@ export interface OmniChannelGalleryImage {
   sort_order: number;
 }
 
+export interface OmniChannelShowcaseImage {
+  path: string;
+  url: string;
+  sort_order: number;
+}
+
+export type OmniChannelLayoutMode = 'classic' | 'modern' | 'clean';
+
 export interface OmniChannelWidgetLabels {
   date_label?: string;
   checkin_label?: string;
@@ -439,6 +447,8 @@ export interface BusinessOmniChannel {
   logo_url?: string;
   banner_url?: string | null;
   gallery_images?: OmniChannelGalleryImage[];
+  showcase_images?: OmniChannelShowcaseImage[];
+  layout_mode?: OmniChannelLayoutMode;
   widget_date_mode?: 'single' | 'double';
   widget_labels?: OmniChannelWidgetLabels;
   show_pricing?: boolean;
@@ -462,6 +472,7 @@ export interface UpsertOmniChannelData {
   bio?: string | null;
   logo_url?: string | null;
   banner_url?: string | null;
+  layout_mode?: OmniChannelLayoutMode;
   widget_date_mode?: 'single' | 'double';
   widget_labels?: OmniChannelWidgetLabels;
   show_pricing?: boolean;

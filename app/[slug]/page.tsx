@@ -7,6 +7,8 @@ import type { BusinessOmniChannel, OmniChannelLink } from '@/types';
 import type {
   PublicBusiness,
   PublicGalleryImage,
+  PublicShowcaseImage,
+  PublicLayoutMode,
   PublicLink,
   PublicPricingRule,
 } from '@/components/omnichannel/types';
@@ -57,6 +59,18 @@ function normalizeGallery(raw: unknown): PublicGalleryImage[] {
     .sort((a, b) => a.sort_order - b.sort_order);
 }
 
+function normalizeShowcase(raw: unknown): PublicShowcaseImage[] {
+  if (!Array.isArray(raw)) return [];
+  return (raw as Array<{ url?: string; sort_order?: number }>)
+    .filter((x) => x != null && typeof x.url === 'string')
+    .map((x, i) => ({ url: x.url as string, sort_order: typeof x.sort_order === 'number' ? x.sort_order : i }))
+    .sort((a, b) => a.sort_order - b.sort_order);
+}
+
+function normalizeLayoutMode(raw: unknown): PublicLayoutMode {
+  return raw === 'modern' || raw === 'clean' ? raw : 'classic';
+}
+
 export default async function PublicSlugPage({ params }: Props) {
   const { slug } = await params;
 
@@ -69,7 +83,7 @@ export default async function PublicSlugPage({ params }: Props) {
     .from('business_omni_channels')
     .select(`
       id, business_id, slug, is_published, title, tagline, bio, logo_url, banner_url,
-      gallery_images, widget_date_mode, widget_labels,
+      gallery_images, showcase_images, layout_mode, widget_date_mode, widget_labels,
       show_pricing, default_price, price_unit, featured_product,
       links:business_omni_channel_links ( id, channel_type, label, url, is_active, is_primary, sort_order, custom_icon_url ),
       pricing_rules:business_pricing_rules ( id, date_from, date_to, price, label )
@@ -128,6 +142,8 @@ export default async function PublicSlugPage({ params }: Props) {
     widget_action_label: biz?.widget_action_label ?? null,
     logo_url: oc.logo_url ?? biz?.logo_url ?? null,
     gallery: normalizeGallery(oc.gallery_images),
+    showcase: normalizeShowcase(oc.showcase_images),
+    layout_mode: normalizeLayoutMode(oc.layout_mode),
     links: publicLinks,
     widget_date_mode: (oc.widget_date_mode as 'single' | 'double') ?? 'double',
     widget_labels: (oc.widget_labels ?? {}) as PublicBusiness['widget_labels'],

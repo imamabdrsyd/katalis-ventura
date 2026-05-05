@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase';
 import type {
   BusinessOmniChannel,
   OmniChannelGalleryImage,
+  OmniChannelShowcaseImage,
   OmniChannelLink,
   PricingRule,
   UpsertOmniChannelData,
@@ -144,6 +145,50 @@ export async function reorderGalleryImages(
   const json = await res.json();
   if (!res.ok) throw new Error(json.error || 'Gagal reorder gallery');
   return json.gallery;
+}
+
+// ─── SHOWCASE ─────────────────────────────────────────────────────────────────
+
+export async function uploadShowcaseImage(
+  businessId: string,
+  url: string,
+  public_id: string
+): Promise<{ image: OmniChannelShowcaseImage; showcase: OmniChannelShowcaseImage[] }> {
+  const res = await fetch(`/api/omni-channel/${businessId}/showcase`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, public_id }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Gagal upload showcase');
+  return { image: json.image, showcase: json.showcase };
+}
+
+export async function deleteShowcaseImage(
+  businessId: string,
+  path: string
+): Promise<OmniChannelShowcaseImage[]> {
+  const res = await fetch(
+    `/api/omni-channel/${businessId}/showcase?path=${encodeURIComponent(path)}`,
+    { method: 'DELETE' }
+  );
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Gagal menghapus showcase');
+  return json.showcase;
+}
+
+export async function reorderShowcaseImages(
+  businessId: string,
+  paths: string[]
+): Promise<OmniChannelShowcaseImage[]> {
+  const res = await fetch(`/api/omni-channel/${businessId}/showcase`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paths }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Gagal reorder showcase');
+  return json.showcase;
 }
 
 // ─── PRICING RULES ────────────────────────────────────────────────────────────

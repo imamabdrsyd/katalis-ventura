@@ -37,6 +37,7 @@ const upsertSchema = z.object({
     (val) => (typeof val === 'string' && val.trim() === '' ? null : val),
     z.string().url().nullable().optional()
   ),
+  layout_mode: z.enum(['classic', 'modern', 'clean']).optional().nullable(),
   widget_date_mode: z.enum(['single', 'double']).optional().nullable(),
   widget_labels: widgetLabelsSchema,
   show_pricing: z.boolean().optional(),

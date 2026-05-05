@@ -3,6 +3,13 @@ export interface PublicGalleryImage {
   sort_order: number;
 }
 
+export interface PublicShowcaseImage {
+  url: string;
+  sort_order: number;
+}
+
+export type PublicLayoutMode = 'classic' | 'modern' | 'clean';
+
 export interface PublicLink {
   id: string;
   channel_type: string;
@@ -54,6 +61,8 @@ export interface PublicBusiness {
   logo_url: string | null;
   banner_url?: string | null;
   gallery: PublicGalleryImage[];
+  showcase: PublicShowcaseImage[];
+  layout_mode: PublicLayoutMode;
   links: PublicLink[];
   widget_date_mode?: 'single' | 'double';
   widget_labels?: PublicWidgetLabels;
