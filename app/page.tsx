@@ -3,7 +3,7 @@
 import { useState, useEffect, Fragment } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Monitor, TrendingUp, Shield } from 'lucide-react';
+import { BookOpen, LayoutGrid, ShoppingBag } from 'lucide-react';
 import { OmnichannelSection } from '@/components/omnichannel/OmnichannelSection';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
@@ -33,15 +33,15 @@ const content = {
     heroSub: "Dan angka-angka dalam bisnis Anda sedang bercerita — mau Anda dengarkan atau tidak.\nAXION membantu Anda mendengar, agar setiap keputusan bisnis berbasis data.",
     heroCta: 'Masuk ke AXION',
     aum: 'Assets Under Management',
-    card1Title: 'Semua entitas bisnis Anda, satu dashboard',
-    card1Body: 'Berhenti berpindah-pindah antara file Excel, aplikasi terpisah, dan laporan yang tidak sinkron. Axion menarik data dari seluruh perusahaan Anda — properti, trading, jasa — ke dalam satu tampilan konsolidasi yang selalu real-time.',
-    card1Badge: 'Konsolidasi otomatis',
-    card2Title: 'Laporan investor yang selama ini Anda buat manual — kini otomatis',
-    card2Body: 'IRR, MOIC, cash position, dan burn rate per entitas — tersedia setiap saat tanpa harus menunggu laporan dari akuntan. Bagikan akses baca kepada investor atau LP Anda dengan satu klik, tanpa risiko data bocor.',
-    card2Badge: 'PE-grade metrics',
-    card3Title: 'Akuntansi PSAK yang benar — tanpa perlu belajar akuntansi',
-    card3Body: 'Di balik antarmuka yang sederhana, setiap transaksi dicatat dengan double-entry yang patuh PSAK dan IFRS. Anda cukup input uang masuk dan keluar. Axion yang mengurus jurnal, neraca, dan laporan laba rugi.',
-    card3Badge: 'PSAK & IFRS compliant',
+    card1Title: 'Keuangan bisnis tercatat rapi',
+    card1Body: 'Nggak perlu lagi buka-tutup spreadsheet atau nunggu laporan dari akuntan yang datangnya telat. Semua transaksi harian, laporan bulanan, sampai neraca bisnis kamu — sudah tercatat otomatis dan bisa dicek kapan saja.',
+    card1Badge: 'Accounting',
+    card2Title: 'Cek ketersediaan di satu channel terpusat',
+    card2Body: 'Stok di toko fisik, website, dan marketplace kamu terpantau dari satu tempat. Nggak perlu lagi cek satu-satu atau khawatir overselling gara-gara data yang nggak sinkron antar channel.',
+    card2Badge: 'Omnichannel',
+    card3Title: 'Sinkronisasi order, pembukuan otomatis',
+    card3Body: 'Setiap order masuk dari Tokopedia, Shopee, atau marketplace lain langsung tercatat di pembukuan — tanpa input manual, tanpa selisih angka di akhir bulan. Kamu fokus jualan, sisanya biar sistem yang urus.',
+    card3Badge: 'Integrasi E-Commerce',
     ecomTag: 'Omnichannel Ready',
     ecomTitle: 'Ecommerce Integration',
     ecomBody: 'Hubungkan bisnis Anda dengan marketplace dan platform sosial terpopuler Indonesia. Tampilkan produk, terima pesanan, dan kelola semua saluran penjualan dari satu halaman publik — tanpa perlu website sendiri.',
@@ -60,15 +60,15 @@ const content = {
     heroSub: "And the numbers in your business are telling a story whether you're listening or not.\nAXION helps you listen so you can make data-driven decisions for your business.",
     heroCta: 'Enter AXION',
     aum: 'Assets Under Management',
-    card1Title: 'All your business entities, one dashboard',
-    card1Body: 'Stop juggling between Excel files, separate apps, and out-of-sync reports. Axion pulls data from all your companies — property, trading, services — into a single consolidated view that stays real-time.',
-    card1Badge: 'Auto consolidation',
-    card2Title: 'Investor reports you used to build manually — now automated',
-    card2Body: 'IRR, MOIC, cash position, and burn rate per entity — available any time without waiting on an accountant. Share read-only access with your investors or LPs in one click, with zero risk of data leaks.',
-    card2Badge: 'PE-grade metrics',
-    card3Title: 'Proper PSAK accounting — no accounting degree required',
-    card3Body: 'Behind a simple interface, every transaction is recorded with double-entry bookkeeping compliant with PSAK and IFRS. You just enter money in and out. Axion handles the journals, balance sheet, and income statement.',
-    card3Badge: 'PSAK & IFRS compliant',
+    card1Title: 'Business finances recorded neatly',
+    card1Body: 'No more opening and closing spreadsheets or waiting on an accountant\'s delayed report. Every daily transaction, monthly statement, and balance sheet — automatically recorded and accessible anytime.',
+    card1Badge: 'Accounting',
+    card2Title: 'Check availability from one central channel',
+    card2Body: 'Stock across your physical store, website, and marketplaces are monitored from a single place. No more checking them one by one or worrying about overselling due to out-of-sync data across channels.',
+    card2Badge: 'Omnichannel',
+    card3Title: 'Order sync, automatic bookkeeping',
+    card3Body: 'Every order from Tokopedia, Shopee, or any other marketplace is recorded directly in your books — no manual input, no number discrepancies at month end. You focus on selling, the system handles the rest.',
+    card3Badge: 'E-Commerce Integration',
     ecomTag: 'Omnichannel Ready',
     ecomTitle: 'Ecommerce Integration',
     ecomBody: 'Connect your business with Indonesia\'s most popular marketplaces and social platforms. Display products, receive orders, and manage all sales channels from one public page — no website needed.',
@@ -268,7 +268,7 @@ export default function LandingPage() {
         {/* Features Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto mb-12">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col">
-            <Monitor className="w-6 h-6 text-indigo-500 mb-5" />
+            <BookOpen className="w-6 h-6 text-primary-500 mb-5" />
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">
               {t.card1Title}
             </h3>
@@ -276,14 +276,14 @@ export default function LandingPage() {
               {t.card1Body}
             </p>
             <div className="mt-5">
-              <span className="inline-block px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs font-semibold rounded-lg">
+              <span className="inline-block px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs font-semibold rounded-lg">
                 {t.card1Badge}
               </span>
             </div>
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col">
-            <TrendingUp className="w-6 h-6 text-indigo-500 mb-5" />
+            <LayoutGrid className="w-6 h-6 text-primary-500 mb-5" />
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">
               {t.card2Title}
             </h3>
@@ -291,14 +291,14 @@ export default function LandingPage() {
               {t.card2Body}
             </p>
             <div className="mt-5">
-              <span className="inline-block px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs font-semibold rounded-lg">
+              <span className="inline-block px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs font-semibold rounded-lg">
                 {t.card2Badge}
               </span>
             </div>
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col">
-            <Shield className="w-6 h-6 text-indigo-500 mb-5" />
+            <ShoppingBag className="w-6 h-6 text-primary-500 mb-5" />
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">
               {t.card3Title}
             </h3>
@@ -306,7 +306,7 @@ export default function LandingPage() {
               {t.card3Body}
             </p>
             <div className="mt-5">
-              <span className="inline-block px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs font-semibold rounded-lg">
+              <span className="inline-block px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs font-semibold rounded-lg">
                 {t.card3Badge}
               </span>
             </div>
