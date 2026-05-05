@@ -162,7 +162,10 @@ export default function LandingPage() {
               className={`object-contain hidden transition-all duration-300 ${scrolled ? 'opacity-0 scale-75 absolute pointer-events-none' : 'dark:block opacity-100 scale-100'}`}
             />
           </div>
-          <div className="hidden sm:flex items-center gap-6">
+          <span className="hidden sm:block text-xs font-semibold tracking-[0.12em] uppercase text-gray-400 dark:text-gray-500 border-l border-gray-200 dark:border-gray-700 pl-4">
+            Family Offices
+          </span>
+          <div className="hidden sm:flex items-center gap-6 ml-auto">
             <nav className="flex items-center gap-2">
               {([
                 { label: t.navAccounting, href: '#section-accounting' },
