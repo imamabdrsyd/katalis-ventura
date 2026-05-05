@@ -20,10 +20,82 @@ interface Stats {
   businessLogos: BusinessLogo[];
 }
 
+type Lang = 'id' | 'en';
+
+const content = {
+  id: {
+    navAccounting: 'Accounting Engine',
+    navOmnichannel: 'Omnichannel',
+    navEcommerce: 'Ecommerce Integration',
+    heroTag: 'Accounting Engine',
+    heroTitle1: 'People lie, ',
+    heroTitle2: "numbers don't.",
+    heroSub: "Dan angka-angka dalam bisnis Anda sedang bercerita — mau Anda dengarkan atau tidak.\nAXION membantu Anda mendengar, agar setiap keputusan bisnis berbasis data.",
+    heroCta: 'Masuk ke AXION',
+    aum: 'Assets Under Management',
+    card1Title: 'Semua entitas bisnis Anda, satu dashboard',
+    card1Body: 'Berhenti berpindah-pindah antara file Excel, aplikasi terpisah, dan laporan yang tidak sinkron. Axion menarik data dari seluruh perusahaan Anda — properti, trading, jasa — ke dalam satu tampilan konsolidasi yang selalu real-time.',
+    card1Badge: 'Konsolidasi otomatis',
+    card2Title: 'Laporan investor yang selama ini Anda buat manual — kini otomatis',
+    card2Body: 'IRR, MOIC, cash position, dan burn rate per entitas — tersedia setiap saat tanpa harus menunggu laporan dari akuntan. Bagikan akses baca kepada investor atau LP Anda dengan satu klik, tanpa risiko data bocor.',
+    card2Badge: 'PE-grade metrics',
+    card3Title: 'Akuntansi PSAK yang benar — tanpa perlu belajar akuntansi',
+    card3Body: 'Di balik antarmuka yang sederhana, setiap transaksi dicatat dengan double-entry yang patuh PSAK dan IFRS. Anda cukup input uang masuk dan keluar. Axion yang mengurus jurnal, neraca, dan laporan laba rugi.',
+    card3Badge: 'PSAK & IFRS compliant',
+    ecomTag: 'Omnichannel Ready',
+    ecomTitle: 'Ecommerce Integration',
+    ecomBody: 'Hubungkan bisnis Anda dengan marketplace dan platform sosial terpopuler Indonesia. Tampilkan produk, terima pesanan, dan kelola semua saluran penjualan dari satu halaman publik — tanpa perlu website sendiri.',
+    footerLabel: 'Platform Keuangan Bisnis',
+    footerTitle: 'Kelola bisnis lebih cerdas.',
+    footerCta: 'Limited Partner Login',
+    copyright: '© 2026 PT Imam Katalis Ventura. All rights reserved.',
+  },
+  en: {
+    navAccounting: 'Accounting Engine',
+    navOmnichannel: 'Omnichannel',
+    navEcommerce: 'Ecommerce Integration',
+    heroTag: 'Accounting Engine',
+    heroTitle1: 'People lie, ',
+    heroTitle2: "numbers don't.",
+    heroSub: "And the numbers in your business are telling a story whether you're listening or not.\nAXION helps you listen so you can make data-driven decisions for your business.",
+    heroCta: 'Enter AXION',
+    aum: 'Assets Under Management',
+    card1Title: 'All your business entities, one dashboard',
+    card1Body: 'Stop juggling between Excel files, separate apps, and out-of-sync reports. Axion pulls data from all your companies — property, trading, services — into a single consolidated view that stays real-time.',
+    card1Badge: 'Auto consolidation',
+    card2Title: 'Investor reports you used to build manually — now automated',
+    card2Body: 'IRR, MOIC, cash position, and burn rate per entity — available any time without waiting on an accountant. Share read-only access with your investors or LPs in one click, with zero risk of data leaks.',
+    card2Badge: 'PE-grade metrics',
+    card3Title: 'Proper PSAK accounting — no accounting degree required',
+    card3Body: 'Behind a simple interface, every transaction is recorded with double-entry bookkeeping compliant with PSAK and IFRS. You just enter money in and out. Axion handles the journals, balance sheet, and income statement.',
+    card3Badge: 'PSAK & IFRS compliant',
+    ecomTag: 'Omnichannel Ready',
+    ecomTitle: 'Ecommerce Integration',
+    ecomBody: 'Connect your business with Indonesia\'s most popular marketplaces and social platforms. Display products, receive orders, and manage all sales channels from one public page — no website needed.',
+    footerLabel: 'Business Finance Platform',
+    footerTitle: 'Run your business smarter.',
+    footerCta: 'Limited Partner Login',
+    copyright: '© 2026 PT Imam Katalis Ventura. All rights reserved.',
+  },
+} as const;
+
 export default function LandingPage() {
   const [stats, setStats] = useState<Stats>({ users: 0, businesses: 0, businessLogos: [] });
   const [loading, setLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
+  const [lang, setLang] = useState<Lang>('id');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('axion_lang') as Lang | null;
+    if (saved === 'id' || saved === 'en') setLang(saved);
+  }, []);
+
+  const switchLang = (l: Lang) => {
+    setLang(l);
+    localStorage.setItem('axion_lang', l);
+  };
+
+  const t = content[lang];
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -93,9 +165,9 @@ export default function LandingPage() {
           <div className="hidden sm:flex items-center gap-6">
             <nav className="flex items-center gap-2">
               {([
-                { label: 'Accounting Engine', href: '#section-accounting' },
-                { label: 'Omnichannel', href: '#section-omnichannel' },
-                { label: 'Ecommerce Integration', href: '#section-ecommerce' },
+                { label: t.navAccounting, href: '#section-accounting' },
+                { label: t.navOmnichannel, href: '#section-omnichannel' },
+                { label: t.navEcommerce, href: '#section-ecommerce' },
               ]).map(({ label, href }, i, arr) => (
                 <Fragment key={label}>
                   <a
@@ -126,34 +198,32 @@ export default function LandingPage() {
         <div id="section-accounting" className="max-w-3xl mx-auto text-center mb-12">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-semibold mb-5">
             <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></span>
-            Accounting Engine
+            {t.heroTag}
           </div>
 
           <h1 className="text-5xl md:text-6xl font-bold mb-5 leading-[1.1] tracking-tight">
-            <span className="text-gray-900 dark:text-gray-100">People lie, </span>
+            <span className="text-gray-900 dark:text-gray-100">{t.heroTitle1}</span>
             <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              numbers don't.
+              {t.heroTitle2}
             </span>
           </h1>
 
-          <p className="text-base text-gray-500 dark:text-gray-400 mb-8 max-w-2xl mx-auto leading-relaxed">
-            And the numbers in your business are telling a story whether you&apos;re listening or not.
-            <br />
-            AXION helps you listen so you can make data-driven decisions for your business.
+          <p className="text-base text-gray-500 dark:text-gray-400 mb-8 max-w-2xl mx-auto leading-relaxed whitespace-pre-line">
+            {t.heroSub}
           </p>
 
           <Link
             href="/login"
             className="group relative inline-block px-10 py-3.5 text-white rounded-xl font-semibold text-lg overflow-hidden bg-[length:200%_100%] bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 bg-left hover:bg-right transition-[background-position] duration-500 ease-in-out"
           >
-            Enter AXION
+            {t.heroCta}
           </Link>
         </div>
 
         {/* Business Logo Marquee */}
         {stats.businessLogos.length > 0 && (
           <div className="max-w-5xl mx-auto w-full mb-12">
-            <p className="text-center text-sm text-gray-400 dark:text-gray-500 mb-4 font-medium">Assets Under Management</p>
+            <p className="text-center text-sm text-gray-400 dark:text-gray-500 mb-4 font-medium">{t.aum}</p>
             <div
               className="relative overflow-hidden group"
               style={{
@@ -197,14 +267,14 @@ export default function LandingPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col">
             <Monitor className="w-6 h-6 text-indigo-500 mb-5" />
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">
-              Semua entitas bisnis Anda, satu dashboard
+              {t.card1Title}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed flex-1">
-              Berhenti berpindah-pindah antara file Excel, aplikasi terpisah, dan laporan yang tidak sinkron. Axion menarik data dari seluruh perusahaan Anda — properti, trading, jasa — ke dalam satu tampilan konsolidasi yang selalu real-time.
+              {t.card1Body}
             </p>
             <div className="mt-5">
               <span className="inline-block px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs font-semibold rounded-lg">
-                Konsolidasi otomatis
+                {t.card1Badge}
               </span>
             </div>
           </div>
@@ -212,14 +282,14 @@ export default function LandingPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col">
             <TrendingUp className="w-6 h-6 text-indigo-500 mb-5" />
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">
-              Laporan investor yang selama ini Anda buat manual — kini otomatis
+              {t.card2Title}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed flex-1">
-              IRR, MOIC, cash position, dan burn rate per entitas — tersedia setiap saat tanpa harus menunggu laporan dari akuntan. Bagikan akses baca kepada investor atau LP Anda dengan satu klik, tanpa risiko data bocor.
+              {t.card2Body}
             </p>
             <div className="mt-5">
               <span className="inline-block px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs font-semibold rounded-lg">
-                PE-grade metrics
+                {t.card2Badge}
               </span>
             </div>
           </div>
@@ -227,14 +297,14 @@ export default function LandingPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col">
             <Shield className="w-6 h-6 text-indigo-500 mb-5" />
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">
-              Akuntansi PSAK yang benar — tanpa perlu belajar akuntansi
+              {t.card3Title}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed flex-1">
-              Di balik antarmuka yang sederhana, setiap transaksi dicatat dengan double-entry yang patuh PSAK dan IFRS. Anda cukup input uang masuk dan keluar. Axion yang mengurus jurnal, neraca, dan laporan laba rugi.
+              {t.card3Body}
             </p>
             <div className="mt-5">
               <span className="inline-block px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs font-semibold rounded-lg">
-                PSAK &amp; IFRS compliant
+                {t.card3Badge}
               </span>
             </div>
           </div>
@@ -247,13 +317,13 @@ export default function LandingPage() {
               <div className="flex-1">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-semibold mb-4">
                   <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></span>
-                  Omnichannel Ready
+                  {t.ecomTag}
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
-                  Ecommerce Integration
+                  {t.ecomTitle}
                 </h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                  Hubungkan bisnis Anda dengan marketplace dan platform sosial terpopuler Indonesia. Tampilkan produk, terima pesanan, dan kelola semua saluran penjualan dari satu halaman publik — tanpa perlu website sendiri.
+                  {t.ecomBody}
                 </p>
               </div>
               <div className="flex-shrink-0 w-full md:w-auto">
@@ -284,10 +354,10 @@ export default function LandingPage() {
         <div className="container mx-auto px-6 pt-10 pb-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
             <p className="text-xs font-semibold tracking-[0.15em] uppercase text-gray-400 mb-2">
-              Platform Keuangan Bisnis
+              {t.footerLabel}
             </p>
             <h2 className="text-2xl md:text-3xl font-bold text-white">
-              Kelola bisnis lebih cerdas.
+              {t.footerTitle}
             </h2>
           </div>
 
@@ -313,15 +383,30 @@ export default function LandingPage() {
             href="/login"
             className="shrink-0 px-8 py-3 border border-gray-600 text-gray-200 font-semibold text-sm rounded-xl hover:border-gray-400 hover:text-white transition-colors"
           >
-            Limited Partner Login
+            {t.footerCta}
           </Link>
         </div>
 
         {/* Copyright bar */}
         <div className="border-t border-gray-800">
           <div className="container mx-auto px-6 py-4 flex flex-col md:flex-row items-center justify-between text-sm text-gray-500 gap-2">
-            <p>&copy; 2026 PT Imam Katalis Ventura. All rights reserved.</p>
+            <p>{t.copyright}</p>
             <div className="flex items-center gap-4">
+              {/* Language switcher */}
+              <div className="flex items-center gap-1 border border-gray-700 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => switchLang('id')}
+                  className={`px-2.5 py-1 text-xs font-semibold transition-colors ${lang === 'id' ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                >
+                  ID
+                </button>
+                <button
+                  onClick={() => switchLang('en')}
+                  className={`px-2.5 py-1 text-xs font-semibold transition-colors ${lang === 'en' ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                >
+                  EN
+                </button>
+              </div>
               <Link
                 href="/blog"
                 className="hover:text-gray-300 transition-colors"
