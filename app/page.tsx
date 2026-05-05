@@ -24,10 +24,10 @@ type Lang = 'id' | 'en';
 
 const content = {
   id: {
-    navAccounting: 'Family Offices',
+    navAccounting: 'Accounting Engine',
     navOmnichannel: 'Omnichannel',
     navEcommerce: 'Ecommerce Integration',
-    heroTag: 'Family Offices',
+    heroTag: 'Accounting Engine',
     heroTitle1: 'People lie, ',
     heroTitle2: "numbers don't.",
     heroSub: "Dan angka-angka dalam bisnis Anda sedang bercerita — mau Anda dengarkan atau tidak.\nAXION membantu Anda mendengar, agar setiap keputusan bisnis berbasis data.",
@@ -51,10 +51,10 @@ const content = {
     copyright: '© 2026 PT Imam Katalis Ventura. All rights reserved.',
   },
   en: {
-    navAccounting: 'Family Offices',
+    navAccounting: 'Accounting Engine',
     navOmnichannel: 'Omnichannel',
     navEcommerce: 'Ecommerce Integration',
-    heroTag: 'Family Offices',
+    heroTag: 'Accounting Engine',
     heroTitle1: 'People lie, ',
     heroTitle2: "numbers don't.",
     heroSub: "And the numbers in your business are telling a story whether you're listening or not.\nAXION helps you listen so you can make data-driven decisions for your business.",
