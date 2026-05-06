@@ -381,6 +381,7 @@ export interface OmniChannelLink {
   sort_order: number;
   custom_icon_url?: string | null;
   lucide_icon?: string | null;
+  display_mode?: 'default' | 'icon_only';
   created_at: string;
   updated_at: string;
 }
@@ -462,6 +463,8 @@ export interface BusinessOmniChannel {
   price_unit?: string | null;
   public_url_mode?: 'slug-only' | 'axion-only' | 'both';
   featured_product?: FeaturedProduct | null;
+  button_color?: string | null;
+  banner_position?: string | null;
   created_at: string;
   updated_at: string;
   created_by: string;
@@ -490,6 +493,8 @@ export interface UpsertOmniChannelData {
   price_unit?: string | null;
   public_url_mode?: 'slug-only' | 'axion-only' | 'both';
   featured_product?: FeaturedProduct | null;
+  button_color?: string | null;
+  banner_position?: string | null;
 }
 
 export interface UpsertOmniChannelLinkData {
@@ -502,6 +507,7 @@ export interface UpsertOmniChannelLinkData {
   sort_order: number;
   custom_icon_url?: string | null;
   lucide_icon?: string | null;
+  display_mode?: 'default' | 'icon_only';
 }
 
 // Audit trail types

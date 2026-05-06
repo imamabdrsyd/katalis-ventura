@@ -72,7 +72,7 @@ export function PublicOmniChannelPage({ channel, business }: Props) {
             </div>
             {business.banner_url && (
               <div className="relative w-full aspect-[3/1] rounded-2xl overflow-hidden mb-6 shadow-sm">
-                <Image src={business.banner_url} alt={`${channel.title} banner`} fill className="object-cover" unoptimized priority />
+                <Image src={business.banner_url} alt={`${channel.title} banner`} fill className="object-cover" style={{ objectPosition: business.banner_position ?? 'center' }} unoptimized priority />
               </div>
             )}
           </>
@@ -83,7 +83,7 @@ export function PublicOmniChannelPage({ channel, business }: Props) {
             <div className="relative mb-6">
               {business.banner_url ? (
                 <div className="relative w-full aspect-[3/1] rounded-2xl overflow-hidden shadow-sm">
-                  <Image src={business.banner_url} alt={`${channel.title} banner`} fill className="object-cover" unoptimized priority />
+                  <Image src={business.banner_url} alt={`${channel.title} banner`} fill className="object-cover" style={{ objectPosition: business.banner_position ?? 'center' }} unoptimized priority />
                 </div>
               ) : (
                 <div className="w-full aspect-[3/1] rounded-2xl bg-gradient-to-br from-primary-500 to-purple-500" />
@@ -105,7 +105,7 @@ export function PublicOmniChannelPage({ channel, business }: Props) {
           <>
             {business.banner_url && (
               <div className="relative w-full aspect-[16/9] rounded-2xl overflow-hidden mb-6 shadow-sm">
-                <Image src={business.banner_url} alt={`${channel.title} banner`} fill className="object-cover" unoptimized priority />
+                <Image src={business.banner_url} alt={`${channel.title} banner`} fill className="object-cover" style={{ objectPosition: business.banner_position ?? 'center' }} unoptimized priority />
               </div>
             )}
             <div className="flex flex-col items-center mb-6">
@@ -143,7 +143,7 @@ export function PublicOmniChannelPage({ channel, business }: Props) {
         {/* LINKS — berdiri sendiri, untuk semua tipe bisnis */}
         {showLinks && (
           <div className="max-w-md mx-auto w-full mt-6">
-            <OmnichannelLinks links={business.links} />
+            <OmnichannelLinks links={business.links} buttonColor={business.button_color} />
           </div>
         )}
 

@@ -21,6 +21,7 @@ const patchSchema = z.object({
     z.string().url().nullable().optional()
   ),
   lucide_icon: z.string().max(100).nullable().optional(),
+  display_mode: z.enum(['default', 'icon_only']).optional(),
 });
 
 async function verifyManagerOwnsLink(userId: string, linkId: string): Promise<boolean> {

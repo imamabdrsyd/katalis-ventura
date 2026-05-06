@@ -167,6 +167,7 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
   const [subtitle, setSubtitle] = useState(editingLink?.subtitle ?? '');
   const [url, setUrl] = useState(editingLink?.url ?? '');
   const [isActive, setIsActive] = useState(editingLink?.is_active ?? true);
+  const [displayMode, setDisplayMode] = useState<'default' | 'icon_only'>(editingLink?.display_mode ?? 'default');
   const [customIconUrl, setCustomIconUrl] = useState(editingLink?.custom_icon_url ?? '');
   const [lucideIcon, setLucideIcon] = useState<string>(editingLink?.lucide_icon ?? '');
   const [showIconPicker, setShowIconPicker] = useState(false);
@@ -240,6 +241,7 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
           is_active: isActive,
           custom_icon_url: customIconUrl || null,
           lucide_icon: lucideIcon || null,
+          display_mode: displayMode,
         });
       } else {
         await addOmniChannelLink('', {
@@ -251,6 +253,7 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
           is_primary: false,
           sort_order: nextSortOrder,
           lucide_icon: lucideIcon || null,
+          display_mode: displayMode,
           businessId,
         });
       }
@@ -424,6 +427,25 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
                 {iconError && <p className="text-xs text-red-500">{iconError}</p>}
               </div>
             </div>
+          </div>
+
+          {/* Display mode */}
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Icon saja</span>
+              <p className="text-xs text-gray-400 dark:text-gray-500">Tampil sebagai icon kecil tanpa kotak & label</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={displayMode === 'icon_only'}
+              onClick={() => setDisplayMode(displayMode === 'icon_only' ? 'default' : 'icon_only')}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                displayMode === 'icon_only' ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${displayMode === 'icon_only' ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
           </div>
 
           {/* Active toggle */}

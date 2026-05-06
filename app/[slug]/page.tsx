@@ -83,11 +83,11 @@ export default async function PublicSlugPage({ params }: Props) {
     .from('business_omni_channels')
     .select(`
       id, business_id, slug, is_published, title, tagline, bio, logo_url, banner_url,
-      gallery_images, showcase_images, layout_mode,
+      gallery_images, showcase_images, layout_mode, button_color, banner_position,
       show_gallery, show_showcase, show_widget, show_links,
       widget_date_mode, widget_labels,
       show_pricing, default_price, price_unit, featured_product,
-      links:business_omni_channel_links ( id, channel_type, label, subtitle, url, is_active, is_primary, sort_order, custom_icon_url, lucide_icon ),
+      links:business_omni_channel_links ( id, channel_type, label, subtitle, url, is_active, is_primary, sort_order, custom_icon_url, lucide_icon, display_mode ),
       pricing_rules:business_pricing_rules ( id, date_from, date_to, price, label )
     `)
     .eq('slug', slug)
@@ -123,6 +123,7 @@ export default async function PublicSlugPage({ params }: Props) {
     sort_order: l.sort_order,
     custom_icon_url: (l as any).custom_icon_url ?? null,
     lucide_icon: (l as any).lucide_icon ?? null,
+    display_mode: (l as any).display_mode ?? 'default',
   }));
 
   const pricingRules: PublicPricingRule[] = showPricing
@@ -163,6 +164,8 @@ export default async function PublicSlugPage({ params }: Props) {
     pricing_rules: pricingRules,
     banner_url: oc.banner_url ?? null,
     featured_product: oc.featured_product ?? null,
+    button_color: oc.button_color ?? null,
+    banner_position: oc.banner_position ?? 'center',
   };
 
   return (

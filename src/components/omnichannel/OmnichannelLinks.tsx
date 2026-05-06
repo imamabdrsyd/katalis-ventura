@@ -60,17 +60,22 @@ function ChannelIcon({ type, customIconUrl, lucideIcon }: { type: string; custom
 
 interface Props {
   links: PublicLink[];
+  buttonColor?: string | null;
 }
 
-export function OmnichannelLinks({ links }: Props) {
+export function OmnichannelLinks({ links, buttonColor }: Props) {
   if (links.length === 0) return null;
 
   const primaryLinks = links.filter((l) => l.is_primary);
   const secondaryLinks = links.filter((l) => !l.is_primary);
+  const iconOnlyLinks = links.filter((l) => l.display_mode === 'icon_only');
+  const visibleSecondary = secondaryLinks.filter((l) => l.display_mode !== 'icon_only');
+
+  const primaryBg = buttonColor ?? '#6366f1';
 
   return (
     <div className="space-y-2">
-      {/* Primary links — full-width button style */}
+      {/* Primary links — full-width button style dengan warna kustom */}
       {primaryLinks.map((link) => {
         const meta = CHANNEL_META[link.channel_type as OmniChannelType] ?? CHANNEL_META.custom;
         return (
@@ -79,7 +84,8 @@ export function OmnichannelLinks({ links }: Props) {
             href={link.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2.5 w-full py-3.5 px-4 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-semibold text-sm transition-colors"
+            className="flex items-center justify-center gap-2.5 w-full py-3.5 px-4 rounded-xl text-white font-semibold text-sm transition-opacity hover:opacity-90"
+            style={{ backgroundColor: primaryBg }}
           >
             <ShoppingCart className="w-4 h-4" />
             {link.label || meta.defaultLabel}
@@ -88,7 +94,7 @@ export function OmnichannelLinks({ links }: Props) {
       })}
 
       {/* Secondary links — row style */}
-      {secondaryLinks.map((link) => {
+      {visibleSecondary.map((link) => {
         const meta = CHANNEL_META[link.channel_type as OmniChannelType] ?? CHANNEL_META.custom;
         const subtitleText = link.subtitle || (link.label !== meta.label ? meta.label : null);
         return (
@@ -114,6 +120,24 @@ export function OmnichannelLinks({ links }: Props) {
           </a>
         );
       })}
+
+      {/* Icon-only links — baris icon kecil tanpa kotak */}
+      {iconOnlyLinks.length > 0 && (
+        <div className="flex flex-wrap gap-3 pt-1 justify-center">
+          {iconOnlyLinks.map((link) => (
+            <a
+              key={`icon-${link.id}`}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={link.label}
+              className="text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 transition"
+            >
+              <ChannelIcon type={link.channel_type} customIconUrl={link.custom_icon_url} lucideIcon={link.lucide_icon} />
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

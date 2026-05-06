@@ -20,6 +20,7 @@ export interface PublicLink {
   sort_order: number;
   custom_icon_url?: string | null;
   lucide_icon?: string | null;
+  display_mode?: 'default' | 'icon_only';
 }
 
 export interface PublicFeaturedProduct {
@@ -77,6 +78,8 @@ export interface PublicBusiness {
   price_unit?: string | null;
   pricing_rules?: PublicPricingRule[];
   featured_product?: PublicFeaturedProduct | null;
+  button_color?: string | null;
+  banner_position?: string | null;
 }
 
 const SECTOR_LABELS: Record<string, string> = {

@@ -26,6 +26,8 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
   const [layoutMode, setLayoutMode] = useState<OmniChannelLayoutMode>(channel?.layout_mode ?? 'classic');
   const [widgetDateMode, setWidgetDateMode] = useState<'single' | 'double'>(channel?.widget_date_mode ?? 'double');
   const [widgetLabels, setWidgetLabels] = useState<OmniChannelWidgetLabels>(channel?.widget_labels ?? {});
+  const [buttonColor, setButtonColor] = useState(channel?.button_color ?? '#6366f1');
+  const [bannerPosition, setBannerPosition] = useState(channel?.banner_position ?? 'center');
 
   const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'unavailable'>('idle');
   const [slugError, setSlugError] = useState('');
@@ -51,7 +53,41 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
     layoutMode: channel?.layout_mode ?? 'classic',
     widgetDateMode: channel?.widget_date_mode ?? 'double',
     widgetLabels: JSON.stringify(channel?.widget_labels ?? {}),
+    buttonColor: channel?.button_color ?? '#6366f1',
+    bannerPosition: channel?.banner_position ?? 'center',
   });
+
+  // Banner drag-to-reposition
+  const bannerDragRef = useRef<{ startX: number; startY: number; posX: number; posY: number } | null>(null);
+
+  function parseBannerPosition(pos: string): { x: number; y: number } {
+    if (pos === 'center') return { x: 50, y: 50 };
+    const parts = pos.split(' ');
+    const x = parseFloat(parts[0]) || 50;
+    const y = parseFloat(parts[1]) || 50;
+    return { x, y };
+  }
+
+  function handleBannerDragStart(e: React.MouseEvent<HTMLDivElement>) {
+    const { x, y } = parseBannerPosition(bannerPosition);
+    bannerDragRef.current = { startX: e.clientX, startY: e.clientY, posX: x, posY: y };
+    e.preventDefault();
+  }
+
+  function handleBannerDragMove(e: React.MouseEvent<HTMLDivElement>) {
+    if (!bannerDragRef.current) return;
+    const el = e.currentTarget;
+    const rect = el.getBoundingClientRect();
+    const dx = ((e.clientX - bannerDragRef.current.startX) / rect.width) * 100;
+    const dy = ((e.clientY - bannerDragRef.current.startY) / rect.height) * 100;
+    const newX = Math.max(0, Math.min(100, bannerDragRef.current.posX - dx));
+    const newY = Math.max(0, Math.min(100, bannerDragRef.current.posY - dy));
+    setBannerPosition(`${newX.toFixed(1)}% ${newY.toFixed(1)}%`);
+  }
+
+  function handleBannerDragEnd() {
+    bannerDragRef.current = null;
+  }
 
   // Debounced slug check
   useEffect(() => {
@@ -163,8 +199,10 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
         layout_mode: layoutMode,
         widget_date_mode: widgetDateMode,
         widget_labels: widgetLabels,
+        button_color: buttonColor || null,
+        banner_position: bannerPosition || 'center',
       }, userId);
-      savedRef.current = { slug, title, tagline, bio, logoUrl, bannerUrl, isPublished, layoutMode, widgetDateMode, widgetLabels: JSON.stringify(widgetLabels) };
+      savedRef.current = { slug, title, tagline, bio, logoUrl, bannerUrl, isPublished, layoutMode, widgetDateMode, widgetLabels: JSON.stringify(widgetLabels), buttonColor, bannerPosition };
       onSaved();
     } catch (err: any) {
       setSaveError(err.message || 'Gagal menyimpan');
@@ -215,7 +253,9 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
     isPublished !== saved.isPublished ||
     layoutMode !== saved.layoutMode ||
     widgetDateMode !== saved.widgetDateMode ||
-    JSON.stringify(widgetLabels) !== saved.widgetLabels;
+    JSON.stringify(widgetLabels) !== saved.widgetLabels ||
+    buttonColor !== saved.buttonColor ||
+    bannerPosition !== saved.bannerPosition;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-5">
@@ -413,27 +453,47 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Banner <span className="text-gray-400 font-normal">(opsional)</span>
         </label>
-        <div className="relative group rounded-xl overflow-hidden border-2 border-dashed border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 cursor-pointer aspect-[3/1] flex items-center justify-center">
+        {/* Drag-to-reposition area */}
+        <div
+          className="relative rounded-xl overflow-hidden border-2 border-dashed border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 aspect-[3/1] flex items-center justify-center select-none"
+          style={{ cursor: bannerUrl ? 'grab' : 'default' }}
+          onMouseDown={bannerUrl ? handleBannerDragStart : undefined}
+          onMouseMove={bannerUrl ? handleBannerDragMove : undefined}
+          onMouseUp={handleBannerDragEnd}
+          onMouseLeave={handleBannerDragEnd}
+        >
           {bannerUrl ? (
-            <img src={bannerUrl} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
+            <img
+              src={bannerUrl}
+              alt="Banner"
+              className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+              style={{ objectPosition: bannerPosition }}
+              draggable={false}
+            />
           ) : (
             <div className="flex flex-col items-center gap-1 text-gray-400">
               <ImageIcon className="w-7 h-7" />
               <span className="text-xs">Klik untuk upload banner</span>
             </div>
           )}
-          <label className={`absolute inset-0 flex items-center justify-center bg-black/50 cursor-pointer transition-opacity ${uploadingBanner ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+          {/* Upload overlay — hanya saat hover DAN tidak sedang drag */}
+          <label className={`absolute inset-0 flex items-center justify-center bg-black/50 cursor-pointer transition-opacity ${uploadingBanner ? 'opacity-100' : 'opacity-0 hover:opacity-100'}`}>
             {uploadingBanner ? <Loader2 className="w-6 h-6 text-white animate-spin" /> : <Camera className="w-6 h-6 text-white" />}
             <input ref={bannerInputRef} type="file" accept="image/*" onChange={handleBannerUpload} disabled={uploadingBanner} className="hidden" />
           </label>
           {bannerUrl && !uploadingBanner && (
             <button
               type="button"
-              onClick={() => { setBannerUrl(''); setBannerUploadError(''); }}
-              className="absolute top-2 right-2 w-7 h-7 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center"
+              onClick={(e) => { e.stopPropagation(); setBannerUrl(''); setBannerPosition('center'); setBannerUploadError(''); }}
+              className="absolute top-2 right-2 w-7 h-7 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center z-10"
             >
               <X className="w-4 h-4" />
             </button>
+          )}
+          {bannerUrl && (
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full pointer-events-none">
+              Geser untuk atur posisi
+            </div>
           )}
         </div>
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
@@ -513,6 +573,50 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
               </button>
             );
           })}
+        </div>
+      </div>
+
+      {/* Button Color */}
+      <div className="border-t border-gray-100 dark:border-gray-700 pt-5">
+        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+          Warna Tombol Utama
+        </label>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          Warna tombol primary di halaman publik (link yang ditandai bintang).
+        </p>
+        <div className="flex items-center gap-3">
+          <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 shrink-0">
+            <input
+              type="color"
+              value={buttonColor}
+              onChange={(e) => setButtonColor(e.target.value)}
+              className="absolute inset-0 w-full h-full cursor-pointer opacity-0"
+            />
+            <div className="w-full h-full rounded-xl" style={{ backgroundColor: buttonColor }} />
+          </div>
+          <input
+            type="text"
+            value={buttonColor}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (/^#[0-9A-Fa-f]{0,6}$/.test(v)) setButtonColor(v);
+            }}
+            maxLength={7}
+            className="w-28 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
+          />
+          {/* Preset swatches */}
+          <div className="flex gap-1.5 flex-wrap">
+            {['#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#0ea5e9', '#64748b', '#1e293b'].map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setButtonColor(c)}
+                className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${buttonColor === c ? 'border-gray-800 dark:border-white scale-110' : 'border-transparent'}`}
+                style={{ backgroundColor: c }}
+                title={c}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
