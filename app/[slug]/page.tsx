@@ -87,7 +87,7 @@ export default async function PublicSlugPage({ params }: Props) {
       show_gallery, show_showcase, show_widget, show_links,
       widget_date_mode, widget_labels,
       show_pricing, default_price, price_unit, featured_product,
-      links:business_omni_channel_links ( id, channel_type, label, subtitle, url, is_active, is_primary, sort_order, custom_icon_url ),
+      links:business_omni_channel_links ( id, channel_type, label, subtitle, url, is_active, is_primary, sort_order, custom_icon_url, lucide_icon ),
       pricing_rules:business_pricing_rules ( id, date_from, date_to, price, label )
     `)
     .eq('slug', slug)
@@ -122,6 +122,7 @@ export default async function PublicSlugPage({ params }: Props) {
     is_primary: !!l.is_primary,
     sort_order: l.sort_order,
     custom_icon_url: (l as any).custom_icon_url ?? null,
+    lucide_icon: (l as any).lucide_icon ?? null,
   }));
 
   const pricingRules: PublicPricingRule[] = showPricing

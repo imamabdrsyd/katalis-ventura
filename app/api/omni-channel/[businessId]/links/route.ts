@@ -15,6 +15,7 @@ const linkSchema = z.object({
   url: z.string().min(1).max(2048),
   is_active: z.boolean().default(true),
   sort_order: z.number().int().default(0),
+  lucide_icon: z.string().max(100).nullable().optional(),
 });
 
 async function verifyManager(userId: string, businessId: string): Promise<boolean> {

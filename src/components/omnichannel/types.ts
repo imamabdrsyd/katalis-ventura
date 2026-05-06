@@ -19,6 +19,7 @@ export interface PublicLink {
   is_primary: boolean;
   sort_order: number;
   custom_icon_url?: string | null;
+  lucide_icon?: string | null;
 }
 
 export interface PublicFeaturedProduct {

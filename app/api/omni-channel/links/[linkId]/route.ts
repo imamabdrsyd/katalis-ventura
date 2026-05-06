@@ -20,6 +20,7 @@ const patchSchema = z.object({
     (val) => (typeof val === 'string' && val.trim() === '' ? null : val),
     z.string().url().nullable().optional()
   ),
+  lucide_icon: z.string().max(100).nullable().optional(),
 });
 
 async function verifyManagerOwnsLink(userId: string, linkId: string): Promise<boolean> {

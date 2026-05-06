@@ -380,6 +380,7 @@ export interface OmniChannelLink {
   is_primary: boolean;
   sort_order: number;
   custom_icon_url?: string | null;
+  lucide_icon?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -500,6 +501,7 @@ export interface UpsertOmniChannelLinkData {
   is_primary: boolean;
   sort_order: number;
   custom_icon_url?: string | null;
+  lucide_icon?: string | null;
 }
 
 // Audit trail types

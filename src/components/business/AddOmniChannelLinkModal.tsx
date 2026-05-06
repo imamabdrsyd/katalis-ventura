@@ -168,7 +168,7 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
   const [url, setUrl] = useState(editingLink?.url ?? '');
   const [isActive, setIsActive] = useState(editingLink?.is_active ?? true);
   const [customIconUrl, setCustomIconUrl] = useState(editingLink?.custom_icon_url ?? '');
-  const [lucideIcon, setLucideIcon] = useState<string>((editingLink as any)?.lucide_icon ?? '');
+  const [lucideIcon, setLucideIcon] = useState<string>(editingLink?.lucide_icon ?? '');
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [uploadingIcon, setUploadingIcon] = useState(false);
   const [iconError, setIconError] = useState('');
@@ -239,6 +239,7 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
           url: normalizedUrl,
           is_active: isActive,
           custom_icon_url: customIconUrl || null,
+          lucide_icon: lucideIcon || null,
         });
       } else {
         await addOmniChannelLink('', {
@@ -249,6 +250,7 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
           is_active: isActive,
           is_primary: false,
           sort_order: nextSortOrder,
+          lucide_icon: lucideIcon || null,
           businessId,
         });
       }

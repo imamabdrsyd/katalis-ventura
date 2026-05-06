@@ -79,6 +79,7 @@ interface RawOmniChannel {
     is_active: boolean;
     is_primary: boolean;
     sort_order: number;
+    lucide_icon?: string | null;
   }> | null;
   pricing_rules: Array<{
     id: string;
@@ -139,7 +140,7 @@ export async function GET() {
             show_gallery, show_showcase, show_widget, show_links,
             widget_date_mode, widget_labels,
             show_pricing, default_price, price_unit,
-            links:business_omni_channel_links ( id, channel_type, label, subtitle, url, is_active, is_primary, sort_order ),
+            links:business_omni_channel_links ( id, channel_type, label, subtitle, url, is_active, is_primary, sort_order, lucide_icon ),
             pricing_rules:business_pricing_rules ( id, date_from, date_to, price, label )
           )
         `
@@ -165,7 +166,7 @@ export async function GET() {
         ? (oc?.links ?? [])
             .filter((l) => l.is_active)
             .sort((a, b) => a.sort_order - b.sort_order)
-            .map(({ id, channel_type, label, subtitle, url, is_primary, sort_order }) => ({
+            .map(({ id, channel_type, label, subtitle, url, is_primary, sort_order, lucide_icon }) => ({
               id,
               channel_type,
               label,
@@ -173,6 +174,7 @@ export async function GET() {
               url,
               is_primary: !!is_primary,
               sort_order,
+              lucide_icon: lucide_icon ?? null,
             }))
         : [];
 

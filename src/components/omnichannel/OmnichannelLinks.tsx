@@ -1,7 +1,8 @@
 'use client';
 
 import Image from 'next/image';
-import { ExternalLink, Link2, ShoppingCart } from 'lucide-react';
+import { ExternalLink, ShoppingCart } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import { CHANNEL_META } from '@/lib/omniChannelMeta';
 import type { OmniChannelType } from '@/types';
 import type { PublicLink } from './types';
@@ -12,10 +13,10 @@ const CHANNEL_PNG: Partial<Record<string, string>> = {
   tokopedia: '/images/ecommerce/Tokopedia.png',
 };
 
-function ChannelIcon({ type, customIconUrl }: { type: string; customIconUrl?: string | null }) {
+function ChannelIcon({ type, customIconUrl, lucideIcon }: { type: string; customIconUrl?: string | null; lucideIcon?: string | null }) {
   const meta = CHANNEL_META[type as OmniChannelType] ?? CHANNEL_META.custom;
-  const pngUrl = CHANNEL_PNG[type];
 
+  // Custom uploaded image — highest priority
   if (customIconUrl) {
     return (
       <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
@@ -23,6 +24,21 @@ function ChannelIcon({ type, customIconUrl }: { type: string; customIconUrl?: st
       </div>
     );
   }
+
+  // Lucide icon picked by user
+  if (lucideIcon) {
+    const Icon = (LucideIcons as any)[lucideIcon] as React.ElementType | undefined;
+    if (Icon) {
+      return (
+        <div className="w-9 h-9 rounded-lg flex-shrink-0 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+          <Icon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+        </div>
+      );
+    }
+  }
+
+  // Platform PNG (Shopee, TikTok, Tokopedia)
+  const pngUrl = CHANNEL_PNG[type];
   if (pngUrl) {
     return (
       <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 bg-white border border-gray-100">
@@ -30,6 +46,8 @@ function ChannelIcon({ type, customIconUrl }: { type: string; customIconUrl?: st
       </div>
     );
   }
+
+  // Default platform SVG icon
   return (
     <div
       className={`w-9 h-9 rounded-lg flex items-center justify-center ${meta.bgColor} ${meta.textColor} flex-shrink-0`}
@@ -72,6 +90,7 @@ export function OmnichannelLinks({ links }: Props) {
       {/* Secondary links — row style */}
       {secondaryLinks.map((link) => {
         const meta = CHANNEL_META[link.channel_type as OmniChannelType] ?? CHANNEL_META.custom;
+        const subtitleText = link.subtitle || (link.label !== meta.label ? meta.label : null);
         return (
           <a
             key={link.id}
@@ -80,14 +99,14 @@ export function OmnichannelLinks({ links }: Props) {
             rel="noopener noreferrer"
             className="group flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-primary-300 dark:hover:border-primary-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
           >
-            <ChannelIcon type={link.channel_type} customIconUrl={link.custom_icon_url} />
+            <ChannelIcon type={link.channel_type} customIconUrl={link.custom_icon_url} lucideIcon={link.lucide_icon} />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                 {link.label || meta.label}
               </p>
-              {(link.subtitle || link.label !== meta.label) && (
+              {subtitleText && (
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
-                  {link.subtitle || meta.label}
+                  {subtitleText}
                 </p>
               )}
             </div>
