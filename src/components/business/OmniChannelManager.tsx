@@ -111,8 +111,8 @@ export function OmniChannelManager({ businessId, businessName, userId }: Props) 
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header with link preview */}
+    <div className="space-y-5">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
@@ -123,7 +123,7 @@ export function OmniChannelManager({ businessId, businessName, userId }: Props) 
               Halaman Publik
             </h2>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Tampilkan semua link bisnis dalam satu halaman
+              Konfigurasi tampilan halaman publik bisnis kamu
             </p>
           </div>
         </div>
@@ -141,96 +141,105 @@ export function OmniChannelManager({ businessId, businessName, userId }: Props) 
         )}
       </div>
 
-      {/* Page Config */}
-      <OmniChannelPageConfig
-        businessId={businessId}
-        businessName={businessName}
-        userId={userId}
-        channel={channel}
-        onSaved={fetchChannel}
-      />
+      {/* 2-panel layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
 
-      {/* Gallery Section */}
-      <OmniChannelGallery
-        businessId={businessId}
-        userId={userId}
-        channel={channel}
-        initialGallery={channel?.gallery_images ?? []}
-        hasOmniChannel={!!channel}
-        onChanged={fetchChannel}
-      />
-
-      {/* Showcase Section */}
-      <OmniChannelShowcase
-        businessId={businessId}
-        userId={userId}
-        channel={channel}
-        initialShowcase={channel?.showcase_images ?? []}
-        hasOmniChannel={!!channel}
-        onChanged={fetchChannel}
-      />
-
-      {/* Pricing Section */}
-      <OmniChannelPricing
-        businessId={businessId}
-        userId={userId}
-        channel={channel}
-        onChanged={fetchChannel}
-      />
-
-      {/* Featured Product Section */}
-      {channel && (
-        <OmniChannelFeaturedProductConfig
-          businessId={businessId}
-          userId={userId}
-          channel={channel}
-          onChanged={fetchChannel}
-        />
-      )}
-
-      {/* Widget Reservasi / Link Cards */}
-      {channel && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between mb-1">
-            <h3 className="font-semibold text-gray-800 dark:text-gray-100 text-sm">
-              Widget Utama
-            </h3>
-            <VisibilityToggle
-              checked={channel.show_widget ?? true}
-              onChange={() => toggleField('show_widget', channel.show_widget ?? true, setTogglingWidget)}
-              disabled={togglingWidget}
-            />
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Widget reservasi (bisnis jasa) atau kartu link (bisnis produk/dagang).
-          </p>
-        </div>
-      )}
-
-      {/* Links Section */}
-      {channel && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Link2 className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-              <h3 className="font-semibold text-gray-800 dark:text-gray-100">
-                Daftar Link
-              </h3>
-            </div>
-            <VisibilityToggle
-              checked={channel.show_links ?? true}
-              onChange={() => toggleField('show_links', channel.show_links ?? true, setTogglingLinks)}
-              disabled={togglingLinks}
-            />
-          </div>
-          <OmniChannelLinkList
-            omniChannelId={channel.id}
+        {/* Panel Kiri — Pengaturan & Konten */}
+        <div className="space-y-5">
+          {/* Page Config */}
+          <OmniChannelPageConfig
             businessId={businessId}
-            links={channel.links ?? []}
+            businessName={businessName}
+            userId={userId}
+            channel={channel}
+            onSaved={fetchChannel}
+          />
+
+          {/* Pricing */}
+          <OmniChannelPricing
+            businessId={businessId}
+            userId={userId}
+            channel={channel}
+            onChanged={fetchChannel}
+          />
+
+          {/* Featured Product */}
+          {channel && (
+            <OmniChannelFeaturedProductConfig
+              businessId={businessId}
+              userId={userId}
+              channel={channel}
+              onChanged={fetchChannel}
+            />
+          )}
+
+          {/* Widget Utama toggle */}
+          {channel && (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="font-semibold text-gray-800 dark:text-gray-100 text-sm">
+                  Widget Utama
+                </h3>
+                <VisibilityToggle
+                  checked={channel.show_widget ?? true}
+                  onChange={() => toggleField('show_widget', channel.show_widget ?? true, setTogglingWidget)}
+                  disabled={togglingWidget}
+                />
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Widget reservasi (bisnis jasa) atau kartu link (bisnis produk/dagang).
+              </p>
+            </div>
+          )}
+
+          {/* Daftar Link */}
+          {channel && (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Link2 className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <h3 className="font-semibold text-gray-800 dark:text-gray-100 text-sm">
+                    Daftar Link
+                  </h3>
+                </div>
+                <VisibilityToggle
+                  checked={channel.show_links ?? true}
+                  onChange={() => toggleField('show_links', channel.show_links ?? true, setTogglingLinks)}
+                  disabled={togglingLinks}
+                />
+              </div>
+              <OmniChannelLinkList
+                omniChannelId={channel.id}
+                businessId={businessId}
+                links={channel.links ?? []}
+                onChanged={fetchChannel}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Panel Kanan — Media Visual */}
+        <div className="space-y-5">
+          <OmniChannelGallery
+            businessId={businessId}
+            userId={userId}
+            channel={channel}
+            initialGallery={channel?.gallery_images ?? []}
+            hasOmniChannel={!!channel}
+            onChanged={fetchChannel}
+          />
+
+          <OmniChannelShowcase
+            businessId={businessId}
+            userId={userId}
+            channel={channel}
+            initialShowcase={channel?.showcase_images ?? []}
+            hasOmniChannel={!!channel}
             onChanged={fetchChannel}
           />
         </div>
-      )}
+
+      </div>
     </div>
   );
 }
