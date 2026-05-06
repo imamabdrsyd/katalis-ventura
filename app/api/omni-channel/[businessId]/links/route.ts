@@ -11,6 +11,7 @@ const VALID_CHANNEL_TYPES = [
 const linkSchema = z.object({
   channel_type: z.enum(VALID_CHANNEL_TYPES),
   label: z.string().min(1).max(200),
+  subtitle: z.string().max(200).nullable().optional(),
   url: z.string().min(1).max(2048),
   is_active: z.boolean().default(true),
   sort_order: z.number().int().default(0),

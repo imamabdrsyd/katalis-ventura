@@ -85,9 +85,9 @@ export function OmnichannelLinks({ links }: Props) {
               <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                 {link.label || meta.label}
               </p>
-              {link.label !== meta.label && (
+              {(link.subtitle || link.label !== meta.label) && (
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
-                  {meta.label}
+                  {link.subtitle || meta.label}
                 </p>
               )}
             </div>

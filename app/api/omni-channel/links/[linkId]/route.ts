@@ -11,6 +11,7 @@ const VALID_CHANNEL_TYPES = [
 const patchSchema = z.object({
   channel_type: z.enum(VALID_CHANNEL_TYPES).optional(),
   label: z.string().min(1).max(200).optional(),
+  subtitle: z.string().max(200).nullable().optional(),
   url: z.string().min(1).max(2048).optional(),
   is_active: z.boolean().optional(),
   is_primary: z.boolean().optional(),

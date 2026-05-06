@@ -374,6 +374,7 @@ export interface OmniChannelLink {
   omni_channel_id: string;
   channel_type: OmniChannelType;
   label: string;
+  subtitle?: string | null;
   url: string;
   is_active: boolean;
   is_primary: boolean;
@@ -493,6 +494,7 @@ export interface UpsertOmniChannelData {
 export interface UpsertOmniChannelLinkData {
   channel_type: OmniChannelType;
   label: string;
+  subtitle?: string | null;
   url: string;
   is_active: boolean;
   is_primary: boolean;

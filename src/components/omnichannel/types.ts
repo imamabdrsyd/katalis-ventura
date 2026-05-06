@@ -14,6 +14,7 @@ export interface PublicLink {
   id: string;
   channel_type: string;
   label: string;
+  subtitle?: string | null;
   url: string;
   is_primary: boolean;
   sort_order: number;
