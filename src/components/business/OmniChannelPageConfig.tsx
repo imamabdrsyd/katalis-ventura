@@ -223,7 +223,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {isPublished ? (
-            <Eye className="w-4 h-4 text-emerald-500" />
+            <Eye className="w-4 h-4 text-primary-500" />
           ) : (
             <EyeOff className="w-4 h-4 text-gray-400" />
           )}
@@ -237,7 +237,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
           aria-checked={isPublished}
           onClick={() => setIsPublished(!isPublished)}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-            isPublished ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+            isPublished ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
           }`}
         >
           <span
@@ -264,13 +264,13 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
               slugStatus === 'unavailable'
                 ? 'border-red-300 dark:border-red-500'
                 : slugStatus === 'available'
-                ? 'border-emerald-300 dark:border-emerald-500'
+                ? 'border-primary-300 dark:border-primary-500'
                 : 'border-gray-200 dark:border-gray-600'
             }`}
           />
           <div className="w-5 shrink-0">
             {slugStatus === 'checking' && <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />}
-            {slugStatus === 'available' && <Check className="w-4 h-4 text-emerald-500" />}
+            {slugStatus === 'available' && <Check className="w-4 h-4 text-primary-500" />}
             {slugStatus === 'unavailable' && <X className="w-4 h-4 text-red-500" />}
           </div>
         </div>
