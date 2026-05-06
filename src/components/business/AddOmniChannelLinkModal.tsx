@@ -31,8 +31,10 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
 
   const handleTypeChange = (type: OmniChannelType) => {
     setChannelType(type);
+    // custom: biarkan label kosong supaya user isi sendiri
+    // non-custom dan belum edit: isi default label sebagai hint
     if (!isEditing) {
-      setLabel(CHANNEL_META[type].defaultLabel);
+      setLabel(type === 'custom' ? '' : CHANNEL_META[type].defaultLabel);
     }
   };
 
@@ -162,16 +164,21 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
         {/* Label */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Label
+            Label{channelType === 'custom' && <span className="text-red-400 ml-1">*</span>}
           </label>
           <input
             type="text"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            placeholder={meta.defaultLabel}
+            placeholder={channelType === 'custom' ? 'misal: Website kami, Katalog, Blog...' : meta.defaultLabel}
             maxLength={200}
             className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
+          {channelType === 'custom' && (
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              Tulis nama link sesuka kamu — ini yang akan tampil di halaman publik.
+            </p>
+          )}
         </div>
 
         {/* URL */}
