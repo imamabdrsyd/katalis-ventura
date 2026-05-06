@@ -90,28 +90,50 @@ export function OmnichannelLinks({ links, buttonColor }: Props) {
 
   const primaryBg = buttonColor ?? '#6366f1';
 
+  // Group consecutive icon_only links into horizontal chunks
+  type Chunk =
+    | { kind: 'icons'; items: PublicLink[] }
+    | { kind: 'single'; item: PublicLink };
+
+  const chunks: Chunk[] = [];
+  for (const link of links) {
+    if (link.display_mode === 'icon_only') {
+      const last = chunks[chunks.length - 1];
+      if (last?.kind === 'icons') {
+        last.items.push(link);
+      } else {
+        chunks.push({ kind: 'icons', items: [link] });
+      }
+    } else {
+      chunks.push({ kind: 'single', item: link });
+    }
+  }
+
   return (
     <div className="space-y-2">
-      {links.map((link) => {
-        const meta = CHANNEL_META[link.channel_type as OmniChannelType] ?? CHANNEL_META.custom;
-
-        // Icon-only — hanya icon, tidak ada kotak/label/border
-        if (link.display_mode === 'icon_only') {
+      {chunks.map((chunk, ci) => {
+        if (chunk.kind === 'icons') {
           return (
-            <a
-              key={link.id}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={link.label}
-              className="flex justify-center py-1 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 transition"
-            >
-              <ChannelIcon type={link.channel_type} customIconUrl={link.custom_icon_url} lucideIcon={link.lucide_icon} />
-            </a>
+            <div key={`icons-${ci}`} className="flex flex-wrap gap-3 justify-center py-1">
+              {chunk.items.map((link) => (
+                <a
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={link.label}
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 transition"
+                >
+                  <ChannelIcon type={link.channel_type} customIconUrl={link.custom_icon_url} lucideIcon={link.lucide_icon} />
+                </a>
+              ))}
+            </div>
           );
         }
 
-        // Primary button — full-width dengan warna kustom, icon mengikuti pilihan user
+        const link = chunk.item;
+        const meta = CHANNEL_META[link.channel_type as OmniChannelType] ?? CHANNEL_META.custom;
+
         if (link.is_primary) {
           return (
             <a
@@ -128,7 +150,6 @@ export function OmnichannelLinks({ links, buttonColor }: Props) {
           );
         }
 
-        // Default — row dengan icon, label, subtitle
         const subtitleText = link.subtitle || (link.label !== meta.label ? meta.label : null);
         return (
           <a
