@@ -2,37 +2,73 @@
 
 import { useRef, useState, useEffect } from 'react';
 import { Loader2, Plus, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
-import type { OmniChannelGalleryImage } from '@/types';
+import type { BusinessOmniChannel, OmniChannelGalleryImage } from '@/types';
 import {
   uploadGalleryImage,
   deleteGalleryImage,
   reorderGalleryImages,
+  upsertOmniChannel,
 } from '@/lib/api/omniChannel';
 
 interface Props {
   businessId: string;
+  userId: string;
+  channel: BusinessOmniChannel | null;
   initialGallery: OmniChannelGalleryImage[];
-  /** True jika halaman publik (omni-channel record) sudah pernah disimpan */
   hasOmniChannel: boolean;
   onChanged?: () => void;
 }
 
 const MAX_IMAGES = 12;
 
-export function OmniChannelGallery({ businessId, initialGallery, hasOmniChannel, onChanged }: Props) {
+export function OmniChannelGallery({ businessId, userId, channel, initialGallery, hasOmniChannel, onChanged }: Props) {
   const [gallery, setGallery] = useState<OmniChannelGalleryImage[]>(
     [...initialGallery].sort((a, b) => a.sort_order - b.sort_order)
   );
+  const [showGallery, setShowGallery] = useState(channel?.show_gallery ?? true);
+  const [togglingVisibility, setTogglingVisibility] = useState(false);
 
-  // Sync state dari prop setiap kali parent re-fetch (misalnya setelah reload)
   useEffect(() => {
     setGallery([...initialGallery].sort((a, b) => a.sort_order - b.sort_order));
   }, [initialGallery]);
+  useEffect(() => {
+    setShowGallery(channel?.show_gallery ?? true);
+  }, [channel?.show_gallery]);
+
   const [uploading, setUploading] = useState(false);
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
   const [reordering, setReordering] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleToggleVisibility() {
+    if (!channel) return;
+    const next = !showGallery;
+    setShowGallery(next);
+    setTogglingVisibility(true);
+    try {
+      await upsertOmniChannel(businessId, {
+        slug: channel.slug,
+        title: channel.title,
+        tagline: channel.tagline,
+        bio: channel.bio,
+        logo_url: channel.logo_url ?? null,
+        is_published: channel.is_published,
+        widget_date_mode: channel.widget_date_mode,
+        widget_labels: channel.widget_labels,
+        show_pricing: channel.show_pricing,
+        show_gallery: next,
+        show_showcase: channel.show_showcase,
+        show_widget: channel.show_widget,
+        show_links: channel.show_links,
+      }, userId);
+      onChanged?.();
+    } catch {
+      setShowGallery(!next);
+    } finally {
+      setTogglingVisibility(false);
+    }
+  }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -137,11 +173,28 @@ export function OmniChannelGallery({ businessId, initialGallery, hasOmniChannel,
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-            Gallery Showcase
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 mb-1">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+              Gallery Showcase
+            </h3>
+            {/* Visibility toggle */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={showGallery}
+              onClick={handleToggleVisibility}
+              disabled={togglingVisibility || !channel}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-50 ${showGallery ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+              title={showGallery ? 'Tampil di halaman publik' : 'Disembunyikan dari halaman publik'}
+            >
+              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${showGallery ? 'translate-x-4' : 'translate-x-0.5'}`} />
+            </button>
+            <span className="text-xs text-gray-400 dark:text-gray-500">
+              {showGallery ? 'Tampil' : 'Disembunyikan'}
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             Gambar bisnis yang akan ditampilkan di landing page Axion.
             Format: JPG, PNG, WebP, GIF · Maks 4MB · Hingga {MAX_IMAGES} gambar.
           </p>

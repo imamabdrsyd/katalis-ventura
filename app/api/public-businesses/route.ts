@@ -61,6 +61,10 @@ interface RawOmniChannel {
   gallery_images: unknown;
   showcase_images: unknown;
   layout_mode: string | null;
+  show_gallery: boolean | null;
+  show_showcase: boolean | null;
+  show_widget: boolean | null;
+  show_links: boolean | null;
   widget_date_mode: string | null;
   widget_labels: unknown;
   show_pricing: boolean | null;
@@ -131,6 +135,7 @@ export async function GET() {
           city, whatsapp_number, widget_action_label, logo_url,
           omni_channel:business_omni_channels (
             id, slug, is_published, gallery_images, showcase_images, layout_mode,
+            show_gallery, show_showcase, show_widget, show_links,
             widget_date_mode, widget_labels,
             show_pricing, default_price, price_unit,
             links:business_omni_channel_links ( id, channel_type, label, url, is_active, is_primary, sort_order ),
@@ -193,6 +198,10 @@ export async function GET() {
         gallery,
         showcase,
         layout_mode: layoutMode,
+        show_gallery: oc?.show_gallery !== false,
+        show_showcase: oc?.show_showcase !== false,
+        show_widget: oc?.show_widget !== false,
+        show_links: oc?.show_links !== false,
         links,
         widget_date_mode: (oc?.widget_date_mode as 'single' | 'double') ?? 'double',
         widget_labels: (oc?.widget_labels ?? {}) as PublicWidgetLabels,

@@ -16,9 +16,11 @@ interface Props {
 
 export function PublicOmniChannelPage({ channel, business }: Props) {
   const isJasa = (business.business_type ?? 'jasa') === 'jasa';
-  const hasGallery = business.gallery.length > 0;
-  const hasShowcase = business.showcase.length > 0;
+  const hasGallery = business.show_gallery && business.gallery.length > 0;
+  const hasShowcase = business.show_showcase && business.showcase.length > 0;
   const hasFeaturedProduct = !!(business.featured_product?.show && business.featured_product?.name);
+  const showWidget = business.show_widget;
+  const showLinks = business.show_links;
   const layout = business.layout_mode;
   const showLogo = layout !== 'clean';
 
@@ -146,19 +148,21 @@ export function PublicOmniChannelPage({ channel, business }: Props) {
             </div>
           )}
 
-          <div>
-            {isJasa ? (
-              <OmnichannelWidget
-                business={business}
-                index={0}
-              />
-            ) : (
-              <OmnichannelLinkCards
-                business={business}
-                index={0}
-              />
-            )}
-          </div>
+          {showWidget && (
+            <div>
+              {isJasa ? (
+                <OmnichannelWidget
+                  business={business}
+                  index={0}
+                />
+              ) : (
+                <OmnichannelLinkCards
+                  business={business}
+                  index={0}
+                />
+              )}
+            </div>
+          )}
         </div>
 
         {/* Featured product — full width jika tidak ada gallery */}

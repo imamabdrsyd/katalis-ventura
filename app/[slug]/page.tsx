@@ -83,7 +83,9 @@ export default async function PublicSlugPage({ params }: Props) {
     .from('business_omni_channels')
     .select(`
       id, business_id, slug, is_published, title, tagline, bio, logo_url, banner_url,
-      gallery_images, showcase_images, layout_mode, widget_date_mode, widget_labels,
+      gallery_images, showcase_images, layout_mode,
+      show_gallery, show_showcase, show_widget, show_links,
+      widget_date_mode, widget_labels,
       show_pricing, default_price, price_unit, featured_product,
       links:business_omni_channel_links ( id, channel_type, label, url, is_active, is_primary, sort_order, custom_icon_url ),
       pricing_rules:business_pricing_rules ( id, date_from, date_to, price, label )
@@ -144,6 +146,10 @@ export default async function PublicSlugPage({ params }: Props) {
     gallery: normalizeGallery(oc.gallery_images),
     showcase: normalizeShowcase(oc.showcase_images),
     layout_mode: normalizeLayoutMode(oc.layout_mode),
+    show_gallery: oc.show_gallery !== false,
+    show_showcase: oc.show_showcase !== false,
+    show_widget: oc.show_widget !== false,
+    show_links: oc.show_links !== false,
     links: publicLinks,
     widget_date_mode: (oc.widget_date_mode as 'single' | 'double') ?? 'double',
     widget_labels: (oc.widget_labels ?? {}) as PublicBusiness['widget_labels'],

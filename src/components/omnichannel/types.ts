@@ -63,6 +63,10 @@ export interface PublicBusiness {
   gallery: PublicGalleryImage[];
   showcase: PublicShowcaseImage[];
   layout_mode: PublicLayoutMode;
+  show_gallery: boolean;
+  show_showcase: boolean;
+  show_widget: boolean;
+  show_links: boolean;
   links: PublicLink[];
   widget_date_mode?: 'single' | 'double';
   widget_labels?: PublicWidgetLabels;

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Globe, ExternalLink, Link2 } from 'lucide-react';
 import type { BusinessOmniChannel, OmniChannelLink } from '@/types';
-import { getOmniChannel } from '@/lib/api/omniChannel';
+import { getOmniChannel, upsertOmniChannel } from '@/lib/api/omniChannel';
 import { OmniChannelPageConfig } from './OmniChannelPageConfig';
 import { OmniChannelLinkList } from './OmniChannelLinkList';
 import { OmniChannelGallery } from './OmniChannelGallery';
@@ -17,9 +17,41 @@ interface Props {
   userId: string;
 }
 
+/** Toggle kecil yang konsisten dipakai di tiap section header */
+function VisibilityToggle({
+  checked,
+  onChange,
+  disabled,
+}: {
+  checked: boolean;
+  onChange: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2 shrink-0">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={onChange}
+        disabled={disabled}
+        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-50 ${checked ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+        title={checked ? 'Tampil di halaman publik' : 'Disembunyikan dari halaman publik'}
+      >
+        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-4' : 'translate-x-0.5'}`} />
+      </button>
+      <span className="text-xs text-gray-400 dark:text-gray-500">
+        {checked ? 'Tampil' : 'Disembunyikan'}
+      </span>
+    </div>
+  );
+}
+
 export function OmniChannelManager({ businessId, businessName, userId }: Props) {
   const [channel, setChannel] = useState<BusinessOmniChannel | null>(null);
   const [loading, setLoading] = useState(true);
+  const [togglingWidget, setTogglingWidget] = useState(false);
+  const [togglingLinks, setTogglingLinks] = useState(false);
 
   const fetchChannel = useCallback(async () => {
     try {
@@ -35,6 +67,40 @@ export function OmniChannelManager({ businessId, businessName, userId }: Props) 
   useEffect(() => {
     fetchChannel();
   }, [fetchChannel]);
+
+  async function toggleField(
+    field: 'show_widget' | 'show_links',
+    current: boolean,
+    setSaving: (v: boolean) => void
+  ) {
+    if (!channel) return;
+    setSaving(true);
+    // optimistic update
+    setChannel((prev) => prev ? { ...prev, [field]: !current } : prev);
+    try {
+      await upsertOmniChannel(businessId, {
+        slug: channel.slug,
+        title: channel.title,
+        tagline: channel.tagline,
+        bio: channel.bio,
+        logo_url: channel.logo_url ?? null,
+        is_published: channel.is_published,
+        widget_date_mode: channel.widget_date_mode,
+        widget_labels: channel.widget_labels,
+        show_pricing: channel.show_pricing,
+        show_gallery: channel.show_gallery,
+        show_showcase: channel.show_showcase,
+        show_widget: field === 'show_widget' ? !current : channel.show_widget,
+        show_links: field === 'show_links' ? !current : channel.show_links,
+      }, userId);
+      fetchChannel();
+    } catch {
+      // revert
+      setChannel((prev) => prev ? { ...prev, [field]: current } : prev);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -87,14 +153,18 @@ export function OmniChannelManager({ businessId, businessName, userId }: Props) 
       {/* Gallery Section */}
       <OmniChannelGallery
         businessId={businessId}
+        userId={userId}
+        channel={channel}
         initialGallery={channel?.gallery_images ?? []}
         hasOmniChannel={!!channel}
         onChanged={fetchChannel}
       />
 
-      {/* Showcase Section — gambar dengan ratio asli (tanpa crop) */}
+      {/* Showcase Section */}
       <OmniChannelShowcase
         businessId={businessId}
+        userId={userId}
+        channel={channel}
         initialShowcase={channel?.showcase_images ?? []}
         hasOmniChannel={!!channel}
         onChanged={fetchChannel}
@@ -118,14 +188,40 @@ export function OmniChannelManager({ businessId, businessName, userId }: Props) 
         />
       )}
 
+      {/* Widget Reservasi / Link Cards */}
+      {channel && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-semibold text-gray-800 dark:text-gray-100 text-sm">
+              Widget Utama
+            </h3>
+            <VisibilityToggle
+              checked={channel.show_widget ?? true}
+              onChange={() => toggleField('show_widget', channel.show_widget ?? true, setTogglingWidget)}
+              disabled={togglingWidget}
+            />
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Widget reservasi (bisnis jasa) atau kartu link (bisnis produk/dagang).
+          </p>
+        </div>
+      )}
+
       {/* Links Section */}
       {channel && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Link2 className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-            <h3 className="font-semibold text-gray-800 dark:text-gray-100">
-              Daftar Link
-            </h3>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Link2 className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              <h3 className="font-semibold text-gray-800 dark:text-gray-100">
+                Daftar Link
+              </h3>
+            </div>
+            <VisibilityToggle
+              checked={channel.show_links ?? true}
+              onChange={() => toggleField('show_links', channel.show_links ?? true, setTogglingLinks)}
+              disabled={togglingLinks}
+            />
           </div>
           <OmniChannelLinkList
             omniChannelId={channel.id}

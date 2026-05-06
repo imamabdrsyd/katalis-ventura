@@ -452,6 +452,10 @@ export interface BusinessOmniChannel {
   widget_date_mode?: 'single' | 'double';
   widget_labels?: OmniChannelWidgetLabels;
   show_pricing?: boolean;
+  show_gallery?: boolean;
+  show_showcase?: boolean;
+  show_widget?: boolean;
+  show_links?: boolean;
   default_price?: number | null;
   price_unit?: string | null;
   public_url_mode?: 'slug-only' | 'axion-only' | 'both';
@@ -476,6 +480,10 @@ export interface UpsertOmniChannelData {
   widget_date_mode?: 'single' | 'double';
   widget_labels?: OmniChannelWidgetLabels;
   show_pricing?: boolean;
+  show_gallery?: boolean;
+  show_showcase?: boolean;
+  show_widget?: boolean;
+  show_links?: boolean;
   default_price?: number | null;
   price_unit?: string | null;
   public_url_mode?: 'slug-only' | 'axion-only' | 'both';

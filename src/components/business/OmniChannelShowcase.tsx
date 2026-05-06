@@ -2,15 +2,18 @@
 
 import { useRef, useState, useEffect } from 'react';
 import { Loader2, Plus, Trash2, ArrowUp, ArrowDown, ImageIcon } from 'lucide-react';
-import type { OmniChannelShowcaseImage } from '@/types';
+import type { BusinessOmniChannel, OmniChannelShowcaseImage } from '@/types';
 import {
   uploadShowcaseImage,
   deleteShowcaseImage,
   reorderShowcaseImages,
+  upsertOmniChannel,
 } from '@/lib/api/omniChannel';
 
 interface Props {
   businessId: string;
+  userId: string;
+  channel: BusinessOmniChannel | null;
   initialShowcase: OmniChannelShowcaseImage[];
   hasOmniChannel: boolean;
   onChanged?: () => void;
@@ -18,16 +21,50 @@ interface Props {
 
 const MAX_IMAGES = 12;
 
-export function OmniChannelShowcase({ businessId, initialShowcase, hasOmniChannel, onChanged }: Props) {
+export function OmniChannelShowcase({ businessId, userId, channel, initialShowcase, hasOmniChannel, onChanged }: Props) {
   const [showcase, setShowcase] = useState<OmniChannelShowcaseImage[]>(
     [...initialShowcase].sort((a, b) => a.sort_order - b.sort_order)
   );
+  const [showShowcase, setShowShowcase] = useState(channel?.show_showcase ?? true);
+  const [togglingVisibility, setTogglingVisibility] = useState(false);
 
   useEffect(() => {
     setShowcase([...initialShowcase].sort((a, b) => a.sort_order - b.sort_order));
   }, [initialShowcase]);
+  useEffect(() => {
+    setShowShowcase(channel?.show_showcase ?? true);
+  }, [channel?.show_showcase]);
 
   const [uploading, setUploading] = useState(false);
+
+  async function handleToggleVisibility() {
+    if (!channel) return;
+    const next = !showShowcase;
+    setShowShowcase(next);
+    setTogglingVisibility(true);
+    try {
+      await upsertOmniChannel(businessId, {
+        slug: channel.slug,
+        title: channel.title,
+        tagline: channel.tagline,
+        bio: channel.bio,
+        logo_url: channel.logo_url ?? null,
+        is_published: channel.is_published,
+        widget_date_mode: channel.widget_date_mode,
+        widget_labels: channel.widget_labels,
+        show_pricing: channel.show_pricing,
+        show_gallery: channel.show_gallery,
+        show_showcase: next,
+        show_widget: channel.show_widget,
+        show_links: channel.show_links,
+      }, userId);
+      onChanged?.();
+    } catch {
+      setShowShowcase(!next);
+    } finally {
+      setTogglingVisibility(false);
+    }
+  }
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
   const [reordering, setReordering] = useState(false);
   const [error, setError] = useState('');
@@ -133,11 +170,27 @@ export function OmniChannelShowcase({ businessId, initialShowcase, hasOmniChanne
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-            Showcase Image
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 mb-1">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+              Showcase Image
+            </h3>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={showShowcase}
+              onClick={handleToggleVisibility}
+              disabled={togglingVisibility || !channel}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-50 ${showShowcase ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+              title={showShowcase ? 'Tampil di halaman publik' : 'Disembunyikan dari halaman publik'}
+            >
+              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${showShowcase ? 'translate-x-4' : 'translate-x-0.5'}`} />
+            </button>
+            <span className="text-xs text-gray-400 dark:text-gray-500">
+              {showShowcase ? 'Tampil' : 'Disembunyikan'}
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             Gambar yang tampil di halaman publik <span className="font-medium">apa adanya sesuai rasio aslinya</span> — tidak di-crop agar muat frame.
             Format: JPG, PNG, WebP, GIF · Maks 4MB · Hingga {MAX_IMAGES} gambar.
           </p>
