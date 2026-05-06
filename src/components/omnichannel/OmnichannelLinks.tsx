@@ -66,36 +66,47 @@ interface Props {
 export function OmnichannelLinks({ links, buttonColor }: Props) {
   if (links.length === 0) return null;
 
-  const primaryLinks = links.filter((l) => l.is_primary);
-  const secondaryLinks = links.filter((l) => !l.is_primary);
-  const iconOnlyLinks = links.filter((l) => l.display_mode === 'icon_only');
-  const visibleSecondary = secondaryLinks.filter((l) => l.display_mode !== 'icon_only');
-
   const primaryBg = buttonColor ?? '#6366f1';
 
   return (
     <div className="space-y-2">
-      {/* Primary links — full-width button style dengan warna kustom */}
-      {primaryLinks.map((link) => {
+      {links.map((link) => {
         const meta = CHANNEL_META[link.channel_type as OmniChannelType] ?? CHANNEL_META.custom;
-        return (
-          <a
-            key={`primary-${link.id}`}
-            href={link.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2.5 w-full py-3.5 px-4 rounded-xl text-white font-semibold text-sm transition-opacity hover:opacity-90"
-            style={{ backgroundColor: primaryBg }}
-          >
-            <ShoppingCart className="w-4 h-4" />
-            {link.label || meta.defaultLabel}
-          </a>
-        );
-      })}
 
-      {/* Secondary links — row style */}
-      {visibleSecondary.map((link) => {
-        const meta = CHANNEL_META[link.channel_type as OmniChannelType] ?? CHANNEL_META.custom;
+        // Icon-only — hanya icon, tidak ada kotak/label/border
+        if (link.display_mode === 'icon_only') {
+          return (
+            <a
+              key={link.id}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={link.label}
+              className="flex justify-center py-1 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 transition"
+            >
+              <ChannelIcon type={link.channel_type} customIconUrl={link.custom_icon_url} lucideIcon={link.lucide_icon} />
+            </a>
+          );
+        }
+
+        // Primary button — full-width dengan warna kustom
+        if (link.is_primary) {
+          return (
+            <a
+              key={link.id}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2.5 w-full py-3.5 px-4 rounded-xl text-white font-semibold text-sm transition-opacity hover:opacity-90"
+              style={{ backgroundColor: primaryBg }}
+            >
+              <ShoppingCart className="w-4 h-4" />
+              {link.label || meta.defaultLabel}
+            </a>
+          );
+        }
+
+        // Default — row dengan icon, label, subtitle
         const subtitleText = link.subtitle || (link.label !== meta.label ? meta.label : null);
         return (
           <a
@@ -120,24 +131,6 @@ export function OmnichannelLinks({ links, buttonColor }: Props) {
           </a>
         );
       })}
-
-      {/* Icon-only links — baris icon kecil tanpa kotak */}
-      {iconOnlyLinks.length > 0 && (
-        <div className="flex flex-wrap gap-3 pt-1 justify-center">
-          {iconOnlyLinks.map((link) => (
-            <a
-              key={`icon-${link.id}`}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={link.label}
-              className="text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 transition"
-            >
-              <ChannelIcon type={link.channel_type} customIconUrl={link.custom_icon_url} lucideIcon={link.lucide_icon} />
-            </a>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
