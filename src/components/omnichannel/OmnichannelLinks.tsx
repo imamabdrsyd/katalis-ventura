@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { ExternalLink, ShoppingCart } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { CHANNEL_META } from '@/lib/omniChannelMeta';
 import type { OmniChannelType } from '@/types';
@@ -58,6 +58,28 @@ function ChannelIcon({ type, customIconUrl, lucideIcon }: { type: string; custom
   );
 }
 
+// Icon khusus untuk primary button — tanpa wrapper kotak, selalu putih
+function ButtonIcon({ type, customIconUrl, lucideIcon }: { type: string; customIconUrl?: string | null; lucideIcon?: string | null }) {
+  const meta = CHANNEL_META[type as OmniChannelType] ?? CHANNEL_META.custom;
+
+  if (customIconUrl) {
+    return <Image src={customIconUrl} alt={meta.label} width={20} height={20} className="w-5 h-5 object-contain brightness-0 invert" unoptimized />;
+  }
+
+  if (lucideIcon) {
+    const Icon = (LucideIcons as any)[lucideIcon] as React.ElementType | undefined;
+    if (Icon) return <Icon className="w-5 h-5 text-white" />;
+  }
+
+  // Platform SVG — inline tanpa wrapper, paksa putih
+  return (
+    <span
+      className="w-5 h-5 flex items-center justify-center [&_svg]:w-5 [&_svg]:h-5 [&_path]:fill-white [&_circle]:fill-white [&_rect]:fill-white"
+      dangerouslySetInnerHTML={{ __html: meta.iconSvg }}
+    />
+  );
+}
+
 interface Props {
   links: PublicLink[];
   buttonColor?: string | null;
@@ -89,7 +111,7 @@ export function OmnichannelLinks({ links, buttonColor }: Props) {
           );
         }
 
-        // Primary button — full-width dengan warna kustom
+        // Primary button — full-width dengan warna kustom, icon mengikuti pilihan user
         if (link.is_primary) {
           return (
             <a
@@ -100,7 +122,7 @@ export function OmnichannelLinks({ links, buttonColor }: Props) {
               className="flex items-center justify-center gap-2.5 w-full py-3.5 px-4 rounded-xl text-white font-semibold text-sm transition-opacity hover:opacity-90"
               style={{ backgroundColor: primaryBg }}
             >
-              <ShoppingCart className="w-4 h-4" />
+              <ButtonIcon type={link.channel_type} customIconUrl={link.custom_icon_url} lucideIcon={link.lucide_icon} />
               {link.label || meta.defaultLabel}
             </a>
           );
