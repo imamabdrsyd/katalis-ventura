@@ -35,7 +35,7 @@ function VisibilityToggle({
         aria-checked={checked}
         onClick={onChange}
         disabled={disabled}
-        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-50 ${checked ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-50 ${checked ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'}`}
         title={checked ? 'Tampil di halaman publik' : 'Disembunyikan dari halaman publik'}
       >
         <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-4' : 'translate-x-0.5'}`} />
@@ -115,8 +115,8 @@ export function OmniChannelManager({ businessId, businessName, userId }: Props) 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
-            <Globe className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+            <Globe className="w-5 h-5 text-gray-500 dark:text-gray-400" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">

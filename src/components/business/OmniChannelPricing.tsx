@@ -178,7 +178,7 @@ export function OmniChannelPricing({ businessId, userId, channel, onChanged }: P
           aria-checked={showPricing}
           onClick={() => setShowPricing(!showPricing)}
           className={`shrink-0 relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-            showPricing ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+            showPricing ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
           }`}
         >
           <span

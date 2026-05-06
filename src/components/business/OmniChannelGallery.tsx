@@ -185,7 +185,7 @@ export function OmniChannelGallery({ businessId, userId, channel, initialGallery
               aria-checked={showGallery}
               onClick={handleToggleVisibility}
               disabled={togglingVisibility || !channel}
-              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-50 ${showGallery ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-50 ${showGallery ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'}`}
               title={showGallery ? 'Tampil di halaman publik' : 'Disembunyikan dari halaman publik'}
             >
               <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${showGallery ? 'translate-x-4' : 'translate-x-0.5'}`} />
