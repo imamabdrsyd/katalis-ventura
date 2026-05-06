@@ -260,7 +260,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
             value={slug}
             onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
             placeholder="nama-bisnis"
-            className={`flex-1 px-3 py-2 rounded-xl border text-sm text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${
+            className={`flex-1 px-3 py-2 rounded-xl border text-sm text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors ${
               slugStatus === 'unavailable'
                 ? 'border-red-300 dark:border-red-500'
                 : slugStatus === 'available'
@@ -413,7 +413,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Banner <span className="text-gray-400 font-normal">(opsional)</span>
         </label>
-        <div className="relative group rounded-xl overflow-hidden border-2 border-dashed border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 cursor-pointer h-28 flex items-center justify-center">
+        <div className="relative group rounded-xl overflow-hidden border-2 border-dashed border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 cursor-pointer aspect-[3/1] flex items-center justify-center">
           {bannerUrl ? (
             <img src={bannerUrl} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
           ) : (
@@ -500,13 +500,13 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
                 onClick={() => setLayoutMode(id)}
                 className={`group flex flex-col items-center gap-2 p-2 rounded-xl border-2 transition ${
                   active
-                    ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20 shadow-sm'
+                    ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-900/20 shadow-sm'
                     : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'
                 }`}
               >
                 <div className="aspect-square w-full">{preview}</div>
                 <span className={`text-xs font-medium text-center leading-tight ${
-                  active ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-400'
+                  active ? 'text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400'
                 }`}>
                   {label}
                 </span>

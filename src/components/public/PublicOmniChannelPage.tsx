@@ -80,16 +80,23 @@ export function PublicOmniChannelPage({ channel, business }: Props) {
 
         {layout === 'modern' && (
           <>
-            {business.banner_url ? (
-              <div className="relative w-full aspect-[16/9] rounded-2xl overflow-hidden shadow-sm">
-                <Image src={business.banner_url} alt={`${channel.title} banner`} fill className="object-cover" unoptimized priority />
-              </div>
-            ) : (
-              <div className="w-full aspect-[16/9] rounded-2xl bg-gradient-to-br from-primary-500 to-purple-500" />
-            )}
-            <div className="flex flex-col items-center -mt-12 mb-6">
-              {logoBlock}
-              <div className="mt-4">{identity}</div>
+            <div className="relative mb-6">
+              {business.banner_url ? (
+                <div className="relative w-full aspect-[3/1] rounded-2xl overflow-hidden shadow-sm">
+                  <Image src={business.banner_url} alt={`${channel.title} banner`} fill className="object-cover" unoptimized priority />
+                </div>
+              ) : (
+                <div className="w-full aspect-[3/1] rounded-2xl bg-gradient-to-br from-primary-500 to-purple-500" />
+              )}
+              {/* Logo overlap di tengah bawah banner */}
+              {logoBlock && (
+                <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
+                  {logoBlock}
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col items-center mt-14 mb-6">
+              {identity}
             </div>
           </>
         )}
