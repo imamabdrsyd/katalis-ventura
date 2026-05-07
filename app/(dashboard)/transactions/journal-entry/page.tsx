@@ -377,8 +377,10 @@ export default function JournalEntryPage() {
   const router = useRouter();
   const { user, activeBusiness, activeBusinessId: businessId } = useBusinessContext();
 
-  // step state
-  const [selectedEntryType, setSelectedEntryType] = useState<EntryType | null>(null);
+  // step state — initialize with first default entry type to show form by default
+  const [selectedEntryType, setSelectedEntryType] = useState<EntryType | null>(() => {
+    return ENTRY_TYPES.find(et => et.id === 'penjualan') || null;
+  });
 
   // dividend entry mode (only relevant when selectedEntryType.id === 'tarik_dividen')
   const [dividendEntryMode, setDividendEntryMode] = useState<DividendEntryMode | null>(null);
@@ -1029,18 +1031,18 @@ export default function JournalEntryPage() {
         </div>
 
         {/* Right Panel: Form */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto flex flex-col">
           {/* Success message */}
           {successMessage && (
-            <div className="mx-8 mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center gap-3">
+            <div className="mx-auto mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center gap-3 w-full max-w-2xl">
               <CheckCircle2 className="w-5 h-5 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
               <p className="text-sm text-emerald-500 dark:text-emerald-300 font-medium">{successMessage}</p>
             </div>
           )}
 
           {/* Form */}
-          {selectedEntryType && (
-            <div className="p-8 max-w-3xl">
+          <div className="flex-1 flex items-start justify-center px-8 py-8">
+            <div className="w-full max-w-2xl">
               <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
 
@@ -1492,17 +1494,7 @@ export default function JournalEntryPage() {
           </form>
               </div>
             </div>
-          )}
-
-          {/* Empty State */}
-          {!selectedEntryType && (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <BookOpen className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-500 dark:text-gray-400 text-lg">Pilih jenis transaksi untuk memulai</p>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       </div>
 
