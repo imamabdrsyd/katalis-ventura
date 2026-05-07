@@ -1367,7 +1367,7 @@ export default function JournalEntryPage() {
             {/* Row 3: Name + Category */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="label text-base font-semibold">{selectedEntryType.nameLabel}</label>
+                <label className="label text-base font-semibold">{selectedEntryType!.nameLabel}</label>
                 <ContactAutocomplete
                   businessId={businessId ?? ''}
                   value={name}
@@ -1375,12 +1375,12 @@ export default function JournalEntryPage() {
                     setName(v);
                     if (errors.name) setErrors(p => { const n = { ...p }; delete n.name; return n; });
                   }}
-                  placeholder={selectedEntryType.namePlaceholder}
+                  placeholder={selectedEntryType!.namePlaceholder}
                   onSaveAsContact={async (contactName) => {
                     if (!businessId || !user) return;
                     try {
-                      const contactType = selectedEntryType.suggestedCategory === 'EARN' ? 'customer'
-                        : ['OPEX', 'VAR', 'CAPEX', 'TAX'].includes(selectedEntryType.suggestedCategory) ? 'vendor'
+                      const contactType = selectedEntryType!.suggestedCategory === 'EARN' ? 'customer'
+                        : ['OPEX', 'VAR', 'CAPEX', 'TAX'].includes(selectedEntryType!.suggestedCategory) ? 'vendor'
                         : 'other';
                       await saveContactFromTransaction(businessId, contactName, contactType, user.id);
                     } catch (err) {
@@ -1397,14 +1397,14 @@ export default function JournalEntryPage() {
                 <label className="label text-base font-semibold">
                   Kategori
                   <span className="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500">
-                    {selectedEntryType.lockCategory ? '(terkunci)' : '(otomatis terdeteksi)'}
+                    {selectedEntryType!.lockCategory ? '(terkunci)' : '(otomatis terdeteksi)'}
                   </span>
                 </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value as TransactionCategory)}
-                  className={`input ${selectedEntryType.lockCategory ? 'bg-gray-50 dark:bg-gray-700' : ''}`}
-                  disabled={selectedEntryType.lockCategory}
+                  className={`input ${selectedEntryType!.lockCategory ? 'bg-gray-50 dark:bg-gray-700' : ''}`}
+                  disabled={selectedEntryType!.lockCategory}
                 >
                   {ALL_CATEGORIES.map((cat) => (
                     <option key={cat} value={cat}>
