@@ -906,9 +906,9 @@ export default function JournalEntryPage() {
   // ─── render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="p-8">
+    <div className="flex h-screen flex-col bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
+      <div className="flex items-center gap-3 px-8 py-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
         {/* Back button */}
         <button
           onClick={() => router.push('/transactions')}
@@ -928,108 +928,120 @@ export default function JournalEntryPage() {
         </div>
       </div>
 
-      {/* Success message */}
-      {successMessage && (
-        <div className="mb-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center gap-3">
-          <CheckCircle2 className="w-5 h-5 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
-          <p className="text-sm text-emerald-500 dark:text-emerald-300 font-medium">{successMessage}</p>
-        </div>
-      )}
+      {/* Main Content: 2-Panel Layout */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Panel: Transaction Types */}
+        <div className="w-64 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto">
+          <div className="p-6 space-y-4">
+            <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+              Jenis Transaksi
+            </p>
 
-      {/* ── STEP 1: Entry type selector ── */}
-      <div className="mb-6">
-        <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-          Jenis Transaksi
-        </p>
+            {/* Default visible entry types */}
+            <div className="space-y-2">
+              {defaultEntryTypes.map((et) => {
+                const isSelected = selectedEntryType?.id === et.id;
+                return (
+                  <button
+                    key={et.id}
+                    type="button"
+                    onClick={() => handleSelectEntryType(et)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left ${
+                      isSelected
+                        ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 dark:border-indigo-400'
+                        : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                    }`}
+                  >
+                    <span className={isSelected ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}>
+                      {et.icon}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-sm font-semibold ${isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                        {et.label}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{et.description}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
 
-        {/* Default visible entry types */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-          {defaultEntryTypes.map((et) => {
-            const isSelected = selectedEntryType?.id === et.id;
-            return (
-              <button
-                key={et.id}
-                type="button"
-                onClick={() => handleSelectEntryType(et)}
-                className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center ${
-                  isSelected
-                    ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 dark:border-indigo-400 text-indigo-500 dark:text-indigo-400'
-                    : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
-                }`}
-              >
-                <span className={isSelected ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}>
-                  {et.icon}
-                </span>
-                <span className="text-xs font-semibold leading-tight">{et.label}</span>
-              </button>
-            );
-          })}
-        </div>
+            {/* Expandable extra entry types */}
+            {entryTypesExpanded && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 space-y-2">
+                {extraEntryTypes.map((et) => {
+                  const isSelected = selectedEntryType?.id === et.id;
+                  return (
+                    <button
+                      key={et.id}
+                      type="button"
+                      onClick={() => handleSelectEntryType(et)}
+                      className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left ${
+                        isSelected
+                          ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 dark:border-indigo-400'
+                          : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                      }`}
+                    >
+                      <span className={isSelected ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}>
+                        {et.icon}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className={`text-sm font-semibold ${isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                          {et.label}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{et.description}</div>
+                      </div>
+                    </button>
+                  );
+                })}
 
-        {/* Expandable extra entry types */}
-        {entryTypesExpanded && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
-            {extraEntryTypes.map((et) => {
-              const isSelected = selectedEntryType?.id === et.id;
-              return (
+                {/* Buat Invoice */}
                 <button
-                  key={et.id}
                   type="button"
-                  onClick={() => handleSelectEntryType(et)}
-                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center ${
-                    isSelected
-                      ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 dark:border-indigo-400 text-indigo-500 dark:text-indigo-400'
-                      : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
-                  }`}
+                  onClick={() => router.push('/invoices?create=true')}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg border border-dashed border-indigo-300 dark:border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all text-left"
                 >
-                  <span className={isSelected ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}>
-                    {et.icon}
-                  </span>
-                  <span className="text-xs font-semibold leading-tight">{et.label}</span>
+                  <FileText className="w-5 h-5" />
+                  <div className="text-sm font-semibold">Buat Invoice</div>
                 </button>
-              );
-            })}
+              </div>
+            )}
 
-            {/* Buat Invoice — always in the extra section, with dashed border styling */}
+            {/* Toggle button */}
             <button
               type="button"
-              onClick={() => router.push('/invoices?create=true')}
-              className="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/10 text-indigo-500 dark:text-indigo-400 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all text-center"
+              onClick={toggleEntryTypesExpanded}
+              className="w-full mt-4 flex items-center justify-center gap-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors py-2"
             >
-              <FileText className="w-5 h-5" />
-              <span className="text-xs font-semibold leading-tight">Buat Invoice</span>
+              {entryTypesExpanded ? (
+                <>
+                  <ChevronUp className="w-3.5 h-3.5" />
+                  Sembunyikan
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                  Tampilkan Lainnya
+                </>
+              )}
             </button>
           </div>
-        )}
+        </div>
 
-        {/* Toggle button */}
-        <button
-          type="button"
-          onClick={toggleEntryTypesExpanded}
-          className="mt-2 flex items-center gap-1.5 text-xs font-medium text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
-        >
-          {entryTypesExpanded ? (
-            <>
-              <ChevronUp className="w-3.5 h-3.5" />
-              Sembunyikan
-            </>
-          ) : (
-            <>
-              <ChevronDown className="w-3.5 h-3.5" />
-              + Tampilkan Lainnya
-            </>
+        {/* Right Panel: Form */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Success message */}
+          {successMessage && (
+            <div className="mx-8 mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
+              <p className="text-sm text-emerald-500 dark:text-emerald-300 font-medium">{successMessage}</p>
+            </div>
           )}
-        </button>
-        {selectedEntryType && (
-          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-            {selectedEntryType.description}
-          </p>
-        )}
-      </div>
 
-      {/* ── STEP 2: Form (shown after entry type selected) ── */}
-      {selectedEntryType && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
+          {/* Form */}
+          {selectedEntryType && (
+            <div className="p-8 max-w-3xl">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
 
             {/* Submit error */}
@@ -1089,17 +1101,12 @@ export default function JournalEntryPage() {
                   onRemove={handleRemoveBreakdown}
                 />
 
-                {/* Row 2: Debit + Credit */}
+                {/* Row 2: Debit + Credit (Free Input - All Accounts) */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <AccountDropdown
                       label="Akun Debit"
-                      accounts={accounts.filter(a =>
-                        selectedEntryType.debitFilter === 'ALL'
-                          ? true
-                          : a.account_type === selectedEntryType.debitFilter
-                      )}
-                      subFilter={selectedEntryType.debitSubFilter}
+                      accounts={accounts}
                       value={debitAccountId}
                       onChange={(id, _code) => {
                         setDebitAccountId(id);
@@ -1113,20 +1120,7 @@ export default function JournalEntryPage() {
                   <div>
                     <AccountDropdown
                       label="Akun Kredit"
-                      accounts={accounts.filter(a => {
-                        // Override filter untuk tarik_dividen mode 'declare':
-                        // credit harus akun Hutang Dividen (LIABILITY) bukan ASSET
-                        if (
-                          selectedEntryType.id === 'tarik_dividen' &&
-                          dividendEntryMode === 'declare'
-                        ) {
-                          return a.account_type === 'LIABILITY' && a.is_dividend_payable;
-                        }
-                        return selectedEntryType.creditFilter === 'ALL'
-                          ? true
-                          : a.account_type === selectedEntryType.creditFilter;
-                      })}
-                      subFilter={selectedEntryType.creditSubFilter}
+                      accounts={accounts}
                       value={creditAccountId}
                       onChange={(id, _code) => {
                         setCreditAccountId(id);
@@ -1136,24 +1130,6 @@ export default function JournalEntryPage() {
                       error={errors.credit}
                       required
                     />
-                    {selectedEntryType.id === 'tarik_dividen' && dividendEntryMode && (
-                      <div className="mt-1.5 flex items-center gap-2 text-xs">
-                        <span className={`px-2 py-0.5 rounded font-semibold ${
-                          dividendEntryMode === 'declare'
-                            ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
-                            : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
-                        }`}>
-                          Mode: {dividendEntryMode === 'declare' ? 'Declare (commitment)' : 'Cashout langsung'}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setShowDividendModeModal(true)}
-                          className="text-indigo-600 dark:text-indigo-400 underline hover:no-underline"
-                        >
-                          Ganti
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -1251,14 +1227,10 @@ export default function JournalEntryPage() {
                               <td className="px-2 py-1.5 min-w-48">
                                 <AccountDropdown
                                   label=""
-                                  accounts={getMlAccountsForRow(side)}
+                                  accounts={accounts}
                                   value={line.account_id || undefined}
                                   onChange={(accountId) => mlUpdateAccount(idx, accountId)}
-                                  placeholder={
-                                    selectedEntryType?.id === 'penjualan' && side === 'debit'
-                                      ? 'Pilih akun aset atau beban...'
-                                      : 'Pilih akun'
-                                  }
+                                  placeholder="Pilih akun"
                                   error={errors[`ml_${idx}_account`]}
                                 />
                               </td>
@@ -1518,8 +1490,20 @@ export default function JournalEntryPage() {
               </button>
             </div>
           </form>
-        </div>
-      )}
+            </div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!selectedEntryType && (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <BookOpen className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400 text-lg">Pilih jenis transaksi untuk memulai</p>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Dividend entry mode picker — muncul saat user pilih akun Dividen */}
       <DividendEntryModeModal
