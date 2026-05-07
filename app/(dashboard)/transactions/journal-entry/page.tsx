@@ -1490,19 +1490,20 @@ export default function JournalEntryPage() {
               </button>
             </div>
           </form>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Empty State */}
-        {!selectedEntryType && (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <BookOpen className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-500 dark:text-gray-400 text-lg">Pilih jenis transaksi untuk memulai</p>
+          {/* Empty State */}
+          {!selectedEntryType && (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <BookOpen className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                <p className="text-gray-500 dark:text-gray-400 text-lg">Pilih jenis transaksi untuk memulai</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Dividend entry mode picker — muncul saat user pilih akun Dividen */}
