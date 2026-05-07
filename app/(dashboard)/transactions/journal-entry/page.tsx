@@ -910,7 +910,7 @@ export default function JournalEntryPage() {
   return (
     <div className="flex h-screen flex-col bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="flex items-center gap-3 px-8 py-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
+      <div className="flex items-center gap-3 px-8 py-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         {/* Back button */}
         <button
           onClick={() => router.push('/transactions')}
@@ -933,7 +933,7 @@ export default function JournalEntryPage() {
       {/* Main Content: 2-Panel Layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Panel: Transaction Types */}
-        <div className="w-64 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto">
+        <div className="w-64 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
           <div className="p-6 space-y-4">
             <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               Jenis Transaksi
@@ -1034,16 +1034,15 @@ export default function JournalEntryPage() {
         <div className="flex-1 overflow-y-auto flex flex-col">
           {/* Success message */}
           {successMessage && (
-            <div className="mx-auto mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center gap-3 w-full max-w-2xl">
+            <div className="mx-8 mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center gap-3">
               <CheckCircle2 className="w-5 h-5 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
               <p className="text-sm text-emerald-500 dark:text-emerald-300 font-medium">{successMessage}</p>
             </div>
           )}
 
           {/* Form */}
-          <div className="flex-1 flex items-start justify-center px-8 py-8">
-            <div className="w-full max-w-2xl">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex-1 px-8 py-8">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
 
             {/* Submit error */}
@@ -1492,7 +1491,6 @@ export default function JournalEntryPage() {
               </button>
             </div>
           </form>
-              </div>
             </div>
           </div>
         </div>
