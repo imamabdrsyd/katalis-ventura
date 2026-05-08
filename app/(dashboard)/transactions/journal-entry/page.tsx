@@ -922,18 +922,27 @@ export default function JournalEntryPage() {
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
           <BookOpen className="w-5 h-5 text-white" />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Journal Entry</h1>
           {activeBusiness && (
             <p className="text-sm text-gray-500 dark:text-gray-400">{activeBusiness.business_name}</p>
           )}
         </div>
+        {/* Buat Invoice — shortcut di header */}
+        <button
+          type="button"
+          onClick={() => router.push('/invoices?create=true')}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-indigo-300 dark:border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all text-sm font-semibold"
+        >
+          <FileText className="w-4 h-4" />
+          Buat Invoice
+        </button>
       </div>
 
       {/* Main Content: 2-Panel Layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Panel: Transaction Types */}
-        <div className="w-64 overflow-y-auto">
+        <div className="w-72 overflow-y-auto">
           <div className="p-6 space-y-4">
             <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               Jenis Transaksi
@@ -997,15 +1006,6 @@ export default function JournalEntryPage() {
                   );
                 })}
 
-                {/* Buat Invoice */}
-                <button
-                  type="button"
-                  onClick={() => router.push('/invoices?create=true')}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg border border-dashed border-indigo-300 dark:border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all text-left"
-                >
-                  <FileText className="w-5 h-5" />
-                  <div className="text-sm font-semibold">Buat Invoice</div>
-                </button>
               </div>
             )}
 
@@ -1044,6 +1044,17 @@ export default function JournalEntryPage() {
           <div className="flex-1 px-8 py-8">
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
+
+            {/* Entry type descriptor */}
+            {selectedEntryType && (
+              <div className={`flex items-center gap-3 px-4 py-3 rounded-xl ${selectedEntryType.bgColor}`}>
+                <span className={selectedEntryType.color}>{selectedEntryType.icon}</span>
+                <div>
+                  <p className={`text-sm font-semibold ${selectedEntryType.color}`}>{selectedEntryType.label}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{selectedEntryType.description}</p>
+                </div>
+              </div>
+            )}
 
             {/* Submit error */}
             {errors.submit && (
