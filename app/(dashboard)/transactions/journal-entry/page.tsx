@@ -942,9 +942,9 @@ export default function JournalEntryPage() {
       {/* Main Content: 2-Panel Layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Panel: Transaction Types */}
-        <div className="w-72 overflow-y-auto">
-          <div className="p-6 space-y-4">
-            <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+        <div className="w-72 overflow-y-auto flex-shrink-0">
+          <div className="pl-8 pr-3 pt-8 pb-6 space-y-4">
+            <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide h-5">
               Jenis Transaksi
             </p>
 
@@ -1031,30 +1031,25 @@ export default function JournalEntryPage() {
         </div>
 
         {/* Right Panel: Form */}
-        <div className="flex-1 overflow-y-auto flex flex-col">
+        <div className="flex-1 overflow-y-auto flex flex-col min-w-0">
           {/* Success message */}
           {successMessage && (
-            <div className="mx-8 mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center gap-3">
+            <div className="mr-8 ml-3 mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center gap-3">
               <CheckCircle2 className="w-5 h-5 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
               <p className="text-sm text-emerald-500 dark:text-emerald-300 font-medium">{successMessage}</p>
             </div>
           )}
 
           {/* Form */}
-          <div className="flex-1 px-8 py-8">
+          <div className="flex-1 pl-3 pr-8 pt-8 pb-8">
+            {/* Entry type description — sejajar dengan label "Jenis Transaksi" di kiri */}
+            {selectedEntryType && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 h-5">
+                {selectedEntryType.description}
+              </p>
+            )}
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-
-            {/* Entry type descriptor */}
-            {selectedEntryType && (
-              <div className={`flex items-center gap-3 px-4 py-3 rounded-xl ${selectedEntryType.bgColor}`}>
-                <span className={selectedEntryType.color}>{selectedEntryType.icon}</span>
-                <div>
-                  <p className={`text-sm font-semibold ${selectedEntryType.color}`}>{selectedEntryType.label}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{selectedEntryType.description}</p>
-                </div>
-              </div>
-            )}
 
             {/* Submit error */}
             {errors.submit && (
