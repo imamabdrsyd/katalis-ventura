@@ -910,7 +910,7 @@ export default function JournalEntryPage() {
   return (
     <div className="flex h-screen flex-col bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="flex items-center gap-3 px-8 py-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+      <div className="flex items-center gap-3 px-8 py-6 flex-shrink-0">
         {/* Back button */}
         <button
           onClick={() => router.push('/transactions')}
@@ -933,7 +933,7 @@ export default function JournalEntryPage() {
       {/* Main Content: 2-Panel Layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Panel: Transaction Types */}
-        <div className="w-64 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
+        <div className="w-64 overflow-y-auto">
           <div className="p-6 space-y-4">
             <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               Jenis Transaksi
