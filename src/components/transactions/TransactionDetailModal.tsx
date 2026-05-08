@@ -835,8 +835,8 @@ export function TransactionDetailModal({
           return (
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
 
-              {/* Status badge */}
-              {settled ? (
+              {/* Status badge — only for fully settled */}
+              {settled && (
                 <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-lg">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
                   <div>
@@ -846,43 +846,51 @@ export function TransactionDetailModal({
                     </p>
                   </div>
                 </div>
-              ) : hasPartials ? (
-                <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <History className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">{t.transactionDetail.partiallyPaid}</p>
-                      <p className="text-xs text-amber-600 dark:text-amber-400">
-                        {t.transactionDetail.remaining} <span className="font-semibold">{formatCurrency(outstanding)}</span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
+              )}
 
-              {/* Partial payment history */}
+              {/* Partial payment history (also conveys partially-paid status) */}
               {hasPartials && (
                 <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                  <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700/50 flex items-center gap-1.5">
-                    <History className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
-                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                      {t.transactionDetail.paymentHistory}
-                    </span>
+                  <div className="px-3 py-2.5 flex items-center justify-between gap-2 bg-gray-50 dark:bg-gray-700/50">
+                    <div className="flex items-center gap-1.5">
+                      <History className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                      <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        {t.transactionDetail.paymentHistory}
+                      </span>
+                    </div>
+                    {!settled && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {t.transactionDetail.remaining} <span className="font-semibold text-gray-700 dark:text-gray-200">{formatCurrency(outstanding)}</span>
+                      </span>
+                    )}
                   </div>
                   <div className="divide-y divide-gray-100 dark:divide-gray-700">
                     {partialTxns
                       .sort((a, b) => a.date.localeCompare(b.date))
-                      .map((pt) => (
-                        <div key={pt.id} className="flex items-center justify-between px-3 py-2.5">
-                          <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(pt.date)}</p>
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{pt.description || t.transactionDetail.partialPayment}</p>
+                      .map((pt) => {
+                        const clickable = !!onShowRelatedTransaction;
+                        return (
+                          <div
+                            key={pt.id}
+                            onClick={clickable ? () => onShowRelatedTransaction!(pt) : undefined}
+                            className={`flex items-center justify-between px-3 py-2.5 ${
+                              clickable ? 'cursor-pointer group' : ''
+                            }`}
+                          >
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(pt.date)}</p>
+                              <p className={`text-sm font-medium text-gray-700 dark:text-gray-200 ${
+                                clickable ? 'group-hover:underline' : ''
+                              }`}>
+                                {pt.description || t.transactionDetail.partialPayment}
+                              </p>
+                            </div>
+                            <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                              +{formatCurrency(pt.amount)}
+                            </span>
                           </div>
-                          <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                            +{formatCurrency(pt.amount)}
-                          </span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     {/* Running total paid */}
                     <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-700/50">
                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">{t.transactionDetail.totalPaid}</span>
@@ -1028,7 +1036,7 @@ export function TransactionDetailModal({
           return (
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
 
-              {/* Status badge */}
+              {/* Status badge — for fully settled or undeclared (no partials yet) */}
               {settled ? (
                 <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-lg">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
@@ -1039,19 +1047,7 @@ export function TransactionDetailModal({
                     </p>
                   </div>
                 </div>
-              ) : hasPartials ? (
-                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <History className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Dividen sebagian dibayar</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Sisa: <span className="font-semibold">{formatCurrency(outstanding)}</span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
+              ) : !hasPartials ? (
                 <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg">
                   <FileText className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                   <div>
@@ -1061,31 +1057,51 @@ export function TransactionDetailModal({
                     </p>
                   </div>
                 </div>
-              )}
+              ) : null}
 
-              {/* Partial payment history */}
+              {/* Partial payment history (also conveys partially-paid status) */}
               {hasPartials && (
                 <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                  <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700/50 flex items-center gap-1.5">
-                    <History className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
-                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                      Riwayat Pembayaran
-                    </span>
+                  <div className="px-3 py-2.5 flex items-center justify-between gap-2 bg-gray-50 dark:bg-gray-700/50">
+                    <div className="flex items-center gap-1.5">
+                      <History className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                      <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        Riwayat Pembayaran
+                      </span>
+                    </div>
+                    {!settled && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        Sisa: <span className="font-semibold text-gray-700 dark:text-gray-200">{formatCurrency(outstanding)}</span>
+                      </span>
+                    )}
                   </div>
                   <div className="divide-y divide-gray-100 dark:divide-gray-700">
                     {partialTxns
                       .sort((a, b) => a.date.localeCompare(b.date))
-                      .map((pt) => (
-                        <div key={pt.id} className="flex items-center justify-between px-3 py-2.5">
-                          <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(pt.date)}</p>
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{pt.description || 'Pembayaran sebagian'}</p>
+                      .map((pt) => {
+                        const clickable = !!onShowRelatedTransaction;
+                        return (
+                          <div
+                            key={pt.id}
+                            onClick={clickable ? () => onShowRelatedTransaction!(pt) : undefined}
+                            className={`flex items-center justify-between px-3 py-2.5 ${
+                              clickable ? 'cursor-pointer group' : ''
+                            }`}
+                          >
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(pt.date)}</p>
+                              <p className={`text-sm font-medium text-gray-700 dark:text-gray-200 ${
+                                clickable ? 'group-hover:underline' : ''
+                              }`}>
+                                {pt.description || 'Pembayaran sebagian'}
+                              </p>
+                            </div>
+                            <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                              +{formatCurrency(pt.amount)}
+                            </span>
                           </div>
-                          <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                            +{formatCurrency(pt.amount)}
-                          </span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-700/50">
                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Total dibayar</span>
                       <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
