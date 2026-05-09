@@ -122,6 +122,7 @@ export default function AccountsPage() {
 
     setSaving(true);
     try {
+      const isDepreciable = data.account_type === 'ASSET' && data.default_category === 'CAPEX';
       const newAccount = await accountsApi.createAccount({
         business_id: businessId,
         account_code: data.account_code,
@@ -137,6 +138,9 @@ export default function AccountsPage() {
         sort_order: data.sort_order,
         description: data.description,
         default_category: data.default_category,
+        useful_life_months: isDepreciable ? data.useful_life_months : undefined,
+        residual_value: isDepreciable ? data.residual_value : undefined,
+        acquisition_date: isDepreciable ? data.acquisition_date : undefined,
       });
 
       if (data.is_retained_earnings) {
@@ -164,13 +168,17 @@ export default function AccountsPage() {
 
     setSaving(true);
     try {
+      const isDepreciable = data.account_type === 'ASSET' && data.default_category === 'CAPEX';
       await accountsApi.updateAccount(editAccount.id, {
         account_name: data.account_name,
         normal_balance: data.normal_balance,
         description: data.description,
         default_category: data.default_category,
         is_dividend: data.is_dividend ?? false,
-      });
+        useful_life_months: isDepreciable ? (data.useful_life_months ?? null) : null,
+        residual_value: isDepreciable ? (data.residual_value ?? null) : null,
+        acquisition_date: isDepreciable ? (data.acquisition_date || null) : null,
+      } as any);
 
       if (data.is_retained_earnings) {
         await accountsApi.setRetainedEarningsAccount(businessId, editAccount.id);
