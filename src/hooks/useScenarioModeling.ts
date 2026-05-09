@@ -6,6 +6,7 @@ import {
   calculateFinancialSummary,
   calculateIncomeStatementMetrics,
   applyDepreciationToSummary,
+  buildFixedAssetCostMap,
   groupTransactionsByMonth,
 } from '@/lib/calculations';
 import { calculateDepreciationSummary } from '@/lib/accounting/depreciation';
@@ -129,17 +130,7 @@ export function useScenarioModeling() {
     // Calculate period depreciation (same pattern as useIncomeStatement)
     let periodDepreciation = 0;
     if (accounts.length && startDate && endDate) {
-      const fixedAssetCosts = new Map<string, number>();
-      for (const t of transactions) {
-        if (!t.is_double_entry) continue;
-        const amount = Number(t.amount);
-        if (t.debit_account?.account_type === 'ASSET' && t.debit_account.default_category === 'CAPEX') {
-          fixedAssetCosts.set(t.debit_account.id, (fixedAssetCosts.get(t.debit_account.id) ?? 0) + amount);
-        }
-        if (t.credit_account?.account_type === 'ASSET' && t.credit_account.default_category === 'CAPEX') {
-          fixedAssetCosts.set(t.credit_account.id, (fixedAssetCosts.get(t.credit_account.id) ?? 0) - amount);
-        }
-      }
+      const fixedAssetCosts = buildFixedAssetCostMap(transactions);
       const depSummary = calculateDepreciationSummary(
         accounts,
         (accountId) => fixedAssetCosts.get(accountId) ?? 0,

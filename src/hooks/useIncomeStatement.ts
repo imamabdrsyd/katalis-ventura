@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { useReportData } from './useReportData';
-import { calculateFinancialSummary, calculateIncomeStatementMetrics, applyDepreciationToSummary, extractIncomeStatementLineItems } from '@/lib/calculations';
+import { calculateFinancialSummary, calculateIncomeStatementMetrics, applyDepreciationToSummary, extractIncomeStatementLineItems, buildFixedAssetCostMap } from '@/lib/calculations';
 import { calculateDepreciationSummary } from '@/lib/accounting/depreciation';
 import * as accountsApi from '@/lib/api/accounts';
 import {
@@ -63,18 +63,9 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
     if (!accounts.length || !startDate || !endDate) return baseSummary;
 
     // Build fixed asset cost map from ALL transactions (cumulative, not period-filtered)
-    // because asset cost is cumulative — we need total cost to compute depreciation rate
-    const fixedAssetCosts = new Map<string, number>();
-    for (const t of transactions) {
-      if (!t.is_double_entry) continue;
-      const amount = Number(t.amount);
-      if (t.debit_account?.account_type === 'ASSET' && t.debit_account.default_category === 'CAPEX') {
-        fixedAssetCosts.set(t.debit_account.id, (fixedAssetCosts.get(t.debit_account.id) ?? 0) + amount);
-      }
-      if (t.credit_account?.account_type === 'ASSET' && t.credit_account.default_category === 'CAPEX') {
-        fixedAssetCosts.set(t.credit_account.id, (fixedAssetCosts.get(t.credit_account.id) ?? 0) - amount);
-      }
-    }
+    // because asset cost is cumulative — we need total cost to compute depreciation rate.
+    // Uses shared helper so multi-line journal entries are included (same as Balance Sheet).
+    const fixedAssetCosts = buildFixedAssetCostMap(transactions);
 
     const depSummary = calculateDepreciationSummary(
       accounts,

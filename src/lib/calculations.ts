@@ -448,6 +448,35 @@ export function calculateIncomeStatementMetrics(
 }
 
 /**
+ * Build a map of cumulative cost per fixed-asset account from raw transactions.
+ * Handles both legacy double-entry transactions and multi-line journal entries,
+ * matching the logic used inside calculateBalanceSheet.
+ */
+export function buildFixedAssetCostMap(transactions: Transaction[]): Map<string, number> {
+  const fixedAssetCosts = new Map<string, number>();
+  for (const t of transactions) {
+    // Legacy double-entry path
+    if (t.is_double_entry) {
+      const amount = Number(t.amount);
+      if (t.debit_account?.account_type === 'ASSET' && t.debit_account.default_category === 'CAPEX') {
+        fixedAssetCosts.set(t.debit_account.id, (fixedAssetCosts.get(t.debit_account.id) ?? 0) + amount);
+      }
+      if (t.credit_account?.account_type === 'ASSET' && t.credit_account.default_category === 'CAPEX') {
+        fixedAssetCosts.set(t.credit_account.id, (fixedAssetCosts.get(t.credit_account.id) ?? 0) - amount);
+      }
+    }
+    // Multi-line journal entries
+    for (const line of (t.journal_lines ?? [])) {
+      const acc = line.account;
+      if (!acc || acc.account_type !== 'ASSET' || acc.default_category !== 'CAPEX') continue;
+      const prev = fixedAssetCosts.get(acc.id) ?? 0;
+      fixedAssetCosts.set(acc.id, prev + line.debit_amount - line.credit_amount);
+    }
+  }
+  return fixedAssetCosts;
+}
+
+/**
  * Apply depreciation expense to a FinancialSummary and recalculate netProfit.
  * Called by hooks that know the accounts and period dates.
  * Returns a new summary object (does not mutate the original).

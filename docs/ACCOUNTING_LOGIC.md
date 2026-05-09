@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 03 Mei 2026 (Dividend Settlement — declare vs cashout, Hutang Dividen flag, popup mode picker) | AR/AP Aging & Repayment: 29 Maret 2026
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 09 Mei 2026 (Depreciation cost map: ikut multi-line journal entries via `buildFixedAssetCostMap`) | AR/AP Aging & Repayment: 29 Maret 2026
 
 ---
 
@@ -1336,6 +1336,10 @@ Form input depreciation settings tersedia di `AccountForm.tsx` — hanya muncul 
 - Tanggal Perolehan
 - Masa Manfaat (bulan)
 - Nilai Residu (Rp)
+
+### 16.8 Fixed Asset Cost Source
+
+`useIncomeStatement` dan `useScenarioModeling` membangun map biaya akun aset tetap via helper `buildFixedAssetCostMap(transactions)` di `src/lib/calculations.ts`. Helper ini memproses **legacy double-entry** (`debit_account` / `credit_account`) **DAN multi-line journal entries** (`journal_lines`) — sama seperti `calculateBalanceSheet`. Ini penting agar aset yang dibuat lewat journal entry multi-line tetap menghasilkan Beban Penyusutan di Income Statement.
 
 ---
 
