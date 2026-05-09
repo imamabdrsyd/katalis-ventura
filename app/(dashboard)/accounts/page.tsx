@@ -8,7 +8,7 @@ import * as accountsApi from '@/lib/api/accounts';
 import type { AccountTreeNode } from '@/lib/api/accounts';
 import { AccountForm, type AccountFormData } from '@/components/accounts/AccountForm';
 import { AccountDeleteModal } from '@/components/accounts/AccountDeleteModal';
-import { Plus, Search, ChevronDown, ChevronRight, Lock, CheckCircle2, BookOpen as BookOpenIcon, MoreVertical, BookMarked } from 'lucide-react';
+import { Plus, Search, ChevronDown, ChevronRight, Lock, CheckCircle2, BookOpen as BookOpenIcon, MoreVertical, BookMarked, Building2 } from 'lucide-react';
 
 
 const TYPE_COLORS: Record<AccountType, string> = {
@@ -579,6 +579,12 @@ function SubAccountRow({
           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded bg-indigo-50 dark:bg-indigo-900/30 text-gray-500 dark:text-gray-400">
             <BookMarked className="w-3 h-3 text-gray-400 dark:text-gray-500" />
             Laba Ditahan
+          </span>
+        )}
+        {account.account_type === 'ASSET' && account.default_category === 'CAPEX' && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded bg-indigo-50 dark:bg-indigo-900/30 text-gray-500 dark:text-gray-400">
+            <Building2 className="w-3 h-3 text-gray-400 dark:text-gray-500" />
+            Fixed Asset
           </span>
         )}
         {isSystem && (
