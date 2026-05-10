@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase';
-import type { Contact, ContactType, Transaction } from '@/types';
+import type { Contact, ContactType, Transaction, TransactionAttachment } from '@/types';
 
 export interface ContactInsert {
   business_id: string;
@@ -9,6 +9,7 @@ export interface ContactInsert {
   email?: string;
   address?: string;
   notes?: string;
+  id_card_attachments?: TransactionAttachment[];
   created_by: string;
 }
 
@@ -19,6 +20,7 @@ export interface ContactUpdate {
   email?: string | null;
   address?: string | null;
   notes?: string | null;
+  id_card_attachments?: TransactionAttachment[];
 }
 
 /** Ambil semua kontak bisnis, sorted by name */

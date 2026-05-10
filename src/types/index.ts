@@ -753,6 +753,7 @@ export interface Contact {
   email: string | null;
   address: string | null;
   notes: string | null;
+  id_card_attachments: TransactionAttachment[];
   created_by: string | null;
   created_at: string;
   updated_at: string;

@@ -3,12 +3,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Contact, Phone, Mail, MapPin, Plus, Search, Pencil, Trash2, User, Building, Users2, Handshake, UserCog, TrendingUp, ArrowDownLeft, ArrowUpRight, Loader2, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
+import { FileUpload } from '@/components/ui/FileUpload';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import * as contactsApi from '@/lib/api/contacts';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { CATEGORY_LABELS } from '@/lib/calculations';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
-import type { Contact as ContactType, ContactType as ContactTypeEnum, Transaction } from '@/types';
+import type { Contact as ContactType, ContactType as ContactTypeEnum, Transaction, TransactionAttachment } from '@/types';
 
 const CONTACT_TYPE_CONFIG: Record<ContactTypeEnum, { label: string; icon: React.ReactNode; className: string }> = {
   customer: {
@@ -61,6 +62,7 @@ interface ContactFormData {
   email: string;
   address: string;
   notes: string;
+  id_card_attachments: TransactionAttachment[];
 }
 
 const EMPTY_FORM: ContactFormData = {
@@ -70,6 +72,7 @@ const EMPTY_FORM: ContactFormData = {
   email: '',
   address: '',
   notes: '',
+  id_card_attachments: [],
 };
 
 interface ContactListProps {
@@ -165,6 +168,7 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
       email: contact.email || '',
       address: contact.address || '',
       notes: contact.notes || '',
+      id_card_attachments: contact.id_card_attachments || [],
     });
     setFormError('');
     setShowForm(true);
@@ -192,6 +196,7 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
           email: formData.email.trim() || null,
           address: formData.address.trim() || null,
           notes: formData.notes.trim() || null,
+          id_card_attachments: formData.id_card_attachments,
         });
 
         if (nameChanged) {
@@ -225,6 +230,7 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
           email: formData.email.trim() || undefined,
           address: formData.address.trim() || undefined,
           notes: formData.notes.trim() || undefined,
+          id_card_attachments: formData.id_card_attachments,
           created_by: userId,
         });
       }
@@ -678,6 +684,16 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
               className="input"
               rows={2}
               placeholder="Alamat lengkap"
+            />
+          </div>
+
+          <div>
+            <label className="label">Foto ID Card</label>
+            <FileUpload
+              businessId={businessId}
+              value={formData.id_card_attachments}
+              onChange={(atts) => setFormData((prev) => ({ ...prev, id_card_attachments: atts }))}
+              disabled={saving}
             />
           </div>
 
