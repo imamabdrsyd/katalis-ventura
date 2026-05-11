@@ -140,12 +140,12 @@ export default function MarketDashboardPage() {
         </h2>
         {state.loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[0, 1, 2, 3, 4, 5].map((i) => (
+            {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <div key={i} className="h-72 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
             ))}
           </div>
         ) : (
-          <StockNewsGrid items={state.news} limit={6} columns={3} />
+          <StockNewsGrid items={state.news} limit={9} columns={3} />
         )}
       </section>
     </div>

@@ -119,7 +119,7 @@ export function getStockNews(): Promise<MarketResult<StockNews[]>> {
     cacheKey: CACHE_KEYS.rssStockNews,
     source: 'rss',
     ttlSeconds: CACHE_TTL.RSS_STOCK_NEWS,
-    fetcher: () => fetchStockNewsRss(12),
+    fetcher: () => fetchStockNewsRss(15),
     fallback: [],
   });
 }

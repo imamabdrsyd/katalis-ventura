@@ -18,6 +18,9 @@ export const STOCK_NEWS_FEEDS: RssFeedSource[] = [
   { name: 'Yahoo Finance', url: 'https://feeds.finance.yahoo.com/rss/2.0/headline?s=^GSPC&region=US&lang=en-US' },
   { name: 'CNBC', url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html' },
   { name: 'Bloomberg Markets', url: 'https://feeds.bloomberg.com/markets/news.rss' },
+  // MarketWatch & Investing.com menyertakan media:content image di setiap item
+  { name: 'MarketWatch', url: 'https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines' },
+  { name: 'Investing.com', url: 'https://www.investing.com/rss/news_301.rss' },
 ];
 
 export const VC_PE_SME_FEEDS: RssFeedSource[] = [
@@ -62,17 +65,31 @@ function extractTag(item: string, tag: string): string | null {
 
 function extractImage(item: string): string | null {
   // <media:content url="..."> or <media:thumbnail url="...">
-  const media = item.match(/<media:(?:content|thumbnail)[^>]*url=["']([^"']+)["']/i);
-  if (media) return media[1];
-  // <enclosure url="..." type="image/...">
-  const enc = item.match(/<enclosure[^>]*url=["']([^"']+)["'][^>]*type=["']image\//i);
-  if (enc) return enc[1];
-  // <image><url>...</url></image>
+  const media = item.match(/<media:(?:content|thumbnail)[^>]*\burl=["']([^"']+)["']/i);
+  if (media?.[1]) return media[1];
+
+  // <enclosure url="..." type="image/..."> — beberapa feed taruh gambar di enclosure
+  const encImg = item.match(/<enclosure[^>]*\btype=["']image\/[^"']*["'][^>]*\burl=["']([^"']+)["']/i);
+  if (encImg?.[1]) return encImg[1];
+  const encUrl = item.match(/<enclosure[^>]*\burl=["']([^"']+)["'][^>]*\btype=["']image\//i);
+  if (encUrl?.[1]) return encUrl[1];
+
+  // <image><url>...</url></image> — format RSS standar
   const imgUrl = item.match(/<image>[\s\S]*?<url>([\s\S]*?)<\/url>[\s\S]*?<\/image>/i);
-  if (imgUrl) return stripCdata(imgUrl[1]);
-  // First <img src="..."> in description
-  const inlineImg = item.match(/<img[^>]+src=["']([^"']+)["']/i);
-  if (inlineImg) return inlineImg[1];
+  if (imgUrl?.[1]) return stripCdata(imgUrl[1]).trim();
+
+  // <thumbnail> tag (beberapa feed pakai ini)
+  const thumb = item.match(/<thumbnail>([^<]+)<\/thumbnail>/i);
+  if (thumb?.[1]) return stripCdata(thumb[1]).trim();
+
+  // og:image atau twitter:image di CDATA description
+  const ogImg = item.match(/(?:og:image|twitter:image)[^"']*content=["']([^"']+)["']/i);
+  if (ogImg?.[1]) return ogImg[1];
+
+  // First <img src="..."> dalam description/content (sering ada di CDATA)
+  const inlineImg = item.match(/<img[^>]+\bsrc=["']([^"']+)["']/i);
+  if (inlineImg?.[1]) return inlineImg[1];
+
   return null;
 }
 
@@ -142,7 +159,12 @@ async function fetchFromFeeds(
     throw new Error('All RSS feeds failed');
   }
 
-  merged.sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime());
+  // Sort: item dengan image diprioritaskan, lalu by date descending
+  merged.sort((a, b) => {
+    if (a.image && !b.image) return -1;
+    if (!a.image && b.image) return 1;
+    return new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime();
+  });
   return merged.slice(0, limit);
 }
 
