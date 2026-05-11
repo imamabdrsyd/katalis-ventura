@@ -742,7 +742,7 @@ function Sidebar({
           ${isCollapsed ? 'w-16' : 'w-56'}`}
       >
         {/* Logo + Hamburger row */}
-        <div className={`flex items-center border-b border-gray-200 dark:border-gray-700 h-16 flex-shrink-0 ${isCollapsed ? 'justify-center px-2' : 'gap-2 px-3'}`}>
+        <div className={`flex items-center border-b border-transparent h-16 flex-shrink-0 ${isCollapsed ? 'justify-center px-2' : 'gap-2 px-3'}`}>
           {isCollapsed ? (
             /* Favicon sebagai tombol expand */
             <button
