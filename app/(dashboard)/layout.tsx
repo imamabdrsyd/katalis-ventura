@@ -36,15 +36,12 @@ import {
   FlaskConical,
   Plus,
   UserPlus,
-  FileText,
   BarChart3,
   Calculator,
   LineChart,
   Target,
   Calendar,
   HandCoins,
-  ScanSearch,
-  BookCheck,
   Languages,
 } from 'lucide-react';
 
@@ -93,12 +90,9 @@ function useNavData() {
       icon: Calculator,
       items: [
         { href: '/accounts', label: t.nav.chartOfAccounts, icon: BookOpen },
-        { href: '/invoices', label: t.nav.invoice, icon: FileText },
         { href: '/general-ledger', label: t.nav.generalLedger, icon: BookOpenCheck },
         { href: '/trial-balance', label: t.nav.trialBalance, icon: ClipboardCheck },
         { href: '/ar-ap', label: t.nav.arAp, icon: HandCoins },
-        { href: '/reconciliation', label: t.nav.bankReconciliation, icon: ScanSearch },
-        { href: '/closing-entry', label: t.nav.closingEntry, icon: BookCheck },
       ],
     },
     {
@@ -116,6 +110,7 @@ function useNavData() {
       items: [
         { href: '/scenario-modeling', label: t.nav.scenarioModeling, icon: FlaskConical },
         { href: '/roi-forecast', label: t.nav.budgetForecast, icon: Target },
+        { href: '/market', label: t.nav.marketTracker, icon: LineChart },
       ],
     },
   ], [t]);
