@@ -34,7 +34,7 @@ function NewsCardImage({ src, site }: { src: string | null | undefined; site: st
   const [errored, setErrored] = useState(false);
   if (!src || errored) {
     return (
-      <div className="w-full h-40 bg-gradient-to-br from-indigo-50 via-indigo-100 to-purple-100 dark:from-indigo-900/40 dark:via-indigo-800/40 dark:to-purple-900/40 flex items-center justify-center">
+      <div className="relative w-full aspect-video bg-gradient-to-br from-indigo-50 via-indigo-100 to-purple-100 dark:from-indigo-900/40 dark:via-indigo-800/40 dark:to-purple-900/40 flex items-center justify-center">
         <div className="flex flex-col items-center gap-2 text-indigo-400 dark:text-indigo-500">
           <Newspaper className="w-8 h-8" />
           <span className="text-xs font-semibold uppercase tracking-wider opacity-80">{site}</span>
@@ -46,15 +46,17 @@ function NewsCardImage({ src, site }: { src: string | null | undefined; site: st
     // Pakai img native, bukan next/image — gambar dari domain eksternal arbitrer
     // tidak ter-allowlist di next.config. Saat gagal load (404/hotlink-block),
     // fallback ke placeholder gradient.
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt=""
-      loading="lazy"
-      referrerPolicy="no-referrer"
-      onError={() => setErrored(true)}
-      className="w-full h-40 object-cover bg-gray-100 dark:bg-gray-900"
-    />
+    <div className="relative w-full aspect-video overflow-hidden bg-gray-100 dark:bg-gray-900">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt=""
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        onError={() => setErrored(true)}
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+    </div>
   );
 }
 

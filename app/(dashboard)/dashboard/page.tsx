@@ -173,11 +173,22 @@ export default function DashboardPage() {
 
   if (businessLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500 dark:text-gray-400">{t.common.loading}</p>
+      <div className="p-8 animate-pulse">
+        {/* Filter bar skeleton */}
+        <div className="h-9 w-full max-w-2xl bg-gray-200 dark:bg-gray-700 rounded-lg mb-6" />
+        {/* Stats cards skeleton — 4 kolom */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-2xl" />
+          ))}
         </div>
+        {/* Charts skeleton — 2 kolom */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="h-80 bg-gray-200 dark:bg-gray-700 rounded-2xl" />
+          <div className="h-80 bg-gray-200 dark:bg-gray-700 rounded-2xl" />
+        </div>
+        {/* Recent transactions skeleton */}
+        <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-2xl" />
       </div>
     );
   }

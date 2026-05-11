@@ -14,7 +14,6 @@ import { QuickTransactionForm } from '@/components/transactions/QuickTransaction
 import { RecurringList } from '@/components/transactions/RecurringList';
 import { useRecurringTransactions } from '@/hooks/useRecurringTransactions';
 import { Upload, TrendingUp, TrendingDown, Plus, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2, Calculator, RefreshCw, Printer, Loader2, Contact as ContactIcon } from 'lucide-react';
-import { exportSelectedTransactionsToPDF } from '@/lib/export';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
@@ -186,6 +185,7 @@ function TransactionsPageInner() {
     const selected = allTransactions.filter((t) => selectedIds.has(t.id));
     setPdfExporting(true);
     try {
+      const { exportSelectedTransactionsToPDF } = await import('@/lib/export');
       await exportSelectedTransactionsToPDF(
         activeBusiness?.business_name ?? 'Bisnis',
         pdfTitle.trim(),

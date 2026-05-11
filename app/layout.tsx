@@ -7,7 +7,7 @@ import { QueryProvider } from '@/components/providers/QueryProvider';
 import { LanguageProvider } from '@/context/LanguageContext';
 import './globals.css';
 
-const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ['latin'] });
+const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ['latin'], display: 'swap' });
 
 const baseUrl = 'https://axionventura.com';
 

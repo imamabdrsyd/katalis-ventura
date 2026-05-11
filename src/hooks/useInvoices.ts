@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useBusinessContext } from '@/context/BusinessContext';
 import * as invoicesApi from '@/lib/api/invoices';
-import { exportInvoiceToPDF } from '@/lib/invoicePDF';
 import type { Invoice, InvoiceFormData, InvoicePaymentStatus, InvoiceSettings } from '@/types';
 
 export function useInvoices() {
@@ -134,7 +133,8 @@ export function useInvoices() {
   }, [deleteInvoiceTarget, user, fetchInvoices, fetchSettings]);
 
   // Download PDF
-  const handleDownloadPDF = useCallback((invoice: Invoice) => {
+  const handleDownloadPDF = useCallback(async (invoice: Invoice) => {
+    const { exportInvoiceToPDF } = await import('@/lib/invoicePDF');
     exportInvoiceToPDF({
       invoice,
       business: {

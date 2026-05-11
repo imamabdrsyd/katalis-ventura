@@ -90,10 +90,10 @@ export default function MarketDashboardPage() {
           </p>
         </div>
 
-        {/* FX mini widget */}
-        <div className="flex-shrink-0 mt-1">
+        {/* FX mini widget — skeleton dan widget pakai w-40 yang sama agar tidak ada CLS */}
+        <div className="flex-shrink-0 mt-1 w-40">
           {state.loading ? (
-            <div className="w-36 h-14 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+            <div className="w-full h-[52px] rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
           ) : fxRate ? (
             <div className="flex items-center gap-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 shadow-sm">
               <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-900/40 flex items-center justify-center flex-shrink-0">
@@ -113,10 +113,11 @@ export default function MarketDashboardPage() {
       </header>
 
       {/* Macro Tracker (lebih lebar) + VC PE UMKM Insights — grid 5 kolom */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6 items-stretch">
+      {/* min-h-[490px] match tinggi aktual MacroTrackerSection (header ~100px + chart min-h-80 + padding + footer) */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6 items-stretch min-h-[490px]">
         <div className="lg:col-span-3">
           {state.loading ? (
-            <div className="h-full min-h-96 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+            <div className="h-full rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
           ) : (
             <MacroTrackerSection
               initialSeries={state.macro}
@@ -126,7 +127,7 @@ export default function MarketDashboardPage() {
         </div>
         <div className="lg:col-span-2">
           {state.loading ? (
-            <div className="h-full min-h-96 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+            <div className="h-full rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
           ) : (
             <ArticleSidebar articles={state.articles} limit={10} />
           )}
@@ -141,7 +142,8 @@ export default function MarketDashboardPage() {
         {state.loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <div key={i} className="h-72 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+              // h-80 match tinggi aktual kartu (aspect-video image ~200px + konten ~120px)
+              <div key={i} className="h-80 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
             ))}
           </div>
         ) : (
