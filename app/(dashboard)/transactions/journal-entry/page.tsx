@@ -3,6 +3,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
+import { useInvoices } from '@/hooks/useInvoices';
+import { Modal } from '@/components/ui/Modal';
+import { InvoiceForm } from '@/components/invoices/InvoiceForm';
 import { getAccounts } from '@/lib/api/accounts';
 import { createTransaction, createMultiLineTransaction } from '@/lib/api/transactions';
 import { getTransactions } from '@/lib/api/transactions';
@@ -39,6 +42,8 @@ import {
   RotateCcw,
   Repeat,
   FileText,
+  ScanSearch,
+  BookCheck,
   HandCoins,
   Receipt,
   ChevronDown,
@@ -376,6 +381,16 @@ function mlParseNumber(s: string): number {
 export default function JournalEntryPage() {
   const router = useRouter();
   const { user, activeBusiness, activeBusinessId: businessId } = useBusinessContext();
+
+  // Invoice modal — Buat Invoice di header
+  const {
+    saving: invoiceSaving,
+    showAddModal: showInvoiceModal,
+    setShowAddModal: setShowInvoiceModal,
+    invoiceSettings,
+    nextInvoiceNumber,
+    handleCreateInvoice,
+  } = useInvoices();
 
   // step state — initialize with first default entry type to show form by default
   const [selectedEntryType, setSelectedEntryType] = useState<EntryType | null>(() => {
@@ -922,16 +937,55 @@ export default function JournalEntryPage() {
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
           <BookOpen className="w-5 h-5 text-white" />
         </div>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Journal Entry</h1>
-          {activeBusiness && (
-            <p className="text-sm text-gray-500 dark:text-gray-400">{activeBusiness.business_name}</p>
-          )}
+        <div className="flex items-center gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Journal Entry</h1>
+            {activeBusiness && (
+              <p className="text-sm text-gray-500 dark:text-gray-400">{activeBusiness.business_name}</p>
+            )}
+          </div>
+
+          {/* Pemisah */}
+          <div className="h-8 w-px bg-gray-200 dark:bg-gray-700 mx-1" />
+
+          {/* Menu navigation — Invoicing, Rekonsiliasi Bank, Tutup Buku */}
+          <nav className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => router.push('/invoices')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+              title="Invoicing"
+            >
+              <FileText className="w-4 h-4" />
+              Invoicing
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push('/reconciliation')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+              title="Rekonsiliasi Bank"
+            >
+              <ScanSearch className="w-4 h-4" />
+              Rekonsiliasi Bank
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push('/closing-entry')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+              title="Tutup Buku"
+            >
+              <BookCheck className="w-4 h-4" />
+              Tutup Buku
+            </button>
+          </nav>
         </div>
-        {/* Buat Invoice — shortcut di header */}
+
+        <div className="flex-1" />
+
+        {/* Buat Invoice — buka modal langsung */}
         <button
           type="button"
-          onClick={() => router.push('/invoices?create=true')}
+          onClick={() => setShowInvoiceModal(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-indigo-300 dark:border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all text-sm font-semibold"
         >
           <FileText className="w-4 h-4" />
@@ -1510,6 +1564,24 @@ export default function JournalEntryPage() {
         selectedAccount={accounts.find(a => a.id === debitAccountId) ?? null}
         accounts={accounts}
       />
+
+      {/* Create Invoice Modal — di-trigger dari button "Buat Invoice" di header */}
+      <Modal
+        isOpen={showInvoiceModal}
+        onClose={() => setShowInvoiceModal(false)}
+        title="Buat Invoice"
+      >
+        <InvoiceForm
+          onSubmit={handleCreateInvoice}
+          onCancel={() => setShowInvoiceModal(false)}
+          loading={invoiceSaving}
+          defaultInvoiceNumber={nextInvoiceNumber}
+          defaultDueDays={invoiceSettings?.default_due_days ?? 7}
+          defaultTaxRate={invoiceSettings?.default_tax_rate ?? 11}
+          defaultTaxType={invoiceSettings?.default_tax_type ?? 'none'}
+          businessCategory={activeBusiness?.business_type}
+        />
+      </Modal>
     </div>
   );
 }
