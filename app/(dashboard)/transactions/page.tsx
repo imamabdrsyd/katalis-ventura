@@ -13,7 +13,7 @@ import type { TransactionCategory } from '@/types';
 import { QuickTransactionForm } from '@/components/transactions/QuickTransactionForm';
 import { RecurringList } from '@/components/transactions/RecurringList';
 import { useRecurringTransactions } from '@/hooks/useRecurringTransactions';
-import { Upload, TrendingUp, TrendingDown, BookOpen, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2, Calculator, RefreshCw, Printer, Loader2, Contact as ContactIcon } from 'lucide-react';
+import { Upload, TrendingUp, TrendingDown, Plus, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2, Calculator, RefreshCw, Printer, Loader2, Contact as ContactIcon } from 'lucide-react';
 import { exportSelectedTransactionsToPDF } from '@/lib/export';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
@@ -311,7 +311,7 @@ function TransactionsPageInner() {
               onClick={() => router.push('/transactions/journal-entry')}
               className="btn-primary flex items-center gap-2"
             >
-              <BookOpen className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
               {t.transactions.journalEntry}
             </button>
 
