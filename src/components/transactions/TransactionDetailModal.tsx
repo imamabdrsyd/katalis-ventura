@@ -1304,7 +1304,7 @@ export function TransactionDetailModal({
           <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
             Informasi Tambahan
           </h4>
-          <div className="space-y-3 text-sm">
+          <div className="bg-gray-50 dark:bg-gray-800/60 rounded-xl p-4 border border-gray-100 dark:border-gray-700 space-y-3 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-500 dark:text-gray-400">No. Transaksi</span>
               <span className="text-gray-700 dark:text-gray-300 font-mono text-xs">
