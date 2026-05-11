@@ -193,7 +193,7 @@ export default function JoinBusinessPage() {
     return null;
   };
 
-  const canRequest = selectedBusiness && !selectedBusiness.requestStatus;
+  const canRequest = selectedBusiness && selectedBusiness.requestStatus !== 'pending';
 
   if (isCheckingAuth) {
     return (
@@ -308,7 +308,7 @@ export default function JoinBusinessPage() {
               <div className="space-y-3 max-h-72 overflow-y-auto mb-6">
                 {filteredBusinesses.map((business) => {
                   const isSelected = selectedBusiness?.id === business.id;
-                  const hasRequest = !!business.requestStatus;
+                  const hasRequest = business.requestStatus === 'pending';
 
                   return (
                     <div

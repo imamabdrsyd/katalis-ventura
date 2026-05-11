@@ -26,13 +26,23 @@ export async function submitJoinRequest(
   message?: string
 ): Promise<JoinRequest> {
   const supabase = createClient();
+
+  // Upsert handles the case where a user was removed and wants to re-join:
+  // an old approved/rejected row would block a fresh INSERT due to the
+  // UNIQUE(business_id, requester_id) constraint, so we reset it to pending.
   const { data, error } = await supabase
     .from('business_join_requests')
-    .insert({
-      business_id: businessId,
-      requester_id: requesterId,
-      message: message || null,
-    })
+    .upsert(
+      {
+        business_id: businessId,
+        requester_id: requesterId,
+        message: message || null,
+        status: 'pending',
+        reviewed_by: null,
+        reviewed_at: null,
+      },
+      { onConflict: 'business_id,requester_id' }
+    )
     .select()
     .single();
 

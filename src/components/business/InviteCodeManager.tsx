@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Copy, Check, X, UserPlus, Clock, Users } from 'lucide-react';
+import { Copy, Check, X, UserPlus, Clock, Users, Ban, Trash2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import type { InviteCode, UserRole } from '@/types';
 import * as inviteCodesApi from '@/lib/api/inviteCodes';
 
@@ -22,11 +22,24 @@ export function InviteCodeManager({
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Form state for new invite code
   const [role, setRole] = useState<'business_manager' | 'investor'>('investor');
   const [maxUses, setMaxUses] = useState<number>(10);
   const [expiresIn, setExpiresIn] = useState<number>(30); // days
+
+  const showFeedback = (type: 'success' | 'error', message: string) => {
+    setFeedback({ type, message });
+    setTimeout(() => setFeedback(null), 4000);
+  };
+
+  const getErrorMessage = (error: unknown): string => {
+    if (error && typeof error === 'object' && 'message' in error) {
+      return String((error as { message: unknown }).message);
+    }
+    return 'Terjadi kesalahan. Silakan coba lagi.';
+  };
 
   useEffect(() => {
     fetchInviteCodes();
@@ -39,12 +52,22 @@ export function InviteCodeManager({
       setInviteCodes(codes);
     } catch (error) {
       console.error('Failed to fetch invite codes:', error);
+      showFeedback('error', `Gagal memuat kode undangan: ${getErrorMessage(error)}`);
     } finally {
       setLoading(false);
     }
   };
 
   const handleGenerateCode = async () => {
+    if (!Number.isFinite(maxUses) || maxUses < 1) {
+      showFeedback('error', 'Maks penggunaan harus minimal 1');
+      return;
+    }
+    if (!Number.isFinite(expiresIn) || expiresIn < 1) {
+      showFeedback('error', 'Masa berlaku harus minimal 1 hari');
+      return;
+    }
+
     setGenerating(true);
     try {
       const expiresAt = new Date();
@@ -61,8 +84,10 @@ export function InviteCodeManager({
       );
 
       await fetchInviteCodes();
+      showFeedback('success', 'Kode undangan berhasil dibuat');
     } catch (error) {
       console.error('Failed to generate invite code:', error);
+      showFeedback('error', `Gagal membuat kode undangan: ${getErrorMessage(error)}`);
     } finally {
       setGenerating(false);
     }
@@ -71,6 +96,7 @@ export function InviteCodeManager({
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
     setCopiedCode(code);
+    showFeedback('success', `Kode ${code} disalin ke clipboard`);
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
@@ -78,8 +104,10 @@ export function InviteCodeManager({
     try {
       await inviteCodesApi.deactivateInviteCode(codeId);
       await fetchInviteCodes();
+      showFeedback('success', 'Kode undangan dinonaktifkan');
     } catch (error) {
       console.error('Failed to deactivate code:', error);
+      showFeedback('error', `Gagal menonaktifkan kode: ${getErrorMessage(error)}`);
     }
   };
 
@@ -89,8 +117,10 @@ export function InviteCodeManager({
     try {
       await inviteCodesApi.deleteInviteCode(codeId);
       await fetchInviteCodes();
+      showFeedback('success', 'Kode undangan dihapus');
     } catch (error) {
       console.error('Failed to delete code:', error);
+      showFeedback('error', `Gagal menghapus kode: ${getErrorMessage(error)}`);
     }
   };
 
@@ -136,6 +166,33 @@ export function InviteCodeManager({
 
         {/* Content */}
         <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
+          {/* Feedback banner */}
+          {feedback && (
+            <div
+              role="status"
+              aria-live="polite"
+              className={`mb-4 flex items-start gap-2 rounded-xl px-4 py-3 text-sm ${
+                feedback.type === 'success'
+                  ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                  : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
+              }`}
+            >
+              {feedback.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+              )}
+              <span className="flex-1">{feedback.message}</span>
+              <button
+                onClick={() => setFeedback(null)}
+                className="opacity-60 hover:opacity-100 transition-opacity"
+                aria-label="Tutup notifikasi"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
           {/* Generate New Code Form */}
           <div className="bg-indigo-50 dark:bg-indigo-900/30 rounded-xl p-4 mb-6">
             <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
@@ -193,7 +250,7 @@ export function InviteCodeManager({
           {/* Invite Codes List */}
           <div>
             <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-3">
-              Kode Undangan Aktif
+              Riwayat Kode Undangan
             </h3>
 
             {loading ? (
@@ -203,7 +260,7 @@ export function InviteCodeManager({
               </div>
             ) : inviteCodes.length === 0 ? (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                Belum ada kode undangan
+                Belum ada kode undangan. Buat kode baru di atas untuk mengundang anggota.
               </div>
             ) : (
               <div className="space-y-3">
@@ -275,14 +332,14 @@ export function InviteCodeManager({
                             className="p-1.5 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded transition-colors"
                             title="Nonaktifkan"
                           >
-                            <X className="w-4 h-4" />
+                            <Ban className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete(code.id)}
                             className="p-1.5 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
                             title="Hapus"
                           >
-                            <X className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       )}

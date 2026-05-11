@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase';
-import type { InviteCode, UserRole } from '@/types';
+import type { InviteCode } from '@/types';
 
 // Generate cryptographically secure random invite code (8 characters)
 function generateCode(): string {
@@ -99,69 +99,33 @@ export async function validateInviteCode(
   return { valid: true, inviteCode };
 }
 
-// Use invite code to join business
+// Use invite code to join business (transactional via RPC)
 export async function useInviteCode(
   code: string,
   userId: string
 ): Promise<{ success: boolean; message?: string; businessId?: string }> {
   const supabase = createClient();
 
-  // Validate code
-  const validation = await validateInviteCode(code);
-  if (!validation.valid || !validation.inviteCode) {
-    return { success: false, message: validation.message };
-  }
-
-  const inviteCode = validation.inviteCode;
-
-  // Check if user already joined this business
-  const { data: existingRole } = await supabase
-    .from('user_business_roles')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('business_id', inviteCode.business_id)
-    .single();
-
-  if (existingRole) {
-    return { success: false, message: 'Anda sudah tergabung di bisnis ini' };
-  }
-
-  // Atomic increment: use current_uses condition to prevent race condition.
-  // Only update if current_uses hasn't changed since validation (optimistic lock).
-  const { data: updatedCode, error: updateError } = await supabase
-    .from('invite_codes')
-    .update({ current_uses: inviteCode.current_uses + 1 })
-    .eq('id', inviteCode.id)
-    .eq('current_uses', inviteCode.current_uses) // Optimistic concurrency check
-    .lt('current_uses', inviteCode.max_uses) // Ensure we don't exceed max
-    .select()
-    .single();
-
-  if (updateError || !updatedCode) {
-    // Another request used this code concurrently, or max uses reached
-    return { success: false, message: 'Kode undangan sudah mencapai batas penggunaan atau sedang digunakan. Coba lagi.' };
-  }
-
-  // Add user to business
-  const { error: roleError } = await supabase.from('user_business_roles').insert({
-    user_id: userId,
-    business_id: inviteCode.business_id,
-    role: inviteCode.role,
-    invited_by: inviteCode.created_by,
+  const { data, error } = await supabase.rpc('use_invite_code', {
+    p_code: code.toUpperCase(),
+    p_user_id: userId,
   });
 
-  if (roleError) {
-    // Rollback the usage counter since the join failed
-    await supabase
-      .from('invite_codes')
-      .update({ current_uses: inviteCode.current_uses })
-      .eq('id', inviteCode.id);
-
-    console.error('Error adding user to business:', roleError);
-    return { success: false, message: 'Gagal bergabung ke bisnis' };
+  if (error) {
+    console.error('use_invite_code RPC error:', error);
+    return { success: false, message: 'Gagal memproses kode undangan. Coba lagi.' };
   }
 
-  return { success: true, businessId: inviteCode.business_id };
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    return { success: false, message: 'Kode undangan tidak valid' };
+  }
+
+  return {
+    success: row.success,
+    message: row.message ?? undefined,
+    businessId: row.business_id ?? undefined,
+  };
 }
 
 // Deactivate invite code
