@@ -72,6 +72,7 @@ export interface Translations {
     analytics: string;
     scenarioModeling: string;
     budgetForecast: string;
+    marketTracker: string;
     settings: string;
     logout: string;
     quickEntry: string;

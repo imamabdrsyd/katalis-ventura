@@ -70,6 +70,7 @@ export const en: Translations = {
     analytics: 'ANALYTICS',
     scenarioModeling: 'Scenario Modeling',
     budgetForecast: 'Budget & Forecast',
+    marketTracker: 'Market Tracker',
     settings: 'Settings',
     logout: 'Logout',
     quickEntry: 'Quick Entry',

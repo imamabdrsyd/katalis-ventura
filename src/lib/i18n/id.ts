@@ -70,6 +70,7 @@ export const id: Translations = {
     analytics: 'ANALITIK',
     scenarioModeling: 'Pemodelan Skenario',
     budgetForecast: 'Anggaran & Proyeksi',
+    marketTracker: 'Market Tracker',
     settings: 'Pengaturan',
     logout: 'Keluar',
     quickEntry: 'Entri Cepat',
