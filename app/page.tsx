@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { BookOpen, LayoutGrid, ShoppingBag } from 'lucide-react';
 import { OmnichannelSection } from '@/components/omnichannel/OmnichannelSection';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { MarketInsightSection } from '@/components/market/MarketInsightSection';
 
 interface BusinessLogo {
   id: string;
@@ -349,6 +350,8 @@ export default function LandingPage() {
           </div>
         </div>
 
+        {/* <MarketInsightSection /> */}
+
       </main>
 
       {/* Footer */}
@@ -416,6 +419,7 @@ export default function LandingPage() {
               >
                 Blog
               </Link>
+              {/* Market nav hidden — fitur market aggregator belum live */}
               <a
                 href="https://instagram.com/imamabdrsyd"
                 target="_blank"

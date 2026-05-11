@@ -4,7 +4,7 @@ const ContentSecurityPolicy = `
   script-src 'self' 'unsafe-inline' 'unsafe-eval';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src 'self' https://fonts.gstatic.com;
-  img-src 'self' data: blob: https://*.supabase.co https://res.cloudinary.com;
+  img-src 'self' data: blob: https:;
   connect-src 'self' https://*.supabase.co https://api.cloudinary.com wss://*.supabase.co;
   frame-ancestors 'none';
 `.replace(/\n/g, ' ');
