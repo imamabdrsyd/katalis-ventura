@@ -112,11 +112,11 @@ export default function MarketDashboardPage() {
         </div>
       </header>
 
-      {/* Macro Tracker + VC PE UMKM Insights — 2 kolom */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        <div>
+      {/* Macro Tracker (lebih lebar) + VC PE UMKM Insights — grid 5 kolom */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6 items-stretch">
+        <div className="lg:col-span-3">
           {state.loading ? (
-            <div className="h-96 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+            <div className="h-full min-h-96 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
           ) : (
             <MacroTrackerSection
               initialSeries={state.macro}
@@ -124,9 +124,9 @@ export default function MarketDashboardPage() {
             />
           )}
         </div>
-        <div>
+        <div className="lg:col-span-2">
           {state.loading ? (
-            <div className="h-96 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+            <div className="h-full min-h-96 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
           ) : (
             <ArticleSidebar articles={state.articles} limit={10} />
           )}

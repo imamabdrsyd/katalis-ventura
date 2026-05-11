@@ -1,4 +1,7 @@
-import { ExternalLink, Clock } from 'lucide-react';
+'use client';
+
+import { useState } from 'react';
+import { ExternalLink, Clock, Newspaper } from 'lucide-react';
 import type { StockNews } from '@/lib/marketData/types';
 
 interface StockNewsGridProps {
@@ -27,6 +30,34 @@ function formatRelativeDate(dateStr: string): string {
   }
 }
 
+function NewsCardImage({ src, site }: { src: string | null | undefined; site: string }) {
+  const [errored, setErrored] = useState(false);
+  if (!src || errored) {
+    return (
+      <div className="w-full h-40 bg-gradient-to-br from-indigo-50 via-indigo-100 to-purple-100 dark:from-indigo-900/40 dark:via-indigo-800/40 dark:to-purple-900/40 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2 text-indigo-400 dark:text-indigo-500">
+          <Newspaper className="w-8 h-8" />
+          <span className="text-xs font-semibold uppercase tracking-wider opacity-80">{site}</span>
+        </div>
+      </div>
+    );
+  }
+  return (
+    // Pakai img native, bukan next/image — gambar dari domain eksternal arbitrer
+    // tidak ter-allowlist di next.config. Saat gagal load (404/hotlink-block),
+    // fallback ke placeholder gradient.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt=""
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={() => setErrored(true)}
+      className="w-full h-40 object-cover bg-gray-100 dark:bg-gray-900"
+    />
+  );
+}
+
 export function StockNewsGrid({
   items,
   limit = 4,
@@ -53,19 +84,7 @@ export function StockNewsGrid({
           rel="noopener noreferrer"
           className="group flex flex-col bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-md transition-all overflow-hidden"
         >
-          {item.image ? (
-            // Pakai img native, bukan next/image — gambar dari domain eksternal arbitrer
-            // tidak ter-allowlist di next.config; cukup loading lazy untuk performa.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={item.image}
-              alt=""
-              loading="lazy"
-              className="w-full h-40 object-cover bg-gray-100 dark:bg-gray-900"
-            />
-          ) : (
-            <div className="w-full h-40 bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/40 dark:to-indigo-800/40" />
-          )}
+          <NewsCardImage src={item.image} site={item.site} />
           <div className="p-4 flex-1 flex flex-col">
             <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-2">
               <span className="font-semibold text-indigo-600 dark:text-indigo-400 truncate">

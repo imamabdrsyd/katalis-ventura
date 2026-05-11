@@ -44,7 +44,7 @@ export function MacroTrackerSection({
   const meta = FRED_SERIES[seriesId];
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 flex-shrink-0">
@@ -77,13 +77,15 @@ export function MacroTrackerSection({
         </select>
       </div>
 
-      {loading ? (
-        <div className="h-80 flex items-center justify-center">
-          <div className="animate-pulse text-sm text-gray-400">Memuat data...</div>
-        </div>
-      ) : (
-        <MacroChart series={series} />
-      )}
+      <div className="flex-1 flex flex-col justify-center min-h-80">
+        {loading ? (
+          <div className="h-80 flex items-center justify-center">
+            <div className="animate-pulse text-sm text-gray-400">Memuat data...</div>
+          </div>
+        ) : (
+          <MacroChart series={series} />
+        )}
+      </div>
 
       <p className="text-xs text-gray-400 dark:text-gray-500 mt-4">
         Sumber: Federal Reserve Economic Data (FRED), St. Louis Fed

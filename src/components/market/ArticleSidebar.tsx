@@ -15,7 +15,7 @@ export function ArticleSidebar({
   const visible = articles.slice(0, limit);
 
   return (
-    <aside className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+    <aside className="h-full flex flex-col bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
       <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
         {title}
       </h3>
@@ -24,7 +24,7 @@ export function ArticleSidebar({
           Belum ada artikel terkait
         </p>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-3 flex-1 overflow-y-auto">
           {visible.map((a, idx) => (
             <li key={`${a.link}-${idx}`}>
               <a
