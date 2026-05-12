@@ -1,28 +1,119 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import Script from 'next/script';
 import HealthScoreCalculator from '@/components/landing/HealthScoreCalculator';
 
+const pageUrl = 'https://axionventura.com/cek-bisnis';
+const pageTitle = 'Cek Kesehatan Keuangan Bisnis Gratis — Skor 0–100 dalam 10 Detik';
+const pageDescription =
+  'Kalkulator kesehatan keuangan bisnis gratis. Input 3 angka (pendapatan, pengeluaran, saldo kas) dan dapatkan skor 0–100 plus rekomendasi spesifik untuk UMKM Indonesia. Tidak perlu daftar.';
+
 export const metadata: Metadata = {
-  title: 'Cek Kesehatan Keuangan Bisnis Gratis',
-  description:
-    'Hitung skor kesehatan keuangan bisnismu dalam 10 detik. Input 3 angka, dapat skor 0–100 plus rekomendasi spesifik. Gratis, tanpa daftar.',
+  title: pageTitle,
+  description: pageDescription,
+  keywords: [
+    'cek kesehatan keuangan bisnis',
+    'kalkulator keuangan bisnis gratis',
+    'skor keuangan UMKM',
+    'cara cek keuangan bisnis',
+    'kesehatan finansial bisnis',
+    'analisis keuangan bisnis sederhana',
+    'kalkulator laba rugi UMKM',
+    'cek bisnis sehat',
+    'indikator kesehatan bisnis',
+    'profit margin bisnis Indonesia',
+  ],
+  alternates: {
+    canonical: pageUrl,
+  },
   openGraph: {
-    title: 'Cek Kesehatan Keuangan Bisnis — AXION',
-    description: 'Hitung skor kesehatan keuangan bisnismu dalam 10 detik. Gratis, tanpa daftar.',
-    url: 'https://axionventura.com/cek-bisnis',
+    title: pageTitle,
+    description: pageDescription,
+    url: pageUrl,
     type: 'website',
+    siteName: 'AXION',
+    locale: 'id_ID',
+    images: [
+      {
+        url: '/images/axion.png',
+        width: 1200,
+        height: 630,
+        alt: 'Cek Kesehatan Keuangan Bisnis — AXION',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Cek Kesehatan Keuangan Bisnis — AXION',
-    description: 'Hitung skor kesehatan keuangan bisnismu dalam 10 detik. Gratis, tanpa daftar.',
+    title: pageTitle,
+    description: pageDescription,
+    images: ['/images/axion.png'],
   },
+};
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebApplication',
+      '@id': `${pageUrl}#app`,
+      name: 'Kalkulator Kesehatan Keuangan Bisnis',
+      description: pageDescription,
+      url: pageUrl,
+      applicationCategory: 'FinanceApplication',
+      operatingSystem: 'Web Browser',
+      offers: {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'IDR',
+      },
+      provider: {
+        '@type': 'Organization',
+        name: 'AXION',
+        url: 'https://axionventura.com',
+      },
+    },
+    {
+      '@type': 'FAQPage',
+      '@id': `${pageUrl}#faq`,
+      mainEntity: [
+        {
+          '@type': 'Question',
+          name: 'Bagaimana cara menghitung kesehatan keuangan bisnis?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Masukkan 3 angka: pendapatan bulan ini, total pengeluaran bulan ini, dan saldo kas saat ini. Kalkulator akan otomatis menghitung skor 0–100 berdasarkan profit margin, burn rate, dan likuiditas bisnis kamu.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Apakah data saya tersimpan di server?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Tidak. Semua kalkulasi dilakukan langsung di browser kamu. Data tidak dikirim ke server manapun.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Apa arti skor kesehatan keuangan bisnis?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Skor 80–100 berarti bisnis dalam kondisi sehat. Skor 60–79 berarti cukup baik tapi ada ruang perbaikan. Skor di bawah 60 berarti perlu perhatian khusus pada profitabilitas atau likuiditas.',
+          },
+        },
+      ],
+    },
+  ],
 };
 
 export default function CekBisnisPage() {
   return (
     <main className="min-h-screen bg-slate-950 flex flex-col items-center px-4 py-12 sm:py-16">
+      <Script
+        id="json-ld-cek-bisnis"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Top nav */}
       <div className="w-full max-w-4xl mb-8 flex items-center justify-between">
         <Link
@@ -34,15 +125,14 @@ export default function CekBisnisPage() {
           </svg>
           axionventura.com
         </Link>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center">
           <Image
-            src="/images/favicon-dark.png"
+            src="/images/axion-dark.png"
             alt="AXION"
-            width={20}
-            height={20}
-            className="object-contain opacity-70"
+            width={80}
+            height={24}
+            className="object-contain opacity-60"
           />
-          <span className="text-xs font-bold tracking-[0.1em] text-slate-500 uppercase">AXION</span>
         </div>
       </div>
 

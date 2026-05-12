@@ -380,27 +380,29 @@ export default function HealthScoreCalculator({
                   <div style={{ position:'absolute', top:-80, right:-80, width:320, height:320, borderRadius:'50%', background:`radial-gradient(circle, ${grade.cardBg}44 0%, transparent 70%)`, pointerEvents:'none' }} />
                   <div style={{ position:'absolute', bottom:-80, left:-80, width:280, height:280, borderRadius:'50%', background:'radial-gradient(circle, #6366f144 0%, transparent 70%)', pointerEvents:'none' }} />
 
-                  {/* AXION wordmark */}
-                  <div style={{ marginBottom: 32, textAlign: 'center' }}>
-                    <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '0.15em', color: '#fff', opacity: 0.9 }}>AXION</div>
-                    <div style={{ fontSize: 10, color: '#6366f1', letterSpacing: '0.1em', marginTop: 3, textTransform: 'uppercase' }}>Business Finance Platform</div>
+                  {/* AXION logo image */}
+                  <div style={{ marginBottom: 36, textAlign: 'center' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/images/axion-dark.png" alt="AXION" style={{ height: 36, width: 'auto', objectFit: 'contain', display: 'inline-block' }} />
                   </div>
 
                   {/* Label */}
-                  <div style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600, letterSpacing: '0.08em', marginBottom: 20, textTransform: 'uppercase' }}>
+                  <div style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600, letterSpacing: '0.08em', marginBottom: 24, textTransform: 'uppercase' }}>
                     Skor Kesehatan Bisnismu
                   </div>
 
-                  {/* Score */}
-                  <div style={{ fontSize: 96, fontWeight: 800, color: grade.cardBg, lineHeight: 1, marginBottom: 8 }}>
-                    {finalScore}
+                  {/* Score + dari 100 */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 24, gap: 6 }}>
+                    <div style={{ fontSize: 100, fontWeight: 800, color: grade.cardBg, lineHeight: '1', display: 'block' }}>
+                      {finalScore}
+                    </div>
+                    <div style={{ fontSize: 15, color: '#64748b', lineHeight: '1' }}>dari 100</div>
                   </div>
-                  <div style={{ fontSize: 14, color: '#64748b', marginBottom: 20 }}>dari 100</div>
 
                   {/* Grade badge */}
-                  <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(255,255,255,0.06)', borderRadius:100, padding:'8px 20px', marginBottom:40, border:`1px solid ${grade.cardBg}44` }}>
-                    <span style={{ fontSize: 20 }}>{grade.emoji}</span>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: grade.cardBg }}>{grade.label}</span>
+                  <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(255,255,255,0.06)', borderRadius:100, padding:'10px 24px', marginBottom:44, border:`1px solid ${grade.cardBg}44` }}>
+                    <span style={{ fontSize: 22 }}>{grade.emoji}</span>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: grade.cardBg }}>{grade.label}</span>
                   </div>
 
                   {/* Divider */}
