@@ -268,9 +268,15 @@ export function useGeneralLedger(): UseGeneralLedgerReturn {
         const subAccounts = data.filter((a) => a.parent_account_id != null);
         setAccounts(subAccounts);
         if (subAccounts.length > 0) {
-          // Default ke akun Bank (1200), fallback ke akun pertama
-          const bankAccount = subAccounts.find((a) => a.account_code === '1200');
-          setSelectedAccountId((bankAccount ?? subAccounts[0]).id);
+          // Default ke akun kas/bank pertama (flag is_cash_equivalent), prefer code 1200,
+          // fallback ke akun pertama.
+          const cashAccounts = subAccounts.filter(
+            (a) => a.is_cash_equivalent || a.account_code === '1100' || a.account_code === '1200'
+          );
+          const bankDefault = cashAccounts.find((a) => a.account_code === '1200');
+          const cashDefault = cashAccounts.find((a) => a.account_code === '1100');
+          const firstCash = cashAccounts[0];
+          setSelectedAccountId((bankDefault ?? cashDefault ?? firstCash ?? subAccounts[0]).id);
         }
       })
       .catch(console.error)

@@ -29,10 +29,13 @@ export function detectCategory(
   creditAccount?: Account  // Optional: full account object with default_category
 ): TransactionCategory {
   // Priority 1: Check if accounts have explicit default_category
-  // Skip cash/bank accounts (1100, 1200) - they don't determine transaction category
-  const CASH_CODES = ['1100', '1200'];
-  const debitIsCash = CASH_CODES.includes(debitAccountCode);
-  const creditIsCash = CASH_CODES.includes(creditAccountCode);
+  // Skip cash/bank accounts — pakai flag is_cash_equivalent (DB-driven), fallback
+  // ke legacy hardcode 1100/1200 saat objek Account belum tersedia di caller.
+  const LEGACY_CASH_CODES = ['1100', '1200'];
+  const debitIsCash =
+    debitAccount?.is_cash_equivalent === true || LEGACY_CASH_CODES.includes(debitAccountCode);
+  const creditIsCash =
+    creditAccount?.is_cash_equivalent === true || LEGACY_CASH_CODES.includes(creditAccountCode);
 
   // Priority 0.5: Talangan/advance receivable (ASSET with FIN category) must always be FIN,
   // even when paired with cash — prevents mislabeling as EARN or CAPEX

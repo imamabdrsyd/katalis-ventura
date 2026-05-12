@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 09 Mei 2026 (Depreciation cost map: ikut multi-line journal entries via `buildFixedAssetCostMap`) | AR/AP Aging & Repayment: 29 Maret 2026
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 12 Mei 2026 (Cash detection pindah ke flag `accounts.is_cash_equivalent`; legacy fallback 1100/1200 tetap untuk akun pre-migration; toggle baru di AccountForm)
 
 ---
 
@@ -563,7 +563,7 @@ totalEquityDebit   += legacyFinEquityOut (prive/cicilan)
 ### 6.2 Asset Classification (Double-Entry)
 
 Untuk double-entry transactions, asset di-classify berdasarkan:
-- **Cash**: Account codes `1100` (Cash) dan `1200` (Bank)
+- **Cash**: Flag `accounts.is_cash_equivalent = TRUE` (legacy fallback: kode `1100`/`1200`)
 - **Fixed Assets**: `default_category === 'CAPEX'`
 - **Inventory**: `default_category === 'VAR'`
 - **Receivables**: `default_category === 'EARN'`
@@ -697,9 +697,13 @@ Cash flow menggunakan dual-mode: double-entry aware untuk transaksi baru, catego
 
 **A. Double-Entry Transactions** — Track actual cash movement:
 ```
-Cash account codes: 1100 (Cash), 1200 (Bank)
+Cash detection: flag `accounts.is_cash_equivalent = TRUE` (DB-driven, sejak migration 071).
+  Default 1100/1200 di-backfill TRUE saat migration; bisnis baru via
+  create_default_accounts() langsung dapat flag.
+  Legacy fallback: kode '1100'/'1200' tetap dianggap kas saat objek Account
+  tidak tersedia di scope caller (mis. data import lama).
 
-Untuk setiap transaksi yang menyentuh Cash/Bank:
+Untuk setiap transaksi yang menyentuh akun kas/setara kas (flag is_cash_equivalent):
 
 Cash MASUK (debit cash):
   Counter = REVENUE/EXPENSE              → Operating  (+amount)
@@ -719,7 +723,7 @@ Cash KELUAR (credit cash):
   Counter = LIABILITY, lainnya           → Financing  (-amount)
   Counter = EQUITY                       → Financing  (-amount)
 
-Transaksi non-cash (tidak menyentuh 1100/1200) → diabaikan
+Transaksi non-cash (tidak menyentuh akun is_cash_equivalent) → diabaikan
 Bank transfer (kedua sisi cash) → net zero, diabaikan
 ```
 
@@ -978,15 +982,20 @@ Money IN (Debit Cash, Credit Selected):
 ### 12.2 Default Cash Account Selection
 
 ```
-Priority: Bank (1200) → Cash (1100) → first active ASSET sub-account
+Filter: ASSET sub-account dengan flag is_cash_equivalent (atau kode legacy 1100/1200).
+Priority: code 1200 (Bank) → code 1100 (Cash) → first cash-equivalent by sort_order
 ```
+
+Sejak migration 071, deteksi tidak lagi tergantung kode akun spesifik — bisnis yang
+pakai CoA custom (mis. 1101 Kas Besar, 1210 BCA) bisa tandai akun via toggle
+"Akun Kas / Setara Kas" di Chart of Accounts.
 
 ### 12.3 Account Filtering untuk Quick Add
 
 `getQuickAddAccounts()` mengecualikan:
 - Parent accounts (tanpa parent_account_id)
 - Inactive accounts
-- Cash (1100) dan Bank (1200) — karena mereka jadi counter-account otomatis
+- Semua akun kas/setara kas (flag `is_cash_equivalent` ATAU kode legacy 1100/1200) — mereka jadi counter-account otomatis
 - Akun piutang/receivable/talangan/advance — termasuk ASSET dengan `default_category === 'EARN'` (trade receivable). Akun-akun ini memerlukan kontrol debit/kredit manual, sehingga hanya bisa digunakan via **Full Double-Entry** atau **Multi-line Journal**.
 
 ---

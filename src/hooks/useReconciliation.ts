@@ -12,21 +12,27 @@ import {
   getSessionMatchedTransactionIds,
   type ReconciliationSession,
 } from '@/lib/api/reconciliationSessions';
-import type { Transaction } from '@/types';
+import type { Account, Transaction } from '@/types';
 
 /**
- * Check if a transaction touches a cash/bank account (1100 or 1200).
+ * Cek apakah akun adalah kas/setara kas — pakai flag is_cash_equivalent dari DB,
+ * fallback ke kode legacy 1100/1200 saat flag belum di-set di akun lama.
+ */
+function isCashEquivalent(acc: Pick<Account, 'account_code' | 'is_cash_equivalent'> | null | undefined): boolean {
+  if (!acc) return false;
+  if (acc.is_cash_equivalent === true) return true;
+  return acc.account_code === '1100' || acc.account_code === '1200';
+}
+
+/**
+ * Check if a transaction touches a cash/bank account.
  */
 function isCashTransaction(t: Transaction): boolean {
   if (t.is_multi_line) {
-    return (t.journal_lines ?? []).some(
-      (l) => l.account && (l.account.account_code === '1100' || l.account.account_code === '1200')
-    );
+    return (t.journal_lines ?? []).some((l) => isCashEquivalent(l.account));
   }
   if (t.is_double_entry) {
-    const dc = t.debit_account?.account_code;
-    const cc = t.credit_account?.account_code;
-    return dc === '1100' || dc === '1200' || cc === '1100' || cc === '1200';
+    return isCashEquivalent(t.debit_account) || isCashEquivalent(t.credit_account);
   }
   // Legacy transactions always affect cash
   return true;
@@ -154,15 +160,15 @@ export function useReconciliation() {
       const amount = Number(t.amount);
       if (t.is_multi_line) {
         for (const line of (t.journal_lines ?? [])) {
-          if (line.account?.account_code === '1100' || line.account?.account_code === '1200') {
+          if (isCashEquivalent(line.account)) {
             balance += line.debit_amount - line.credit_amount;
           }
         }
       } else if (t.is_double_entry) {
-        if (t.debit_account?.account_code === '1100' || t.debit_account?.account_code === '1200') {
+        if (isCashEquivalent(t.debit_account)) {
           balance += amount;
         }
-        if (t.credit_account?.account_code === '1100' || t.credit_account?.account_code === '1200') {
+        if (isCashEquivalent(t.credit_account)) {
           balance -= amount;
         }
       } else {

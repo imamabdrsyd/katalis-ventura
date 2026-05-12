@@ -75,6 +75,7 @@ export interface Account {
   is_retained_earnings: boolean;
   is_dividend: boolean;          // EQUITY: tandai akun Dividen / Prive / Drawing
   is_dividend_payable: boolean;  // LIABILITY: tandai akun Hutang Dividen
+  is_cash_equivalent: boolean;   // ASSET: tandai akun sebagai Kas/Setara Kas (Cash Flow basis)
   sort_order: number;
   description?: string;
   default_category?: TransactionCategory; // Optional: Auto-detected category for transactions

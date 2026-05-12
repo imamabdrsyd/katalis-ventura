@@ -679,8 +679,7 @@ export function calculateTotalCapex(transactions: Transaction[]): number {
       // Check if double-entry transaction debits to a non-cash ASSET (fixed asset purchase)
       if (t.is_double_entry && t.debit_account) {
         return t.debit_account.account_type === 'ASSET'
-          && t.debit_account.account_code !== '1100'
-          && t.debit_account.account_code !== '1200';
+          && !isCashAccount(t.debit_account);
       }
 
       return false;
@@ -721,9 +720,11 @@ export function calculateBalanceSheet(
   let totalExpenses = 0;
 
   // Classify an ASSET account into current vs fixed based on default_category
-  function classifyAsset(account: { account_code: string; default_category?: TransactionCategory }, amount: number) {
-    const code = account.account_code;
-    if (code === '1100' || code === '1200') {
+  function classifyAsset(
+    account: { account_code: string; is_cash_equivalent?: boolean; default_category?: TransactionCategory },
+    amount: number
+  ) {
+    if (account.is_cash_equivalent || isCashAccount(account.account_code)) {
       totalCash += amount;
     } else if (account.default_category === 'CAPEX') {
       totalFixedAssets += amount;
@@ -988,11 +989,28 @@ export function calculateBalanceSheet(
   };
 }
 
-// Cash account codes used as the basis for cash flow tracking
-const CASH_ACCOUNT_CODES = ['1100', '1200'];
+// Legacy cash codes — fallback only saat tidak punya akses objek Account
+// (mis. data import lama yang cuma simpan kode). Prefer overload Account.
+const LEGACY_CASH_CODES = ['1100', '1200'];
 
-function isCashAccount(code: string): boolean {
-  return CASH_ACCOUNT_CODES.includes(code);
+/**
+ * Cek apakah akun adalah kas/setara kas.
+ *
+ * Preferred: pass objek Account — pakai flag `is_cash_equivalent` dari DB,
+ * sehingga bisnis dengan kode akun custom (mis. 1101 Kas Kecil) tetap
+ * terdeteksi setelah toggle di Chart of Accounts.
+ *
+ * Fallback: pass string kode — untuk path yang belum punya objek Account
+ * di scope. Hanya cocok untuk akun default 1100/1200.
+ */
+function isCashAccount(account: Pick<Account, 'account_code' | 'is_cash_equivalent'>): boolean;
+function isCashAccount(code: string | null | undefined): boolean;
+function isCashAccount(
+  arg: Pick<Account, 'account_code' | 'is_cash_equivalent'> | string | null | undefined
+): boolean {
+  if (arg == null) return false;
+  if (typeof arg === 'string') return LEGACY_CASH_CODES.includes(arg);
+  return arg.is_cash_equivalent === true;
 }
 
 /**
@@ -1092,7 +1110,7 @@ function calculateOpeningBalance(
     if (!t.is_multi_line) continue;
     for (const line of (t.journal_lines ?? [])) {
       const acc = line.account;
-      if (!acc || !isCashAccount(acc.account_code)) continue;
+      if (!acc || !isCashAccount(acc)) continue;
       opening += line.debit_amount - line.credit_amount;
     }
   }
@@ -1101,12 +1119,10 @@ function calculateOpeningBalance(
   for (const t of prePeriodTxns) {
     if (!t.is_double_entry || t.is_multi_line) continue;
 
-    const debitCode = t.debit_account?.account_code;
-    const creditCode = t.credit_account?.account_code;
-    if (!debitCode || !creditCode) continue;
+    if (!t.debit_account || !t.credit_account) continue;
 
-    const debitIsCash = isCashAccount(debitCode);
-    const creditIsCash = isCashAccount(creditCode);
+    const debitIsCash = isCashAccount(t.debit_account);
+    const creditIsCash = isCashAccount(t.credit_account);
     const amount = Number(t.amount);
 
     if (debitIsCash && !creditIsCash) {
@@ -1153,13 +1169,13 @@ function calculateOpeningBalance(
   const hasDoubleEntryEquity = prePeriodTxns.some(t => {
     if (t.is_multi_line) {
       const lines = t.journal_lines ?? [];
-      const hasCashLine = lines.some(l => l.account && isCashAccount(l.account.account_code));
+      const hasCashLine = lines.some(l => l.account && isCashAccount(l.account));
       const hasEquityLine = lines.some(l => l.account?.account_type === 'EQUITY');
       return hasCashLine && hasEquityLine;
     }
     return t.is_double_entry && (
-      (isCashAccount(t.debit_account?.account_code ?? '') && t.credit_account?.account_type === 'EQUITY') ||
-      (isCashAccount(t.credit_account?.account_code ?? '') && t.debit_account?.account_type === 'EQUITY')
+      (t.debit_account != null && isCashAccount(t.debit_account) && t.credit_account?.account_type === 'EQUITY') ||
+      (t.credit_account != null && isCashAccount(t.credit_account) && t.debit_account?.account_type === 'EQUITY')
     );
   });
   const hasLegacyTxns = prePeriodTxns.some(t => !t.is_double_entry && !t.is_multi_line);
@@ -1193,13 +1209,10 @@ export function calculateCashFlow(
   // --- Double-entry: track actual cash movement ---
   doubleEntryTxns.forEach(t => {
     const amount = Number(t.amount);
-    const debitCode = t.debit_account?.account_code;
-    const creditCode = t.credit_account?.account_code;
+    if (!t.debit_account || !t.credit_account) return;
 
-    if (!debitCode || !creditCode) return;
-
-    const debitIsCash = isCashAccount(debitCode);
-    const creditIsCash = isCashAccount(creditCode);
+    const debitIsCash = isCashAccount(t.debit_account);
+    const creditIsCash = isCashAccount(t.credit_account);
 
     // Only process transactions that touch a cash/bank account
     if (!debitIsCash && !creditIsCash) return;
@@ -1252,7 +1265,7 @@ export function calculateCashFlow(
     for (const line of lines) {
       const acc = line.account;
       if (!acc) continue;
-      if (isCashAccount(acc.account_code)) {
+      if (isCashAccount(acc)) {
         cashIn += line.debit_amount;
         cashOut += line.credit_amount;
       }

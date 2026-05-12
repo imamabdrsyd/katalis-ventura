@@ -43,9 +43,19 @@ export interface ResolvedTransaction {
 }
 
 /**
+ * Cek apakah akun adalah kas/setara kas — pakai flag DB, fallback ke kode legacy.
+ */
+function isCashEquivalent(acc: Account): boolean {
+  if (acc.is_cash_equivalent === true) return true;
+  return acc.account_code === '1100' || acc.account_code === '1200';
+}
+
+/**
  * Find the default cash/bank account for counter-entry.
- * Looks for active ASSET sub-accounts (accounts with parent_account_id).
- * Prefers 1200 (Bank), falls back to 1100 (Cash), or first available.
+ * Looks for active ASSET sub-accounts flagged is_cash_equivalent.
+ * Prefers code 1200 (Bank default) then 1100 (Cash default) untuk
+ * konsistensi UX dengan bisnis yang masih pakai CoA default, lalu
+ * fallback ke akun kas equivalent pertama berdasarkan sort_order.
  */
 export function findDefaultCashAccount(accounts: Account[]): Account | null {
   const cashBankAccounts = accounts
@@ -53,18 +63,19 @@ export function findDefaultCashAccount(accounts: Account[]): Account | null {
       (acc) =>
         acc.is_active &&
         acc.account_type === 'ASSET' &&
-        acc.parent_account_id != null // Only sub-accounts, not main "Assets" parent
+        acc.parent_account_id != null && // Only sub-accounts, not main "Assets" parent
+        isCashEquivalent(acc)
     )
     .sort((a, b) => a.sort_order - b.sort_order);
 
-  // Prefer Bank (1200) over Cash (1100)
+  // Prefer Bank (1200) over Cash (1100) — preserve historical UX default
   const bank = cashBankAccounts.find((acc) => acc.account_code === '1200');
   if (bank) return bank;
 
   const cash = cashBankAccounts.find((acc) => acc.account_code === '1100');
   if (cash) return cash;
 
-  // Fallback to first available
+  // Fallback to first available cash-equivalent account (custom codes ok)
   return cashBankAccounts[0] || null;
 }
 
@@ -109,7 +120,7 @@ function resolveDebitCredit(
   if (
     type === 'EXPENSE' ||
     isDividendDrawingAccount(selectedAccount) ||
-    (type === 'ASSET' && code !== '1100' && code !== '1200') // Non-cash assets
+    (type === 'ASSET' && !isCashEquivalent(selectedAccount)) // Non-cash assets
   ) {
     return {
       debitAccountId: selectedAccount.id,
@@ -139,7 +150,7 @@ export function getFlowLabel(account: Account): string {
   if (type === 'LIABILITY') return 'Terima Pinjaman';
   if (isDividendDrawingAccount(account)) return 'Penarikan Prive';
   if (type === 'EQUITY') return 'Suntik Modal';
-  if (type === 'ASSET' && account.account_code !== '1100' && account.account_code !== '1200') return 'Beli Aset';
+  if (type === 'ASSET' && !isCashEquivalent(account)) return 'Beli Aset';
   return 'Transaksi';
 }
 
@@ -152,7 +163,7 @@ export function getFlowDirection(account: Account): 'in' | 'out' {
   if (
     type === 'EXPENSE' ||
     isDividendDrawingAccount(account) ||
-    (type === 'ASSET' && account.account_code !== '1100' && account.account_code !== '1200')
+    (type === 'ASSET' && !isCashEquivalent(account))
   ) {
     return 'out';
   }
@@ -274,8 +285,9 @@ export function getQuickAddAccounts(accounts: Account[]): Account[] {
     if (!acc.parent_account_id) return false; // Exclude main parent accounts (1000, 2000, etc.)
     // Exclude the default counter-account (Cash/Bank) to prevent same-account transactions
     if (defaultCash && acc.id === defaultCash.id) return false;
-    // Also exclude the other cash/bank account (both 1100 and 1200 are counter-accounts)
-    if (acc.account_code === '1100' || acc.account_code === '1200') return false;
+    // Also exclude every other cash-equivalent ASSET — semuanya berperan sebagai
+    // counter-account potensial; user transfer antar-kas pakai Full Double-Entry.
+    if (isCashEquivalent(acc)) return false;
     // Exclude receivable/advance accounts — must use Full Double-Entry or Multi-line Journal
     if (isReceivableOrAdvanceAccount(acc)) return false;
     // Exclude Hutang Dividen — hanya boleh dipakai lewat tombol "Bayar Dividen"

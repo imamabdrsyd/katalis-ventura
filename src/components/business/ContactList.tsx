@@ -265,11 +265,13 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
     }
   };
 
-  // Determine cash direction: inflow if debit account is cash/bank (1100/1200)
+  // Determine cash direction: inflow if debit account is cash/bank
   function isCashInflow(txn: Transaction): boolean {
     if (txn.is_double_entry && txn.debit_account) {
-      const code = txn.debit_account.account_code || '';
-      return code === '1100' || code === '1200';
+      const acc = txn.debit_account;
+      if (acc.is_cash_equivalent === true) return true;
+      // Legacy fallback untuk akun lama yang belum di-flag
+      return acc.account_code === '1100' || acc.account_code === '1200';
     }
     return txn.category === 'EARN';
   }

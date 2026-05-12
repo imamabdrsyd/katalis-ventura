@@ -17,6 +17,7 @@ export interface AccountFormData {
   is_retained_earnings?: boolean;
   is_dividend?: boolean;          // EQUITY: tandai akun Dividen / Prive
   is_dividend_payable?: boolean;  // LIABILITY: tandai akun Hutang Dividen
+  is_cash_equivalent?: boolean;   // ASSET: tandai akun sebagai Kas / Setara Kas
   // Depreciation fields (PSAK 16) — only for ASSET + CAPEX
   useful_life_months?: number;
   residual_value?: number;
@@ -63,6 +64,7 @@ export function AccountForm({
     is_retained_earnings: account?.is_retained_earnings ?? false,
     is_dividend: account?.is_dividend ?? false,
     is_dividend_payable: account?.is_dividend_payable ?? false,
+    is_cash_equivalent: account?.is_cash_equivalent ?? false,
     useful_life_months: account?.useful_life_months,
     residual_value: account?.residual_value,
     acquisition_date: account?.acquisition_date,
@@ -567,6 +569,42 @@ export function AccountForm({
               Jika bisnis sudah memiliki akun Laba Ditahan lain, penanda tersebut akan dipindah ke akun ini.
             </p>
           )}
+        </div>
+      )}
+
+      {/* Kas / Setara Kas designation — hanya untuk ASSET accounts */}
+      {formData.account_type === 'ASSET' && (
+        <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700/50">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                Akun Kas / Setara Kas
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Tandai akun ini sebagai kas atau setara kas (mis. Kas Kecil, BCA, Mandiri). Akun yang ditandai akan masuk Cash Flow report, Bank Reconciliation, dan jadi counter-account otomatis di Quick Transaction.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={formData.is_cash_equivalent}
+              onClick={() =>
+                setFormData(prev => ({ ...prev, is_cash_equivalent: !prev.is_cash_equivalent }))
+              }
+              disabled={loading}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+                formData.is_cash_equivalent
+                  ? 'bg-indigo-600 dark:bg-indigo-500'
+                  : 'bg-gray-200 dark:bg-gray-600'
+              } disabled:opacity-50`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                  formData.is_cash_equivalent ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
         </div>
       )}
 
