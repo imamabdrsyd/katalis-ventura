@@ -318,6 +318,17 @@ export default function LandingPage() {
         {/* Financial Health Score Calculator */}
         <div className="max-w-4xl mx-auto w-full mb-12">
           <HealthScoreCalculator />
+          <div className="text-center mt-3">
+            <a
+              href="/cek-bisnis"
+              className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              Buka di halaman penuh
+              <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none">
+                <path d="M2.5 9.5l7-7M9.5 2.5H5M9.5 2.5v4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </a>
+          </div>
         </div>
 
         {/* Ecommerce Integration */}

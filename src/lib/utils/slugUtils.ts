@@ -20,6 +20,7 @@ export const RESERVED_SLUGS = new Set([
   'settings',
   'api',
   'blog',
+  'cek-bisnis',
 ]);
 
 /**
