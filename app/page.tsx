@@ -32,10 +32,10 @@ const content = {
     heroTitle1: 'People lie,',
     heroTitle2: "numbers don't.",
     heroSub:
-      'Angka di bisnis Anda sedang bercerita — mau didengarkan atau tidak. AXION membantu Anda mendengar, agar setiap keputusan berbasis data, bukan dugaan.',
-    heroCta: 'Masuk ke AXION',
+      'Ada cerita di balik angka bisnis kamu entah kamu dengerin atau engga. AXION bantu kamu nangkep cerita itu, biar kamu tinggal ambil setiap keputusan berdasarkan data, bukan dugaan.',
+    heroCta: 'Enter AXION',
     heroCtaSecondary: 'Lihat cara kerjanya',
-    aumEyebrow: 'Dipakai oleh bisnis Indonesia',
+    aumEyebrow: 'Dipercaya oleh',
     aum: 'Assets Under Management',
     section1Eyebrow: 'Pembukuan otomatis',
     section1Title: 'Pembukuan double-entry, tanpa effort spreadsheet.',
