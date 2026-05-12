@@ -6,7 +6,9 @@ type Step = 'input' | 'result';
 
 type Grade = {
   label: string;
-  emoji: string;
+  emoji: string;        // for WhatsApp text only
+  icon: React.ReactNode;
+  cardIcon: string;     // unicode char for share card
   color: string;        // Tailwind gradient
   ring: string;         // SVG stroke class
   glow: string;         // shadow class
@@ -26,10 +28,34 @@ const parseRupiah = (value: string): number =>
 const formatCurrency = (n: number): string =>
   'Rp ' + Math.round(n).toLocaleString('id-ID');
 
+const GRADE_ICONS = {
+  sangat_sehat: (
+    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+    </svg>
+  ),
+  sehat: (
+    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+    </svg>
+  ),
+  perlu_perhatian: (
+    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+    </svg>
+  ),
+  kritis: (
+    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+    </svg>
+  ),
+};
+
 const getGrade = (score: number): Grade => {
   if (score >= 80)
     return {
       label: 'Sangat Sehat', emoji: '🎉',
+      icon: GRADE_ICONS.sangat_sehat, cardIcon: '✓',
       color: 'from-emerald-400 to-teal-400',
       ring: 'stroke-emerald-400',
       glow: 'shadow-[0_0_60px_-10px_rgba(52,211,153,0.5)]',
@@ -38,6 +64,7 @@ const getGrade = (score: number): Grade => {
   if (score >= 60)
     return {
       label: 'Sehat', emoji: '✅',
+      icon: GRADE_ICONS.sehat, cardIcon: '✓',
       color: 'from-indigo-400 to-violet-400',
       ring: 'stroke-indigo-400',
       glow: 'shadow-[0_0_60px_-10px_rgba(99,102,241,0.55)]',
@@ -46,6 +73,7 @@ const getGrade = (score: number): Grade => {
   if (score >= 40)
     return {
       label: 'Perlu Perhatian', emoji: '⚠️',
+      icon: GRADE_ICONS.perlu_perhatian, cardIcon: '!',
       color: 'from-amber-400 to-orange-400',
       ring: 'stroke-amber-400',
       glow: 'shadow-[0_0_60px_-10px_rgba(251,191,36,0.5)]',
@@ -53,6 +81,7 @@ const getGrade = (score: number): Grade => {
     };
   return {
     label: 'Kritis', emoji: '🚨',
+    icon: GRADE_ICONS.kritis, cardIcon: '✕',
     color: 'from-rose-400 to-red-400',
     ring: 'stroke-rose-400',
     glow: 'shadow-[0_0_60px_-10px_rgba(251,113,133,0.5)]',
@@ -269,7 +298,7 @@ export default function HealthScoreCalculator({
               </div>
 
               <div className={`mt-6 inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-base font-semibold ${grade.text} ring-1 ring-white/10`}>
-                <span className="text-xl">{grade.emoji}</span>
+                {grade.icon}
                 {grade.label}
               </div>
             </div>
@@ -400,8 +429,8 @@ export default function HealthScoreCalculator({
                   </div>
 
                   {/* Grade badge */}
-                  <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(255,255,255,0.06)', borderRadius:100, padding:'10px 24px', marginBottom:44, border:`1px solid ${grade.cardBg}44` }}>
-                    <span style={{ fontSize: 22 }}>{grade.emoji}</span>
+                  <div style={{ display:'inline-flex', alignItems:'center', gap:10, background:'rgba(255,255,255,0.06)', borderRadius:100, padding:'10px 24px', marginBottom:44, border:`1px solid ${grade.cardBg}44` }}>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: grade.cardBg, lineHeight: 1 }}>{grade.cardIcon}</span>
                     <span style={{ fontSize: 16, fontWeight: 700, color: grade.cardBg }}>{grade.label}</span>
                   </div>
 
