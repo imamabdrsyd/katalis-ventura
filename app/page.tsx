@@ -3,10 +3,9 @@
 import { useState, useEffect, Fragment } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { BookOpen, LayoutGrid, ShoppingBag } from 'lucide-react';
+import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import { OmnichannelSection } from '@/components/omnichannel/OmnichannelSection';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { MarketInsightSection } from '@/components/market/MarketInsightSection';
 import HealthScoreCalculator from '@/components/landing/HealthScoreCalculator';
 
 interface BusinessLogo {
@@ -29,63 +28,149 @@ const content = {
     navAccounting: 'Accounting Engine',
     navOmnichannel: 'Omnichannel',
     navEcommerce: 'Ecommerce Integration',
-    heroTag: 'Accounting Engine',
-    heroTitle1: 'People lie, ',
+    eyebrowHero: 'Accounting Engine',
+    heroTitle1: 'People lie,',
     heroTitle2: "numbers don't.",
-    heroSub: "Dan angka-angka dalam bisnis Anda sedang bercerita — mau Anda dengarkan atau tidak.\nAXION membantu Anda mendengar, agar setiap keputusan bisnis berbasis data.",
+    heroSub:
+      'Angka di bisnis Anda sedang bercerita — mau didengarkan atau tidak. AXION membantu Anda mendengar, agar setiap keputusan berbasis data, bukan dugaan.',
     heroCta: 'Masuk ke AXION',
+    heroCtaSecondary: 'Lihat cara kerjanya',
+    aumEyebrow: 'Dipakai oleh bisnis Indonesia',
     aum: 'Assets Under Management',
-    card1Title: 'Keuangan bisnis tercatat rapi',
-    card1Body: 'Nggak perlu lagi buka-tutup spreadsheet atau nunggu laporan dari akuntan yang datangnya telat. Semua transaksi harian, laporan bulanan, sampai neraca bisnis kamu — sudah tercatat otomatis dan bisa dicek kapan saja.',
-    card1Badge: 'Accounting',
-    card2Title: 'Cek ketersediaan di satu channel terpusat',
-    card2Body: 'Stok di toko fisik, website, dan marketplace kamu terpantau dari satu tempat. Nggak perlu lagi cek satu-satu atau khawatir overselling gara-gara data yang nggak sinkron antar channel.',
-    card2Badge: 'Omnichannel',
-    card3Title: 'Sinkronisasi order, pembukuan otomatis',
-    card3Body: 'Setiap order masuk dari Tokopedia, Shopee, atau marketplace lain langsung tercatat di pembukuan — tanpa input manual, tanpa selisih angka di akhir bulan. Kamu fokus jualan, sisanya biar sistem yang urus.',
-    card3Badge: 'Integrasi E-Commerce',
-    ecomTag: 'Omnichannel Ready',
-    ecomTitle: 'Ecommerce Integration',
-    ecomBody: 'Hubungkan bisnis Anda dengan marketplace dan platform sosial terpopuler Indonesia. Tampilkan produk, terima pesanan, dan kelola semua saluran penjualan dari satu halaman publik — tanpa perlu website sendiri.',
+    section1Eyebrow: 'Pembukuan otomatis',
+    section1Title: 'Pembukuan double-entry, tanpa effort spreadsheet.',
+    section1Lead:
+      'Setiap transaksi mengalir ke buku besar, jurnal, dan laporan secara otomatis. Tutup buku tidak lagi menunggu akhir bulan — kapan saja, status keuangan tersedia.',
+    section1Items: [
+      {
+        n: '01',
+        title: 'Jurnal & buku besar otomatis',
+        body: 'Input sekali, sistem yang menyusun jurnal, posting ke buku besar, dan menghitung saldo tiap akun.',
+      },
+      {
+        n: '02',
+        title: 'Laporan keuangan real-time',
+        body: 'Neraca, laba rugi, dan arus kas selalu terkini — bukan snapshot bulan kemarin.',
+      },
+      {
+        n: '03',
+        title: 'Audit trail penuh',
+        body: 'Setiap perubahan tercatat: siapa, kapan, dari nilai apa ke nilai apa. Tidak ada angka yang hilang diam-diam.',
+      },
+    ],
+    section2Eyebrow: 'Omnichannel inventory',
+    section2Title: 'Satu stok, semua channel.',
+    section2Lead:
+      'Stok di toko fisik, website, dan marketplace dipantau dari satu tempat. Tidak ada overselling karena data tidak sinkron, tidak ada duplikasi entri.',
+    section3Eyebrow: 'Ecommerce integration',
+    section3Title: 'Order masuk, buku langsung tercatat.',
+    section3Lead:
+      'Hubungkan Tokopedia, Shopee, dan TikTok Shop. Setiap order otomatis masuk ke pembukuan — tanpa input manual, tanpa selisih di akhir bulan.',
+    healthEyebrow: 'Tool gratis',
+    healthTitle: 'Cek skor kesehatan bisnis Anda.',
+    healthLead: 'Tiga angka, dua menit, satu skor. Tahu posisi bisnis Anda sebelum bicara dengan investor.',
+    healthFullLink: 'Buka di halaman penuh',
+    closingEyebrow: 'Mulai sekarang',
+    closingTitle: 'Kelola bisnis lebih cerdas.',
+    closingLead: 'Gratis untuk satu bisnis. Tanpa kartu kredit. Pindah dari spreadsheet dalam hitungan menit.',
+    closingCta: 'Buka akun AXION',
     footerLabel: 'Platform Keuangan Bisnis',
-    footerTitle: 'Kelola bisnis lebih cerdas.',
     footerCta: 'Limited Partner Login',
     copyright: '© 2026 PT Imam Katalis Ventura. All rights reserved.',
+    statUsers: 'Pengguna',
+    statBusinesses: 'Bisnis',
+    statPrivacy: 'Data Privacy',
   },
   en: {
     navAccounting: 'Accounting Engine',
     navOmnichannel: 'Omnichannel',
     navEcommerce: 'Ecommerce Integration',
-    heroTag: 'Accounting Engine',
-    heroTitle1: 'People lie, ',
+    eyebrowHero: 'Accounting Engine',
+    heroTitle1: 'People lie,',
     heroTitle2: "numbers don't.",
-    heroSub: "And the numbers in your business are telling a story whether you're listening or not.\nAXION helps you listen so you can make data-driven decisions for your business.",
+    heroSub:
+      "The numbers in your business are telling a story — whether you're listening or not. AXION helps you listen, so every decision is built on data, not guesswork.",
     heroCta: 'Enter AXION',
+    heroCtaSecondary: 'See how it works',
+    aumEyebrow: 'Trusted by Indonesian businesses',
     aum: 'Assets Under Management',
-    card1Title: 'Business finances recorded neatly',
-    card1Body: 'No more opening and closing spreadsheets or waiting on an accountant\'s delayed report. Every daily transaction, monthly statement, and balance sheet — automatically recorded and accessible anytime.',
-    card1Badge: 'Accounting',
-    card2Title: 'Check availability from one central channel',
-    card2Body: 'Stock across your physical store, website, and marketplaces are monitored from a single place. No more checking them one by one or worrying about overselling due to out-of-sync data across channels.',
-    card2Badge: 'Omnichannel',
-    card3Title: 'Order sync, automatic bookkeeping',
-    card3Body: 'Every order from Tokopedia, Shopee, or any other marketplace is recorded directly in your books — no manual input, no number discrepancies at month end. You focus on selling, the system handles the rest.',
-    card3Badge: 'E-Commerce Integration',
-    ecomTag: 'Omnichannel Ready',
-    ecomTitle: 'Ecommerce Integration',
-    ecomBody: 'Connect your business with Indonesia\'s most popular marketplaces and social platforms. Display products, receive orders, and manage all sales channels from one public page — no website needed.',
+    section1Eyebrow: 'Automatic bookkeeping',
+    section1Title: 'Double-entry accounting, without the spreadsheet effort.',
+    section1Lead:
+      'Every transaction flows into the ledger, journal, and reports automatically. Closing the books no longer waits for month-end — your financial picture is always available.',
+    section1Items: [
+      {
+        n: '01',
+        title: 'Auto-generated journals & ledgers',
+        body: 'Enter once. The system handles journal entries, posting, and account balances.',
+      },
+      {
+        n: '02',
+        title: 'Real-time financial reports',
+        body: 'Balance sheet, income statement, and cash flow always current — not last month’s snapshot.',
+      },
+      {
+        n: '03',
+        title: 'Full audit trail',
+        body: 'Every change recorded: who, when, from what value to what value. No silent edits.',
+      },
+    ],
+    section2Eyebrow: 'Omnichannel inventory',
+    section2Title: 'One stock, every channel.',
+    section2Lead:
+      'Stock across your physical store, website, and marketplaces is monitored from one place. No overselling from out-of-sync data, no duplicated entries.',
+    section3Eyebrow: 'Ecommerce integration',
+    section3Title: 'Order in, books updated.',
+    section3Lead:
+      'Connect Tokopedia, Shopee, and TikTok Shop. Every order is recorded in your books automatically — no manual input, no month-end discrepancies.',
+    healthEyebrow: 'Free tool',
+    healthTitle: 'Check your business health score.',
+    healthLead: 'Three numbers, two minutes, one score. Know where you stand before you talk to investors.',
+    healthFullLink: 'Open in full page',
+    closingEyebrow: 'Start now',
+    closingTitle: 'Run your business smarter.',
+    closingLead: 'Free for one business. No credit card. Move off spreadsheets in minutes.',
+    closingCta: 'Open AXION account',
     footerLabel: 'Business Finance Platform',
-    footerTitle: 'Run your business smarter.',
     footerCta: 'Limited Partner Login',
     copyright: '© 2026 PT Imam Katalis Ventura. All rights reserved.',
+    statUsers: 'Users',
+    statBusinesses: 'Businesses',
+    statPrivacy: 'Data Privacy',
   },
 } as const;
+
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
+  },
+};
+
+const fadeUpStagger: Variants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.08, delayChildren: 0.05 },
+  },
+};
+
+const heroWord: Variants = {
+  hidden: { opacity: 0, y: 24 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] },
+  },
+};
 
 export default function LandingPage() {
   const [stats, setStats] = useState<Stats>({ users: 0, businesses: 0, businessLogos: [] });
   const [loading, setLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const [lang, setLang] = useState<Lang>('id');
+  const reduce = useReducedMotion();
 
   useEffect(() => {
     const saved = localStorage.getItem('axion_lang') as Lang | null;
@@ -123,320 +208,532 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const heroTitle1Words = t.heroTitle1.split(' ');
+  const heroTitle2Words = t.heroTitle2.split(' ');
+
   return (
-    <div className="min-h-screen bg-indigo-50 dark:bg-gray-900 flex flex-col" style={{ scrollBehavior: 'smooth' }}>
-      {/* Header */}
-      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? 'bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 py-3'
-          : 'bg-indigo-50 dark:bg-gray-900 py-5'
-      }`}>
-        <nav className="container mx-auto px-6 flex items-center justify-between gap-4">
+    <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 flex flex-col antialiased" style={{ scrollBehavior: 'smooth' }}>
+      {/* ───────── Navbar ───────── */}
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          scrolled
+            ? 'bg-white/85 dark:bg-gray-950/85 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 py-3'
+            : 'bg-transparent py-5'
+        }`}
+      >
+        <nav className="container mx-auto px-6 max-w-6xl flex items-center justify-between gap-6">
           <div className="shrink-0 relative h-9 flex items-center">
-            {/* Favicon logo (scrolled) */}
             <Image
               src="/images/favicon.png"
               alt="Axion Logo"
               width={36}
               height={36}
-              className={`object-contain dark:hidden transition-all duration-300 ${scrolled ? 'opacity-100 scale-100' : 'opacity-0 scale-75 absolute pointer-events-none'}`}
+              className={`object-contain dark:hidden transition-all duration-300 ${
+                scrolled ? 'opacity-100 scale-100' : 'opacity-0 scale-75 absolute pointer-events-none'
+              }`}
             />
             <Image
               src="/images/favicon-dark.png"
               alt="Axion Logo"
               width={36}
               height={36}
-              className={`object-contain hidden transition-all duration-300 ${scrolled ? 'dark:block opacity-100 scale-100' : 'opacity-0 scale-75 absolute pointer-events-none'}`}
+              className={`object-contain hidden transition-all duration-300 ${
+                scrolled ? 'dark:block opacity-100 scale-100' : 'opacity-0 scale-75 absolute pointer-events-none'
+              }`}
             />
-            {/* Full logo (not scrolled) */}
             <Image
               src="/images/axion.png"
               alt="Axion Logo"
               width={110}
               height={36}
-              className={`object-contain dark:hidden transition-all duration-300 ${scrolled ? 'opacity-0 scale-75 absolute pointer-events-none' : 'opacity-100 scale-100'}`}
+              className={`object-contain dark:hidden transition-all duration-300 ${
+                scrolled ? 'opacity-0 scale-75 absolute pointer-events-none' : 'opacity-100 scale-100'
+              }`}
             />
             <Image
               src="/images/axion-dark.png"
               alt="Axion Logo"
               width={110}
               height={36}
-              className={`object-contain hidden transition-all duration-300 ${scrolled ? 'opacity-0 scale-75 absolute pointer-events-none' : 'dark:block opacity-100 scale-100'}`}
+              className={`object-contain hidden transition-all duration-300 ${
+                scrolled ? 'opacity-0 scale-75 absolute pointer-events-none' : 'dark:block opacity-100 scale-100'
+              }`}
             />
           </div>
-          <span className="hidden sm:block text-xs font-semibold tracking-[0.12em] uppercase text-gray-400 dark:text-gray-500 border-l border-gray-200 dark:border-gray-700 pl-4">
-            Family Offices
-          </span>
-          <div className="hidden sm:flex items-center gap-6 ml-auto">
-            <nav className="flex items-center gap-2">
-              {([
-                { label: t.navAccounting, href: '#section-accounting' },
-                { label: t.navOmnichannel, href: '#section-omnichannel' },
-                { label: t.navEcommerce, href: '#section-ecommerce' },
-              ]).map(({ label, href }, i, arr) => (
-                <Fragment key={label}>
-                  <a
-                    href={href}
-                    className="px-2 py-1 text-[11px] font-semibold tracking-[0.12em] uppercase text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors border-b border-transparent hover:border-indigo-600 dark:hover:border-indigo-400"
-                  >
-                    {label}
-                  </a>
-                  {i < arr.length - 1 && (
-                    <span className="text-gray-300 dark:text-gray-600 text-xs select-none px-1">|</span>
-                  )}
-                </Fragment>
+
+          <div className="hidden md:flex items-center gap-8 ml-auto">
+            <nav className="flex items-center gap-7">
+              {(
+                [
+                  { label: t.navAccounting, href: '#section-accounting' },
+                  { label: t.navOmnichannel, href: '#section-omnichannel' },
+                  { label: t.navEcommerce, href: '#section-ecommerce' },
+                ] as const
+              ).map(({ label, href }) => (
+                <a
+                  key={label}
+                  href={href}
+                  className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                >
+                  {label}
+                </a>
               ))}
             </nav>
+            <span className="w-px h-5 bg-gray-200 dark:bg-gray-800" />
             <ThemeToggle />
+            <Link
+              href="/login"
+              className="text-sm font-semibold px-4 py-2 rounded-full bg-gray-900 text-white hover:bg-primary-600 dark:bg-white dark:text-gray-900 dark:hover:bg-primary-500 dark:hover:text-white transition-colors cursor-pointer"
+            >
+              {t.heroCta.split(' ')[0]}
+            </Link>
           </div>
         </nav>
       </header>
 
-      {/* Hero + Features combined */}
-      <main className="flex-1 container mx-auto px-6 pt-24 pb-10 flex flex-col">
-        {/* Omnichannel Widget */}
-        <div id="section-omnichannel" className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl shadow-gray-200/60 dark:shadow-gray-900/60 border border-gray-100 dark:border-gray-700 mb-16 overflow-hidden">
-          <OmnichannelSection />
-        </div>
+      <main className="flex-1">
+        {/* ───────── Hero ───────── */}
+        <section className="relative pt-36 md:pt-44 pb-24 md:pb-32 overflow-hidden">
+          {/* Editorial grid (Vercel-style square cells) */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 dark:hidden"
+            style={{
+              backgroundImage:
+                'linear-gradient(to right, rgba(0,0,0,0.07) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.07) 1px, transparent 1px)',
+              backgroundSize: '120px 120px',
+              maskImage:
+                'radial-gradient(ellipse 80% 70% at 50% 30%, black 30%, transparent 80%)',
+              WebkitMaskImage:
+                'radial-gradient(ellipse 80% 70% at 50% 30%, black 30%, transparent 80%)',
+            }}
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 hidden dark:block"
+            style={{
+              backgroundImage:
+                'linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px)',
+              backgroundSize: '120px 120px',
+              maskImage:
+                'radial-gradient(ellipse 80% 70% at 50% 30%, black 30%, transparent 80%)',
+              WebkitMaskImage:
+                'radial-gradient(ellipse 80% 70% at 50% 30%, black 30%, transparent 80%)',
+            }}
+          />
 
-        {/* Hero */}
-        <div id="section-accounting" className="max-w-3xl mx-auto text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-semibold mb-5">
-            <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></span>
-            {t.heroTag}
-          </div>
-
-          <h1 className="text-5xl md:text-6xl font-bold mb-5 leading-[1.1] tracking-tight">
-            <span className="text-gray-900 dark:text-gray-100">{t.heroTitle1}</span>
-            <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              {t.heroTitle2}
-            </span>
-          </h1>
-
-          <p className="text-base text-gray-500 dark:text-gray-400 mb-8 max-w-2xl mx-auto leading-relaxed whitespace-pre-line">
-            {t.heroSub}
-          </p>
-
-          <Link
-            href="/login"
-            className="group relative inline-block px-10 py-3.5 text-white rounded-xl font-semibold text-lg overflow-hidden bg-[length:200%_100%] bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 bg-left hover:bg-right transition-[background-position] duration-500 ease-in-out"
-          >
-            {t.heroCta}
-          </Link>
-        </div>
-
-        {/* Business Logo Marquee */}
-        {stats.businessLogos.length > 0 && (
-          <div className="max-w-5xl mx-auto w-full mb-12">
-            <p className="text-center text-sm text-gray-400 dark:text-gray-500 mb-4 font-medium">{t.aum}</p>
-            <div
-              className="relative overflow-hidden group"
-              style={{
-                maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
-                WebkitMaskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
-              }}
+          <div className="container mx-auto px-6 max-w-6xl relative">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
+              <div className="lg:col-span-7">
+            <motion.p
+              initial={reduce ? false : { opacity: 0, y: 8 }}
+              animate={reduce ? undefined : { opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              className="text-xs font-semibold tracking-[0.18em] uppercase text-gray-500 dark:text-gray-400 mb-6"
             >
-              <div className="flex gap-12 animate-marquee group-hover:[animation-play-state:paused]">
-                {[...stats.businessLogos, ...stats.businessLogos].map((biz, i) => (
-                  <div
-                    key={`${biz.id}-${i}`}
-                    className="flex-shrink-0 flex items-center gap-3 px-2"
-                  >
-                    <div className="w-10 h-10 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center">
-                      {biz.logo_url ? (
-                        <Image
-                          src={biz.logo_url}
-                          alt={biz.business_name}
-                          width={40}
-                          height={40}
-                          className={`w-10 h-10 ${biz.logo_fit === 'contain' ? 'object-contain p-1' : 'object-cover'}`}
-                        />
-                      ) : (
-                        <span className="text-xs font-bold text-gray-400">
-                          {biz.business_name.slice(0, 2).toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                      {biz.business_name}
-                    </span>
-                  </div>
+              {t.eyebrowHero}
+            </motion.p>
+
+            <motion.h1
+              initial={reduce ? false : 'hidden'}
+              animate={reduce ? undefined : 'visible'}
+              variants={fadeUpStagger}
+              className="font-bold tracking-[-0.035em] leading-[0.95] text-[clamp(2.5rem,5.6vw,4.75rem)]"
+            >
+              <span className="block">
+                {heroTitle1Words.map((word, i) => (
+                  <span key={`t1-${i}`} className="inline-block overflow-hidden align-bottom">
+                    <motion.span variants={heroWord} className="inline-block">
+                      {word}
+                      {i < heroTitle1Words.length - 1 && ' '}
+                    </motion.span>
+                  </span>
+                ))}{' '}
+              </span>
+              <span className="block text-gray-400 dark:text-gray-600">
+                {heroTitle2Words.map((word, i) => (
+                  <span key={`t2-${i}`} className="inline-block overflow-hidden align-bottom">
+                    <motion.span variants={heroWord} className="inline-block">
+                      {word}
+                      {i < heroTitle2Words.length - 1 && ' '}
+                    </motion.span>
+                  </span>
                 ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto mb-12">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col">
-            <BookOpen className="w-6 h-6 text-primary-500 mb-5" />
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">
-              {t.card1Title}
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed flex-1">
-              {t.card1Body}
-            </p>
-            <div className="mt-5">
-              <span className="inline-block px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs font-semibold rounded-lg">
-                {t.card1Badge}
               </span>
-            </div>
-          </div>
+            </motion.h1>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col">
-            <LayoutGrid className="w-6 h-6 text-primary-500 mb-5" />
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">
-              {t.card2Title}
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed flex-1">
-              {t.card2Body}
-            </p>
-            <div className="mt-5">
-              <span className="inline-block px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs font-semibold rounded-lg">
-                {t.card2Badge}
-              </span>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col">
-            <ShoppingBag className="w-6 h-6 text-primary-500 mb-5" />
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">
-              {t.card3Title}
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed flex-1">
-              {t.card3Body}
-            </p>
-            <div className="mt-5">
-              <span className="inline-block px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs font-semibold rounded-lg">
-                {t.card3Badge}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Financial Health Score Calculator */}
-        <div className="max-w-4xl mx-auto w-full mb-12">
-          <HealthScoreCalculator />
-          <div className="text-center mt-3">
-            <a
-              href="/cek-bisnis"
-              className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+            <motion.div
+              initial={reduce ? false : { opacity: 0, y: 16 }}
+              animate={reduce ? undefined : { opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              className="mt-10 max-w-xl"
             >
-              Buka di halaman penuh
-              <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none">
-                <path d="M2.5 9.5l7-7M9.5 2.5H5M9.5 2.5v4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </a>
-          </div>
-        </div>
+              <p className="text-lg md:text-xl leading-relaxed text-gray-600 dark:text-gray-400">
+                {t.heroSub}
+              </p>
 
-        {/* Ecommerce Integration */}
-        <div id="section-ecommerce" className="max-w-5xl mx-auto w-full mb-12">
-          <div className="bg-gray-50 dark:bg-gray-800/60 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 md:p-10">
-            <div className="flex flex-col md:flex-row gap-8 md:gap-12 items-start md:items-center">
-              <div className="flex-1">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-semibold mb-4">
-                  <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></span>
-                  {t.ecomTag}
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
-                  {t.ecomTitle}
-                </h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {t.ecomBody}
-                </p>
+              <div className="mt-10 flex flex-wrap items-center gap-x-7 gap-y-4">
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gray-900 text-white text-sm font-semibold hover:bg-primary-600 dark:bg-white dark:text-gray-900 dark:hover:bg-primary-500 dark:hover:text-white transition-colors cursor-pointer"
+                >
+                  {t.heroCta}
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+                    <path d="M3 7h8m0 0L7.5 3.5M11 7L7.5 10.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </Link>
+
+                <a
+                  href="#section-accounting"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors group cursor-pointer"
+                >
+                  {t.heroCtaSecondary}
+                  <span className="transition-transform group-hover:translate-x-1">↓</span>
+                </a>
               </div>
-              <div className="flex-shrink-0 w-full md:w-auto">
-                <div className="flex gap-6 items-center justify-center md:justify-end">
-                  {[
-                    { name: 'Shopee', src: '/images/ecommerce/Shopee.png' },
-                    { name: 'TikTok Shop', src: '/images/ecommerce/Tiktokshop.png' },
-                    { name: 'Tokopedia', src: '/images/ecommerce/Tokopedia.png' },
-                  ].map(({ name, src }) => (
-                    <div key={name} className="flex flex-col items-center gap-2">
-                      <div className="w-14 h-14 rounded-2xl bg-white dark:bg-gray-700 shadow-sm border border-gray-100 dark:border-gray-600 flex items-center justify-center overflow-hidden">
-                        <Image src={src} alt={name} width={40} height={40} className="object-contain" />
+            </motion.div>
+              </div>
+
+              <motion.div
+                initial={reduce ? false : { opacity: 0, scale: 0.96, y: 24 }}
+                animate={reduce ? undefined : { opacity: 1, scale: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                whileHover={
+                  reduce
+                    ? undefined
+                    : { y: -10, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } }
+                }
+                className="lg:col-span-5 relative"
+              >
+                <div className="rounded-2xl overflow-hidden lg:scale-[1.1] lg:origin-center border border-gray-200 dark:border-gray-800 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.15)] hover:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.25)] dark:shadow-[0_10px_40px_-12px_rgba(0,0,0,0.6)] dark:hover:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.8)] transition-shadow duration-500">
+                  <Image
+                    src="/images/landing-page-2.png"
+                    alt="AXION dashboard preview"
+                    width={2880}
+                    height={1794}
+                    priority
+                    sizes="(min-width: 1024px) 50vw, 100vw"
+                    className="w-full h-auto block"
+                  />
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </section>
+
+        {/* ───────── Trust strip ───────── */}
+        {stats.businessLogos.length > 0 && (
+          <motion.section
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+            variants={fadeUp}
+            className="border-y border-gray-200 dark:border-gray-800 py-10"
+          >
+            <div className="container mx-auto px-6 max-w-6xl">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-7">
+                <p className="text-xs font-semibold tracking-[0.18em] uppercase text-gray-500 dark:text-gray-400">
+                  {t.aumEyebrow}
+                </p>
+                <div className="flex items-center gap-8">
+                  <Stat value={loading ? '—' : String(stats.businesses)} label={t.statBusinesses} />
+                  <span className="w-px h-8 bg-gray-200 dark:bg-gray-800" />
+                  <Stat value={loading ? '—' : String(stats.users)} label={t.statUsers} />
+                  <span className="w-px h-8 bg-gray-200 dark:bg-gray-800" />
+                  <Stat value="100%" label={t.statPrivacy} />
+                </div>
+              </div>
+
+              <div
+                className="relative overflow-hidden group"
+                style={{
+                  maskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)',
+                  WebkitMaskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)',
+                }}
+              >
+                <div className="flex gap-14 animate-marquee group-hover:[animation-play-state:paused]">
+                  {[...stats.businessLogos, ...stats.businessLogos].map((biz, i) => (
+                    <div key={`${biz.id}-${i}`} className="flex-shrink-0 flex items-center gap-3 px-1">
+                      <div className="w-9 h-9 rounded-md flex-shrink-0 overflow-hidden flex items-center justify-center">
+                        {biz.logo_url ? (
+                          <Image
+                            src={biz.logo_url}
+                            alt={biz.business_name}
+                            width={36}
+                            height={36}
+                            className={`w-9 h-9 transition ${
+                              biz.logo_fit === 'contain' ? 'object-contain p-0.5' : 'object-cover'
+                            }`}
+                          />
+                        ) : (
+                          <span className="text-xs font-bold text-gray-400">
+                            {biz.business_name.slice(0, 2).toUpperCase()}
+                          </span>
+                        )}
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">{name}</span>
+                      <span className="text-sm font-medium text-gray-500 dark:text-gray-500 whitespace-nowrap">
+                        {biz.business_name}
+                      </span>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
+          </motion.section>
+        )}
+
+        {/* ───────── Section 1: Accounting Engine (editorial split) ───────── */}
+        <motion.section
+          id="section-accounting"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-100px' }}
+          variants={fadeUpStagger}
+          className="py-24 md:py-32"
+        >
+          <div className="container mx-auto px-6 max-w-6xl">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+              <motion.div variants={fadeUp} className="lg:col-span-5">
+                <p className="text-xs font-semibold tracking-[0.18em] uppercase text-gray-500 dark:text-gray-400 mb-5">
+                  {t.section1Eyebrow}
+                </p>
+                <h2 className="text-3xl md:text-4xl lg:text-[2.75rem] font-bold leading-[1.05] tracking-[-0.02em] mb-6">
+                  {t.section1Title}
+                </h2>
+                <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
+                  {t.section1Lead}
+                </p>
+              </motion.div>
+
+              <div className="lg:col-span-7 flex flex-col">
+                {t.section1Items.map((item, idx) => (
+                  <motion.div
+                    key={item.n}
+                    variants={fadeUp}
+                    className={`group grid grid-cols-[auto_1fr] gap-x-6 md:gap-x-10 py-7 ${
+                      idx === 0
+                        ? 'border-t border-gray-200 dark:border-gray-800'
+                        : ''
+                    } border-b border-gray-200 dark:border-gray-800`}
+                  >
+                    <span className="text-sm font-mono font-medium text-gray-400 dark:text-gray-600 pt-1 tabular-nums">
+                      {item.n}
+                    </span>
+                    <div>
+                      <h3 className="text-lg md:text-xl font-semibold mb-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                        {item.title}
+                      </h3>
+                      <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 leading-relaxed">
+                        {item.body}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
+        </motion.section>
 
-        {/* <MarketInsightSection /> */}
+        {/* ───────── Section 2: Omnichannel (visual + copy split) ───────── */}
+        <motion.section
+          id="section-omnichannel"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-100px' }}
+          variants={fadeUpStagger}
+          className="py-24 md:py-32 bg-gray-50 dark:bg-gray-900/40 border-y border-gray-200 dark:border-gray-800"
+        >
+          <div className="container mx-auto px-6 max-w-6xl">
+            <motion.div variants={fadeUp} className="max-w-2xl mb-14">
+              <p className="text-xs font-semibold tracking-[0.18em] uppercase text-gray-500 dark:text-gray-400 mb-5">
+                {t.section2Eyebrow}
+              </p>
+              <h2 className="text-3xl md:text-4xl lg:text-[2.75rem] font-bold leading-[1.05] tracking-[-0.02em] mb-6">
+                {t.section2Title}
+              </h2>
+              <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
+                {t.section2Lead}
+              </p>
+            </motion.div>
 
+            <motion.div
+              variants={fadeUp}
+              className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 overflow-hidden"
+            >
+              <OmnichannelSection />
+            </motion.div>
+          </div>
+        </motion.section>
+
+        {/* ───────── Section 3: Ecommerce Integration ───────── */}
+        <motion.section
+          id="section-ecommerce"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-100px' }}
+          variants={fadeUpStagger}
+          className="py-24 md:py-32"
+        >
+          <div className="container mx-auto px-6 max-w-6xl">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+              <motion.div variants={fadeUp} className="lg:col-span-6 order-2 lg:order-1">
+                <div className="grid grid-cols-3 gap-4">
+                  {[
+                    { name: 'Shopee', src: '/images/ecommerce/Shopee.png' },
+                    { name: 'TikTok Shop', src: '/images/ecommerce/Tiktokshop.png' },
+                    { name: 'Tokopedia', src: '/images/ecommerce/Tokopedia.png' },
+                  ].map(({ name, src }) => (
+                    <div
+                      key={name}
+                      className="aspect-square rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 flex flex-col items-center justify-center gap-3 p-5 hover:border-gray-300 dark:hover:border-gray-700 transition-colors"
+                    >
+                      <Image src={src} alt={name} width={48} height={48} className="object-contain" />
+                      <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{name}</span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+
+              <motion.div variants={fadeUp} className="lg:col-span-6 order-1 lg:order-2">
+                <p className="text-xs font-semibold tracking-[0.18em] uppercase text-gray-500 dark:text-gray-400 mb-5">
+                  {t.section3Eyebrow}
+                </p>
+                <h2 className="text-3xl md:text-4xl lg:text-[2.75rem] font-bold leading-[1.05] tracking-[-0.02em] mb-6">
+                  {t.section3Title}
+                </h2>
+                <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
+                  {t.section3Lead}
+                </p>
+              </motion.div>
+            </div>
+          </div>
+        </motion.section>
+
+        {/* ───────── Health Score CTA ───────── */}
+        <motion.section
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-100px' }}
+          variants={fadeUpStagger}
+          className="py-24 md:py-32 bg-gray-50 dark:bg-gray-900/40 border-y border-gray-200 dark:border-gray-800"
+        >
+          <div className="container mx-auto px-6 max-w-4xl">
+            <motion.div variants={fadeUp} className="text-center mb-12">
+              <p className="text-xs font-semibold tracking-[0.18em] uppercase text-gray-500 dark:text-gray-400 mb-5">
+                {t.healthEyebrow}
+              </p>
+              <h2 className="text-3xl md:text-4xl font-bold leading-[1.1] tracking-[-0.02em] mb-5">
+                {t.healthTitle}
+              </h2>
+              <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 max-w-xl mx-auto leading-relaxed">
+                {t.healthLead}
+              </p>
+            </motion.div>
+
+            <motion.div variants={fadeUp}>
+              <HealthScoreCalculator />
+              <div className="text-center mt-5">
+                <a
+                  href="/cek-bisnis"
+                  className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors cursor-pointer"
+                >
+                  {t.healthFullLink}
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+                    <path d="M2.5 9.5l7-7M9.5 2.5H5M9.5 2.5v4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </a>
+              </div>
+            </motion.div>
+          </div>
+        </motion.section>
+
+        {/* ───────── Closing CTA (dark band) ───────── */}
+        <motion.section
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-80px' }}
+          variants={fadeUpStagger}
+          className="bg-gray-950 text-white py-24 md:py-32"
+        >
+          <div className="container mx-auto px-6 max-w-4xl text-center">
+            <motion.p
+              variants={fadeUp}
+              className="text-xs font-semibold tracking-[0.18em] uppercase text-gray-400 mb-6"
+            >
+              {t.closingEyebrow}
+            </motion.p>
+            <motion.h2
+              variants={fadeUp}
+              className="text-4xl md:text-5xl lg:text-6xl font-bold leading-[1.05] tracking-[-0.025em] mb-7"
+            >
+              {t.closingTitle}
+            </motion.h2>
+            <motion.p
+              variants={fadeUp}
+              className="text-base md:text-lg text-gray-400 max-w-xl mx-auto mb-10 leading-relaxed"
+            >
+              {t.closingLead}
+            </motion.p>
+            <motion.div variants={fadeUp}>
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-white text-gray-900 text-sm font-semibold hover:bg-gray-200 transition-colors cursor-pointer"
+              >
+                {t.closingCta}
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+                  <path d="M3 7h8m0 0L7.5 3.5M11 7L7.5 10.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
+            </motion.div>
+          </div>
+        </motion.section>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 dark:bg-gray-950">
-        {/* Brand CTA + Stats satu baris */}
-        <div className="container mx-auto px-6 pt-10 pb-8 flex flex-col md:flex-row items-center justify-between gap-6">
+      {/* ───────── Footer ───────── */}
+      <footer className="bg-gray-950 text-gray-400 border-t border-gray-800">
+        <div className="container mx-auto px-6 max-w-6xl pt-14 pb-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
           <div>
-            <p className="text-xs font-semibold tracking-[0.15em] uppercase text-gray-400 mb-2">
+            <p className="text-xs font-semibold tracking-[0.18em] uppercase text-gray-500 mb-3">
               {t.footerLabel}
             </p>
-            <h2 className="text-2xl md:text-3xl font-bold text-white">
-              {t.footerTitle}
-            </h2>
-          </div>
-
-          {/* Stats inline di tengah */}
-          <div className="hidden md:flex items-center gap-6 text-sm">
-            <div className="text-center">
-              <div className="font-bold text-white text-lg">100%</div>
-              <div className="text-gray-400">Data Privacy</div>
-            </div>
-            <span className="w-px h-8 bg-gray-700"></span>
-            <div className="text-center">
-              <div className="font-bold text-white text-lg">{loading ? '...' : stats.users}</div>
-              <div className="text-gray-400">Users</div>
-            </div>
-            <span className="w-px h-8 bg-gray-700"></span>
-            <div className="text-center">
-              <div className="font-bold text-white text-lg">{loading ? '...' : stats.businesses}</div>
-              <div className="text-gray-400">Businesses</div>
-            </div>
+            <Image
+              src="/images/axion-dark.png"
+              alt="AXION"
+              width={140}
+              height={44}
+              className="object-contain h-9 w-auto"
+            />
           </div>
 
           <Link
             href="/login"
-            className="shrink-0 px-8 py-3 border border-gray-600 text-gray-200 font-semibold text-sm rounded-xl hover:border-gray-400 hover:text-white transition-colors"
+            className="shrink-0 inline-flex items-center gap-2 px-6 py-2.5 border border-gray-700 text-gray-200 font-semibold text-sm rounded-full hover:border-gray-500 hover:text-white transition-colors cursor-pointer"
           >
             {t.footerCta}
           </Link>
         </div>
 
-        {/* Copyright bar */}
         <div className="border-t border-gray-800">
-          <div className="container mx-auto px-6 py-4 flex flex-col md:flex-row items-center justify-between text-sm text-gray-500 gap-2">
+          <div className="container mx-auto px-6 max-w-6xl py-5 flex flex-col md:flex-row items-center justify-between text-sm text-gray-500 gap-3">
             <p>{t.copyright}</p>
-            <div className="flex items-center gap-4">
-              {/* Language switcher */}
-              <div className="flex items-center gap-1 border border-gray-700 rounded-lg overflow-hidden">
-                <button
-                  onClick={() => switchLang('id')}
-                  className={`px-2.5 py-1 text-xs font-semibold transition-colors ${lang === 'id' ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-gray-300'}`}
-                >
-                  ID
-                </button>
-                <button
-                  onClick={() => switchLang('en')}
-                  className={`px-2.5 py-1 text-xs font-semibold transition-colors ${lang === 'en' ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-gray-300'}`}
-                >
-                  EN
-                </button>
+            <div className="flex items-center gap-5">
+              <div className="flex items-center gap-1 border border-gray-700 rounded-full overflow-hidden">
+                {(['id', 'en'] as const).map((l) => (
+                  <Fragment key={l}>
+                    <button
+                      onClick={() => switchLang(l)}
+                      className={`px-3 py-1 text-xs font-semibold transition-colors cursor-pointer ${
+                        lang === l ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-gray-300'
+                      }`}
+                    >
+                      {l.toUpperCase()}
+                    </button>
+                  </Fragment>
+                ))}
               </div>
-              <Link
-                href="/blog"
-                className="hover:text-gray-300 transition-colors"
-              >
+              <Link href="/blog" className="hover:text-gray-300 transition-colors">
                 Blog
               </Link>
-              {/* Market nav hidden — fitur market aggregator belum live */}
               <a
                 href="https://instagram.com/imamabdrsyd"
                 target="_blank"
@@ -445,16 +742,26 @@ export default function LandingPage() {
               >
                 @imamabdrsyd
               </a>
-              <a
-                href="mailto:imam.isyida@gmail.com"
-                className="hover:text-gray-300 transition-colors"
-              >
+              <a href="mailto:imam.isyida@gmail.com" className="hover:text-gray-300 transition-colors">
                 imam.isyida@gmail.com
               </a>
             </div>
           </div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function Stat({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="flex items-baseline gap-2.5">
+      <span className="font-semibold text-gray-900 dark:text-gray-100 text-lg tabular-nums leading-none">
+        {value}
+      </span>
+      <span className="text-[11px] font-medium tracking-[0.12em] uppercase text-gray-500 dark:text-gray-500">
+        {label}
+      </span>
     </div>
   );
 }

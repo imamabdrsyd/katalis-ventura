@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 18 April 2026
+> Terakhir diupdate: 13 Mei 2026
 
 ---
 
@@ -445,6 +445,137 @@ import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 ```
 
 Props: `options` (dengan `icon?` opsional), `value`, `onChange`, `fullWidth?` (untuk modal/auth page), `disabled?`, `ariaLabel?`, `className?`.
+
+---
+
+## 8.5 Landing Page Pattern (Editorial)
+
+Landing page publik ([app/page.tsx](../app/page.tsx)) memakai gaya **editorial fintech** — disiplin tipografi & whitespace, minim gradient, motion restrained-expressive via `framer-motion`. Pola ini terpisah dari dashboard (yang lebih utilitarian).
+
+### 8.5.1 Eyebrow text
+
+Label kecil di atas setiap heading section. Selalu uppercase, tracking lebar, neutral gray.
+
+```tsx
+<p className="text-xs font-semibold tracking-[0.18em] uppercase text-gray-500 dark:text-gray-400 mb-5">
+  {eyebrow}
+</p>
+```
+
+- **Jangan** pakai badge berwarna (`bg-indigo-100 text-indigo-700`) untuk eyebrow landing — itu pola dashboard.
+- **Jangan** pakai dot `animate-pulse` di samping eyebrow — overdone.
+
+### 8.5.2 Type scale landing
+
+Lebih besar & lebih ketat dari dashboard. Inter, weight 600/700.
+
+| Token | Class | Pakai untuk |
+|-------|-------|-------------|
+| Display | `text-[clamp(2.75rem,7.2vw,5.75rem)] font-bold leading-[0.95] tracking-[-0.035em]` | Hero h1 |
+| Section heading | `text-3xl md:text-4xl lg:text-[2.75rem] font-bold leading-[1.05] tracking-[-0.02em]` | Heading section (h2) |
+| Closing heading | `text-4xl md:text-5xl lg:text-6xl font-bold leading-[1.05] tracking-[-0.025em]` | Closing CTA band |
+| Lead | `text-base md:text-lg leading-relaxed` (atau `text-lg md:text-xl` di hero) | Paragraf intro |
+| Body | `text-sm md:text-base leading-relaxed` | Body item list |
+
+**Aturan warna heading:** solid `text-gray-900 dark:text-gray-100`. **Jangan** pakai gradient text `bg-clip-text` di landing — sudah dianggap "AI-slop". Untuk menekankan, pakai split warna: 1 baris solid + 1 baris `text-gray-400 dark:text-gray-600`.
+
+### 8.5.3 Section rhythm
+
+- **Container:** `container mx-auto px-6 max-w-6xl`
+- **Section padding:** `py-24 md:py-32` (closing & hero boleh lebih).
+- **Alternating surface:** putih → `bg-gray-50 dark:bg-gray-900/40` dengan `border-y border-gray-200 dark:border-gray-800` → putih. Hindari shadow tebal untuk separasi section.
+- **Closing band:** `bg-gray-950 text-white` untuk kontras akhir.
+
+### 8.5.4 Editorial split list (pengganti feature-card-3-kolom)
+
+Untuk daftar 3 fitur, **jangan** pakai 3 card seragam dengan icon di kiri atas (cliché AI). Pakai **editorial split**:
+
+```tsx
+<div className="grid grid-cols-[auto_1fr] gap-x-6 md:gap-x-10 py-7 border-b border-gray-200 dark:border-gray-800">
+  <span className="text-sm font-mono font-medium text-gray-400 dark:text-gray-600 pt-1 tabular-nums">
+    01
+  </span>
+  <div>
+    <h3 className="text-lg md:text-xl font-semibold mb-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+      {title}
+    </h3>
+    <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 leading-relaxed">
+      {body}
+    </p>
+  </div>
+</div>
+```
+
+- Nomor `01/02/03` mono + tabular-nums di kolom kiri sebagai grid marker.
+- Border tipis sebagai pemisah, bukan card surface.
+- Hover berubah warna heading ke `primary-*`, **bukan** `-translate-y-*` (anti AI-slop).
+
+### 8.5.5 CTA primer
+
+Landing pakai pill rounded penuh + neutral inverse (bukan `.btn-primary` indigo) **dengan hover ke primary-* untuk aksen brand**. Ini sengaja beda dari dashboard: rest state neutral untuk kontras maksimum + nuansa editorial, hover memunculkan warna brand.
+
+```tsx
+<Link
+  href="/login"
+  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gray-900 text-white text-sm font-semibold hover:bg-primary-600 dark:bg-white dark:text-gray-900 dark:hover:bg-primary-500 dark:hover:text-white transition-colors cursor-pointer"
+>
+  {label}
+  <ArrowRightIcon />
+</Link>
+```
+
+CTA sekunder = text link dengan ikon arrow yang nudge:
+
+```tsx
+<a className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors group cursor-pointer">
+  {label}
+  <span className="transition-transform group-hover:translate-x-1">→</span>
+</a>
+```
+
+### 8.5.6 Motion (framer-motion)
+
+`framer-motion` v12 terdaftar di [package.json](../package.json). Pola yang dipakai:
+
+| Pola | Kapan | Konfig |
+|------|-------|--------|
+| `fadeUp` section enter | Setiap section selain hero | `opacity 0→1`, `y 16→0`, `duration 0.5`, `ease [0.22,1,0.36,1]`, `viewport once: true` |
+| `fadeUpStagger` parent | Container yang membungkus beberapa anak `fadeUp` | `staggerChildren 0.08`, `delayChildren 0.05` |
+| Hero word reveal | Hanya h1 hero | Tiap kata `motion.span` dengan `opacity 0→1`, `y 24→0`, di-stagger lewat parent |
+| `useReducedMotion()` | Selalu | Skip animasi jika user prefer reduced motion |
+
+Definisi variants ada di [app/page.tsx](../app/page.tsx). **Jangan** tambah scroll-linked parallax atau infinite loop animation — itu masuk kategori AI-slop untuk produk fintech.
+
+### 8.5.7 Trust strip (logo marquee + inline stats)
+
+Logo bisnis pelanggan ditampilkan **warna asli** (no grayscale filter). Marquee tetap dipakai untuk social proof.
+
+Stats menggunakan layout **inline baseline** — angka besar dan label uppercase tiny **sejajar pada baseline yang sama**, bukan stacked vertical. Ini supaya selaras secara optis dengan eyebrow text di sisi kiri trust strip:
+
+```tsx
+function Stat({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="flex items-baseline gap-2.5">
+      <span className="font-semibold text-gray-900 dark:text-gray-100 text-lg tabular-nums leading-none">
+        {value}
+      </span>
+      <span className="text-[11px] font-medium tracking-[0.12em] uppercase text-gray-500 dark:text-gray-500">
+        {label}
+      </span>
+    </div>
+  );
+}
+```
+
+### 8.5.8 Apa yang tidak boleh muncul di landing
+
+- ❌ Hero gradient text `from-indigo-600 to-purple-600 bg-clip-text text-transparent`
+- ❌ Background indigo-50 untuk shell page
+- ❌ CTA dengan `bg-gradient-to-r animate-...` bg-position trick
+- ❌ Badge eyebrow berwarna dengan dot pulse
+- ❌ 3 feature cards seragam icon-top-left dengan `hover:-translate-y-1`
+- ❌ Shadow blur tebal sebagai pemisah section
+- ❌ Emoji sebagai icon (pakai SVG / lucide)
 
 ---
 
