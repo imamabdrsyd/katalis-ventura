@@ -799,7 +799,7 @@ function Sidebar({
         <div className="px-2 pt-3 pb-1 space-y-0.5">
           {/* Transactions (manager only) */}
           {canManage && (() => {
-            const isTransactionsActive = pathname === '/transactions' || pathname.startsWith('/transactions/');
+            const isTransactionsActive = pathname === '/transactions' || pathname.startsWith('/transactions/') || pathname === '/invoices' || pathname === '/reconciliation' || pathname === '/closing-entry';
             return (
               <div className="relative group">
                 <div

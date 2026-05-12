@@ -949,29 +949,31 @@ export default function JournalEntryPage() {
           <div className="h-8 w-px bg-gray-200 dark:bg-gray-700 mx-1" />
 
           {/* Menu navigation — Invoicing, Rekonsiliasi Bank, Tutup Buku */}
-          <nav className="flex items-center gap-1">
+          <nav className="flex items-center">
             <button
               type="button"
               onClick={() => router.push('/invoices')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
               title="Invoicing"
             >
               <FileText className="w-4 h-4" />
               Invoicing
             </button>
+            <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 mx-0.5" />
             <button
               type="button"
               onClick={() => router.push('/reconciliation')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
               title="Rekonsiliasi Bank"
             >
               <ScanSearch className="w-4 h-4" />
               Rekonsiliasi Bank
             </button>
+            <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 mx-0.5" />
             <button
               type="button"
               onClick={() => router.push('/closing-entry')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
               title="Tutup Buku"
             >
               <BookCheck className="w-4 h-4" />
