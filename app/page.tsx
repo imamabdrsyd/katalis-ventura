@@ -7,6 +7,7 @@ import { BookOpen, LayoutGrid, ShoppingBag } from 'lucide-react';
 import { OmnichannelSection } from '@/components/omnichannel/OmnichannelSection';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { MarketInsightSection } from '@/components/market/MarketInsightSection';
+import HealthScoreCalculator from '@/components/landing/HealthScoreCalculator';
 
 interface BusinessLogo {
   id: string;
@@ -312,6 +313,11 @@ export default function LandingPage() {
               </span>
             </div>
           </div>
+        </div>
+
+        {/* Financial Health Score Calculator */}
+        <div className="max-w-4xl mx-auto w-full mb-12">
+          <HealthScoreCalculator />
         </div>
 
         {/* Ecommerce Integration */}
