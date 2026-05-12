@@ -7,11 +7,11 @@ type Step = 'input' | 'result';
 type Grade = {
   label: string;
   emoji: string;
-  color: string;
-  ring: string;
-  glow: string;
-  text: string;
-  cardBg: string;
+  color: string;        // Tailwind gradient
+  ring: string;         // SVG stroke class
+  glow: string;         // shadow class
+  text: string;         // text color class
+  cardBg: string;       // hex for share card
 };
 
 const formatRupiah = (value: string): string => {
@@ -20,61 +20,47 @@ const formatRupiah = (value: string): string => {
   return parseInt(numeric, 10).toLocaleString('id-ID');
 };
 
-const parseRupiah = (value: string): number => {
-  return parseInt(value.replace(/\D/g, '') || '0', 10);
-};
+const parseRupiah = (value: string): number =>
+  parseInt(value.replace(/\D/g, '') || '0', 10);
 
-const formatCurrency = (n: number): string => {
-  return 'Rp ' + Math.round(n).toLocaleString('id-ID');
-};
+const formatCurrency = (n: number): string =>
+  'Rp ' + Math.round(n).toLocaleString('id-ID');
 
 const getGrade = (score: number): Grade => {
   if (score >= 80)
     return {
-      label: 'Sangat Sehat',
-      emoji: '🎉',
-      color: 'from-emerald-400 to-teal-500',
+      label: 'Sangat Sehat', emoji: '🎉',
+      color: 'from-emerald-400 to-teal-400',
       ring: 'stroke-emerald-400',
-      glow: 'shadow-[0_0_60px_-10px_rgba(52,211,153,0.6)]',
-      text: 'text-emerald-400',
-      cardBg: '#10b981',
+      glow: 'shadow-[0_0_60px_-10px_rgba(52,211,153,0.5)]',
+      text: 'text-emerald-400', cardBg: '#34d399',
     };
   if (score >= 60)
     return {
-      label: 'Sehat',
-      emoji: '✅',
-      color: 'from-teal-400 to-cyan-500',
-      ring: 'stroke-teal-400',
-      glow: 'shadow-[0_0_60px_-10px_rgba(45,212,191,0.55)]',
-      text: 'text-teal-400',
-      cardBg: '#14b8a6',
+      label: 'Sehat', emoji: '✅',
+      color: 'from-indigo-400 to-violet-400',
+      ring: 'stroke-indigo-400',
+      glow: 'shadow-[0_0_60px_-10px_rgba(99,102,241,0.55)]',
+      text: 'text-indigo-400', cardBg: '#818cf8',
     };
   if (score >= 40)
     return {
-      label: 'Perlu Perhatian',
-      emoji: '⚠️',
-      color: 'from-amber-400 to-orange-500',
+      label: 'Perlu Perhatian', emoji: '⚠️',
+      color: 'from-amber-400 to-orange-400',
       ring: 'stroke-amber-400',
-      glow: 'shadow-[0_0_60px_-10px_rgba(251,191,36,0.55)]',
-      text: 'text-amber-400',
-      cardBg: '#f59e0b',
+      glow: 'shadow-[0_0_60px_-10px_rgba(251,191,36,0.5)]',
+      text: 'text-amber-400', cardBg: '#fbbf24',
     };
   return {
-    label: 'Kritis',
-    emoji: '🚨',
-    color: 'from-rose-400 to-red-500',
+    label: 'Kritis', emoji: '🚨',
+    color: 'from-rose-400 to-red-400',
     ring: 'stroke-rose-400',
-    glow: 'shadow-[0_0_60px_-10px_rgba(251,113,133,0.55)]',
-    text: 'text-rose-400',
-    cardBg: '#f43f5e',
+    glow: 'shadow-[0_0_60px_-10px_rgba(251,113,133,0.5)]',
+    text: 'text-rose-400', cardBg: '#fb7185',
   };
 };
 
-const generateRecommendations = (
-  margin: number,
-  buffer: number,
-  profit: number,
-): string[] => {
+const generateRecommendations = (margin: number, buffer: number, profit: number): string[] => {
   const recs: string[] = [];
   if (profit < 0)
     recs.push('Bisnismu sedang merugi. Audit pengeluaran terbesar dan cari yang bisa dipotong minggu ini.');
@@ -91,17 +77,17 @@ const generateRecommendations = (
   return recs.slice(0, 3);
 };
 
-const getMarginLabel = (margin: number): { text: string; tone: string } => {
-  if (margin < 0) return { text: 'Merugi', tone: 'text-rose-400' };
-  if (margin < 5) return { text: 'Tipis (<5%)', tone: 'text-amber-400' };
-  if (margin <= 15) return { text: 'Cukup (5–15%)', tone: 'text-teal-400' };
-  return { text: 'Bagus (>15%)', tone: 'text-emerald-400' };
+const getMarginLabel = (m: number) => {
+  if (m < 0)  return { text: 'Merugi',        tone: 'text-rose-400' };
+  if (m < 5)  return { text: 'Tipis (<5%)',   tone: 'text-amber-400' };
+  if (m <= 15) return { text: 'Cukup (5–15%)', tone: 'text-indigo-400' };
+  return           { text: 'Bagus (>15%)',  tone: 'text-emerald-400' };
 };
 
-const getBufferLabel = (buffer: number): { text: string; tone: string } => {
-  if (buffer < 1) return { text: 'Risiko (<1 bln)', tone: 'text-rose-400' };
-  if (buffer <= 3) return { text: 'Cukup (1–3 bln)', tone: 'text-amber-400' };
-  return { text: 'Aman (>3 bln)', tone: 'text-emerald-400' };
+const getBufferLabel = (b: number) => {
+  if (b < 1)  return { text: 'Risiko (<1 bln)', tone: 'text-rose-400' };
+  if (b <= 3) return { text: 'Cukup (1–3 bln)', tone: 'text-amber-400' };
+  return         { text: 'Aman (>3 bln)',    tone: 'text-emerald-400' };
 };
 
 export default function HealthScoreCalculator({
@@ -109,16 +95,16 @@ export default function HealthScoreCalculator({
 }: {
   showShareButtons?: boolean;
 }) {
-  const [step, setStep] = useState<Step>('input');
+  const [step, setStep]       = useState<Step>('input');
   const [revenue, setRevenue] = useState('');
   const [expense, setExpense] = useState('');
-  const [cash, setCash] = useState('');
-  const [error, setError] = useState('');
+  const [cash, setCash]       = useState('');
+  const [error, setError]     = useState('');
 
   const [animatedScore, setAnimatedScore] = useState(0);
-  const [finalScore, setFinalScore] = useState(0);
+  const [finalScore, setFinalScore]       = useState(0);
   const [metrics, setMetrics] = useState({ netProfit: 0, netMargin: 0, cashBuffer: 0 });
-  const [recs, setRecs] = useState<string[]>([]);
+  const [recs, setRecs]       = useState<string[]>([]);
 
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -126,22 +112,22 @@ export default function HealthScoreCalculator({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const r = parseRupiah(revenue);
+    const r  = parseRupiah(revenue);
     const ex = parseRupiah(expense);
-    const c = parseRupiah(cash);
+    const c  = parseRupiah(cash);
     if (r <= 0 || ex <= 0 || c <= 0) {
       setError('Mohon isi semua kolom dengan angka lebih dari 0.');
       return;
     }
     setError('');
-    const netProfit = r - ex;
-    const netMargin = r > 0 ? (netProfit / r) * 100 : 0;
+    const netProfit  = r - ex;
+    const netMargin  = r > 0 ? (netProfit / r) * 100 : 0;
     const monthlyBurn = ex > 0 ? ex : 1;
     const cashBuffer = c / monthlyBurn;
     const marginScore = Math.min(40, Math.max(0, netMargin * 2));
     const bufferScore = Math.min(40, cashBuffer * 13.33);
     const profitBonus = netProfit > 0 ? 20 : 0;
-    const totalScore = Math.round(marginScore + bufferScore + profitBonus);
+    const totalScore  = Math.round(marginScore + bufferScore + profitBonus);
     setMetrics({ netProfit, netMargin, cashBuffer });
     setRecs(generateRecommendations(netMargin, cashBuffer, netProfit));
     setFinalScore(totalScore);
@@ -152,27 +138,19 @@ export default function HealthScoreCalculator({
   useEffect(() => {
     if (step !== 'result') return;
     let current = 0;
-    const target = finalScore;
-    const duration = 1100;
-    const steps = 40;
-    const stepValue = target / steps;
-    const interval = duration / steps;
+    const target   = finalScore;
+    const steps    = 40;
+    const stepVal  = target / steps;
+    const ms       = 1100 / steps;
     const timer = setInterval(() => {
-      current += stepValue;
-      if (current >= target) {
-        setAnimatedScore(target);
-        clearInterval(timer);
-      } else {
-        setAnimatedScore(Math.round(current));
-      }
-    }, interval);
+      current += stepVal;
+      if (current >= target) { setAnimatedScore(target); clearInterval(timer); }
+      else setAnimatedScore(Math.round(current));
+    }, ms);
     return () => clearInterval(timer);
   }, [step, finalScore]);
 
-  const reset = () => {
-    setStep('input');
-    setError('');
-  };
+  const reset = () => { setStep('input'); setError(''); };
 
   const handleCopyLink = async () => {
     await navigator.clipboard.writeText('https://axionventura.com/cek-bisnis');
@@ -186,10 +164,7 @@ export default function HealthScoreCalculator({
     try {
       const html2canvas = (await import('html2canvas')).default;
       const canvas = await html2canvas(shareCardRef.current, {
-        backgroundColor: '#0f172a',
-        scale: 2,
-        useCORS: true,
-        logging: false,
+        backgroundColor: '#0f172a', scale: 2, useCORS: true, logging: false,
       });
       const link = document.createElement('a');
       link.download = 'skor-bisnis-axion.png';
@@ -202,60 +177,46 @@ export default function HealthScoreCalculator({
 
   const handleWhatsApp = () => {
     const grade = getGrade(finalScore);
-    const text = encodeURIComponent(
+    const text  = encodeURIComponent(
       `Aku baru cek kesehatan keuangan bisnismu di AXION, dapat skor ${finalScore}/100 (${grade.label} ${grade.emoji}).\n\nCoba juga yuk di axionventura.com/cek-bisnis`,
     );
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 
-  const grade = getGrade(finalScore);
+  const grade      = getGrade(finalScore);
   const marginInfo = getMarginLabel(metrics.netMargin);
   const bufferInfo = getBufferLabel(metrics.cashBuffer);
 
-  const radius = 88;
+  const radius       = 88;
   const circumference = 2 * Math.PI * radius;
-  const progress = (animatedScore / 100) * circumference;
+  const progress     = (animatedScore / 100) * circumference;
 
   return (
-    <section className="relative isolate overflow-hidden rounded-3xl bg-slate-950 p-6 sm:p-10 ring-1 ring-white/10">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(45,212,191,0.18),transparent_45%),radial-gradient(circle_at_bottom_left,rgba(99,102,241,0.12),transparent_50%)]" />
+    <section className="relative isolate overflow-hidden rounded-3xl bg-gray-900 p-6 sm:p-10 ring-1 ring-white/10">
+      {/* Brand gradient: indigo top-right, purple bottom-left */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.2),transparent_45%),radial-gradient(circle_at_bottom_left,rgba(139,92,246,0.12),transparent_50%)]" />
 
       <div className="relative">
+        {/* ── STEP 1: INPUT ── */}
         {step === 'input' && (
           <div className="mx-auto max-w-xl animate-[fadeUp_0.5s_ease-out]">
-            <div className="mb-1 inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300 ring-1 ring-emerald-500/20">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+            <div className="mb-1 inline-flex items-center gap-2 rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-300 ring-1 ring-indigo-500/20">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400" />
               Gratis • Tanpa daftar
             </div>
+
             <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
               Cek Kesehatan Keuangan{' '}
-              <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
                 Bisnismu
               </span>
             </h2>
-            <p className="mt-3 text-base text-slate-400">
-              Gratis. 3 angka. 10 detik.
-            </p>
+            <p className="mt-3 text-base text-gray-400">Gratis. 3 angka. 10 detik.</p>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              <InputField
-                label="Pendapatan bulan ini"
-                value={revenue}
-                onChange={setRevenue}
-                placeholder="contoh: 25.000.000"
-              />
-              <InputField
-                label="Total pengeluaran bulan ini"
-                value={expense}
-                onChange={setExpense}
-                placeholder="contoh: 18.000.000"
-              />
-              <InputField
-                label="Saldo kas / tabungan bisnis sekarang"
-                value={cash}
-                onChange={setCash}
-                placeholder="contoh: 35.000.000"
-              />
+              <InputField label="Pendapatan bulan ini"              value={revenue} onChange={setRevenue} placeholder="contoh: 25.000.000" />
+              <InputField label="Total pengeluaran bulan ini"       value={expense} onChange={setExpense} placeholder="contoh: 18.000.000" />
+              <InputField label="Saldo kas / tabungan bisnis sekarang" value={cash} onChange={setCash}    placeholder="contoh: 35.000.000" />
 
               {error && (
                 <div className="rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-rose-300 ring-1 ring-rose-500/30">
@@ -265,7 +226,7 @@ export default function HealthScoreCalculator({
 
               <button
                 type="submit"
-                className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all hover:shadow-emerald-500/40 hover:scale-[1.01] active:scale-[0.99]"
+                className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 hover:scale-[1.01] active:scale-[0.99]"
               >
                 <span className="relative z-10 flex items-center justify-center gap-2">
                   Hitung Sekarang
@@ -273,20 +234,22 @@ export default function HealthScoreCalculator({
                     <path d="M3 8h10m0 0L8 3m5 5l-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </span>
-                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
               </button>
             </form>
 
-            <p className="mt-4 text-center text-xs text-slate-500">
+            <p className="mt-4 text-center text-xs text-gray-500">
               Data hanya diproses di browser-mu. Tidak disimpan, tidak dikirim kemana-mana.
             </p>
           </div>
         )}
 
+        {/* ── STEP 2: RESULT ── */}
         {step === 'result' && (
           <div className="animate-[fadeUp_0.5s_ease-out]">
+            {/* Score gauge */}
             <div className="flex flex-col items-center text-center">
-              <div className="mb-2 text-sm font-medium text-slate-400">Skor Kesehatan Keuangan</div>
+              <div className="mb-2 text-sm font-medium text-gray-400">Skor Kesehatan Keuangan</div>
 
               <div className={`relative inline-flex items-center justify-center rounded-full ${grade.glow}`}>
                 <svg width="220" height="220" className="-rotate-90">
@@ -301,7 +264,7 @@ export default function HealthScoreCalculator({
                   <div className={`bg-gradient-to-br ${grade.color} bg-clip-text text-6xl font-bold leading-none tracking-tight text-transparent sm:text-7xl`}>
                     {animatedScore}
                   </div>
-                  <div className="mt-1 text-sm text-slate-500">dari 100</div>
+                  <div className="mt-1 text-sm text-gray-500">dari 100</div>
                 </div>
               </div>
 
@@ -311,9 +274,10 @@ export default function HealthScoreCalculator({
               </div>
             </div>
 
+            {/* Metric cards */}
             <div className="mt-10 grid gap-4 sm:grid-cols-3">
-              <MetricCard delay={0} label="Net Margin" value={`${metrics.netMargin.toFixed(1)}%`} hint={marginInfo.text} tone={marginInfo.tone} />
-              <MetricCard delay={100} label="Cash Buffer" value={`${metrics.cashBuffer.toFixed(1)} bulan`} hint={bufferInfo.text} tone={bufferInfo.tone} />
+              <MetricCard delay={0}   label="Net Margin"   value={`${metrics.netMargin.toFixed(1)}%`}     hint={marginInfo.text} tone={marginInfo.tone} />
+              <MetricCard delay={100} label="Cash Buffer"  value={`${metrics.cashBuffer.toFixed(1)} bulan`} hint={bufferInfo.text} tone={bufferInfo.tone} />
               <MetricCard
                 delay={200} label="Net Profit" value={formatCurrency(metrics.netProfit)}
                 hint={metrics.netProfit >= 0 ? 'Untung' : 'Rugi'}
@@ -322,9 +286,10 @@ export default function HealthScoreCalculator({
               />
             </div>
 
+            {/* Recommendations */}
             <div className="mt-8 rounded-2xl bg-white/[0.03] p-6 ring-1 ring-white/10">
               <div className="mb-4 flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-300">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-300">
                   <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v3.5h-3.5a.75.75 0 000 1.5h3.5v3.5a.75.75 0 001.5 0v-3.5h3.5a.75.75 0 000-1.5h-3.5v-3.5z" clipRule="evenodd" />
                   </svg>
@@ -333,23 +298,24 @@ export default function HealthScoreCalculator({
               </div>
               <ul className="space-y-3">
                 {recs.map((rec, i) => (
-                  <li key={i} className="flex gap-3 text-sm text-slate-300 animate-[fadeUp_0.4s_ease-out]" style={{ animationDelay: `${i * 100}ms` }}>
-                    <span className="mt-1 flex h-1.5 w-1.5 flex-shrink-0 rounded-full bg-emerald-400" />
+                  <li key={i} className="flex gap-3 text-sm text-gray-300 animate-[fadeUp_0.4s_ease-out]" style={{ animationDelay: `${i * 100}ms` }}>
+                    <span className="mt-1 flex h-1.5 w-1.5 flex-shrink-0 rounded-full bg-indigo-400" />
                     <span className="leading-relaxed">{rec}</span>
                   </li>
                 ))}
               </ul>
             </div>
 
-            {/* Share Panel — hanya di halaman /cek-bisnis */}
+            {/* Share Panel */}
             {showShareButtons && (
               <div className="mt-8 rounded-2xl bg-white/[0.03] p-6 ring-1 ring-white/10">
-                <p className="mb-4 text-sm font-semibold text-slate-300">Bagikan hasilmu</p>
+                <p className="mb-4 text-sm font-semibold text-gray-300">Bagikan hasilmu</p>
                 <div className="flex flex-col gap-3 sm:flex-row">
+                  {/* Save image */}
                   <button
                     onClick={handleSaveImage}
                     disabled={saving}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white/5 px-4 py-3 text-sm font-medium text-slate-200 ring-1 ring-white/10 transition-colors hover:bg-white/10 disabled:opacity-60"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white/5 px-4 py-3 text-sm font-medium text-gray-200 ring-1 ring-white/10 transition-colors hover:bg-white/10 disabled:opacity-60"
                   >
                     {saving ? (
                       <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -364,12 +330,13 @@ export default function HealthScoreCalculator({
                     {saving ? 'Menyimpan...' : 'Simpan Gambar'}
                   </button>
 
+                  {/* Copy link */}
                   <button
                     onClick={handleCopyLink}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white/5 px-4 py-3 text-sm font-medium text-slate-200 ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white/5 px-4 py-3 text-sm font-medium text-gray-200 ring-1 ring-white/10 transition-colors hover:bg-white/10"
                   >
                     {copied ? (
-                      <svg className="h-4 w-4 text-emerald-400" viewBox="0 0 20 20" fill="currentColor">
+                      <svg className="h-4 w-4 text-indigo-400" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
                     ) : (
@@ -381,6 +348,7 @@ export default function HealthScoreCalculator({
                     {copied ? 'Disalin!' : 'Salin Link'}
                   </button>
 
+                  {/* WhatsApp */}
                   <button
                     onClick={handleWhatsApp}
                     className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#25D366]/10 px-4 py-3 text-sm font-medium text-[#25D366] ring-1 ring-[#25D366]/20 transition-colors hover:bg-[#25D366]/20"
@@ -394,49 +362,32 @@ export default function HealthScoreCalculator({
               </div>
             )}
 
-            {/* Hidden share card — di-screenshot oleh html2canvas */}
+            {/* Hidden share card for html2canvas */}
             {showShareButtons && (
               <div className="pointer-events-none absolute -left-[9999px] top-0">
                 <div
                   ref={shareCardRef}
                   style={{
-                    width: 540,
-                    height: 960,
-                    background: 'linear-gradient(135deg, #0f172a 0%, #0d1f2d 50%, #0f172a 100%)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '48px 40px',
+                    width: 540, height: 960,
+                    background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    justifyContent: 'center', padding: '48px 40px',
                     fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif',
-                    position: 'relative',
-                    overflow: 'hidden',
+                    position: 'relative', overflow: 'hidden',
                   }}
                 >
-                  {/* Glow background */}
-                  <div style={{
-                    position: 'absolute', top: -80, right: -80, width: 320, height: 320,
-                    borderRadius: '50%', background: `radial-gradient(circle, ${grade.cardBg}33 0%, transparent 70%)`,
-                    pointerEvents: 'none',
-                  }} />
-                  <div style={{
-                    position: 'absolute', bottom: -80, left: -80, width: 280, height: 280,
-                    borderRadius: '50%', background: 'radial-gradient(circle, #6366f133 0%, transparent 70%)',
-                    pointerEvents: 'none',
-                  }} />
+                  {/* Glow blobs */}
+                  <div style={{ position:'absolute', top:-80, right:-80, width:320, height:320, borderRadius:'50%', background:`radial-gradient(circle, ${grade.cardBg}44 0%, transparent 70%)`, pointerEvents:'none' }} />
+                  <div style={{ position:'absolute', bottom:-80, left:-80, width:280, height:280, borderRadius:'50%', background:'radial-gradient(circle, #6366f144 0%, transparent 70%)', pointerEvents:'none' }} />
 
-                  {/* AXION logo */}
+                  {/* AXION wordmark */}
                   <div style={{ marginBottom: 32, textAlign: 'center' }}>
-                    <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '0.12em', color: '#fff', opacity: 0.9 }}>
-                      AXION
-                    </div>
-                    <div style={{ fontSize: 11, color: '#64748b', letterSpacing: '0.08em', marginTop: 2 }}>
-                      BUSINESS FINANCE PLATFORM
-                    </div>
+                    <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '0.15em', color: '#fff', opacity: 0.9 }}>AXION</div>
+                    <div style={{ fontSize: 10, color: '#6366f1', letterSpacing: '0.1em', marginTop: 3, textTransform: 'uppercase' }}>Business Finance Platform</div>
                   </div>
 
                   {/* Label */}
-                  <div style={{ fontSize: 13, color: '#94a3b8', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 20, textTransform: 'uppercase' }}>
+                  <div style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600, letterSpacing: '0.08em', marginBottom: 20, textTransform: 'uppercase' }}>
                     Skor Kesehatan Bisnismu
                   </div>
 
@@ -444,53 +395,45 @@ export default function HealthScoreCalculator({
                   <div style={{ fontSize: 96, fontWeight: 800, color: grade.cardBg, lineHeight: 1, marginBottom: 8 }}>
                     {finalScore}
                   </div>
-                  <div style={{ fontSize: 15, color: '#64748b', marginBottom: 20 }}>dari 100</div>
+                  <div style={{ fontSize: 14, color: '#64748b', marginBottom: 20 }}>dari 100</div>
 
-                  {/* Grade */}
-                  <div style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 8,
-                    background: 'rgba(255,255,255,0.06)', borderRadius: 100,
-                    padding: '8px 20px', marginBottom: 40,
-                    border: `1px solid ${grade.cardBg}44`,
-                  }}>
+                  {/* Grade badge */}
+                  <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(255,255,255,0.06)', borderRadius:100, padding:'8px 20px', marginBottom:40, border:`1px solid ${grade.cardBg}44` }}>
                     <span style={{ fontSize: 20 }}>{grade.emoji}</span>
                     <span style={{ fontSize: 15, fontWeight: 700, color: grade.cardBg }}>{grade.label}</span>
                   </div>
 
                   {/* Divider */}
-                  <div style={{ width: '100%', height: 1, background: 'rgba(255,255,255,0.07)', marginBottom: 32 }} />
+                  <div style={{ width:'100%', height:1, background:'rgba(255,255,255,0.07)', marginBottom:32 }} />
 
                   {/* Metrics */}
-                  <div style={{ display: 'flex', gap: 0, width: '100%', marginBottom: 40 }}>
+                  <div style={{ display:'flex', gap:0, width:'100%', marginBottom:40 }}>
                     {[
-                      { label: 'Net Margin', value: `${metrics.netMargin.toFixed(1)}%` },
+                      { label: 'Net Margin',  value: `${metrics.netMargin.toFixed(1)}%` },
                       { label: 'Cash Buffer', value: `${metrics.cashBuffer.toFixed(1)} bln` },
-                      { label: 'Net Profit', value: metrics.netProfit >= 0 ? `+Rp ${(metrics.netProfit / 1000000).toFixed(1)}jt` : `-Rp ${(Math.abs(metrics.netProfit) / 1000000).toFixed(1)}jt` },
+                      { label: 'Net Profit',  value: metrics.netProfit >= 0 ? `+Rp ${(metrics.netProfit/1e6).toFixed(1)}jt` : `-Rp ${(Math.abs(metrics.netProfit)/1e6).toFixed(1)}jt` },
                     ].map((m, i) => (
-                      <div key={i} style={{
-                        flex: 1, textAlign: 'center',
-                        borderRight: i < 2 ? '1px solid rgba(255,255,255,0.07)' : 'none',
-                        padding: '0 16px',
-                      }}>
-                        <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.label}</div>
-                        <div style={{ fontSize: 18, fontWeight: 700, color: '#e2e8f0' }}>{m.value}</div>
+                      <div key={i} style={{ flex:1, textAlign:'center', borderRight: i < 2 ? '1px solid rgba(255,255,255,0.07)' : 'none', padding:'0 16px' }}>
+                        <div style={{ fontSize:11, color:'#64748b', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.05em' }}>{m.label}</div>
+                        <div style={{ fontSize:18, fontWeight:700, color:'#e2e8f0' }}>{m.value}</div>
                       </div>
                     ))}
                   </div>
 
                   {/* Watermark */}
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 12, color: '#475569', marginBottom: 4 }}>Coba juga di</div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#64748b' }}>axionventura.com/cek-bisnis</div>
+                  <div style={{ textAlign:'center' }}>
+                    <div style={{ fontSize:11, color:'#475569', marginBottom:4 }}>Coba juga di</div>
+                    <div style={{ fontSize:13, fontWeight:600, color:'#6366f1' }}>axionventura.com/cek-bisnis</div>
                   </div>
                 </div>
               </div>
             )}
 
+            {/* Bottom CTAs */}
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a
                 href="/signup"
-                className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4 text-center text-base font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all hover:shadow-emerald-500/40 hover:scale-[1.01]"
+                className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-6 py-4 text-center text-base font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 hover:scale-[1.01]"
               >
                 <span className="relative z-10 flex items-center justify-center gap-2">
                   Lacak Otomatis dengan AXION — Gratis 14 Hari
@@ -498,11 +441,11 @@ export default function HealthScoreCalculator({
                     <path d="M3 8h10m0 0L8 3m5 5l-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </span>
-                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
               </a>
               <button
                 onClick={reset}
-                className="rounded-xl bg-white/5 px-6 py-4 text-base font-medium text-slate-300 ring-1 ring-white/10 transition-colors hover:bg-white/10 hover:text-white"
+                className="rounded-xl bg-white/5 px-6 py-4 text-base font-medium text-gray-300 ring-1 ring-white/10 transition-colors hover:bg-white/10 hover:text-white"
               >
                 Hitung Ulang
               </button>
@@ -514,39 +457,35 @@ export default function HealthScoreCalculator({
       <style jsx>{`
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
+          to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>
     </section>
   );
 }
 
-function InputField({
-  label, value, onChange, placeholder,
-}: {
+function InputField({ label, value, onChange, placeholder }: {
   label: string; value: string; onChange: (v: string) => void; placeholder?: string;
 }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-medium text-slate-300">{label}</label>
+      <label className="mb-2 block text-sm font-medium text-gray-300">{label}</label>
       <div className="relative">
-        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-500">Rp</span>
+        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-500">Rp</span>
         <input
           type="text"
           inputMode="numeric"
           value={value}
           onChange={(e) => onChange(formatRupiah(e.target.value))}
           placeholder={placeholder}
-          className="w-full rounded-xl bg-white/[0.04] py-4 pl-12 pr-4 text-base font-semibold text-white placeholder:text-slate-600 ring-1 ring-white/10 transition-all focus:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+          className="w-full rounded-xl bg-white/[0.04] py-4 pl-12 pr-4 text-base font-semibold text-white placeholder:text-gray-600 ring-1 ring-white/10 transition-all focus:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
         />
       </div>
     </div>
   );
 }
 
-function MetricCard({
-  label, value, hint, tone, delay, valueClass,
-}: {
+function MetricCard({ label, value, hint, tone, delay, valueClass }: {
   label: string; value: string; hint: string; tone: string; delay: number; valueClass?: string;
 }) {
   return (
@@ -554,7 +493,7 @@ function MetricCard({
       className="rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/10 opacity-0 animate-[fadeUp_0.5s_ease-out_forwards]"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="text-xs font-medium uppercase tracking-wider text-slate-500">{label}</div>
+      <div className="text-xs font-medium uppercase tracking-wider text-gray-500">{label}</div>
       <div className={`mt-2 text-2xl font-bold tracking-tight ${valueClass ?? 'text-white'}`}>{value}</div>
       <div className={`mt-1 text-xs font-medium ${tone}`}>{hint}</div>
     </div>
