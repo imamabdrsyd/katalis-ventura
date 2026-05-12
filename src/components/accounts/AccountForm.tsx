@@ -51,6 +51,7 @@ export function AccountForm({
   parentAccountId,
 }: AccountFormProps) {
   const isEditMode = !!account;
+  const isSystemAccount = !!account?.is_system;
 
   const [formData, setFormData] = useState<AccountFormData>({
     account_code: account?.account_code || '',
@@ -264,7 +265,9 @@ export function AccountForm({
         <div className="flex items-start gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg">
           <AlertCircle className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Kode dan tipe akun tidak dapat diubah.
+            {isSystemAccount
+              ? 'Akun sistem — kode, tipe, dan kategori tidak dapat diubah. Anda boleh mengubah nama (mis. "Bank" → "BCA Rekening Usaha") dan deskripsi.'
+              : 'Kode dan tipe akun tidak dapat diubah.'}
           </p>
         </div>
       )}
@@ -449,7 +452,8 @@ export function AccountForm({
             }));
           }}
           className="input"
-          disabled={loading}
+          disabled={loading || isSystemAccount}
+          title={isSystemAccount ? 'Kategori akun sistem dikelola otomatis' : undefined}
         >
           <option value="">Deteksi otomatis dari tipe akun</option>
           <option value="EARN">EARN - Pendapatan/Penjualan</option>
@@ -583,6 +587,12 @@ export function AccountForm({
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                 Tandai akun ini sebagai kas atau setara kas (mis. Kas Kecil, BCA, Mandiri). Akun yang ditandai akan masuk Cash Flow report, Bank Reconciliation, dan jadi counter-account otomatis di Quick Transaction.
               </p>
+              {isSystemAccount && (
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  Status untuk akun sistem dikelola otomatis dan tidak dapat diubah.
+                </p>
+              )}
             </div>
             <button
               type="button"
@@ -591,12 +601,14 @@ export function AccountForm({
               onClick={() =>
                 setFormData(prev => ({ ...prev, is_cash_equivalent: !prev.is_cash_equivalent }))
               }
-              disabled={loading}
-              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+              disabled={loading || isSystemAccount}
+              aria-disabled={isSystemAccount}
+              title={isSystemAccount ? 'Akun sistem — status kas dikelola otomatis' : undefined}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
                 formData.is_cash_equivalent
                   ? 'bg-indigo-600 dark:bg-indigo-500'
                   : 'bg-gray-200 dark:bg-gray-600'
-              } disabled:opacity-50`}
+              } ${isSystemAccount ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} disabled:opacity-60`}
             >
               <span
                 className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${

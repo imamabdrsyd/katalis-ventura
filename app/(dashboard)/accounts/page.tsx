@@ -174,9 +174,13 @@ export default function AccountsPage() {
         account_name: data.account_name,
         normal_balance: data.normal_balance,
         description: data.description,
-        default_category: data.default_category,
+        default_category: editAccount.is_system
+          ? editAccount.default_category
+          : data.default_category,
         is_dividend: data.is_dividend ?? false,
-        is_cash_equivalent: data.account_type === 'ASSET' && (data.is_cash_equivalent ?? false),
+        is_cash_equivalent: editAccount.is_system
+          ? editAccount.is_cash_equivalent
+          : data.account_type === 'ASSET' && (data.is_cash_equivalent ?? false),
         useful_life_months: isDepreciable ? (data.useful_life_months ?? null) : null,
         residual_value: isDepreciable ? (data.residual_value ?? null) : null,
         acquisition_date: isDepreciable ? (data.acquisition_date || null) : null,
@@ -549,7 +553,9 @@ function SubAccountRow({
 
   const isSystem = account.is_system;
   const isInactive = !account.is_active;
-  const canEdit = onEdit && !isSystem;
+  // Akun sistem tetap bisa di-edit (rename "Bank" → "BCA Utama") — form yang
+  // membatasi field mana yang boleh diubah. Aktivasi/nonaktivasi tetap terkunci.
+  const canEdit = !!onEdit;
   const canToggle = (onDeactivate && !isSystem && account.is_active) || (onActivate && !account.is_active);
   const hasMenu = canEdit || canToggle;
 
@@ -590,7 +596,7 @@ function SubAccountRow({
           </span>
         )}
         {isSystem && (
-          <span title="Akun sistem"><Lock className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" /></span>
+          <span title="Akun sistem — nama boleh diubah, struktur tetap"><Lock className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" /></span>
         )}
         {isInactive && (
           <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded">
