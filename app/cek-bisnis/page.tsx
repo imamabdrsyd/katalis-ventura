@@ -125,14 +125,15 @@ export default function CekBisnisPage() {
           </svg>
           axionventura.com
         </Link>
-        <div className="flex items-center">
+        <div className="flex items-center gap-1.5">
           <Image
-            src="/images/axion-dark.png"
+            src="/images/favicon-dark.png"
             alt="AXION"
-            width={80}
-            height={24}
-            className="object-contain opacity-60"
+            width={20}
+            height={20}
+            className="object-contain opacity-70"
           />
+          <span className="text-xs font-bold tracking-[0.1em] text-slate-500 uppercase">AXION</span>
         </div>
       </div>
 
