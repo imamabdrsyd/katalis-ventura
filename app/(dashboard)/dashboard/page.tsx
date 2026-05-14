@@ -3,12 +3,14 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet, Calendar, ClipboardList, HandCoins, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet, ClipboardList, HandCoins, ArrowRight } from 'lucide-react';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useLanguage } from '@/context/LanguageContext';
 import { calculateFinancialSummary, calculateCategoryCounts, calculateIncomeStatementMetrics } from '@/lib/calculations';
 import { formatCurrency, formatPercentage, formatDateShort } from '@/lib/utils';
 import { CategoryBadge } from '@/components/ui/CategoryBadge';
+import { Sparkline } from '@/components/ui/Sparkline';
+import { FxMiniWidget } from '@/components/market/FxMiniWidget';
 import { isTradeReceivableTransaction, isSettled, isSettlementEntry, getOutstandingAmount } from '@/lib/accounting/guidance/receivableSettlement';
 
 // Lazy-load chart components — chart.js (~6.2 MB) only loads when charts render
@@ -93,6 +95,24 @@ export default function DashboardPage() {
   const summary = useMemo(() => calculateFinancialSummary(filteredTransactions), [filteredTransactions]);
   const categoryCounts = useMemo(() => calculateCategoryCounts(filteredTransactions), [filteredTransactions]);
 
+  // --- Monthly series untuk sparkline KPI cards (basis: tahun terpilih) ---
+  const monthlySeries = useMemo(() => {
+    const revenue = Array(12).fill(0) as number[];
+    const expense = Array(12).fill(0) as number[];
+    for (const tx of yearTransactions) {
+      const m = new Date(tx.date).getMonth();
+      const amt = Number(tx.amount);
+      if (tx.category === 'EARN') revenue[m] += amt;
+      else if (tx.category === 'OPEX' || tx.category === 'VAR' || tx.category === 'TAX') {
+        expense[m] += amt;
+      }
+    }
+    const netProfit = revenue.map((r, i) => r - expense[i]);
+    // Trim ke bulan-bulan yang relevan: kalau yearly, gunakan 12 bulan;
+    // kalau monthly filter aktif, sparkline tetap 12 bulan supaya tetap memberi konteks tren.
+    return { revenue, netProfit, expense };
+  }, [yearTransactions]);
+
   // --- AR Tracker: outstanding piutang across all time, bucketed by age ---
   const arData = useMemo(() => {
     const today = new Date();
@@ -172,6 +192,25 @@ export default function DashboardPage() {
     }
   }, [transactions, summary.totalEarn, selectedYear, selectedMonth, MONTH_LABELS]);
 
+  // Periode ROI dihitung dari tanggal transaksi pertama agar angka tidak menyesatkan
+  // (ROI 50% dalam 3 bulan vs 3 tahun punya makna sangat berbeda).
+  // NOTE: harus di atas early-return supaya order hooks stabil.
+  const roiPeriod = useMemo(() => {
+    if (transactions.length === 0) return null;
+    let earliest = new Date(transactions[0].date);
+    for (const t of transactions) {
+      const d = new Date(t.date);
+      if (d < earliest) earliest = d;
+    }
+    const now = new Date();
+    const months = Math.max(
+      1,
+      (now.getFullYear() - earliest.getFullYear()) * 12 + (now.getMonth() - earliest.getMonth())
+    );
+    const sinceLabel = `${MONTH_LABELS[earliest.getMonth()]} ${earliest.getFullYear()}`;
+    return { months, sinceLabel };
+  }, [transactions, MONTH_LABELS]);
+
   if (businessLoading) {
     return (
       <div className="p-8 animate-pulse">
@@ -216,24 +255,6 @@ export default function DashboardPage() {
     ? (allTimeSummary.netProfit / investedCapital.remainingInvestedCapital) * 100
     : 0;
 
-  // Periode ROI dihitung dari tanggal transaksi pertama agar angka tidak menyesatkan
-  // (ROI 50% dalam 3 bulan vs 3 tahun punya makna sangat berbeda).
-  const roiPeriod = useMemo(() => {
-    if (transactions.length === 0) return null;
-    let earliest = new Date(transactions[0].date);
-    for (const t of transactions) {
-      const d = new Date(t.date);
-      if (d < earliest) earliest = d;
-    }
-    const now = new Date();
-    const months = Math.max(
-      1,
-      (now.getFullYear() - earliest.getFullYear()) * 12 + (now.getMonth() - earliest.getMonth())
-    );
-    const sinceLabel = `${MONTH_LABELS[earliest.getMonth()]} ${earliest.getFullYear()}`;
-    return { months, sinceLabel };
-  }, [transactions, MONTH_LABELS]);
-
   // --- Cash Balance: runway in months (uses all-time data, not year-filtered) ---
   const totalAllTimeExpenses = allTimeSummary.totalOpex + allTimeSummary.totalVar + allTimeSummary.totalTax + allTimeSummary.totalInterest;
   const avgMonthlyExpense = (() => {
@@ -263,92 +284,110 @@ export default function DashboardPage() {
   return (
     <div className="p-8">
       {/* Global Year + Month Filter */}
-      <div className="w-full overflow-x-auto mb-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-      <div className="flex items-center gap-1.5 min-w-max">
-        <div className="flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 shadow-sm">
-          <button
-            onClick={() => {
-              userPickedYearRef.current = true;
-              setSelectedYear((y) => y - 1);
-            }}
-            disabled={selectedYear <= minYear}
-            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-          </button>
-          <span className="text-sm font-bold text-gray-800 dark:text-gray-200 min-w-[3rem] text-center">
-            {selectedYear}
-          </span>
-          <button
-            onClick={() => {
-              userPickedYearRef.current = true;
-              setSelectedYear((y) => y + 1);
-            }}
-            disabled={selectedYear >= maxYear}
-            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          >
-            <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-          </button>
+      <div className="flex items-center gap-3 mb-6">
+        <div className="flex-1 min-w-0 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="flex items-center gap-2 min-w-max">
+          {/* Year nav pill */}
+          <div className="inline-flex items-center gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 shadow-sm">
+            <button
+              onClick={() => {
+                userPickedYearRef.current = true;
+                setSelectedYear((y) => y - 1);
+              }}
+              disabled={selectedYear <= minYear}
+              aria-label="Previous year"
+              className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="px-2 text-sm font-bold text-gray-800 dark:text-gray-100 min-w-[3rem] text-center tabular-nums">
+              {selectedYear}
+            </span>
+            <button
+              onClick={() => {
+                userPickedYearRef.current = true;
+                setSelectedYear((y) => y + 1);
+              }}
+              disabled={selectedYear >= maxYear}
+              aria-label="Next year"
+              className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Month tabs pill */}
+          <div className="inline-flex items-center gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 shadow-sm">
+            <button
+              onClick={() => setSelectedMonth(null)}
+              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                selectedMonth === null
+                  ? 'bg-white dark:bg-gray-700 text-primary-500 dark:text-primary-400 font-bold shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 font-normal hover:text-gray-700 dark:hover:text-gray-200'
+              }`}
+            >
+              {t.dashboard.yearly}
+            </button>
+            {MONTH_LABELS.map((label, i) => (
+              <button
+                key={i}
+                onClick={() => setSelectedMonth(i)}
+                className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                  selectedMonth === i
+                    ? 'bg-white dark:bg-gray-700 text-primary-500 dark:text-primary-400 font-bold shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 font-normal hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
-        <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
-        <button
-          onClick={() => setSelectedMonth(null)}
-          className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
-            selectedMonth === null
-              ? 'bg-indigo-500 text-white shadow-sm'
-              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
-          }`}
-        >
-          {t.dashboard.yearly}
-        </button>
-        {MONTH_LABELS.map((label, i) => (
-          <button
-            key={i}
-            onClick={() => setSelectedMonth(i)}
-            className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
-              selectedMonth === i
-                ? 'bg-indigo-500 text-white shadow-sm'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+        </div>
+        <FxMiniWidget className="hidden xl:flex flex-shrink-0" />
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {/* Revenue */}
         <div
-          className="card cursor-pointer flex flex-col"
+          className="card cursor-pointer flex flex-col group"
           onClick={() => router.push('/transactions?category=EARN')}
         >
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t.dashboard.revenue}</div>
-            <TrendingUp className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-          </div>
-          <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 break-all">
-            {transactionsLoading ? '...' : formatCurrency(summary.totalEarn)}
-          </div>
-          <div className="flex items-center justify-between mt-2 min-h-[2.5rem]">
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              {transactionsLoading ? '...' : t.dashboard.transactionsIn.replace('{n}', String(categoryCounts.EARN))}
+          <div className="flex items-start justify-between mb-3">
+            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center">
+              <TrendingUp className="w-5 h-5" />
             </div>
             {!transactionsLoading && revenueGrowthData.growth !== null && (
-              <div className={`flex items-center gap-0.5 text-xs font-semibold ${revenueGrowthData.growth === 0 ? 'text-gray-500 dark:text-gray-400' : revenueGrowthData.growth > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+              <div className={`inline-flex items-center gap-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${revenueGrowthData.growth === 0 ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : revenueGrowthData.growth > 0 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'}`}>
                 <span>{revenueGrowthData.growth >= 0 ? '▲' : '▼'}</span>
-                <span>{Math.abs(revenueGrowthData.growth).toFixed(1)}% {revenueGrowthData.label}</span>
+                <span>{Math.abs(revenueGrowthData.growth).toFixed(1)}%</span>
               </div>
             )}
             {!transactionsLoading && revenueGrowthData.growth === null && revenueGrowthData.isNew && (
-              <div className="text-xs text-emerald-500 dark:text-emerald-400 font-semibold">{t.dashboard.noComparisonData}</div>
+              <div className="text-[11px] text-gray-500 dark:text-gray-400">
+                {t.dashboard.noComparisonData}
+              </div>
             )}
           </div>
+          <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.revenue}</div>
+          <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 break-all">
+            {transactionsLoading ? '...' : formatCurrency(summary.totalEarn)}
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {transactionsLoading ? '...' : t.dashboard.transactionsIn.replace('{n}', String(categoryCounts.EARN))}
+            {revenueGrowthData.label && <span className="text-gray-400 dark:text-gray-500"> · {revenueGrowthData.label}</span>}
+          </div>
+          {monthlySeries.revenue.some((v) => v > 0) && (
+            <div className="mt-3 text-emerald-500 dark:text-emerald-400">
+              <Sparkline data={monthlySeries.revenue} height={28} variant="area" />
+            </div>
+          )}
         </div>
 
+        {/* Profit / Loss */}
         <div
-          className="card cursor-pointer flex flex-col"
+          className="card cursor-pointer flex flex-col group"
           onClick={() => {
             const start = selectedMonth === null
               ? `${selectedYear}-01-01`
@@ -359,78 +398,114 @@ export default function DashboardPage() {
             router.push(`/income-statement?startDate=${start}&endDate=${end}&scrollTo=net-income`);
           }}
         >
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t.dashboard.profitLoss}</div>
-            <BarChart3 className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-          </div>
-          <div className={`text-xl md:text-2xl font-bold break-all ${summary.netProfit === 0 ? 'text-gray-500 dark:text-gray-400' : summary.netProfit > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
-            {transactionsLoading ? '...' : formatCurrency(summary.netProfit)}
-          </div>
-          <div className="flex items-center justify-between mt-2 min-h-[2.5rem]">
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              {transactionsLoading
-                ? '...'
-                : expenseRatio !== null
-                  ? t.dashboard.ofRevenueUsed.replace('{n}', expenseRatio.toFixed(1))
-                  : ''}
+          <div className="flex items-start justify-between mb-3">
+            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center">
+              <BarChart3 className="w-5 h-5" />
             </div>
             {!transactionsLoading && netMargin !== null && (
-              <div className={`text-xs font-semibold ${netMargin === 0 ? 'text-gray-500 dark:text-gray-400' : netMargin > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+              <div className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${netMargin === 0 ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : netMargin > 0 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'}`}>
                 {t.dashboard.margin.replace('{n}', netMargin.toFixed(1))}
               </div>
             )}
           </div>
+          <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.profitLoss}</div>
+          <div className={`text-xl md:text-2xl font-bold break-all ${summary.netProfit === 0 ? 'text-gray-500 dark:text-gray-400' : summary.netProfit > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+            {transactionsLoading ? '...' : formatCurrency(summary.netProfit)}
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {transactionsLoading
+              ? '...'
+              : expenseRatio !== null
+                ? t.dashboard.ofRevenueUsed.replace('{n}', expenseRatio.toFixed(1))
+                : '—'}
+          </div>
+          {monthlySeries.netProfit.some((v) => v !== 0) && (
+            <div className={`mt-3 ${summary.netProfit >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+              <Sparkline data={monthlySeries.netProfit} height={28} variant="bar" />
+            </div>
+          )}
         </div>
 
+        {/* ROI */}
         <div className="card flex flex-col">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t.dashboard.roi}</div>
-            <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-          </div>
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <div className={`text-xl md:text-2xl font-bold ${roi === 0 ? 'text-gray-500 dark:text-gray-400' : roi > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
-              {transactionsLoading ? '...' : formatPercentage(roi)}
+          <div className="flex items-start justify-between mb-3">
+            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center">
+              <Target className="w-5 h-5" />
             </div>
             {!transactionsLoading && investedCapital.remainingInvestedCapital > 0 && (
               <div
-                className={`text-xs font-semibold ${remainingCapitalRoi === 0 ? 'text-gray-500 dark:text-gray-400' : remainingCapitalRoi > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}
+                className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${remainingCapitalRoi === 0 ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : remainingCapitalRoi > 0 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'}`}
                 title="ROI atas modal yang masih tertanam"
               >
                 {t.dashboard.remainingCapitalRoi.replace('{n}', formatPercentage(remainingCapitalRoi))}
               </div>
             )}
           </div>
-          <div className="mt-2 min-h-[2.5rem] flex flex-col justify-center">
-            <div className="text-sm text-gray-500 dark:text-gray-400">{t.dashboard.allTime}</div>
+          <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.roi}</div>
+          <div className={`text-xl md:text-2xl font-bold ${roi === 0 ? 'text-gray-500 dark:text-gray-400' : roi > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+            {transactionsLoading ? '...' : formatPercentage(roi)}
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {t.dashboard.allTime}
             {roiPeriod && (
-              <div className="text-xs text-gray-400 dark:text-gray-500">
-                {t.dashboard.roiPeriodSince.replace('{date}', roiPeriod.sinceLabel)}
-                {' · '}
-                {t.dashboard.roiPeriodMonths.replace('{n}', String(roiPeriod.months))}
-              </div>
+              <span className="text-gray-400 dark:text-gray-500"> · {t.dashboard.roiPeriodMonths.replace('{n}', String(roiPeriod.months))}</span>
             )}
+          </div>
+          {/* Progress bar: clamp ke 30% target reference, sebelah kiri zero kalau negatif */}
+          <div className="mt-3 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden relative">
+            {!transactionsLoading && (() => {
+              const target = 30; // reference: 30% ROI sebagai full bar
+              const pct = Math.min(100, Math.abs(roi) / target * 100);
+              const isNeg = roi < 0;
+              return (
+                <div
+                  className={`h-full rounded-full ${isNeg ? 'bg-red-400 dark:bg-red-500' : roi === 0 ? 'bg-gray-300 dark:bg-gray-600' : 'bg-amber-400 dark:bg-amber-500'}`}
+                  style={{ width: `${pct}%` }}
+                />
+              );
+            })()}
           </div>
         </div>
 
+        {/* Cash Balance */}
         <div
           className="card cursor-pointer flex flex-col"
           onClick={() => router.push('/general-ledger?filterType=ASSET')}
         >
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t.dashboard.cashBalance}</div>
-            <Wallet className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+          <div className="flex items-start justify-between mb-3">
+            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center">
+              <Wallet className="w-5 h-5" />
+            </div>
+            {!transactionsLoading && cashRunwayMonths !== null && cashRunwayMonths > 0 && (
+              <div className="text-[11px] text-gray-500 dark:text-gray-400">
+                ~{cashRunwayMonths}mo runway
+              </div>
+            )}
           </div>
+          <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.cashBalance}</div>
           <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 break-all">
             {transactionsLoading ? '...' : formatCurrency(balanceSheet.assets.cash)}
           </div>
-          <div className="mt-2 min-h-[2.5rem] flex flex-col justify-center">
-            <div className="text-sm text-gray-500 dark:text-gray-400">{t.dashboard.cashAndBank}</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {t.dashboard.cashAndBank}
+            {cashVsRevenue !== null && (
+              <span className="text-gray-400 dark:text-gray-500"> · {cashVsRevenue.toFixed(0)}% rev</span>
+            )}
+          </div>
+          {/* Runway bar: 12 bulan = full */}
+          <div className="mt-3 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+            {!transactionsLoading && cashRunwayMonths !== null && cashRunwayMonths > 0 && (
+              <div
+                className={`h-full rounded-full ${cashRunwayMonths >= 6 ? 'bg-sky-400 dark:bg-sky-500' : cashRunwayMonths >= 3 ? 'bg-amber-400 dark:bg-amber-500' : 'bg-red-400 dark:bg-red-500'}`}
+                style={{ width: `${Math.min(100, (cashRunwayMonths / 12) * 100)}%` }}
+              />
+            )}
           </div>
         </div>
       </div>
 
       {/* Monitoring Chart + Expense Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         <div className="lg:col-span-2 flex flex-col">
           <MonitoringChart transactions={transactions} loading={transactionsLoading} selectedYear={selectedYear} />
         </div>
@@ -441,7 +516,7 @@ export default function DashboardPage() {
 
       {/* AR Tracker (Monitor Piutang) */}
       {transactions.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-8">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.arTrackerTitle}</h2>

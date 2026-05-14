@@ -2,17 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { TrendingUp } from 'lucide-react';
 import { StockNewsGrid } from '@/components/market/StockNewsGrid';
 import { ArticleSidebar } from '@/components/market/ArticleSidebar';
+import { FxMiniWidget } from '@/components/market/FxMiniWidget';
 import { DEFAULT_FRED_SERIES } from '@/lib/marketData/constants';
 import type {
-  FxRate,
   StockNews,
   FmpArticle,
   MacroSeries,
   MarketResult,
-  MarketCacheStatus,
 } from '@/lib/marketData/types';
 
 const MacroTrackerSection = dynamic(
@@ -21,8 +19,6 @@ const MacroTrackerSection = dynamic(
 );
 
 interface MarketState {
-  fx: FxRate | null;
-  fxStatus: MarketCacheStatus;
   news: StockNews[];
   articles: FmpArticle[];
   macro: MacroSeries | null;
@@ -31,8 +27,6 @@ interface MarketState {
 
 export default function MarketDashboardPage() {
   const [state, setState] = useState<MarketState>({
-    fx: null,
-    fxStatus: 'ok',
     news: [],
     articles: [],
     macro: null,
@@ -43,8 +37,7 @@ export default function MarketDashboardPage() {
     let cancelled = false;
     async function load() {
       try {
-        const [fxRes, newsRes, articlesRes, macroRes] = await Promise.all([
-          fetch('/api/market/fx').then((r) => r.json() as Promise<MarketResult<FxRate | null>>),
+        const [newsRes, articlesRes, macroRes] = await Promise.all([
           fetch('/api/market/news?type=stock').then((r) => r.json() as Promise<MarketResult<StockNews[]>>),
           fetch('/api/market/news?type=articles').then((r) => r.json() as Promise<MarketResult<FmpArticle[]>>),
           fetch(`/api/market/macro?series=${DEFAULT_FRED_SERIES}`).then(
@@ -53,8 +46,6 @@ export default function MarketDashboardPage() {
         ]);
         if (cancelled) return;
         setState({
-          fx: fxRes.data,
-          fxStatus: fxRes.status,
           news: newsRes.data,
           articles: articlesRes.data,
           macro: macroRes.data,
@@ -69,10 +60,6 @@ export default function MarketDashboardPage() {
       cancelled = true;
     };
   }, []);
-
-  const fxRate = state.fx
-    ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(state.fx.rate)
-    : null;
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl">
@@ -90,26 +77,7 @@ export default function MarketDashboardPage() {
           </p>
         </div>
 
-        {/* FX mini widget — skeleton dan widget pakai w-40 yang sama agar tidak ada CLS */}
-        <div className="flex-shrink-0 mt-1 w-40">
-          {state.loading ? (
-            <div className="w-full h-[52px] rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
-          ) : fxRate ? (
-            <div className="flex items-center gap-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 shadow-sm">
-              <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-900/40 flex items-center justify-center flex-shrink-0">
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider leading-none mb-0.5">
-                  USD / IDR
-                </p>
-                <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-none">
-                  {fxRate}
-                </p>
-              </div>
-            </div>
-          ) : null}
-        </div>
+        <FxMiniWidget className="flex-shrink-0 mt-1" />
       </header>
 
       {/* Macro Tracker (lebih lebar) + VC PE UMKM Insights — grid 5 kolom */}
