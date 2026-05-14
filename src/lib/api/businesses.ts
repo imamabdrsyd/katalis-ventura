@@ -384,12 +384,11 @@ export async function getAvailableBusinesses(userId: string): Promise<Business[]
 
   const joinedBusinessIds = userRoles?.map((r) => r.business_id) || [];
 
-  // Get all active public businesses
+  // Get all active businesses (is_public is for omnichannel widget, not for join access)
   let query = supabase
     .from('businesses')
     .select('*')
     .eq('is_archived', false)
-    .eq('is_public', true)
     .order('business_name', { ascending: true });
 
   // Filter out businesses user already joined
