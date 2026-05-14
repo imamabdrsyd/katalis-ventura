@@ -513,7 +513,7 @@ export default function DashboardPage() {
                 const isNeg = roi < 0;
                 return (
                   <div
-                    className={`h-full rounded-full ${isNeg ? 'bg-red-400 dark:bg-red-500' : roi === 0 ? 'bg-gray-300 dark:bg-gray-600' : 'bg-amber-400 dark:bg-amber-500'}`}
+                    className={`h-full rounded-full ${isNeg ? 'bg-red-400 dark:bg-red-500' : roi === 0 ? 'bg-gray-300 dark:bg-gray-600' : 'bg-primary-500 dark:bg-primary-400'}`}
                     style={{ width: `${pct}%` }}
                   />
                 );
