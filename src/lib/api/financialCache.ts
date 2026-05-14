@@ -5,6 +5,7 @@ import type {
   BalanceSheetData,
   CashFlowData,
 } from '@/types';
+import type { InvestedCapitalMetrics } from '@/lib/calculations';
 
 // ============================================
 // Types
@@ -47,6 +48,7 @@ export interface DashboardPayload {
   summary: FinancialSummary;
   balanceSheet: BalanceSheetData;
   capital: number;
+  investedCapital?: InvestedCapitalMetrics;
 }
 
 // ============================================

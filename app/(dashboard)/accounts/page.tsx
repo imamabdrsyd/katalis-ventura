@@ -9,7 +9,7 @@ import type { AccountTreeNode } from '@/lib/api/accounts';
 import { isManagerRole } from '@/lib/roles';
 import { AccountForm, type AccountFormData } from '@/components/accounts/AccountForm';
 import { AccountDeleteModal } from '@/components/accounts/AccountDeleteModal';
-import { Plus, Search, ChevronDown, ChevronRight, Lock, CheckCircle2, BookOpen as BookOpenIcon, MoreVertical, BookMarked, Building2 } from 'lucide-react';
+import { Plus, Search, ChevronDown, ChevronRight, Lock, CheckCircle2, BookOpen as BookOpenIcon, MoreVertical, BookMarked, Building2, BadgeDollarSign } from 'lucide-react';
 
 
 export default function AccountsPage() {
@@ -118,6 +118,7 @@ export default function AccountsPage() {
         is_active: true,
         is_system: false,
         is_retained_earnings: false,
+        is_stock: data.account_type === 'EQUITY' && (data.is_stock ?? false),
         is_dividend: data.is_dividend ?? false,
         is_dividend_payable: false,
         is_cash_equivalent: data.account_type === 'ASSET' && (data.is_cash_equivalent ?? false),
@@ -162,7 +163,8 @@ export default function AccountsPage() {
         default_category: editAccount.is_system
           ? editAccount.default_category
           : data.default_category,
-        is_dividend: data.is_dividend ?? false,
+        is_stock: data.account_type === 'EQUITY' && (data.is_stock ?? false),
+        is_dividend: data.account_type === 'EQUITY' && (data.is_dividend ?? false),
         is_cash_equivalent: editAccount.is_system
           ? editAccount.is_cash_equivalent
           : data.account_type === 'ASSET' && (data.is_cash_equivalent ?? false),
@@ -568,6 +570,12 @@ function SubAccountRow({
         <span className="text-sm text-gray-900 dark:text-gray-100">
           {account.account_name}
         </span>
+        {account.is_stock && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded bg-emerald-50 dark:bg-emerald-900/30 text-gray-500 dark:text-gray-400">
+            <BadgeDollarSign className="w-3 h-3 text-gray-400 dark:text-gray-500" />
+            Stock
+          </span>
+        )}
         {account.is_retained_earnings && (
           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded bg-indigo-50 dark:bg-indigo-900/30 text-gray-500 dark:text-gray-400">
             <BookMarked className="w-3 h-3 text-gray-400 dark:text-gray-500" />

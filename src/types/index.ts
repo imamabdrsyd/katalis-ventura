@@ -73,6 +73,7 @@ export interface Account {
   is_active: boolean;
   is_system: boolean;
   is_retained_earnings: boolean;
+  is_stock: boolean;             // EQUITY: tandai akun modal disetor pemilik/investor
   is_dividend: boolean;          // EQUITY: tandai akun Dividen / Prive / Drawing
   is_dividend_payable: boolean;  // LIABILITY: tandai akun Hutang Dividen
   is_cash_equivalent: boolean;   // ASSET: tandai akun sebagai Kas/Setara Kas (Cash Flow basis)

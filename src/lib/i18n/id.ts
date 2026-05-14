@@ -124,6 +124,8 @@ export const id: Translations = {
     cashBalance: 'Saldo Kas',
     cashAndBank: 'Kas & Bank',
     yearToDate: 'Sejak awal tahun',
+    allTime: 'Semua waktu',
+    remainingCapitalRoi: 'Tertanam {n}',
     transactionsIn: '{n} transaksi masuk',
     ofRevenueUsed: '{n}% dari pendapatan terpakai',
     margin: 'Margin {n}%',

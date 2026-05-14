@@ -44,6 +44,7 @@ export default function DashboardPage() {
     transactionsLoading,
     balanceSheet,
     summary: allTimeSummary,
+    investedCapital,
   } = useDashboard();
 
   const router = useRouter();
@@ -207,16 +208,13 @@ export default function DashboardPage() {
       ? (totalExpenses / summary.totalEarn) * 100
       : null;
 
-  // --- ROI: all-time Net Profit / all-time CAPEX ---
-  const roi = allTimeSummary.totalCapex > 0
-    ? (allTimeSummary.netProfit / allTimeSummary.totalCapex) * 100
+  // --- ROI: all-time Net Profit / invested capital ---
+  const roi = investedCapital.grossInvestedCapital > 0
+    ? (allTimeSummary.netProfit / investedCapital.grossInvestedCapital) * 100
     : 0;
-  const roiLabel =
-    allTimeSummary.totalCapex === 0
-      ? ''
-      : '';
-  const roiLabelColor =
-    roi === 0 ? 'text-gray-500 dark:text-gray-400' : roi > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400';
+  const remainingCapitalRoi = investedCapital.remainingInvestedCapital > 0
+    ? (allTimeSummary.netProfit / investedCapital.remainingInvestedCapital) * 100
+    : 0;
 
   // --- Cash Balance: runway in months (uses all-time data, not year-filtered) ---
   const totalAllTimeExpenses = allTimeSummary.totalOpex + allTimeSummary.totalVar + allTimeSummary.totalTax + allTimeSummary.totalInterest;
@@ -371,11 +369,21 @@ export default function DashboardPage() {
             <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t.dashboard.roi}</div>
             <Target className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           </div>
-          <div className={`text-xl md:text-2xl font-bold ${roi === 0 ? 'text-gray-500 dark:text-gray-400' : roi > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
-            {transactionsLoading ? '...' : formatPercentage(roi)}
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <div className={`text-xl md:text-2xl font-bold ${roi === 0 ? 'text-gray-500 dark:text-gray-400' : roi > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+              {transactionsLoading ? '...' : formatPercentage(roi)}
+            </div>
+            {!transactionsLoading && investedCapital.remainingInvestedCapital > 0 && (
+              <div
+                className={`text-xs font-semibold ${remainingCapitalRoi === 0 ? 'text-gray-500 dark:text-gray-400' : remainingCapitalRoi > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}
+                title="ROI atas modal yang masih tertanam"
+              >
+                {t.dashboard.remainingCapitalRoi.replace('{n}', formatPercentage(remainingCapitalRoi))}
+              </div>
+            )}
           </div>
           <div className="mt-2 min-h-[2.5rem] flex flex-col justify-center">
-            <div className="text-sm text-gray-500 dark:text-gray-400">{t.dashboard.yearToDate}</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">{t.dashboard.allTime}</div>
           </div>
         </div>
 

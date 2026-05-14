@@ -15,6 +15,7 @@ export interface AccountFormData {
   sort_order: number;
   default_category?: TransactionCategory;
   is_retained_earnings?: boolean;
+  is_stock?: boolean;             // EQUITY: tandai akun modal disetor pemilik/investor
   is_dividend?: boolean;          // EQUITY: tandai akun Dividen / Prive
   is_dividend_payable?: boolean;  // LIABILITY: tandai akun Hutang Dividen
   is_cash_equivalent?: boolean;   // ASSET: tandai akun sebagai Kas / Setara Kas
@@ -63,6 +64,7 @@ export function AccountForm({
     sort_order: account?.sort_order || 0,
     default_category: account?.default_category,
     is_retained_earnings: account?.is_retained_earnings ?? false,
+    is_stock: account?.is_stock ?? false,
     is_dividend: account?.is_dividend ?? false,
     is_dividend_payable: account?.is_dividend_payable ?? false,
     is_cash_equivalent: account?.is_cash_equivalent ?? false,
@@ -534,6 +536,47 @@ export function AccountForm({
         </div>
       )}
 
+      {/* Stock / Owner Capital designation — hanya untuk EQUITY accounts */}
+      {formData.account_type === 'EQUITY' && !formData.is_retained_earnings && !formData.is_dividend && (
+        <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700/50">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                Akun Stock / Modal Pemilik
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Tandai akun ini sebagai modal disetor pemilik/investor. Kredit ke akun ini masuk gross invested capital untuk ROI dashboard.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={formData.is_stock}
+              onClick={() =>
+                setFormData(prev => ({
+                  ...prev,
+                  is_stock: !prev.is_stock,
+                  is_retained_earnings: false,
+                  is_dividend: false,
+                }))
+              }
+              disabled={loading}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+                formData.is_stock
+                  ? 'bg-indigo-600 dark:bg-indigo-500'
+                  : 'bg-gray-200 dark:bg-gray-600'
+              } disabled:opacity-50`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                  formData.is_stock ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Retained Earnings designation — hanya untuk EQUITY accounts */}
       {formData.account_type === 'EQUITY' && (
         <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700/50">
@@ -551,7 +594,12 @@ export function AccountForm({
               role="switch"
               aria-checked={formData.is_retained_earnings}
               onClick={() =>
-                setFormData(prev => ({ ...prev, is_retained_earnings: !prev.is_retained_earnings }))
+                setFormData(prev => ({
+                  ...prev,
+                  is_retained_earnings: !prev.is_retained_earnings,
+                  is_stock: false,
+                  is_dividend: false,
+                }))
               }
               disabled={loading}
               className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
@@ -621,7 +669,7 @@ export function AccountForm({
       )}
 
       {/* Dividen / Prive designation — hanya untuk EQUITY accounts */}
-      {formData.account_type === 'EQUITY' && !formData.is_retained_earnings && (
+      {formData.account_type === 'EQUITY' && !formData.is_retained_earnings && !formData.is_stock && (
         <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700/50">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
@@ -637,7 +685,11 @@ export function AccountForm({
               role="switch"
               aria-checked={formData.is_dividend}
               onClick={() =>
-                setFormData(prev => ({ ...prev, is_dividend: !prev.is_dividend }))
+                setFormData(prev => ({
+                  ...prev,
+                  is_dividend: !prev.is_dividend,
+                  is_stock: false,
+                }))
               }
               disabled={loading}
               className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${

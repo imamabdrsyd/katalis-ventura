@@ -124,6 +124,8 @@ export const en: Translations = {
     cashBalance: 'Cash Balance',
     cashAndBank: 'Cash & Bank',
     yearToDate: 'Year to date',
+    allTime: 'All-time',
+    remainingCapitalRoi: 'Remaining {n}',
     transactionsIn: '{n} incoming transactions',
     ofRevenueUsed: '{n}% of revenue used',
     margin: 'Margin {n}%',

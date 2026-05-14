@@ -264,6 +264,107 @@ export function calculateFinancialSummary(
   return summary;
 }
 
+export interface InvestedCapitalMetrics {
+  grossInvestedCapital: number;
+  remainingInvestedCapital: number;
+  capitalInjections: number;
+  ownerWithdrawals: number;
+}
+
+function isStockAccount(account?: Account | null): boolean {
+  return account?.account_type === 'EQUITY' && account.is_stock === true;
+}
+
+function isOwnerWithdrawalAccount(account?: Account | null): boolean {
+  return account?.account_type === 'EQUITY' && (account.is_stock === true || account.is_dividend === true);
+}
+
+function looksLikeInitialCapitalTransaction(t: Transaction): boolean {
+  const text = `${t.name ?? ''} ${t.description ?? ''} ${t.notes ?? ''}`.toLowerCase();
+  return (
+    text.includes('modal investasi awal') ||
+    text.includes('modal awal') ||
+    text.includes('owner capital') ||
+    text.includes("owner's capital")
+  );
+}
+
+/**
+ * Calculate owner/investor capital used by ROI.
+ *
+ * Gross invested capital = all credits to EQUITY accounts marked is_stock.
+ * Remaining invested capital = gross stock injections minus owner withdrawals
+ * from stock/dividend equity accounts.
+ *
+ * Legacy/setup fallback: add businesses.capital_investment unless the same
+ * initial capital already exists as a posted stock transaction.
+ */
+export function calculateInvestedCapital(
+  transactions: Transaction[],
+  fallbackCapital: number = 0
+): InvestedCapitalMetrics {
+  let capitalInjections = 0;
+  let ownerWithdrawals = 0;
+  let hasFallbackCapitalTransaction = false;
+  const normalizedFallbackCapital = Math.max(0, Number(fallbackCapital) || 0);
+
+  for (const t of transactions) {
+    if (t.deleted_at) continue;
+
+    if (t.is_multi_line && t.journal_lines && t.journal_lines.length > 0) {
+      let transactionStockCredit = 0;
+      for (const line of t.journal_lines) {
+        const acc = line.account;
+        if (isStockAccount(acc)) {
+          const credit = Number(line.credit_amount || 0);
+          transactionStockCredit += credit;
+          capitalInjections += credit;
+        }
+        if (isOwnerWithdrawalAccount(acc)) {
+          ownerWithdrawals += Number(line.debit_amount || 0);
+        }
+      }
+      if (
+        normalizedFallbackCapital > 0 &&
+        looksLikeInitialCapitalTransaction(t) &&
+        Math.abs(transactionStockCredit - normalizedFallbackCapital) < 0.01
+      ) {
+        hasFallbackCapitalTransaction = true;
+      }
+      continue;
+    }
+
+    const amount = Number(t.amount);
+    if (isStockAccount(t.credit_account)) {
+      capitalInjections += amount;
+      if (
+        normalizedFallbackCapital > 0 &&
+        looksLikeInitialCapitalTransaction(t) &&
+        Math.abs(amount - normalizedFallbackCapital) < 0.01
+      ) {
+        hasFallbackCapitalTransaction = true;
+      }
+    }
+    if (isOwnerWithdrawalAccount(t.debit_account)) {
+      ownerWithdrawals += amount;
+    }
+  }
+
+  const fallbackContribution =
+    normalizedFallbackCapital > 0 && !hasFallbackCapitalTransaction
+      ? normalizedFallbackCapital
+      : 0;
+  const grossInvestedCapital = capitalInjections + fallbackContribution;
+  const remainingInvestedCapital = Math.max(0, grossInvestedCapital - ownerWithdrawals);
+
+  return {
+    grossInvestedCapital,
+    remainingInvestedCapital,
+    capitalInjections,
+    ownerWithdrawals,
+  };
+}
+
 /**
  * Extract income statement line items grouped by account.
  * Handles both simple double-entry and multi-line journal entries.

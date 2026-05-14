@@ -129,6 +129,8 @@ export interface Translations {
     cashBalance: string;
     cashAndBank: string;
     yearToDate: string;
+    allTime: string;
+    remainingCapitalRoi: string;
     transactionsIn: string;
     ofRevenueUsed: string;
     margin: string;

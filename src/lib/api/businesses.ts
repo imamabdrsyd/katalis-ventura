@@ -41,6 +41,7 @@ async function ensureAccountExists(
     sort_order: number;
     description: string;
     default_category?: string;
+    is_stock?: boolean;
   }
 ) {
   let account = await getAccountByCode(businessId, code);
@@ -64,6 +65,7 @@ async function ensureAccountExists(
       sort_order: defaults.sort_order,
       description: defaults.description,
       default_category: defaults.default_category ?? null,
+      is_stock: defaults.account_type === 'EQUITY' && (defaults.is_stock ?? false),
     })
     .select()
     .single();
@@ -98,6 +100,7 @@ async function createCapitalInvestmentTransaction(
     sort_order: 3100,
     description: 'Modal pemilik',
     default_category: 'FIN',
+    is_stock: true,
   });
   if (!capitalAccount) {
     throw new Error("Owner's Capital account (3100) could not be found or created.");
@@ -117,6 +120,7 @@ async function createCapitalInvestmentTransaction(
     debit_account_id: cashAccount.id, // Debit Cash (Asset increases)
     credit_account_id: capitalAccount.id, // Credit Owner's Capital (Capital increases)
     is_double_entry: true,
+    status: 'posted',
     notes: 'Transaksi modal investasi awal dibuat otomatis saat pembuatan bisnis',
   });
 }
@@ -284,6 +288,7 @@ export async function createBusiness(
       sort_order: 3100,
       description: 'Modal pemilik',
       default_category: 'FIN',
+      is_stock: true,
     });
   } catch (err) {
     console.warn('Failed to ensure account 3100:', err);

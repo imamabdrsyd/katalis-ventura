@@ -4,7 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { isManagerRole } from '@/lib/roles';
-import { calculateFinancialSummary, calculateBalanceSheet } from '@/lib/calculations';
+import { calculateFinancialSummary, calculateBalanceSheet, calculateInvestedCapital } from '@/lib/calculations';
 import * as transactionsApi from '@/lib/api/transactions';
 import { generateDueRecurringTransactions } from '@/lib/api/recurring';
 import {
@@ -69,10 +69,11 @@ export function useDashboard() {
   // runway calc & ROI all-time. Numbers per year/month dihitung di page
   // dari `transactions` yang sudah ter-load.
   const capital = business?.capital_investment ?? 0;
-  const { summary, balanceSheet } = useMemo(
+  const { summary, balanceSheet, investedCapital } = useMemo(
     () => ({
       summary: calculateFinancialSummary(transactions),
       balanceSheet: calculateBalanceSheet(transactions, capital),
+      investedCapital: calculateInvestedCapital(transactions, capital),
     }),
     [transactions, capital]
   );
@@ -91,6 +92,7 @@ export function useDashboard() {
       summary,
       balanceSheet,
       capital,
+      investedCapital,
     };
 
     upsertFinancialCache({
@@ -111,6 +113,9 @@ export function useDashboard() {
   const effectiveBalanceSheet = transactionsLoading && dashboardCache?.payload
     ? dashboardCache.payload.balanceSheet
     : balanceSheet;
+  const effectiveInvestedCapital = transactionsLoading && dashboardCache?.payload?.investedCapital
+    ? dashboardCache.payload.investedCapital
+    : investedCapital;
 
   return {
     business,
@@ -122,6 +127,7 @@ export function useDashboard() {
     transactionsLoading,
     summary: effectiveSummary,
     balanceSheet: effectiveBalanceSheet,
+    investedCapital: effectiveInvestedCapital,
     // Indikator "data dari cache" untuk UI (misalnya menampilkan "cached X menit lalu")
     isHydratedFromCache: transactionsLoading && !!dashboardCache?.payload,
     cacheComputedAt: dashboardCache?.computed_at ?? null,
