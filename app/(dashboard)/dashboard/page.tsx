@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet, ClipboardList, HandCoins, ArrowRight } from 'lucide-react';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useLanguage } from '@/context/LanguageContext';
@@ -10,6 +11,7 @@ import { calculateFinancialSummary, calculateCategoryCounts, calculateIncomeStat
 import { formatCurrency, formatPercentage, formatDateShort } from '@/lib/utils';
 import { CategoryBadge } from '@/components/ui/CategoryBadge';
 import { Sparkline } from '@/components/ui/Sparkline';
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { FxMiniWidget } from '@/components/market/FxMiniWidget';
 import { isTradeReceivableTransaction, isSettled, isSettlementEntry, getOutstandingAmount } from '@/lib/accounting/guidance/receivableSettlement';
 
@@ -21,6 +23,28 @@ const ExpenseBreakdownChart = dynamic(() => import('@/components/charts/ExpenseB
   loading: () => <div className="animate-pulse h-80 bg-gray-200 dark:bg-gray-700 rounded-lg" />,
 });
 
+const DASHBOARD_ITEM_VARIANTS: Variants = {
+  hidden: { opacity: 0, y: 14, scale: 0.985 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+  },
+};
+
+const DASHBOARD_STAGGER_VARIANTS: Variants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.05,
+    },
+  },
+};
+
+const formatAnimatedCurrency = (value: number) => formatCurrency(value);
+const formatAnimatedPercentage = (value: number) => formatPercentage(value);
 
 function formatRelativeTime(createdAt: string, txDate: string): string {
   const now = new Date();
@@ -51,11 +75,13 @@ export default function DashboardPage() {
 
   const router = useRouter();
   const { t } = useLanguage();
+  const shouldReduceMotion = useReducedMotion();
 
   // --- Global year + month filter ---
   const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null); // null = Yearly, 0-11 = specific month
   const userPickedYearRef = useRef(false);
+  const dashboardAnimationKey = `${selectedYear}-${selectedMonth ?? 'year'}-${transactionsLoading ? 'loading' : 'ready'}`;
 
   const MONTH_LABELS = t.dashboard.months;
 
@@ -348,171 +374,213 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <motion.div
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
+        initial={shouldReduceMotion ? false : 'hidden'}
+        animate={shouldReduceMotion ? undefined : 'visible'}
+        variants={shouldReduceMotion ? undefined : DASHBOARD_STAGGER_VARIANTS}
+      >
         {/* Revenue */}
-        <div
-          className="card cursor-pointer flex flex-col group"
-          onClick={() => router.push('/transactions?category=EARN')}
-        >
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5" />
+        <motion.div variants={shouldReduceMotion ? undefined : DASHBOARD_ITEM_VARIANTS}>
+          <div
+            className="card cursor-pointer flex flex-col group"
+            onClick={() => router.push('/transactions?category=EARN')}
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              {!transactionsLoading && revenueGrowthData.growth !== null && (
+                <div className={`inline-flex items-center gap-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${revenueGrowthData.growth === 0 ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : revenueGrowthData.growth > 0 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'}`}>
+                  <span>{revenueGrowthData.growth >= 0 ? '▲' : '▼'}</span>
+                  <span>{Math.abs(revenueGrowthData.growth).toFixed(1)}%</span>
+                </div>
+              )}
+              {!transactionsLoading && revenueGrowthData.growth === null && revenueGrowthData.isNew && (
+                <div className="text-[11px] text-gray-500 dark:text-gray-400">
+                  {t.dashboard.noComparisonData}
+                </div>
+              )}
             </div>
-            {!transactionsLoading && revenueGrowthData.growth !== null && (
-              <div className={`inline-flex items-center gap-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${revenueGrowthData.growth === 0 ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : revenueGrowthData.growth > 0 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'}`}>
-                <span>{revenueGrowthData.growth >= 0 ? '▲' : '▼'}</span>
-                <span>{Math.abs(revenueGrowthData.growth).toFixed(1)}%</span>
+            <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.revenue}</div>
+            <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 break-all">
+              {transactionsLoading ? '...' : (
+                <AnimatedNumber
+                  value={summary.totalEarn}
+                  formatter={formatAnimatedCurrency}
+                  replayKey={dashboardAnimationKey}
+                />
+              )}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {transactionsLoading ? '...' : t.dashboard.transactionsIn.replace('{n}', String(categoryCounts.EARN))}
+              {revenueGrowthData.label && <span className="text-gray-400 dark:text-gray-500"> · {revenueGrowthData.label}</span>}
+            </div>
+            {monthlySeries.revenue.some((v) => v > 0) && (
+              <div className="mt-3 text-emerald-500 dark:text-emerald-400">
+                <Sparkline data={monthlySeries.revenue} height={28} variant="area" />
               </div>
             )}
-            {!transactionsLoading && revenueGrowthData.growth === null && revenueGrowthData.isNew && (
-              <div className="text-[11px] text-gray-500 dark:text-gray-400">
-                {t.dashboard.noComparisonData}
-              </div>
-            )}
           </div>
-          <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.revenue}</div>
-          <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 break-all">
-            {transactionsLoading ? '...' : formatCurrency(summary.totalEarn)}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            {transactionsLoading ? '...' : t.dashboard.transactionsIn.replace('{n}', String(categoryCounts.EARN))}
-            {revenueGrowthData.label && <span className="text-gray-400 dark:text-gray-500"> · {revenueGrowthData.label}</span>}
-          </div>
-          {monthlySeries.revenue.some((v) => v > 0) && (
-            <div className="mt-3 text-emerald-500 dark:text-emerald-400">
-              <Sparkline data={monthlySeries.revenue} height={28} variant="area" />
-            </div>
-          )}
-        </div>
+        </motion.div>
 
         {/* Profit / Loss */}
-        <div
-          className="card cursor-pointer flex flex-col group"
-          onClick={() => {
-            const start = selectedMonth === null
-              ? `${selectedYear}-01-01`
-              : `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-01`;
-            const end = selectedMonth === null
-              ? `${selectedYear}-12-31`
-              : new Date(selectedYear, selectedMonth + 1, 0).toISOString().split('T')[0];
-            router.push(`/income-statement?startDate=${start}&endDate=${end}&scrollTo=net-income`);
-          }}
-        >
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center">
-              <BarChart3 className="w-5 h-5" />
+        <motion.div variants={shouldReduceMotion ? undefined : DASHBOARD_ITEM_VARIANTS}>
+          <div
+            className="card cursor-pointer flex flex-col group"
+            onClick={() => {
+              const start = selectedMonth === null
+                ? `${selectedYear}-01-01`
+                : `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-01`;
+              const end = selectedMonth === null
+                ? `${selectedYear}-12-31`
+                : new Date(selectedYear, selectedMonth + 1, 0).toISOString().split('T')[0];
+              router.push(`/income-statement?startDate=${start}&endDate=${end}&scrollTo=net-income`);
+            }}
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center">
+                <BarChart3 className="w-5 h-5" />
+              </div>
+              {!transactionsLoading && netMargin !== null && (
+                <div className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${netMargin === 0 ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : netMargin > 0 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'}`}>
+                  {t.dashboard.margin.replace('{n}', netMargin.toFixed(1))}
+                </div>
+              )}
             </div>
-            {!transactionsLoading && netMargin !== null && (
-              <div className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${netMargin === 0 ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : netMargin > 0 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'}`}>
-                {t.dashboard.margin.replace('{n}', netMargin.toFixed(1))}
+            <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.profitLoss}</div>
+            <div className={`text-xl md:text-2xl font-bold break-all ${summary.netProfit === 0 ? 'text-gray-500 dark:text-gray-400' : summary.netProfit > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+              {transactionsLoading ? '...' : (
+                <AnimatedNumber
+                  value={summary.netProfit}
+                  formatter={formatAnimatedCurrency}
+                  replayKey={dashboardAnimationKey}
+                />
+              )}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {transactionsLoading
+                ? '...'
+                : expenseRatio !== null
+                  ? t.dashboard.ofRevenueUsed.replace('{n}', expenseRatio.toFixed(1))
+                  : '—'}
+            </div>
+            {monthlySeries.netProfit.some((v) => v !== 0) && (
+              <div className={`mt-3 ${summary.netProfit >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+                <Sparkline data={monthlySeries.netProfit} height={28} variant="bar" />
               </div>
             )}
           </div>
-          <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.profitLoss}</div>
-          <div className={`text-xl md:text-2xl font-bold break-all ${summary.netProfit === 0 ? 'text-gray-500 dark:text-gray-400' : summary.netProfit > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
-            {transactionsLoading ? '...' : formatCurrency(summary.netProfit)}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            {transactionsLoading
-              ? '...'
-              : expenseRatio !== null
-                ? t.dashboard.ofRevenueUsed.replace('{n}', expenseRatio.toFixed(1))
-                : '—'}
-          </div>
-          {monthlySeries.netProfit.some((v) => v !== 0) && (
-            <div className={`mt-3 ${summary.netProfit >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
-              <Sparkline data={monthlySeries.netProfit} height={28} variant="bar" />
-            </div>
-          )}
-        </div>
+        </motion.div>
 
         {/* ROI */}
-        <div className="card flex flex-col">
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center">
-              <Target className="w-5 h-5" />
-            </div>
-            {!transactionsLoading && investedCapital.remainingInvestedCapital > 0 && (
-              <div
-                className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${remainingCapitalRoi === 0 ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : remainingCapitalRoi > 0 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'}`}
-                title="ROI atas modal yang masih tertanam"
-              >
-                {t.dashboard.remainingCapitalRoi.replace('{n}', formatPercentage(remainingCapitalRoi))}
+        <motion.div variants={shouldReduceMotion ? undefined : DASHBOARD_ITEM_VARIANTS}>
+          <div className="card flex flex-col">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center">
+                <Target className="w-5 h-5" />
               </div>
-            )}
-          </div>
-          <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.roi}</div>
-          <div className={`text-xl md:text-2xl font-bold ${roi === 0 ? 'text-gray-500 dark:text-gray-400' : roi > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
-            {transactionsLoading ? '...' : formatPercentage(roi)}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            {t.dashboard.allTime}
-            {roiPeriod && (
-              <span className="text-gray-400 dark:text-gray-500"> · {t.dashboard.roiPeriodMonths.replace('{n}', String(roiPeriod.months))}</span>
-            )}
-          </div>
-          {/* Progress bar: clamp ke 30% target reference, sebelah kiri zero kalau negatif */}
-          <div className="mt-3 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden relative">
-            {!transactionsLoading && (() => {
-              const target = 30; // reference: 30% ROI sebagai full bar
-              const pct = Math.min(100, Math.abs(roi) / target * 100);
-              const isNeg = roi < 0;
-              return (
+              {!transactionsLoading && investedCapital.remainingInvestedCapital > 0 && (
                 <div
-                  className={`h-full rounded-full ${isNeg ? 'bg-red-400 dark:bg-red-500' : roi === 0 ? 'bg-gray-300 dark:bg-gray-600' : 'bg-amber-400 dark:bg-amber-500'}`}
-                  style={{ width: `${pct}%` }}
+                  className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${remainingCapitalRoi === 0 ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : remainingCapitalRoi > 0 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'}`}
+                  title="ROI atas modal yang masih tertanam"
+                >
+                  {t.dashboard.remainingCapitalRoi.replace('{n}', formatPercentage(remainingCapitalRoi))}
+                </div>
+              )}
+            </div>
+            <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.roi}</div>
+            <div className={`text-xl md:text-2xl font-bold ${roi === 0 ? 'text-gray-500 dark:text-gray-400' : roi > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+              {transactionsLoading ? '...' : (
+                <AnimatedNumber
+                  value={roi}
+                  formatter={formatAnimatedPercentage}
+                  replayKey={dashboardAnimationKey}
                 />
-              );
-            })()}
+              )}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {t.dashboard.allTime}
+              {roiPeriod && (
+                <span className="text-gray-400 dark:text-gray-500"> · {t.dashboard.roiPeriodMonths.replace('{n}', String(roiPeriod.months))}</span>
+              )}
+            </div>
+            {/* Progress bar: clamp ke 30% target reference, sebelah kiri zero kalau negatif */}
+            <div className="mt-3 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden relative">
+              {!transactionsLoading && (() => {
+                const target = 30; // reference: 30% ROI sebagai full bar
+                const pct = Math.min(100, Math.abs(roi) / target * 100);
+                const isNeg = roi < 0;
+                return (
+                  <div
+                    className={`h-full rounded-full ${isNeg ? 'bg-red-400 dark:bg-red-500' : roi === 0 ? 'bg-gray-300 dark:bg-gray-600' : 'bg-amber-400 dark:bg-amber-500'}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                );
+              })()}
+            </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Cash Balance */}
-        <div
-          className="card cursor-pointer flex flex-col"
-          onClick={() => router.push('/general-ledger?filterType=ASSET')}
-        >
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center">
-              <Wallet className="w-5 h-5" />
-            </div>
-            {!transactionsLoading && cashRunwayMonths !== null && cashRunwayMonths > 0 && (
-              <div className="text-[11px] text-gray-500 dark:text-gray-400">
-                ~{cashRunwayMonths}mo runway
+        <motion.div variants={shouldReduceMotion ? undefined : DASHBOARD_ITEM_VARIANTS}>
+          <div
+            className="card cursor-pointer flex flex-col"
+            onClick={() => router.push('/general-ledger?filterType=ASSET')}
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center">
+                <Wallet className="w-5 h-5" />
               </div>
-            )}
+              {!transactionsLoading && cashRunwayMonths !== null && cashRunwayMonths > 0 && (
+                <div className="text-[11px] text-gray-500 dark:text-gray-400">
+                  ~{cashRunwayMonths}mo runway
+                </div>
+              )}
+            </div>
+            <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.cashBalance}</div>
+            <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 break-all">
+              {transactionsLoading ? '...' : (
+                <AnimatedNumber
+                  value={balanceSheet.assets.cash}
+                  formatter={formatAnimatedCurrency}
+                  replayKey={dashboardAnimationKey}
+                />
+              )}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {t.dashboard.cashAndBank}
+              {cashVsRevenue !== null && (
+                <span className="text-gray-400 dark:text-gray-500"> · {cashVsRevenue.toFixed(0)}% rev</span>
+              )}
+            </div>
+            {/* Runway bar: 12 bulan = full */}
+            <div className="mt-3 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+              {!transactionsLoading && cashRunwayMonths !== null && cashRunwayMonths > 0 && (
+                <div
+                  className={`h-full rounded-full ${cashRunwayMonths >= 3 ? 'bg-primary-500 dark:bg-primary-400' : 'bg-red-400 dark:bg-red-500'}`}
+                  style={{ width: `${Math.min(100, (cashRunwayMonths / 12) * 100)}%` }}
+                />
+              )}
+            </div>
           </div>
-          <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.cashBalance}</div>
-          <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 break-all">
-            {transactionsLoading ? '...' : formatCurrency(balanceSheet.assets.cash)}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            {t.dashboard.cashAndBank}
-            {cashVsRevenue !== null && (
-              <span className="text-gray-400 dark:text-gray-500"> · {cashVsRevenue.toFixed(0)}% rev</span>
-            )}
-          </div>
-          {/* Runway bar: 12 bulan = full */}
-          <div className="mt-3 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-            {!transactionsLoading && cashRunwayMonths !== null && cashRunwayMonths > 0 && (
-              <div
-                className={`h-full rounded-full ${cashRunwayMonths >= 3 ? 'bg-primary-500 dark:bg-primary-400' : 'bg-red-400 dark:bg-red-500'}`}
-                style={{ width: `${Math.min(100, (cashRunwayMonths / 12) * 100)}%` }}
-              />
-            )}
-          </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Monitoring Chart + Expense Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <div className="lg:col-span-2 flex flex-col">
+      <motion.div
+        className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6"
+        initial={shouldReduceMotion ? false : 'hidden'}
+        animate={shouldReduceMotion ? undefined : 'visible'}
+        variants={shouldReduceMotion ? undefined : DASHBOARD_STAGGER_VARIANTS}
+      >
+        <motion.div className="lg:col-span-2 flex flex-col" variants={shouldReduceMotion ? undefined : DASHBOARD_ITEM_VARIANTS}>
           <MonitoringChart transactions={transactions} loading={transactionsLoading} selectedYear={selectedYear} />
-        </div>
-        <div className="lg:col-span-1 flex flex-col">
+        </motion.div>
+        <motion.div className="lg:col-span-1 flex flex-col" variants={shouldReduceMotion ? undefined : DASHBOARD_ITEM_VARIANTS}>
           <ExpenseBreakdownChart transactions={transactions} loading={transactionsLoading} selectedYear={selectedYear} selectedMonth={selectedMonth} />
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* AR Tracker (Monitor Piutang) */}
       {transactions.length > 0 && (
