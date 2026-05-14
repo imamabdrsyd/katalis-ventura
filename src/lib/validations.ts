@@ -122,6 +122,106 @@ export const createMultiLineTransactionSchema = z.object({
 );
 
 // ============================================
+// Account Schemas
+// ============================================
+
+const ACCOUNT_TYPES = ['ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE'] as const;
+const NORMAL_BALANCES = ['DEBIT', 'CREDIT'] as const;
+const INCOME_STATEMENT_SECTIONS = ['cost_of_revenue', 'operating_expense'] as const;
+
+export const createAccountSchema = z.object({
+  business_id: z.string().regex(UUID_REGEX, 'Invalid business ID format'),
+  account_code: z.string().min(1).max(20),
+  account_name: z.string().min(1).max(200),
+  account_type: z.enum(ACCOUNT_TYPES),
+  parent_account_id: z.string().regex(UUID_REGEX).optional().nullable(),
+  normal_balance: z.enum(NORMAL_BALANCES),
+  is_active: z.boolean().optional().default(true),
+  is_system: z.boolean().optional().default(false),
+  is_stock: z.boolean().optional(),
+  is_retained_earnings: z.boolean().optional(),
+  is_dividend_payable: z.boolean().optional(),
+  sort_order: z.number().int().optional().default(0),
+  description: z.string().max(1000).optional().nullable(),
+  default_category: z.string().max(20).optional().nullable(),
+  income_statement_section: z.enum(INCOME_STATEMENT_SECTIONS).optional().nullable(),
+});
+
+export const updateAccountSchema = z.object({
+  account_code: z.string().min(1).max(20).optional(),
+  account_name: z.string().min(1).max(200).optional(),
+  account_type: z.enum(ACCOUNT_TYPES).optional(),
+  parent_account_id: z.string().regex(UUID_REGEX).optional().nullable(),
+  normal_balance: z.enum(NORMAL_BALANCES).optional(),
+  is_active: z.boolean().optional(),
+  is_stock: z.boolean().optional(),
+  is_retained_earnings: z.boolean().optional(),
+  is_dividend_payable: z.boolean().optional(),
+  sort_order: z.number().int().optional(),
+  description: z.string().max(1000).optional().nullable(),
+  default_category: z.string().max(20).optional().nullable(),
+  income_statement_section: z.enum(INCOME_STATEMENT_SECTIONS).optional().nullable(),
+});
+
+export const accountIdSchema = z.string().regex(UUID_REGEX, 'Invalid account ID format');
+
+export const bulkUpdateIncomeStatementSectionSchema = z.object({
+  business_id: z.string().regex(UUID_REGEX, 'Invalid business ID format'),
+  updates: z.array(
+    z.object({
+      id: z.string().regex(UUID_REGEX, 'Invalid account ID format'),
+      section: z.enum(INCOME_STATEMENT_SECTIONS).nullable(),
+    })
+  ).min(1),
+});
+
+// ============================================
+// Business Schemas
+// ============================================
+
+export const createBusinessSchema = z.object({
+  business_name: z.string().min(1, 'Nama bisnis wajib diisi').max(200),
+  business_sector: z.string().min(1).max(100),
+  business_type: z.string().max(100).optional(),
+  capital_investment: z.number().min(0).max(MAX_TRANSACTION_AMOUNT).optional().default(0),
+  property_address: z.string().max(500).optional(),
+  logo_url: z.string().url().optional().or(z.literal('')),
+  logo_fit: z.enum(['cover', 'contain']).optional(),
+  city: z.string().max(100).optional(),
+  whatsapp_number: z.string().max(30).optional(),
+  widget_action_label: z.string().max(100).optional(),
+  is_public: z.boolean().optional(),
+});
+
+export const updateBusinessSchema = z.object({
+  business_name: z.string().min(1).max(200).optional(),
+  business_sector: z.string().min(1).max(100).optional(),
+  business_type: z.string().max(100).optional(),
+  capital_investment: z.number().min(0).max(MAX_TRANSACTION_AMOUNT).optional(),
+  property_address: z.string().max(500).optional().nullable(),
+  logo_url: z.string().optional().nullable(),
+  logo_fit: z.enum(['cover', 'contain']).optional().nullable(),
+  city: z.string().max(100).optional().nullable(),
+  whatsapp_number: z.string().max(30).optional().nullable(),
+  widget_action_label: z.string().max(100).optional().nullable(),
+  is_public: z.boolean().optional(),
+  is_archived: z.boolean().optional(),
+});
+
+// ============================================
+// Invite Code Schemas
+// ============================================
+
+export const createInviteCodeSchema = z.object({
+  business_id: z.string().regex(UUID_REGEX, 'Invalid business ID format'),
+  role: z.enum(['business_manager', 'investor', 'both', 'superadmin']),
+  expires_at: z.string().datetime().optional().nullable(),
+  max_uses: z.number().int().positive().optional().nullable(),
+});
+
+export const inviteCodeIdSchema = z.string().regex(UUID_REGEX, 'Invalid invite code ID format');
+
+// ============================================
 // Type exports
 // ============================================
 
@@ -129,3 +229,8 @@ export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 export type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;
 export type JournalLineInput = z.infer<typeof journalLineSchema>;
 export type CreateMultiLineTransactionInput = z.infer<typeof createMultiLineTransactionSchema>;
+export type CreateAccountInput = z.infer<typeof createAccountSchema>;
+export type UpdateAccountInput = z.infer<typeof updateAccountSchema>;
+export type CreateBusinessInput = z.infer<typeof createBusinessSchema>;
+export type UpdateBusinessInput = z.infer<typeof updateBusinessSchema>;
+export type CreateInviteCodeInput = z.infer<typeof createInviteCodeSchema>;

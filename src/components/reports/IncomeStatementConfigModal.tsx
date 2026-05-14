@@ -12,6 +12,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   accounts: Account[];
+  businessId: string;
   onSaved: () => void;
 }
 
@@ -25,7 +26,7 @@ function currentSection(acc: Account): Section {
   return defaultSection(acc);
 }
 
-export function IncomeStatementConfigModal({ isOpen, onClose, accounts, onSaved }: Props) {
+export function IncomeStatementConfigModal({ isOpen, onClose, accounts, businessId, onSaved }: Props) {
   const [mounted, setMounted] = useState(false);
   const [saving, setSaving] = useState(false);
   // Map of accountId → Section (working state)
@@ -118,7 +119,7 @@ export function IncomeStatementConfigModal({ isOpen, onClose, accounts, onSaved 
         });
 
       if (updates.length > 0) {
-        await bulkUpdateIncomeStatementSection(updates);
+        await bulkUpdateIncomeStatementSection(businessId, updates);
       }
       onSaved();
       onClose();

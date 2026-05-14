@@ -640,6 +640,7 @@ function IncomeStatementPageInner() {
         isOpen={showConfigModal}
         onClose={() => setShowConfigModal(false)}
         accounts={accounts}
+        businessId={activeBusiness.id}
         onSaved={async () => {
           await refetchAccounts();
           // Refresh transactions cache supaya debit/credit account yang di-embed ikut ter-update

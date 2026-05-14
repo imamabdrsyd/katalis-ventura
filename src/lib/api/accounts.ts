@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase';
 import type { Account } from '@/types';
+import { apiFetch } from './_fetchHelper';
 
 export interface AccountTreeNode extends Account {
   children: AccountTreeNode[];
@@ -211,151 +212,81 @@ export async function getAccountById(id: string): Promise<Account | null> {
 }
 
 /**
- * Create a new custom account
+ * Create a new custom account (routes through /api/accounts).
  */
 export async function createAccount(
   account: Omit<Account, 'id' | 'created_at' | 'updated_at'>
 ): Promise<Account> {
-  const supabase = createClient();
-  const { data, error} = await supabase
-    .from('accounts')
-    .insert(account)
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
-  return data as Account;
+  return apiFetch<Account>('/api/accounts', { method: 'POST', body: account });
 }
 
 /**
- * Update an existing account
+ * Update an existing account (routes through /api/accounts/[id]).
  */
 export async function updateAccount(
   id: string,
   updates: Partial<Omit<Account, 'id' | 'business_id' | 'created_at' | 'updated_at'>>
 ): Promise<Account> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('accounts')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
-  return data as Account;
+  return apiFetch<Account>(`/api/accounts/${id}`, { method: 'PATCH', body: updates });
 }
 
 /**
  * Designate an EQUITY account as the Retained Earnings account for this business.
  * Clears the flag on any previous account in the same business, then sets it on accountId.
- * The DB partial unique index (WHERE is_retained_earnings = TRUE) is the safety net.
  */
 export async function setRetainedEarningsAccount(
   businessId: string,
   accountId: string
 ): Promise<void> {
-  const supabase = createClient();
-
-  // Clear any existing designation in this business (except the target account)
-  const { error: clearError } = await supabase
-    .from('accounts')
-    .update({ is_retained_earnings: false })
-    .eq('business_id', businessId)
-    .eq('is_retained_earnings', true)
-    .neq('id', accountId);
-
-  if (clearError) throw new Error(clearError.message);
-
-  // Set the flag on the target account (must be EQUITY)
-  const { error: setError } = await supabase
-    .from('accounts')
-    .update({ is_retained_earnings: true })
-    .eq('id', accountId)
-    .eq('business_id', businessId)
-    .eq('account_type', 'EQUITY');
-
-  if (setError) throw new Error(setError.message);
+  await apiFetch('/api/accounts/designate', {
+    method: 'POST',
+    body: { business_id: businessId, account_id: accountId, flag: 'retained_earnings' },
+  });
 }
 
 /**
  * Designate a LIABILITY account as the Hutang Dividen (Dividend Payable) account
- * for this business. Clears the flag on any previous account in the same business,
- * then sets it on accountId. Mirror of setRetainedEarningsAccount.
+ * for this business. Mirror of setRetainedEarningsAccount.
  */
 export async function setDividendPayableAccount(
   businessId: string,
   accountId: string
 ): Promise<void> {
-  const supabase = createClient();
-
-  const { error: clearError } = await supabase
-    .from('accounts')
-    .update({ is_dividend_payable: false })
-    .eq('business_id', businessId)
-    .eq('is_dividend_payable', true)
-    .neq('id', accountId);
-
-  if (clearError) throw new Error(clearError.message);
-
-  const { error: setError } = await supabase
-    .from('accounts')
-    .update({ is_dividend_payable: true })
-    .eq('id', accountId)
-    .eq('business_id', businessId)
-    .eq('account_type', 'LIABILITY');
-
-  if (setError) throw new Error(setError.message);
+  await apiFetch('/api/accounts/designate', {
+    method: 'POST',
+    body: { business_id: businessId, account_id: accountId, flag: 'dividend_payable' },
+  });
 }
 
 /**
  * Batch update income_statement_section untuk banyak akun sekaligus.
- * Digunakan oleh Income Statement Config modal.
- * Pass null untuk reset ke default logic.
+ * Pass null pada `section` untuk reset ke default logic.
  */
 export async function bulkUpdateIncomeStatementSection(
+  businessId: string,
   updates: Array<{ id: string; section: 'cost_of_revenue' | 'operating_expense' | null }>
 ): Promise<void> {
-  const supabase = createClient();
-  await Promise.all(
-    updates.map(({ id, section }) =>
-      supabase
-        .from('accounts')
-        .update({ income_statement_section: section })
-        .eq('id', id)
-    )
-  );
+  await apiFetch('/api/accounts/income-statement-section', {
+    method: 'PATCH',
+    body: { business_id: businessId, updates },
+  });
 }
 
 /**
- * Deactivate an account (soft delete)
- * Cannot deactivate system accounts
+ * Deactivate an account (soft delete). System accounts cannot be deactivated.
  */
 export async function deactivateAccount(id: string): Promise<void> {
-  const supabase = createClient();
-  const { error } = await supabase
-    .from('accounts')
-    .update({ is_active: false })
-    .eq('id', id)
-    .eq('is_system', false);
-
-  if (error) throw new Error(error.message);
+  await apiFetch(`/api/accounts/${id}`, { method: 'DELETE' });
 }
 
 /**
- * Reactivate a deactivated account
+ * Reactivate a deactivated account.
  */
 export async function activateAccount(id: string): Promise<Account> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('accounts')
-    .update({ is_active: true })
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
-  return data as Account;
+  return apiFetch<Account>(`/api/accounts/${id}`, {
+    method: 'PATCH',
+    body: { is_active: true },
+  });
 }
 
 /**
