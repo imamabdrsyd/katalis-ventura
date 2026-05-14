@@ -126,6 +126,8 @@ export const id: Translations = {
     yearToDate: 'Sejak awal tahun',
     allTime: 'Semua waktu',
     remainingCapitalRoi: 'Tertanam {n}',
+    roiPeriodSince: 'Sejak {date}',
+    roiPeriodMonths: '{n} bulan',
     transactionsIn: '{n} transaksi masuk',
     ofRevenueUsed: '{n}% dari pendapatan terpakai',
     margin: 'Margin {n}%',

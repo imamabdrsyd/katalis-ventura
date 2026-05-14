@@ -126,6 +126,8 @@ export const en: Translations = {
     yearToDate: 'Year to date',
     allTime: 'All-time',
     remainingCapitalRoi: 'Remaining {n}',
+    roiPeriodSince: 'Since {date}',
+    roiPeriodMonths: '{n} months',
     transactionsIn: '{n} incoming transactions',
     ofRevenueUsed: '{n}% of revenue used',
     margin: 'Margin {n}%',

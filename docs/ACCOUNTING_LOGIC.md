@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 12 Mei 2026 (Cash detection pindah ke flag `accounts.is_cash_equivalent`; legacy fallback 1100/1200 tetap untuk akun pre-migration; toggle baru di AccountForm)
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 14 Mei 2026 (Section 5.5 ROI & Invested Capital ditambahkan; `calculateMonthlyROI` direname jadi `calculateAverageMonthlyROI`; tampilan ROI dashboard sekarang menyertakan konteks periode "sejak {bulan tahun} · {n} bulan")
 
 ---
 
@@ -502,6 +502,49 @@ CAPEX tidak masuk net profit karena bukan expense (beli aset). CAPEX hanya muncu
 - earn, opex, var, capex, tax, fin, interest, netProfit
 - Interest mengikuti logic yang sama (hanya FIN expense)
 - Digunakan oleh Scenario Modeling untuk proyeksi
+
+### 5.5 ROI & Invested Capital
+
+#### Formula
+
+```
+ROI (%)                 = (netProfit / grossInvestedCapital) × 100
+remainingCapitalROI (%) = (netProfit / remainingInvestedCapital) × 100
+```
+
+Formula sesuai praktik akuntansi standar (Return on Investment). `netProfit` di sini adalah akumulasi all-time, bukan per-period.
+
+#### Invested Capital (`calculateInvestedCapital()`)
+
+```
+grossInvestedCapital     = sum kredit ke akun EQUITY ber-flag is_stock=true + fallbackContribution
+ownerWithdrawals         = sum debit ke akun EQUITY ber-flag is_stock=true ATAU is_dividend=true
+remainingInvestedCapital = max(0, grossInvestedCapital - ownerWithdrawals)
+```
+
+**Kenapa `is_stock` muncul di sisi withdrawal?**
+Prive/penarikan owner bisa dijurnal dua cara yang sama-sama valid:
+- `Dr 3100 Modal Owner (is_stock) / Cr Kas` — langsung kurangi akun modal disetor
+- `Dr 3200 Prive (is_dividend) / Cr Kas` — pakai akun kontra ekuitas terpisah
+
+Kode membedakan injeksi vs penarikan **bukan dari flag akun**, melainkan dari **sisi entry**: cek `credit_account` untuk injeksi, cek `debit_account` untuk withdrawal.
+
+#### Fallback `business.capital_investment`
+
+Untuk bisnis lama yang setup capital sebelum sistem double-entry, nilai `businesses.capital_investment` dipakai sebagai fallback. Sistem mendeteksi transaksi "Modal Awal" (nama/deskripsi mengandung "modal investasi awal", "modal awal", "owner capital", "owner's capital") dengan amount yang match — jika ditemukan, fallback **tidak** ditambahkan agar tidak double-count.
+
+#### Tampilan Dashboard
+
+Card ROI di `app/(dashboard)/dashboard/page.tsx` menampilkan:
+1. **ROI utama** — % atas `grossInvestedCapital`
+2. **Remaining ROI** (jika ada withdrawal) — % atas `remainingInvestedCapital`
+3. **Konteks periode** — "Sejak {bulan tahun} · {n} bulan" dihitung dari tanggal transaksi paling awal
+
+Konteks periode wajib agar pembaca tidak salah interpretasi: ROI 50% dalam 3 bulan jauh berbeda dari ROI 50% dalam 5 tahun. Annualized ROI belum diimplementasi.
+
+#### Helper
+
+`calculateAverageMonthlyROI(netProfit, capital, months)` = `roi / months` — rata-rata sederhana, **bukan** compound annualized rate. Tidak dipakai di UI saat ini; disediakan untuk konsumen eksternal. Untuk annualized compound: `(1 + roi/100)^(12/months) - 1`.
 
 ---
 

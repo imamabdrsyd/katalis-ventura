@@ -216,6 +216,24 @@ export default function DashboardPage() {
     ? (allTimeSummary.netProfit / investedCapital.remainingInvestedCapital) * 100
     : 0;
 
+  // Periode ROI dihitung dari tanggal transaksi pertama agar angka tidak menyesatkan
+  // (ROI 50% dalam 3 bulan vs 3 tahun punya makna sangat berbeda).
+  const roiPeriod = useMemo(() => {
+    if (transactions.length === 0) return null;
+    let earliest = new Date(transactions[0].date);
+    for (const t of transactions) {
+      const d = new Date(t.date);
+      if (d < earliest) earliest = d;
+    }
+    const now = new Date();
+    const months = Math.max(
+      1,
+      (now.getFullYear() - earliest.getFullYear()) * 12 + (now.getMonth() - earliest.getMonth())
+    );
+    const sinceLabel = `${MONTH_LABELS[earliest.getMonth()]} ${earliest.getFullYear()}`;
+    return { months, sinceLabel };
+  }, [transactions, MONTH_LABELS]);
+
   // --- Cash Balance: runway in months (uses all-time data, not year-filtered) ---
   const totalAllTimeExpenses = allTimeSummary.totalOpex + allTimeSummary.totalVar + allTimeSummary.totalTax + allTimeSummary.totalInterest;
   const avgMonthlyExpense = (() => {
@@ -384,6 +402,13 @@ export default function DashboardPage() {
           </div>
           <div className="mt-2 min-h-[2.5rem] flex flex-col justify-center">
             <div className="text-sm text-gray-500 dark:text-gray-400">{t.dashboard.allTime}</div>
+            {roiPeriod && (
+              <div className="text-xs text-gray-400 dark:text-gray-500">
+                {t.dashboard.roiPeriodSince.replace('{date}', roiPeriod.sinceLabel)}
+                {' · '}
+                {t.dashboard.roiPeriodMonths.replace('{n}', String(roiPeriod.months))}
+              </div>
+            )}
           </div>
         </div>
 

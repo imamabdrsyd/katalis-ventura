@@ -131,6 +131,8 @@ export interface Translations {
     yearToDate: string;
     allTime: string;
     remainingCapitalRoi: string;
+    roiPeriodSince: string;
+    roiPeriodMonths: string;
     transactionsIn: string;
     ofRevenueUsed: string;
     margin: string;

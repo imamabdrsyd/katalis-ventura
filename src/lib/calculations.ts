@@ -1480,14 +1480,16 @@ export function calculateROI(netProfit: number, capital: number): number {
   return (netProfit / capital) * 100;
 }
 
-// Calculate monthly ROI
-export function calculateMonthlyROI(
+// Average monthly ROI = total ROI divided by number of months elapsed.
+// Note: this is a simple average, NOT a compound annualized rate.
+// For compound annualized ROI use: (1 + roi/100)^(12/months) - 1
+export function calculateAverageMonthlyROI(
   netProfit: number,
   capital: number,
   months: number = 1
 ): number {
   const roi = calculateROI(netProfit, capital);
-  return roi / months;
+  return months > 0 ? roi / months : 0;
 }
 
 // Calculate profit margin
