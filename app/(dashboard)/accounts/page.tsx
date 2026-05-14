@@ -12,20 +12,12 @@ import { AccountDeleteModal } from '@/components/accounts/AccountDeleteModal';
 import { Plus, Search, ChevronDown, ChevronRight, Lock, CheckCircle2, BookOpen as BookOpenIcon, MoreVertical, BookMarked, Building2 } from 'lucide-react';
 
 
-const TYPE_COLORS: Record<AccountType, string> = {
-  ASSET: 'border-blue-400 dark:border-blue-500 text-blue-600 dark:text-blue-400',
-  LIABILITY: 'border-amber-400 dark:border-amber-500 text-amber-600 dark:text-amber-400',
-  EQUITY: 'border-indigo-400 dark:border-indigo-500 text-indigo-600 dark:text-indigo-400',
-  REVENUE: 'border-green-400 dark:border-green-500 text-green-600 dark:text-green-400',
-  EXPENSE: 'border-red-400 dark:border-red-500 text-red-600 dark:text-red-400',
-};
-
-const TYPE_TEXT_COLORS: Record<AccountType, string> = {
-  ASSET: 'text-blue-600 dark:text-blue-400',
-  LIABILITY: 'text-amber-600 dark:text-amber-400',
-  EQUITY: 'text-indigo-600 dark:text-indigo-400',
-  REVENUE: 'text-green-600 dark:text-green-400',
-  EXPENSE: 'text-red-600 dark:text-red-400',
+const TYPE_BAR_COLORS: Record<AccountType, string> = {
+  ASSET: 'bg-blue-500 dark:bg-blue-400',
+  LIABILITY: 'bg-amber-500 dark:bg-amber-400',
+  EQUITY: 'bg-indigo-500 dark:bg-indigo-400',
+  REVENUE: 'bg-green-500 dark:bg-green-400',
+  EXPENSE: 'bg-red-500 dark:bg-red-400',
 };
 
 export default function AccountsPage() {
@@ -469,11 +461,16 @@ function ParentAccountCard({
   const displayChildren = showInactive ? parent.children : activeChildren;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      {/* Type color indicator — vertical line on the left */}
+      <div
+        className={`absolute left-0 top-0 bottom-0 w-0.5 ${TYPE_BAR_COLORS[parent.account_type]}`}
+        aria-hidden="true"
+      />
       {/* Parent Header */}
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+        className="w-full flex items-center justify-between p-4 pl-5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
       >
         <div className="flex items-center gap-3">
           {isExpanded ? (
@@ -485,7 +482,7 @@ function ParentAccountCard({
             <span className="font-bold text-xs text-gray-600 dark:text-gray-400">{parent.account_code}</span>
           </div>
           <div className="text-left">
-            <h2 className={`text-lg font-bold ${TYPE_TEXT_COLORS[parent.account_type]}`}>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
               {parent.account_name}
             </h2>
             <p className="text-xs text-gray-500 dark:text-gray-400">
