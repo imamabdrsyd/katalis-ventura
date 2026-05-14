@@ -13,9 +13,10 @@ import { SyncStatusBanner } from '@/components/ui/SyncStatusBanner';
 import type { Transaction, TransactionCategory } from '@shared/types';
 
 export default function TransactionsScreen() {
-  const { activeBusinessId } = useBusiness();
+  const { activeBusinessId, userRole } = useBusiness();
   const { transactions, isLoading, error } = useTransactions(activeBusinessId || '');
   const router = useRouter();
+  const canManageTransactions = userRole === 'business_manager' || userRole === 'superadmin';
 
   // Search & filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -181,11 +182,13 @@ export default function TransactionsScreen() {
       )}
 
       {/* FAB - Add Transaction */}
-      <Link href="/(tabs)/transactions/add" asChild>
-        <Pressable className="absolute bottom-6 right-6 w-14 h-14 bg-blue-500 rounded-full shadow-lg items-center justify-center">
-          <Plus color="white" size={24} />
-        </Pressable>
-      </Link>
+      {canManageTransactions && (
+        <Link href="/(tabs)/transactions/add" asChild>
+          <Pressable className="absolute bottom-6 right-6 w-14 h-14 bg-blue-500 rounded-full shadow-lg items-center justify-center">
+            <Plus color="white" size={24} />
+          </Pressable>
+        </Link>
+      )}
 
       {/* Filter Bottom Sheet */}
       <FilterSheet

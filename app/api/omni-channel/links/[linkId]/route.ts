@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, createAdminClient } from '@/lib/supabase-server';
+import { canManageBusiness, getAuthenticatedUser, createAdminClient, createServerClient } from '@/lib/supabase-server';
 import { z } from 'zod';
 
 const VALID_CHANNEL_TYPES = [
@@ -27,10 +27,6 @@ const patchSchema = z.object({
 async function verifyManagerOwnsLink(userId: string, linkId: string): Promise<boolean> {
   const supabase = createAdminClient();
 
-  // Superadmin bypass
-  const { data: profile } = await supabase.from('profiles').select('default_role').eq('id', userId).maybeSingle();
-  if (profile?.default_role === 'superadmin') return true;
-
   const { data: link } = await supabase
     .from('business_omni_channel_links')
     .select('omni_channel_id, business_omni_channels!inner(business_id, created_by)')
@@ -40,19 +36,10 @@ async function verifyManagerOwnsLink(userId: string, linkId: string): Promise<bo
   if (!link) return false;
   const ch = (link as any).business_omni_channels;
   const businessId = ch?.business_id;
-  const createdBy = ch?.created_by;
   if (!businessId) return false;
 
-  if (createdBy === userId) return true;
-
-  const { data: role } = await supabase
-    .from('user_business_roles')
-    .select('role')
-    .eq('user_id', userId)
-    .eq('business_id', businessId)
-    .single();
-
-  return role?.role === 'business_manager' || role?.role === 'both';
+  const server = await createServerClient();
+  return canManageBusiness(server, userId, businessId);
 }
 
 // PATCH /api/omni-channel/links/[linkId]

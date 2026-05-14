@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useBusinessContext } from '@/context/BusinessContext';
+import { isManagerRole } from '@/lib/roles';
 import * as invoicesApi from '@/lib/api/invoices';
 import type { Invoice, InvoiceFormData, InvoicePaymentStatus, InvoiceSettings } from '@/types';
 
 export function useInvoices() {
   const { user, activeBusiness, activeBusinessId: businessId, loading: businessLoading, error: businessError, userRole } = useBusinessContext();
-  const canManageInvoices = userRole === 'business_manager' || userRole === 'both';
+  const canManageInvoices = isManagerRole(userRole);
 
   // Invoice state
   const [invoices, setInvoices] = useState<Invoice[]>([]);

@@ -1,12 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser, createServerClient } from '@/lib/supabase-server';
 
+async function canUseTelegramBot(supabase: Awaited<ReturnType<typeof createServerClient>>, userId: string) {
+  const { data, error } = await supabase
+    .from('user_business_roles')
+    .select('id')
+    .eq('user_id', userId)
+    .in('role', ['business_manager', 'superadmin'])
+    .limit(1);
+
+  if (error) {
+    console.error('[telegram/link] access check error:', error);
+    return false;
+  }
+
+  return (data?.length ?? 0) > 0;
+}
+
 // GET — cek status koneksi Telegram user saat ini
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const supabase = await createServerClient();
+  if (!(await canUseTelegramBot(supabase, user.id))) {
+    return NextResponse.json({ error: 'Telegram Bot hanya tersedia untuk Business Manager dan Super Admin' }, { status: 403 });
+  }
+
   const { data } = await supabase
     .from('telegram_connections')
     .select('telegram_username, telegram_first_name, default_business_id, default_transaction_status, is_active, created_at')
@@ -28,6 +48,10 @@ export async function PATCH(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
+  if (!(await canUseTelegramBot(supabase, user.id))) {
+    return NextResponse.json({ error: 'Telegram Bot hanya tersedia untuk Business Manager dan Super Admin' }, { status: 403 });
+  }
+
   const { error } = await supabase
     .from('telegram_connections')
     .update({ default_transaction_status: status })
@@ -47,6 +71,9 @@ export async function POST() {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const supabase = await createServerClient();
+  if (!(await canUseTelegramBot(supabase, user.id))) {
+    return NextResponse.json({ error: 'Telegram Bot hanya tersedia untuk Business Manager dan Super Admin' }, { status: 403 });
+  }
 
   // Hapus token lama yang sudah kadaluarsa milik user ini
   await supabase

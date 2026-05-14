@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase';
+import { normalizeRole } from '@/lib/roles';
 
 export type JoinRequestStatus = 'pending' | 'approved' | 'rejected';
 
@@ -133,12 +134,23 @@ export async function approveJoinRequest(
 
   if (updateErr) throw updateErr;
 
+  const { data: requesterProfile } = await supabase
+    .from('profiles')
+    .select('default_role')
+    .eq('id', req.requester_id)
+    .maybeSingle();
+
+  const defaultRole = normalizeRole(requesterProfile?.default_role);
+  const role = defaultRole === 'business_manager' || defaultRole === 'superadmin'
+    ? defaultRole
+    : 'investor';
+
   const { error: roleErr } = await supabase
     .from('user_business_roles')
     .insert({
       user_id: req.requester_id,
       business_id: req.business_id,
-      role: 'investor',
+      role,
       invited_by: reviewerId,
     });
 

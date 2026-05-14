@@ -23,10 +23,6 @@ const nextConfig = {
     return [
       { source: '/(.*)', headers: securityHeaders },
       {
-        source: '/_next/static/(.*)',
-        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
-      },
-      {
         source: '/images/(.*)',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }],
       },
@@ -44,10 +40,28 @@ const nextConfig = {
       },
     ],
   },
-  experimental: {
-    turbo: {
-      root: __dirname,
-    },
+  turbopack: {
+    root: __dirname,
+  },
+  webpack(config, { dev }) {
+    if (dev) {
+      config.watchOptions = {
+        ...(config.watchOptions ?? {}),
+        ignored: [
+          '**/.git/**',
+          '**/.next/**',
+          '**/node_modules/**',
+          '**/.claude/**',
+          '**/mobile/**',
+          '**/pixel-agents/**',
+          '**/playwright-report/**',
+          '**/test-results/**',
+          '**/tsconfig.tsbuildinfo',
+        ],
+      };
+    }
+
+    return config;
   },
 }
 

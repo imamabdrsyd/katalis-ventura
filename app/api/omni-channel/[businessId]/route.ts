@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, createAdminClient } from '@/lib/supabase-server';
+import { canManageBusiness, getAuthenticatedUser, createAdminClient, createServerClient } from '@/lib/supabase-server';
 import { isReservedSlug, isValidSlugFormat } from '@/lib/utils/slugUtils';
 import { z } from 'zod';
 
@@ -98,50 +98,15 @@ export async function PUT(
 
   // Use admin client to bypass RLS — auth is already verified above via getAuthenticatedUser
   const supabase = createAdminClient();
+  const server = await createServerClient();
 
-  // Verify user is a manager of this business
-  const [roleResult, businessResult] = await Promise.all([
-    supabase
-      .from('user_business_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('business_id', businessId)
-      .maybeSingle(),
-    supabase
-      .from('businesses')
-      .select('created_by')
-      .eq('id', businessId)
-      .maybeSingle(),
-  ]);
-
-  const role = roleResult.data;
-  const business = businessResult.data;
-
-  // Check superadmin
-  const { data: profile } = await supabase.from('profiles').select('default_role').eq('id', user.id).maybeSingle();
-  const isManager =
-    profile?.default_role === 'superadmin' ||
-    role?.role === 'business_manager' ||
-    role?.role === 'both' ||
-    business?.created_by === user.id;
-
-  if (!isManager) {
+  if (!(await canManageBusiness(server, user.id, businessId))) {
     console.error('[omni-channel] Forbidden debug:', {
       userId: user.id,
       businessId,
-      role: role?.role ?? null,
-      roleError: roleResult.error?.message ?? null,
-      businessCreatedBy: business?.created_by ?? null,
-      businessError: businessResult.error?.message ?? null,
     });
     return NextResponse.json({
       error: 'Forbidden',
-      debug: {
-        hasRole: !!role,
-        roleValue: role?.role ?? null,
-        hasBusiness: !!business,
-        isCreator: business?.created_by === user.id,
-      },
     }, { status: 403 });
   }
 

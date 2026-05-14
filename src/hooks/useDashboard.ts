@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBusinessContext } from '@/context/BusinessContext';
+import { isManagerRole } from '@/lib/roles';
 import { calculateFinancialSummary, calculateROI, calculateCategoryCounts, calculateBalanceSheet } from '@/lib/calculations';
 import * as transactionsApi from '@/lib/api/transactions';
 import { generateDueRecurringTransactions } from '@/lib/api/recurring';
@@ -15,7 +16,7 @@ import type { Transaction } from '@/types';
 
 export function useDashboard() {
   const { activeBusiness: business, activeBusinessId: businessId, loading: businessLoading, userRole, user } = useBusinessContext();
-  const canManageTransactions = userRole === 'business_manager' || userRole === 'both';
+  const canManageTransactions = isManagerRole(userRole);
   const queryClient = useQueryClient();
 
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';

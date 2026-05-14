@@ -1,6 +1,6 @@
 // Core type definitions for Katalis Ventura
 
-export type UserRole = 'business_manager' | 'investor' | 'both' | 'superadmin';
+export type UserRole = 'business_manager' | 'investor' | 'superadmin';
 
 export type TransactionCategory = 'EARN' | 'OPEX' | 'VAR' | 'CAPEX' | 'TAX' | 'FIN';
 export type TransactionStatus = 'draft' | 'posted';

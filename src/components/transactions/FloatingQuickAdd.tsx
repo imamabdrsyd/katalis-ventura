@@ -8,6 +8,7 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import * as transactionsApi from '@/lib/api/transactions';
 import { getAccounts } from '@/lib/api/accounts';
 import { findCogsAccount } from '@/lib/utils/inventoryHelper';
+import { isManagerRole } from '@/lib/roles';
 import type { Transaction, Account } from '@/types';
 import type { TransactionFormData } from './TransactionForm';
 
@@ -24,7 +25,7 @@ export function FloatingQuickAdd({
   onOpenChange?: (open: boolean) => void;
 } = {}) {
   const { user, activeBusinessId: businessId, userRole } = useBusinessContext();
-  const canManage = userRole === 'business_manager' || userRole === 'both' || userRole === 'superadmin';
+  const canManage = isManagerRole(userRole);
 
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [saving, setSaving] = useState(false);

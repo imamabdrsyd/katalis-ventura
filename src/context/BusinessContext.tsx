@@ -11,15 +11,17 @@ import {
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
+import { normalizeRole, pickHighestRole } from '@/lib/roles';
 import type { AuthUser } from '@supabase/supabase-js';
 import type { Business, UserRole } from '@/types';
 
 const ACTIVE_BUSINESS_KEY = 'katalis_active_business_id';
-const ACTIVE_ROLE_KEY = 'katalis_active_role';
+const DISPLAY_ROLE_KEY = 'katalis_superadmin_display_role';
 
 interface BusinessContextType {
   user: AuthUser | null;
   userRole: UserRole | null;
+  displayRole: UserRole | null;
   isSuperadmin: boolean;
   businesses: Business[];
   activeBusiness: Business | null;
@@ -36,6 +38,7 @@ const BusinessContext = createContext<BusinessContextType | null>(null);
 export function BusinessProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [displayRole, setDisplayRole] = useState<UserRole | null>(null);
   const [isSuperadmin, setIsSuperadmin] = useState(false);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [activeBusiness, setActiveBusinessState] = useState<Business | null>(null);
@@ -64,8 +67,8 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
 
       setUser(user);
 
-      // Batch profile + roles queries in parallel (saves ~200-300ms)
-      const [profileResult, rolesResult] = await Promise.all([
+      // Batch profile + business membership queries in parallel (saves ~200-300ms)
+      const [profileResult, rolesResult, createdBusinessesResult] = await Promise.all([
         supabase
           .from('profiles')
           .select('default_role')
@@ -75,12 +78,17 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
           .from('user_business_roles')
           .select('role, business_id, businesses(*)')
           .eq('user_id', user.id),
+        supabase
+          .from('businesses')
+          .select('*')
+          .eq('created_by', user.id),
       ]);
 
       const { data: profile } = profileResult;
       const { data: rolesData, error: rolesError } = rolesResult;
+      const { data: createdBusinessesData } = createdBusinessesResult;
 
-      const userIsSuperadmin = profile?.default_role === 'superadmin';
+      const userIsSuperadmin = normalizeRole(profile?.default_role) === 'superadmin';
       setIsSuperadmin(userIsSuperadmin);
 
       if (rolesError) {
@@ -93,9 +101,9 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      if (!rolesData || rolesData.length === 0) {
+      if ((!rolesData || rolesData.length === 0) && (!createdBusinessesData || createdBusinessesData.length === 0)) {
         // Check profile first, then fallback to user metadata
-        const defaultRole = profile?.default_role || user.user_metadata?.default_role;
+        const defaultRole = normalizeRole(profile?.default_role || user.user_metadata?.default_role);
 
         if (!defaultRole) {
           // User baru via Google OAuth — belum pilih role
@@ -103,55 +111,41 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
         } else if (defaultRole === 'investor') {
           router.push('/join-business');
         } else if (defaultRole === 'superadmin') {
-          // Superadmin tanpa bisnis sendiri — fetch semua bisnis
+          router.push('/join-business');
         } else {
           router.push('/setup-business');
         }
-        if (!userIsSuperadmin) return;
+        return;
       }
 
       let businessList: Business[];
       let primaryRole: UserRole;
 
-      if (userIsSuperadmin) {
-        // Superadmin: fetch ALL businesses
-        const { data: allBusinesses, error: allBizError } = await supabase
-          .from('businesses')
-          .select('*')
-          .eq('is_archived', false)
-          .order('created_at', { ascending: false });
+      // Extract businesses and determine user role.
+      // Super Admin is membership-scoped: no invisible global business access.
+      const membershipBusinesses = (rolesData || [])
+        .map((item) => item.businesses as unknown as Business)
+        .filter((b): b is Business => b !== null && !b.is_archived);
+      const createdBusinesses = (createdBusinessesData || [])
+        .filter((b): b is Business => b !== null && !b.is_archived);
+      const businessById = new Map<string, Business>();
+      [...membershipBusinesses, ...createdBusinesses].forEach((business) => {
+        businessById.set(business.id, business);
+      });
+      businessList = Array.from(businessById.values());
 
-        if (allBizError) {
-          setError(allBizError.message);
-          setLoading(false);
-          return;
-        }
-
-        businessList = (allBusinesses || []) as Business[];
-        // Superadmin: restore active role from localStorage or default to 'superadmin'
-        const savedRole = typeof window !== 'undefined'
-          ? localStorage.getItem(ACTIVE_ROLE_KEY) as UserRole | null
-          : null;
-        primaryRole = savedRole || 'superadmin';
-        // isSuperadmin selalu true untuk superadmin sejati, tidak berubah saat switch role
-        setIsSuperadmin(true);
-      } else {
-        // Extract businesses and determine user role
-        businessList = (rolesData || [])
-          .map((item) => item.businesses as unknown as Business)
-          .filter((b): b is Business => b !== null && !b.is_archived);
-
-        // Determine the user's primary role
-        const roles = (rolesData || []).map((item) => item.role as UserRole);
-        primaryRole = roles.includes('business_manager')
-          ? 'business_manager'
-          : roles.includes('both')
-          ? 'both'
-          : 'investor';
-      }
+      const roles = (rolesData || []).map((item) => item.role);
+      primaryRole = userIsSuperadmin ? 'superadmin' : pickHighestRole(
+        createdBusinesses.length > 0 ? [...roles, 'business_manager'] : roles
+      );
 
       setBusinesses(businessList);
       setUserRole(primaryRole);
+      setIsSuperadmin(primaryRole === 'superadmin');
+      const savedDisplayRole = typeof window !== 'undefined'
+        ? normalizeRole(localStorage.getItem(DISPLAY_ROLE_KEY))
+        : null;
+      setDisplayRole(primaryRole === 'superadmin' ? savedDisplayRole || 'superadmin' : primaryRole);
 
       // Restore active business from localStorage or use first business
       const savedBusinessId =
@@ -196,25 +190,29 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     [businesses]
   );
 
-  const switchRole = useCallback(
-    (role: UserRole) => {
-      setUserRole(role);
-      // isSuperadmin selalu mencerminkan apakah user ini superadmin sejati,
-      // tidak berubah saat switch role — superadmin tetap bisa akses semua
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(ACTIVE_ROLE_KEY, role);
-      }
-    },
-    []
-  );
-
   const refetch = useCallback(async () => {
     await fetchData();
   }, [fetchData]);
 
+  const switchRole = useCallback(
+    (role: UserRole) => {
+      if (!isSuperadmin) {
+        setDisplayRole(userRole);
+        return;
+      }
+
+      setDisplayRole(role);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(DISPLAY_ROLE_KEY, role);
+      }
+    },
+    [isSuperadmin, userRole]
+  );
+
   const contextValue = useMemo(() => ({
     user,
     userRole,
+    displayRole,
     isSuperadmin,
     businesses,
     activeBusiness,
@@ -224,7 +222,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     loading,
     error,
     refetch,
-  }), [user, userRole, isSuperadmin, businesses, activeBusiness, activeBusinessId, setActiveBusiness, switchRole, loading, error, refetch]);
+  }), [user, userRole, displayRole, isSuperadmin, businesses, activeBusiness, activeBusinessId, setActiveBusiness, switchRole, loading, error, refetch]);
 
   return (
     <BusinessContext.Provider value={contextValue}>

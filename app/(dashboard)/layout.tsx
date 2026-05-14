@@ -61,6 +61,7 @@ import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import { FloatingQuickAdd } from '@/components/transactions/FloatingQuickAdd';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
 import { useNotifications } from '@/hooks/useNotifications';
+import { isManagerRole } from '@/lib/roles';
 
 type NavItem = {
   href: string;
@@ -80,7 +81,6 @@ function useNavData() {
   const roleLabels: Record<string, string> = useMemo(() => ({
     business_manager: t.roles.businessManager,
     investor: t.roles.investor,
-    both: t.roles.managerInvestor,
     superadmin: t.roles.superAdmin,
   }), [t]);
 
@@ -357,7 +357,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
 
 function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: () => void; onQuickAddClick: () => void; isCollapsed: boolean }) {
   const router = useRouter();
-  const { user, businesses, activeBusiness, setActiveBusiness, userRole } = useBusinessContext();
+  const { user, businesses, activeBusiness, setActiveBusiness, userRole, displayRole } = useBusinessContext();
   const { roleLabels, t } = useNavData();
   const { locale, setLocale } = useLanguage();
   const supabase = createClient();
@@ -371,8 +371,9 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
   const profileDropdownRef = useRef<HTMLDivElement>(null);
 
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
+  const labelRole = displayRole || userRole;
   const isInvestor = userRole === 'investor';
-  const canManage = userRole === 'business_manager' || userRole === 'both' || userRole === 'superadmin';
+  const canManage = isManagerRole(userRole);
 
   const businessIds = businesses.map((b) => b.id);
   const { pendingCount, refresh: refreshNotifications } = useNotifications(businessIds, canManage, user?.id);
@@ -575,7 +576,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
           </button>
         )}
 
-        {/* Notification Bell — hanya untuk manager/both/superadmin */}
+        {/* Notification Bell — hanya untuk manager/superadmin */}
         {canManage && (
           <NotificationBell
             count={pendingCount}
@@ -606,15 +607,15 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
             </div>
             <div className="hidden md:block text-left">
               <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{userName}</p>
-              {userRole && (
+              {labelRole && (
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  userRole === 'superadmin'
+                  labelRole === 'superadmin'
                     ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/20'
-                    : userRole === 'investor'
+                    : labelRole === 'investor'
                     ? 'bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 ring-1 ring-sky-500/20'
                     : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 ring-1 ring-indigo-500/20'
                 }`}>
-                  {roleLabels[userRole]}
+                  {roleLabels[labelRole]}
                 </span>
               )}
             </div>
@@ -707,7 +708,7 @@ function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
   const { navSections, t } = useNavData();
-  const canManage = userRole === 'business_manager' || userRole === 'both' || userRole === 'superadmin';
+  const canManage = isManagerRole(userRole);
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 

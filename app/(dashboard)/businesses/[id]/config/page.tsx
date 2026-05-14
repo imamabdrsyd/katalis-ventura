@@ -16,6 +16,7 @@ import { OmniChannelManager } from '@/components/business/OmniChannelManager';
 import * as businessesApi from '@/lib/api/businesses';
 import { EcommerceIntegration } from '@/components/ecommerce/EcommerceIntegration';
 import { ContactList } from '@/components/business/ContactList';
+import { isManagerRole } from '@/lib/roles';
 import type { Business } from '@/types';
 
 const BUSINESS_SECTOR_LABELS: Record<string, string> = {
@@ -144,7 +145,7 @@ export default function BusinessMembersPage() {
 
   const { user, userRole, isSuperadmin, businesses, activeBusiness, setActiveBusiness, refetch } = useBusinessContext();
   const isInvestor = userRole === 'investor';
-  const canManage = userRole === 'business_manager' || userRole === 'both' || userRole === 'superadmin';
+  const canManage = isManagerRole(userRole);
 
   const business = businesses.find((b) => b.id === businessId);
   const isCreator = business?.created_by === user?.id || isSuperadmin;

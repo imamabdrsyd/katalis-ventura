@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useBusinessContext } from '@/context/BusinessContext';
+import { isManagerRole } from '@/lib/roles';
 import * as budgetsApi from '@/lib/api/budgets';
 import { getAccounts } from '@/lib/api/accounts';
 import { getTransactions } from '@/lib/api/transactions';
@@ -20,7 +21,7 @@ export type BudgetTab = 'overview' | 'input' | 'variance' | 'projection';
 
 export function useBudget() {
   const { user, activeBusiness, activeBusinessId: businessId, loading: businessLoading, userRole } = useBusinessContext();
-  const canManage = userRole === 'business_manager' || userRole === 'both' || userRole === 'superadmin';
+  const canManage = isManagerRole(userRole);
 
   // Data state
   const [budgets, setBudgets] = useState<Budget[]>([]);

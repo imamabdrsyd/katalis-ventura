@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createAdminClient, getAuthenticatedUser } from '@/lib/supabase-server';
+import { canManageBusiness, createAdminClient, createServerClient, getAuthenticatedUser } from '@/lib/supabase-server';
 
 export async function DELETE(
   _request: Request,
@@ -14,6 +14,7 @@ export async function DELETE(
     }
 
     const admin = createAdminClient();
+    const supabase = await createServerClient();
 
     const { data: business, error: businessError } = await admin
       .from('businesses')
@@ -25,8 +26,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Bisnis tidak ditemukan' }, { status: 404 });
     }
 
-    if (business.created_by !== user.id) {
-      return NextResponse.json({ error: 'Anda bukan pemilik bisnis ini' }, { status: 403 });
+    if (!(await canManageBusiness(supabase, user.id, businessId))) {
+      return NextResponse.json({ error: 'Anda tidak memiliki akses untuk mengelola bisnis ini' }, { status: 403 });
     }
 
     // memberId dari URL = id row di user_business_roles (PK)

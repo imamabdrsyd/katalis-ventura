@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, createServerClient } from '@/lib/supabase-server';
+import { canManageBusiness, getAuthenticatedUser, createServerClient } from '@/lib/supabase-server';
 import { businessIdSchema, createTransactionSchema } from '@/lib/validations';
 
 interface PushPayload {
@@ -43,22 +43,8 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createServerClient();
 
-    // Verify user has manager access to this business
-    const { data: role, error: roleError } = await supabase
-      .from('user_business_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('business_id', parsed.data)
-      .single();
-
-    if (roleError || !role) {
-      return NextResponse.json(
-        { error: 'You do not have access to this business' },
-        { status: 403 }
-      );
-    }
-
-    if (role.role !== 'business_manager' && role.role !== 'both') {
+    // Verify user has manager access to this business.
+    if (!(await canManageBusiness(supabase, user.id, parsed.data))) {
       return NextResponse.json(
         { error: 'Only business managers can push transactions' },
         { status: 403 }

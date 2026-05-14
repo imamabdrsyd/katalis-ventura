@@ -89,10 +89,14 @@ export async function handleLinkWithToken(
     .from('user_business_roles')
     .select('business_id, businesses(business_name)')
     .eq('user_id', linkToken.user_id)
-    .in('role', ['business_manager', 'both'])
+    .in('role', ['business_manager', 'superadmin'])
     .limit(1);
 
   const defaultBusinessId = roles?.[0]?.business_id ?? null;
+  if (!defaultBusinessId) {
+    await sendMessage(chatId, '❌ Telegram Bot hanya tersedia untuk Business Manager dan Super Admin.');
+    return;
+  }
 
   // Upsert koneksi
   await admin.from('telegram_connections').upsert(
@@ -202,7 +206,7 @@ export async function handleBisnisCommand(chatId: number): Promise<void> {
     .from('user_business_roles')
     .select('business_id, businesses(id, business_name)')
     .eq('user_id', conn.user_id)
-    .in('role', ['business_manager', 'both']);
+    .in('role', ['business_manager', 'superadmin']);
 
   if (!roles || roles.length === 0) {
     await sendMessage(chatId, 'Kamu belum punya bisnis. Buat bisnis di aplikasi AXION terlebih dahulu.');

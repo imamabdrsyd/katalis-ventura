@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS user_business_roles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
-    role TEXT CHECK (role IN ('business_manager', 'investor', 'both')) NOT NULL,
+    role TEXT CHECK (role IN ('business_manager', 'investor', 'superadmin')) NOT NULL,
     joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     invited_by UUID REFERENCES auth.users(id),
     UNIQUE(user_id, business_id)
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     full_name TEXT,
     avatar_url TEXT,
-    default_role TEXT CHECK (default_role IN ('business_manager', 'investor', 'both')),
+    default_role TEXT CHECK (default_role IN ('business_manager', 'investor', 'superadmin')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -164,6 +164,25 @@ CREATE POLICY "Business creators can update"
     USING (created_by = auth.uid())
     WITH CHECK (created_by = auth.uid());
 
+CREATE POLICY "superadmin_members_can_update_joined_businesses"
+    ON businesses FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 FROM user_business_roles
+            WHERE user_id = auth.uid()
+            AND business_id = businesses.id
+            AND role = 'superadmin'
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM user_business_roles
+            WHERE user_id = auth.uid()
+            AND business_id = businesses.id
+            AND role = 'superadmin'
+        )
+    );
+
 CREATE POLICY "Authenticated users can create businesses"
     ON businesses FOR INSERT
     WITH CHECK (auth.uid() = created_by);
@@ -175,7 +194,7 @@ CREATE POLICY "Managers can manage transactions"
         business_id IN (
             SELECT business_id FROM user_business_roles
             WHERE user_id = auth.uid()
-            AND role IN ('business_manager', 'both')
+            AND role IN ('business_manager', 'superadmin')
         )
     );
 
@@ -185,7 +204,7 @@ CREATE POLICY "Investors can view transactions"
         business_id IN (
             SELECT business_id FROM user_business_roles
             WHERE user_id = auth.uid()
-            AND role IN ('investor', 'both')
+            AND role IN ('investor', 'superadmin')
         )
     );
 
@@ -200,7 +219,7 @@ CREATE POLICY "Business managers can invite users"
         business_id IN (
             SELECT business_id FROM user_business_roles
             WHERE user_id = auth.uid()
-            AND role IN ('business_manager', 'both')
+            AND role IN ('business_manager', 'superadmin')
         )
     );
 
@@ -234,7 +253,7 @@ CREATE POLICY "Business managers can create invite codes"
         business_id IN (
             SELECT business_id FROM user_business_roles
             WHERE user_id = auth.uid()
-            AND role IN ('business_manager', 'both')
+            AND role IN ('business_manager', 'superadmin')
         )
     );
 

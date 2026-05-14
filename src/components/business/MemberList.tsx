@@ -7,6 +7,7 @@ import { formatDate } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { createClient } from '@/lib/supabase';
 import { saveContactFromTransaction } from '@/lib/api/contacts';
+import { normalizeRole } from '@/lib/roles';
 import type { ContactType } from '@/types';
 
 const ROLE_BADGE: Record<string, { label: string; className: string }> = {
@@ -18,9 +19,9 @@ const ROLE_BADGE: Record<string, { label: string; className: string }> = {
     label: 'Investor',
     className: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 ring-1 ring-indigo-500/20',
   },
-  both: {
-    label: 'Manager & Investor',
-    className: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 ring-1 ring-indigo-500/20',
+  superadmin: {
+    label: 'Super Admin',
+    className: 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/20',
   },
 };
 
@@ -75,8 +76,8 @@ function KebabMenu({
       if (!user) throw new Error('Tidak terautentikasi');
 
       const contactType: ContactType =
-        member.role === 'investor' ? 'investor'
-        : member.role === 'business_manager' ? 'partner'
+        normalizeRole(member.role) === 'investor' ? 'investor'
+        : normalizeRole(member.role) === 'business_manager' ? 'partner'
         : 'partner';
 
       const result = await saveContactFromTransaction(businessId, name, contactType, user.id);
@@ -201,7 +202,7 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
       <div className="space-y-3">
         {members.map((member) => {
           const name = member.profile?.full_name || 'Unknown User';
-          const badge = ROLE_BADGE[member.role] || ROLE_BADGE.business_manager;
+          const badge = ROLE_BADGE[normalizeRole(member.role) ?? member.role] || ROLE_BADGE.business_manager;
           const canRemove = isCreator && !member.is_creator;
 
           return (

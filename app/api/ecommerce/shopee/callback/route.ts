@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, createServerClient } from '@/lib/supabase-server';
+import { canManageBusiness, getAuthenticatedUser, createServerClient } from '@/lib/supabase-server';
 import { exchangeCodeForToken, getShopInfo } from '@/lib/ecommerce/shopee/auth';
 import { encryptToken } from '@/lib/utils/tokenCrypto';
 
@@ -32,14 +32,7 @@ export async function GET(request: NextRequest) {
   const supabase = await createServerClient();
 
   // Verifikasi role
-  const { data: role } = await supabase
-    .from('user_business_roles')
-    .select('role')
-    .eq('user_id', user.id)
-    .eq('business_id', businessId)
-    .single();
-
-  if (!role || !['business_manager', 'both', 'superadmin'].includes(role.role)) {
+  if (!(await canManageBusiness(supabase, user.id, businessId))) {
     return errorRedirect('Akses ditolak', businessId);
   }
 

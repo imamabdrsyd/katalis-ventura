@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, createServerClient } from '@/lib/supabase-server';
+import { canManageBusiness, getAuthenticatedUser, createServerClient } from '@/lib/supabase-server';
 import { updateTransactionSchema, transactionIdSchema } from '@/lib/validations';
 
 interface RouteParams {
@@ -79,21 +79,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verify user has write access to this business
-    const { data: role, error: roleError } = await supabase
-      .from('user_business_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('business_id', existing.business_id)
-      .single();
-
-    if (roleError || !role) {
-      return NextResponse.json(
-        { error: 'You do not have access to this business' },
-        { status: 403 }
-      );
-    }
-
-    if (role.role !== 'business_manager' && role.role !== 'both') {
+    if (!(await canManageBusiness(supabase, user.id, existing.business_id))) {
       return NextResponse.json(
         { error: 'Only business managers can update transactions' },
         { status: 403 }
@@ -185,21 +171,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verify user has write access to this business
-    const { data: role, error: roleError } = await supabase
-      .from('user_business_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('business_id', existing.business_id)
-      .single();
-
-    if (roleError || !role) {
-      return NextResponse.json(
-        { error: 'You do not have access to this business' },
-        { status: 403 }
-      );
-    }
-
-    if (role.role !== 'business_manager' && role.role !== 'both') {
+    if (!(await canManageBusiness(supabase, user.id, existing.business_id))) {
       return NextResponse.json(
         { error: 'Only business managers can delete transactions' },
         { status: 403 }

@@ -91,7 +91,6 @@ export interface Translations {
   roles: {
     businessManager: string;
     investor: string;
-    managerInvestor: string;
     superAdmin: string;
     creator: string;
   };

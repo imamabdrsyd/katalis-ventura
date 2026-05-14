@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, createAdminClient } from '@/lib/supabase-server';
+import { canManageBusiness, getAuthenticatedUser, createServerClient } from '@/lib/supabase-server';
 import crypto from 'crypto';
 
 /**
@@ -19,33 +19,8 @@ export async function DELETE(req: NextRequest) {
   }
 
   // Verifikasi user punya akses ke bisnis ini
-  const supabase = createAdminClient();
-  const { data: role } = await supabase
-    .from('user_business_roles')
-    .select('role')
-    .eq('user_id', user.id)
-    .eq('business_id', businessId)
-    .maybeSingle();
-
-  const { data: business } = await supabase
-    .from('businesses')
-    .select('created_by')
-    .eq('id', businessId)
-    .maybeSingle();
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('default_role')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  const hasAccess =
-    profile?.default_role === 'superadmin' ||
-    role?.role === 'business_manager' ||
-    role?.role === 'both' ||
-    business?.created_by === user.id;
-
-  if (!hasAccess) {
+  const supabase = await createServerClient();
+  if (!(await canManageBusiness(supabase, user.id, businessId))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

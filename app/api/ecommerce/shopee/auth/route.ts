@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, createServerClient } from '@/lib/supabase-server';
+import { canManageBusiness, getAuthenticatedUser, createServerClient } from '@/lib/supabase-server';
 import { getShopeeAuthUrl } from '@/lib/ecommerce/shopee/auth';
 import { businessIdSchema } from '@/lib/validations';
 
@@ -26,14 +26,7 @@ export async function GET(request: NextRequest) {
 
   // Verifikasi user adalah manager bisnis ini
   const supabase = await createServerClient();
-  const { data: role } = await supabase
-    .from('user_business_roles')
-    .select('role')
-    .eq('user_id', user.id)
-    .eq('business_id', businessId)
-    .single();
-
-  if (!role || !['business_manager', 'both', 'superadmin'].includes(role.role)) {
+  if (!(await canManageBusiness(supabase, user.id, businessId))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

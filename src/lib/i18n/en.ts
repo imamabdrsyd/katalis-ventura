@@ -88,7 +88,6 @@ export const en: Translations = {
   roles: {
     businessManager: 'Business Manager',
     investor: 'Investor',
-    managerInvestor: 'Manager & Investor',
     superAdmin: 'Super Admin',
     creator: 'Creator',
   },
@@ -105,7 +104,7 @@ export const en: Translations = {
     email: 'Email',
     emailReadonly: 'Email cannot be changed',
     role: 'Role',
-    superadminRoleHint: 'You can switch roles because you have Super Admin access',
+    superadminRoleHint: 'Super Admin includes investor and business manager access for joined businesses',
     roleReadonly: 'Role cannot be changed',
     saveChanges: 'Save Changes',
     photoUploaded: 'Photo uploaded successfully!',

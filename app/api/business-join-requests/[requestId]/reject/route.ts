@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createServerClient, createAdminClient, getAuthenticatedUser } from '@/lib/supabase-server';
+import { canManageBusiness, createServerClient, createAdminClient, getAuthenticatedUser } from '@/lib/supabase-server';
 
 export async function POST(
   _request: Request,
@@ -15,9 +15,11 @@ export async function POST(
 
     const supabase = await createServerClient();
 
-    const { data: req, error: fetchErr } = await supabase
+    const admin = createAdminClient();
+
+    const { data: req, error: fetchErr } = await admin
       .from('business_join_requests')
-      .select('id, status, businesses!inner(created_by)')
+      .select('id, business_id, status, businesses!inner(created_by)')
       .eq('id', requestId)
       .single();
 
@@ -26,15 +28,14 @@ export async function POST(
     }
 
     const business = Array.isArray(req.businesses) ? req.businesses[0] : req.businesses;
-    if (!business || business.created_by !== user.id) {
-      return NextResponse.json({ error: 'Anda bukan pemilik bisnis ini' }, { status: 403 });
+    if (!business || !(await canManageBusiness(supabase, user.id, req.business_id))) {
+      return NextResponse.json({ error: 'Anda tidak memiliki akses untuk mengelola bisnis ini' }, { status: 403 });
     }
 
     if (req.status !== 'pending') {
       return NextResponse.json({ error: 'Permintaan sudah diproses sebelumnya' }, { status: 409 });
     }
 
-    const admin = createAdminClient();
     const { error } = await admin
       .from('business_join_requests')
       .update({

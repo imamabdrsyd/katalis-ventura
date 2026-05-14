@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, createAdminClient } from '@/lib/supabase-server';
+import { canManageBusiness, getAuthenticatedUser, createAdminClient, createServerClient } from '@/lib/supabase-server';
 
 const MAX_SIZE = 2 * 1024 * 1024; // 2MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -13,22 +13,9 @@ export async function POST(
 
   const { businessId } = await params;
   const supabase = createAdminClient();
+  const server = await createServerClient();
 
-  // Verify user is a manager of this business
-  const [{ data: role }, { data: business }] = await Promise.all([
-    supabase.from('user_business_roles').select('role').eq('user_id', user.id).eq('business_id', businessId).maybeSingle(),
-    supabase.from('businesses').select('created_by').eq('id', businessId).maybeSingle(),
-  ]);
-
-  // Check superadmin
-  const { data: profile } = await supabase.from('profiles').select('default_role').eq('id', user.id).maybeSingle();
-  const isManager =
-    profile?.default_role === 'superadmin' ||
-    role?.role === 'business_manager' ||
-    role?.role === 'both' ||
-    business?.created_by === user.id;
-
-  if (!isManager) {
+  if (!(await canManageBusiness(server, user.id, businessId))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

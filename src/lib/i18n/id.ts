@@ -88,7 +88,6 @@ export const id: Translations = {
   roles: {
     businessManager: 'Business Manager',
     investor: 'Investor',
-    managerInvestor: 'Manager & Investor',
     superAdmin: 'Super Admin',
     creator: 'Creator',
   },
@@ -105,7 +104,7 @@ export const id: Translations = {
     email: 'Email',
     emailReadonly: 'Email tidak bisa diubah',
     role: 'Role',
-    superadminRoleHint: 'Anda bisa berganti role karena memiliki akses Super Admin',
+    superadminRoleHint: 'Super Admin memiliki akses gabungan investor dan business manager pada bisnis yang diikuti',
     roleReadonly: 'Role tidak bisa diubah',
     saveChanges: 'Simpan Perubahan',
     photoUploaded: 'Foto berhasil diupload!',

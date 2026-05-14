@@ -1,6 +1,8 @@
 import { createServerClient as createSupabaseServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
+import { isManagerRole, normalizeRole } from '@/lib/roles';
+import type { UserRole } from '@/types';
 
 /**
  * Create an authenticated Supabase client for API route handlers.
@@ -53,4 +55,37 @@ export async function getAuthenticatedUser() {
 
   if (error || !user) return null;
   return user;
+}
+
+export async function getBusinessRoleForUser(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  userId: string,
+  businessId: string
+): Promise<UserRole | null> {
+  const [{ data: role }, { data: business }] = await Promise.all([
+    supabase
+      .from('user_business_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('business_id', businessId)
+      .maybeSingle(),
+    supabase
+      .from('businesses')
+      .select('created_by')
+      .eq('id', businessId)
+      .maybeSingle(),
+  ]);
+
+  const normalized = normalizeRole(role?.role);
+  if (normalized) return normalized;
+  if (business?.created_by === userId) return 'business_manager';
+  return null;
+}
+
+export async function canManageBusiness(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  userId: string,
+  businessId: string
+): Promise<boolean> {
+  return isManagerRole(await getBusinessRoleForUser(supabase, userId, businessId));
 }

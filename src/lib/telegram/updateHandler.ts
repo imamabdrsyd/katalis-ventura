@@ -224,7 +224,7 @@ async function saveTransaction(
     return;
   }
 
-  // Verifikasi role (business_manager atau both)
+  // Verifikasi role (business_manager atau superadmin)
   const { data: role } = await admin
     .from('user_business_roles')
     .select('role')
@@ -232,7 +232,7 @@ async function saveTransaction(
     .eq('business_id', businessId)
     .single();
 
-  if (!role || !['business_manager', 'both'].includes(role.role)) {
+  if (!role || !['business_manager', 'superadmin'].includes(role.role)) {
     await sendMessage(chatId, '❌ Kamu tidak memiliki akses untuk mencatat transaksi di bisnis ini.');
     return;
   }

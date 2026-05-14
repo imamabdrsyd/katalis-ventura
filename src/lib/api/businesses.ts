@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase';
 import type { Business, Database } from '@/types';
 import { getAccountByCode } from './accounts';
 import { createTransaction } from './transactions';
+import { normalizeRole } from '@/lib/roles';
 
 type BusinessInsert = Database['public']['Tables']['businesses']['Insert'];
 type BusinessUpdate = Database['public']['Tables']['businesses']['Update'] & {
@@ -178,18 +179,29 @@ export async function getUserBusinesses(
   includeArchived = false
 ): Promise<Business[]> {
   const supabase = createClient();
-  let query = supabase
-    .from('user_business_roles')
-    .select('business_id, businesses(*)')
-    .eq('user_id', userId);
+  const [rolesResult, createdResult] = await Promise.all([
+    supabase
+      .from('user_business_roles')
+      .select('business_id, businesses(*)')
+      .eq('user_id', userId),
+    supabase
+      .from('businesses')
+      .select('*')
+      .eq('created_by', userId),
+  ]);
 
-  const { data, error } = await query;
+  if (rolesResult.error) throw rolesResult.error;
+  if (createdResult.error) throw createdResult.error;
 
-  if (error) throw error;
-
-  const businesses = data
+  const membershipBusinesses = rolesResult.data
     ?.map((item) => item.businesses as unknown as Business)
     .filter((b): b is Business => b !== null) || [];
+  const createdBusinesses = createdResult.data || [];
+  const businessById = new Map<string, Business>();
+  [...membershipBusinesses, ...createdBusinesses].forEach((business) => {
+    businessById.set(business.id, business);
+  });
+  const businesses = Array.from(businessById.values());
 
   if (!includeArchived) {
     return businesses.filter((b) => !b.is_archived);
@@ -219,6 +231,15 @@ export async function createBusiness(
   userId: string
 ): Promise<Business> {
   const supabase = createClient();
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('default_role')
+    .eq('id', userId)
+    .maybeSingle();
+  const creatorRole = normalizeRole(profile?.default_role) === 'superadmin'
+    ? 'superadmin'
+    : 'business_manager';
+
   // Create business
   const { data: newBusiness, error: businessError } = await supabase
     .from('businesses')
@@ -236,7 +257,7 @@ export async function createBusiness(
   const { error: roleError } = await supabase.from('user_business_roles').insert({
     user_id: userId,
     business_id: newBusiness.id,
-    role: 'business_manager',
+    role: creatorRole,
   });
 
   if (roleError) throw roleError;
@@ -383,10 +404,17 @@ export async function joinBusiness(
   businessId: string
 ): Promise<void> {
   const supabase = createClient();
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('default_role')
+    .eq('id', userId)
+    .maybeSingle();
+  const role = normalizeRole(profile?.default_role) === 'superadmin' ? 'superadmin' : 'investor';
+
   const { error } = await supabase.from('user_business_roles').insert({
     user_id: userId,
     business_id: businessId,
-    role: 'investor',
+    role,
   });
 
   if (error) throw error;

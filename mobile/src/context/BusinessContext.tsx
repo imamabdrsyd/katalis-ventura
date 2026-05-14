@@ -3,12 +3,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
 import { initDatabase } from '@/db';
-import type { Business, UserBusinessRole } from '@shared/types';
+import type { Business } from '@shared/types';
+import { pickHighestRole } from '@/lib/roles';
+import type { UserRole } from '@shared/types';
 
 interface BusinessContextType {
   businesses: Business[];
   activeBusiness: Business | null;
   activeBusinessId: string | null;
+  userRole: UserRole | null;
   isLoading: boolean;
   setActiveBusiness: (businessId: string) => Promise<void>;
 }
@@ -22,6 +25,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [activeBusiness, setActiveBusiness] = useState<Business | null>(null);
   const [activeBusinessId, setActiveBusinessId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch businesses when user logs in
@@ -45,6 +49,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
 
         const businessList = roles?.map((role: any) => role.businesses).filter(Boolean) as Business[] || [];
         setBusinesses(businessList);
+        setUserRole(pickHighestRole((roles || []).map((role: any) => role.role)));
 
         // Try to restore last active business
         const savedBusinessId = await AsyncStorage.getItem(STORAGE_KEY);
@@ -79,6 +84,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
         businesses,
         activeBusiness,
         activeBusinessId,
+        userRole,
         isLoading,
         setActiveBusiness: switchBusiness,
       }}

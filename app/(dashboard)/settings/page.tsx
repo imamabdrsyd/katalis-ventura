@@ -9,9 +9,11 @@ import { LOCALE_LABELS, LOCALE_FLAGS, type Locale } from '@/lib/i18n';
 import { Camera, User, Mail, Briefcase, Save, Globe, Send, CheckCircle2, XCircle, Copy, RefreshCw, FileEdit, CheckCheck } from 'lucide-react';
 import Image from 'next/image';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
+import { isManagerRole } from '@/lib/roles';
+import type { UserRole } from '@/types';
 
 export default function SettingsPage() {
-  const { user, userRole, isSuperadmin, switchRole, refetch } = useBusinessContext();
+  const { user, userRole, displayRole, isSuperadmin, switchRole, refetch } = useBusinessContext();
   const { locale, setLocale, t } = useLanguage();
   const router = useRouter();
   const supabase = createClient();
@@ -19,25 +21,19 @@ export default function SettingsPage() {
   const roleLabels: Record<string, string> = {
     business_manager: t.roles.businessManager,
     investor: t.roles.investor,
-    both: t.roles.managerInvestor,
     superadmin: t.roles.superAdmin,
   };
-
-  const switchableRoles = [
-    { value: 'business_manager', label: t.roles.businessManager },
-    { value: 'investor', label: t.roles.investor },
-    { value: 'superadmin', label: t.roles.superAdmin },
-  ];
+  const canUseTelegram = isManagerRole(userRole);
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState<string>(userRole || '');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedDisplayRole, setSelectedDisplayRole] = useState<UserRole>('superadmin');
 
   // Telegram state
   const [telegramConn, setTelegramConn] = useState<{
@@ -61,10 +57,20 @@ export default function SettingsPage() {
       setEmail(user.email || '');
       setAvatarUrl(user.user_metadata?.avatar_url || null);
       setLoading(false);
-      // Fetch telegram connection status
-      fetchTelegramStatus();
+      if (canUseTelegram) {
+        fetchTelegramStatus();
+      } else {
+        setTelegramConn(null);
+        setTelegramLoading(false);
+      }
     }
-  }, [user]);
+  }, [user, canUseTelegram]);
+
+  useEffect(() => {
+    if (displayRole) {
+      setSelectedDisplayRole(displayRole);
+    }
+  }, [displayRole]);
 
   // Countdown timer untuk link token
   useEffect(() => {
@@ -154,10 +160,6 @@ export default function SettingsPage() {
     return `${m}:${s}`;
   };
 
-  useEffect(() => {
-    if (userRole) setSelectedRole(userRole);
-  }, [userRole]);
-
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true);
@@ -225,9 +227,8 @@ export default function SettingsPage() {
 
       if (profileError) throw profileError;
 
-      // Superadmin: switch active role via context
-      if (isSuperadmin && selectedRole !== userRole) {
-        switchRole(selectedRole as any);
+      if (isSuperadmin) {
+        switchRole(selectedDisplayRole);
       }
 
       setSuccess(t.settings.profileUpdated);
@@ -276,6 +277,7 @@ export default function SettingsPage() {
       )}
 
       {/* Telegram Bot Section */}
+      {canUseTelegram && (
       <div className="card mt-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center">
@@ -407,6 +409,7 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+      )}
 
       <div className="card mt-6">
         <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6">{t.settings.profileInfo}</h2>
@@ -490,35 +493,26 @@ export default function SettingsPage() {
               {t.settings.role}
             </label>
             {isSuperadmin ? (
-              <>
-                <select
-                  value={selectedRole}
-                  onChange={(e) => setSelectedRole(e.target.value)}
-                  className="input"
-                >
-                  {switchableRoles.map((role) => (
-                    <option key={role.value} value={role.value}>
-                      {role.label}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {t.settings.superadminRoleHint}
-                </p>
-              </>
+              <select
+                value={selectedDisplayRole}
+                onChange={(event) => setSelectedDisplayRole(event.target.value as UserRole)}
+                className="input"
+              >
+                <option value="business_manager">{roleLabels.business_manager}</option>
+                <option value="investor">{roleLabels.investor}</option>
+                <option value="superadmin">{roleLabels.superadmin}</option>
+              </select>
             ) : (
-              <>
-                <input
-                  type="text"
-                  value={userRole ? roleLabels[userRole] : '-'}
-                  disabled
-                  className="input bg-gray-50 dark:bg-gray-700 cursor-not-allowed"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {t.settings.roleReadonly}
-                </p>
-              </>
+              <input
+                type="text"
+                value={userRole ? roleLabels[userRole] : '-'}
+                disabled
+                className="input bg-gray-50 dark:bg-gray-700 cursor-not-allowed"
+              />
             )}
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {isSuperadmin ? t.settings.superadminRoleHint : t.settings.roleReadonly}
+            </p>
           </div>
 
           {/* Language Switcher */}

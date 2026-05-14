@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "NEXT_TELEMETRY_DISABLED=1 next dev --webpack --disable-source-maps",
+    "dev:turbo": "NEXT_TELEMETRY_DISABLED=1 next dev --turbopack --disable-source-maps",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

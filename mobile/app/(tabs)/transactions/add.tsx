@@ -10,8 +10,9 @@ import { createTransaction } from '@/hooks/useTransactions';
 import type { Account } from '@shared/types';
 
 export default function AddTransactionScreen() {
-  const { activeBusinessId } = useBusiness();
+  const { activeBusinessId, userRole } = useBusiness();
   const router = useRouter();
+  const canManageTransactions = userRole === 'business_manager' || userRole === 'superadmin';
 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [saving, setSaving] = useState(false);
@@ -19,6 +20,11 @@ export default function AddTransactionScreen() {
 
   // Fetch accounts from Supabase (or local DB)
   useEffect(() => {
+    if (userRole && !canManageTransactions) {
+      router.replace('/(tabs)/transactions');
+      return;
+    }
+
     if (!activeBusinessId) return;
 
     const fetchAccounts = async () => {
@@ -40,7 +46,7 @@ export default function AddTransactionScreen() {
     };
 
     fetchAccounts();
-  }, [activeBusinessId]);
+  }, [activeBusinessId, canManageTransactions, router, userRole]);
 
   const handleSubmit = async (data: TransactionFormData) => {
     if (!activeBusinessId) return;

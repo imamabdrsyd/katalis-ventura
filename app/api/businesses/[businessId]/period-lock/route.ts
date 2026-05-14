@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, createServerClient } from '@/lib/supabase-server';
+import { canManageBusiness, getAuthenticatedUser, createServerClient } from '@/lib/supabase-server';
 import { z } from 'zod';
 
 const periodLockSchema = z.object({
@@ -34,19 +34,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const supabase = await createServerClient();
 
-    // Only business managers can set period lock
-    const { data: role, error: roleError } = await supabase
-      .from('user_business_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('business_id', businessId)
-      .single();
-
-    if (roleError || !role) {
-      return NextResponse.json({ error: 'You do not have access to this business' }, { status: 403 });
-    }
-
-    if (role.role !== 'business_manager' && role.role !== 'both') {
+    // Only business managers/superadmin members can set period lock
+    if (!(await canManageBusiness(supabase, user.id, businessId))) {
       return NextResponse.json(
         { error: 'Hanya business manager yang dapat mengatur period lock' },
         { status: 403 }

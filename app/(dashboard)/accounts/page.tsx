@@ -6,6 +6,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import type { Account, AccountType } from '@/types';
 import * as accountsApi from '@/lib/api/accounts';
 import type { AccountTreeNode } from '@/lib/api/accounts';
+import { isManagerRole } from '@/lib/roles';
 import { AccountForm, type AccountFormData } from '@/components/accounts/AccountForm';
 import { AccountDeleteModal } from '@/components/accounts/AccountDeleteModal';
 import { Plus, Search, ChevronDown, ChevronRight, Lock, CheckCircle2, BookOpen as BookOpenIcon, MoreVertical, BookMarked, Building2 } from 'lucide-react';
@@ -46,7 +47,7 @@ export default function AccountsPage() {
   const [showInactive, setShowInactive] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
-  const canManageAccounts = userRole === 'business_manager' || userRole === 'both' || userRole === 'superadmin';
+  const canManageAccounts = isManagerRole(userRole);
 
   // Fetch accounts
   useEffect(() => {

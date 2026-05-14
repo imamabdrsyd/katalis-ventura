@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBusinessContext } from '@/context/BusinessContext';
+import { isManagerRole } from '@/lib/roles';
 import * as transactionsApi from '@/lib/api/transactions';
 import * as recurringApi from '@/lib/api/recurring';
 import * as contactsApi from '@/lib/api/contacts';
@@ -21,7 +22,7 @@ import type { TransactionFilters } from '@/lib/api/transactions';
 
 export function useTransactions() {
   const { user, activeBusinessId: businessId, activeBusiness, loading: businessLoading, error: businessError, userRole } = useBusinessContext();
-  const canManageTransactions = userRole === 'business_manager' || userRole === 'both';
+  const canManageTransactions = isManagerRole(userRole);
   const queryClient = useQueryClient();
 
   // Filter state

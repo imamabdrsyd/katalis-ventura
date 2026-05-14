@@ -14,6 +14,7 @@ import { Tabs, type TabItem } from '@/components/ui/Tabs';
 import * as businessesApi from '@/lib/api/businesses';
 import { calculateTotalCapex } from '@/lib/calculations';
 import { createClient } from '@/lib/supabase';
+import { isManagerRole } from '@/lib/roles';
 import type { Business, Transaction } from '@/types';
 
 type TabType = 'active' | 'archived';
@@ -23,7 +24,7 @@ export default function BusinessesPage() {
     useBusinessContext();
   const { t } = useLanguage();
   const isInvestor = userRole === 'investor';
-  const canManage = userRole === 'business_manager' || userRole === 'both' || userRole === 'superadmin';
+  const canManage = isManagerRole(userRole);
 
   // Get user's first name
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
@@ -44,19 +45,7 @@ export default function BusinessesPage() {
     if (!user) return;
     setFetchLoading(true);
     try {
-      let data: Business[];
-      if (isSuperadmin) {
-        // Superadmin: fetch ALL businesses including archived
-        const supabaseClient = createClient();
-        const { data: allBiz, error: allBizErr } = await supabaseClient
-          .from('businesses')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (allBizErr) throw allBizErr;
-        data = (allBiz || []) as Business[];
-      } else {
-        data = await businessesApi.getUserBusinesses(user.id, true);
-      }
+      const data = await businessesApi.getUserBusinesses(user.id, true);
       setAllBusinesses(data);
 
       // Fetch transactions for all businesses to calculate total CAPEX
@@ -91,7 +80,7 @@ export default function BusinessesPage() {
     } finally {
       setFetchLoading(false);
     }
-  }, [user, isSuperadmin]);
+  }, [user]);
 
   useEffect(() => {
     fetchBusinesses();

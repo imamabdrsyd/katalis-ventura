@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getAuthenticatedUser, createAdminClient } from '@/lib/supabase-server';
+import { canManageBusiness, getAuthenticatedUser, createAdminClient, createServerClient } from '@/lib/supabase-server';
 
 const ruleSchema = z.object({
   date_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format YYYY-MM-DD'),
@@ -13,18 +13,8 @@ const ruleSchema = z.object({
 });
 
 async function verifyManager(userId: string, businessId: string) {
-  const supabase = createAdminClient();
-  const [roleResult, businessResult, profileResult] = await Promise.all([
-    supabase.from('user_business_roles').select('role').eq('user_id', userId).eq('business_id', businessId).maybeSingle(),
-    supabase.from('businesses').select('created_by').eq('id', businessId).maybeSingle(),
-    supabase.from('profiles').select('default_role').eq('id', userId).maybeSingle(),
-  ]);
-  return (
-    profileResult.data?.default_role === 'superadmin' ||
-    roleResult.data?.role === 'business_manager' ||
-    roleResult.data?.role === 'both' ||
-    businessResult.data?.created_by === userId
-  );
+  const supabase = await createServerClient();
+  return canManageBusiness(supabase, userId, businessId);
 }
 
 async function getOmniChannelId(businessId: string): Promise<string | null> {

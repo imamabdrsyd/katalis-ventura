@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, createAdminClient } from '@/lib/supabase-server';
+import { canManageBusiness, getAuthenticatedUser, createAdminClient, createServerClient } from '@/lib/supabase-server';
 import { z } from 'zod';
 
 const VALID_CHANNEL_TYPES = [
@@ -20,13 +20,8 @@ const linkSchema = z.object({
 });
 
 async function verifyManager(userId: string, businessId: string): Promise<boolean> {
-  const supabase = createAdminClient();
-  const [{ data: role }, { data: business }, { data: profile }] = await Promise.all([
-    supabase.from('user_business_roles').select('role').eq('user_id', userId).eq('business_id', businessId).maybeSingle(),
-    supabase.from('businesses').select('created_by').eq('id', businessId).maybeSingle(),
-    supabase.from('profiles').select('default_role').eq('id', userId).maybeSingle(),
-  ]);
-  return profile?.default_role === 'superadmin' || role?.role === 'business_manager' || role?.role === 'both' || business?.created_by === userId;
+  const supabase = await createServerClient();
+  return canManageBusiness(supabase, userId, businessId);
 }
 
 // POST /api/omni-channel/[businessId]/links
