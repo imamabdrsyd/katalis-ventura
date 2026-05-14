@@ -79,12 +79,14 @@ export interface Translations {
     searchPlaceholder: string;
     notFound: string;
     pages: string;
+    data: string;
     createNewBusiness: string;
     joinBusiness: string;
     selectBusiness: string;
     expandSidebar: string;
     collapseSidebar: string;
     searchingTransactions: string;
+    searchingData: string;
   };
 
   // Roles
