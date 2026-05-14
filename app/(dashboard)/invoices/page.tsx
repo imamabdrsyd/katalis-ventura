@@ -165,7 +165,7 @@ function InvoicesPageInner() {
       <Modal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        title="{t.invoices.createInvoice}"
+        title={t.invoices.createInvoice}
       >
         <InvoiceForm
           onSubmit={handleCreateInvoice}
