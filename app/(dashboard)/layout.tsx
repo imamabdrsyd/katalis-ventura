@@ -43,6 +43,9 @@ import {
   Calendar,
   HandCoins,
   Languages,
+  FileText,
+  RefreshCw,
+  Upload,
 } from 'lucide-react';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -115,93 +118,190 @@ function useNavData() {
     },
   ], [t]);
 
-  const allNavItems: NavItem[] = useMemo(() => [
-    ...navSections.flatMap((s) => s.items),
-    { href: '/transactions', label: t.nav.transactions, icon: CreditCard },
-    { href: '/transactions/journal-entry', label: t.nav.journalEntry, icon: Plus },
-    { href: '/settings', label: t.nav.settings, icon: Settings },
-  ], [navSections, t]);
-
-  return { roleLabels, navSections, allNavItems, t };
+  return { roleLabels, navSections, t };
 }
 
 type SearchResult = {
-  type: 'page' | 'transaction';
+  type: 'page' | 'data';
   label: string;
   sublabel?: string;
   href: string;
   icon?: LucideIcon;
-  category?: string;
+  source?: DataSearchSource;
+  badge?: string;
+  amount?: number;
+  date?: string;
 };
+
+type DataSearchSource =
+  | 'business'
+  | 'transaction'
+  | 'account'
+  | 'contact'
+  | 'invoice'
+  | 'budget'
+  | 'recurring'
+  | 'template'
+  | 'import_batch';
+
+type ApiSearchResult = {
+  id: string;
+  source: DataSearchSource;
+  title: string;
+  subtitle?: string;
+  href: string;
+  badge?: string;
+  amount?: number;
+  date?: string;
+};
+
+const DATA_SOURCE_LABELS: Record<DataSearchSource, string> = {
+  business: 'Business',
+  transaction: 'Transaction',
+  account: 'Account',
+  contact: 'Contact',
+  invoice: 'Invoice',
+  budget: 'Budget',
+  recurring: 'Recurring',
+  template: 'Template',
+  import_batch: 'Import',
+};
+
+const DATA_SOURCE_ICONS: Record<DataSearchSource, LucideIcon> = {
+  business: Building2,
+  transaction: CreditCard,
+  account: BookOpen,
+  contact: UserPlus,
+  invoice: FileText,
+  budget: Target,
+  recurring: RefreshCw,
+  template: ClipboardCheck,
+  import_batch: Upload,
+};
+
+function getSearchTokens(query: string): string[] {
+  return query
+    .toLowerCase()
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function matchesSearchTokens(text: string, query: string): boolean {
+  const tokens = getSearchTokens(query);
+  if (tokens.length === 0) return true;
+  const normalized = text.toLowerCase();
+  return tokens.every((token) => normalized.includes(token));
+}
+
+function formatSearchAmount(amount?: number): string | null {
+  if (typeof amount !== 'number' || !Number.isFinite(amount)) return null;
+  return amount.toLocaleString('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+  });
+}
 
 function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
-  const { activeBusinessId } = useBusinessContext();
-  const { allNavItems, t } = useNavData();
+  const { activeBusinessId, userRole } = useBusinessContext();
+  const { navSections, t } = useNavData();
   const [query, setQuery] = useState('');
-  const [transactionResults, setTransactionResults] = useState<SearchResult[]>([]);
+  const [dataResults, setDataResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const canManage = isManagerRole(userRole);
+
+  const searchablePages = useMemo(() => {
+    const pages: NavItem[] = [
+      { href: '/dashboard', label: t.nav.dashboard, icon: LayoutDashboard },
+      { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
+      ...navSections.flatMap((s) => s.items),
+      { href: '/settings', label: t.nav.settings, icon: Settings },
+    ];
+
+    if (canManage) {
+      pages.splice(2, 0,
+        { href: '/transactions', label: t.nav.transactions, icon: CreditCard },
+        { href: '/transactions/journal-entry', label: t.nav.journalEntry, icon: Plus },
+        { href: '/invoices', label: t.nav.invoice, icon: FileText },
+        { href: '/reconciliation', label: t.nav.bankReconciliation, icon: ClipboardCheck },
+        { href: '/closing-entry', label: t.nav.closingEntry, icon: Calculator }
+      );
+    }
+
+    return pages;
+  }, [canManage, navSections, t]);
 
   const filteredPages = useMemo(
     () =>
       query.trim() === ''
-        ? allNavItems.map((item) => ({ type: 'page' as const, label: item.label, href: item.href, icon: item.icon }))
-        : allNavItems
-            .filter((item) => item.label.toLowerCase().includes(query.toLowerCase()))
+        ? searchablePages.map((item) => ({ type: 'page' as const, label: item.label, href: item.href, icon: item.icon }))
+        : searchablePages
+            .filter((item) => matchesSearchTokens(`${item.label} ${item.href}`, query))
             .map((item) => ({ type: 'page' as const, label: item.label, href: item.href, icon: item.icon })),
-    [query, allNavItems]
+    [query, searchablePages]
   );
 
-  // Search transactions with debounce
+  // Search business data with debounce. API uses the current user session and Supabase RLS.
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    if (!query.trim() || !activeBusinessId) {
-      setTransactionResults([]);
+    const trimmedQuery = query.trim();
+
+    if (trimmedQuery.length < 2 || !activeBusinessId) {
+      setDataResults([]);
       setSearching(false);
       return;
     }
 
+    let cancelled = false;
     setSearching(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        const supabase = createClient();
-        const q = query.toLowerCase();
-        const { data } = await supabase
-          .from('active_transactions')
-          .select('id, name, description, category, amount, date')
-          .eq('business_id', activeBusinessId)
-          .or(`name.ilike.%${q}%,description.ilike.%${q}%`)
-          .order('date', { ascending: false })
-          .limit(8);
+        const params = new URLSearchParams({
+          q: trimmedQuery,
+          businessId: activeBusinessId,
+          limit: '24',
+        });
+        const response = await fetch(`/api/search?${params.toString()}`);
+        if (!response.ok) throw new Error('Search request failed');
 
-        if (data) {
-          setTransactionResults(
-            data.map((t) => ({
-              type: 'transaction' as const,
-              label: t.name || t.description || '',
-              sublabel: t.description && t.name ? t.description : undefined,
-              href: `/transactions?highlight=${t.id}`,
-              category: t.category,
-            }))
-          );
-        }
+        const payload = (await response.json()) as { data?: ApiSearchResult[] };
+        if (cancelled) return;
+
+        setDataResults(
+          (payload.data ?? []).map((item) => ({
+            type: 'data' as const,
+            label: item.title,
+            sublabel: item.subtitle,
+            href: item.href,
+            source: item.source,
+            badge: item.badge,
+            amount: item.amount,
+            date: item.date,
+            icon: DATA_SOURCE_ICONS[item.source],
+          }))
+        );
       } catch {
-        setTransactionResults([]);
+        if (!cancelled) setDataResults([]);
       } finally {
-        setSearching(false);
+        if (!cancelled) setSearching(false);
       }
     }, 300);
 
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    return () => {
+      cancelled = true;
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, [query, activeBusinessId]);
 
   const allResults: SearchResult[] = useMemo(() => {
     if (!query.trim()) return filteredPages;
-    return [...filteredPages, ...transactionResults];
-  }, [query, filteredPages, transactionResults]);
+    return [...filteredPages, ...dataResults];
+  }, [query, filteredPages, dataResults]);
 
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -210,7 +310,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
     if (open) {
       setQuery('');
       setSelectedIndex(0);
-      setTransactionResults([]);
+      setDataResults([]);
       setTimeout(() => inputRef.current?.focus(), 0);
     }
   }, [open]);
@@ -238,7 +338,8 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
         setSelectedIndex((i) => (i - 1 + (allResults.length || 1)) % (allResults.length || 1));
       } else if (e.key === 'Enter' && allResults.length > 0) {
         e.preventDefault();
-        navigate(allResults[selectedIndex].href);
+        const selected = allResults[Math.min(selectedIndex, allResults.length - 1)];
+        navigate(selected.href);
       }
     },
     [allResults, selectedIndex, navigate]
@@ -247,7 +348,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
   if (!open) return null;
 
   const hasPages = filteredPages.length > 0;
-  const hasTransactions = transactionResults.length > 0;
+  const hasData = dataResults.length > 0;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]" onClick={onClose}>
@@ -306,13 +407,14 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
               )}
 
               {/* Transactions section */}
-              {hasTransactions && (
+              {hasData && (
                 <div>
                   {hasPages && <div className="border-t border-gray-100 dark:border-gray-700 my-1" />}
-                  <p className="px-5 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.nav.transactions}</p>
-                  {transactionResults.map((item, rawIdx) => {
+                  <p className="px-5 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.nav.data}</p>
+                  {dataResults.map((item, rawIdx) => {
                     const globalIdx = filteredPages.length + rawIdx;
-                    const CATEGORY_COLORS = CATEGORY_BADGE_CLASSES;
+                    const Icon = item.icon ?? Search;
+                    const amount = formatSearchAmount(item.amount);
                     return (
                       <button
                         key={item.href + rawIdx}
@@ -324,16 +426,28 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
                             : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                         }`}
                       >
-                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${CATEGORY_COLORS[item.category || ''] || 'bg-gray-100 text-gray-500'}`}>
-                          {item.category}
-                        </span>
+                        <Icon className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         <div className="flex flex-col items-start min-w-0 flex-1">
-                          <span className="truncate w-full text-left">{item.label}</span>
+                          <span className="truncate w-full text-left">
+                            {item.label}
+                          </span>
                           {item.sublabel && (
                             <span className="text-xs text-gray-400 truncate w-full text-left">{item.sublabel}</span>
                           )}
                         </div>
-                        <CreditCard className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                        <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+                          {amount && <span className="hidden sm:inline text-xs text-gray-400">{amount}</span>}
+                          {item.badge && (
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${CATEGORY_BADGE_CLASSES[item.badge] || 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
+                              {item.badge}
+                            </span>
+                          )}
+                          {item.source && (
+                            <span className="hidden sm:inline text-xs text-gray-400">
+                              {DATA_SOURCE_LABELS[item.source]}
+                            </span>
+                          )}
+                        </div>
                       </button>
                     );
                   })}
@@ -344,7 +458,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
               {searching && (
                 <div className="px-5 py-3 flex items-center gap-2 text-xs text-gray-400">
                   <div className="w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                  {t.nav.searchingTransactions}
+                  {t.nav.searchingData}
                 </div>
               )}
             </>

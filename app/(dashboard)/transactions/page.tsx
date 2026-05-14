@@ -224,6 +224,11 @@ function TransactionsPageInner() {
   // Read filters from URL search params (e.g., /transactions?category=EARN&start=2026-01-01&end=2026-01-31)
   const searchParams = useSearchParams();
   useEffect(() => {
+    const view = searchParams.get('view');
+    if (view === 'recurring') {
+      setActiveView('recurring');
+    }
+
     const category = searchParams.get('category');
     if (category && CATEGORIES.includes(category as TransactionCategory)) {
       setCategoryFilter(category as TransactionCategory);
@@ -254,7 +259,7 @@ function TransactionsPageInner() {
       });
       return ids.size > 0 ? ids : undefined;
     }
-    return undefined;
+    return new Set([highlightParam]);
   })();
 
   // Loading state
