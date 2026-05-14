@@ -12,14 +12,6 @@ import { AccountDeleteModal } from '@/components/accounts/AccountDeleteModal';
 import { Plus, Search, ChevronDown, ChevronRight, Lock, CheckCircle2, BookOpen as BookOpenIcon, MoreVertical, BookMarked, Building2 } from 'lucide-react';
 
 
-const TYPE_BAR_COLORS: Record<AccountType, string> = {
-  ASSET: 'bg-blue-500 dark:bg-blue-400',
-  LIABILITY: 'bg-amber-500 dark:bg-amber-400',
-  EQUITY: 'bg-indigo-500 dark:bg-indigo-400',
-  REVENUE: 'bg-green-500 dark:bg-green-400',
-  EXPENSE: 'bg-red-500 dark:bg-red-400',
-};
-
 export default function AccountsPage() {
   const { activeBusiness, userRole } = useBusinessContext();
   const { t } = useLanguage();
@@ -461,16 +453,11 @@ function ParentAccountCard({
   const displayChildren = showInactive ? parent.children : activeChildren;
 
   return (
-    <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-      {/* Type color indicator — vertical line on the left */}
-      <div
-        className={`absolute left-0 top-0 bottom-0 w-0.5 ${TYPE_BAR_COLORS[parent.account_type]}`}
-        aria-hidden="true"
-      />
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
       {/* Parent Header */}
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-4 pl-5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
       >
         <div className="flex items-center gap-3">
           {isExpanded ? (
