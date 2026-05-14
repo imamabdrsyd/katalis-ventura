@@ -496,7 +496,7 @@ export default function DashboardPage() {
           <div className="mt-3 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
             {!transactionsLoading && cashRunwayMonths !== null && cashRunwayMonths > 0 && (
               <div
-                className={`h-full rounded-full ${cashRunwayMonths >= 6 ? 'bg-sky-400 dark:bg-sky-500' : cashRunwayMonths >= 3 ? 'bg-amber-400 dark:bg-amber-500' : 'bg-red-400 dark:bg-red-500'}`}
+                className={`h-full rounded-full ${cashRunwayMonths >= 3 ? 'bg-primary-500 dark:bg-primary-400' : 'bg-red-400 dark:bg-red-500'}`}
                 style={{ width: `${Math.min(100, (cashRunwayMonths / 12) * 100)}%` }}
               />
             )}
