@@ -1,11 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { calculateBalanceSheet, filterTransactionsUpToDate } from '@/lib/calculations';
 import * as accountsApi from '@/lib/api/accounts';
 import * as transactionsApi from '@/lib/api/transactions';
+import {
+  getFinancialCache,
+  upsertFinancialCache,
+  type BalanceSheetPayload,
+} from '@/lib/api/financialCache';
 import type { Account } from '@/types';
 
 export interface UseBalanceSheetReturn {
@@ -23,9 +28,8 @@ export interface UseBalanceSheetReturn {
 }
 
 export function useBalanceSheet(): UseBalanceSheetReturn {
-  const { activeBusiness } = useBusinessContext();
+  const { activeBusiness, user } = useBusinessContext();
   const activeBusinessId = activeBusiness?.id ?? null;
-  const queryClient = useQueryClient();
 
   const today = new Date().toISOString().split('T')[0];
   const [asOfDate, setAsOfDate] = useState<string>(today);
@@ -33,10 +37,25 @@ export function useBalanceSheet(): UseBalanceSheetReturn {
   const exportButtonRef = useRef<HTMLDivElement>(null);
 
   // Fetch all transactions (no period filter — balance sheet is cumulative)
-  const { data: allTransactions = [], isLoading: loading } = useQuery({
+  const { data: allTransactions = [], isLoading: transactionsLoading } = useQuery({
     queryKey: ['transactions', activeBusinessId],
     queryFn: () => transactionsApi.getTransactions(activeBusinessId!),
     enabled: !!activeBusinessId,
+  });
+
+  // Hydrate dari DB cache (fast-path saat transactions belum loaded)
+  // Cache di-key oleh business_id + cache_type + period_end=asOfDate, period_start=null.
+  const { data: balanceSheetCache } = useQuery({
+    queryKey: ['financial-cache', activeBusinessId, 'balance_sheet', asOfDate],
+    queryFn: () =>
+      getFinancialCache<BalanceSheetPayload>({
+        businessId: activeBusinessId!,
+        cacheType: 'balance_sheet',
+        periodStart: null,
+        periodEnd: asOfDate,
+      }),
+    enabled: !!activeBusinessId,
+    staleTime: 30_000,
   });
 
   // Only posted transactions — null status (transaksi lama) dianggap posted
@@ -44,15 +63,6 @@ export function useBalanceSheet(): UseBalanceSheetReturn {
     () => allTransactions.filter((t) => !t.status || t.status === 'posted'),
     [allTransactions]
   );
-
-  // Invalidate cache when FloatingQuickAdd saves a transaction
-  useEffect(() => {
-    const handler = () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions', activeBusinessId] });
-    };
-    window.addEventListener('transaction-saved', handler);
-    return () => window.removeEventListener('transaction-saved', handler);
-  }, [queryClient, activeBusinessId]);
 
   // Fetch accounts for depreciation calculation
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -72,7 +82,7 @@ export function useBalanceSheet(): UseBalanceSheetReturn {
 
   const capital = activeBusiness?.capital_investment ?? 0;
 
-  const balanceSheet = useMemo(
+  const computedBalanceSheet = useMemo(
     () => calculateBalanceSheet(
       cumulativeTransactions,
       capital,
@@ -81,6 +91,34 @@ export function useBalanceSheet(): UseBalanceSheetReturn {
     ),
     [cumulativeTransactions, capital, accounts, asOfDate]
   );
+
+  // Hasil akhir: kalau transactions masih loading tapi cache valid, pakai cache;
+  // saat transactions sudah load, switch ke computed.
+  const balanceSheet = transactionsLoading && balanceSheetCache?.payload
+    ? balanceSheetCache.payload
+    : computedBalanceSheet;
+
+  // Override loading: kalau cache sudah ada, UI tidak perlu skeleton.
+  const loading = transactionsLoading && !balanceSheetCache?.payload;
+
+  // Write-through cache: simpan hasil ke DB setelah compute selesai.
+  // Dependencies pakai primitive supaya tidak re-fire saat compute return struktur sama.
+  useEffect(() => {
+    if (!activeBusinessId || !user) return;
+    if (transactionsLoading) return;
+    if (cumulativeTransactions.length === 0) return;
+
+    upsertFinancialCache({
+      businessId: activeBusinessId,
+      cacheType: 'balance_sheet',
+      periodStart: null,
+      periodEnd: asOfDate,
+      payload: computedBalanceSheet,
+      transactionCount: cumulativeTransactions.length,
+      computedBy: user.id,
+    }).catch((err) => console.error('[useBalanceSheet] Failed to persist cache:', err));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBusinessId, user?.id, transactionsLoading, cumulativeTransactions.length, asOfDate, capital, accounts.length]);
 
   const isBalanced = useMemo(() => Math.abs(
     balanceSheet.assets.totalAssets -

@@ -34,8 +34,9 @@ export interface UseIncomeStatementReturn extends ReturnType<typeof useReportDat
 
 export function useIncomeStatement(): UseIncomeStatementReturn {
   const reportData = useReportData();
-  const { activeBusiness, transactions, filteredTransactions, startDate, endDate, setShowExportMenu } = reportData;
+  const { activeBusiness, transactions, filteredTransactions, startDate, endDate, setShowExportMenu, loading: transactionsLoading } = reportData;
   const { user } = useBusinessContext();
+  const activeBusinessId = activeBusiness?.id ?? null;
 
   // Fetch accounts for depreciation calculation + income statement config
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -59,7 +60,7 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
   );
 
   // Calculate period depreciation and apply to summary
-  const summary = useMemo(() => {
+  const computedSummary = useMemo(() => {
     if (!accounts.length || !startDate || !endDate) return baseSummary;
 
     // Build fixed asset cost map from ALL transactions (cumulative, not period-filtered)
@@ -77,10 +78,17 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
     return applyDepreciationToSummary(baseSummary, depSummary.periodDepreciation);
   }, [baseSummary, accounts, transactions, startDate, endDate]);
 
-  const metrics = useMemo(
-    () => calculateIncomeStatementMetrics(summary),
-    [summary]
+  const computedMetrics = useMemo(
+    () => calculateIncomeStatementMetrics(computedSummary),
+    [computedSummary]
   );
+
+  // Income statement UI butuh lineItems & transactionsByCategory yang sumbernya
+  // raw transactions — tidak praktis di-cache (payload jadi besar karena include
+  // ribuan transactions). Hydration cache hanya berguna untuk consumer non-UI
+  // (server, future API), jadi summary/metrics tetap pakai computed values.
+  const summary = computedSummary;
+  const metrics = computedMetrics;
 
   const lineItems = useMemo(
     () => extractIncomeStatementLineItems(filteredTransactions),
@@ -111,14 +119,16 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
   // Write-through cache: simpan hasil income statement ke DB setelah compute.
   // Di-key oleh business_id + period, sehingga laporan yang sama bisa di-load
   // ulang dari cache tanpa recompute dari raw transactions.
+  // Dependencies pakai primitive supaya tidak re-fire saat compute return struktur sama.
   useEffect(() => {
-    if (!activeBusiness || !user || !startDate || !endDate) return;
+    if (!activeBusinessId || !user || !startDate || !endDate) return;
+    if (transactionsLoading) return;
     if (filteredTransactions.length === 0) return;
 
-    const payload: IncomeStatementPayload = { summary, metrics };
+    const payload: IncomeStatementPayload = { summary: computedSummary, metrics: computedMetrics };
 
     upsertFinancialCache({
-      businessId: activeBusiness.id,
+      businessId: activeBusinessId,
       cacheType: 'income_statement',
       periodStart: startDate,
       periodEnd: endDate,
@@ -128,15 +138,9 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
     }).catch((err) =>
       console.error('[useIncomeStatement] Failed to persist cache:', err)
     );
-  }, [
-    activeBusiness,
-    user,
-    startDate,
-    endDate,
-    filteredTransactions.length,
-    summary,
-    metrics,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBusinessId, user?.id, transactionsLoading, startDate, endDate, filteredTransactions.length, accounts.length]);
+
 
   const handleExportPDF = useCallback(async () => {
     if (!activeBusiness) return;

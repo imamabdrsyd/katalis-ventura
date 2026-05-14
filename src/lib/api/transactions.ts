@@ -82,18 +82,14 @@ export async function getTransactions(businessId: string): Promise<Transaction[]
   return data as Transaction[];
 }
 
-// Create a multi-line journal entry (N debit + M credit lines, balanced)
+// Create a multi-line journal entry (N debit + M credit lines, balanced).
+// Atomic via stored procedure — header + lines inserted in satu DB transaction
+// (lihat migration 073). Sebelumnya pakai 2 HTTP call dengan manual rollback
+// yang bisa meninggalkan orphan header kalau rollback DELETE juga fail.
 export async function createMultiLineTransaction(
   insert: MultiLineTransactionInsert
 ): Promise<Transaction> {
   const supabase = createClient();
-
-  const totalDebit = insert.journal_lines.reduce((s, l) => s + l.debit_amount, 0);
-  const totalCredit = insert.journal_lines.reduce((s, l) => s + l.credit_amount, 0);
-
-  if (Math.abs(totalDebit - totalCredit) > 0.01) {
-    throw new Error('Jurnal tidak seimbang: total debit harus sama dengan total kredit');
-  }
 
   // Build meta: merge caller-supplied meta with attachments
   const meta: Record<string, unknown> = { ...(insert.meta ?? {}) };
@@ -101,32 +97,7 @@ export async function createMultiLineTransaction(
     meta.attachments = insert.attachments;
   }
 
-  // Insert transaction header
-  const { data: transaction, error: txnError } = await supabase
-    .from('transactions')
-    .insert({
-      business_id: insert.business_id,
-      created_by: insert.created_by,
-      date: insert.date,
-      category: insert.category,
-      name: insert.name,
-      description: insert.description,
-      notes: insert.notes ?? null,
-      amount: totalDebit,
-      account: 'Multi-line journal entry',
-      status: insert.status ?? 'draft',
-      is_multi_line: true,
-      is_double_entry: false,
-      meta: Object.keys(meta).length > 0 ? meta : null,
-    })
-    .select()
-    .single();
-
-  if (txnError || !transaction) throw new Error(txnError?.message ?? 'Failed to create transaction');
-
-  // Insert journal lines
   const lines = insert.journal_lines.map((l, i) => ({
-    transaction_id: transaction.id,
     account_id: l.account_id,
     debit_amount: l.debit_amount,
     credit_amount: l.credit_amount,
@@ -134,17 +105,24 @@ export async function createMultiLineTransaction(
     sort_order: l.sort_order ?? i,
   }));
 
-  const { error: linesError } = await supabase
-    .from('journal_lines')
-    .insert(lines);
+  const { data, error } = await supabase.rpc('create_multi_line_transaction', {
+    p_business_id: insert.business_id,
+    p_date: insert.date,
+    p_category: insert.category,
+    p_name: insert.name,
+    p_description: insert.description,
+    p_notes: insert.notes ?? '',
+    p_status: insert.status ?? 'draft',
+    p_meta: Object.keys(meta).length > 0 ? meta : null,
+    p_lines: lines,
+  });
 
-  if (linesError) {
-    // Rollback by deleting the transaction (cascade deletes lines)
-    await supabase.from('transactions').delete().eq('id', transaction.id);
-    throw new Error(linesError.message);
-  }
+  if (error) throw new Error(error.message);
 
-  return transaction as Transaction;
+  // RPC returns TABLE → array. Ambil row pertama (single transaction).
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) throw new Error('Gagal membuat multi-line transaction');
+  return row as Transaction;
 }
 
 // Update a multi-line journal entry (replaces all journal_lines)
@@ -501,6 +479,51 @@ export async function deleteTransaction(id: string): Promise<void> {
   });
 
   if (error) throw new Error(error.message);
+}
+
+// ============================================================
+// Settle transaction (full atau partial) via RPC.
+// Atomic — insert settlement + update meta transaksi asli dalam satu
+// DB transaction dengan FOR UPDATE lock di sisi server (lihat migration 073).
+// Mencegah lost update saat partial settlement parallel.
+// ============================================================
+export interface SettlementInput {
+  date: string;
+  category: TransactionCategory;
+  name: string;
+  description: string;
+  debit_account_id?: string;
+  credit_account_id?: string;
+  is_double_entry?: boolean;
+  account?: string;
+  notes?: string;
+  status?: TransactionStatus;
+  meta?: Record<string, unknown> | null;
+}
+
+export interface SettlementResult {
+  settlement_id: string;
+  updated_meta: TransactionMeta;
+}
+
+export async function settleTransaction(input: {
+  originalTransactionId: string;
+  settlementData: SettlementInput;
+  partialAmount?: number; // undefined/null = full settle
+  outstandingAmount?: number; // cross-check vs server (deteksi stale)
+}): Promise<SettlementResult> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('settle_transaction', {
+    p_original_transaction_id: input.originalTransactionId,
+    p_settlement_data: input.settlementData,
+    p_partial_amount: input.partialAmount ?? null,
+    p_outstanding_amount: input.outstandingAmount ?? null,
+  });
+
+  if (error) throw new Error(error.message);
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) throw new Error('Gagal melunasi transaksi');
+  return row as SettlementResult;
 }
 
 // Restore a soft-deleted transaction

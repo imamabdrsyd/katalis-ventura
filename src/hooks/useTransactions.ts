@@ -137,16 +137,6 @@ export function useTransactions() {
     }
   }, [businessId, fetchAccounts, fetchContacts]);
 
-  // Refetch ketika FloatingQuickAdd berhasil menyimpan transaksi
-  useEffect(() => {
-    const handler = () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions-paginated', businessId] });
-      queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
-    };
-    window.addEventListener('transaction-saved', handler);
-    return () => window.removeEventListener('transaction-saved', handler);
-  }, [queryClient, businessId]);
-
   // Helper to invalidate all transaction caches
   const invalidateTransactions = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['transactions-paginated', businessId] });
@@ -447,35 +437,24 @@ export function useTransactions() {
     setShowAddModal(true);
   }, []);
 
-  // Settle a receivable: create settlement transaction + mark original as settled
+  // Settlement via RPC settle_transaction — atomic insert + update meta dengan
+  // FOR UPDATE lock di sisi DB (lihat migration 073). Sebelumnya pakai 2 HTTP
+  // call yang non-atomic + read-modify-write tanpa lock untuk partial settlement.
   const handleSettleReceivable = useCallback(async (original: Transaction) => {
     if (!businessId || !user) return;
     setSaving(true);
     try {
-      // 1. Buat transaksi settlement penuh (langsung posted)
       const outstanding = getOutstandingAmount(original);
-      const settlement = await transactionsApi.createTransaction({
-        ...buildSettlementPrefill(original, accounts),
-        business_id: businessId,
-        created_by: user.id,
-        amount: outstanding,
+      const prefill = buildSettlementPrefill(original, accounts);
+      const { updated_meta } = await transactionsApi.settleTransaction({
+        originalTransactionId: original.id,
+        settlementData: prefill,
+        outstandingAmount: outstanding,
       });
 
-      // 2. Update meta transaksi asli: tandai LUNAS, sisa = 0
-      const updated = await transactionsApi.updateTransaction(original.id, {
-        meta: {
-          ...original.meta,
-          settled_by_transaction_id: settlement.id,
-          remaining_amount: 0,
-        },
-      });
-
-      // 3. Update detail modal state agar langsung tampilkan status LUNAS
       setDetailTransaction({
         ...original,
-        ...updated,
-        debit_account: original.debit_account,
-        credit_account: original.credit_account,
+        meta: updated_meta,
       });
 
       invalidateTransactions();
@@ -497,30 +476,17 @@ export function useTransactions() {
     }
     setSaving(true);
     try {
-      // 1. Buat transaksi settlement sebagian
-      const settlement = await transactionsApi.createTransaction({
-        ...buildPartialSettlementPrefill(original, partialAmount, accounts),
-        business_id: businessId,
-        created_by: user.id,
+      const prefill = buildPartialSettlementPrefill(original, partialAmount, accounts);
+      const { updated_meta } = await transactionsApi.settleTransaction({
+        originalTransactionId: original.id,
+        settlementData: prefill,
+        partialAmount,
+        outstandingAmount: outstanding,
       });
 
-      // 2. Update meta transaksi asli: tambah ke partial_settlements, kurangi remaining
-      const prevPartials = original.meta?.partial_settlements ?? [];
-      const newRemaining = outstanding - partialAmount;
-      const updated = await transactionsApi.updateTransaction(original.id, {
-        meta: {
-          ...original.meta,
-          partial_settlements: [...prevPartials, settlement.id],
-          remaining_amount: newRemaining,
-        },
-      });
-
-      // 3. Refresh detail modal
       setDetailTransaction({
         ...original,
-        ...updated,
-        debit_account: original.debit_account,
-        credit_account: original.credit_account,
+        meta: updated_meta,
       });
 
       invalidateTransactions();
@@ -539,26 +505,16 @@ export function useTransactions() {
     setSaving(true);
     try {
       const outstanding = getDividendOutstanding(original);
-      const settlement = await transactionsApi.createTransaction({
-        ...buildDividendSettlementPrefill(original, accounts),
-        business_id: businessId,
-        created_by: user.id,
-        amount: outstanding,
-      });
-
-      const updated = await transactionsApi.updateTransaction(original.id, {
-        meta: {
-          ...original.meta,
-          settled_by_transaction_id: settlement.id,
-          remaining_amount: 0,
-        },
+      const prefill = buildDividendSettlementPrefill(original, accounts);
+      const { updated_meta } = await transactionsApi.settleTransaction({
+        originalTransactionId: original.id,
+        settlementData: prefill,
+        outstandingAmount: outstanding,
       });
 
       setDetailTransaction({
         ...original,
-        ...updated,
-        debit_account: original.debit_account,
-        credit_account: original.credit_account,
+        meta: updated_meta,
       });
 
       invalidateTransactions();
@@ -580,27 +536,17 @@ export function useTransactions() {
     }
     setSaving(true);
     try {
-      const settlement = await transactionsApi.createTransaction({
-        ...buildDividendPartialSettlementPrefill(original, partialAmount, accounts),
-        business_id: businessId,
-        created_by: user.id,
-      });
-
-      const prevPartials = original.meta?.partial_settlements ?? [];
-      const newRemaining = outstanding - partialAmount;
-      const updated = await transactionsApi.updateTransaction(original.id, {
-        meta: {
-          ...original.meta,
-          partial_settlements: [...prevPartials, settlement.id],
-          remaining_amount: newRemaining,
-        },
+      const prefill = buildDividendPartialSettlementPrefill(original, partialAmount, accounts);
+      const { updated_meta } = await transactionsApi.settleTransaction({
+        originalTransactionId: original.id,
+        settlementData: prefill,
+        partialAmount,
+        outstandingAmount: outstanding,
       });
 
       setDetailTransaction({
         ...original,
-        ...updated,
-        debit_account: original.debit_account,
-        credit_account: original.credit_account,
+        meta: updated_meta,
       });
 
       invalidateTransactions();

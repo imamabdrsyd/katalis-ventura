@@ -4,7 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { isManagerRole } from '@/lib/roles';
-import { calculateFinancialSummary, calculateROI, calculateCategoryCounts, calculateBalanceSheet } from '@/lib/calculations';
+import { calculateFinancialSummary, calculateBalanceSheet } from '@/lib/calculations';
 import * as transactionsApi from '@/lib/api/transactions';
 import { generateDueRecurringTransactions } from '@/lib/api/recurring';
 import {
@@ -19,9 +19,6 @@ export function useDashboard() {
   const canManageTransactions = isManagerRole(userRole);
   const queryClient = useQueryClient();
 
-  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
-  const firstName = userName.split(' ')[0];
-
   // Use TanStack Query — shared cache with useReportData (same queryKey)
   const { data: allTransactions = [], isLoading: transactionsLoading } = useQuery({
     queryKey: ['transactions', businessId],
@@ -30,7 +27,9 @@ export function useDashboard() {
   });
 
   // Hydrate dari DB cache (fast-path untuk dashboard KPIs)
-  // Kalau cache masih valid, initial render tidak perlu tunggu transactions
+  // Cache hanya menyimpan figures all-time (summary + balance sheet) yang dipakai
+  // untuk runway & ROI di dashboard. Numbers per year/month tetap dihitung di page
+  // setelah transactions ter-load.
   const { data: dashboardCache } = useQuery({
     queryKey: ['financial-cache', businessId, 'dashboard'],
     queryFn: () =>
@@ -44,7 +43,7 @@ export function useDashboard() {
 
   // Auto-generate due recurring transactions on dashboard load (once per day)
   useEffect(() => {
-    if (!businessId || !user) return;
+    if (!businessId || !user?.id) return;
     const today = new Date().toISOString().split('T')[0];
     const key = `recurring_checked_${businessId}_${today}`;
     if (sessionStorage.getItem(key)) return;
@@ -57,16 +56,7 @@ export function useDashboard() {
         }
       })
       .catch((err) => console.error('[useDashboard] Recurring generation failed:', err));
-  }, [businessId, user, queryClient]);
-
-  // Invalidate cache when FloatingQuickAdd saves a transaction
-  useEffect(() => {
-    const handler = () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
-    };
-    window.addEventListener('transaction-saved', handler);
-    return () => window.removeEventListener('transaction-saved', handler);
-  }, [queryClient, businessId]);
+  }, [businessId, user?.id, queryClient]);
 
   // Dashboard KPIs only use posted transactions
   // Transaksi lama sebelum fitur draft/posted memiliki status=null — dianggap posted
@@ -75,31 +65,30 @@ export function useDashboard() {
     [allTransactions]
   );
 
-  // Combine all calculations in single useMemo — one pass trigger instead of 5
-  const { summary, roi, categoryCounts, balanceSheet } = useMemo(() => {
-    const sum = calculateFinancialSummary(transactions);
-    const capital = business?.capital_investment || 0;
-    return {
-      summary: sum,
-      roi: calculateROI(sum.netProfit, capital),
-      categoryCounts: calculateCategoryCounts(transactions),
+  // Hanya compute all-time figures yang dipakai dashboard page untuk
+  // runway calc & ROI all-time. Numbers per year/month dihitung di page
+  // dari `transactions` yang sudah ter-load.
+  const capital = business?.capital_investment ?? 0;
+  const { summary, balanceSheet } = useMemo(
+    () => ({
+      summary: calculateFinancialSummary(transactions),
       balanceSheet: calculateBalanceSheet(transactions, capital),
-    };
-  }, [transactions, business?.capital_investment]);
+    }),
+    [transactions, capital]
+  );
 
   // Write-through cache: simpan hasil kalkulasi ke DB setelah compute selesai.
   // Dijalankan setiap kali transaksi berubah sehingga cache selalu fresh.
   // Fire-and-forget — kegagalan tidak mempengaruhi UI.
+  // Dependencies pakai primitive (transactions.length, capital) bukan object
+  // identity supaya tidak re-fire saat compute mengembalikan struktur yang sama.
   useEffect(() => {
     if (!businessId || !user) return;
     if (transactionsLoading) return;
     if (transactions.length === 0) return;
 
-    const capital = business?.capital_investment || 0;
     const payload: DashboardPayload = {
       summary,
-      roi,
-      categoryCounts,
       balanceSheet,
       capital,
     };
@@ -111,29 +100,14 @@ export function useDashboard() {
       transactionCount: transactions.length,
       computedBy: user.id,
     }).catch((err) => console.error('[useDashboard] Failed to persist cache:', err));
-  }, [
-    businessId,
-    user,
-    transactionsLoading,
-    transactions.length,
-    summary,
-    roi,
-    categoryCounts,
-    balanceSheet,
-    business?.capital_investment,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId, user?.id, transactionsLoading, transactions.length, capital]);
 
   // Hasil akhir: kalau transactions sudah loaded, pakai nilai computed;
   // kalau belum loaded tapi cache valid, pakai cache payload
   const effectiveSummary = transactionsLoading && dashboardCache?.payload
     ? dashboardCache.payload.summary
     : summary;
-  const effectiveRoi = transactionsLoading && dashboardCache?.payload
-    ? dashboardCache.payload.roi
-    : roi;
-  const effectiveCategoryCounts = transactionsLoading && dashboardCache?.payload
-    ? dashboardCache.payload.categoryCounts
-    : categoryCounts;
   const effectiveBalanceSheet = transactionsLoading && dashboardCache?.payload
     ? dashboardCache.payload.balanceSheet
     : balanceSheet;
@@ -144,12 +118,9 @@ export function useDashboard() {
     businessLoading,
     canManageTransactions,
     user,
-    firstName,
     transactions,
     transactionsLoading,
     summary: effectiveSummary,
-    roi: effectiveRoi,
-    categoryCounts: effectiveCategoryCounts,
     balanceSheet: effectiveBalanceSheet,
     // Indikator "data dari cache" untuk UI (misalnya menampilkan "cached X menit lalu")
     isHydratedFromCache: transactionsLoading && !!dashboardCache?.payload,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { filterTransactionsByDateRange } from '@/lib/calculations';
@@ -30,7 +30,6 @@ export interface UseReportDataReturn {
 export function useReportData(): UseReportDataReturn {
   const { activeBusiness } = useBusinessContext();
   const activeBusinessId = activeBusiness?.id ?? null;
-  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
 
   const [period, setPeriod] = useState<Period>('month');
@@ -71,15 +70,6 @@ export function useReportData(): UseReportDataReturn {
     () => allTransactions.filter((t) => !t.status || t.status === 'posted'),
     [allTransactions]
   );
-
-  // Invalidate cache when FloatingQuickAdd saves a transaction
-  useEffect(() => {
-    const handler = () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions', activeBusinessId] });
-    };
-    window.addEventListener('transaction-saved', handler);
-    return () => window.removeEventListener('transaction-saved', handler);
-  }, [queryClient, activeBusinessId]);
 
   // Memoize filtered transactions — only re-compute when data or dates change
   const filteredTransactions = useMemo(

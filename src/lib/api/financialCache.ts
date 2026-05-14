@@ -45,8 +45,6 @@ export type CashFlowPayload = CashFlowData;
 
 export interface DashboardPayload {
   summary: FinancialSummary;
-  roi: number;
-  categoryCounts: Record<string, number>;
   balanceSheet: BalanceSheetData;
   capital: number;
 }
