@@ -573,7 +573,7 @@ function SubAccountRow({
         {account.is_stock && (
           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded bg-indigo-50 dark:bg-indigo-900/30 text-gray-500 dark:text-gray-400">
             <BadgeDollarSign className="w-3 h-3 text-gray-400 dark:text-gray-500" />
-            Stock
+            Share
           </span>
         )}
         {account.is_retained_earnings && (

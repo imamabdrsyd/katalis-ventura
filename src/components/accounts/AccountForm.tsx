@@ -536,16 +536,16 @@ export function AccountForm({
         </div>
       )}
 
-      {/* Stock / Owner Capital designation — hanya untuk EQUITY accounts */}
+      {/* Share / Owner Capital designation — hanya untuk EQUITY accounts */}
       {formData.account_type === 'EQUITY' && !formData.is_retained_earnings && !formData.is_dividend && (
         <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700/50">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                Akun Stock / Modal Pemilik
+                Akun Saham / Modal Pemilik
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Tandai akun ini sebagai modal disetor pemilik/investor. Kredit ke akun ini masuk gross invested capital untuk ROI dashboard.
+                Tandai akun ini sebagai modal disetor pemilik/investor (share capital). Kredit ke akun ini masuk gross invested capital untuk ROI dashboard.
               </p>
             </div>
             <button

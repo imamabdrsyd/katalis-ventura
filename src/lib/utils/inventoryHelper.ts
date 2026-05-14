@@ -66,7 +66,7 @@ export interface StockToCOGSUpdate {
 /**
  * Build the update payload to convert a stock transaction to COGS.
  * Changes only the debit account from Inventory to COGS/Expense.
- * The badge will automatically change from "Stock" to "VAR" because
+ * The badge will automatically change from "Inventory" to "VAR" because
  * isInventoryTransaction() checks if debit is an inventory account.
  */
 export function buildStockToCOGSUpdate(

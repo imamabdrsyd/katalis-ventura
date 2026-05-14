@@ -129,7 +129,14 @@ export default function DashboardPage() {
       const m = new Date(tx.date).getMonth();
       const amt = Number(tx.amount);
       if (tx.category === 'EARN') revenue[m] += amt;
-      else if (tx.category === 'OPEX' || tx.category === 'VAR' || tx.category === 'TAX') {
+      else if (tx.category === 'OPEX' || tx.category === 'TAX') {
+        expense[m] += amt;
+      } else if (
+        tx.category === 'VAR' &&
+        // Hanya hitung VAR sebagai expense kalau debit ke EXPENSE (HPP recognition).
+        // VAR + debit ASSET = pembelian inventory, bukan expense. Konsisten dgn calculateFinancialSummary.
+        !(tx.is_double_entry && tx.debit_account?.account_type === 'ASSET')
+      ) {
         expense[m] += amt;
       }
     }
@@ -287,7 +294,12 @@ export default function DashboardPage() {
     if (totalAllTimeExpenses === 0) return 0;
     const expenseMonths = new Set(
       transactions
-        .filter((t) => t.category === 'OPEX' || t.category === 'VAR' || t.category === 'TAX')
+        .filter((t) => {
+          if (t.category === 'OPEX' || t.category === 'TAX') return true;
+          if (t.category !== 'VAR') return false;
+          // Skip inventory purchases — bukan expense bulan tersebut
+          return !(t.is_double_entry && t.debit_account?.account_type === 'ASSET');
+        })
         .map((t) => {
           const d = new Date(t.date);
           return `${d.getFullYear()}-${d.getMonth()}`;

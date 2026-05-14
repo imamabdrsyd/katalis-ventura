@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 14 Mei 2026 (Section 5.5 ROI & Invested Capital ditambahkan; `calculateMonthlyROI` direname jadi `calculateAverageMonthlyROI`; tampilan ROI dashboard sekarang menyertakan konteks periode "sejak {bulan tahun} · {n} bulan")
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 15 Mei 2026 (Section 19 Issue #20: VAR-Inventory double-count dashboard-wide — diperbaiki di MonitoringChart, ExpenseBreakdownChart, sparkline KPI, dan expense month counter; Issue #21: label UI `is_stock` direname menjadi "Share/Saham" + DB CHECK constraint `is_stock` hanya untuk akun EQUITY)
 
 ---
 
@@ -1708,6 +1708,73 @@ Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
 | #17 | Cash Flow Opening Balance hanya pakai capital | RESOLVED | Multi-year aware: hitung dari semua cash movements sebelum startDate |
 | #18 | Scenario Modeling baseline tidak include depreciation | RESOLVED | Baseline include periodDepreciation, constant di scenarios |
 | #19 | Docs: Retained Earnings formula tidak include depreciation | RESOLVED | Code sudah benar, docs diupdate: `retainedEarnings = revenue - expenses - accumulatedDepreciation` |
+| #20 | VAR-Inventory double-count di dashboard charts (Monitoring, ExpenseBreakdown, KPI sparkline, avgMonthlyExpense) | RESOLVED | Lihat detail di bawah |
+| #21 | Label UI `is_stock` ambigu (stock = inventory atau saham?) + DB tidak proteksi flag salah lokasi | RESOLVED | Lihat detail di bawah |
+
+### Issue #20 — VAR-Inventory double-count: dashboard-wide
+
+**Gejala**: Pada bisnis dengan inventory flow (F&B, retail), beberapa visualisasi dashboard menampilkan angka expense yang **inflated** karena pembelian inventory dihitung sebagai expense bersama dengan HPP recognition (double-count). Akibatnya:
+- **MonitoringChart**: garis Expenses selalu di atas garis Revenue, terlihat seakan bisnis selalu rugi.
+- **ExpenseBreakdownChart**: akun ASSET seperti "Persediaan Bahan Baku" muncul sebagai expense terbesar (padahal bukan expense, itu aset di balance sheet).
+- **Sparkline KPI di dashboard**: tren bulanan expense membesar palsu.
+- **avgMonthlyExpense**: jumlah bulan yang dihitung pembagi rata-rata jadi ikut salah (count bulan termasuk bulan yang cuma ada pembelian stok).
+
+**Root cause**: VAR punya dua sub-tipe yang berbeda secara akuntansi (lihat [Section 18.2 — VAR Split](#var-split--inventory-vs-cogs)):
+- **VAR + Debit ASSET** (kode 1310 Persediaan Bahan Baku) = pembelian persediaan → transfer kas ke aset, **bukan** expense.
+- **VAR + Debit EXPENSE** (kode 52xx HPP) = pengakuan HPP saat barang terjual → expense riil di Income Statement.
+
+`calculateFinancialSummary()` ([calculations.ts:216-219](../src/lib/calculations.ts#L216-L219)) dan `calculateMonthlyData()` ([calculations.ts:673-680](../src/lib/calculations.ts#L673-L680)) **sudah benar** (skip VAR + debit ASSET), tetapi banyak chart/aggregator di komponen UI ditulis ulang dengan pola `category === 'VAR'` tanpa memeriksa debit account type — terjadi drift kecil-kecil yang akumulasinya merusak banyak dashboard.
+
+**Files yang diperbaiki** (semua menambahkan guard yang sama):
+- [src/components/charts/MonitoringChart.tsx:114, 138-140](../src/components/charts/MonitoringChart.tsx#L114) — line chart Revenue vs Expenses
+- [src/components/charts/ExpenseBreakdownChart.tsx:50](../src/components/charts/ExpenseBreakdownChart.tsx#L50) — donut chart Expense Breakdown
+- [app/(dashboard)/dashboard/page.tsx:132](../app/\(dashboard\)/dashboard/page.tsx#L132) — sparkline KPI `monthlySeries`
+- [app/(dashboard)/dashboard/page.tsx:290](../app/\(dashboard\)/dashboard/page.tsx#L290) — counter `expenseMonths` untuk `avgMonthlyExpense`
+
+**Pattern fix** (konsisten di semua tempat):
+
+```ts
+// Skip pembelian inventory (VAR + debit ASSET) — bukan expense, masuk balance sheet
+if (
+  t.category === 'VAR' &&
+  t.is_double_entry &&
+  t.debit_account?.account_type === 'ASSET'
+) return; // atau: continue / else-if-skip, tergantung struktur loop
+```
+
+**Verifikasi** (data Kopi Nusantara, Mei 2026):
+- Expense breakdown sebelum: Rp 1.354jt (mengandung Rp 479jt pembelian inventory yang seharusnya tidak ada)
+- Expense breakdown setelah: Rp 879jt = COGS Rp 419jt + OPEX Rp 455jt + TAX Rp 5jt → match dengan Income Statement.
+- Margin ROI 79% (sebelumnya tampak "loss" di chart, padahal P&L sehat).
+
+**Lesson**: Setiap kali ada chart/aggregator baru yang merangkum kategori VAR, **harus konsisten dengan `calculateFinancialSummary()`** — jangan ulangi pattern "sum semua VAR" tanpa membedakan debit account type. Audit periodik: `grep -rn "category === 'VAR'"` untuk menemukan drift baru.
+
+### Issue #21 — Label UI `is_stock` ambigu + tidak ada proteksi flag salah lokasi
+
+**Gejala**: Akun ASSET seperti "Persediaan Bahan Baku" bisa salah di-flag `is_stock=true` (lewat seed/SQL langsung). Akibatnya `calculateInvestedCapital()` menghitung pembelian persediaan sebagai *capital injection* atau *owner withdrawal*, sehingga ROI dan invested capital melenceng jauh.
+
+Selain itu, label UI badge `"Stock"` di Chart of Accounts ambigu — "stock" di bahasa Inggris bermakna ganda: (a) saham/equity, (b) persediaan/inventory. Hal ini membingungkan pengguna karena akun Persediaan Bahan Baku (inventory) bisa terlihat seakan ditandai sebagai modal saham.
+
+**Root cause**:
+1. Kolom DB `accounts.is_stock` (Migration 074) **semantiknya adalah "share capital"** (modal disetor pemilik/investor), tetapi tidak ada CHECK constraint yang membatasi flag ini hanya untuk `account_type='EQUITY'`. Validasi hanya ada di UI (`app/(dashboard)/accounts/page.tsx`).
+2. Label UI menggunakan kata `"Stock"` yang ambigu dengan istilah inventory di transaksi VAR.
+
+**Fix**:
+
+1. **Migration 075**: Tambahkan DB CHECK constraint
+   ```sql
+   ALTER TABLE accounts
+     ADD CONSTRAINT is_stock_only_for_equity
+     CHECK (is_stock = false OR account_type = 'EQUITY');
+   ```
+   Sebelumnya reset semua row yang salah (UPDATE `is_stock = false` untuk non-EQUITY).
+
+2. **Rename label UI**:
+   - Badge Chart of Accounts: `"Stock"` → `"Share"` ([app/(dashboard)/accounts/page.tsx:576](../app/\(dashboard\)/accounts/page.tsx#L576))
+   - Toggle AccountForm: `"Akun Stock / Modal Pemilik"` → `"Akun Saham / Modal Pemilik"` ([src/components/accounts/AccountForm.tsx:545](../src/components/accounts/AccountForm.tsx#L545))
+   - i18n key `stock` (yang dipakai TransactionDetailModal untuk badge inventory): `'Stock'` → `'Inventory'` (EN) / `'Persediaan'` (ID)
+
+**Lesson**: Untuk semantik double-meaning seperti "stock", **lebih baik label UI tegas (share vs inventory)** dan **kolom DB diberi CHECK constraint** untuk mencegah data masuk ke kategori yang salah. Validasi di layer UI saja rentan di-bypass via SQL langsung, import, atau migrasi seed.
 
 ---
 

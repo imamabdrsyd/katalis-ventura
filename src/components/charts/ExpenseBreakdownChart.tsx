@@ -48,6 +48,14 @@ export default function ExpenseBreakdownChart({ transactions, loading = false, s
 
     transactions.forEach((t) => {
       if (t.category !== 'OPEX' && t.category !== 'VAR' && t.category !== 'TAX') return;
+      // Skip inventory purchases (VAR + debit ASSET) — these are balance sheet movements,
+      // not expenses until recognized as COGS. Konsisten dengan calculateFinancialSummary.
+      if (
+        t.category === 'VAR' &&
+        t.is_double_entry &&
+        t.debit_account?.account_type === 'ASSET'
+      ) return;
+
       const d = new Date(t.date);
       if (d.getFullYear() !== selectedYear) return;
       if (selectedMonth !== null && d.getMonth() !== selectedMonth) return;
