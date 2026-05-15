@@ -199,7 +199,7 @@ function BalanceSheetPageInner() {
             {/* Total Assets */}
             <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-bold border-t-2 border-gray-900 dark:border-gray-100 mt-auto">
               <span className="text-lg text-gray-800 dark:text-gray-100">{t.balanceSheetPage.totalAssets}</span>
-              <span className="text-lg text-primary-600 dark:text-primary-400">
+              <span className="text-lg text-gray-900 dark:text-gray-100">
                 {formatCurrency(balanceSheet.assets.totalAssets)}
               </span>
             </div>
@@ -276,7 +276,7 @@ function BalanceSheetPageInner() {
               <span className="text-lg text-gray-800 dark:text-gray-100">
                 {t.balanceSheetPage.totalLiabilitiesEquity}
               </span>
-              <span className="text-lg text-primary-600 dark:text-primary-400">
+              <span className="text-lg text-gray-900 dark:text-gray-100">
                 {formatCurrency(
                   balanceSheet.liabilities.totalLiabilities + balanceSheet.equity.totalEquity
                 )}

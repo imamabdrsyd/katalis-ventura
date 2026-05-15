@@ -12,6 +12,14 @@ import { AccountDeleteModal } from '@/components/accounts/AccountDeleteModal';
 import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
 import { Plus, Search, ChevronDown, ChevronRight, Lock, CheckCircle2, BookOpen as BookOpenIcon, MoreVertical, BookMarked, Building2, BadgeDollarSign } from 'lucide-react';
 
+const TYPE_STRIP_CLASSES: Record<AccountType, string> = {
+  ASSET: 'bg-blue-500 dark:bg-blue-400',
+  LIABILITY: 'bg-amber-500 dark:bg-amber-400',
+  EQUITY: 'bg-purple-500 dark:bg-purple-400',
+  REVENUE: 'bg-emerald-500 dark:bg-emerald-400',
+  EXPENSE: 'bg-red-500 dark:bg-red-400',
+};
+
 
 export default function AccountsPage() {
   const { activeBusiness, userRole } = useBusinessContext();
@@ -456,6 +464,7 @@ function ParentAccountCard({
           <div className="w-10 h-10 rounded-lg border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center bg-white dark:bg-gray-800">
             <span className="font-bold text-xs text-gray-600 dark:text-gray-400">{parent.account_code}</span>
           </div>
+          <span className={`w-0.5 h-8 rounded-full ${TYPE_STRIP_CLASSES[parent.account_type]}`} aria-hidden="true" />
           <div className="text-left">
             <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
               {parent.account_name}
