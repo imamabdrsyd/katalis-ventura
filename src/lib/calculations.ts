@@ -1475,6 +1475,15 @@ export function calculateCashFlow(
 }
 
 // Calculate ROI
+// Test-only exports (internal helpers exposed for unit tests).
+// Do NOT consume these from app code — they may change without notice.
+export const __test__ = {
+  classifyLegacyFin,
+  classifyCashFlow,
+  isCashAccount,
+  calculateOpeningBalance,
+};
+
 export function calculateROI(netProfit: number, capital: number): number {
   if (capital === 0) return 0;
   return (netProfit / capital) * 100;
