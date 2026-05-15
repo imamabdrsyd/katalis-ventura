@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase';
 import type { Transaction, TransactionCategory, TransactionStatus, TransactionMeta, JournalLineInput } from '@/types';
+import { apiFetch } from './_fetchHelper';
 
 export interface TransactionInsert {
   business_id: string;
@@ -82,15 +83,11 @@ export async function getTransactions(businessId: string): Promise<Transaction[]
   return data as Transaction[];
 }
 
-// Create a multi-line journal entry (N debit + M credit lines, balanced).
-// Atomic via stored procedure — header + lines inserted in satu DB transaction
-// (lihat migration 073). Sebelumnya pakai 2 HTTP call dengan manual rollback
-// yang bisa meninggalkan orphan header kalau rollback DELETE juga fail.
+// Create a multi-line journal entry (routes through POST /api/transactions
+// when journal_lines is in body — handled atomically server-side).
 export async function createMultiLineTransaction(
   insert: MultiLineTransactionInsert
 ): Promise<Transaction> {
-  const supabase = createClient();
-
   // Build meta: merge caller-supplied meta with attachments
   const meta: Record<string, unknown> = { ...(insert.meta ?? {}) };
   if (insert.attachments && insert.attachments.length > 0) {
@@ -105,88 +102,57 @@ export async function createMultiLineTransaction(
     sort_order: l.sort_order ?? i,
   }));
 
-  const { data, error } = await supabase.rpc('create_multi_line_transaction', {
-    p_business_id: insert.business_id,
-    p_date: insert.date,
-    p_category: insert.category,
-    p_name: insert.name,
-    p_description: insert.description,
-    p_notes: insert.notes ?? '',
-    p_status: insert.status ?? 'draft',
-    p_meta: Object.keys(meta).length > 0 ? meta : null,
-    p_lines: lines,
+  return apiFetch<Transaction>('/api/transactions', {
+    method: 'POST',
+    body: {
+      business_id: insert.business_id,
+      date: insert.date,
+      category: insert.category,
+      name: insert.name,
+      description: insert.description,
+      notes: insert.notes ?? '',
+      status: insert.status ?? 'draft',
+      meta: Object.keys(meta).length > 0 ? meta : undefined,
+      journal_lines: lines,
+    },
   });
-
-  if (error) throw new Error(error.message);
-
-  // RPC returns TABLE → array. Ambil row pertama (single transaction).
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row) throw new Error('Gagal membuat multi-line transaction');
-  return row as Transaction;
 }
 
-// Update a multi-line journal entry (replaces all journal_lines)
+// Update a multi-line journal entry (routes through PATCH /api/transactions/[id]/multi-line)
 export async function updateMultiLineTransaction(
   id: string,
   updates: Partial<Omit<MultiLineTransactionInsert, 'business_id'>>
 ): Promise<Transaction> {
-  const supabase = createClient();
-
-  const updateData: Record<string, unknown> = {
-    date: updates.date,
-    category: updates.category,
-    name: updates.name,
-    description: updates.description,
-    notes: updates.notes ?? null,
-    status: updates.status,
-    ...(updates.meta !== undefined ? { meta: updates.meta } : {}),
-  };
-
-  // Remove undefined keys
-  Object.keys(updateData).forEach((k) => {
-    if (updateData[k] === undefined) delete updateData[k];
-  });
-
   if (updates.journal_lines) {
     const totalDebit = updates.journal_lines.reduce((s, l) => s + l.debit_amount, 0);
     const totalCredit = updates.journal_lines.reduce((s, l) => s + l.credit_amount, 0);
-
     if (Math.abs(totalDebit - totalCredit) > 0.01) {
       throw new Error('Jurnal tidak seimbang: total debit harus sama dengan total kredit');
     }
-
-    updateData.amount = totalDebit;
   }
 
-  const { data: transaction, error: txnError } = await supabase
-    .from('transactions')
-    .update(updateData)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (txnError || !transaction) throw new Error(txnError?.message ?? 'Failed to update transaction');
-
+  const body: Record<string, unknown> = {};
+  if (updates.date !== undefined) body.date = updates.date;
+  if (updates.category !== undefined) body.category = updates.category;
+  if (updates.name !== undefined) body.name = updates.name;
+  if (updates.description !== undefined) body.description = updates.description;
+  if (updates.notes !== undefined) body.notes = updates.notes;
+  if (updates.status !== undefined) body.status = updates.status;
+  if (updates.meta !== undefined) body.meta = updates.meta;
   if (updates.journal_lines) {
-    // Atomic replace via RPC — menghindari race condition deferred trigger
-    // antara 2 HTTP request terpisah (DELETE lalu INSERT)
-    const lines = updates.journal_lines.map((l, i) => ({
+    body.journal_lines = updates.journal_lines.map((l, i) => ({
       account_id: l.account_id,
       debit_amount: l.debit_amount,
       credit_amount: l.credit_amount,
       description: l.description ?? null,
       sort_order: l.sort_order ?? i,
     }));
-
-    const { error: rpcError } = await supabase.rpc('replace_journal_lines', {
-      p_transaction_id: id,
-      p_lines: lines,
-    });
-
-    if (rpcError) throw new Error(rpcError.message);
   }
 
-  return transaction as Transaction;
+  return apiFetch<Transaction>(`/api/transactions/${id}/multi-line`, {
+    method: 'PATCH',
+    body,
+  });
 }
 
 // Get paginated transactions for the transactions list page
@@ -309,176 +275,97 @@ function validateDoubleEntryTransaction(transaction: TransactionInsert | Transac
   }
 }
 
-// Create a new transaction (default status: draft)
+// Create a new transaction (routes through POST /api/transactions)
 export async function createTransaction(transaction: TransactionInsert): Promise<Transaction> {
-  // Validate double-entry rules before creating
+  // Client-side pre-validation for fast feedback. Server re-validates with Zod.
   validateDoubleEntryTransaction(transaction);
 
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('transactions')
-    .insert({
-      ...transaction,
-      status: transaction.status || 'draft',
-    })
-    .select()
-    .single();
+  // Server fills in created_by from auth; strip if present to avoid confusion.
+  const { created_by: _omit, ...payload } = transaction;
+  void _omit;
 
-  if (error) throw new Error(error.message);
-  return data as Transaction;
+  return apiFetch<Transaction>('/api/transactions', {
+    method: 'POST',
+    body: { ...payload, status: payload.status || 'draft' },
+  });
 }
 
 // Post a draft transaction (draft → posted, one-way)
 export async function postTransaction(id: string): Promise<Transaction> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('transactions')
-    .update({
-      status: 'posted' as TransactionStatus,
-      posted_at: new Date().toISOString(),
-    })
-    .eq('id', id)
-    .eq('status', 'draft') // Only draft can be posted
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
-  return data as Transaction;
+  return apiFetch<Transaction>(`/api/transactions/${id}/post`, { method: 'POST' });
 }
 
 // Bulk post multiple draft transactions
 export async function postTransactionsBulk(ids: string[]): Promise<number> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('transactions')
-    .update({
-      status: 'posted' as TransactionStatus,
-      posted_at: new Date().toISOString(),
-    })
-    .in('id', ids)
-    .eq('status', 'draft')
-    .select('id');
-
-  if (error) throw new Error(error.message);
-  return data?.length ?? 0;
+  const data = await apiFetch<{ posted: number }>('/api/transactions/bulk-post', {
+    method: 'POST',
+    body: { ids },
+  });
+  return data.posted;
 }
 
-// Bulk import transactions
+// Bulk import transactions (routes through POST /api/transactions/bulk).
+// Server inserts in batches of 100 and returns aggregate counts.
+// The onProgress callback is kept for API compatibility but fires only once
+// at completion since the request is now a single round-trip.
 export async function createTransactionsBulk(
   transactions: TransactionInsert[],
   onProgress?: (current: number, total: number) => void
 ): Promise<BulkImportResult> {
-  const supabase = createClient();
-
-  // For optimal performance, we'll insert in batches
-  const BATCH_SIZE = 100;
-  const results: BulkImportResult = {
-    success: true,
-    inserted: 0,
-    failed: 0,
-    errors: [],
-    data: [],
-  };
-
-  // If less than batch size, insert all at once
-  if (transactions.length <= BATCH_SIZE) {
-    try {
-      const { data, error } = await supabase
-        .from('transactions')
-        .insert(transactions)
-        .select();
-
-      if (error) {
-        return {
-          success: false,
-          inserted: 0,
-          failed: transactions.length,
-          errors: [error.message],
-        };
-      }
-
-      return {
-        success: true,
-        inserted: data.length,
-        failed: 0,
-        errors: [],
-        data: data as Transaction[],
-      };
-    } catch (err) {
-      return {
-        success: false,
-        inserted: 0,
-        failed: transactions.length,
-        errors: [err instanceof Error ? err.message : 'Unknown error'],
-      };
-    }
+  if (transactions.length === 0) {
+    return { success: true, inserted: 0, failed: 0, errors: [], data: [] };
   }
 
-  // For larger imports, batch the inserts
-  for (let i = 0; i < transactions.length; i += BATCH_SIZE) {
-    const batch = transactions.slice(i, i + BATCH_SIZE);
-
-    try {
-      const { data, error } = await supabase
-        .from('transactions')
-        .insert(batch)
-        .select();
-
-      if (error) {
-        results.failed += batch.length;
-        results.errors.push(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${error.message}`);
-        results.success = false;
-      } else {
-        results.inserted += data.length;
-        if (results.data) {
-          results.data.push(...(data as Transaction[]));
-        }
-      }
-
-      // Report progress
-      if (onProgress) {
-        onProgress(Math.min(i + BATCH_SIZE, transactions.length), transactions.length);
-      }
-    } catch (err) {
-      results.failed += batch.length;
-      results.errors.push(
-        `Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${err instanceof Error ? err.message : 'Unknown error'}`
-      );
-      results.success = false;
-    }
+  const businessIds = new Set(transactions.map((t) => t.business_id));
+  if (businessIds.size > 1) {
+    return {
+      success: false,
+      inserted: 0,
+      failed: transactions.length,
+      errors: ['Semua transaksi harus dalam bisnis yang sama'],
+    };
   }
+  const business_id = transactions[0].business_id;
 
-  return results;
+  // Strip business_id and created_by from each row — server fills them in.
+  const payload = transactions.map(({ business_id: _b, created_by: _c, ...rest }) => {
+    void _b;
+    void _c;
+    return rest;
+  });
+
+  try {
+    const result = await apiFetch<BulkImportResult>('/api/transactions/bulk', {
+      method: 'POST',
+      body: { business_id, transactions: payload },
+    });
+    if (onProgress) onProgress(transactions.length, transactions.length);
+    return result;
+  } catch (err) {
+    return {
+      success: false,
+      inserted: 0,
+      failed: transactions.length,
+      errors: [err instanceof Error ? err.message : 'Unknown error'],
+    };
+  }
 }
 
-// Update an existing transaction
+// Update an existing transaction (routes through PUT /api/transactions/[id])
 export async function updateTransaction(
   id: string,
   updates: TransactionUpdate
 ): Promise<Transaction> {
-  // Validate double-entry rules before updating
   validateDoubleEntryTransaction(updates);
-
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('transactions')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
-  return data as Transaction;
+  return apiFetch<Transaction>(`/api/transactions/${id}`, {
+    method: 'PUT',
+    body: updates,
+  });
 }
 
-// Soft delete a transaction (sets deleted_at and deleted_by)
+// Soft delete a transaction (routes through DELETE /api/transactions/[id])
 export async function deleteTransaction(id: string): Promise<void> {
-  const supabase = createClient();
-  const { error } = await supabase.rpc('soft_delete_transaction', {
-    transaction_id: id,
-  });
-
-  if (error) throw new Error(error.message);
+  await apiFetch(`/api/transactions/${id}`, { method: 'DELETE' });
 }
 
 // ============================================================
@@ -512,26 +399,20 @@ export async function settleTransaction(input: {
   partialAmount?: number; // undefined/null = full settle
   outstandingAmount?: number; // cross-check vs server (deteksi stale)
 }): Promise<SettlementResult> {
-  const supabase = createClient();
-  const { data, error } = await supabase.rpc('settle_transaction', {
-    p_original_transaction_id: input.originalTransactionId,
-    p_settlement_data: input.settlementData,
-    p_partial_amount: input.partialAmount ?? null,
-    p_outstanding_amount: input.outstandingAmount ?? null,
-  });
-
-  if (error) throw new Error(error.message);
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row) throw new Error('Gagal melunasi transaksi');
-  return row as SettlementResult;
+  return apiFetch<SettlementResult>(
+    `/api/transactions/${input.originalTransactionId}/settle`,
+    {
+      method: 'POST',
+      body: {
+        settlement_data: input.settlementData,
+        partial_amount: input.partialAmount ?? null,
+        outstanding_amount: input.outstandingAmount ?? null,
+      },
+    }
+  );
 }
 
 // Restore a soft-deleted transaction
 export async function restoreTransaction(id: string): Promise<void> {
-  const supabase = createClient();
-  const { error } = await supabase.rpc('restore_transaction', {
-    transaction_id: id,
-  });
-
-  if (error) throw new Error(error.message);
+  await apiFetch(`/api/transactions/${id}/restore`, { method: 'POST' });
 }

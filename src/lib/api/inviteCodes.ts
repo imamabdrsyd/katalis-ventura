@@ -1,17 +1,6 @@
 import { createClient } from '@/lib/supabase';
 import type { InviteCode } from '@/types';
-
-// Generate cryptographically secure random invite code (8 characters)
-function generateCode(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  const array = new Uint8Array(8);
-  crypto.getRandomValues(array);
-  let code = '';
-  for (let i = 0; i < 8; i++) {
-    code += chars.charAt(array[i] % chars.length);
-  }
-  return code;
-}
+import { apiFetch } from './_fetchHelper';
 
 export interface CreateInviteCodeData {
   business_id: string;
@@ -20,48 +9,33 @@ export interface CreateInviteCodeData {
   max_uses?: number;
 }
 
-// Create a new invite code
+/**
+ * Create a new invite code (routes through POST /api/businesses/[id]/invite-codes).
+ * Server generates the random code and sets created_by from the auth session.
+ * The userId argument is retained for backward compatibility but ignored.
+ */
 export async function createInviteCode(
   data: CreateInviteCodeData,
-  userId: string
+  _userId?: string
 ): Promise<InviteCode> {
-  const supabase = createClient();
-  const code = generateCode();
-
-  const { data: inviteCode, error } = await supabase
-    .from('invite_codes')
-    .insert({
-      business_id: data.business_id,
-      code,
+  void _userId;
+  return apiFetch<InviteCode>(`/api/businesses/${data.business_id}/invite-codes`, {
+    method: 'POST',
+    body: {
       role: data.role,
-      created_by: userId,
-      expires_at: data.expires_at,
-      max_uses: data.max_uses || 10,
-      current_uses: 0,
-      is_active: true,
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-
-  return inviteCode;
+      expires_at: data.expires_at ?? null,
+      max_uses: data.max_uses,
+    },
+  });
 }
 
-// Get all invite codes for a business
+/**
+ * Get all invite codes for a business (manager-only — enforced server-side).
+ */
 export async function getBusinessInviteCodes(
   businessId: string
 ): Promise<InviteCode[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('invite_codes')
-    .select('*')
-    .eq('business_id', businessId)
-    .order('created_at', { ascending: false });
-
-  if (error) throw error;
-
-  return data || [];
+  return apiFetch<InviteCode[]>(`/api/businesses/${businessId}/invite-codes`);
 }
 
 // Validate and get invite code
@@ -99,53 +73,29 @@ export async function validateInviteCode(
   return { valid: true, inviteCode };
 }
 
-// Use invite code to join business (transactional via RPC)
+// Use invite code to join business (routes through POST /api/invite-codes/use).
+// The userId argument is retained for backward compatibility but ignored —
+// the server derives it from the auth session.
 export async function useInviteCode(
   code: string,
-  userId: string
+  _userId?: string
 ): Promise<{ success: boolean; message?: string; businessId?: string }> {
-  const supabase = createClient();
-
-  const { data, error } = await supabase.rpc('use_invite_code', {
-    p_code: code.toUpperCase(),
-    p_user_id: userId,
-  });
-
-  if (error) {
-    console.error('use_invite_code RPC error:', error);
-    return { success: false, message: 'Gagal memproses kode undangan. Coba lagi.' };
-  }
-
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row) {
-    return { success: false, message: 'Kode undangan tidak valid' };
-  }
-
-  return {
-    success: row.success,
-    message: row.message ?? undefined,
-    businessId: row.business_id ?? undefined,
-  };
+  void _userId;
+  return apiFetch<{ success: boolean; message?: string; businessId?: string }>(
+    '/api/invite-codes/use',
+    { method: 'POST', body: { code } }
+  );
 }
 
-// Deactivate invite code
+// Deactivate invite code (routes through PATCH /api/invite-codes/[id])
 export async function deactivateInviteCode(codeId: string): Promise<void> {
-  const supabase = createClient();
-  const { error } = await supabase
-    .from('invite_codes')
-    .update({ is_active: false })
-    .eq('id', codeId);
-
-  if (error) throw error;
+  await apiFetch(`/api/invite-codes/${codeId}`, {
+    method: 'PATCH',
+    body: { is_active: false },
+  });
 }
 
-// Delete invite code
+// Delete invite code (routes through DELETE /api/invite-codes/[id])
 export async function deleteInviteCode(codeId: string): Promise<void> {
-  const supabase = createClient();
-  const { error } = await supabase
-    .from('invite_codes')
-    .delete()
-    .eq('id', codeId);
-
-  if (error) throw error;
+  await apiFetch(`/api/invite-codes/${codeId}`, { method: 'DELETE' });
 }

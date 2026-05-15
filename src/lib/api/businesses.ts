@@ -1,15 +1,12 @@
 import { createClient } from '@/lib/supabase';
 import type { Business, Database } from '@/types';
-import { getAccountByCode } from './accounts';
-import { createTransaction } from './transactions';
-import { normalizeRole } from '@/lib/roles';
+import { apiFetch } from './_fetchHelper';
 
-type BusinessInsert = Database['public']['Tables']['businesses']['Insert'];
 type BusinessUpdate = Database['public']['Tables']['businesses']['Update'] & {
   logo_fit?: 'cover' | 'contain' | null;
 };
 
-// Form data type without created_by (will be set by the API)
+// Form data type without created_by (will be set by the server)
 export interface CreateBusinessData {
   business_name: string;
   business_sector: string;
@@ -22,160 +19,6 @@ export interface CreateBusinessData {
   whatsapp_number?: string;
   widget_action_label?: string;
   is_public?: boolean;
-}
-
-/**
- * Create initial capital investment transaction (double-entry)
- * Debit: Cash (1100) - Asset increases
- * Credit: Equity (3000) - Owner's capital increases
- */
-async function ensureAccountExists(
-  businessId: string,
-  code: string,
-  defaults: {
-    account_name: string;
-    account_type: 'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENSE';
-    normal_balance: 'DEBIT' | 'CREDIT';
-    parent_code: string;
-    is_system: boolean;
-    sort_order: number;
-    description: string;
-    default_category?: string;
-    is_stock?: boolean;
-  }
-) {
-  let account = await getAccountByCode(businessId, code);
-  if (account) return account;
-
-  // Find parent account
-  const parent = await getAccountByCode(businessId, defaults.parent_code);
-  if (!parent) return null;
-
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('accounts')
-    .insert({
-      business_id: businessId,
-      account_code: code,
-      account_name: defaults.account_name,
-      account_type: defaults.account_type,
-      parent_account_id: parent.id,
-      normal_balance: defaults.normal_balance,
-      is_system: defaults.is_system,
-      sort_order: defaults.sort_order,
-      description: defaults.description,
-      default_category: defaults.default_category ?? null,
-      is_stock: defaults.account_type === 'EQUITY' && (defaults.is_stock ?? false),
-    })
-    .select()
-    .single();
-
-  if (error) {
-    console.warn(`Failed to create account ${code}:`, error);
-    return null;
-  }
-  return data;
-}
-
-async function createCapitalInvestmentTransaction(
-  businessId: string,
-  amount: number,
-  userId: string
-): Promise<void> {
-  if (!amount || amount <= 0) return;
-
-  // Get Cash account (1100)
-  const cashAccount = await getAccountByCode(businessId, '1100');
-  if (!cashAccount) {
-    throw new Error('Cash account (1100) not found. Please ensure default accounts are created.');
-  }
-
-  // Get or create Owner's Capital sub-account (3100)
-  const capitalAccount = await ensureAccountExists(businessId, '3100', {
-    account_name: "Owner's Capital",
-    account_type: 'EQUITY',
-    normal_balance: 'CREDIT',
-    parent_code: '3000',
-    is_system: true,
-    sort_order: 3100,
-    description: 'Modal pemilik',
-    default_category: 'FIN',
-    is_stock: true,
-  });
-  if (!capitalAccount) {
-    throw new Error("Owner's Capital account (3100) could not be found or created.");
-  }
-
-  // Create the double-entry transaction
-  // Using 'FIN' category (Financing) as capital investment is a financing activity
-  await createTransaction({
-    business_id: businessId,
-    date: new Date().toISOString().split('T')[0], // Today's date
-    category: 'FIN',
-    name: 'Modal Investasi Awal',
-    description: 'Setoran modal investasi awal dari pemilik',
-    amount: amount,
-    account: 'Cash', // Legacy field
-    created_by: userId,
-    debit_account_id: cashAccount.id, // Debit Cash (Asset increases)
-    credit_account_id: capitalAccount.id, // Credit Owner's Capital (Capital increases)
-    is_double_entry: true,
-    status: 'posted',
-    notes: 'Transaksi modal investasi awal dibuat otomatis saat pembuatan bisnis',
-  });
-}
-
-/**
- * Update or create capital investment transaction when business is updated
- */
-async function updateCapitalInvestmentTransaction(
-  businessId: string,
-  newAmount: number,
-  userId: string
-): Promise<void> {
-  const supabase = createClient();
-
-  // Find existing capital investment transaction
-  const { data: existingTx, error: findError } = await supabase
-    .from('transactions')
-    .select('*')
-    .eq('business_id', businessId)
-    .eq('category', 'FIN')
-    .eq('name', 'Modal Investasi Awal')
-    .is('deleted_at', null)
-    .single();
-
-  if (findError && findError.code !== 'PGRST116') {
-    throw findError;
-  }
-
-  // If no existing transaction and new amount > 0, create new transaction
-  if (!existingTx && newAmount > 0) {
-    await createCapitalInvestmentTransaction(businessId, newAmount, userId);
-    return;
-  }
-
-  // If existing transaction found
-  if (existingTx) {
-    // If new amount is 0, soft delete the transaction
-    if (newAmount <= 0) {
-      await supabase.rpc('soft_delete_transaction', {
-        transaction_id: existingTx.id,
-      });
-      return;
-    }
-
-    // Update existing transaction amount
-    const { error: updateError } = await supabase
-      .from('transactions')
-      .update({
-        amount: newAmount,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', existingTx.id);
-
-    if (updateError) throw updateError;
-  }
 }
 
 export async function getUserBusinesses(
@@ -230,146 +73,49 @@ export async function getBusinessById(businessId: string): Promise<Business | nu
   return data;
 }
 
+/**
+ * Create a new business (routes through POST /api/businesses).
+ * Server provisions default accounts and initial capital transaction.
+ * The userId argument is retained for backward compatibility but ignored —
+ * the server derives the creator from the auth session.
+ */
 export async function createBusiness(
   business: CreateBusinessData,
-  userId: string
+  _userId?: string
 ): Promise<Business> {
-  const supabase = createClient();
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('default_role')
-    .eq('id', userId)
-    .maybeSingle();
-  const creatorRole = normalizeRole(profile?.default_role) === 'superadmin'
-    ? 'superadmin'
-    : 'business_manager';
-
-  // Create business
-  const { data: newBusiness, error: businessError } = await supabase
-    .from('businesses')
-    .insert({
-      ...business,
-      capital_investment: business.capital_investment || 0,
-      created_by: userId,
-    })
-    .select()
-    .single();
-
-  if (businessError) throw businessError;
-
-  // Assign user as business manager
-  const { error: roleError } = await supabase.from('user_business_roles').insert({
-    user_id: userId,
-    business_id: newBusiness.id,
-    role: creatorRole,
+  void _userId;
+  return apiFetch<Business>('/api/businesses', {
+    method: 'POST',
+    body: business,
   });
-
-  if (roleError) throw roleError;
-
-  // Create default accounts for the business
-  // Call the stored procedure after user role is assigned
-  const { error: accountsError } = await supabase.rpc('create_default_accounts', {
-    p_business_id: newBusiness.id,
-  });
-
-  if (accountsError) {
-    console.warn('Failed to create default accounts:', accountsError);
-    // Don't throw - allow business creation to succeed even if accounts fail
-  }
-
-  // Ensure essential sub-accounts exist (in case stored procedure is outdated)
-  try {
-    await ensureAccountExists(newBusiness.id, '3100', {
-      account_name: "Owner's Capital",
-      account_type: 'EQUITY',
-      normal_balance: 'CREDIT',
-      parent_code: '3000',
-      is_system: true,
-      sort_order: 3100,
-      description: 'Modal pemilik',
-      default_category: 'FIN',
-      is_stock: true,
-    });
-  } catch (err) {
-    console.warn('Failed to ensure account 3100:', err);
-  }
-
-  // Create capital investment transaction if amount > 0
-  // This must happen AFTER accounts are created
-  try {
-    await createCapitalInvestmentTransaction(
-      newBusiness.id,
-      business.capital_investment || 0,
-      userId
-    );
-  } catch (error) {
-    console.warn('Failed to create capital investment transaction:', error);
-    // Don't throw - allow business creation to succeed
-  }
-
-  return newBusiness;
 }
 
+/**
+ * Update business fields (routes through PATCH /api/businesses/[id]).
+ * Server syncs the initial capital transaction when capital_investment changes.
+ */
 export async function updateBusiness(
   businessId: string,
   updates: BusinessUpdate,
-  userId?: string
+  _userId?: string
 ): Promise<Business> {
-  const supabase = createClient();
-
-  // Update business
-  const { data, error } = await supabase
-    .from('businesses')
-    .update(updates)
-    .eq('id', businessId)
-    .select()
-    .single();
-
-  if (error) throw error;
-
-  // If capital_investment was updated and userId is provided, update the transaction
-  if (updates.capital_investment !== undefined && userId) {
-    try {
-      await updateCapitalInvestmentTransaction(
-        businessId,
-        updates.capital_investment,
-        userId
-      );
-    } catch (error) {
-      console.warn('Failed to update capital investment transaction:', error);
-      // Don't throw - allow business update to succeed
-    }
-  }
-
-  return data;
+  void _userId;
+  return apiFetch<Business>(`/api/businesses/${businessId}`, {
+    method: 'PATCH',
+    body: updates,
+  });
 }
 
 export async function archiveBusiness(businessId: string): Promise<Business> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('businesses')
-    .update({ is_archived: true })
-    .eq('id', businessId)
-    .select()
-    .single();
-
-  if (error) throw error;
-
-  return data;
+  return apiFetch<Business>(`/api/businesses/${businessId}/archive`, {
+    method: 'POST',
+  });
 }
 
 export async function restoreBusiness(businessId: string): Promise<Business> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('businesses')
-    .update({ is_archived: false })
-    .eq('id', businessId)
-    .select()
-    .single();
-
-  if (error) throw error;
-
-  return data;
+  return apiFetch<Business>(`/api/businesses/${businessId}/archive`, {
+    method: 'DELETE',
+  });
 }
 
 export async function getAvailableBusinesses(userId: string): Promise<Business[]> {
@@ -403,39 +149,27 @@ export async function getAvailableBusinesses(userId: string): Promise<Business[]
   return data || [];
 }
 
+/**
+ * Join a business as the authenticated user (routes through POST /api/businesses/[id]/membership).
+ * Server derives the role from the user's profile.
+ */
 export async function joinBusiness(
-  userId: string,
+  _userId: string,
   businessId: string
 ): Promise<void> {
-  const supabase = createClient();
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('default_role')
-    .eq('id', userId)
-    .maybeSingle();
-  const role = normalizeRole(profile?.default_role) === 'superadmin' ? 'superadmin' : 'investor';
-
-  const { error } = await supabase.from('user_business_roles').insert({
-    user_id: userId,
-    business_id: businessId,
-    role,
-  });
-
-  if (error) throw error;
+  void _userId;
+  await apiFetch(`/api/businesses/${businessId}/membership`, { method: 'POST' });
 }
 
+/**
+ * Leave a business (routes through DELETE /api/businesses/[id]/membership).
+ */
 export async function leaveBusiness(
-  userId: string,
+  _userId: string,
   businessId: string
 ): Promise<void> {
-  const supabase = createClient();
-  const { error } = await supabase
-    .from('user_business_roles')
-    .delete()
-    .eq('user_id', userId)
-    .eq('business_id', businessId);
-
-  if (error) throw error;
+  void _userId;
+  await apiFetch(`/api/businesses/${businessId}/membership`, { method: 'DELETE' });
 }
 
 export async function checkUserHasBusiness(userId: string): Promise<boolean> {

@@ -121,6 +121,75 @@ export const createMultiLineTransactionSchema = z.object({
   { message: 'Journal lines validation failed' }
 );
 
+// Bulk post (draft → posted)
+export const bulkPostTransactionsSchema = z.object({
+  ids: z.array(z.string().regex(UUID_REGEX)).min(1).max(500),
+});
+
+// Bulk create (import excel/csv)
+export const bulkCreateTransactionsSchema = z.object({
+  business_id: z.string().regex(UUID_REGEX, 'Invalid business ID format'),
+  transactions: z
+    .array(
+      z.object({
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        category: z.enum(VALID_CATEGORIES),
+        name: z.string().min(1).max(500),
+        description: z.string().max(2000).default(''),
+        amount: z.number().positive().max(MAX_TRANSACTION_AMOUNT),
+        account: z.string().max(500).default(''),
+        debit_account_id: z.string().regex(UUID_REGEX).optional().nullable(),
+        credit_account_id: z.string().regex(UUID_REGEX).optional().nullable(),
+        is_double_entry: z.boolean().optional().default(false),
+        notes: z.string().max(2000).optional().nullable(),
+        status: z.enum(VALID_STATUSES).optional().default('draft'),
+        import_batch_id: z.string().regex(UUID_REGEX).optional().nullable(),
+        meta: z.record(z.string(), z.unknown()).optional().nullable(),
+      })
+    )
+    .min(1)
+    .max(2000),
+});
+
+// Update multi-line transaction
+export const updateMultiLineTransactionSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  category: z.enum(VALID_CATEGORIES).optional(),
+  name: z.string().min(1).max(500).optional(),
+  description: z.string().max(2000).optional(),
+  notes: z.string().max(2000).optional().nullable(),
+  status: z.enum(VALID_STATUSES).optional(),
+  meta: z.record(z.string(), z.unknown()).optional().nullable(),
+  journal_lines: z.array(journalLineSchema).min(2).optional(),
+}).refine(
+  (data) => {
+    if (!data.journal_lines) return true;
+    const totalDebit = data.journal_lines.reduce((s, l) => s + l.debit_amount, 0);
+    const totalCredit = data.journal_lines.reduce((s, l) => s + l.credit_amount, 0);
+    return Math.abs(totalDebit - totalCredit) < 0.01;
+  },
+  { message: 'Total debit must equal total credit (balanced journal entry)' }
+);
+
+// Settle transaction (full or partial)
+export const settleTransactionSchema = z.object({
+  settlement_data: z.object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    category: z.enum(VALID_CATEGORIES),
+    name: z.string().min(1).max(500),
+    description: z.string().max(2000),
+    debit_account_id: z.string().regex(UUID_REGEX).optional().nullable(),
+    credit_account_id: z.string().regex(UUID_REGEX).optional().nullable(),
+    is_double_entry: z.boolean().optional(),
+    account: z.string().max(500).optional(),
+    notes: z.string().max(2000).optional().nullable(),
+    status: z.enum(VALID_STATUSES).optional(),
+    meta: z.record(z.string(), z.unknown()).optional().nullable(),
+  }),
+  partial_amount: z.number().positive().max(MAX_TRANSACTION_AMOUNT).optional().nullable(),
+  outstanding_amount: z.number().min(0).max(MAX_TRANSACTION_AMOUNT).optional().nullable(),
+});
+
 // ============================================
 // Account Schemas
 // ============================================
