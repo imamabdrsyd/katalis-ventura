@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { Modal } from '@/components/ui/Modal';
+import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
 import { BusinessCard } from '@/components/business/BusinessCard';
 import { BusinessForm, type BusinessFormData } from '@/components/business/BusinessForm';
 import { InviteCodeManager } from '@/components/business/InviteCodeManager';
@@ -308,43 +309,25 @@ export default function BusinessesPage() {
       )}
 
       {/* Add Business Modal */}
-      {isFormOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-          onClick={() => setIsFormOpen(false)}
-        >
-          <div
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <BusinessForm
-              onSubmit={handleCreateBusiness}
-              onCancel={() => setIsFormOpen(false)}
-              loading={loading}
-            />
-          </div>
-        </div>
-      )}
+      <AnimatedDialog isOpen={isFormOpen} onClose={() => setIsFormOpen(false)}>
+        <BusinessForm
+          onSubmit={handleCreateBusiness}
+          onCancel={() => setIsFormOpen(false)}
+          loading={loading}
+        />
+      </AnimatedDialog>
 
       {/* Edit Business Modal */}
-      {!!editingBusiness && (
-        <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-          onClick={() => setEditingBusiness(null)}
-        >
-          <div
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <BusinessForm
-              business={editingBusiness}
-              onSubmit={handleUpdateBusiness}
-              onCancel={() => setEditingBusiness(null)}
-              loading={loading}
-            />
-          </div>
-        </div>
-      )}
+      <AnimatedDialog isOpen={!!editingBusiness} onClose={() => setEditingBusiness(null)}>
+        {editingBusiness && (
+          <BusinessForm
+            business={editingBusiness}
+            onSubmit={handleUpdateBusiness}
+            onCancel={() => setEditingBusiness(null)}
+            loading={loading}
+          />
+        )}
+      </AnimatedDialog>
 
       {/* Archive Confirm Modal */}
       <Modal

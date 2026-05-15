@@ -7,6 +7,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { BusinessProvider, useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { BusinessForm, type BusinessFormData } from '@/components/business/BusinessForm';
+import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
 import { createClient } from '@/lib/supabase';
 import * as businessesApi from '@/lib/api/businesses';
 import {
@@ -304,6 +305,19 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
   }, [query, filteredPages, dataResults]);
 
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [shouldRender, setShouldRender] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setShouldRender(true);
+      const raf = requestAnimationFrame(() => setIsVisible(true));
+      return () => cancelAnimationFrame(raf);
+    }
+    setIsVisible(false);
+    const timeout = setTimeout(() => setShouldRender(false), 200);
+    return () => clearTimeout(timeout);
+  }, [open]);
 
   // Reset state saat dialog dibuka
   useEffect(() => {
@@ -345,16 +359,16 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
     [allResults, selectedIndex, navigate]
   );
 
-  if (!open) return null;
+  if (!shouldRender) return null;
 
   const hasPages = filteredPages.length > 0;
   const hasData = dataResults.length > 0;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]" onClick={onClose}>
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
+      <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-200 ease-out ${isVisible ? 'opacity-100' : 'opacity-0'}`} />
       <div
-        className="relative w-full max-w-xl bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+        className={`relative w-full max-w-xl bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-200 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search Input */}
@@ -785,23 +799,16 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
     <SearchDialog open={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
 
     {/* Add Business Modal */}
-    {showAddBusiness && !isInvestor && (
-      <div
-        className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-        onClick={() => setShowAddBusiness(false)}
-      >
-        <div
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <BusinessForm
-            onSubmit={handleAddBusiness}
-            onCancel={() => setShowAddBusiness(false)}
-            loading={isSubmitting}
-          />
-        </div>
-      </div>
-    )}
+    <AnimatedDialog
+      isOpen={showAddBusiness && !isInvestor}
+      onClose={() => setShowAddBusiness(false)}
+    >
+      <BusinessForm
+        onSubmit={handleAddBusiness}
+        onCancel={() => setShowAddBusiness(false)}
+        loading={isSubmitting}
+      />
+    </AnimatedDialog>
     </>
   );
 }

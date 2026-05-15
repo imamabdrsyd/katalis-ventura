@@ -28,6 +28,8 @@ function currentSection(acc: Account): Section {
 
 export function IncomeStatementConfigModal({ isOpen, onClose, accounts, businessId, onSaved }: Props) {
   const [mounted, setMounted] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   // Map of accountId → Section (working state)
   const [assignments, setAssignments] = useState<Record<string, Section>>({});
@@ -36,6 +38,17 @@ export function IncomeStatementConfigModal({ isOpen, onClose, accounts, business
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      const raf = requestAnimationFrame(() => setIsVisible(true));
+      return () => cancelAnimationFrame(raf);
+    }
+    setIsVisible(false);
+    const timeout = setTimeout(() => setShouldRender(false), 200);
+    return () => clearTimeout(timeout);
+  }, [isOpen]);
 
   // Filter ke EXPENSE account yang non-TAX (TAX punya section terpisah di income statement)
   const expenseAccounts = useMemo(
@@ -131,7 +144,7 @@ export function IncomeStatementConfigModal({ isOpen, onClose, accounts, business
     }
   };
 
-  if (!isOpen || !mounted) return null;
+  if (!shouldRender || !mounted) return null;
 
   const selected = selectedId ? expenseAccounts.find((a) => a.id === selectedId) : null;
 
@@ -174,11 +187,11 @@ export function IncomeStatementConfigModal({ isOpen, onClose, accounts, business
 
   const modalContent = (
     <div
-      className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+      className={`fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-200 ease-out ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       onClick={() => !saving && onClose()}
     >
       <div
-        className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
+        className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col transition-all duration-200 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

@@ -13,6 +13,7 @@ import { BudgetTrendChart } from '@/components/budget/BudgetTrendChart';
 import { BudgetVarianceTable } from '@/components/budget/BudgetVarianceTable';
 import { formatCurrency } from '@/lib/utils';
 import { useLanguage } from '@/context/LanguageContext';
+import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
 import { Tabs } from '@/components/ui/Tabs';
 
 function BudgetForecastPageInner() {
@@ -368,31 +369,31 @@ function BudgetForecastPageInner() {
       />
 
       {/* Delete confirmation */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)}>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">Hapus Budget?</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-              Budget &quot;{selectedBudget?.name}&quot; akan dihapus beserta semua data budget lines-nya. Tindakan ini tidak bisa dibatalkan.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="btn-secondary"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleDeleteBudget}
-                disabled={saving}
-                className="px-4 py-2.5 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
-              >
-                {saving ? 'Menghapus...' : 'Hapus'}
-              </button>
-            </div>
-          </div>
+      <AnimatedDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        panelClassName="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-sm w-full p-6"
+      >
+        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">Hapus Budget?</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+          Budget &quot;{selectedBudget?.name}&quot; akan dihapus beserta semua data budget lines-nya. Tindakan ini tidak bisa dibatalkan.
+        </p>
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => setShowDeleteConfirm(false)}
+            className="btn-secondary"
+          >
+            Batal
+          </button>
+          <button
+            onClick={handleDeleteBudget}
+            disabled={saving}
+            className="px-4 py-2.5 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
+          >
+            {saving ? 'Menghapus...' : 'Hapus'}
+          </button>
         </div>
-      )}
+      </AnimatedDialog>
     </div>
   );
 }

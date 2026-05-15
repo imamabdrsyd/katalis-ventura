@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import type { Account } from '@/types';
 import { AlertTriangle, Lock } from 'lucide-react';
 
@@ -18,17 +19,31 @@ export function AccountDeleteModal({
   loading = false,
   account,
 }: AccountDeleteModalProps) {
-  if (!isOpen || !account) return null;
+  const [shouldRender, setShouldRender] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      const raf = requestAnimationFrame(() => setIsVisible(true));
+      return () => cancelAnimationFrame(raf);
+    }
+    setIsVisible(false);
+    const timeout = setTimeout(() => setShouldRender(false), 200);
+    return () => clearTimeout(timeout);
+  }, [isOpen]);
+
+  if (!shouldRender || !account) return null;
 
   const isSystemAccount = account.is_system;
 
   return (
     <div
-      className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+      className={`fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-200 ease-out ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full animate-in fade-in zoom-in-95 duration-200"
+        className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full transition-all duration-200 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6">

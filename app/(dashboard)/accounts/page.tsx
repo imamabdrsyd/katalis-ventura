@@ -9,6 +9,7 @@ import type { AccountTreeNode } from '@/lib/api/accounts';
 import { isManagerRole } from '@/lib/roles';
 import { AccountForm, type AccountFormData } from '@/components/accounts/AccountForm';
 import { AccountDeleteModal } from '@/components/accounts/AccountDeleteModal';
+import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
 import { Plus, Search, ChevronDown, ChevronRight, Lock, CheckCircle2, BookOpen as BookOpenIcon, MoreVertical, BookMarked, Building2, BadgeDollarSign } from 'lucide-react';
 
 
@@ -364,56 +365,41 @@ export default function AccountsPage() {
       })()}
 
       {/* Add Account Modal */}
-      {showAddModal && (
-        <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-          onClick={() => {
+      <AnimatedDialog
+        isOpen={showAddModal}
+        onClose={() => {
+          setShowAddModal(false);
+          setPreselectedParentId(null);
+        }}
+      >
+        <AccountForm
+          onSubmit={handleAddAccount}
+          onCancel={() => {
             setShowAddModal(false);
             setPreselectedParentId(null);
           }}
-        >
-          <div
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <AccountForm
-              onSubmit={handleAddAccount}
-              onCancel={() => {
-                setShowAddModal(false);
-                setPreselectedParentId(null);
-              }}
-              loading={saving}
-              businessId={businessId}
-              existingCodes={existingCodes}
-              parentAccounts={parentAccounts}
-              parentAccountId={preselectedParentId || undefined}
-            />
-          </div>
-        </div>
-      )}
+          loading={saving}
+          businessId={businessId}
+          existingCodes={existingCodes}
+          parentAccounts={parentAccounts}
+          parentAccountId={preselectedParentId || undefined}
+        />
+      </AnimatedDialog>
 
       {/* Edit Account Modal */}
-      {editAccount && (
-        <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-          onClick={() => setEditAccount(null)}
-        >
-          <div
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <AccountForm
-              account={editAccount}
-              onSubmit={handleEditAccount}
-              onCancel={() => setEditAccount(null)}
-              loading={saving}
-              businessId={businessId}
-              existingCodes={existingCodes}
-              parentAccounts={parentAccounts}
-            />
-          </div>
-        </div>
-      )}
+      <AnimatedDialog isOpen={!!editAccount} onClose={() => setEditAccount(null)}>
+        {editAccount && (
+          <AccountForm
+            account={editAccount}
+            onSubmit={handleEditAccount}
+            onCancel={() => setEditAccount(null)}
+            loading={saving}
+            businessId={businessId}
+            existingCodes={existingCodes}
+            parentAccounts={parentAccounts}
+          />
+        )}
+      </AnimatedDialog>
 
       {/* Delete Confirmation Modal */}
       <AccountDeleteModal

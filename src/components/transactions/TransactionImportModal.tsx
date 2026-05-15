@@ -73,6 +73,19 @@ export default function TransactionImportModal({
   const [smartRows, setSmartRows] = useState<SmartResolvedRow[]>([]);
   const [showFilter, setShowFilter] = useState<'all' | 'review'>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [shouldRender, setShouldRender] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      const raf = requestAnimationFrame(() => setIsVisible(true));
+      return () => cancelAnimationFrame(raf);
+    }
+    setIsVisible(false);
+    const timeout = setTimeout(() => setShouldRender(false), 200);
+    return () => clearTimeout(timeout);
+  }, [isOpen]);
 
   // Fetch accounts when modal opens
   useEffect(() => {
@@ -95,7 +108,7 @@ export default function TransactionImportModal({
     }
   }, [isOpen, businessId]);
 
-  if (!isOpen) return null;
+  if (!shouldRender) return null;
 
   const handleFileSelect = async (selectedFile: File) => {
     setFile(null);
@@ -618,11 +631,11 @@ export default function TransactionImportModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+      className={`fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-200 ease-out ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
+        className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col transition-all duration-200 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
