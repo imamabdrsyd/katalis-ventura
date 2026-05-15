@@ -84,14 +84,22 @@ export default function DashboardPage() {
   const dashboardAnimationKey = `${selectedYear}-${selectedMonth ?? 'year'}-${transactionsLoading ? 'loading' : 'ready'}`;
 
   const MONTH_LABELS = t.dashboard.months;
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const futureMonthLimit = new Date(currentYear, currentMonth + 4, 1);
+  const maxFilterYear = futureMonthLimit.getFullYear();
+  const maxFilterMonth = futureMonthLimit.getMonth();
+  const isBeyondFutureMonthLimit = (monthIndex: number) =>
+    selectedYear > maxFilterYear || (selectedYear === maxFilterYear && monthIndex > maxFilterMonth);
 
   const availableYears = useMemo(() => {
     const years = new Set<number>();
     transactions.forEach((t) => years.add(new Date(t.date).getFullYear()));
     const sorted = Array.from(years).sort();
-    if (sorted.length === 0) sorted.push(new Date().getFullYear());
+    if (sorted.length === 0) sorted.push(currentYear);
     return sorted;
-  }, [transactions]);
+  }, [transactions, currentYear]);
 
   // Kalau tahun sekarang tidak punya transaksi, snap ke tahun terbaru yang ada datanya.
   // Hanya berlaku untuk initial render — setelah user ganti tahun manual, biarkan.
@@ -105,6 +113,13 @@ export default function DashboardPage() {
 
   const minYear = availableYears[0];
   const maxYear = availableYears[availableYears.length - 1];
+  const selectedMonthIsBeyondLimit = selectedMonth !== null && isBeyondFutureMonthLimit(selectedMonth);
+
+  useEffect(() => {
+    if (selectedMonthIsBeyondLimit) {
+      setSelectedMonth(null);
+    }
+  }, [selectedMonthIsBeyondLimit]);
 
   const yearTransactions = useMemo(
     () => transactions.filter((t) => new Date(t.date).getFullYear() === selectedYear),
@@ -366,19 +381,25 @@ export default function DashboardPage() {
             >
               {t.dashboard.yearly}
             </button>
-            {MONTH_LABELS.map((label, i) => (
-              <button
-                key={i}
-                onClick={() => setSelectedMonth(i)}
-                className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                  selectedMonth === i
-                    ? 'bg-white dark:bg-gray-700 text-primary-500 dark:text-primary-400 font-bold shadow-sm'
-                    : 'text-gray-500 dark:text-gray-400 font-normal hover:text-gray-700 dark:hover:text-gray-200'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+            {MONTH_LABELS.map((label, i) => {
+              const isDisabled = isBeyondFutureMonthLimit(i);
+              const isSelected = selectedMonth === i && !isDisabled;
+
+              return (
+                <button
+                  key={i}
+                  onClick={() => setSelectedMonth(i)}
+                  disabled={isDisabled}
+                  className={`px-3 py-1.5 text-xs rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+                    isSelected
+                      ? 'bg-white dark:bg-gray-700 text-primary-500 dark:text-primary-400 font-bold shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400 font-normal hover:text-gray-700 dark:hover:text-gray-200 disabled:hover:text-gray-500 dark:disabled:hover:text-gray-400'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
         </div>
