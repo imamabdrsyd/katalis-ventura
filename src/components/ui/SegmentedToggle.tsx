@@ -45,7 +45,7 @@ export function SegmentedToggle<T extends string>({
           fullWidth ? 'flex-1' : '',
           'flex items-center justify-center gap-1.5 px-4 py-1.5 text-sm rounded-full transition-all disabled:cursor-default',
           isActive
-            ? 'bg-white dark:bg-gray-600 text-indigo-500 dark:text-indigo-400 font-semibold shadow-sm'
+            ? 'bg-white dark:bg-gray-600 text-primary-500 dark:text-primary-400 font-bold shadow-sm'
             : 'bg-transparent text-gray-500 dark:text-gray-400 font-normal hover:text-gray-700 dark:hover:text-gray-200',
         ]
           .filter(Boolean)
