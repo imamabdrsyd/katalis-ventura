@@ -35,6 +35,8 @@ export default function BusinessesPage() {
   const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
   const [archivingBusiness, setArchivingBusiness] = useState<Business | null>(null);
+  const [hardDeletingBusiness, setHardDeletingBusiness] = useState<Business | null>(null);
+  const [isHardDeleteConfirmOpen, setIsHardDeleteConfirmOpen] = useState(false);
   const [managingInviteBusiness, setManagingInviteBusiness] = useState<Business | null>(null);
   const [periodLockBusiness, setPeriodLockBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(false);
@@ -189,6 +191,30 @@ export default function BusinessesPage() {
 
   const router = useRouter();
 
+  const handleHardDeleteBusiness = async () => {
+    if (!hardDeletingBusiness) return;
+    setLoading(true);
+    try {
+      await businessesApi.hardDeleteBusiness(hardDeletingBusiness.id);
+      if (activeBusiness?.id === hardDeletingBusiness.id) {
+        const nextBusiness = activeBusinesses.find((b) => b.id !== hardDeletingBusiness.id);
+        if (nextBusiness) {
+          setActiveBusiness(nextBusiness.id);
+        }
+      }
+      await fetchBusinesses();
+      await refetch();
+      setHardDeletingBusiness(null);
+      setIsHardDeleteConfirmOpen(false);
+    } catch (err: any) {
+      console.error('Failed to hard delete business:', err);
+      const errorMessage = err?.message || err?.error?.message || JSON.stringify(err) || 'Unknown error';
+      alert(`Gagal menghapus bisnis: ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleRestoreBusiness = async (business: Business) => {
     setLoading(true);
     try {
@@ -284,6 +310,10 @@ export default function BusinessesPage() {
                 setIsArchiveConfirmOpen(true);
               } : undefined}
               onRestore={(canManage && (isSuperadmin || business.created_by === user?.id)) ? () => handleRestoreBusiness(business) : undefined}
+              onHardDelete={(isSuperadmin && business.is_archived) ? () => {
+                setHardDeletingBusiness(business);
+                setIsHardDeleteConfirmOpen(true);
+              } : undefined}
               onInvite={canManage ? () => setManagingInviteBusiness(business) : undefined}
               onPeriodLock={(canManage && (isSuperadmin || business.created_by === user?.id)) ? () => setPeriodLockBusiness(business) : undefined}
               showActions={canManage}
@@ -379,6 +409,43 @@ export default function BusinessesPage() {
         </div>
       </Modal>
 
+      {/* Hard Delete Confirm Modal (superadmin only) */}
+      <Modal
+        isOpen={isHardDeleteConfirmOpen}
+        onClose={() => {
+          setIsHardDeleteConfirmOpen(false);
+          setHardDeletingBusiness(null);
+        }}
+        title={t.businesses.hardDeleteBusiness}
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600 dark:text-gray-300">
+            {t.businesses.hardDeleteConfirm.replace('{name}', hardDeletingBusiness?.business_name || '')}
+          </p>
+          <p className="text-sm text-red-600 dark:text-red-400">
+            {t.businesses.hardDeleteHint}
+          </p>
+          <div className="flex gap-3 pt-4">
+            <button
+              onClick={() => {
+                setIsHardDeleteConfirmOpen(false);
+                setHardDeletingBusiness(null);
+              }}
+              className="btn-secondary flex-1"
+              disabled={loading}
+            >
+              {t.common.cancel}
+            </button>
+            <button
+              onClick={handleHardDeleteBusiness}
+              className="btn-danger flex-1"
+              disabled={loading}
+            >
+              {loading ? t.businesses.hardDeleting : t.businesses.hardDelete}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
     </div>
   );

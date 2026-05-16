@@ -274,6 +274,11 @@ export interface Translations {
     archiveHint: string;
     archive: string;
     archiving: string;
+    hardDeleteBusiness: string;
+    hardDeleteConfirm: string;
+    hardDeleteHint: string;
+    hardDelete: string;
+    hardDeleting: string;
     periodLock: string;
     loadingBusinesses: string;
   };

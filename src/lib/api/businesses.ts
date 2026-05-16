@@ -118,6 +118,16 @@ export async function restoreBusiness(businessId: string): Promise<Business> {
   });
 }
 
+/**
+ * Hard delete a business. Superadmin-only; requires the business to be archived first.
+ * FK cascade will remove all related rows (transactions, accounts, etc.).
+ */
+export async function hardDeleteBusiness(businessId: string): Promise<{ id: string }> {
+  return apiFetch<{ id: string }>(`/api/businesses/${businessId}/hard-delete`, {
+    method: 'DELETE',
+  });
+}
+
 export async function getAvailableBusinesses(userId: string): Promise<Business[]> {
   const supabase = createClient();
   // Get businesses that user already joined

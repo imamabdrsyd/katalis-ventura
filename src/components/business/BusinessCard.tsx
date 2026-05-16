@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, PackageOpen, Home, UserPlus, Coins, Lock, MoreVertical, Pencil, Archive, RotateCcw } from 'lucide-react';
+import { MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, PackageOpen, Home, UserPlus, Coins, Lock, MoreVertical, Pencil, Archive, RotateCcw, Trash2 } from 'lucide-react';
 import type { Business } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 
@@ -21,6 +21,7 @@ interface BusinessCardProps {
   onEdit?: () => void;
   onArchive?: () => void;
   onRestore?: () => void;
+  onHardDelete?: () => void;
   onInvite?: () => void;
   onPeriodLock?: () => void;
   showActions?: boolean;
@@ -61,6 +62,7 @@ export function BusinessCard({
   onEdit,
   onArchive,
   onRestore,
+  onHardDelete,
   onInvite,
   onPeriodLock,
   showActions = true,
@@ -227,7 +229,7 @@ export function BusinessCard({
             )}
           </div>
         )}
-        {showActions && business.is_archived && onRestore && (
+        {showActions && business.is_archived && (onRestore || onHardDelete) && (
           <div className="relative" ref={menuRef}>
             <button
               onClick={(e) => {
@@ -240,18 +242,33 @@ export function BusinessCard({
               <MoreVertical className="w-5 h-5" />
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-20 py-1">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setMenuOpen(false);
-                    onRestore();
-                  }}
-                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Restore
-                </button>
+              <div className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-20 py-1">
+                {onRestore && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpen(false);
+                      onRestore();
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Restore
+                  </button>
+                )}
+                {onHardDelete && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpen(false);
+                      onHardDelete();
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Hapus Permanen
+                  </button>
+                )}
               </div>
             )}
           </div>
