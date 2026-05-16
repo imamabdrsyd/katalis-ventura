@@ -8,7 +8,7 @@ import { InviteCodeManager } from '@/components/business/InviteCodeManager';
 import { JoinRequestList } from '@/components/business/JoinRequestList';
 import { getBusinessMembers, type BusinessMember } from '@/lib/api/members';
 import Image from 'next/image';
-import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut, ShoppingBag, Contact, CalendarDays } from 'lucide-react';
+import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut, ShoppingBag, Contact, CalendarDays, Rocket, Pencil, Check, X, Info } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { Tabs } from '@/components/ui/Tabs';
@@ -49,10 +49,46 @@ const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
   real_estate: <Building2 className="w-6 h-6" />,
 };
 
-function BusinessDetailCard({ business, onLeave }: { business: Business; onLeave?: () => void }) {
+function BusinessDetailCard({
+  business,
+  canManage,
+  onLeave,
+  onBusinessUpdated,
+}: {
+  business: Business;
+  canManage: boolean;
+  onLeave?: () => void;
+  onBusinessUpdated?: (updated: Business) => void;
+}) {
   const icon = BUSINESS_TYPE_ICONS[business.business_sector ?? ''] || <Building2 className="w-6 h-6" />;
   const sectorLabel = BUSINESS_SECTOR_LABELS[business.business_sector ?? ''] || business.business_sector;
   const typeLabel = business.business_type ? BUSINESS_TYPE_LABELS[business.business_type] : null;
+
+  const [isEditingOpStart, setIsEditingOpStart] = useState(false);
+  const [opStartDraft, setOpStartDraft] = useState(business.operations_start_date ?? '');
+  const [savingOpStart, setSavingOpStart] = useState(false);
+  const [opStartError, setOpStartError] = useState<string | null>(null);
+
+  const opStartDate = business.operations_start_date;
+
+  const formatDateID = (iso: string) =>
+    new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  const saveOpStart = async (value: string | null) => {
+    setSavingOpStart(true);
+    setOpStartError(null);
+    try {
+      const updated = await businessesApi.updateBusiness(business.id, {
+        operations_start_date: value,
+      });
+      onBusinessUpdated?.(updated);
+      setIsEditingOpStart(false);
+    } catch (err: any) {
+      setOpStartError(err?.message || 'Gagal menyimpan');
+    } finally {
+      setSavingOpStart(false);
+    }
+  };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 flex-1 self-stretch">
@@ -116,11 +152,96 @@ function BusinessDetailCard({ business, onLeave }: { business: Business; onLeave
             <div>
               <p className="text-xs text-gray-500 dark:text-gray-400">Dibuat</p>
               <p className="text-sm text-gray-800 dark:text-gray-200">
-                {new Date(business.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                {formatDateID(business.created_at)}
               </p>
             </div>
           </div>
         )}
+
+        {/* Operations start date */}
+        <div className="flex items-start gap-3">
+          <Rocket className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Mulai Beroperasi</p>
+              {canManage && !isEditingOpStart && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpStartDraft(opStartDate ?? '');
+                    setOpStartError(null);
+                    setIsEditingOpStart(true);
+                  }}
+                  className="text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+                  title={opStartDate ? 'Ubah tanggal mulai operasi' : 'Set tanggal mulai operasi'}
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {isEditingOpStart ? (
+              <div className="mt-1.5 space-y-2">
+                <input
+                  type="date"
+                  value={opStartDraft}
+                  onChange={(e) => setOpStartDraft(e.target.value)}
+                  className="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <p className="flex items-start gap-1.5 text-xs text-gray-500 dark:text-gray-400 leading-snug">
+                  <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                  <span>Jika di-set, ROI di dashboard dihitung sejak tanggal ini (operating ROI). Jika kosong, dihitung sejak transaksi pertama (holding period return).</span>
+                </p>
+                {opStartError && (
+                  <p className="text-xs text-red-600 dark:text-red-400">{opStartError}</p>
+                )}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => saveOpStart(opStartDraft || null)}
+                    disabled={savingOpStart}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    {savingOpStart ? 'Menyimpan...' : 'Simpan'}
+                  </button>
+                  {opStartDate && (
+                    <button
+                      type="button"
+                      onClick={() => saveOpStart(null)}
+                      disabled={savingOpStart}
+                      className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    >
+                      Hapus
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditingOpStart(false);
+                      setOpStartError(null);
+                    }}
+                    disabled={savingOpStart}
+                    className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Batal
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-800 dark:text-gray-200">
+                {opStartDate ? (
+                  formatDateID(opStartDate)
+                ) : (
+                  <span className="italic text-gray-400 dark:text-gray-500">
+                    Belum di-set
+                  </span>
+                )}
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
       {onLeave && (
@@ -315,7 +436,9 @@ export default function BusinessMembersPage() {
           {business && (
             <BusinessDetailCard
               business={business}
+              canManage={canManage}
               onLeave={!isCreator ? () => setIsLeaveConfirmOpen(true) : undefined}
+              onBusinessUpdated={() => { refetch(); }}
             />
           )}
         </div>

@@ -148,6 +148,7 @@ export interface Business {
   widget_action_label?: string | null;
   is_public?: boolean | null;
   closed_until_date?: string | null; // Period lock: transaksi <= tanggal ini tidak bisa diedit/dihapus
+  operations_start_date?: string | null; // Tanggal mulai operasi. Jika di-set, periode ROI di dashboard dihitung dari tanggal ini.
   created_at: string;
   created_by: string;
   updated_at: string;

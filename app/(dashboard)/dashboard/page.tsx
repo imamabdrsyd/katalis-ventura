@@ -64,6 +64,7 @@ function formatRelativeTime(createdAt: string, txDate: string): string {
 
 export default function DashboardPage() {
   const {
+    business,
     businessLoading,
     canManageTransactions,
     transactions,
@@ -225,24 +226,38 @@ export default function DashboardPage() {
     }
   }, [transactions, summary.totalEarn, selectedYear, selectedMonth, MONTH_LABELS]);
 
-  // Periode ROI dihitung dari tanggal transaksi pertama agar angka tidak menyesatkan
-  // (ROI 50% dalam 3 bulan vs 3 tahun punya makna sangat berbeda).
+  // Periode ROI:
+  // - Jika business.operations_start_date di-set → hitung sejak tanggal tsb
+  //   (operating period ROI: hanya menilai fase operasi aktif).
+  // - Jika tidak → fallback ke tanggal transaksi pertama
+  //   (holding period return: sejak modal pertama dikeluarkan).
   // NOTE: harus di atas early-return supaya order hooks stabil.
   const roiPeriod = useMemo(() => {
     if (transactions.length === 0) return null;
-    let earliest = new Date(transactions[0].date);
-    for (const t of transactions) {
-      const d = new Date(t.date);
-      if (d < earliest) earliest = d;
+
+    let earliest: Date;
+    let basis: 'operations_start' | 'first_transaction';
+
+    if (business?.operations_start_date) {
+      earliest = new Date(business.operations_start_date);
+      basis = 'operations_start';
+    } else {
+      earliest = new Date(transactions[0].date);
+      for (const t of transactions) {
+        const d = new Date(t.date);
+        if (d < earliest) earliest = d;
+      }
+      basis = 'first_transaction';
     }
+
     const now = new Date();
     const months = Math.max(
       1,
       (now.getFullYear() - earliest.getFullYear()) * 12 + (now.getMonth() - earliest.getMonth())
     );
     const sinceLabel = `${MONTH_LABELS[earliest.getMonth()]} ${earliest.getFullYear()}`;
-    return { months, sinceLabel };
-  }, [transactions, MONTH_LABELS]);
+    return { months, sinceLabel, basis };
+  }, [transactions, MONTH_LABELS, business?.operations_start_date]);
 
   if (businessLoading) {
     return (
@@ -280,12 +295,24 @@ export default function DashboardPage() {
       ? (totalExpenses / summary.totalEarn) * 100
       : null;
 
-  // --- ROI: all-time Net Profit / invested capital ---
+  // --- ROI: Net Profit / invested capital ---
+  // Jika operations_start_date di-set, hitung net profit hanya dari transaksi
+  // sejak tanggal tsb (operating ROI). Jika tidak, pakai net profit all-time
+  // (holding period return). Penyebut (invested capital) tetap all-time karena
+  // modal investor sudah masuk sejak hari pertama, terlepas dari kapan bisnis
+  // mulai beroperasi.
+  const roiNetProfit = (() => {
+    if (!business?.operations_start_date) return allTimeSummary.netProfit;
+    const opStart = new Date(business.operations_start_date);
+    const operatingTxns = transactions.filter((t) => new Date(t.date) >= opStart);
+    return calculateFinancialSummary(operatingTxns).netProfit;
+  })();
+
   const roi = investedCapital.grossInvestedCapital > 0
-    ? (allTimeSummary.netProfit / investedCapital.grossInvestedCapital) * 100
+    ? (roiNetProfit / investedCapital.grossInvestedCapital) * 100
     : 0;
   const remainingCapitalRoi = investedCapital.remainingInvestedCapital > 0
-    ? (allTimeSummary.netProfit / investedCapital.remainingInvestedCapital) * 100
+    ? (roiNetProfit / investedCapital.remainingInvestedCapital) * 100
     : 0;
 
   // --- Cash Balance: runway in months (uses all-time data, not year-filtered) ---
@@ -512,7 +539,9 @@ export default function DashboardPage() {
               )}
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {t.dashboard.allTime}
+              {roiPeriod?.basis === 'operations_start'
+                ? `Sejak ${roiPeriod.sinceLabel}`
+                : t.dashboard.allTime}
               {roiPeriod && (
                 <span className="text-gray-400 dark:text-gray-500"> · {t.dashboard.roiPeriodMonths.replace('{n}', String(roiPeriod.months))}</span>
               )}
