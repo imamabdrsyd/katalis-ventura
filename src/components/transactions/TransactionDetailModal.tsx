@@ -499,7 +499,7 @@ export function TransactionDetailModal({
               <span className="mx-1.5 text-gray-300 dark:text-gray-600">×</span>
               {transaction.meta.unit_breakdown.quantity.toLocaleString('id-ID')}
               {transaction.meta.unit_breakdown.unit && (
-                <span className="ml-1 text-indigo-500 dark:text-indigo-400 font-medium">{transaction.meta.unit_breakdown.unit}</span>
+                <span className="ml-1">{transaction.meta.unit_breakdown.unit}</span>
               )}
             </p>
           )}
