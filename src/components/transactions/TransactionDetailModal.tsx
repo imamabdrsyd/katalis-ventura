@@ -828,9 +828,13 @@ export function TransactionDetailModal({
         {isReceivableTransaction(transaction) && onSettleReceivable && (() => {
           const outstanding = getOutstandingAmount(transaction);
           const partialIds = getPartialSettlementIds(transaction);
-          const partialTxns = allTransactions?.filter(t => partialIds.includes(t.id)) ?? [];
           const settled = isSettled(transaction);
-          const hasPartials = partialTxns.length > 0;
+          const finalSettlementId = transaction.meta?.settled_by_transaction_id;
+          const paymentIds = finalSettlementId && !partialIds.includes(finalSettlementId)
+            ? [...partialIds, finalSettlementId]
+            : partialIds;
+          const paymentTxns = allTransactions?.filter(t => paymentIds.includes(t.id)) ?? [];
+          const hasPayments = paymentTxns.length > 0;
 
           return (
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
@@ -848,8 +852,8 @@ export function TransactionDetailModal({
                 </div>
               )}
 
-              {/* Partial payment history (also conveys partially-paid status) */}
-              {hasPartials && (
+              {/* Payment history — includes partial settlements and final settlement when fully paid */}
+              {hasPayments && (
                 <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                   <div className="px-3 py-2.5 flex items-center justify-between gap-2 bg-gray-50 dark:bg-gray-700/50">
                     <div className="flex items-center gap-1.5">
@@ -865,10 +869,11 @@ export function TransactionDetailModal({
                     )}
                   </div>
                   <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {partialTxns
+                    {paymentTxns
                       .sort((a, b) => a.date.localeCompare(b.date))
                       .map((pt) => {
                         const clickable = !!onShowRelatedTransaction;
+                        const isFinal = settled && pt.id === finalSettlementId;
                         return (
                           <div
                             key={pt.id}
@@ -882,7 +887,7 @@ export function TransactionDetailModal({
                               <p className={`text-sm font-medium text-gray-700 dark:text-gray-200 ${
                                 clickable ? 'group-hover:underline' : ''
                               }`}>
-                                {pt.description || t.transactionDetail.partialPayment}
+                                {pt.description || (isFinal ? t.transactionDetail.finalSettlement : t.transactionDetail.partialPayment)}
                               </p>
                             </div>
                             <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
@@ -1029,9 +1034,13 @@ export function TransactionDetailModal({
         {isDividendDeclaration(transaction) && onSettleDividend && (() => {
           const outstanding = getDividendOutstanding(transaction);
           const partialIds = getDividendPartialSettlementIds(transaction);
-          const partialTxns = allTransactions?.filter(t => partialIds.includes(t.id)) ?? [];
           const settled = isDividendSettled(transaction);
-          const hasPartials = partialTxns.length > 0;
+          const finalSettlementId = transaction.meta?.settled_by_transaction_id;
+          const paymentIds = finalSettlementId && !partialIds.includes(finalSettlementId)
+            ? [...partialIds, finalSettlementId]
+            : partialIds;
+          const paymentTxns = allTransactions?.filter(t => paymentIds.includes(t.id)) ?? [];
+          const hasPayments = paymentTxns.length > 0;
 
           return (
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
@@ -1047,7 +1056,7 @@ export function TransactionDetailModal({
                     </p>
                   </div>
                 </div>
-              ) : !hasPartials ? (
+              ) : !hasPayments ? (
                 <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg">
                   <FileText className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                   <div>
@@ -1059,8 +1068,8 @@ export function TransactionDetailModal({
                 </div>
               ) : null}
 
-              {/* Partial payment history (also conveys partially-paid status) */}
-              {hasPartials && (
+              {/* Payment history — includes partial settlements and final settlement when fully paid */}
+              {hasPayments && (
                 <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                   <div className="px-3 py-2.5 flex items-center justify-between gap-2 bg-gray-50 dark:bg-gray-700/50">
                     <div className="flex items-center gap-1.5">
@@ -1076,10 +1085,11 @@ export function TransactionDetailModal({
                     )}
                   </div>
                   <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {partialTxns
+                    {paymentTxns
                       .sort((a, b) => a.date.localeCompare(b.date))
                       .map((pt) => {
                         const clickable = !!onShowRelatedTransaction;
+                        const isFinal = settled && pt.id === finalSettlementId;
                         return (
                           <div
                             key={pt.id}
@@ -1093,7 +1103,7 @@ export function TransactionDetailModal({
                               <p className={`text-sm font-medium text-gray-700 dark:text-gray-200 ${
                                 clickable ? 'group-hover:underline' : ''
                               }`}>
-                                {pt.description || 'Pembayaran sebagian'}
+                                {pt.description || (isFinal ? 'Pelunasan akhir' : 'Pembayaran sebagian')}
                               </p>
                             </div>
                             <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
@@ -1240,7 +1250,11 @@ export function TransactionDetailModal({
           const settlementOf = transaction.meta?.settlement_of_transaction_id
             ? allTransactions?.find(tx => tx.id === transaction.meta!.settlement_of_transaction_id)
             : null;
-          const settledBy = transaction.meta?.settled_by_transaction_id
+          // Hide "settled by" link when this transaction already shows the final settlement
+          // inside its own Payment History (receivable/dividend declarations).
+          const showSettledBy =
+            !isReceivableTransaction(transaction) && !isDividendDeclaration(transaction);
+          const settledBy = showSettledBy && transaction.meta?.settled_by_transaction_id
             ? allTransactions?.find(tx => tx.id === transaction.meta!.settled_by_transaction_id)
             : null;
 

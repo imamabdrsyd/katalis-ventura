@@ -664,6 +664,7 @@ export const id: Translations = {
     remaining: 'Sisa:',
     paymentHistory: 'Riwayat Pembayaran',
     partialPayment: 'Pelunasan sebagian',
+    finalSettlement: 'Pelunasan akhir',
     totalPaid: 'Total terbayar',
     settleFull: 'Lunasi Piutang',
     settlePartial: 'Bayar Sebagian',

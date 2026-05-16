@@ -698,6 +698,7 @@ export interface Translations {
     remaining: string;
     paymentHistory: string;
     partialPayment: string;
+    finalSettlement: string;
     totalPaid: string;
     settleFull: string;
     settlePartial: string;

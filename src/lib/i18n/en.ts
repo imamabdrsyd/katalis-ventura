@@ -664,6 +664,7 @@ export const en: Translations = {
     remaining: 'Remaining:',
     paymentHistory: 'Payment History',
     partialPayment: 'Partial payment',
+    finalSettlement: 'Final settlement',
     totalPaid: 'Total paid',
     settleFull: 'Settle Receivable',
     settlePartial: 'Partial Payment',
