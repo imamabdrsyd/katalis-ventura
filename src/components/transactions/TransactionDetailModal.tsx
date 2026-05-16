@@ -335,7 +335,9 @@ export function TransactionDetailModal({
         <button
           onClick={() => {
             onClose();
-            onEdit(transaction);
+            // Tunggu animasi close detail modal selesai sebelum membuka form edit
+            // agar transisi terasa mulus, tanpa blink dua modal yang saling tabrakan.
+            setTimeout(() => onEdit(transaction), 200);
           }}
           className="btn-secondary flex-1 flex items-center justify-center gap-2"
         >
