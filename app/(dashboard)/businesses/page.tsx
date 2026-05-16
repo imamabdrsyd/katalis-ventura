@@ -11,17 +11,16 @@ import { InviteCodeManager } from '@/components/business/InviteCodeManager';
 import { PeriodLockManager } from '@/components/business/PeriodLockManager';
 import { Building2, Archive, Lock } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import { Tabs, type TabItem } from '@/components/ui/Tabs';
+import { Tabs } from '@/components/ui/Tabs';
 import * as businessesApi from '@/lib/api/businesses';
-import { calculateTotalCapex } from '@/lib/calculations';
 import { createClient } from '@/lib/supabase';
 import { isManagerRole } from '@/lib/roles';
-import type { Business, Transaction } from '@/types';
+import type { Business } from '@/types';
 
 type TabType = 'active' | 'archived';
 
 export default function BusinessesPage() {
-  const { user, userRole, isSuperadmin, businesses: contextBusinesses, activeBusiness, setActiveBusiness, refetch } =
+  const { user, userRole, isSuperadmin, activeBusiness, setActiveBusiness, refetch } =
     useBusinessContext();
   const { t } = useLanguage();
   const isInvestor = userRole === 'investor';
@@ -41,6 +40,7 @@ export default function BusinessesPage() {
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
   const [capexByBusiness, setCapexByBusiness] = useState<Map<string, number>>(new Map());
+  const [creatorNames, setCreatorNames] = useState<Map<string, string>>(new Map());
 
   const fetchBusinesses = useCallback(async () => {
     if (!user) return;
@@ -49,32 +49,43 @@ export default function BusinessesPage() {
       const data = await businessesApi.getUserBusinesses(user.id, true);
       setAllBusinesses(data);
 
-      // Fetch transactions for all businesses to calculate total CAPEX
+      // Business Capital di tiap card = capital_investment + total CAPEX.
+      // Agregasi dilakukan via RPC supaya hanya 1 baris per bisnis yang dikirim,
+      // bukan seluruh transaksi (sebelumnya bikin halaman lambat saat data banyak).
+      // Sekalian batch ambil nama creator untuk semua bisnis — sebelumnya tiap
+      // BusinessCard hit /api/users/profile sendiri (N+1).
       if (data.length > 0) {
         const supabase = createClient();
-        const businessIds = data.map(b => b.id);
-        const { data: allTransactions } = await supabase
-          .from('transactions')
-          .select('*')
-          .in('business_id', businessIds);
+        const creatorIds = Array.from(
+          new Set(data.map(b => b.created_by).filter((v): v is string => !!v))
+        );
 
-        // Group transactions by business
-        const transactionsByBusiness = new Map<string, Transaction[]>();
-        allTransactions?.forEach(t => {
-          if (!transactionsByBusiness.has(t.business_id)) {
-            transactionsByBusiness.set(t.business_id, []);
-          }
-          transactionsByBusiness.get(t.business_id)!.push(t);
-        });
+        const [capexResult, profilesResult] = await Promise.all([
+          supabase.rpc('get_capex_by_business'),
+          creatorIds.length > 0
+            ? supabase.from('profiles').select('id, full_name').in('id', creatorIds)
+            : Promise.resolve({ data: [], error: null }),
+        ]);
 
-        // Calculate business capital = capital_investment + total capex
+        if (capexResult.error) throw capexResult.error;
+
+        const totalCapexByBusiness = new Map<string, number>(
+          (capexResult.data ?? []).map((row: { business_id: string; total_capex: number | string }) => [
+            row.business_id,
+            Number(row.total_capex) || 0,
+          ])
+        );
         const capexMap = new Map<string, number>();
         data.forEach(b => {
-          const transactions = transactionsByBusiness.get(b.id) || [];
-          const totalCapex = calculateTotalCapex(transactions);
-          capexMap.set(b.id, (b.capital_investment || 0) + totalCapex);
+          capexMap.set(b.id, (b.capital_investment || 0) + (totalCapexByBusiness.get(b.id) || 0));
         });
         setCapexByBusiness(capexMap);
+
+        const namesMap = new Map<string, string>();
+        (profilesResult.data ?? []).forEach((p: { id: string; full_name: string | null }) => {
+          namesMap.set(p.id, p.full_name || 'Unknown');
+        });
+        setCreatorNames(namesMap);
       }
     } catch (err) {
       console.error('Failed to fetch businesses:', err);
@@ -255,6 +266,7 @@ export default function BusinessesPage() {
               key={business.id}
               business={business}
               totalCapex={capexByBusiness.get(business.id) || 0}
+              creatorName={business.created_by ? creatorNames.get(business.created_by) : undefined}
               isActive={activeBusiness?.id === business.id}
               onSelect={() => {
                 if (!business.is_archived) {

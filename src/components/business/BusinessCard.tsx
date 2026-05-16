@@ -9,6 +9,12 @@ import { formatCurrency } from '@/lib/utils';
 interface BusinessCardProps {
   business: Business;
   totalCapex: number; // NEW: Calculated business capital from MODEL layer
+  /**
+   * Nama creator yang sudah di-fetch parent (batch) untuk menghindari
+   * N+1 ke /api/users/profile dari tiap card. Kalau undefined, card akan
+   * fallback ke fetch sendiri (kompatibel dengan caller lama).
+   */
+  creatorName?: string;
   isActive?: boolean;
   onSelect?: () => void;
   onDoubleClick?: () => void;
@@ -48,6 +54,7 @@ const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
 export function BusinessCard({
   business,
   totalCapex,
+  creatorName: creatorNameProp,
   isActive = false,
   onSelect,
   onDoubleClick,
@@ -58,10 +65,15 @@ export function BusinessCard({
   onPeriodLock,
   showActions = true,
 }: BusinessCardProps) {
-  const [creatorName, setCreatorName] = useState<string>('');
-  const [loading, setLoading] = useState(true);
+  // Kalau parent sudah pass creatorName (batch-fetched), pakai itu — skip fetch.
+  // Kalau tidak, fallback ke fetch per-card (untuk caller lama yang belum di-update).
+  const useFallbackFetch = creatorNameProp === undefined;
+  const [fallbackName, setFallbackName] = useState<string>('');
+  const [loading, setLoading] = useState(useFallbackFetch);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const creatorName = useFallbackFetch ? fallbackName : (creatorNameProp || 'Unknown');
 
   // Close kebab menu on outside click
   useEffect(() => {
@@ -75,6 +87,7 @@ export function BusinessCard({
   }, [menuOpen]);
 
   useEffect(() => {
+    if (!useFallbackFetch) return;
     const fetchCreatorInfo = async () => {
       if (!business.created_by) {
         setLoading(false);
@@ -87,16 +100,45 @@ export function BusinessCard({
         );
 
         const data = await response.json();
-        setCreatorName(data.full_name || 'Unknown');
+        setFallbackName(data.full_name || 'Unknown');
       } catch {
-        setCreatorName('Unknown');
+        setFallbackName('Unknown');
       } finally {
         setLoading(false);
       }
     };
 
     fetchCreatorInfo();
-  }, [business.created_by]);
+  }, [business.created_by, useFallbackFetch]);
+
+  // Tunda single-click sebentar supaya double-click bisa membatalkannya.
+  // Tanpa ini, double-click selalu men-trigger onSelect dulu (yang men-set
+  // activeBusiness + memicu re-fetch berantai) baru kemudian navigate ke
+  // halaman config — terasa lag.
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+  }, []);
+
+  const handleClick = (e: React.MouseEvent) => {
+    // Klik tombol dalam (Undang, Kunci Periode, kebab) sudah stopPropagation,
+    // tapi jaga-jaga: kalau target bukan div root, skip.
+    if (e.defaultPrevented) return;
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    clickTimerRef.current = setTimeout(() => {
+      onSelect?.();
+      clickTimerRef.current = null;
+    }, 220);
+  };
+
+  const handleDoubleClick = () => {
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
+    onDoubleClick?.();
+  };
+
   return (
     <div
       className={`card cursor-pointer transition-all flex flex-col ${
@@ -104,8 +146,8 @@ export function BusinessCard({
           ? 'ring-2 ring-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
           : 'hover:shadow-md hover:border-gray-200 dark:hover:border-gray-600'
       } ${business.is_archived ? 'opacity-60' : ''}`}
-      onClick={onSelect}
-      onDoubleClick={onDoubleClick}
+      onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
