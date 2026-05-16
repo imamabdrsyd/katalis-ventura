@@ -284,6 +284,8 @@ export interface InviteCode {
 
 // Derived income statement metrics (single source of truth)
 export interface IncomeStatementMetrics {
+  ebitda: number;
+  ebitdaMargin: number;
   operatingIncome: number;
   ebt: number;
   grossMargin: number;

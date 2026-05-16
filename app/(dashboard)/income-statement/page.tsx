@@ -338,10 +338,18 @@ function IncomeStatementPageInner() {
                 <span className={`font-medium ${summary.totalOpex === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-red-500 dark:text-red-400'}`}>({formatCurrency(summary.totalOpex)})</span>
               </div>
               {summary.totalDepreciation > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400 pl-2">- Penyusutan:</span>
-                  <span className="font-medium text-red-500 dark:text-red-400">({formatCurrency(summary.totalDepreciation)})</span>
-                </div>
+                <>
+                  <div className="flex justify-between pt-1 border-t border-gray-200 dark:border-gray-600">
+                    <span className="font-medium text-gray-700 dark:text-gray-300">EBITDA:</span>
+                    <span className={`font-semibold ${metrics.ebitda === 0 ? 'text-gray-500 dark:text-gray-400' : metrics.ebitda > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                      {formatCurrency(metrics.ebitda)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400 pl-2">- Penyusutan:</span>
+                    <span className="font-medium text-red-500 dark:text-red-400">({formatCurrency(summary.totalDepreciation)})</span>
+                  </div>
+                </>
               )}
               <div className="flex justify-between pt-1 border-t border-gray-200 dark:border-gray-600">
                 <span className="font-medium text-gray-700 dark:text-gray-300">Operating Income:</span>
@@ -475,6 +483,34 @@ function IncomeStatementPageInner() {
                 </div>
               </div>
 
+              {/* EBITDA — only shown if depreciation > 0 */}
+              {summary.totalDepreciation > 0 && (
+                <div className="relative group bg-gray-100 dark:bg-gray-700/50 rounded-lg p-4 hover:bg-gray-100/70 dark:hover:bg-gray-700/70 cursor-default">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-bold text-gray-800 dark:text-gray-100 text-lg flex items-center gap-1">
+                        EBITDA
+                        <Info className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Margin: {metrics.ebitdaMargin.toFixed(2)}%</p>
+                    </div>
+                    <span className={`text-xl font-bold ${metrics.ebitda === 0 ? 'text-gray-500 dark:text-gray-400' : metrics.ebitda > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                      {formatCurrency(metrics.ebitda)}
+                    </span>
+                  </div>
+                  <Tooltip
+                    title="EBITDA"
+                    color="text-emerald-300"
+                    formula="Gross Profit − Operating Expenses"
+                    breakdown={[
+                      { label: 'Gross Profit', value: summary.grossProfit, color: summary.grossProfit >= 0 ? 'green' : 'red' },
+                      { label: 'Operating Expenses', value: summary.totalOpex, color: 'red' },
+                      { label: 'EBITDA', value: metrics.ebitda, color: metrics.ebitda >= 0 ? 'green' : 'red' },
+                    ]}
+                  />
+                </div>
+              )}
+
               {/* DEPRECIATION EXPENSE (PSAK 16) — only shown if > 0 */}
               {summary.totalDepreciation > 0 && (
                 <div>
@@ -528,11 +564,11 @@ function IncomeStatementPageInner() {
               </div>
 
               {/* EBT */}
-              <div className="relative group bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 hover:bg-blue-100/70 dark:hover:bg-blue-900/30 cursor-default">
+              <div className="relative group bg-gray-100 dark:bg-gray-700/50 rounded-lg p-4 hover:bg-gray-100/70 dark:hover:bg-gray-700/70 cursor-default">
                 <div className="flex justify-between items-center">
-                  <h3 className="font-bold text-blue-900 dark:text-blue-100 text-lg flex items-center gap-1">
+                  <h3 className="font-bold text-gray-800 dark:text-gray-100 text-lg flex items-center gap-1">
                     EBT (Earnings Before Tax)
-                    <Info className="w-3.5 h-3.5 text-blue-400 dark:text-blue-500" />
+                    <Info className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
                   </h3>
                   <span className={`text-xl font-bold ${metrics.ebt === 0 ? 'text-gray-500 dark:text-gray-400' : metrics.ebt > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                     {formatCurrency(metrics.ebt)}

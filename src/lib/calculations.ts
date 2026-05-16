@@ -539,14 +539,15 @@ export function extractIncomeStatementLineItems(
 export function calculateIncomeStatementMetrics(
   summary: FinancialSummary
 ): IncomeStatementMetrics {
-  // Depreciation is included in operating expenses (PSAK 16)
-  const operatingIncome = summary.grossProfit - summary.totalOpex - summary.totalDepreciation;
+  const ebitda = summary.grossProfit - summary.totalOpex;
+  const operatingIncome = ebitda - summary.totalDepreciation;
   const ebt = operatingIncome - summary.totalInterest;
   const grossMargin = summary.totalEarn > 0 ? (summary.grossProfit / summary.totalEarn) * 100 : 0;
+  const ebitdaMargin = summary.totalEarn > 0 ? (ebitda / summary.totalEarn) * 100 : 0;
   const operatingMargin = summary.totalEarn > 0 ? (operatingIncome / summary.totalEarn) * 100 : 0;
   const netMargin = summary.totalEarn > 0 ? (summary.netProfit / summary.totalEarn) * 100 : 0;
 
-  return { operatingIncome, ebt, grossMargin, operatingMargin, netMargin };
+  return { ebitda, ebitdaMargin, operatingIncome, ebt, grossMargin, operatingMargin, netMargin };
 }
 
 /**
