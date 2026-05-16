@@ -128,6 +128,7 @@ export async function POST(request: NextRequest) {
           status: parsed.data.status ?? 'draft',
           is_multi_line: true,
           is_double_entry: false,
+          meta: parsed.data.meta ?? null,
           created_by: user.id,
         })
         .select()

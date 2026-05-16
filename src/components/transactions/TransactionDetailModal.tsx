@@ -325,7 +325,7 @@ export function TransactionDetailModal({
       {onPost && isDraft && (
         <button
           onClick={() => onPost(transaction.id)}
-          className="btn-outline flex-1 flex items-center justify-center gap-2"
+          className="btn-primary flex-1 flex items-center justify-center gap-2"
         >
           <CheckCircle2 className="w-4 h-4" />
           {t.transactionDetail.postBtn}
@@ -336,7 +336,7 @@ export function TransactionDetailModal({
           onClick={() => {
             onClose();
             // Tunggu animasi close detail modal selesai sebelum membuka form edit
-            // agar transisi terasa mulus, tanpa blink dua modal yang saling tabrakan.
+            // agar tidak ada dua overlay yang overlap (menyebabkan blink).
             setTimeout(() => onEdit(transaction), 200);
           }}
           className="btn-secondary flex-1 flex items-center justify-center gap-2"
@@ -358,7 +358,7 @@ export function TransactionDetailModal({
             onClose();
             onDelete(transaction);
           }}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-xl border-2 border-red-500 text-red-500 dark:text-red-400 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 font-semibold transition-colors"
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 font-semibold underline underline-offset-4 decoration-1 transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -914,7 +914,7 @@ export function TransactionDetailModal({
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowSettleConfirm(true)}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-emerald-500 text-emerald-600 dark:text-emerald-400 dark:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-sm font-semibold rounded-lg transition-colors"
                   >
                     <Banknote className="w-4 h-4" />
                     {t.transactionDetail.settleFull}

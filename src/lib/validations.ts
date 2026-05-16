@@ -33,6 +33,7 @@ export const createTransactionSchema = z.object({
   is_double_entry: z.boolean().optional().default(false),
   notes: z.string().max(2000).optional().nullable(),
   status: z.enum(VALID_STATUSES).optional().default('draft'),
+  meta: z.record(z.string(), z.unknown()).optional().nullable(),
 }).refine(
   (data) => {
     // If double-entry, both accounts must be present and different
@@ -64,6 +65,7 @@ export const updateTransactionSchema = z.object({
   is_double_entry: z.boolean().optional(),
   notes: z.string().max(2000).optional().nullable(),
   status: z.enum(VALID_STATUSES).optional(),
+  meta: z.record(z.string(), z.unknown()).optional().nullable(),
 });
 
 export const transactionIdSchema = z.string().regex(UUID_REGEX, 'Invalid transaction ID format');
@@ -99,6 +101,7 @@ export const createMultiLineTransactionSchema = z.object({
   description: z.string().max(2000, 'Description too long').default(''),
   notes: z.string().max(2000).optional().nullable(),
   status: z.enum(VALID_STATUSES).optional().default('draft'),
+  meta: z.record(z.string(), z.unknown()).optional().nullable(),
   journal_lines: z.array(journalLineSchema).min(2, 'Multi-line transaction requires at least 2 lines'),
 }).refine(
   (data) => {
