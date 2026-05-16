@@ -325,7 +325,7 @@ export function TransactionDetailModal({
       {onPost && isDraft && (
         <button
           onClick={() => onPost(transaction.id)}
-          className="btn-primary flex-1 flex items-center justify-center gap-2"
+          className="btn-outline flex-1 flex items-center justify-center gap-2"
         >
           <CheckCircle2 className="w-4 h-4" />
           {t.transactionDetail.postBtn}
@@ -356,7 +356,7 @@ export function TransactionDetailModal({
             onClose();
             onDelete(transaction);
           }}
-          className="btn-danger flex-1 flex items-center justify-center gap-2"
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-xl border-2 border-red-500 text-red-500 dark:text-red-400 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 font-semibold transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path

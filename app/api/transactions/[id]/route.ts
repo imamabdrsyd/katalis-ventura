@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { canManageBusiness, getAuthenticatedUser, createServerClient } from '@/lib/supabase-server';
 import { updateTransactionSchema, transactionIdSchema } from '@/lib/validations';
+import { isSuperadminRole } from '@/lib/roles';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -55,9 +56,18 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
     }
 
+    // Cek apakah user adalah superadmin (privilege khusus: bisa edit walau posted & periode terkunci)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('default_role')
+      .eq('id', user.id)
+      .single();
+    const isSuperadmin = isSuperadminRole(profile?.default_role);
+
     // Block editing posted transactions (except status change draft→posted)
+    // Superadmin dikecualikan dari aturan ini.
     const isOnlyStatusChange = Object.keys(parsed.data).length === 1 && parsed.data.status === 'posted';
-    if (existing.status === 'posted' && !isOnlyStatusChange) {
+    if (existing.status === 'posted' && !isOnlyStatusChange && !isSuperadmin) {
       return NextResponse.json(
         { error: 'Transaksi yang sudah di-posting tidak dapat diedit. Hapus dan buat ulang jika perlu.' },
         { status: 400 }
@@ -65,13 +75,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Period lock check: reject if transaction date is within locked period
+    // Superadmin dikecualikan dari period lock.
     const { data: biz } = await supabase
       .from('businesses')
       .select('closed_until_date')
       .eq('id', existing.business_id)
       .single();
 
-    if (biz?.closed_until_date && existing.date <= biz.closed_until_date) {
+    if (biz?.closed_until_date && existing.date <= biz.closed_until_date && !isSuperadmin) {
       return NextResponse.json(
         { error: `Periode hingga ${biz.closed_until_date} sudah dikunci. Transaksi tidak dapat diedit.` },
         { status: 423 }

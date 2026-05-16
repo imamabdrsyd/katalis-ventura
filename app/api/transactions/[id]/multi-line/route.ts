@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { canManageBusiness, createServerClient, getAuthenticatedUser } from '@/lib/supabase-server';
 import { transactionIdSchema, updateMultiLineTransactionSchema } from '@/lib/validations';
 import { badRequest, forbidden, notFound, serverError, unauthorized, validationError } from '@/lib/api/server/responses';
+import { isSuperadminRole } from '@/lib/roles';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -38,21 +39,29 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return forbidden('Hanya manager bisnis yang dapat mengubah transaksi');
     }
 
-    // Block editing posted unless status-only change
+    // Superadmin punya privilege bypass cek posted & period lock
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('default_role')
+      .eq('id', user.id)
+      .single();
+    const isSuperadmin = isSuperadminRole(profile?.default_role);
+
+    // Block editing posted unless status-only change (superadmin dikecualikan)
     const isOnlyStatusChange =
       Object.keys(parsed.data).length === 1 && parsed.data.status === 'posted';
-    if (existing.status === 'posted' && !isOnlyStatusChange) {
+    if (existing.status === 'posted' && !isOnlyStatusChange && !isSuperadmin) {
       return badRequest('Transaksi yang sudah di-posting tidak dapat diedit');
     }
 
-    // Period lock
+    // Period lock (superadmin dikecualikan)
     const { data: biz } = await supabase
       .from('businesses')
       .select('closed_until_date')
       .eq('id', existing.business_id)
       .single();
 
-    if (biz?.closed_until_date && existing.date <= biz.closed_until_date) {
+    if (biz?.closed_until_date && existing.date <= biz.closed_until_date && !isSuperadmin) {
       return NextResponse.json(
         { error: `Periode hingga ${biz.closed_until_date} sudah dikunci. Transaksi tidak dapat diedit.` },
         { status: 423 }
