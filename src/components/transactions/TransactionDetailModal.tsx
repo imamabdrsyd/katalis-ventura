@@ -152,6 +152,7 @@ export function TransactionDetailModal({
   const [auditHistory, setAuditHistory] = useState<AuditLog[]>([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [showAuditHistory, setShowAuditHistory] = useState(false);
+  const [showAdditionalInfo, setShowAdditionalInfo] = useState(false);
   const [warningDismissed, setWarningDismissed] = useState(false);
   const [warningExpanded, setWarningExpanded] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
@@ -321,7 +322,7 @@ export function TransactionDetailModal({
   const showActions = onEdit || onDelete || (onPost && isDraft);
 
   const actionButtons = showActions ? (
-    <div className="flex gap-3">
+    <div className="flex items-center gap-3">
       {onPost && isDraft && (
         <button
           onClick={() => onPost(transaction.id)}
@@ -331,6 +332,7 @@ export function TransactionDetailModal({
           {t.transactionDetail.postBtn}
         </button>
       )}
+      <div className={`flex items-center gap-4 ${onPost && isDraft ? '' : 'flex-1 justify-end'}`}>
       {onEdit && (
         <button
           onClick={() => {
@@ -339,9 +341,9 @@ export function TransactionDetailModal({
             // agar tidak ada dua overlay yang overlap (menyebabkan blink).
             setTimeout(() => onEdit(transaction), 200);
           }}
-          className="btn-secondary flex-1 flex items-center justify-center gap-2"
+          className="flex items-center gap-1.5 px-2 py-1 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 font-medium transition-colors"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -352,13 +354,16 @@ export function TransactionDetailModal({
           {t.transactionDetail.editBtn}
         </button>
       )}
+      {onEdit && onDelete && (
+        <span className="text-gray-300 dark:text-gray-600">·</span>
+      )}
       {onDelete && (
         <button
           onClick={() => {
             onClose();
             onDelete(transaction);
           }}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 font-semibold underline underline-offset-4 decoration-1 transition-colors"
+          className="flex items-center gap-1.5 px-2 py-1 text-sm text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 font-medium transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -371,6 +376,7 @@ export function TransactionDetailModal({
           {t.transactionDetail.deleteBtn}
         </button>
       )}
+      </div>
     </div>
   ) : undefined;
 
@@ -379,13 +385,13 @@ export function TransactionDetailModal({
       isOpen={isOpen}
       onClose={onClose}
       title={
-        <div>
-          <div>{t.transactionDetail.title}</div>
-          {transaction.transaction_number && (
-            <div className="text-xs font-mono font-normal text-gray-400 dark:text-gray-500 mt-0.5">
-              #{transaction.transaction_number}
-            </div>
-          )}
+        <div className="flex flex-col gap-0.5">
+          <div className="text-xs font-mono font-normal text-gray-400 dark:text-gray-500">
+            #{transaction.transaction_number ?? transaction.id.slice(0, 8)}
+          </div>
+          <div className="text-base font-semibold text-gray-800 dark:text-gray-100">
+            {formatDate(transaction.date)}
+          </div>
         </div>
       }
       footer={actionButtons}
@@ -431,49 +437,45 @@ export function TransactionDetailModal({
           </div>
         )}
 
-        {/* Header with Category Badge, Status, and Amount */}
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-          {isInventoryTransaction(transaction) ? (
-            <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${STOCK_COLOR}`}>
-              {t.transactionDetail.stock}
-            </span>
-          ) : (
-            <div className="relative group inline-flex items-center gap-1.5">
-              <span
-                className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${transaction.meta?.settlement_of_transaction_id ? CATEGORY_COLORS['SETTLE'] : CATEGORY_COLORS[transaction.category]}`}
-              >
-                {transaction.meta?.settlement_of_transaction_id ? t.arAp.settlementBadge : CATEGORY_LABELS[transaction.category]}
-              </span>
-              {transaction.meta?.entry_type && (
-                <>
-                  <Info className="w-4 h-4 text-gray-400 dark:text-gray-500 cursor-help" />
-                  <div className="absolute left-0 top-full mt-1.5 z-50 hidden group-hover:block">
-                    <div className="bg-gray-900 dark:bg-gray-700 text-white rounded-lg px-3 py-2 shadow-lg whitespace-nowrap">
-                      <p className="text-sm font-semibold">{transaction.meta.entry_type.label}</p>
-                      <p className="text-xs text-gray-300 dark:text-gray-400">{transaction.meta.entry_type.description}</p>
-                    </div>
-                  </div>
-                </>
+        {/* Amount Hero Card — gabungan amount, badge kategori, breakdown unit, status */}
+        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-gray-50 to-white dark:from-gray-800/60 dark:to-gray-800/20 p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              {isInventoryTransaction(transaction) ? (
+                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${STOCK_COLOR}`}>
+                  {t.transactionDetail.stock}
+                </span>
+              ) : (
+                <div className="relative group inline-flex items-center gap-1.5">
+                  <span
+                    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${transaction.meta?.settlement_of_transaction_id ? CATEGORY_COLORS['SETTLE'] : CATEGORY_COLORS[transaction.category]}`}
+                  >
+                    {transaction.meta?.settlement_of_transaction_id ? t.arAp.settlementBadge : CATEGORY_LABELS[transaction.category]}
+                  </span>
+                  {transaction.meta?.entry_type && (
+                    <>
+                      <Info className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 cursor-help" />
+                      <div className="absolute left-0 top-full mt-1.5 z-50 hidden group-hover:block">
+                        <div className="bg-gray-900 dark:bg-gray-700 text-white rounded-lg px-3 py-2 shadow-lg whitespace-nowrap">
+                          <p className="text-sm font-semibold">{transaction.meta.entry_type.label}</p>
+                          <p className="text-xs text-gray-300 dark:text-gray-400">{transaction.meta.entry_type.description}</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+              {isDraft ? (
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">
+                  {t.transactionDetail.draft}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                  {t.transactionDetail.posted}
+                </span>
               )}
             </div>
-          )}
-          {isDraft ? (
-            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">
-              {t.transactionDetail.draft.toUpperCase()}
-            </span>
-          ) : (
-            <div className="relative group inline-flex items-center">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 cursor-help" />
-              <div className="absolute left-0 top-full mt-1.5 z-50 hidden group-hover:block whitespace-nowrap">
-                <div className="bg-gray-900 dark:bg-gray-700 text-white rounded-lg px-3 py-2 shadow-lg">
-                  <p className="text-xs font-semibold">{t.transactionDetail.posted.toUpperCase()}</p>
-                </div>
-              </div>
-            </div>
-          )}
-          </div>
-          <div className="text-right flex items-center gap-1.5 justify-end">
             {showWarning && matchingWarning && !warningExpanded && (
               <button
                 onClick={() => setWarningExpanded(true)}
@@ -483,63 +485,46 @@ export function TransactionDetailModal({
                 <span className="text-[10px] font-bold leading-none">!</span>
               </button>
             )}
-            <p className={`text-2xl font-bold ${
-              transaction.category === 'EARN'
-                ? 'text-emerald-500 dark:text-emerald-400'
-                : 'text-gray-900 dark:text-gray-100'
-            }`}>
-              {formatCurrency(transaction.amount)}
-            </p>
           </div>
+          <p className={`mt-3 text-3xl font-bold tabular-nums leading-tight ${
+            transaction.category === 'EARN'
+              ? 'text-emerald-500 dark:text-emerald-400'
+              : 'text-gray-900 dark:text-gray-100'
+          }`}>
+            {formatCurrency(transaction.amount)}
+          </p>
+          {transaction.meta?.unit_breakdown && (
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+              Rp {transaction.meta.unit_breakdown.price_per_unit.toLocaleString('id-ID')}
+              <span className="mx-1.5 text-gray-300 dark:text-gray-600">×</span>
+              {transaction.meta.unit_breakdown.quantity.toLocaleString('id-ID')}
+              {transaction.meta.unit_breakdown.unit && (
+                <span className="ml-1 text-indigo-500 dark:text-indigo-400 font-medium">{transaction.meta.unit_breakdown.unit}</span>
+              )}
+            </p>
+          )}
         </div>
 
-        {/* Unit Breakdown */}
-        {transaction.meta?.unit_breakdown && (
-          <div className="flex items-center gap-3 px-3 py-2.5 bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg text-sm">
-            <div className="flex items-center gap-1.5">
-              <span className="text-gray-500 dark:text-gray-400">{t.transactionDetail.pricePerUnit}</span>
-              <span className="font-semibold text-gray-800 dark:text-gray-100">
-                Rp {transaction.meta.unit_breakdown.price_per_unit.toLocaleString('id-ID')}
-              </span>
-            </div>
-            <span className="text-gray-300 dark:text-gray-600">&times;</span>
-            <div className="flex items-center gap-1.5">
-              <span className="text-gray-500 dark:text-gray-400">{t.transactionDetail.quantity}</span>
-              <span className="font-semibold text-gray-800 dark:text-gray-100">
-                {transaction.meta.unit_breakdown.quantity.toLocaleString('id-ID')}
-              </span>
-            </div>
-            {transaction.meta.unit_breakdown.unit && (
-              <span className="ml-auto px-2 py-0.5 bg-indigo-50 dark:bg-indigo-50 text-indigo-500 dark:text-indigo-500 rounded text-xs font-medium">
-                {transaction.meta.unit_breakdown.unit}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Main Info */}
-        <div className="space-y-4">
-          {/* Nama Customer/Vendor */}
+        {/* Main Info — kompak, label kecil di kiri */}
+        <div className="space-y-3">
+          {/* Description sebagai judul utama */}
           <div>
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              {getNameLabel(transaction.category)}
-            </label>
-            <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <p className="text-base font-semibold text-gray-900 dark:text-gray-100 leading-snug">
+              {transaction.description}
+            </p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
               {contacts?.some((contact: Contact) => contact.name === transaction.name) && (
-                <ContactIcon className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                <ContactIcon className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
               )}
-              {transaction.name}
+              <span className="font-medium text-gray-700 dark:text-gray-300">{transaction.name}</span>
+              <span className="text-gray-300 dark:text-gray-600">·</span>
+              <span>{getNameLabel(transaction.category)}</span>
             </p>
           </div>
 
+          {/* Tags row */}
           <div>
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              {t.transactionDetail.keterangan}
-            </label>
-            <div className="mt-1 flex items-start gap-2 flex-wrap">
-              <p className="text-gray-700 dark:text-gray-300 flex-1 min-w-0">
-                {transaction.description}
-              </p>
+            <div className="flex items-start gap-2 flex-wrap">
               {/* Tags inline */}
               <div className="flex items-center gap-1.5 flex-wrap">
                 {tags.map((tag) => (
@@ -616,15 +601,6 @@ export function TransactionDetailModal({
             </div>
           </div>
 
-          <div>
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              {t.transactionDetail.tanggal}
-            </label>
-            <p className="mt-1 text-gray-900 dark:text-gray-100">
-              {formatDate(transaction.date)}
-            </p>
-          </div>
-
           {/* Multi-line Journal Lines */}
           {transaction.is_multi_line && transaction.journal_lines && transaction.journal_lines.length > 0 ? (
             <div className="mt-4">
@@ -678,42 +654,38 @@ export function TransactionDetailModal({
               </div>
             </div>
           ) : transaction.is_double_entry && (transaction.debit_account || transaction.credit_account) ? (
-            <div className="grid grid-cols-2 gap-3 mt-4">
-              <div className="p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+            <div className="mt-2 rounded-xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 overflow-hidden">
+              <div className="flex items-center gap-3 px-4 py-3">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 w-12 flex-shrink-0">
                   {t.transactionDetail.debit}
-                </label>
-                <div className="flex items-center gap-1.5">
-                  {transaction.debit_account?.account_code && (
-                    <span className="font-mono text-xs text-gray-400 dark:text-gray-500">{transaction.debit_account.account_code}</span>
-                  )}
-                  {transaction.debit_account?.account_type && (
-                    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${ACCOUNT_TYPE_BG[transaction.debit_account.account_type] ?? 'bg-gray-100 text-gray-500'}`}>
-                      {ACCOUNT_TYPE_LABEL[transaction.debit_account.account_type] ?? transaction.debit_account.account_type}
-                    </span>
-                  )}
-                </div>
-                <p className="text-gray-900 dark:text-gray-100 font-semibold leading-tight">
+                </span>
+                {transaction.debit_account?.account_code && (
+                  <span className="font-mono text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">{transaction.debit_account.account_code}</span>
+                )}
+                <p className="text-sm text-gray-900 dark:text-gray-100 font-medium truncate flex-1">
                   {transaction.debit_account?.account_name || 'Unknown'}
                 </p>
+                {transaction.debit_account?.account_type && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${ACCOUNT_TYPE_BG[transaction.debit_account.account_type] ?? 'bg-gray-100 text-gray-500'}`}>
+                    {ACCOUNT_TYPE_LABEL[transaction.debit_account.account_type] ?? transaction.debit_account.account_type}
+                  </span>
+                )}
               </div>
-              <div className="p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+              <div className="flex items-center gap-3 px-4 py-3">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 w-12 flex-shrink-0">
                   {t.transactionDetail.credit}
-                </label>
-                <div className="flex items-center gap-1.5">
-                  {transaction.credit_account?.account_code && (
-                    <span className="font-mono text-xs text-gray-400 dark:text-gray-500">{transaction.credit_account.account_code}</span>
-                  )}
-                  {transaction.credit_account?.account_type && (
-                    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${ACCOUNT_TYPE_BG[transaction.credit_account.account_type] ?? 'bg-gray-100 text-gray-500'}`}>
-                      {ACCOUNT_TYPE_LABEL[transaction.credit_account.account_type] ?? transaction.credit_account.account_type}
-                    </span>
-                  )}
-                </div>
-                <p className="text-gray-900 dark:text-gray-100 font-semibold leading-tight">
+                </span>
+                {transaction.credit_account?.account_code && (
+                  <span className="font-mono text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">{transaction.credit_account.account_code}</span>
+                )}
+                <p className="text-sm text-gray-900 dark:text-gray-100 font-medium truncate flex-1">
                   {transaction.credit_account?.account_name || 'Unknown'}
                 </p>
+                {transaction.credit_account?.account_type && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${ACCOUNT_TYPE_BG[transaction.credit_account.account_type] ?? 'bg-gray-100 text-gray-500'}`}>
+                    {ACCOUNT_TYPE_LABEL[transaction.credit_account.account_type] ?? transaction.credit_account.account_type}
+                  </span>
+                )}
               </div>
             </div>
           ) : (
@@ -1315,91 +1287,90 @@ export function TransactionDetailModal({
           );
         })()}
 
-        {/* Metadata Section */}
+        {/* Metadata Section — collapsible, tertutup secara default */}
         <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-          <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-            Informasi Tambahan
-          </h4>
-          <div className="bg-gray-50 dark:bg-gray-800/60 rounded-xl p-4 border border-gray-100 dark:border-gray-700 space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-500 dark:text-gray-400">No. Transaksi</span>
-              <span className="text-gray-700 dark:text-gray-300 font-mono text-xs">
-                {transaction.transaction_number ?? `${transaction.id.slice(0, 8)}...`}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500 dark:text-gray-400">Status</span>
-              <span className={`font-medium ${isDraft ? 'text-gray-500 dark:text-gray-400' : 'text-emerald-500 dark:text-emerald-400'}`}>
-                {isDraft ? 'Draft' : 'Posted'}
-                {transaction.posted_at && ` (${formatDateTime(transaction.posted_at)})`}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500 dark:text-gray-400">Dibuat oleh</span>
-              <span className="text-gray-700 dark:text-gray-300">
-                {loadingCreator ? (
-                  <span className="text-gray-400 dark:text-gray-500">Memuat...</span>
-                ) : creatorName ? (
-                  creatorName
-                ) : (
-                  <span className="font-mono text-xs">{transaction.created_by?.slice(0, 8) ?? '—'}...</span>
-                )}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500 dark:text-gray-400">Dibuat pada</span>
-              <span className="text-gray-700 dark:text-gray-300">
-                {formatDateTime(transaction.created_at)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500 dark:text-gray-400">Terakhir diupdate</span>
-              <span className="text-gray-700 dark:text-gray-300">
-                {formatDateTime(transaction.updated_at)}
-              </span>
-            </div>
-            {transaction.updated_by && (
+          <button
+            onClick={() => setShowAdditionalInfo(!showAdditionalInfo)}
+            className="w-full flex items-center justify-between text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <Info className="w-3.5 h-3.5" />
+              Detail Tambahan
+            </span>
+            <ChevronDown
+              className={`w-4 h-4 transition-transform ${showAdditionalInfo ? 'rotate-180' : ''}`}
+            />
+          </button>
+          {showAdditionalInfo && (
+            <div className="mt-3 space-y-2.5 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Diupdate oleh</span>
+                <span className="text-gray-500 dark:text-gray-400">No. Transaksi</span>
+                <span className="text-gray-700 dark:text-gray-300 font-mono text-xs">
+                  {transaction.transaction_number ?? `${transaction.id.slice(0, 8)}...`}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">Status</span>
+                <span className={`font-medium ${isDraft ? 'text-gray-500 dark:text-gray-400' : 'text-emerald-500 dark:text-emerald-400'}`}>
+                  {isDraft ? 'Draft' : 'Posted'}
+                  {transaction.posted_at && ` (${formatDateTime(transaction.posted_at)})`}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">Dibuat oleh</span>
                 <span className="text-gray-700 dark:text-gray-300">
-                  {loadingUpdater ? (
+                  {loadingCreator ? (
                     <span className="text-gray-400 dark:text-gray-500">Memuat...</span>
-                  ) : updaterName ? (
-                    updaterName
+                  ) : creatorName ? (
+                    creatorName
                   ) : (
-                    <span className="font-mono text-xs">{transaction.updated_by.slice(0, 8)}...</span>
+                    <span className="font-mono text-xs">{transaction.created_by?.slice(0, 8) ?? '—'}...</span>
                   )}
                 </span>
               </div>
-            )}
-          </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">Dibuat pada</span>
+                <span className="text-gray-700 dark:text-gray-300">
+                  {formatDateTime(transaction.created_at)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">Terakhir diupdate</span>
+                <span className="text-gray-700 dark:text-gray-300">
+                  {formatDateTime(transaction.updated_at)}
+                </span>
+              </div>
+              {transaction.updated_by && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500 dark:text-gray-400">Diupdate oleh</span>
+                  <span className="text-gray-700 dark:text-gray-300">
+                    {loadingUpdater ? (
+                      <span className="text-gray-400 dark:text-gray-500">Memuat...</span>
+                    ) : updaterName ? (
+                      updaterName
+                    ) : (
+                      <span className="font-mono text-xs">{transaction.updated_by.slice(0, 8)}...</span>
+                    )}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Audit History Section */}
         <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
           <button
             onClick={() => setShowAuditHistory(!showAuditHistory)}
-            className="w-full flex items-center justify-between text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+            className="w-full flex items-center justify-between text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
           >
             <span className="flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+              <History className="w-3.5 h-3.5" />
               Riwayat Perubahan
             </span>
-            <svg
-              className={`w-5 h-5 transition-transform ${showAuditHistory ? 'rotate-180' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
+            <ChevronDown
+              className={`w-4 h-4 transition-transform ${showAuditHistory ? 'rotate-180' : ''}`}
+            />
           </button>
 
           {showAuditHistory && (
