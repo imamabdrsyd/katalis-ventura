@@ -744,9 +744,7 @@ export function TransactionDetailModal({
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
                     >
-                      <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-red-500 dark:text-red-400" />
-                      </div>
+                      <FileText className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                           {att.filename}
