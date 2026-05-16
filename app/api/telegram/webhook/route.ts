@@ -2,6 +2,40 @@ import { NextRequest, NextResponse } from 'next/server';
 import { handleTelegramUpdate } from '@/lib/telegram';
 import { TelegramUpdate } from '@/lib/telegram/types';
 
+const BOT_API = () => `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
+
+// GET ?action=status  — cek status webhook saat ini
+// GET ?action=setup   — daftarkan webhook ke Telegram (panggil sekali setelah deploy)
+// Semua dilindungi header x-admin-secret = TELEGRAM_WEBHOOK_SECRET
+export async function GET(request: NextRequest) {
+  const secret = request.headers.get('x-admin-secret');
+  if (!secret || secret !== process.env.TELEGRAM_WEBHOOK_SECRET) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const action = request.nextUrl.searchParams.get('action') ?? 'status';
+
+  if (action === 'setup') {
+    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://axionventura.com'}/api/telegram/webhook`;
+    const res = await fetch(`${BOT_API()}/setWebhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: webhookUrl,
+        secret_token: process.env.TELEGRAM_WEBHOOK_SECRET,
+        allowed_updates: ['message', 'edited_message'],
+      }),
+    });
+    const data = await res.json();
+    return NextResponse.json({ action: 'setup', webhookUrl, result: data });
+  }
+
+  // default: status
+  const res = await fetch(`${BOT_API()}/getWebhookInfo`);
+  const data = await res.json();
+  return NextResponse.json({ action: 'status', result: data });
+}
+
 export async function POST(request: NextRequest) {
   // Verifikasi secret token dari Telegram
   const secret = request.headers.get('x-telegram-bot-api-secret-token');
