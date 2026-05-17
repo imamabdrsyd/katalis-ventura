@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
-import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet, ClipboardList, HandCoins, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet, ClipboardList, HandCoins, ArrowUpRight } from 'lucide-react';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useLanguage } from '@/context/LanguageContext';
 import { calculateFinancialSummary, calculateCategoryCounts, calculateIncomeStatementMetrics } from '@/lib/calculations';
@@ -648,10 +648,10 @@ export default function DashboardPage() {
             </div>
             <button
               onClick={() => router.push('/ar-ap')}
-              className="flex items-center gap-1 text-sm text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 font-medium transition-colors"
+              aria-label={t.dashboard.viewAll}
+              className="p-1.5 rounded-lg text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors cursor-pointer"
             >
-              {t.dashboard.viewAll}
-              <ArrowRight className="w-4 h-4" />
+              <ArrowUpRight className="w-4 h-4" />
             </button>
           </div>
 
@@ -833,10 +833,10 @@ export default function DashboardPage() {
             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.recentTransactions}</h2>
             <button
               onClick={() => router.push('/transactions')}
-              className="flex items-center gap-1 text-sm text-primary-500 dark:text-primary-400 hover:text-primary-600 dark:hover:text-primary-300 font-medium transition-colors"
+              aria-label={t.dashboard.viewAll}
+              className="p-1.5 rounded-lg text-primary-500 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors cursor-pointer"
             >
-              {t.dashboard.viewAll}
-              <ArrowRight className="w-4 h-4" />
+              <ArrowUpRight className="w-4 h-4" />
             </button>
           </div>
           <div className="overflow-x-auto">
