@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, ArrowRight } from 'lucide-react';
+import { Users, ArrowUpRight } from 'lucide-react'; // Users dipakai di empty state
 import { calculateCapTable } from '@/lib/calculations';
 import { formatCurrency } from '@/lib/utils';
 import type { Transaction } from '@/types';
@@ -46,17 +46,14 @@ export default function CapTableWidget({ transactions, loading = false }: CapTab
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Users className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Cap Table</h2>
-        </div>
+        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Cap Table</h2>
         <button
           type="button"
           onClick={() => router.push('/balance-sheet')}
-          className="flex items-center gap-1 text-sm text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 font-medium transition-colors cursor-pointer"
+          aria-label="Lihat detail di Balance Sheet"
+          className="p-1.5 rounded-lg text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors cursor-pointer"
         >
-          Detail
-          <ArrowRight className="w-4 h-4" />
+          <ArrowUpRight className="w-4 h-4" />
         </button>
       </div>
 

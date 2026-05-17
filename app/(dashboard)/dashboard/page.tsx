@@ -626,10 +626,10 @@ export default function DashboardPage() {
         </motion.div>
       </motion.div>
 
-      {/* AR Tracker + Cap Table — paired "who" widgets, layout 2/3 + 1/3 */}
+      {/* AR Tracker + Cap Table — paired "who" widgets, layout 3/4 + 1/4 */}
       {transactions.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+        <div className="lg:col-span-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.arTrackerTitle}</h2>
