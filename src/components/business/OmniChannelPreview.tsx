@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
 import { EyeOff, AlertCircle, ChevronRight, ExternalLink } from 'lucide-react';
 import type { BusinessOmniChannel, Business } from '@/types';
@@ -188,7 +188,46 @@ function EmptyState({ message, icon: Icon = AlertCircle }: { message: string; ic
   );
 }
 
+function PreviewSkeleton({ logoUrl, title }: { logoUrl?: string | null; title?: string | null }) {
+  return (
+    <div className="absolute inset-0 flex flex-col items-center pt-20 px-8 bg-white dark:bg-gray-950">
+      {/* Logo bisnis (atau placeholder gradient) */}
+      <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 flex items-center justify-center shadow-sm">
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoUrl} alt={title ?? 'Logo'} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 animate-pulse" />
+        )}
+      </div>
+
+      {/* Title bar */}
+      <div className="mt-6 h-5 w-40 rounded-md bg-gray-200 dark:bg-gray-700 animate-pulse" />
+
+      {/* Tagline bar */}
+      <div className="mt-3 h-3 w-56 rounded-md bg-gray-100 dark:bg-gray-800 animate-pulse" />
+      <div className="mt-2 h-3 w-48 rounded-md bg-gray-100 dark:bg-gray-800 animate-pulse" />
+
+      {/* Content blocks */}
+      <div className="mt-10 w-full max-w-[260px] space-y-3">
+        <div className="h-14 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+        <div className="h-14 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+        <div className="h-14 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+      </div>
+
+      <p className="mt-8 text-[11px] text-gray-400 dark:text-gray-500">Memuat preview…</p>
+    </div>
+  );
+}
+
 function PublicPagePreview({ channel, publicBiz }: { channel: BusinessOmniChannel | null; publicBiz: PublicBusiness | null }) {
+  const [iframeLoading, setIframeLoading] = useState(true);
+
+  // Reset loading state setiap kali iframe key berubah (channel update / slug ganti)
+  useEffect(() => {
+    setIframeLoading(true);
+  }, [channel?.updated_at, channel?.slug]);
+
   if (!channel || !publicBiz) {
     return <EmptyState message="Isi konfigurasi halaman publik untuk melihat preview." />;
   }
@@ -207,14 +246,18 @@ function PublicPagePreview({ channel, publicBiz }: { channel: BusinessOmniChanne
   // Cache-buster pakai updated_at biar fresh setelah save di sub-komponen lain.
   const cacheBuster = encodeURIComponent(channel.updated_at ?? '');
   return (
-    <div className="flex justify-center bg-gray-50 dark:bg-gray-900">
+    <div className="relative flex justify-center bg-gray-50 dark:bg-gray-900">
       <iframe
         key={channel.updated_at}
         src={`/${channel.slug}?preview=1&t=${cacheBuster}`}
         className="w-[380px] h-[820px] border-0 bg-white dark:bg-gray-950"
         title="Preview Halaman Publik"
         loading="lazy"
+        onLoad={() => setIframeLoading(false)}
       />
+      {iframeLoading && (
+        <PreviewSkeleton logoUrl={channel.logo_url} title={channel.title} />
+      )}
     </div>
   );
 }
