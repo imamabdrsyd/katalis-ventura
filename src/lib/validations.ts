@@ -277,6 +277,7 @@ export const updateBusinessSchema = z.object({
   whatsapp_number: z.string().max(30).optional().nullable(),
   widget_action_label: z.string().max(100).optional().nullable(),
   is_public: z.boolean().optional(),
+  show_in_logo_slide: z.boolean().optional(),
   is_archived: z.boolean().optional(),
   operations_start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
 });

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Check, X, Loader2, Eye, EyeOff, Camera, ImageIcon, CalendarDays, Calendar, LayoutTemplate } from 'lucide-react';
-import type { BusinessOmniChannel, OmniChannelLayoutMode, OmniChannelWidgetLabels } from '@/types';
+import { Check, X, Loader2, Eye, EyeOff, Camera, ImageIcon, LayoutTemplate } from 'lucide-react';
+import type { BusinessOmniChannel, OmniChannelLayoutMode } from '@/types';
 import { upsertOmniChannel, checkSlugAvailability, fetchAvailableSlugSuggestions } from '@/lib/api/omniChannel';
 import { generateSlugFromName, isValidSlugFormat, isReservedSlug, generateSlugSuggestions } from '@/lib/utils/slugUtils';
 
@@ -24,8 +24,6 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
   const [isPublished, setIsPublished] = useState(channel?.is_published ?? false);
   const publicUrlMode: 'slug-only' | 'axion-only' | 'both' = 'slug-only';
   const [layoutMode, setLayoutMode] = useState<OmniChannelLayoutMode>(channel?.layout_mode ?? 'classic');
-  const [widgetDateMode, setWidgetDateMode] = useState<'single' | 'double'>(channel?.widget_date_mode ?? 'double');
-  const [widgetLabels, setWidgetLabels] = useState<OmniChannelWidgetLabels>(channel?.widget_labels ?? {});
   const [buttonColor, setButtonColor] = useState(channel?.button_color ?? '#6366f1');
   const [bannerPosition, setBannerPosition] = useState(channel?.banner_position ?? 'center');
 
@@ -51,8 +49,6 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
     bannerUrl: channel?.banner_url ?? '',
     isPublished: channel?.is_published ?? false,
     layoutMode: channel?.layout_mode ?? 'classic',
-    widgetDateMode: channel?.widget_date_mode ?? 'double',
-    widgetLabels: JSON.stringify(channel?.widget_labels ?? {}),
     buttonColor: channel?.button_color ?? '#6366f1',
     bannerPosition: channel?.banner_position ?? 'center',
   });
@@ -197,12 +193,13 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
         is_published: isPublished,
         public_url_mode: publicUrlMode,
         layout_mode: layoutMode,
-        widget_date_mode: widgetDateMode,
-        widget_labels: widgetLabels,
+        // Widget config dimanage komponen terpisah; pass-through agar tidak ter-overwrite
+        widget_date_mode: channel?.widget_date_mode ?? 'double',
+        widget_labels: channel?.widget_labels ?? {},
         button_color: buttonColor || null,
         banner_position: bannerPosition || 'center',
       }, userId);
-      savedRef.current = { slug, title, tagline, bio, logoUrl, bannerUrl, isPublished, layoutMode, widgetDateMode, widgetLabels: JSON.stringify(widgetLabels), buttonColor, bannerPosition };
+      savedRef.current = { slug, title, tagline, bio, logoUrl, bannerUrl, isPublished, layoutMode, buttonColor, bannerPosition };
       onSaved();
     } catch (err: any) {
       setSaveError(err.message || 'Gagal menyimpan');
@@ -252,8 +249,6 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
     bannerUrl !== saved.bannerUrl ||
     isPublished !== saved.isPublished ||
     layoutMode !== saved.layoutMode ||
-    widgetDateMode !== saved.widgetDateMode ||
-    JSON.stringify(widgetLabels) !== saved.widgetLabels ||
     buttonColor !== saved.buttonColor ||
     bannerPosition !== saved.bannerPosition;
 
@@ -288,124 +283,24 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
         </button>
       </div>
 
-      {/* Slug */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          URL Halaman
-        </label>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-400 dark:text-gray-500 shrink-0">/</span>
-          <input
-            type="text"
-            value={slug}
-            onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-            placeholder="nama-bisnis"
-            className={`flex-1 px-3 py-2 rounded-xl border text-sm text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors ${
-              slugStatus === 'unavailable'
-                ? 'border-red-300 dark:border-red-500'
-                : slugStatus === 'available'
-                ? 'border-primary-300 dark:border-primary-500'
-                : 'border-gray-200 dark:border-gray-600'
-            }`}
-          />
-          <div className="w-5 shrink-0">
-            {slugStatus === 'checking' && <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />}
-            {slugStatus === 'available' && <Check className="w-4 h-4 text-primary-500" />}
-            {slugStatus === 'unavailable' && <X className="w-4 h-4 text-red-500" />}
-          </div>
-        </div>
+      {/* 2-column: Logo (kiri) + URL/Nama/Tagline (kanan) */}
+      <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-5 items-start">
 
-        {/* Error + suggestions */}
-        {slugStatus === 'unavailable' && (
-          <div className="mt-1.5 space-y-2">
-            <p className="text-xs text-red-500">{slugError}</p>
-            {suggestions.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs text-gray-400 dark:text-gray-500">Coba:</span>
-                {suggestions.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setSlug(s)}
-                    className="px-2.5 py-1 text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors border border-indigo-200 dark:border-indigo-600"
-                  >
-                    /{s}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {slugStatus === 'available' && slug && (
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            {typeof window !== 'undefined' ? window.location.origin : ''}/{slug}
-          </p>
-        )}
-      </div>
-
-
-      {/* Title */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Nama / Judul
-        </label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Nama bisnis kamu"
-          maxLength={200}
-          className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
-      </div>
-
-      {/* Tagline */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Tagline <span className="text-gray-400 font-normal">(opsional)</span>
-        </label>
-        <input
-          type="text"
-          value={tagline}
-          onChange={(e) => setTagline(e.target.value)}
-          placeholder="Deskripsi singkat satu baris"
-          maxLength={300}
-          className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
-      </div>
-
-      {/* Bio */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Bio <span className="text-gray-400 font-normal">(opsional)</span>
-        </label>
-        <textarea
-          value={bio}
-          onChange={(e) => setBio(e.target.value)}
-          placeholder="Ceritakan tentang bisnis kamu..."
-          maxLength={1000}
-          rows={3}
-          className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-        />
-      </div>
-
-      {/* Logo Upload */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Logo / Foto Profil <span className="text-gray-400 font-normal">(opsional)</span>
-        </label>
-        <div className="flex items-center gap-4">
-          {/* Preview + upload trigger */}
+        {/* Logo Upload — kolom kiri */}
+        <div className="sm:w-32">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-8">
+            Logo / Foto Profil
+          </label>
           <div className="relative group shrink-0">
-            <div className="w-20 h-20 rounded-full overflow-hidden bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-2xl font-bold border-2 border-gray-200 dark:border-gray-600">
+            <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 flex items-center justify-center border-2 border-gray-200 dark:border-gray-600">
               {logoUrl ? (
                 <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
               ) : (
-                <ImageIcon className="w-8 h-8 text-white/70" />
+                <ImageIcon className="w-8 h-8 text-gray-400 dark:text-gray-500" />
               )}
             </div>
             {/* Hover overlay */}
-            <label className={`absolute inset-0 flex items-center justify-center bg-black/50 rounded-full cursor-pointer transition-opacity ${uploading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+            <label className={`absolute inset-0 w-20 h-20 flex items-center justify-center bg-black/50 rounded-full cursor-pointer transition-opacity ${uploading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
               {uploading ? (
                 <Loader2 className="w-5 h-5 text-white animate-spin" />
               ) : (
@@ -425,33 +320,138 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
               <button
                 type="button"
                 onClick={() => { setLogoUrl(''); setUploadError(''); }}
-                className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors"
+                className="absolute -top-1 left-[68px] w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors"
                 title="Hapus logo"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
-          {/* Info teks */}
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Klik foto untuk upload gambar dari device kamu.
+          {/* Info teks — di bawah circle dengan jarak agak longgar */}
+          <div className="mt-5">
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
+              Klik foto untuk upload.
             </p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-              Format: JPG, PNG, WebP · Maks. 2MB
-            </p>
+            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5 leading-snug">
+              JPG/PNG/WebP · Maks 2MB
+              </p>
             {uploadError && (
-              <p className="text-xs text-red-500 mt-1">{uploadError}</p>
+              <p className="text-[11px] text-red-500 mt-1">{uploadError}</p>
             )}
           </div>
         </div>
+
+        {/* URL + Nama + Tagline — kolom kanan */}
+        <div className="space-y-4 min-w-0">
+          {/* Slug */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              URL Halaman
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500 pointer-events-none">
+                /
+              </span>
+              <input
+                type="text"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                placeholder="nama-bisnis"
+                className={`w-full pl-7 pr-9 py-2 rounded-xl border text-sm text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors ${
+                  slugStatus === 'unavailable'
+                    ? 'border-red-300 dark:border-red-500'
+                    : slugStatus === 'available'
+                    ? 'border-primary-300 dark:border-primary-500'
+                    : 'border-gray-200 dark:border-gray-600'
+                }`}
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none">
+                {slugStatus === 'checking' && <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />}
+                {slugStatus === 'available' && <Check className="w-4 h-4 text-primary-500" />}
+                {slugStatus === 'unavailable' && <X className="w-4 h-4 text-red-500" />}
+              </div>
+            </div>
+
+            {/* Error + suggestions */}
+            {slugStatus === 'unavailable' && (
+              <div className="mt-1.5 space-y-2">
+                <p className="text-xs text-red-500">{slugError}</p>
+                {suggestions.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs text-gray-400 dark:text-gray-500">Coba:</span>
+                    {suggestions.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setSlug(s)}
+                        className="px-2.5 py-1 text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors border border-indigo-200 dark:border-indigo-600"
+                      >
+                        /{s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {slugStatus === 'available' && slug && (
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                {typeof window !== 'undefined' ? window.location.origin : ''}/{slug}
+              </p>
+            )}
+          </div>
+
+          {/* Title */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Nama / Judul
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Nama bisnis kamu"
+              maxLength={200}
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          {/* Tagline */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Tagline
+            </label>
+            <input
+              type="text"
+              value={tagline}
+              onChange={(e) => setTagline(e.target.value)}
+              placeholder="Deskripsi singkat satu baris"
+              maxLength={300}
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Bio — full width di bawah grid */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Bio
+        </label>
+        <textarea
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          placeholder="Ceritakan tentang bisnis kamu..."
+          maxLength={1000}
+          rows={3}
+          className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+        />
       </div>
 
       {/* Banner Upload */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Banner <span className="text-gray-400 font-normal">(opsional)</span>
+          Banner
         </label>
         {/* Drag-to-reposition area */}
         <div
@@ -620,157 +620,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
         </div>
       </div>
 
-      {/* Widget Config — hanya untuk bisnis Jasa */}
-      <div className="border-t border-gray-100 dark:border-gray-700 pt-5 space-y-4">
-        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-          Konfigurasi Widget Reservasi
-        </h4>
-
-        {/* Date mode toggle */}
-        <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
-            Mode Tanggal
-          </label>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setWidgetDateMode('double')}
-              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition ${
-                widgetDateMode === 'double'
-                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
-                  : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300'
-              }`}
-            >
-              <CalendarDays className="w-4 h-4" />
-              Check-in & Check-out
-            </button>
-            <button
-              type="button"
-              onClick={() => setWidgetDateMode('single')}
-              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition ${
-                widgetDateMode === 'single'
-                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
-                  : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300'
-              }`}
-            >
-              <Calendar className="w-4 h-4" />
-              Satu Tanggal
-            </button>
-          </div>
-        </div>
-
-        {/* Label fields */}
-        <div className="grid grid-cols-1 gap-3">
-          {widgetDateMode === 'single' ? (
-            <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Label Tanggal
-              </label>
-              <input
-                type="text"
-                value={widgetLabels.date_label ?? ''}
-                onChange={(e) => setWidgetLabels((l) => ({ ...l, date_label: e.target.value }))}
-                placeholder="Tanggal Kunjungan"
-                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                  Label Check-in
-                </label>
-                <input
-                  type="text"
-                  value={widgetLabels.checkin_label ?? ''}
-                  onChange={(e) => setWidgetLabels((l) => ({ ...l, checkin_label: e.target.value }))}
-                  placeholder="Check-in"
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                  Label Check-out
-                </label>
-                <input
-                  type="text"
-                  value={widgetLabels.checkout_label ?? ''}
-                  onChange={(e) => setWidgetLabels((l) => ({ ...l, checkout_label: e.target.value }))}
-                  placeholder="Check-out"
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Label Catatan
-              </label>
-              <input
-                type="text"
-                value={widgetLabels.note_label ?? ''}
-                onChange={(e) => setWidgetLabels((l) => ({ ...l, note_label: e.target.value }))}
-                placeholder="Catatan (opsional)"
-                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Placeholder Catatan
-              </label>
-              <input
-                type="text"
-                value={widgetLabels.note_placeholder ?? ''}
-                onChange={(e) => setWidgetLabels((l) => ({ ...l, note_placeholder: e.target.value }))}
-                placeholder="misal: 2 tamu, butuh parkir"
-                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Label Tombol WA
-              </label>
-              <input
-                type="text"
-                value={widgetLabels.cta_label ?? ''}
-                onChange={(e) => setWidgetLabels((l) => ({ ...l, cta_label: e.target.value }))}
-                placeholder="Kirim rencana via WhatsApp"
-                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Kata Aksi (di pesan WA)
-              </label>
-              <input
-                type="text"
-                value={widgetLabels.action_label ?? ''}
-                onChange={(e) => setWidgetLabels((l) => ({ ...l, action_label: e.target.value }))}
-                placeholder="kunjungan"
-                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-              Label Dibawah Tombol Reservasi
-            </label>
-            <input
-              type="text"
-              value={widgetLabels.reservation_subtitle ?? ''}
-              onChange={(e) => setWidgetLabels((l) => ({ ...l, reservation_subtitle: e.target.value }))}
-              placeholder="Tidak ada komitmen — pemilik akan konfirmasi ketersediaan"
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-        </div>
-      </div>
+      {/* Konfigurasi Widget Reservasi telah dipisah ke OmniChannelWidgetConfig */}
 
       {/* Save */}
       {saveError && (

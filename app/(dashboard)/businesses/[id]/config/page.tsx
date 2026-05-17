@@ -354,7 +354,7 @@ export default function BusinessMembersPage() {
               {business?.business_name || '—'}
             </h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm">
-              Kelola anggota dan halaman publik bisnis
+              Kelola dan konfigurasi bisnis kamu
             </p>
           </div>
         </div>
@@ -394,7 +394,7 @@ export default function BusinessMembersPage() {
           },
           {
             value: 'omni-channel',
-            label: 'Halaman Publik',
+            label: 'Omnichannel',
             icon: <Globe className="w-4 h-4" />,
             hidden: isInvestor,
           },
@@ -452,9 +452,9 @@ export default function BusinessMembersPage() {
       )}
       {activeTab === 'omni-channel' && user && business && (
         <OmniChannelManager
-          businessId={business.id}
-          businessName={business.business_name}
+          business={business}
           userId={user.id}
+          onBusinessUpdated={() => { refetch(); }}
         />
       )}
       {activeTab === 'integrations' && business && (

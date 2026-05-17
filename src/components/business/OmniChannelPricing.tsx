@@ -10,6 +10,8 @@ interface Props {
   userId: string;
   channel: BusinessOmniChannel | null;
   onChanged: () => void;
+  /** Skip outer card chrome — untuk dipasang di dalam card parent */
+  bare?: boolean;
 }
 
 function formatRupiah(value: number): string {
@@ -27,7 +29,7 @@ function formatDateID(dateStr: string): string {
   return `${d}/${m}/${y}`;
 }
 
-export function OmniChannelPricing({ businessId, userId, channel, onChanged }: Props) {
+export function OmniChannelPricing({ businessId, userId, channel, onChanged, bare = false }: Props) {
   const [showPricing, setShowPricing] = useState(channel?.show_pricing ?? false);
   const [defaultPrice, setDefaultPrice] = useState<number>(channel?.default_price ?? 0);
   const [priceUnit, setPriceUnit] = useState(channel?.price_unit ?? '');
@@ -128,39 +130,50 @@ export function OmniChannelPricing({ businessId, userId, channel, onChanged }: P
   }
 
   if (!channel) {
-    return (
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-            <DollarSign className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-gray-800 dark:text-gray-100">Harga Layanan</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Buat halaman publik dulu untuk mengatur harga.
-            </p>
-          </div>
+    const emptyContent = (
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+          <DollarSign className="w-5 h-5 text-gray-500 dark:text-gray-400" />
         </div>
+        <div>
+          <h3 className="font-semibold text-gray-800 dark:text-gray-100">Harga Layanan</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Buat halaman publik dulu untuk mengatur harga.
+          </p>
+        </div>
+      </div>
+    );
+    return bare ? (
+      emptyContent
+    ) : (
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
+        {emptyContent}
       </div>
     );
   }
 
+  const containerClass = bare
+    ? 'space-y-5'
+    : 'bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-5';
+
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-            <DollarSign className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-gray-800 dark:text-gray-100">Harga Layanan</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Tampilkan harga di widget setelah customer pilih tanggal.
-            </p>
+    <div className={containerClass}>
+      {/* Header — disembunyikan saat bare, parent akan menyediakan label section */}
+      {!bare && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+              <DollarSign className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-800 dark:text-gray-100">Harga Layanan</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Tampilkan harga di widget setelah customer pilih tanggal.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Show pricing toggle */}
       <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">

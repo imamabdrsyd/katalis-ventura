@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 
+// Opt-out dari caching — visibility toggle harus reflect real-time
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 /**
  * GET /api/stats
  * Public endpoint — intentionally unauthenticated.
@@ -35,6 +39,7 @@ export async function GET() {
       .from('businesses')
       .select('id, business_name, logo_url, logo_fit')
       .eq('is_archived', false)
+      .eq('show_in_logo_slide', true)
       .not('logo_url', 'is', null)
       .order('created_at', { ascending: true });
 
@@ -42,11 +47,18 @@ export async function GET() {
       console.error('Error fetching business logos:', logosError);
     }
 
-    return NextResponse.json({
-      users: usersCount || 0,
-      businesses: businessesCount || 0,
-      businessLogos: businessLogos || [],
-    });
+    return NextResponse.json(
+      {
+        users: usersCount || 0,
+        businesses: businessesCount || 0,
+        businessLogos: businessLogos || [],
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, max-age=0, must-revalidate',
+        },
+      },
+    );
   } catch (error) {
     console.error('Stats API error:', error);
     return NextResponse.json(
