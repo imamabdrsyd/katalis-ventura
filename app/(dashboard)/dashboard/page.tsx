@@ -626,10 +626,9 @@ export default function DashboardPage() {
         </motion.div>
       </motion.div>
 
-      {/* AR Tracker + Cap Table — paired "who" widgets, layout 3/4 + 1/4 */}
+      {/* AR Tracker (Monitor Piutang) */}
       {transactions.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
-        <div className="lg:col-span-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.arTrackerTitle}</h2>
@@ -743,10 +742,6 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-        <div className="lg:col-span-1">
-          <CapTableWidget transactions={transactions} loading={transactionsLoading} />
-        </div>
-        </div>
       )}
 
       {/* Dual Panel: Financial Summary + Recent Transactions */}
@@ -755,6 +750,10 @@ export default function DashboardPage() {
           {/* Financial Summary */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">{t.dashboard.financialSummary}</h2>
+
+            {/* Cap Table — kepemilikan dinamis dari akun is_stock */}
+            <CapTableWidget transactions={transactions} loading={transactionsLoading} />
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {([
                 { label: t.dashboard.earnings, cat: 'EARN', value: summary.totalEarn, count: categoryCounts.EARN },
