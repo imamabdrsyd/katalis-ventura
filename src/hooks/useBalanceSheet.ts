@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useBusinessContext } from '@/context/BusinessContext';
-import { calculateBalanceSheet, filterTransactionsUpToDate } from '@/lib/calculations';
+import { calculateBalanceSheet, calculateCapTable, filterTransactionsUpToDate } from '@/lib/calculations';
 import * as accountsApi from '@/lib/api/accounts';
 import * as transactionsApi from '@/lib/api/transactions';
 import {
@@ -22,6 +22,7 @@ export interface UseBalanceSheetReturn {
   setShowExportMenu: React.Dispatch<React.SetStateAction<boolean>>;
   exportButtonRef: React.RefObject<HTMLDivElement>;
   balanceSheet: ReturnType<typeof calculateBalanceSheet>;
+  capTable: ReturnType<typeof calculateCapTable>;
   isBalanced: boolean;
   handleExportPDF: () => Promise<void>;
   handleExportExcel: () => Promise<void>;
@@ -120,6 +121,11 @@ export function useBalanceSheet(): UseBalanceSheetReturn {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBusinessId, user?.id, transactionsLoading, cumulativeTransactions.length, asOfDate, capital, accounts.length]);
 
+  const capTable = useMemo(
+    () => calculateCapTable(cumulativeTransactions),
+    [cumulativeTransactions]
+  );
+
   const isBalanced = useMemo(() => Math.abs(
     balanceSheet.assets.totalAssets -
     (balanceSheet.liabilities.totalLiabilities + balanceSheet.equity.totalEquity)
@@ -171,6 +177,7 @@ export function useBalanceSheet(): UseBalanceSheetReturn {
     setShowExportMenu,
     exportButtonRef,
     balanceSheet,
+    capTable,
     isBalanced,
     handleExportPDF,
     handleExportExcel,

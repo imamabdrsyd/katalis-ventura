@@ -17,6 +17,7 @@ function BalanceSheetPageInner() {
     setShowExportMenu,
     exportButtonRef,
     balanceSheet,
+    capTable,
     isBalanced,
     handleExportPDF,
     handleExportExcel,
@@ -242,6 +243,25 @@ function BalanceSheetPageInner() {
                     {formatCurrency(balanceSheet.equity.capital)}
                   </span>
                 </div>
+                {capTable.entries.length > 0 && capTable.totalContributed > 0 && (
+                  <div className="pl-8 space-y-1.5 py-1">
+                    {capTable.entries.map((entry) => (
+                      <div key={entry.accountId} className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500 dark:text-gray-400 truncate flex-1 min-w-0 pr-3">
+                          {entry.accountName}
+                        </span>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <span className="text-xs font-medium text-primary-600 dark:text-primary-400 tabular-nums w-12 text-right">
+                            {entry.percentage.toFixed(2)}%
+                          </span>
+                          <span className="text-gray-600 dark:text-gray-400 tabular-nums">
+                            {formatCurrency(entry.contributed)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {balanceSheet.equity.drawings > 0 && (
                   <div className="flex justify-between py-2 pl-4">
                     <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.dividends}</span>

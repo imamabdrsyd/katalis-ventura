@@ -366,6 +366,73 @@ export function calculateInvestedCapital(
   };
 }
 
+export interface CapTableEntry {
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  contributed: number;
+  percentage: number;
+}
+
+export interface CapTable {
+  entries: CapTableEntry[];
+  totalContributed: number;
+}
+
+/**
+ * Dynamic cap table dari saldo akun EQUITY yang ditandai is_stock.
+ * Persentase kepemilikan = net credit (credit - debit) per akun stock / total semua akun stock.
+ * Net credit dipakai supaya kalau pemilik tarik kembali setoran (rare), persentase ikut menyesuaikan.
+ * Dividen (is_dividend) sengaja TIDAK dihitung — itu distribusi laba, bukan modal disetor.
+ */
+export function calculateCapTable(transactions: Transaction[]): CapTable {
+  const totals = new Map<string, { accountCode: string; accountName: string; net: number }>();
+
+  const accumulate = (acc: Account | null | undefined, credit: number, debit: number) => {
+    if (!isStockAccount(acc) || !acc) return;
+    const existing = totals.get(acc.id) ?? {
+      accountCode: acc.account_code,
+      accountName: acc.account_name,
+      net: 0,
+    };
+    existing.net += credit - debit;
+    totals.set(acc.id, existing);
+  };
+
+  for (const t of transactions) {
+    if (t.deleted_at) continue;
+
+    if (t.is_multi_line && t.journal_lines && t.journal_lines.length > 0) {
+      for (const line of t.journal_lines) {
+        accumulate(line.account, Number(line.credit_amount || 0), Number(line.debit_amount || 0));
+      }
+      continue;
+    }
+
+    const amount = Number(t.amount);
+    accumulate(t.credit_account, amount, 0);
+    accumulate(t.debit_account, 0, amount);
+  }
+
+  const rawEntries = Array.from(totals.entries()).map(([accountId, v]) => ({
+    accountId,
+    accountCode: v.accountCode,
+    accountName: v.accountName,
+    contributed: v.net,
+  }));
+
+  const totalContributed = rawEntries.reduce((sum, e) => sum + e.contributed, 0);
+
+  const entries: CapTableEntry[] = rawEntries
+    .map((e) => ({
+      ...e,
+      percentage: totalContributed > 0 ? (e.contributed / totalContributed) * 100 : 0,
+    }))
+    .sort((a, b) => b.contributed - a.contributed);
+
+  return { entries, totalContributed };
+}
+
 /**
  * Extract income statement line items grouped by account.
  * Handles both simple double-entry and multi-line journal entries.

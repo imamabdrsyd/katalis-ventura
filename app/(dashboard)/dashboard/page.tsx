@@ -22,6 +22,9 @@ const MonitoringChart = dynamic(() => import('@/components/charts/MonitoringChar
 const ExpenseBreakdownChart = dynamic(() => import('@/components/charts/ExpenseBreakdownChart'), {
   loading: () => <div className="animate-pulse h-80 bg-gray-200 dark:bg-gray-700 rounded-lg" />,
 });
+const CapTableWidget = dynamic(() => import('@/components/dashboard/CapTableWidget'), {
+  loading: () => <div className="animate-pulse h-60 bg-gray-200 dark:bg-gray-700 rounded-2xl" />,
+});
 
 const DASHBOARD_ITEM_VARIANTS: Variants = {
   hidden: { opacity: 0, y: 14, scale: 0.985 },
@@ -623,9 +626,10 @@ export default function DashboardPage() {
         </motion.div>
       </motion.div>
 
-      {/* AR Tracker (Monitor Piutang) */}
+      {/* AR Tracker + Cap Table — paired "who" widgets, layout 2/3 + 1/3 */}
       {transactions.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.arTrackerTitle}</h2>
@@ -738,6 +742,10 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
+        </div>
+        <div className="lg:col-span-1">
+          <CapTableWidget transactions={transactions} loading={transactionsLoading} />
+        </div>
         </div>
       )}
 

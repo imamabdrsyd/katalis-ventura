@@ -2,7 +2,9 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
+import { useRouter } from 'next/navigation';
 import { Doughnut } from 'react-chartjs-2';
+import { ArrowRight } from 'lucide-react';
 import {
   Chart as ChartJS,
   ArcElement,
@@ -27,7 +29,8 @@ const EXPENSE_COLORS = [
   '#6366f1',
 ];
 
-const PAGE_SIZE = 5;
+const OTHERS_COLOR = '#9ca3af';
+const TOP_N = 5;
 
 interface ExpenseBreakdownChartProps {
   transactions: Transaction[];
@@ -37,6 +40,7 @@ interface ExpenseBreakdownChartProps {
 }
 
 export default function ExpenseBreakdownChart({ transactions, loading = false, selectedYear, selectedMonth = null }: ExpenseBreakdownChartProps) {
+  const router = useRouter();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -71,6 +75,35 @@ export default function ExpenseBreakdownChart({ transactions, loading = false, s
 
   const totalExpense = useMemo(() => {
     return allExpenseData.reduce((sum, [, amount]) => sum + amount, 0);
+  }, [allExpenseData]);
+
+  // Top-N + Others rollup untuk display list (chart tetap pakai all data agar donut akurat)
+  const displayRows = useMemo(() => {
+    if (allExpenseData.length <= TOP_N) {
+      return allExpenseData.map(([name, amount], idx) => ({
+        name,
+        amount,
+        color: EXPENSE_COLORS[idx % EXPENSE_COLORS.length],
+        isOthers: false,
+      }));
+    }
+    const top = allExpenseData.slice(0, TOP_N).map(([name, amount], idx) => ({
+      name,
+      amount,
+      color: EXPENSE_COLORS[idx % EXPENSE_COLORS.length],
+      isOthers: false,
+    }));
+    const othersAmount = allExpenseData.slice(TOP_N).reduce((sum, [, a]) => sum + a, 0);
+    const othersCount = allExpenseData.length - TOP_N;
+    if (othersAmount > 0) {
+      top.push({
+        name: `Lainnya (${othersCount})`,
+        amount: othersAmount,
+        color: OTHERS_COLOR,
+        isOthers: true,
+      });
+    }
+    return top;
   }, [allExpenseData]);
 
   const chartData = useMemo(() => ({
@@ -116,9 +149,23 @@ export default function ExpenseBreakdownChart({ transactions, loading = false, s
     );
   }
 
+  const hasMore = allExpenseData.length > TOP_N;
+
   return (
     <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 flex flex-col h-full">
-      <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">Expense Breakdown</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Expense Breakdown</h3>
+        {hasMore && (
+          <button
+            type="button"
+            onClick={() => router.push('/income-statement')}
+            className="flex items-center gap-1 text-xs font-medium text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors cursor-pointer"
+          >
+            View all
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
 
       {allExpenseData.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-gray-400 dark:text-gray-500">
@@ -130,21 +177,23 @@ export default function ExpenseBreakdownChart({ transactions, loading = false, s
             <Doughnut data={chartData} options={options} />
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
-            {allExpenseData.map(([name, amount], index) => {
-              const percentage = totalExpense > 0 ? ((amount / totalExpense) * 100).toFixed(1) : '0';
+          <div className="space-y-2">
+            {displayRows.map((row) => {
+              const percentage = totalExpense > 0 ? ((row.amount / totalExpense) * 100).toFixed(1) : '0';
               return (
-                <div key={name} className="flex items-center justify-between text-sm">
+                <div key={row.name} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2 min-w-0">
                     <div
                       className="w-3 h-3 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: EXPENSE_COLORS[index % EXPENSE_COLORS.length] }}
+                      style={{ backgroundColor: row.color }}
                     />
-                    <span className="text-gray-700 dark:text-gray-300 truncate">{name}</span>
+                    <span className={`truncate ${row.isOthers ? 'text-gray-500 dark:text-gray-400 italic' : 'text-gray-700 dark:text-gray-300'}`}>
+                      {row.name}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                     <span className="text-gray-500 dark:text-gray-400 text-xs">{percentage}%</span>
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(amount)}</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(row.amount)}</span>
                   </div>
                 </div>
               );
