@@ -85,12 +85,19 @@ export function CurrencyInputWithCalculator({
   const activeCurrency = currencyCode ?? 'IDR';
   const { rate: autoRate, loading: fxLoading } = useFxRate(activeCurrency);
 
-  // Auto-apply fetched rate when USD is selected and no manual rate set yet
+  // Track previous currency to detect actual currency change
+  const prevCurrencyRef = useRef<string>(activeCurrency);
+
+  // Auto-apply fetched rate whenever currency changes or fresh rate arrives
   useEffect(() => {
-    if (autoRate && onFxRateChange && (!fxRate || fxRate <= 1)) {
+    if (!autoRate || !onFxRateChange) return;
+    const currencyChanged = prevCurrencyRef.current !== activeCurrency;
+    prevCurrencyRef.current = activeCurrency;
+    // Apply if currency just changed, or no rate set yet
+    if (currencyChanged || !fxRate || fxRate <= 1) {
       onFxRateChange(String(Math.round(autoRate)));
     }
-  }, [autoRate]);
+  }, [autoRate, activeCurrency]);
   const [showCalc, setShowCalc] = useState(false);
   const [calcDisplay, setCalcDisplay] = useState('0');
   const [calcPrev, setCalcPrev] = useState<number | null>(null);
