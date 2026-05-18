@@ -197,6 +197,35 @@ describe('parseVendor', () => {
   });
 });
 
+describe('parseTotal USD/foreign currency', () => {
+  it('parses $20.00', () => {
+    expect(parseTotal('Invoice paid\n$20.00\nPayment date: May 17, 2026')).toBe(20);
+  });
+
+  it('parses USD 1,500.00', () => {
+    expect(parseTotal('Amount Due: USD 1,500.00')).toBe(1500);
+  });
+
+  it('parses $1,234.56 (preserves decimals)', () => {
+    expect(parseTotal('Total: $1,234.56')).toBe(1234.56);
+  });
+
+  it('parses amount paid keyword in English invoice', () => {
+    expect(parseTotal('Amount Paid\n$20.00\nInvoice number: JDTEECME-0009')).toBe(20);
+  });
+});
+
+describe('parseVendor leading single char', () => {
+  it('strips single leading char from OCR logo misread', () => {
+    // OCR baca logo "A" Anthropic sebagai teks
+    expect(parseVendor('A Anthropic, PBC\nInvoice paid\n$20.00')).toBe('Anthropic, PBC');
+  });
+
+  it('does not strip multi-char prefix', () => {
+    expect(parseVendor('PT Maju Jaya\nTotal 50.000')).toBe('PT Maju Jaya');
+  });
+});
+
 describe('parseVendor key:value pattern', () => {
   it('extracts vendor from "Jenis Transaksi: Telkomsel"', () => {
     const text = `

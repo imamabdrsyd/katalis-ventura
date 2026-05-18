@@ -95,9 +95,9 @@ const ID_LINE_PATTERN = /\b(inv|ref|no|nomor|id)[.:\-#\s]+[a-z]*[\d\-]{6,}/i;
 export function parseTotal(text: string): number | undefined {
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 
-  const totalKeywords = /\b(grand\s*total|total\s*akhir|total\s*bayar|total\s*belanja|jumlah\s*bayar|total|jumlah|tagihan)\b/i;
+  const totalKeywords = /\b(grand\s*total|total\s*akhir|total\s*bayar|total\s*belanja|jumlah\s*bayar|total|jumlah|tagihan|amount\s*due|amount\s*paid|invoice\s*total)\b/i;
   const skipKeywords = /\b(sub\s*total|subtotal|kembali|kembalian|hemat|diskon|discount|ppn|tax|pajak|service|biaya|tunai|cash|bayar\s+dengan)\b/i;
-  const currencyPrefix = /(?:\b(?:rp|idr|usd|sgd|eur|aud|jpy|cny|rmb|myr|rm)\b\.?\s*[\d.,]+|[$€¥]\s*[\d.,]+)/i;
+  const currencyPrefix = /(?:\b(?:rp|idr|usd|sgd|eur|aud|jpy|cny|rmb|myr|rm)\b\.?\s*[\d.,]+|[$€¥£]\s*[\d.,]+)/i;
 
   const candidatesFromCurrency: number[] = [];
   const candidatesFromKeyword: number[] = [];
@@ -154,13 +154,23 @@ export function parseCurrency(text: string): string | undefined {
 }
 
 /**
- * Ekstrak angka yang punya separator IDR (titik/koma) — exclude plain digit string.
+ * Ekstrak angka dari string — support format IDR (ribuan) dan format asing (desimal USD).
  * "Rp 316.350" → 316350
  * "1.500.000" → 1500000
+ * "$20.00" → 20
+ * "USD 1,500.00" → 1500
  * "1778575615348" → undefined (no separator, kemungkinan ID)
  */
 function extractFormattedNumber(s: string): number | undefined {
-  // Match HANYA angka dengan separator (minimal satu titik/koma sebagai ribuan)
+  // Format asing: $ / simbol currency diikuti angka dengan desimal (mis. $20.00, $1,500.00)
+  const foreignMatch = s.match(/[$€¥£]\s*(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+\.\d{2})/);
+  if (foreignMatch) {
+    const raw = foreignMatch[1].replace(/,/g, '');
+    const n = parseFloat(raw);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+
+  // Format IDR dengan separator ribuan
   const matches = s.matchAll(/(\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?)/g);
   let largest = 0;
   for (const m of matches) {
@@ -268,7 +278,9 @@ export function parseVendor(text: string): string | undefined {
     const m = line.match(MERCHANT_KEY_PATTERN);
     if (m) {
       const val = m[1].trim().replace(/[*•\-_]+$/g, '').trim();
-      if (val.length >= 2 && !/^\d+$/.test(val)) return val;
+      // Strip leading single char + whitespace (mis. "A Anthropic" → "Anthropic" karena OCR baca logo)
+      const cleaned = val.replace(/^[A-Za-z]\s+/, '').trim();
+      if (cleaned.length >= 2 && !/^\d+$/.test(cleaned)) return cleaned;
     }
   }
 
@@ -296,7 +308,9 @@ export function parseVendor(text: string): string | undefined {
     if (skipPatterns.some((p) => p.test(line))) continue;
 
     const cleaned = line.replace(/[*•\-_]+$/g, '').trim();
-    if (cleaned.length >= 2) return cleaned;
+    // Strip leading single char + whitespace (mis. OCR baca logo sebagai single letter)
+    const stripped = cleaned.replace(/^[A-Za-z]\s+/, '').trim();
+    if (stripped.length >= 2) return stripped;
   }
 
   return undefined;
