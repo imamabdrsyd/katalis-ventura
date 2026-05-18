@@ -365,7 +365,7 @@ export function QuickTransactionForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {/* Submit error */}
       {errors.submit && (
         <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -373,47 +373,71 @@ export function QuickTransactionForm({
         </div>
       )}
 
-      {/* OCR SCAN — auto-fill dari struk */}
-      {businessId && (
-        <div className="flex items-center justify-end">
-          <OCRScanButton
-            businessId={businessId}
-            onParsed={applyOcrResult}
-            variant="compact"
+      {/* 1. AMOUNT HERO CARD — gabungan flow badge, jumlah besar, breakdown unit, OCR scan */}
+      <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-gray-50 to-white dark:from-gray-800/60 dark:to-gray-800/20 p-5">
+        <div className="flex items-start justify-between gap-3">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+            Jumlah (Rp)
+          </span>
+          <div className="flex items-center gap-2">
+            {flowDirection && flowLabel && (
+              <span
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
+                  flowDirection === 'in'
+                    ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-300'
+                    : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300'
+                }`}
+              >
+                {flowDirection === 'in' ? (
+                  <ArrowDownLeft className="w-3 h-3" />
+                ) : (
+                  <ArrowUpRight className="w-3 h-3" />
+                )}
+                {flowLabel}
+              </span>
+            )}
+            {businessId && (
+              <OCRScanButton
+                businessId={businessId}
+                onParsed={applyOcrResult}
+                variant="compact"
+              />
+            )}
+          </div>
+        </div>
+        <div className="mt-2">
+          <CurrencyInputWithCalculator
+            value={amount}
+            displayValue={displayAmount}
+            onChange={(numeric, formatted) => {
+              setDisplayAmount(formatted);
+              setAmount(numeric);
+              if (errors.amount) setErrors(prev => { const n = { ...prev }; delete n.amount; return n; });
+            }}
+            inputClassName="text-3xl font-bold tabular-nums leading-tight bg-transparent border-0 p-0 focus:ring-0"
+            colorVariant={flowDirection === 'in' ? 'green' : flowDirection === 'out' ? 'red' : 'default'}
+            error={errors.amount}
+            autoFocus
           />
         </div>
-      )}
-
-      {/* 1. JUMLAH (Rp) + UNIT BREAKDOWN */}
-      <div className="space-y-2">
-        <CurrencyInputWithCalculator
-          label="Jumlah (Rp)"
-          value={amount}
-          displayValue={displayAmount}
-          onChange={(numeric, formatted) => {
-            setDisplayAmount(formatted);
-            setAmount(numeric);
-            if (errors.amount) setErrors(prev => { const n = { ...prev }; delete n.amount; return n; });
-          }}
-          inputClassName="text-2xl font-bold"
-          colorVariant={flowDirection === 'in' ? 'green' : flowDirection === 'out' ? 'red' : 'default'}
-          error={errors.amount}
-          autoFocus
-        />
-        <UnitBreakdownSection
-          unitBreakdown={unitBreakdown}
-          showBreakdown={showBreakdown}
-          onToggle={handleToggleBreakdown}
-          onPriceChange={handleBreakdownPriceChange}
-          onQuantityChange={handleBreakdownQtyChange}
-          onUnitChange={handleBreakdownUnitChange}
-          onRemove={handleRemoveBreakdown}
-        />
+        <div className="mt-3">
+          <UnitBreakdownSection
+            unitBreakdown={unitBreakdown}
+            showBreakdown={showBreakdown}
+            onToggle={handleToggleBreakdown}
+            onPriceChange={handleBreakdownPriceChange}
+            onQuantityChange={handleBreakdownQtyChange}
+            onUnitChange={handleBreakdownUnitChange}
+            onRemove={handleRemoveBreakdown}
+          />
+        </div>
       </div>
 
       {/* 2. KATEGORI (Account Dropdown) */}
       <div>
-        <label className="label text-base font-semibold">Kategori</label>
+        <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
+          Kategori
+        </label>
 
         {/* Combobox trigger — search happens inline */}
         <div
@@ -532,51 +556,38 @@ export function QuickTransactionForm({
           portalRef.current
         )}
 
-        {/* Flow preview badge */}
+        {/* Counter-account hint — inline subtle */}
         {selectedAccount && cashAccount && (
           isDividendDeclareMode && dividendPayableAccount ? (
-            <div className="mt-2 flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300">
-              <div className="flex items-center gap-2">
-                <ArrowUpRight className="w-4 h-4 flex-shrink-0" />
-                <span className="font-medium">Declare Dividen</span>
-                <span className="text-xs opacity-75">
-                  {selectedAccount.account_name} → {dividendPayableAccount.account_name}
+            <div className="mt-2 flex items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-300">
+                  Declare Dividen
+                </span>
+                <span className="truncate">
+                  → {dividendPayableAccount.account_name}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setShowDividendModeModal(true)}
-                className="text-xs underline hover:no-underline"
+                className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 underline hover:no-underline flex-shrink-0"
               >
                 Ganti
               </button>
             </div>
           ) : (
-            <div
-              className={`mt-2 flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm ${
-                flowDirection === 'in'
-                  ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 dark:text-emerald-300'
-                  : 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-300'
-              }`}
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                {flowDirection === 'in' ? (
-                  <ArrowDownLeft className="w-4 h-4 flex-shrink-0" />
-                ) : (
-                  <ArrowUpRight className="w-4 h-4 flex-shrink-0" />
-                )}
-                <span className="font-medium">{flowLabel}</span>
-                <span className="text-xs opacity-75 truncate">
-                  {flowDirection === 'in'
-                    ? `${selectedAccount.account_name} → ${cashAccount.account_name}`
-                    : `${cashAccount.account_name} → ${selectedAccount.account_name}`}
-                </span>
-              </div>
+            <div className="mt-2 flex items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
+              <span className="truncate">
+                {flowDirection === 'in'
+                  ? `→ ${cashAccount.account_name}`
+                  : `→ ${cashAccount.account_name}`}
+              </span>
               {selectedAccount && isDividendChoiceAccount(selectedAccount) && (
                 <button
                   type="button"
                   onClick={() => setShowDividendModeModal(true)}
-                  className="text-xs underline hover:no-underline flex-shrink-0"
+                  className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 underline hover:no-underline flex-shrink-0"
                 >
                   Ganti
                 </button>
@@ -604,49 +615,51 @@ export function QuickTransactionForm({
         />
       )}
 
-      {/* 3. TANGGAL */}
-      <div>
-        <label className="label text-base font-semibold">Tanggal</label>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => {
-            setDate(e.target.value);
-            if (errors.date) {
-              setErrors((prev) => {
-                const next = { ...prev };
-                delete next.date;
-                return next;
-              });
-            }
-          }}
-          className="input"
-        />
-        {errors.date && (
-          <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.date}</p>
-        )}
-      </div>
-
-      {/* 4. NAMA Customer/Vendor */}
-      <div>
-        <label className="label text-base font-semibold">
-          {flowDirection === 'in' ? 'Customer' : flowDirection === 'out' ? 'Vendor' : 'Nama'} (opsional)
-        </label>
-        <ContactAutocomplete
-          businessId={businessId}
-          value={name}
-          onChange={setName}
-          placeholder={flowDirection === 'in' ? 'Nama customer' : flowDirection === 'out' ? 'Nama vendor' : 'Customer atau vendor'}
-          onSaveAsContact={async (contactName) => {
-            if (!businessId || !user) return;
-            try {
-              const contactType = flowDirection === 'in' ? 'customer' : flowDirection === 'out' ? 'vendor' : 'other';
-              await saveContactFromTransaction(businessId, contactName, contactType, user.id);
-            } catch (err) {
-              console.error('Failed to save contact:', err);
-            }
-          }}
-        />
+      {/* 3+4. TANGGAL + NAMA (2-column row) */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
+            Tanggal
+          </label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => {
+              setDate(e.target.value);
+              if (errors.date) {
+                setErrors((prev) => {
+                  const next = { ...prev };
+                  delete next.date;
+                  return next;
+                });
+              }
+            }}
+            className="input"
+          />
+          {errors.date && (
+            <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.date}</p>
+          )}
+        </div>
+        <div>
+          <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
+            {flowDirection === 'in' ? 'Customer' : flowDirection === 'out' ? 'Vendor' : 'Nama'} <span className="lowercase opacity-60">(opsional)</span>
+          </label>
+          <ContactAutocomplete
+            businessId={businessId}
+            value={name}
+            onChange={setName}
+            placeholder={flowDirection === 'in' ? 'Nama customer' : flowDirection === 'out' ? 'Nama vendor' : 'Customer atau vendor'}
+            onSaveAsContact={async (contactName) => {
+              if (!businessId || !user) return;
+              try {
+                const contactType = flowDirection === 'in' ? 'customer' : flowDirection === 'out' ? 'vendor' : 'other';
+                await saveContactFromTransaction(businessId, contactName, contactType, user.id);
+              } catch (err) {
+                console.error('Failed to save contact:', err);
+              }
+            }}
+          />
+        </div>
       </div>
 
       {/* 5. CATATAN + LAMPIRAN (Collapsible) */}
@@ -699,16 +712,8 @@ export function QuickTransactionForm({
         )}
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex gap-3">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="btn-secondary flex-1"
-          disabled={loading}
-        >
-          Cancel
-        </button>
+      {/* Action Buttons — Save primary, Cancel ghost text link */}
+      <div className="flex items-center gap-4 pt-1">
         <button
           type="submit"
           className="btn-primary flex-1 flex items-center justify-center gap-2"
@@ -719,9 +724,17 @@ export function QuickTransactionForm({
           ) : (
             <>
               <Zap className="w-4 h-4" />
-              Save
+              Simpan Transaksi
             </>
           )}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={loading}
+          className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium transition-colors disabled:opacity-50"
+        >
+          Batal
         </button>
       </div>
     </form>
