@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { searchContacts, getContacts } from '@/lib/api/contacts';
 import { User, Building, Users2, Handshake, UserCog, TrendingUp, UserPlus, BookUser } from 'lucide-react';
 import type { Contact, ContactType } from '@/types';
@@ -51,9 +52,31 @@ export function ContactAutocomplete({
   const [allContacts, setAllContacts] = useState<Contact[]>([]);
   const [showContactBook, setShowContactBook] = useState(false);
   const [contactBookLoading, setContactBookLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => { setMounted(true); }, []);
+
+  const updateDropdownPosition = useCallback(() => {
+    if (!wrapperRef.current) return;
+    const rect = wrapperRef.current.getBoundingClientRect();
+    const dropdownHeight = dropdownRef.current?.offsetHeight ?? 240;
+    const spaceBelow = window.innerHeight - rect.bottom - 8;
+    const top = spaceBelow >= dropdownHeight
+      ? rect.bottom + 4
+      : rect.top - dropdownHeight - 4;
+    setDropdownStyle({
+      position: 'fixed',
+      top,
+      left: rect.left,
+      width: rect.width,
+      zIndex: 99999,
+    });
+  }, []);
 
   const fetchSuggestions = useCallback(
     async (query: string) => {
@@ -82,10 +105,26 @@ export function ContactAutocomplete({
     };
   }, [value, fetchSuggestions]);
 
+  // Reposition on scroll/resize
+  useEffect(() => {
+    const isOpen = showDropdown || showContactBook;
+    if (!isOpen) return;
+    updateDropdownPosition();
+    window.addEventListener('scroll', updateDropdownPosition, true);
+    window.addEventListener('resize', updateDropdownPosition);
+    return () => {
+      window.removeEventListener('scroll', updateDropdownPosition, true);
+      window.removeEventListener('resize', updateDropdownPosition);
+    };
+  }, [showDropdown, showContactBook, updateDropdownPosition]);
+
   // Close on click outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+      if (
+        wrapperRef.current && !wrapperRef.current.contains(e.target as Node) &&
+        dropdownRef.current && !dropdownRef.current.contains(e.target as Node)
+      ) {
         setShowDropdown(false);
         setShowContactBook(false);
       }
@@ -185,94 +224,84 @@ export function ContactAutocomplete({
         </button>
       </div>
 
-      {/* Contact Book Dropdown */}
-      {showContactBook && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-          {contactBookLoading ? (
-            <div className="px-4 py-6 text-center text-sm text-gray-400">Memuat kontak...</div>
-          ) : allContacts.length === 0 ? (
-            <div className="px-4 py-6 text-center text-sm text-gray-400">Belum ada kontak tersimpan</div>
+      {/* Dropdowns via portal — tidak terpotong modal/overflow */}
+      {mounted && (showContactBook || shouldShowDropdown) && createPortal(
+        <div
+          ref={dropdownRef}
+          style={dropdownStyle}
+          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-h-60 overflow-y-auto"
+        >
+          {showContactBook ? (
+            contactBookLoading ? (
+              <div className="px-4 py-6 text-center text-sm text-gray-400">Memuat kontak...</div>
+            ) : allContacts.length === 0 ? (
+              <div className="px-4 py-6 text-center text-sm text-gray-400">Belum ada kontak tersimpan</div>
+            ) : (
+              allContacts.map((contact, idx) => (
+                <button
+                  key={contact.id}
+                  type="button"
+                  onClick={() => { handleSelect(contact); setShowContactBook(false); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+                    idx === 0 ? 'rounded-t-xl' : ''
+                  } ${idx === allContacts.length - 1 ? 'rounded-b-xl' : ''} ${
+                    contact.name.toLowerCase() === value.trim().toLowerCase() ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''
+                  }`}
+                >
+                  <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                    {TYPE_ICON[contact.type]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{contact.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {TYPE_LABEL[contact.type]}{contact.phone ? ` · ${contact.phone}` : ''}
+                    </p>
+                  </div>
+                </button>
+              ))
+            )
           ) : (
-            allContacts.map((contact, idx) => (
-              <button
-                key={contact.id}
-                type="button"
-                onClick={() => {
-                  handleSelect(contact);
-                  setShowContactBook(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
-                  idx === 0 ? 'rounded-t-xl' : ''
-                } ${idx === allContacts.length - 1 ? 'rounded-b-xl' : ''} ${
-                  contact.name.toLowerCase() === value.trim().toLowerCase()
-                    ? 'bg-indigo-50 dark:bg-indigo-900/20'
-                    : ''
-                }`}
-              >
-                <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                  {TYPE_ICON[contact.type]}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{contact.name}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {TYPE_LABEL[contact.type]}
-                    {contact.phone ? ` · ${contact.phone}` : ''}
+            <>
+              {suggestions.map((contact, idx) => (
+                <button
+                  key={contact.id}
+                  type="button"
+                  onClick={() => handleSelect(contact)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
+                    idx === activeIndex ? 'bg-indigo-50 dark:bg-indigo-900/30' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                  } ${idx === 0 ? 'rounded-t-xl' : ''} ${idx === suggestions.length - 1 && !showSaveOption ? 'rounded-b-xl' : ''}`}
+                >
+                  <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                    {TYPE_ICON[contact.type]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{contact.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {TYPE_LABEL[contact.type]}{contact.phone ? ` · ${contact.phone}` : ''}
+                    </p>
+                  </div>
+                </button>
+              ))}
+              {showSaveOption && (
+                <button
+                  type="button"
+                  onClick={() => { onSaveAsContact!(value.trim()); setShowDropdown(false); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors border-t border-gray-100 dark:border-gray-700 rounded-b-xl ${
+                    activeIndex === suggestions.length ? 'bg-indigo-50 dark:bg-indigo-900/30' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                  }`}
+                >
+                  <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center flex-shrink-0">
+                    <UserPlus className="w-3.5 h-3.5 text-indigo-500" />
+                  </div>
+                  <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">
+                    Simpan &quot;{value.trim()}&quot; sebagai kontak
                   </p>
-                </div>
-              </button>
-            ))
+                </button>
+              )}
+            </>
           )}
-        </div>
-      )}
-
-      {shouldShowDropdown && !showContactBook && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-52 overflow-y-auto">
-          {suggestions.map((contact, idx) => (
-            <button
-              key={contact.id}
-              type="button"
-              onClick={() => handleSelect(contact)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
-                idx === activeIndex
-                  ? 'bg-indigo-50 dark:bg-indigo-900/30'
-                  : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
-              } ${idx === 0 ? 'rounded-t-xl' : ''} ${idx === suggestions.length - 1 && !showSaveOption ? 'rounded-b-xl' : ''}`}
-            >
-              <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                {TYPE_ICON[contact.type]}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{contact.name}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {TYPE_LABEL[contact.type]}
-                  {contact.phone ? ` · ${contact.phone}` : ''}
-                </p>
-              </div>
-            </button>
-          ))}
-
-          {showSaveOption && (
-            <button
-              type="button"
-              onClick={() => {
-                onSaveAsContact!(value.trim());
-                setShowDropdown(false);
-              }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors border-t border-gray-100 dark:border-gray-700 rounded-b-xl ${
-                activeIndex === suggestions.length
-                  ? 'bg-indigo-50 dark:bg-indigo-900/30'
-                  : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
-              }`}
-            >
-              <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center flex-shrink-0">
-                <UserPlus className="w-3.5 h-3.5 text-indigo-500" />
-              </div>
-              <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">
-                Simpan &quot;{value.trim()}&quot; sebagai kontak
-              </p>
-            </button>
-          )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

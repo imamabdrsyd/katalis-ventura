@@ -9,6 +9,11 @@ export interface TransactionInsert {
   name: string;
   description: string;
   amount: number;
+  original_amount?: number | null;
+  currency_code?: string | null;
+  fx_rate?: number | null;
+  fx_rate_date?: string | null;
+  fx_gain_loss_amount?: number | null;
   account: string; // Legacy field
   created_by: string;
   status?: TransactionStatus;
@@ -34,6 +39,11 @@ export interface MultiLineTransactionInsert {
   notes?: string;
   status?: TransactionStatus;
   meta?: Record<string, unknown> | null;
+  original_amount?: number | null;
+  currency_code?: string | null;
+  fx_rate?: number | null;
+  fx_rate_date?: string | null;
+  fx_gain_loss_amount?: number | null;
   attachments?: import('@/types').TransactionAttachment[];
   journal_lines: JournalLineInput[];
 }
@@ -44,6 +54,11 @@ export interface TransactionUpdate {
   name?: string;
   description?: string;
   amount?: number;
+  original_amount?: number | null;
+  currency_code?: string | null;
+  fx_rate?: number | null;
+  fx_rate_date?: string | null;
+  fx_gain_loss_amount?: number | null;
   account?: string;
   status?: TransactionStatus;
 
@@ -100,6 +115,10 @@ export async function createMultiLineTransaction(
     credit_amount: l.credit_amount,
     description: l.description ?? null,
     sort_order: l.sort_order ?? i,
+    currency_code: l.currency_code ?? 'IDR',
+    original_debit_amount: l.original_debit_amount ?? l.debit_amount,
+    original_credit_amount: l.original_credit_amount ?? l.credit_amount,
+    fx_rate: l.fx_rate ?? 1,
   }));
 
   return apiFetch<Transaction>('/api/transactions', {
@@ -113,6 +132,11 @@ export async function createMultiLineTransaction(
       notes: insert.notes ?? '',
       status: insert.status ?? 'draft',
       meta: Object.keys(meta).length > 0 ? meta : undefined,
+      original_amount: insert.original_amount ?? undefined,
+      currency_code: insert.currency_code ?? undefined,
+      fx_rate: insert.fx_rate ?? undefined,
+      fx_rate_date: insert.fx_rate_date ?? undefined,
+      fx_gain_loss_amount: insert.fx_gain_loss_amount ?? undefined,
       journal_lines: lines,
     },
   });
@@ -139,6 +163,11 @@ export async function updateMultiLineTransaction(
   if (updates.notes !== undefined) body.notes = updates.notes;
   if (updates.status !== undefined) body.status = updates.status;
   if (updates.meta !== undefined) body.meta = updates.meta;
+  if (updates.original_amount !== undefined) body.original_amount = updates.original_amount;
+  if (updates.currency_code !== undefined) body.currency_code = updates.currency_code;
+  if (updates.fx_rate !== undefined) body.fx_rate = updates.fx_rate;
+  if (updates.fx_rate_date !== undefined) body.fx_rate_date = updates.fx_rate_date;
+  if (updates.fx_gain_loss_amount !== undefined) body.fx_gain_loss_amount = updates.fx_gain_loss_amount;
   if (updates.journal_lines) {
     body.journal_lines = updates.journal_lines.map((l, i) => ({
       account_id: l.account_id,
@@ -146,6 +175,10 @@ export async function updateMultiLineTransaction(
       credit_amount: l.credit_amount,
       description: l.description ?? null,
       sort_order: l.sort_order ?? i,
+      currency_code: l.currency_code ?? 'IDR',
+      original_debit_amount: l.original_debit_amount ?? l.debit_amount,
+      original_credit_amount: l.original_credit_amount ?? l.credit_amount,
+      fx_rate: l.fx_rate ?? 1,
     }));
   }
 
@@ -379,6 +412,12 @@ export interface SettlementInput {
   category: TransactionCategory;
   name: string;
   description: string;
+  amount?: number;
+  original_amount?: number | null;
+  currency_code?: string | null;
+  fx_rate?: number | null;
+  fx_rate_date?: string | null;
+  fx_gain_loss_amount?: number | null;
   debit_account_id?: string;
   credit_account_id?: string;
   is_double_entry?: boolean;

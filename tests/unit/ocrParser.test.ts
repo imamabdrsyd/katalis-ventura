@@ -5,6 +5,7 @@ import {
   parseVendor,
   parseReceipt,
   inferCategory,
+  parseCurrency,
 } from '@/lib/ocr/parser';
 
 describe('parseDate', () => {
@@ -132,6 +133,23 @@ describe('parseTotal', () => {
       Total: Rp 90.000
     `;
     expect(parseTotal(text)).toBe(90_000);
+  });
+
+  it('parses USD formatted totals with comma thousands and dot decimals', () => {
+    expect(parseTotal('TOTAL USD 1,234.56')).toBe(1234.56);
+  });
+});
+
+describe('parseCurrency', () => {
+  it('detects IDR and USD currency markers', () => {
+    expect(parseCurrency('TOTAL Rp 150.000')).toBe('IDR');
+    expect(parseCurrency('TOTAL USD 1,234.56')).toBe('USD');
+  });
+
+  it('includes detected currency in parseReceipt output', () => {
+    const result = parseReceipt('Amazon\nTOTAL $12.50');
+    expect(result.currency_code).toBe('USD');
+    expect(result.total).toBe(12.5);
   });
 });
 

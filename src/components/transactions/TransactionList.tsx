@@ -481,7 +481,14 @@ export function TransactionList({
                   ? 'text-red-500 dark:text-red-400'
                   : 'text-gray-900 dark:text-gray-300'
               }`}>
-                {formatCurrency(transaction.amount)}
+                <div className="text-right">
+                  <div>{formatCurrency(transaction.amount)}</div>
+                  {transaction.currency_code && transaction.currency_code !== 'IDR' && transaction.original_amount && (
+                    <div className="text-[11px] font-normal text-gray-400 dark:text-gray-500">
+                      {formatCurrency(transaction.original_amount, transaction.currency_code)}
+                    </div>
+                  )}
+                </div>
               </td>
               <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-800 dark:text-gray-200 break-words">
                 {(() => {

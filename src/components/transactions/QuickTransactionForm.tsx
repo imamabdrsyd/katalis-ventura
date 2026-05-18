@@ -23,11 +23,13 @@ import { UnitBreakdownSection } from './UnitBreakdownSection';
 import { FileUploadCompact } from '@/components/ui/FileUpload';
 import { ChevronDown, StickyNote, Paperclip, Zap, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
+import { CurrencyPill } from '@/components/ui/CurrencyPill';
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
 import { saveContactFromTransaction } from '@/lib/api/contacts';
 import { useBusinessContext } from '@/context/BusinessContext';
 import OCRScanButton from '@/components/transactions/OCRScanButton';
 import type { OcrResult } from '@/lib/ocr/types';
+import { BASE_CURRENCY, SUPPORTED_CURRENCIES, calculateBaseAmount, normalizeCurrencyCode } from '@/lib/currency';
 
 import type { Transaction, UnitBreakdown } from '@/types';
 
@@ -73,6 +75,8 @@ export function QuickTransactionForm({
   // Form state
   const [amount, setAmount] = useState(0);
   const [displayAmount, setDisplayAmount] = useState('');
+  const [currencyCode, setCurrencyCode] = useState(BASE_CURRENCY);
+  const [fxRate, setFxRate] = useState(1);
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [name, setName] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -262,6 +266,11 @@ export function QuickTransactionForm({
         });
       }
     }
+    if (parsed.currency_code) {
+      const currency = normalizeCurrencyCode(parsed.currency_code);
+      setCurrencyCode(currency);
+      setFxRate(currency === BASE_CURRENCY ? 1 : fxRate || 1);
+    }
     if (parsed.vendor) setName(parsed.vendor);
     if (parsed.date) setDate(parsed.date);
   };
@@ -309,11 +318,14 @@ export function QuickTransactionForm({
   // Validate
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (amount <= 0) newErrors.amount = 'Jumlah harus lebih dari 0';
-    if (!selectedAccountId) newErrors.selectedAccountId = 'Kategori harus dipilih';
-    if (!date) newErrors.date = 'Tanggal harus diisi';
+    if (amount <= 0) newErrors.amount = 'Amount must be greater than 0';
+    if (currencyCode !== BASE_CURRENCY && (!fxRate || fxRate <= 0)) {
+      newErrors.fxRate = 'Exchange rate must be greater than 0';
+    }
+    if (!selectedAccountId) newErrors.selectedAccountId = 'Account is required';
+    if (!date) newErrors.date = 'Date is required';
     if (selectedAccount && isDividendChoiceAccount(selectedAccount) && !dividendEntryMode) {
-      newErrors.selectedAccountId = 'Pilih cara pencatatan dividen (Declare atau Cashout)';
+      newErrors.selectedAccountId = 'Select dividend entry method (Declare or Cashout)';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -326,9 +338,10 @@ export function QuickTransactionForm({
 
     const resolvedName = name.trim() || selectedAccount?.description || selectedAccount?.account_name || '';
 
+    const baseAmount = currencyCode === BASE_CURRENCY ? amount : calculateBaseAmount(amount, fxRate);
     const result = resolveQuickTransaction(
       {
-        amount,
+        amount: baseAmount,
         selectedAccountId,
         name: resolvedName,
         date,
@@ -360,6 +373,11 @@ export function QuickTransactionForm({
       unit_breakdown: unitBreakdown && unitBreakdown.unit ? unitBreakdown : undefined,
       attachments: attachments.length > 0 ? attachments : undefined,
     };
+    formData.amount = baseAmount;
+    formData.original_amount = amount;
+    formData.currency_code = currencyCode;
+    formData.fx_rate = currencyCode === BASE_CURRENCY ? 1 : fxRate;
+    formData.fx_rate_date = date;
 
     await onSubmit(formData);
   };
@@ -376,9 +394,20 @@ export function QuickTransactionForm({
       {/* 1. AMOUNT HERO CARD — gabungan flow badge, jumlah besar, breakdown unit, OCR scan */}
       <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-gray-50 to-white dark:from-gray-800/60 dark:to-gray-800/20 p-5">
         <div className="flex items-start justify-between gap-3">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-            Jumlah (Rp)
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+              Amount
+            </span>
+            <CurrencyPill
+              currencyCode={currencyCode}
+              onCurrencyChange={(c) => {
+                const currency = normalizeCurrencyCode(c);
+                setCurrencyCode(currency);
+                if (currency === BASE_CURRENCY) setFxRate(1);
+              }}
+              supportedCurrencies={SUPPORTED_CURRENCIES}
+            />
+          </div>
           <div className="flex items-center gap-2">
             {flowDirection && flowLabel && (
               <span
@@ -419,6 +448,17 @@ export function QuickTransactionForm({
             calcButtonVariant="boxed"
             error={errors.amount}
             autoFocus
+            currencyCode={currencyCode}
+            onCurrencyChange={(c) => {
+              const currency = normalizeCurrencyCode(c);
+              setCurrencyCode(currency);
+              if (currency === BASE_CURRENCY) setFxRate(1);
+            }}
+            supportedCurrencies={SUPPORTED_CURRENCIES}
+            fxRate={currencyCode !== BASE_CURRENCY ? fxRate : undefined}
+            onFxRateChange={currencyCode !== BASE_CURRENCY ? (v) => { setFxRate(Number(v)); if (errors.fxRate) setErrors(prev => { const n = { ...prev }; delete n.fxRate; return n; }); } : undefined}
+            fxBookValue={currencyCode !== BASE_CURRENCY ? calculateBaseAmount(amount, fxRate || 0) : undefined}
+            fxRateError={errors.fxRate}
           />
         </div>
         <div className="mt-3">
@@ -437,7 +477,7 @@ export function QuickTransactionForm({
       {/* 2. KATEGORI (Account Dropdown) */}
       <div>
         <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
-          Kategori
+          Account
         </label>
 
         {/* Combobox trigger — search happens inline */}
@@ -451,7 +491,7 @@ export function QuickTransactionForm({
           {dropdownOpen ? (
             <input
               type="text"
-              placeholder={selectedAccount ? selectedAccount.account_name : 'Cari kode atau nama akun...'}
+              placeholder={selectedAccount ? selectedAccount.account_name : 'Search account code or name...'}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1 bg-transparent outline-none ring-0 focus:ring-0 focus:outline-none border-none text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
@@ -470,7 +510,7 @@ export function QuickTransactionForm({
               <span className="truncate">{selectedAccount.account_name}</span>
             </div>
           ) : (
-            <span className="text-gray-400 dark:text-gray-500">Pilih kategori akun...</span>
+            <span className="text-gray-400 dark:text-gray-500">Search account code or name...</span>
           )}
           <ChevronDown
             className={`w-5 h-5 flex-shrink-0 ml-2 transition-transform ${
@@ -620,7 +660,7 @@ export function QuickTransactionForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
-            Tanggal
+            Date
           </label>
           <input
             type="date"
@@ -635,7 +675,7 @@ export function QuickTransactionForm({
                 });
               }
             }}
-            className="input"
+            className="input text-gray-600 dark:text-gray-300 [color-scheme:light] dark:[color-scheme:dark] [&::-webkit-calendar-picker-indicator]:opacity-50 [&::-webkit-calendar-picker-indicator]:hover:opacity-80 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
           />
           {errors.date && (
             <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.date}</p>
@@ -643,13 +683,13 @@ export function QuickTransactionForm({
         </div>
         <div>
           <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
-            {flowDirection === 'in' ? 'Customer' : flowDirection === 'out' ? 'Vendor' : 'Nama'} <span className="lowercase opacity-60">(opsional)</span>
+            Related Party
           </label>
           <ContactAutocomplete
             businessId={businessId}
             value={name}
             onChange={setName}
-            placeholder={flowDirection === 'in' ? 'Nama customer' : flowDirection === 'out' ? 'Nama vendor' : 'Customer atau vendor'}
+            placeholder="Search contact..."
             onSaveAsContact={async (contactName) => {
               if (!businessId || !user) return;
               try {
@@ -673,13 +713,13 @@ export function QuickTransactionForm({
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               <StickyNote className="w-4 h-4" />
-              <span>Tambah catatan</span>
+              <span>Add note</span>
             </div>
             {businessId && (
               <div className="flex items-center gap-1.5">
                 <span className="text-gray-300 dark:text-gray-600">·</span>
                 <Paperclip className="w-4 h-4" />
-                <span>lampiran</span>
+                <span>attachment</span>
               </div>
             )}
           </div>
@@ -691,13 +731,13 @@ export function QuickTransactionForm({
         {showNotes && (
           <div className="px-3 pb-3 space-y-3 border-t border-gray-100 dark:border-gray-700 pt-3">
             <div>
-              <label className="label text-sm text-gray-500 dark:text-gray-400">Catatan (opsional)</label>
+              <label className="label text-sm text-gray-500 dark:text-gray-400">Note (optional)</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 className="input"
                 rows={2}
-                placeholder="Penjelasan singkat..."
+                placeholder="Brief description..."
                 autoFocus
               />
             </div>
@@ -721,11 +761,11 @@ export function QuickTransactionForm({
           disabled={loading || loadingAccounts}
         >
           {loading ? (
-            'Menyimpan...'
+            'Saving...'
           ) : (
             <>
               <Zap className="w-4 h-4" />
-              Simpan Transaksi
+              Save Transaction
             </>
           )}
         </button>
@@ -735,7 +775,7 @@ export function QuickTransactionForm({
           disabled={loading}
           className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium transition-colors disabled:opacity-50"
         >
-          Batal
+          Cancel
         </button>
       </div>
     </form>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { canManageBusiness, createServerClient, getAuthenticatedUser } from '@/lib/supabase-server';
 import { bulkCreateTransactionsSchema } from '@/lib/validations';
 import { badRequest, forbidden, serverError, unauthorized, validationError } from '@/lib/api/server/responses';
+import { normalizeCurrencyFields } from '@/lib/currency';
 
 const BATCH_SIZE = 100;
 
@@ -66,11 +67,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const stamped = transactions.map((t) => ({
-      ...t,
-      business_id,
-      created_by: user.id,
-    }));
+    const stamped = transactions.map((t) => {
+      const fxFields = normalizeCurrencyFields({
+        amount: t.amount,
+        original_amount: t.original_amount ?? t.amount,
+        currency_code: t.currency_code,
+        fx_rate: t.fx_rate,
+        fx_rate_date: t.fx_rate_date ?? t.date,
+      });
+
+      return {
+        ...t,
+        ...fxFields,
+        fx_gain_loss_amount: t.fx_gain_loss_amount ?? 0,
+        business_id,
+        created_by: user.id,
+      };
+    });
 
     let inserted = 0;
     let failed = 0;

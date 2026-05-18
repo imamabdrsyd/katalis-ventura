@@ -2,7 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Calculator, Delete, X } from 'lucide-react';
+import { Calculator, Delete, X, RefreshCw } from 'lucide-react';
+import { useFxRate } from '@/hooks/useFxRate';
+import { CurrencyPill } from './CurrencyPill';
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -34,6 +36,15 @@ interface CurrencyInputWithCalculatorProps {
   colorVariant?: 'default' | 'green' | 'red' | 'amber' | 'purple' | 'primary';
   /** Style tombol kalkulator: 'inline' (default, kecil di tengah input) atau 'boxed' (kotak bordered seperti icon action) */
   calcButtonVariant?: 'inline' | 'boxed';
+  /** Currency selector inline di label. Jika diisi, label akan menampilkan currency pill. */
+  currencyCode?: string;
+  onCurrencyChange?: (currency: string) => void;
+  supportedCurrencies?: readonly string[];
+  /** Konversi info yang muncul di bawah input saat foreign currency aktif */
+  fxRate?: number;
+  onFxRateChange?: (value: string) => void;
+  fxBookValue?: number;
+  fxRateError?: string;
 }
 
 type CalcOp = '+' | '-' | '×' | '÷' | null;
@@ -63,7 +74,23 @@ export function CurrencyInputWithCalculator({
   required = false,
   colorVariant = 'default',
   calcButtonVariant = 'inline',
+  currencyCode,
+  onCurrencyChange,
+  supportedCurrencies,
+  fxRate,
+  onFxRateChange,
+  fxBookValue,
+  fxRateError,
 }: CurrencyInputWithCalculatorProps) {
+  const activeCurrency = currencyCode ?? 'IDR';
+  const { rate: autoRate, loading: fxLoading } = useFxRate(activeCurrency);
+
+  // Auto-apply fetched rate when USD is selected and no manual rate set yet
+  useEffect(() => {
+    if (autoRate && onFxRateChange && (!fxRate || fxRate <= 1)) {
+      onFxRateChange(String(Math.round(autoRate)));
+    }
+  }, [autoRate]);
   const [showCalc, setShowCalc] = useState(false);
   const [calcDisplay, setCalcDisplay] = useState('0');
   const [calcPrev, setCalcPrev] = useState<number | null>(null);
@@ -237,12 +264,23 @@ export function CurrencyInputWithCalculator({
     : `${btnBase} bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50`;
   const btnAction = `${btnBase} bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500`;
 
+  const isForeign = currencyCode && currencyCode !== 'IDR';
+
   return (
     <div className={`relative ${className}`} ref={wrapperRef}>
       {label && (
-        <label className="label text-base font-semibold">
-          {label} {required && '*'}
-        </label>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="label text-base font-semibold mb-0">
+            {label} {required && '*'}
+          </label>
+          {currencyCode && onCurrencyChange && supportedCurrencies && (
+            <CurrencyPill
+              currencyCode={currencyCode}
+              onCurrencyChange={onCurrencyChange}
+              supportedCurrencies={supportedCurrencies}
+            />
+          )}
+        </div>
       )}
 
       {/* Input wrapper */}
@@ -266,7 +304,7 @@ export function CurrencyInputWithCalculator({
                 : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
             }`}
             tabIndex={-1}
-            title="Kalkulator"
+            title="Open calculator"
           >
             <Calculator className="w-4 h-4" />
           </button>
@@ -276,7 +314,7 @@ export function CurrencyInputWithCalculator({
             onClick={() => setShowCalc(!showCalc)}
             className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md transition-colors ${showCalc ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300'}`}
             tabIndex={-1}
-            title="Kalkulator"
+            title="Open calculator"
           >
             <Calculator className="w-5 h-5" />
           </button>
@@ -284,6 +322,38 @@ export function CurrencyInputWithCalculator({
       </div>
 
       {error && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{error}</p>}
+
+      {/* FX rate + book value row — only for foreign currency */}
+      {isForeign && (
+        <div className="mt-2 flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 whitespace-nowrap">
+              1 {activeCurrency} =
+            </span>
+            {fxLoading ? (
+              <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+                <RefreshCw className="w-3 h-3 animate-spin" />
+                Memuat kurs...
+              </span>
+            ) : fxRate ? (
+              <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 tabular-nums">
+                Rp {Math.round(fxRate).toLocaleString('id-ID')}
+              </span>
+            ) : (
+              <span className="text-xs text-gray-400 dark:text-gray-500 italic">kurs tidak tersedia</span>
+            )}
+          </div>
+          {fxBookValue !== undefined && fxBookValue > 0 && (
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] text-gray-400 dark:text-gray-500">≈</span>
+              <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 tabular-nums">
+                Rp {fxBookValue.toLocaleString('id-ID')}
+              </span>
+            </div>
+          )}
+          {fxRateError && <p className="w-full text-xs text-red-500 dark:text-red-400 mt-0.5">{fxRateError}</p>}
+        </div>
+      )}
 
       {/* Calculator panel — rendered via portal */}
       {mounted && showCalc && createPortal(

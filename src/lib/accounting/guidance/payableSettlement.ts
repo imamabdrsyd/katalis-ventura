@@ -49,6 +49,10 @@ export interface PayableSettlementPrefill {
   debit_account_id: string;
   credit_account_id: string;
   amount: number;
+  original_amount?: number | null;
+  currency_code?: string | null;
+  fx_rate?: number | null;
+  fx_rate_date?: string | null;
   date: string;
   name: string;
   description: string;
@@ -88,6 +92,10 @@ export function buildPayableSettlementPrefill(original: Transaction, accounts: A
     debit_account_id: payableAccountId,
     credit_account_id: cashAccount?.id ?? '',
     amount: original.amount,
+    original_amount: original.original_amount ?? original.amount,
+    currency_code: original.currency_code ?? 'IDR',
+    fx_rate: original.fx_rate ?? 1,
+    fx_rate_date: new Date().toISOString().slice(0, 10),
     date: new Date().toISOString().slice(0, 10),
     name: original.name,
     description: original.description,

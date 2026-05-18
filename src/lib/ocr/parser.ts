@@ -67,6 +67,17 @@ export function parseDate(text: string): string | undefined {
  */
 const MAX_REALISTIC_AMOUNT = 10_000_000_000;
 
+const CURRENCY_PATTERNS: Array<{ code: string; pattern: RegExp }> = [
+  { code: 'IDR', pattern: /\b(rp|idr)\b/i },
+  { code: 'SGD', pattern: /\b(sgd|s\$)\b/i },
+  { code: 'EUR', pattern: /\b(eur)\b|€/i },
+  { code: 'AUD', pattern: /\b(aud|a\$)\b/i },
+  { code: 'JPY', pattern: /\b(jpy)\b|¥/i },
+  { code: 'CNY', pattern: /\b(cny|rmb)\b|¥/i },
+  { code: 'MYR', pattern: /\b(myr|rm)\b/i },
+  { code: 'USD', pattern: /\b(usd|us\$)\b|\$/i },
+];
+
 /**
  * Pattern untuk skip line yang mengandung ID/nomor seri (bukan nominal).
  * Contoh: "INV-1778575615348", "REF: 12345", "No. Transaksi: ABC123".
@@ -86,7 +97,7 @@ export function parseTotal(text: string): number | undefined {
 
   const totalKeywords = /\b(grand\s*total|total\s*akhir|total\s*bayar|total\s*belanja|jumlah\s*bayar|total|jumlah|tagihan)\b/i;
   const skipKeywords = /\b(sub\s*total|subtotal|kembali|kembalian|hemat|diskon|discount|ppn|tax|pajak|service|biaya|tunai|cash|bayar\s+dengan)\b/i;
-  const currencyPrefix = /\b(rp|idr)\b\.?\s*[\d.,]+/i;
+  const currencyPrefix = /(?:\b(?:rp|idr|usd|sgd|eur|aud|jpy|cny|rmb|myr|rm)\b\.?\s*[\d.,]+|[$€¥]\s*[\d.,]+)/i;
 
   const candidatesFromCurrency: number[] = [];
   const candidatesFromKeyword: number[] = [];
@@ -133,6 +144,13 @@ export function parseTotal(text: string): number | undefined {
     }
   }
   return fallbackLargest >= 1000 ? fallbackLargest : undefined;
+}
+
+export function parseCurrency(text: string): string | undefined {
+  for (const { code, pattern } of CURRENCY_PATTERNS) {
+    if (pattern.test(text)) return code;
+  }
+  return undefined;
 }
 
 /**
@@ -187,8 +205,15 @@ function normalizeNumber(raw: string): number | undefined {
 
   let cleaned: string;
   if (hasDot && hasComma) {
-    // "1.500.000,50" → titik = ribuan, koma = desimal
-    cleaned = raw.replace(/\./g, '').replace(',', '.');
+    const lastDot = raw.lastIndexOf('.');
+    const lastComma = raw.lastIndexOf(',');
+    if (lastComma > lastDot) {
+      // "1.500.000,50" → titik = ribuan, koma = desimal
+      cleaned = raw.replace(/\./g, '').replace(',', '.');
+    } else {
+      // "1,500,000.50" → koma = ribuan, titik = desimal
+      cleaned = raw.replace(/,/g, '');
+    }
   } else if (hasComma) {
     // Cek: apakah koma diikuti tepat 1-2 digit di akhir? Jika ya = desimal
     const parts = raw.split(',');
@@ -320,6 +345,7 @@ export function parseReceipt(rawText: string): OcrParsed {
   return {
     date: parseDate(rawText),
     total: parseTotal(rawText),
+    currency_code: parseCurrency(rawText),
     vendor,
     category: inferCategory(vendor, rawText),
   };

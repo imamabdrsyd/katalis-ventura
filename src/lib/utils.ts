@@ -1,17 +1,13 @@
 import { type ClassValue, clsx } from 'clsx';
+import { formatMoney } from './currency';
 
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
 }
 
-// Format currency to Indonesian Rupiah
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+// Format currency. IDR remains the default reporting currency.
+export function formatCurrency(amount: number, currencyCode: string = 'IDR'): string {
+  return formatMoney(amount, currencyCode);
 }
 
 // Format number with thousand separators

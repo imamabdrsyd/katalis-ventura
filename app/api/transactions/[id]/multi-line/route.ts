@@ -3,6 +3,7 @@ import { canManageBusiness, createServerClient, getAuthenticatedUser } from '@/l
 import { transactionIdSchema, updateMultiLineTransactionSchema } from '@/lib/validations';
 import { badRequest, forbidden, notFound, serverError, unauthorized, validationError } from '@/lib/api/server/responses';
 import { isSuperadminRole } from '@/lib/roles';
+import { normalizeCurrencyFields } from '@/lib/currency';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -29,7 +30,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     const { data: existing, error: fetchErr } = await supabase
       .from('transactions')
-      .select('id, business_id, status, date, is_multi_line')
+      .select('id, business_id, status, date, is_multi_line, amount, original_amount, currency_code, fx_rate, fx_rate_date')
       .eq('id', parsedId.data)
       .is('deleted_at', null)
       .maybeSingle();
@@ -77,6 +78,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (parsed.data.notes !== undefined) headerUpdate.notes = parsed.data.notes;
     if (parsed.data.status !== undefined) headerUpdate.status = parsed.data.status;
     if (parsed.data.meta !== undefined) headerUpdate.meta = parsed.data.meta;
+    if (parsed.data.fx_gain_loss_amount !== undefined) {
+      headerUpdate.fx_gain_loss_amount = parsed.data.fx_gain_loss_amount ?? 0;
+    }
 
     if (parsed.data.journal_lines) {
       // Verify all accounts belong to this business
@@ -97,6 +101,30 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       headerUpdate.amount = totalDebit;
     }
 
+    const hasCurrencyUpdate = [
+      'original_amount',
+      'currency_code',
+      'fx_rate',
+      'fx_rate_date',
+    ].some((key) => Object.prototype.hasOwnProperty.call(parsed.data, key));
+
+    if (parsed.data.journal_lines || hasCurrencyUpdate) {
+      const amount = (headerUpdate.amount as number | undefined) ?? existing.amount;
+      const fxFields = normalizeCurrencyFields({
+        amount,
+        original_amount: parsed.data.original_amount ?? existing.original_amount ?? amount,
+        currency_code: parsed.data.currency_code ?? existing.currency_code,
+        fx_rate: parsed.data.fx_rate ?? existing.fx_rate,
+        fx_rate_date: parsed.data.fx_rate_date ?? existing.fx_rate_date ?? parsed.data.date ?? existing.date,
+      });
+      Object.assign(headerUpdate, {
+        original_amount: fxFields.original_amount,
+        currency_code: fxFields.currency_code,
+        fx_rate: fxFields.fx_rate,
+        fx_rate_date: fxFields.fx_rate_date,
+      });
+    }
+
     if (parsed.data.status === 'posted' && existing.status === 'draft') {
       headerUpdate.posted_at = new Date().toISOString();
     }
@@ -115,6 +143,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         account_id: l.account_id,
         debit_amount: l.debit_amount,
         credit_amount: l.credit_amount,
+        currency_code: l.currency_code ?? 'IDR',
+        original_debit_amount: l.original_debit_amount ?? l.debit_amount,
+        original_credit_amount: l.original_credit_amount ?? l.credit_amount,
+        fx_rate: l.fx_rate ?? 1,
         description: l.description ?? null,
         sort_order: l.sort_order ?? i,
       }));

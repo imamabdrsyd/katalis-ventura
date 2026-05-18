@@ -2,7 +2,8 @@ export type OcrProvider = 'google_vision' | 'ocr_space';
 
 export type OcrParsed = {
   date?: string;    // ISO YYYY-MM-DD
-  total?: number;   // numeric amount IDR
+  total?: number;   // numeric amount in detected currency
+  currency_code?: string; // ISO-4217 currency code detected from the receipt
   vendor?: string;  // merchant name
   category?: 'EARN' | 'OPEX' | 'VAR' | 'CAPEX' | 'TAX' | 'FIN'; // inferred category hint
 };

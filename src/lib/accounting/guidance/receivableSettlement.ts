@@ -119,6 +119,10 @@ export interface SettlementPrefill {
   debit_account_id: string;
   credit_account_id: string;
   amount: number;
+  original_amount?: number | null;
+  currency_code?: string | null;
+  fx_rate?: number | null;
+  fx_rate_date?: string | null;
   date: string;
   name: string;
   description: string;
@@ -179,6 +183,10 @@ export function buildSettlementPrefill(original: Transaction, accounts: Account[
     debit_account_id: cashAccount?.id ?? '',
     credit_account_id: receivableAccountId,
     amount: outstanding,
+    original_amount: original.original_amount ?? outstanding,
+    currency_code: original.currency_code ?? 'IDR',
+    fx_rate: original.fx_rate ?? 1,
+    fx_rate_date: new Date().toISOString().slice(0, 10),
     date: new Date().toISOString().slice(0, 10),
     name: original.name,
     description: original.description,
@@ -219,6 +227,12 @@ export function buildPartialSettlementPrefill(
     debit_account_id: cashAccount?.id ?? '',
     credit_account_id: receivableAccountId,
     amount: partialAmount,
+    original_amount: original.currency_code && original.currency_code !== 'IDR' && original.fx_rate
+      ? partialAmount / original.fx_rate
+      : partialAmount,
+    currency_code: original.currency_code ?? 'IDR',
+    fx_rate: original.fx_rate ?? 1,
+    fx_rate_date: new Date().toISOString().slice(0, 10),
     date: new Date().toISOString().slice(0, 10),
     name: original.name,
     description: original.description,

@@ -20,6 +20,12 @@ import { getTransactionTemplates, createTransactionTemplate, deleteTransactionTe
 import { getRecurringTransactions } from '@/lib/api/recurring';
 import OCRScanButton from '@/components/transactions/OCRScanButton';
 import type { OcrResult } from '@/lib/ocr/types';
+import {
+  BASE_CURRENCY,
+  SUPPORTED_CURRENCIES,
+  calculateBaseAmount,
+  normalizeCurrencyCode,
+} from '@/lib/currency';
 
 export interface RecurringFormData {
   frequency: 'weekly' | 'monthly' | 'yearly';
@@ -34,6 +40,11 @@ export interface TransactionFormData {
   name: string;
   description: string;
   amount: number;
+  original_amount?: number | null;
+  currency_code?: string | null;
+  fx_rate?: number | null;
+  fx_rate_date?: string | null;
+  fx_gain_loss_amount?: number | null;
   account: string;
 
   // NEW: Double-entry fields (optional)
@@ -120,12 +131,29 @@ export function TransactionForm({
   const { user } = useBusinessContext();
 
   const categories = allowedCategories || ALL_CATEGORIES;
+  const initialCurrency = normalizeCurrencyCode(transaction?.currency_code ?? initialValues?.currency_code);
+  const initialOriginalAmount =
+    transaction?.original_amount ??
+    initialValues?.original_amount ??
+    transaction?.amount ??
+    initialValues?.amount ??
+    0;
+  const initialFxRate = initialCurrency === BASE_CURRENCY
+    ? 1
+    : Number(transaction?.fx_rate ?? initialValues?.fx_rate ?? 1);
   const [formData, setFormData] = useState<TransactionFormData>({
     date: transaction?.date || initialValues?.date || new Date().toISOString().split('T')[0],
     category: transaction?.category || initialValues?.category || defaultCategory || categories[0],
     name: transaction?.name || initialValues?.name || '',
     description: transaction?.description || initialValues?.description || '',
-    amount: transaction?.amount || initialValues?.amount || 0,
+    amount: initialCurrency === BASE_CURRENCY
+      ? initialOriginalAmount
+      : calculateBaseAmount(initialOriginalAmount, initialFxRate),
+    original_amount: initialOriginalAmount || null,
+    currency_code: initialCurrency,
+    fx_rate: initialFxRate,
+    fx_rate_date: transaction?.fx_rate_date || initialValues?.fx_rate_date || new Date().toISOString().split('T')[0],
+    fx_gain_loss_amount: transaction?.fx_gain_loss_amount ?? initialValues?.fx_gain_loss_amount ?? 0,
     account: transaction?.account || initialValues?.account || '',
     debit_account_id: transaction?.debit_account_id || initialValues?.debit_account_id,
     credit_account_id: transaction?.credit_account_id || initialValues?.credit_account_id,
@@ -151,10 +179,8 @@ export function TransactionForm({
   const [recurringEndDate, setRecurringEndDate] = useState('');
 
   const [displayAmount, setDisplayAmount] = useState<string>(
-    transaction?.amount
-      ? formatNumberWithSeparator(transaction.amount)
-      : initialValues?.amount
-        ? formatNumberWithSeparator(initialValues.amount)
+    initialOriginalAmount
+      ? formatNumberWithSeparator(initialOriginalAmount)
         : ''
   );
 
@@ -216,6 +242,59 @@ export function TransactionForm({
 
   // Check if using double-entry format (always true for 'in' and 'out' modes)
   const isDoubleEntry = mode !== 'full' || !!(formData.debit_account_id || formData.credit_account_id);
+  const selectedCurrency = normalizeCurrencyCode(formData.currency_code);
+  const isForeignCurrency = selectedCurrency !== BASE_CURRENCY;
+  const originalAmount = formData.original_amount ?? formData.amount;
+  const fxRate = selectedCurrency === BASE_CURRENCY ? 1 : Number(formData.fx_rate ?? 1);
+
+  const calculateFunctionalAmount = (sourceAmount: number, rate = fxRate, currency = selectedCurrency) =>
+    currency === BASE_CURRENCY ? sourceAmount : calculateBaseAmount(sourceAmount, rate);
+
+  const handleOriginalAmountChange = (numeric: number, formatted: string) => {
+    setDisplayAmount(formatted);
+    setFormData(prev => {
+      const currency = normalizeCurrencyCode(prev.currency_code);
+      const rate = currency === BASE_CURRENCY ? 1 : Number(prev.fx_rate ?? 1);
+      return {
+        ...prev,
+        original_amount: numeric,
+        amount: calculateFunctionalAmount(numeric, rate, currency),
+        fx_rate: rate,
+      };
+    });
+    if (errors.amount) setErrors(prev => { const n = { ...prev }; delete n.amount; return n; });
+  };
+
+  const handleCurrencyChange = (currencyValue: string) => {
+    const currency = normalizeCurrencyCode(currencyValue);
+    setFormData(prev => {
+      const sourceAmount = prev.original_amount ?? prev.amount;
+      const rate = currency === BASE_CURRENCY ? 1 : Number(prev.fx_rate ?? 1);
+      return {
+        ...prev,
+        currency_code: currency,
+        original_amount: sourceAmount,
+        amount: calculateFunctionalAmount(sourceAmount, rate, currency),
+        fx_rate: rate,
+        fx_rate_date: prev.fx_rate_date ?? prev.date,
+      };
+    });
+    setErrors(prev => {
+      const next = { ...prev };
+      delete next.fx_rate;
+      return next;
+    });
+  };
+
+  const handleFxRateChange = (value: string) => {
+    const rate = Number(value);
+    setFormData(prev => ({
+      ...prev,
+      fx_rate: Number.isFinite(rate) ? rate : 0,
+      amount: calculateFunctionalAmount(prev.original_amount ?? prev.amount, Number.isFinite(rate) ? rate : 0, normalizeCurrencyCode(prev.currency_code)),
+    }));
+    if (errors.fx_rate) setErrors(prev => { const n = { ...prev }; delete n.fx_rate; return n; });
+  };
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -238,7 +317,10 @@ export function TransactionForm({
       newErrors.description = 'Deskripsi harus diisi';
     }
 
-    if (formData.amount <= 0) newErrors.amount = 'Jumlah harus lebih dari 0';
+    if (originalAmount <= 0 || formData.amount <= 0) newErrors.amount = 'Jumlah harus lebih dari 0';
+    if (isForeignCurrency && (!fxRate || fxRate <= 0)) {
+      newErrors.fx_rate = 'Kurs harus lebih dari 0';
+    }
 
     // Validate accounts based on format
     if (isDoubleEntry) {
@@ -260,8 +342,16 @@ export function TransactionForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validate()) {
+      const currency = normalizeCurrencyCode(formData.currency_code);
+      const submittedOriginalAmount = formData.original_amount ?? formData.amount;
+      const submittedFxRate = currency === BASE_CURRENCY ? 1 : Number(formData.fx_rate ?? 1);
       const submitData: TransactionFormData = {
         ...formData,
+        amount: calculateFunctionalAmount(submittedOriginalAmount, submittedFxRate, currency),
+        original_amount: submittedOriginalAmount,
+        currency_code: currency,
+        fx_rate: submittedFxRate,
+        fx_rate_date: formData.fx_rate_date ?? formData.date,
         is_double_entry: isDoubleEntry,
         meta: {
           ...formData.meta,
@@ -398,7 +488,16 @@ export function TransactionForm({
     setFormData((prev) => ({
       ...prev,
       date: parsed.date ?? prev.date,
-      amount: parsed.total ?? prev.amount,
+      currency_code: parsed.currency_code ? normalizeCurrencyCode(parsed.currency_code) : prev.currency_code,
+      original_amount: parsed.total ?? prev.original_amount ?? prev.amount,
+      amount: parsed.total
+        ? calculateFunctionalAmount(
+            parsed.total,
+            parsed.currency_code && normalizeCurrencyCode(parsed.currency_code) === BASE_CURRENCY ? 1 : Number(prev.fx_rate ?? 1),
+            parsed.currency_code ? normalizeCurrencyCode(parsed.currency_code) : normalizeCurrencyCode(prev.currency_code)
+          )
+        : prev.amount,
+      fx_rate: parsed.currency_code && normalizeCurrencyCode(parsed.currency_code) === BASE_CURRENCY ? 1 : prev.fx_rate ?? 1,
       name: parsed.vendor ?? prev.name,
       description: parsed.vendor
         ? `Pembelian di ${parsed.vendor}`
@@ -410,6 +509,7 @@ export function TransactionForm({
           provider: result.provider,
           raw_text: result.raw_text,
           cached: result.cached,
+          currency_code: parsed.currency_code,
         },
       } as TransactionMeta,
     }));
@@ -434,7 +534,12 @@ export function TransactionForm({
       debit_account_id: tmpl.debit_account_id ?? prev.debit_account_id,
       credit_account_id: tmpl.credit_account_id ?? prev.credit_account_id,
       is_double_entry: tmpl.is_double_entry,
-      ...(tmpl.default_amount ? { amount: tmpl.default_amount } : {}),
+      ...(tmpl.default_amount ? {
+        amount: tmpl.default_amount,
+        original_amount: tmpl.default_amount,
+        currency_code: BASE_CURRENCY,
+        fx_rate: 1,
+      } : {}),
     }));
     if (tmpl.default_amount) {
       setDisplayAmount(tmpl.default_amount.toLocaleString('id-ID'));
@@ -495,7 +600,11 @@ export function TransactionForm({
       if (total > 0) {
         const formatted = formatNumberWithSeparator(total);
         setDisplayAmount(formatted);
-        setFormData(f => ({ ...f, amount: total }));
+        setFormData(f => ({
+          ...f,
+          original_amount: total,
+          amount: calculateFunctionalAmount(total, Number(f.fx_rate ?? 1), normalizeCurrencyCode(f.currency_code)),
+        }));
       }
       return updated;
     });
@@ -509,7 +618,11 @@ export function TransactionForm({
       if (total > 0) {
         const formatted = formatNumberWithSeparator(total);
         setDisplayAmount(formatted);
-        setFormData(f => ({ ...f, amount: total }));
+        setFormData(f => ({
+          ...f,
+          original_amount: total,
+          amount: calculateFunctionalAmount(total, Number(f.fx_rate ?? 1), normalizeCurrencyCode(f.currency_code)),
+        }));
       }
       return updated;
     });
@@ -541,6 +654,7 @@ export function TransactionForm({
     transactionName: formData.name,
     accounts,
   });
+
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -608,18 +722,21 @@ export function TransactionForm({
       {mode !== 'full' && (
         <>
           <CurrencyInputWithCalculator
-            label="Jumlah (Rp)"
-            value={formData.amount}
+            label="Jumlah"
+            value={originalAmount}
             displayValue={displayAmount}
-            onChange={(numeric, formatted) => {
-              setDisplayAmount(formatted);
-              setFormData(prev => ({ ...prev, amount: numeric }));
-              if (errors.amount) setErrors(prev => { const n = { ...prev }; delete n.amount; return n; });
-            }}
+            onChange={handleOriginalAmountChange}
             inputClassName="text-2xl font-bold"
             colorVariant={mode === 'in' ? 'green' : 'red'}
             error={errors.amount}
             required
+            currencyCode={selectedCurrency}
+            onCurrencyChange={handleCurrencyChange}
+            supportedCurrencies={SUPPORTED_CURRENCIES}
+            fxRate={isForeignCurrency ? (formData.fx_rate ?? 1) : undefined}
+            onFxRateChange={isForeignCurrency ? handleFxRateChange : undefined}
+            fxBookValue={isForeignCurrency ? formData.amount : undefined}
+            fxRateError={errors.fx_rate}
           />
           <UnitBreakdownSection
             unitBreakdown={unitBreakdown}
@@ -662,16 +779,19 @@ export function TransactionForm({
       {mode === 'full' && (
         <>
           <CurrencyInputWithCalculator
-            label="Jumlah (Rp)"
-            value={formData.amount}
+            label="Jumlah"
+            value={originalAmount}
             displayValue={displayAmount}
-            onChange={(numeric, formatted) => {
-              setDisplayAmount(formatted);
-              setFormData(prev => ({ ...prev, amount: numeric }));
-              if (errors.amount) setErrors(prev => { const n = { ...prev }; delete n.amount; return n; });
-            }}
+            onChange={handleOriginalAmountChange}
             error={errors.amount}
             required
+            currencyCode={selectedCurrency}
+            onCurrencyChange={handleCurrencyChange}
+            supportedCurrencies={SUPPORTED_CURRENCIES}
+            fxRate={isForeignCurrency ? (formData.fx_rate ?? 1) : undefined}
+            onFxRateChange={isForeignCurrency ? handleFxRateChange : undefined}
+            fxBookValue={isForeignCurrency ? formData.amount : undefined}
+            fxRateError={errors.fx_rate}
           />
           <UnitBreakdownSection
             unitBreakdown={unitBreakdown}

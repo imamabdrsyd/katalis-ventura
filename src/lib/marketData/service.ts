@@ -9,7 +9,7 @@ import {
 } from './cache';
 import { fetchStockNewsRss, fetchVcPeSmeArticlesRss } from './rss';
 import { fetchSeries } from './fred';
-import { fetchUsdIdr } from './exchangeRate';
+import { fetchFxPair } from './exchangeRate';
 import { isRateLimitError } from './errors';
 import type {
   StockNews,
@@ -144,12 +144,12 @@ export function getMacroSeries(seriesId: string): Promise<MarketResult<MacroSeri
   });
 }
 
-export function getFxRate(): Promise<MarketResult<FxRate | null>> {
+export function getFxRate(from = 'USD', to = 'IDR'): Promise<MarketResult<FxRate | null>> {
   return cacheFirst<FxRate | null>({
-    cacheKey: CACHE_KEYS.fxUsdIdr,
+    cacheKey: CACHE_KEYS.fxPair(from, to),
     source: 'exchangerate',
     ttlSeconds: CACHE_TTL.EXCHANGE_RATE,
-    fetcher: () => fetchUsdIdr(),
+    fetcher: () => fetchFxPair(from, to),
     fallback: null,
   });
 }

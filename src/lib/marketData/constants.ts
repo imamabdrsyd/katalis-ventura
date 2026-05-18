@@ -10,6 +10,7 @@ export const CACHE_KEYS = {
   rssStockNews: 'rss:stock_news:latest',
   rssVcPeSme: 'rss:articles:vc-pe-sme',
   fxUsdIdr: 'fx:usd_idr',
+  fxPair: (from: string, to = 'IDR') => `fx:${from.toLowerCase()}_${to.toLowerCase()}`,
   fredSeries: (id: string) => `fred:series:${id}`,
 } as const;
 

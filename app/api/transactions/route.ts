@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { canManageBusiness, getAuthenticatedUser, createServerClient } from '@/lib/supabase-server';
 import { createTransactionSchema, createMultiLineTransactionSchema, businessIdSchema } from '@/lib/validations';
+import { normalizeCurrencyFields } from '@/lib/currency';
 
 /**
  * GET /api/transactions?businessId=<uuid>
@@ -113,6 +114,13 @@ export async function POST(request: NextRequest) {
       }
 
       const totalDebit = parsed.data.journal_lines.reduce((s, l) => s + l.debit_amount, 0);
+      const fxFields = normalizeCurrencyFields({
+        amount: totalDebit,
+        original_amount: parsed.data.original_amount ?? totalDebit,
+        currency_code: parsed.data.currency_code,
+        fx_rate: parsed.data.fx_rate,
+        fx_rate_date: parsed.data.fx_rate_date ?? parsed.data.date,
+      });
 
       const { data: transaction, error: insertErr } = await supabase
         .from('transactions')
@@ -124,6 +132,11 @@ export async function POST(request: NextRequest) {
           description: parsed.data.description,
           notes: parsed.data.notes ?? null,
           amount: totalDebit,
+          original_amount: fxFields.original_amount,
+          currency_code: fxFields.currency_code,
+          fx_rate: fxFields.fx_rate,
+          fx_rate_date: fxFields.fx_rate_date,
+          fx_gain_loss_amount: parsed.data.fx_gain_loss_amount ?? 0,
           account: 'Multi-line journal entry',
           status: parsed.data.status ?? 'draft',
           is_multi_line: true,
@@ -143,6 +156,10 @@ export async function POST(request: NextRequest) {
         account_id: l.account_id,
         debit_amount: l.debit_amount,
         credit_amount: l.credit_amount,
+        currency_code: l.currency_code ?? 'IDR',
+        original_debit_amount: l.original_debit_amount ?? l.debit_amount,
+        original_credit_amount: l.original_credit_amount ?? l.credit_amount,
+        fx_rate: l.fx_rate ?? 1,
         description: l.description ?? null,
         sort_order: l.sort_order ?? i,
       }));
@@ -221,11 +238,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const fxFields = normalizeCurrencyFields({
+      amount: parsed.data.amount,
+      original_amount: parsed.data.original_amount ?? parsed.data.amount,
+      currency_code: parsed.data.currency_code,
+      fx_rate: parsed.data.fx_rate,
+      fx_rate_date: parsed.data.fx_rate_date ?? parsed.data.date,
+    });
+
     // Insert the transaction — created_by is set to the authenticated user
     const { data: transaction, error: insertError } = await supabase
       .from('transactions')
       .insert({
         ...parsed.data,
+        ...fxFields,
+        fx_gain_loss_amount: parsed.data.fx_gain_loss_amount ?? 0,
         created_by: user.id,
       })
       .select()

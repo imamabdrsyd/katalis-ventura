@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SUPPORTED_CURRENCIES } from '@/lib/currency';
 
 // ============================================
 // Shared validation constants
@@ -7,7 +8,44 @@ import { z } from 'zod';
 const VALID_CATEGORIES = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'] as const;
 const VALID_STATUSES = ['draft', 'posted'] as const;
 const MAX_TRANSACTION_AMOUNT = 100_000_000_000; // 100 billion IDR
+const MAX_FX_RATE = 1_000_000;
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const currencyFields = {
+  currency_code: z.enum(SUPPORTED_CURRENCIES).optional().default('IDR'),
+  original_amount: z
+    .number()
+    .positive('Original amount must be greater than 0')
+    .max(MAX_TRANSACTION_AMOUNT, `Original amount cannot exceed ${MAX_TRANSACTION_AMOUNT.toLocaleString()}`)
+    .optional()
+    .nullable(),
+  fx_rate: z
+    .number()
+    .positive('FX rate must be greater than 0')
+    .max(MAX_FX_RATE, `FX rate cannot exceed ${MAX_FX_RATE.toLocaleString()}`)
+    .optional()
+    .nullable(),
+  fx_rate_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'FX rate date must be YYYY-MM-DD format').optional().nullable(),
+  fx_gain_loss_amount: z.number().max(MAX_TRANSACTION_AMOUNT).min(-MAX_TRANSACTION_AMOUNT).optional().nullable(),
+};
+
+const optionalCurrencyFields = {
+  currency_code: z.enum(SUPPORTED_CURRENCIES).optional(),
+  original_amount: z
+    .number()
+    .positive('Original amount must be greater than 0')
+    .max(MAX_TRANSACTION_AMOUNT, `Original amount cannot exceed ${MAX_TRANSACTION_AMOUNT.toLocaleString()}`)
+    .optional()
+    .nullable(),
+  fx_rate: z
+    .number()
+    .positive('FX rate must be greater than 0')
+    .max(MAX_FX_RATE, `FX rate cannot exceed ${MAX_FX_RATE.toLocaleString()}`)
+    .optional()
+    .nullable(),
+  fx_rate_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'FX rate date must be YYYY-MM-DD format').optional().nullable(),
+  fx_gain_loss_amount: z.number().max(MAX_TRANSACTION_AMOUNT).min(-MAX_TRANSACTION_AMOUNT).optional().nullable(),
+};
 
 // ============================================
 // Transaction Schemas
@@ -25,6 +63,7 @@ export const createTransactionSchema = z.object({
     .number()
     .positive('Amount must be greater than 0')
     .max(MAX_TRANSACTION_AMOUNT, `Amount cannot exceed ${MAX_TRANSACTION_AMOUNT.toLocaleString()}`),
+  ...currencyFields,
   account: z.string().max(500).default(''),
 
   // Optional double-entry fields
@@ -58,6 +97,7 @@ export const updateTransactionSchema = z.object({
     .positive('Amount must be greater than 0')
     .max(MAX_TRANSACTION_AMOUNT, `Amount cannot exceed ${MAX_TRANSACTION_AMOUNT.toLocaleString()}`)
     .optional(),
+  ...optionalCurrencyFields,
   account: z.string().max(500).optional(),
 
   debit_account_id: z.string().regex(UUID_REGEX).optional().nullable(),
@@ -79,6 +119,10 @@ export const journalLineSchema = z.object({
   account_id: z.string().regex(UUID_REGEX, 'Invalid account ID format'),
   debit_amount: z.number().min(0, 'Debit amount must be >= 0'),
   credit_amount: z.number().min(0, 'Credit amount must be >= 0'),
+  currency_code: z.enum(SUPPORTED_CURRENCIES).optional().default('IDR'),
+  original_debit_amount: z.number().min(0).optional().nullable(),
+  original_credit_amount: z.number().min(0).optional().nullable(),
+  fx_rate: z.number().positive().max(MAX_FX_RATE).optional().nullable(),
   description: z.string().max(500).optional().nullable(),
   sort_order: z.number().int().min(0).default(0),
 }).refine(
@@ -102,6 +146,7 @@ export const createMultiLineTransactionSchema = z.object({
   notes: z.string().max(2000).optional().nullable(),
   status: z.enum(VALID_STATUSES).optional().default('draft'),
   meta: z.record(z.string(), z.unknown()).optional().nullable(),
+  ...currencyFields,
   journal_lines: z.array(journalLineSchema).min(2, 'Multi-line transaction requires at least 2 lines'),
 }).refine(
   (data) => {
@@ -140,6 +185,7 @@ export const bulkCreateTransactionsSchema = z.object({
         name: z.string().min(1).max(500),
         description: z.string().max(2000).default(''),
         amount: z.number().positive().max(MAX_TRANSACTION_AMOUNT),
+        ...currencyFields,
         account: z.string().max(500).default(''),
         debit_account_id: z.string().regex(UUID_REGEX).optional().nullable(),
         credit_account_id: z.string().regex(UUID_REGEX).optional().nullable(),
@@ -163,6 +209,7 @@ export const updateMultiLineTransactionSchema = z.object({
   notes: z.string().max(2000).optional().nullable(),
   status: z.enum(VALID_STATUSES).optional(),
   meta: z.record(z.string(), z.unknown()).optional().nullable(),
+  ...optionalCurrencyFields,
   journal_lines: z.array(journalLineSchema).min(2).optional(),
 }).refine(
   (data) => {
@@ -181,6 +228,7 @@ export const settleTransactionSchema = z.object({
     category: z.enum(VALID_CATEGORIES),
     name: z.string().min(1).max(500),
     description: z.string().max(2000),
+    ...optionalCurrencyFields,
     debit_account_id: z.string().regex(UUID_REGEX).optional().nullable(),
     credit_account_id: z.string().regex(UUID_REGEX).optional().nullable(),
     is_double_entry: z.boolean().optional(),
@@ -213,6 +261,7 @@ export const createAccountSchema = z.object({
   is_stock: z.boolean().optional(),
   is_retained_earnings: z.boolean().optional(),
   is_dividend_payable: z.boolean().optional(),
+  currency_code: z.enum(SUPPORTED_CURRENCIES).optional().default('IDR'),
   sort_order: z.number().int().optional().default(0),
   description: z.string().max(1000).optional().nullable(),
   default_category: z.string().max(20).optional().nullable(),
@@ -229,6 +278,7 @@ export const updateAccountSchema = z.object({
   is_stock: z.boolean().optional(),
   is_retained_earnings: z.boolean().optional(),
   is_dividend_payable: z.boolean().optional(),
+  currency_code: z.enum(SUPPORTED_CURRENCIES).optional(),
   sort_order: z.number().int().optional(),
   description: z.string().max(1000).optional().nullable(),
   default_category: z.string().max(20).optional().nullable(),
@@ -256,6 +306,7 @@ export const createBusinessSchema = z.object({
   business_sector: z.string().min(1).max(100),
   business_type: z.string().max(100).optional(),
   capital_investment: z.number().min(0).max(MAX_TRANSACTION_AMOUNT).optional().default(0),
+  base_currency_code: z.enum(SUPPORTED_CURRENCIES).optional().default('IDR'),
   property_address: z.string().max(500).optional(),
   logo_url: z.string().url().optional().or(z.literal('')),
   logo_fit: z.enum(['cover', 'contain']).optional(),
@@ -270,6 +321,7 @@ export const updateBusinessSchema = z.object({
   business_sector: z.string().min(1).max(100).optional(),
   business_type: z.string().max(100).optional(),
   capital_investment: z.number().min(0).max(MAX_TRANSACTION_AMOUNT).optional(),
+  base_currency_code: z.enum(SUPPORTED_CURRENCIES).optional(),
   property_address: z.string().max(500).optional().nullable(),
   logo_url: z.string().optional().nullable(),
   logo_fit: z.enum(['cover', 'contain']).optional().nullable(),

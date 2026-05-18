@@ -493,9 +493,24 @@ export function TransactionDetailModal({
           }`}>
             {formatCurrency(transaction.amount)}
           </p>
+          {transaction.currency_code && transaction.currency_code !== 'IDR' && transaction.original_amount && (
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 tabular-nums">
+              {formatCurrency(transaction.original_amount, transaction.currency_code)}
+              {transaction.fx_rate ? (
+                <span className="ml-2">
+                  @ {Number(transaction.fx_rate).toLocaleString('id-ID')} IDR/{transaction.currency_code}
+                </span>
+              ) : null}
+            </p>
+          )}
+          {transaction.fx_gain_loss_amount ? (
+            <p className={`mt-1 text-xs tabular-nums ${transaction.fx_gain_loss_amount > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+              FX {transaction.fx_gain_loss_amount > 0 ? 'gain' : 'loss'}: {formatCurrency(Math.abs(transaction.fx_gain_loss_amount))}
+            </p>
+          ) : null}
           {transaction.meta?.unit_breakdown && (
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 tabular-nums">
-              Rp {transaction.meta.unit_breakdown.price_per_unit.toLocaleString('id-ID')}
+              {formatCurrency(transaction.meta.unit_breakdown.price_per_unit, transaction.currency_code ?? 'IDR')}
               <span className="mx-1.5 text-gray-300 dark:text-gray-600">×</span>
               {transaction.meta.unit_breakdown.quantity.toLocaleString('id-ID')}
               {transaction.meta.unit_breakdown.unit && (

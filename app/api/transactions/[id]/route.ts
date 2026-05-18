@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { canManageBusiness, getAuthenticatedUser, createServerClient } from '@/lib/supabase-server';
 import { updateTransactionSchema, transactionIdSchema } from '@/lib/validations';
 import { isSuperadminRole } from '@/lib/roles';
+import { normalizeCurrencyFields } from '@/lib/currency';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -47,7 +48,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Fetch the existing transaction to verify ownership and status
     const { data: existing, error: fetchError } = await supabase
       .from('transactions')
-      .select('id, business_id, status, date')
+      .select('id, business_id, status, date, amount, original_amount, currency_code, fx_rate, fx_rate_date')
       .eq('id', idParsed.data)
       .is('deleted_at', null)
       .single();
@@ -125,6 +126,27 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // If posting, set posted_at timestamp
     const updateData = { ...parsed.data, updated_by: user.id } as Record<string, unknown>;
+    const hasCurrencyUpdate = [
+      'amount',
+      'original_amount',
+      'currency_code',
+      'fx_rate',
+      'fx_rate_date',
+    ].some((key) => Object.prototype.hasOwnProperty.call(parsed.data, key));
+
+    if (hasCurrencyUpdate) {
+      const nextOriginalAmount =
+        parsed.data.original_amount ??
+        (parsed.data.amount !== undefined ? parsed.data.amount : existing.original_amount ?? existing.amount);
+      const fxFields = normalizeCurrencyFields({
+        amount: parsed.data.amount ?? existing.amount,
+        original_amount: nextOriginalAmount,
+        currency_code: parsed.data.currency_code ?? existing.currency_code,
+        fx_rate: parsed.data.fx_rate ?? existing.fx_rate,
+        fx_rate_date: parsed.data.fx_rate_date ?? existing.fx_rate_date ?? parsed.data.date ?? existing.date,
+      });
+      Object.assign(updateData, fxFields);
+    }
     if (parsed.data.status === 'posted' && existing.status === 'draft') {
       updateData.posted_at = new Date().toISOString();
     }

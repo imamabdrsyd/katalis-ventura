@@ -17,12 +17,12 @@ interface PairResponse {
 }
 
 /**
- * Fetch kurs USD → IDR dari ExchangeRate-API.
- * Endpoint: GET /v6/{API_KEY}/pair/USD/IDR
- * Free tier: 1500 req/month.
+ * Fetch kurs {from} → IDR dari ExchangeRate-API.
+ * Endpoint: GET /v6/{API_KEY}/pair/{from}/IDR
+ * Free tier: 1500 req/month — tiap currency pair = 1 request terpisah.
  */
-export async function fetchUsdIdr(): Promise<FxRate> {
-  const url = `https://v6.exchangerate-api.com/v6/${getApiKey()}/pair/USD/IDR`;
+export async function fetchFxPair(from: string, to = 'IDR'): Promise<FxRate> {
+  const url = `https://v6.exchangerate-api.com/v6/${getApiKey()}/pair/${from}/${to}`;
   const res = await fetch(url, { cache: 'no-store' });
   if (res.status === 429) {
     throw new RateLimitError(
@@ -36,16 +36,18 @@ export async function fetchUsdIdr(): Promise<FxRate> {
   }
   const json = (await res.json()) as PairResponse;
   if (json.result !== 'success' || typeof json.conversion_rate !== 'number') {
-    // ExchangeRate-API juga return error-type='quota-reached' di body, bukan 429
     if (json['error-type'] === 'quota-reached') {
       throw new RateLimitError('exchangerate', 'ExchangeRate-API quota reached');
     }
     throw new Error(`ExchangeRate failed: ${json['error-type'] ?? 'unknown'}`);
   }
   return {
-    base: 'USD',
-    target: 'IDR',
+    base: from,
+    target: to,
     rate: json.conversion_rate,
     fetchedAt: json.time_last_update_utc ?? new Date().toISOString(),
   };
 }
+
+/** @deprecated Gunakan fetchFxPair('USD') */
+export const fetchUsdIdr = () => fetchFxPair('USD', 'IDR');

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Package, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { UnitBreakdown } from '@/types';
 
 const UNIT_OPTIONS = ['pcs', 'gram', 'galon', 'ikat', 'orang', 'trip'] as const;
@@ -62,8 +62,7 @@ export function UnitBreakdownSection({
         onClick={onToggle}
         className="flex items-center gap-1.5 text-xs text-indigo-500 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors"
       >
-        <Package className="w-3.5 h-3.5" />
-        <span>Breakdown Unit</span>
+        <span>Unit Breakdown</span>
         <ChevronDown className="w-3 h-3" />
       </button>
     );
@@ -108,20 +107,12 @@ export function UnitBreakdownSection({
       <div className="flex items-center justify-between">
         <button
           type="button"
-          onClick={onToggle}
-          className="flex items-center gap-1.5 text-xs font-semibold text-indigo-500 dark:text-indigo-400"
-        >
-          <Package className="w-3.5 h-3.5" />
-          <span>Breakdown Unit</span>
-          <ChevronUp className="w-3 h-3" />
-        </button>
-        <button
-          type="button"
           onClick={onRemove}
-          className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-          title="Hapus breakdown"
+          className="flex items-center gap-1.5 text-xs font-semibold text-indigo-500 dark:text-indigo-400"
+          title="Close breakdown"
         >
-          <X className="w-3.5 h-3.5" />
+          <span>Unit Breakdown</span>
+          <ChevronUp className="w-3 h-3" />
         </button>
       </div>
 
@@ -130,7 +121,7 @@ export function UnitBreakdownSection({
         {/* Price per unit */}
         <div>
           <label className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-            Harga/Unit
+            Price/Unit
           </label>
           <input
             type="text"
@@ -145,7 +136,7 @@ export function UnitBreakdownSection({
         {/* Quantity */}
         <div>
           <label className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-            Jumlah Unit
+            Quantity
           </label>
           <input
             type="text"
@@ -160,28 +151,31 @@ export function UnitBreakdownSection({
         {/* Unit selector */}
         <div>
           <label className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-            Satuan
+            Unit
           </label>
           {showCustomUnit ? (
             <input
               type="text"
               value={customUnitValue}
               onChange={(e) => handleCustomUnit(e.target.value)}
-              placeholder="Satuan..."
+              placeholder="Custom unit..."
               className="w-full mt-0.5 px-2.5 py-1.5 text-sm border border-indigo-300 dark:border-indigo-500 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               autoFocus
             />
           ) : (
-            <select
-              value={unitBreakdown?.unit && UNIT_OPTIONS.includes(unitBreakdown.unit as typeof UNIT_OPTIONS[number]) ? unitBreakdown.unit : '__custom__'}
-              onChange={(e) => handleUnitSelect(e.target.value)}
-              className="w-full mt-0.5 px-2.5 py-1.5 text-sm border border-indigo-300 dark:border-indigo-500 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              {UNIT_OPTIONS.map((u) => (
-                <option key={u} value={u}>{u}</option>
-              ))}
-              <option value="__custom__">Lainnya...</option>
-            </select>
+            <div className="relative mt-0.5">
+              <select
+                value={unitBreakdown?.unit && UNIT_OPTIONS.includes(unitBreakdown.unit as typeof UNIT_OPTIONS[number]) ? unitBreakdown.unit : '__custom__'}
+                onChange={(e) => handleUnitSelect(e.target.value)}
+                className="w-full appearance-none pl-2.5 pr-8 py-1.5 text-sm border border-indigo-300 dark:border-indigo-500 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+              >
+                {UNIT_OPTIONS.map((u) => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
+                <option value="__custom__">Other...</option>
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+            </div>
           )}
         </div>
       </div>

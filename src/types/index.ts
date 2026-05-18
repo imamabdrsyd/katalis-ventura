@@ -60,6 +60,13 @@ export interface TransactionMeta {
   attachments?: TransactionAttachment[];
   /** ID recurring template yang men-generate transaksi ini */
   recurring_template_id?: string;
+  /** OCR scan payload captured when a transaction was filled from receipt OCR */
+  ocr?: {
+    provider: 'google_vision' | 'ocr_space';
+    raw_text: string;
+    cached: boolean;
+    currency_code?: string;
+  };
 }
 
 export interface Account {
@@ -77,6 +84,7 @@ export interface Account {
   is_dividend: boolean;          // EQUITY: tandai akun Dividen / Prive / Drawing
   is_dividend_payable: boolean;  // LIABILITY: tandai akun Hutang Dividen
   is_cash_equivalent: boolean;   // ASSET: tandai akun sebagai Kas/Setara Kas (Cash Flow basis)
+  currency_code?: string;        // Currency tracked by this account, defaults to IDR
   sort_order: number;
   description?: string;
   default_category?: TransactionCategory; // Optional: Auto-detected category for transactions
@@ -136,6 +144,7 @@ export interface Business {
   business_sector: string;
   business_type?: string;
   capital_investment: number;
+  base_currency_code?: string | null;
   property_address?: string;
   property_details?: Record<string, any>;
   logo_url?: string;
@@ -163,6 +172,10 @@ export interface JournalLine {
   account_id: string;
   debit_amount: number;   // > 0 for debit lines, 0 for credit lines
   credit_amount: number;  // > 0 for credit lines, 0 for debit lines
+  currency_code?: string | null;
+  original_debit_amount?: number | null;
+  original_credit_amount?: number | null;
+  fx_rate?: number | null;
   description?: string | null;
   sort_order: number;
   created_at: string;
@@ -175,6 +188,10 @@ export interface JournalLineInput {
   account_id: string;
   debit_amount: number;
   credit_amount: number;
+  currency_code?: string;
+  original_debit_amount?: number | null;
+  original_credit_amount?: number | null;
+  fx_rate?: number | null;
   description?: string;
   sort_order: number;
 }
@@ -188,6 +205,15 @@ export interface Transaction {
   name: string;
   description: string;
   amount: number;
+  /** Original transaction amount in `currency_code`; `amount` stays functional IDR. */
+  original_amount?: number | null;
+  /** ISO-4217 currency code for the original transaction amount. */
+  currency_code?: string | null;
+  /** Functional currency conversion rate: IDR per 1 unit of `currency_code`. */
+  fx_rate?: number | null;
+  fx_rate_date?: string | null;
+  /** Realized FX gain/loss in IDR. Positive = gain, negative = loss. */
+  fx_gain_loss_amount?: number | null;
   account: string; // Legacy field for backward compatibility
   status: TransactionStatus;
   posted_at?: string | null;

@@ -89,8 +89,8 @@ export function FloatingQuickAdd({
       <button
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 z-30 w-14 h-14 bg-primary-500 hover:bg-primary-600 active:bg-primary-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
-        title="Tambah Transaksi"
-        aria-label="Tambah Transaksi"
+        title="Add Transaction"
+        aria-label="Add Transaction"
       >
         <Zap className="w-6 h-6 group-hover:scale-110 transition-transform" />
       </button>
@@ -99,7 +99,7 @@ export function FloatingQuickAdd({
       <Modal
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
-        title="Tambah Transaksi"
+        title="Add Transaction"
       >
         <QuickTransactionForm
           onSubmit={handleSubmit}
