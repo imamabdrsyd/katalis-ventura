@@ -413,7 +413,16 @@ export default function LandingPage() {
                     height={1794}
                     priority
                     sizes="(min-width: 1024px) 50vw, 100vw"
-                    className="w-full h-auto block"
+                    className="w-full h-auto block dark:hidden"
+                  />
+                  <Image
+                    src="/images/landing-page-dark.png"
+                    alt="AXION dashboard preview"
+                    width={2880}
+                    height={1794}
+                    priority
+                    sizes="(min-width: 1024px) 50vw, 100vw"
+                    className="w-full h-auto hidden dark:block"
                   />
                 </div>
               </motion.div>

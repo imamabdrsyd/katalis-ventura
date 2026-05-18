@@ -18,6 +18,8 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import type { UnitBreakdown } from '@/types';
 import { getTransactionTemplates, createTransactionTemplate, deleteTransactionTemplate } from '@/lib/api/transactionTemplates';
 import { getRecurringTransactions } from '@/lib/api/recurring';
+import OCRScanButton from '@/components/transactions/OCRScanButton';
+import type { OcrResult } from '@/lib/ocr/types';
 
 export interface RecurringFormData {
   frequency: 'weekly' | 'monthly' | 'yearly';
@@ -390,6 +392,39 @@ export function TransactionForm({
     }
   };
 
+  // Apply OCR scan result to form (pre-fill date, amount, vendor name, description, category)
+  const applyOcrResult = (result: OcrResult) => {
+    const { parsed } = result;
+    setFormData((prev) => ({
+      ...prev,
+      date: parsed.date ?? prev.date,
+      amount: parsed.total ?? prev.amount,
+      name: parsed.vendor ?? prev.name,
+      description: parsed.vendor
+        ? `Pembelian di ${parsed.vendor}`
+        : prev.description,
+      category: parsed.category ?? prev.category,
+      meta: {
+        ...(prev.meta ?? {}),
+        ocr: {
+          provider: result.provider,
+          raw_text: result.raw_text,
+          cached: result.cached,
+        },
+      } as TransactionMeta,
+    }));
+    if (parsed.total) {
+      setDisplayAmount(formatNumberWithSeparator(parsed.total));
+    }
+    if (errors.amount && parsed.total) {
+      setErrors((prev) => {
+        const n = { ...prev };
+        delete n.amount;
+        return n;
+      });
+    }
+  };
+
   // Apply a template to the form
   const applyTemplate = (tmpl: TransactionTemplate) => {
     setFormData(prev => ({
@@ -509,6 +544,22 @@ export function TransactionForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* OCR SCAN — only when creating new transaction */}
+      {!transaction && businessId && (
+        <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20">
+          <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300 min-w-0">
+            <Lightbulb className="w-4 h-4 flex-shrink-0" />
+            <span className="truncate">Punya foto struk? Scan otomatis untuk isi form.</span>
+          </div>
+          <OCRScanButton
+            businessId={businessId}
+            onParsed={applyOcrResult}
+            variant="secondary"
+            label="Scan Struk"
+          />
+        </div>
+      )}
+
       {/* TEMPLATE SELECTOR — only when creating new transaction */}
       {!transaction && templates.length > 0 && (
         <div className="relative">

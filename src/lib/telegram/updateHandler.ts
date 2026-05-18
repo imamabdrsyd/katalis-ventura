@@ -1,5 +1,13 @@
 import { createAdminClient } from '@/lib/supabase-server';
-import { sendMessage, sendDocument, sendChatAction } from './api';
+import {
+  sendMessage,
+  sendDocument,
+  sendChatAction,
+  getFile,
+  downloadFile,
+  answerCallbackQuery,
+  editMessageText,
+} from './api';
 import {
   handleStartCommand,
   handleLinkWithToken,
@@ -21,13 +29,35 @@ import {
   formatTransactionConfirmation,
   formatTransactionSaved,
   formatTransactionList,
+  formatOcrDraft,
+  formatOcrSaved,
   TransactionListItem,
 } from './formatter';
-import { TelegramUpdate, ParsedTransaction } from './types';
+import {
+  TelegramUpdate,
+  TelegramMessage,
+  TelegramCallbackQuery,
+  ParsedTransaction,
+} from './types';
+import { scanReceipt, OcrQuotaExceededError } from '@/lib/ocr';
 
 export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void> {
+  // Branch 1: callback dari inline keyboard (klik tombol)
+  if (update.callback_query) {
+    await handleCallbackQuery(update.callback_query);
+    return;
+  }
+
   const message = update.message ?? update.edited_message;
-  if (!message?.text) return;
+  if (!message) return;
+
+  // Branch 2: foto struk → OCR flow
+  if (message.photo && message.photo.length > 0) {
+    await handlePhotoMessage(message);
+    return;
+  }
+
+  if (!message.text) return;
 
   const chatId = message.chat.id;
   const text = message.text.trim();
@@ -367,6 +397,309 @@ async function showTransactionsByDate(
   await sendMessage(
     chatId,
     formatTransactionList(items, dateLabel, displayDate, biz?.business_name ?? 'Bisnis'),
+    { parse_mode: 'Markdown' }
+  );
+}
+
+// ============================================================================
+// OCR PHOTO HANDLING
+// ============================================================================
+
+/**
+ * Pending OCR draft yang disimpan di telegram_connections.pending_transaction.
+ * Pakai discriminator _type biar gak konflik dengan ParsedTransaction reguler.
+ */
+type PendingOcrDraft = {
+  _type: 'ocr_draft';
+  date?: string;
+  total?: number;
+  vendor?: string;
+  provider: 'google_vision' | 'ocr_space';
+  raw_text: string;
+};
+
+async function handlePhotoMessage(message: TelegramMessage): Promise<void> {
+  const chatId = message.chat.id;
+  const admin = createAdminClient();
+
+  // Lookup koneksi user
+  const { data: conn } = await admin
+    .from('telegram_connections')
+    .select('user_id, default_business_id, default_transaction_status')
+    .eq('telegram_chat_id', chatId)
+    .single();
+
+  if (!conn) {
+    await sendMessage(chatId, 'Akun belum terhubung. Ketik /start untuk instruksi.');
+    return;
+  }
+
+  if (!conn.default_business_id) {
+    await sendMessage(chatId, 'Belum ada bisnis aktif. Ketik /bisnis untuk memilih bisnis.');
+    return;
+  }
+
+  // Ambil foto resolusi tertinggi
+  const photos = message.photo ?? [];
+  const largest = photos[photos.length - 1];
+  if (!largest) return;
+
+  await sendChatAction(chatId, 'typing');
+
+  // Download foto dari Telegram
+  const filePath = await getFile(largest.file_id);
+  if (!filePath) {
+    await sendMessage(chatId, '❌ Gagal mengambil foto dari Telegram. Coba kirim ulang.');
+    return;
+  }
+  const buffer = await downloadFile(filePath);
+  if (!buffer) {
+    await sendMessage(chatId, '❌ Gagal mengunduh foto. Coba kirim ulang.');
+    return;
+  }
+
+  // OCR scan
+  let parsed;
+  let provider: 'google_vision' | 'ocr_space';
+  let rawText: string;
+  try {
+    const result = await scanReceipt(buffer);
+    parsed = result.parsed;
+    provider = result.provider;
+    rawText = result.raw_text;
+  } catch (err) {
+    if (err instanceof OcrQuotaExceededError) {
+      await sendMessage(chatId, `❌ ${err.message}`);
+      return;
+    }
+    console.error('[telegram] OCR error:', err);
+    await sendMessage(chatId, '❌ Gagal memproses foto struk. Coba foto yang lebih jelas.');
+    return;
+  }
+
+  if (!parsed.total && !parsed.vendor && !parsed.date) {
+    await sendMessage(
+      chatId,
+      '⚠️ Tidak ada data yang berhasil dibaca dari struk. Pastikan foto tajam dan terang.'
+    );
+    return;
+  }
+
+  // Simpan pending draft
+  const draft: PendingOcrDraft = {
+    _type: 'ocr_draft',
+    date: parsed.date,
+    total: parsed.total,
+    vendor: parsed.vendor,
+    provider,
+    raw_text: rawText,
+  };
+  await admin
+    .from('telegram_connections')
+    .update({
+      pending_transaction: draft as unknown as ParsedTransaction,
+      pending_expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+    })
+    .eq('telegram_chat_id', chatId);
+
+  await sendMessage(
+    chatId,
+    formatOcrDraft({ date: draft.date, total: draft.total, vendor: draft.vendor, provider }),
+    {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: '✅ Simpan', callback_data: 'ocr:save' },
+            { text: '❌ Batal', callback_data: 'ocr:cancel' },
+          ],
+        ],
+      },
+    }
+  );
+}
+
+// ============================================================================
+// CALLBACK QUERY (INLINE KEYBOARD BUTTONS)
+// ============================================================================
+
+async function handleCallbackQuery(cb: TelegramCallbackQuery): Promise<void> {
+  const data = cb.data ?? '';
+  const chatId = cb.message?.chat.id;
+  const messageId = cb.message?.message_id;
+
+  if (!chatId || !messageId) {
+    await answerCallbackQuery(cb.id);
+    return;
+  }
+
+  if (data.startsWith('ocr:')) {
+    await handleOcrCallback(cb.id, chatId, messageId, data.slice(4));
+    return;
+  }
+
+  // Unknown callback — acknowledge supaya tombol gak loading
+  await answerCallbackQuery(cb.id);
+}
+
+async function handleOcrCallback(
+  cbId: string,
+  chatId: number,
+  messageId: number,
+  action: string
+): Promise<void> {
+  const admin = createAdminClient();
+
+  const { data: conn } = await admin
+    .from('telegram_connections')
+    .select('user_id, default_business_id, default_transaction_status, pending_transaction, pending_expires_at')
+    .eq('telegram_chat_id', chatId)
+    .single();
+
+  if (!conn) {
+    await answerCallbackQuery(cbId, 'Akun belum terhubung');
+    return;
+  }
+
+  const pending = conn.pending_transaction as unknown as PendingOcrDraft | null;
+  const expired = !conn.pending_expires_at || new Date(conn.pending_expires_at) <= new Date();
+
+  if (!pending || pending._type !== 'ocr_draft' || expired) {
+    await answerCallbackQuery(cbId, 'Draft sudah kadaluarsa');
+    await editMessageText(chatId, messageId, '⌛ Draft sudah kadaluarsa. Kirim ulang foto struknya.');
+    return;
+  }
+
+  if (action === 'cancel') {
+    await admin
+      .from('telegram_connections')
+      .update({ pending_transaction: null, pending_expires_at: null })
+      .eq('telegram_chat_id', chatId);
+    await answerCallbackQuery(cbId, 'Dibatalkan');
+    await editMessageText(chatId, messageId, '❌ Draft transaksi dibatalkan.');
+    return;
+  }
+
+  if (action === 'save') {
+    if (!pending.total) {
+      await answerCallbackQuery(cbId, 'Tidak ada nominal');
+      await editMessageText(
+        chatId,
+        messageId,
+        '❌ Tidak ada nominal yang berhasil dibaca. Kirim foto lebih jelas atau input manual.'
+      );
+      return;
+    }
+    if (!conn.default_business_id) {
+      await answerCallbackQuery(cbId, 'Pilih bisnis dulu');
+      return;
+    }
+
+    const status: 'draft' | 'posted' =
+      conn.default_transaction_status === 'posted' ? 'posted' : 'draft';
+
+    await answerCallbackQuery(cbId, 'Menyimpan...');
+    await saveOcrTransaction(
+      chatId,
+      messageId,
+      conn.user_id,
+      conn.default_business_id,
+      pending,
+      status
+    );
+    await admin
+      .from('telegram_connections')
+      .update({ pending_transaction: null, pending_expires_at: null })
+      .eq('telegram_chat_id', chatId);
+    return;
+  }
+
+  await answerCallbackQuery(cbId);
+}
+
+async function saveOcrTransaction(
+  chatId: number,
+  messageId: number,
+  userId: string,
+  businessId: string,
+  draft: PendingOcrDraft,
+  status: 'draft' | 'posted'
+): Promise<void> {
+  const admin = createAdminClient();
+
+  // Verifikasi role
+  const { data: role } = await admin
+    .from('user_business_roles')
+    .select('role')
+    .eq('user_id', userId)
+    .eq('business_id', businessId)
+    .single();
+
+  if (!role || !['business_manager', 'superadmin'].includes(role.role)) {
+    await editMessageText(chatId, messageId, '❌ Kamu tidak punya akses mencatat transaksi di bisnis ini.');
+    return;
+  }
+
+  // Cek period lock
+  const today = new Date().toISOString().split('T')[0];
+  const { data: biz } = await admin
+    .from('businesses')
+    .select('business_name, closed_until_date')
+    .eq('id', businessId)
+    .single();
+
+  if (biz?.closed_until_date && today <= biz.closed_until_date) {
+    await editMessageText(
+      chatId,
+      messageId,
+      `❌ Periode hingga ${biz.closed_until_date} sudah dikunci.`
+    );
+    return;
+  }
+
+  // Resolve double-entry pakai vendor + assume OPEX default kalau gak ada hint
+  const { data: accounts } = await admin
+    .from('accounts')
+    .select('*')
+    .eq('business_id', businessId)
+    .eq('is_active', true);
+
+  const vendorName = draft.vendor ?? 'Pembelian struk';
+  const resolved = smartResolveTransaction(vendorName, accounts ?? [], 'OPEX');
+  const isDoubleEntry = !!(resolved.debit_account_id && resolved.credit_account_id);
+
+  const { error } = await admin.from('transactions').insert({
+    business_id: businessId,
+    date: draft.date ?? today,
+    category: resolved.category,
+    name: 'Via AxionBot (OCR)',
+    amount: draft.total!,
+    description: vendorName,
+    account: '',
+    status,
+    created_by: userId,
+    debit_account_id: resolved.debit_account_id || null,
+    credit_account_id: resolved.credit_account_id || null,
+    is_double_entry: isDoubleEntry,
+    meta: {
+      source: 'telegram_ocr',
+      ocr: {
+        provider: draft.provider,
+        raw_text: draft.raw_text,
+      },
+    },
+  });
+
+  if (error) {
+    console.error('[telegram] insert OCR transaction error:', error);
+    await editMessageText(chatId, messageId, '❌ Gagal menyimpan transaksi. Coba lagi nanti.');
+    return;
+  }
+
+  await editMessageText(
+    chatId,
+    messageId,
+    formatOcrSaved(draft.total!, draft.vendor, status),
     { parse_mode: 'Markdown' }
   );
 }

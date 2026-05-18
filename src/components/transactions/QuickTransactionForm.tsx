@@ -26,6 +26,8 @@ import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCa
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
 import { saveContactFromTransaction } from '@/lib/api/contacts';
 import { useBusinessContext } from '@/context/BusinessContext';
+import OCRScanButton from '@/components/transactions/OCRScanButton';
+import type { OcrResult } from '@/lib/ocr/types';
 
 import type { Transaction, UnitBreakdown } from '@/types';
 
@@ -246,6 +248,24 @@ export function QuickTransactionForm({
   // Unit breakdown handlers
   const formatNum = (n: number) => n ? n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
 
+  // OCR result handler — pre-fill amount, vendor name, and date
+  const applyOcrResult = (result: OcrResult) => {
+    const { parsed } = result;
+    if (parsed.total) {
+      setAmount(parsed.total);
+      setDisplayAmount(formatNum(parsed.total));
+      if (errors.amount) {
+        setErrors((prev) => {
+          const n = { ...prev };
+          delete n.amount;
+          return n;
+        });
+      }
+    }
+    if (parsed.vendor) setName(parsed.vendor);
+    if (parsed.date) setDate(parsed.date);
+  };
+
   const handleToggleBreakdown = () => {
     if (!showBreakdown) {
       setUnitBreakdown({ price_per_unit: 0, quantity: 0, unit: 'pcs' });
@@ -350,6 +370,17 @@ export function QuickTransactionForm({
       {errors.submit && (
         <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
           <p className="text-sm text-red-500 dark:text-red-300">{errors.submit}</p>
+        </div>
+      )}
+
+      {/* OCR SCAN — auto-fill dari struk */}
+      {businessId && (
+        <div className="flex items-center justify-end">
+          <OCRScanButton
+            businessId={businessId}
+            onParsed={applyOcrResult}
+            variant="compact"
+          />
         </div>
       )}
 
