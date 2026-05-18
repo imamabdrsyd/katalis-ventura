@@ -18,12 +18,21 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 menit in-memory
  */
 export function useFxRate(currencyCode: string): FxRateResult {
   const key = currencyCode.toUpperCase();
-  const cached = pairCache.get(key);
 
-  const [rate, setRate] = useState<number | null>(cached?.rate ?? null);
+  const [trackedKey, setTrackedKey] = useState(key);
+  const [rate, setRate] = useState<number | null>(() => pairCache.get(key)?.rate ?? null);
+  const [fetchedAt, setFetchedAt] = useState<string | null>(() => pairCache.get(key)?.fetchedAt ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fetchedAt, setFetchedAt] = useState<string | null>(cached?.fetchedAt ?? null);
+
+  // Derived state: reset rate saat key berubah supaya tidak return stale rate dari currency sebelumnya
+  if (trackedKey !== key) {
+    setTrackedKey(key);
+    const c = pairCache.get(key);
+    setRate(c?.rate ?? null);
+    setFetchedAt(c?.fetchedAt ?? null);
+    setError(null);
+  }
 
   useEffect(() => {
     if (key === 'IDR') return;
@@ -31,13 +40,13 @@ export function useFxRate(currencyCode: string): FxRateResult {
     const now = Date.now();
     const hit = pairCache.get(key);
     if (hit && now - hit.ts < CACHE_TTL_MS) {
-      setRate(hit.rate);
-      setFetchedAt(hit.fetchedAt);
+      // sudah di-apply via derived state di atas
       return;
     }
 
     setLoading(true);
     setError(null);
+    let cancelled = false;
 
     fetch(`/api/market/fx?from=${key}`)
       .then((res) => {
@@ -45,6 +54,7 @@ export function useFxRate(currencyCode: string): FxRateResult {
         return res.json();
       })
       .then((json) => {
+        if (cancelled) return;
         const r = json?.data?.rate ?? null;
         if (typeof r === 'number' && r > 0) {
           pairCache.set(key, { rate: r, fetchedAt: json?.fetchedAt ?? new Date().toISOString(), ts: Date.now() });
@@ -54,8 +64,10 @@ export function useFxRate(currencyCode: string): FxRateResult {
           setError('Kurs tidak tersedia');
         }
       })
-      .catch(() => setError('Gagal mengambil kurs'))
-      .finally(() => setLoading(false));
+      .catch(() => { if (!cancelled) setError('Gagal mengambil kurs'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+
+    return () => { cancelled = true; };
   }, [key]);
 
   if (key === 'IDR') {
