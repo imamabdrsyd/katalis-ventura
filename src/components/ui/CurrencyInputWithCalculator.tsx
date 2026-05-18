@@ -32,6 +32,8 @@ interface CurrencyInputWithCalculatorProps {
   label?: string;
   required?: boolean;
   colorVariant?: 'default' | 'green' | 'red' | 'amber' | 'purple' | 'primary';
+  /** Style tombol kalkulator: 'inline' (default, kecil di tengah input) atau 'boxed' (kotak bordered seperti icon action) */
+  calcButtonVariant?: 'inline' | 'boxed';
 }
 
 type CalcOp = '+' | '-' | '×' | '÷' | null;
@@ -60,6 +62,7 @@ export function CurrencyInputWithCalculator({
   label,
   required = false,
   colorVariant = 'default',
+  calcButtonVariant = 'inline',
 }: CurrencyInputWithCalculatorProps) {
   const [showCalc, setShowCalc] = useState(false);
   const [calcDisplay, setCalcDisplay] = useState('0');
@@ -248,20 +251,36 @@ export function CurrencyInputWithCalculator({
           type="text"
           value={displayValue}
           onChange={handleInputChange}
-          className={`input pr-12 ${borderColorClass} ${inputClassName}`}
+          className={`input ${calcButtonVariant === 'boxed' ? 'pr-14' : 'pr-12'} ${borderColorClass} ${inputClassName}`}
           placeholder={placeholder}
           inputMode="numeric"
           autoFocus={autoFocus}
         />
-        <button
-          type="button"
-          onClick={() => setShowCalc(!showCalc)}
-          className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md transition-colors ${showCalc ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300'}`}
-          tabIndex={-1}
-          title="Kalkulator"
-        >
-          <Calculator className="w-5 h-5" />
-        </button>
+        {calcButtonVariant === 'boxed' ? (
+          <button
+            type="button"
+            onClick={() => setShowCalc(!showCalc)}
+            className={`absolute right-0 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-9 h-9 rounded-lg border transition-colors ${
+              showCalc
+                ? 'border-indigo-300 dark:border-indigo-500 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-500 dark:text-indigo-400'
+                : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+            }`}
+            tabIndex={-1}
+            title="Kalkulator"
+          >
+            <Calculator className="w-4 h-4" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowCalc(!showCalc)}
+            className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md transition-colors ${showCalc ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300'}`}
+            tabIndex={-1}
+            title="Kalkulator"
+          >
+            <Calculator className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {error && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{error}</p>}

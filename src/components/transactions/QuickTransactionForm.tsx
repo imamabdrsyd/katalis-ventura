@@ -416,6 +416,7 @@ export function QuickTransactionForm({
             }}
             inputClassName="text-3xl font-bold tabular-nums leading-tight bg-transparent border-0 p-0 focus:ring-0"
             colorVariant={flowDirection === 'in' ? 'green' : flowDirection === 'out' ? 'red' : 'default'}
+            calcButtonVariant="boxed"
             error={errors.amount}
             autoFocus
           />
