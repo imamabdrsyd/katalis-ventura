@@ -32,16 +32,22 @@ export function useFxRate(currencyCode: string): FxRateResult {
     setRate(c?.rate ?? null);
     setFetchedAt(c?.fetchedAt ?? null);
     setError(null);
+    // Selalu trigger loading state saat ganti currency — UX feedback walau cache hit
+    setLoading(true);
   }
 
   useEffect(() => {
-    if (key === 'IDR') return;
+    if (key === 'IDR') {
+      setLoading(false);
+      return;
+    }
 
     const now = Date.now();
     const hit = pairCache.get(key);
     if (hit && now - hit.ts < CACHE_TTL_MS) {
-      // sudah di-apply via derived state di atas
-      return;
+      // Cache hit — tampilkan loading sebentar untuk feedback visual lalu selesai
+      const t = setTimeout(() => setLoading(false), 250);
+      return () => clearTimeout(t);
     }
 
     setLoading(true);
