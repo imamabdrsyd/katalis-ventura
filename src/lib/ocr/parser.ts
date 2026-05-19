@@ -460,8 +460,23 @@ const KEYWORD_RULES: Array<{ pattern: RegExp; keywords: string[] }> = [
 ];
 
 /**
+ * Fallback keyword per kategori transaksi — supaya match minimal nyangkut ke
+ * default CoA seperti "Beban Operasional" / "HPP" / "Beban Pajak" kalau tidak
+ * ada keyword spesifik yang cocok.
+ */
+const CATEGORY_FALLBACK_KEYWORDS: Record<TransactionCategory, string[]> = {
+  OPEX: ['operasional', 'beban', 'biaya'],
+  VAR: ['hpp', 'pokok', 'penjualan', 'persediaan'],
+  TAX: ['pajak', 'beban pajak'],
+  FIN: ['pembiayaan', 'pinjaman', 'modal'],
+  CAPEX: ['aset', 'tetap', 'peralatan'],
+  EARN: ['pendapatan', 'penjualan'],
+};
+
+/**
  * Ekstrak keyword semantik dari struk untuk matching ke Chart of Accounts.
  * Hasil: array kata kunci lowercase, deduped, urut sesuai urutan rule match.
+ * Fallback: kalau tidak ada rule yang match, pakai keyword default dari kategori.
  */
 export function extractKeywords(vendor: string | undefined, rawText: string): string[] {
   const haystack = [vendor ?? '', rawText ?? ''].join(' ');
@@ -471,6 +486,14 @@ export function extractKeywords(vendor: string | undefined, rawText: string): st
       for (const k of rule.keywords) {
         if (!result.includes(k)) result.push(k);
       }
+    }
+  }
+  // Tambahkan fallback dari kategori (selalu, sebagai safety net dengan skor lebih rendah
+  // karena matcher pakai bobot exact/substring — match generik tetap kalah dari match spesifik)
+  const category = inferCategory(vendor, rawText);
+  if (category) {
+    for (const k of CATEGORY_FALLBACK_KEYWORDS[category]) {
+      if (!result.includes(k)) result.push(k);
     }
   }
   return result;
