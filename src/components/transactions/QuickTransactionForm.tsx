@@ -216,10 +216,9 @@ export function QuickTransactionForm({
     );
   };
 
-  // Handle account selection — auto-fill name from account description
+  // Handle account selection
   const handleSelectAccount = (account: Account) => {
     setSelectedAccountId(account.id);
-    setName(account.description || account.account_name); // auto-fill with description
     setSelectedStockIds([]);
     setDropdownOpen(false);
     setSearchTerm('');
