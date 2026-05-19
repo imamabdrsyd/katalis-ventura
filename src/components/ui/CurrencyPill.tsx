@@ -34,7 +34,7 @@ export function CurrencyPill({ currencyCode, onCurrencyChange, supportedCurrenci
         <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-30 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl overflow-hidden min-w-[90px]">
+        <div className="absolute right-0 top-full mt-1 z-30 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl overflow-hidden min-w-[90px] max-w-[calc(100vw-2rem)]">
           {supportedCurrencies.map((c) => (
             <button
               key={c}

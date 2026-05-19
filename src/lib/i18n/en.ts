@@ -661,7 +661,7 @@ export const en: Translations = {
     journalLines: 'Journal Lines',
     account: 'Account',
     total: 'TOTAL',
-    attachment: 'Attachment',
+    attachment: 'Source of Document',
     soldInventory: 'Sold Inventory',
     paidInFull: 'PAID',
     paidInFullDesc: 'Receivable has been fully settled',

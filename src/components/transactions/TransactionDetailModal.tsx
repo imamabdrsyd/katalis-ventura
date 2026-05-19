@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Modal } from '@/components/ui/Modal';
-import type { Transaction, Account, AuditLog, Contact } from '@/types';
+import type { Transaction, Account, AuditLog, Contact, TransactionAttachment } from '@/types';
 import type { TransactionFormData } from '@/components/transactions/TransactionForm';
 import { CATEGORY_LABELS } from '@/lib/calculations';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
 import { CategoryBadge } from '@/components/ui/CategoryBadge';
-import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
+import { formatCurrency, formatDate, formatDateWithDay, formatDateTime } from '@/lib/utils';
 import { getProfileName } from '@/lib/api/profiles';
 import { getRecordAuditHistory, getFieldChanges, formatFieldName, formatAuditValue } from '@/lib/api/audit';
 import {
@@ -23,7 +24,7 @@ import {
   getDividendPartialSettlementIds,
 } from '@/lib/accounting/guidance';
 import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
-import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon } from 'lucide-react';
+import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { updateTransaction } from '@/lib/api/transactions';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
@@ -165,6 +166,8 @@ export function TransactionDetailModal({
   const [partialDisplayAmount, setPartialDisplayAmount] = useState('');
   const [partialLoading, setPartialLoading] = useState(false);
   const [partialError, setPartialError] = useState('');
+  const [previewAttachment, setPreviewAttachment] = useState<TransactionAttachment | null>(null);
+  const [previewScale, setPreviewScale] = useState(1);
   const tagInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
@@ -184,7 +187,23 @@ export function TransactionDetailModal({
     setPartialAmount(0);
     setPartialDisplayAmount('');
     setPartialError('');
+    setPreviewAttachment(null);
+    setPreviewScale(1);
   }, [transaction?.id]);
+
+  useEffect(() => {
+    if (!previewAttachment) return;
+    const handlePreviewKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        setPreviewAttachment(null);
+        setPreviewScale(1);
+      }
+    };
+    document.addEventListener('keydown', handlePreviewKey, true);
+    return () => document.removeEventListener('keydown', handlePreviewKey, true);
+  }, [previewAttachment]);
 
   const saveTags = async (newTags: string[], prevTags: string[]) => {
     if (!transaction) return;
@@ -234,6 +253,7 @@ export function TransactionDetailModal({
   useEffect(() => {
     if (!isOpen) return;
     const handleKey = (e: KeyboardEvent) => {
+      if (previewAttachment) return;
       if (e.key === 'ArrowLeft' && hasPrev && onNavigatePrev) {
         e.preventDefault();
         onNavigatePrev();
@@ -244,7 +264,7 @@ export function TransactionDetailModal({
     };
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
-  }, [isOpen, hasPrev, hasNext, onNavigatePrev, onNavigateNext]);
+  }, [isOpen, hasPrev, hasNext, onNavigatePrev, onNavigateNext, previewAttachment]);
 
   // Matching Principle warning detection
   const matchingWarning = useMemo(() => {
@@ -321,6 +341,16 @@ export function TransactionDetailModal({
   const isDraft = transaction.status === 'draft';
   const showActions = onEdit || onDelete || (onPost && isDraft);
 
+  const openImagePreview = (attachment: TransactionAttachment) => {
+    setPreviewAttachment(attachment);
+    setPreviewScale(1);
+  };
+
+  const closeImagePreview = () => {
+    setPreviewAttachment(null);
+    setPreviewScale(1);
+  };
+
   const actionButtons = showActions ? (
     <div className="flex items-center gap-3">
       {onPost && isDraft && (
@@ -381,6 +411,7 @@ export function TransactionDetailModal({
   ) : undefined;
 
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={onClose}
@@ -390,7 +421,7 @@ export function TransactionDetailModal({
             #{transaction.transaction_number ?? transaction.id.slice(0, 8)}
           </div>
           <div className="text-base font-semibold text-gray-800 dark:text-gray-100">
-            {formatDate(transaction.date)}
+            {formatDateWithDay(transaction.date)}
           </div>
         </div>
       }
@@ -729,12 +760,12 @@ export function TransactionDetailModal({
               <div className="space-y-2">
                 {atts.map((att) =>
                   isImageType(att.mime_type) ? (
-                    <a
+                    <button
                       key={att.path}
-                      href={att.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block group"
+                      type="button"
+                      onClick={() => openImagePreview(att)}
+                      className="block w-full text-left group"
+                      aria-label={`Lihat ${att.filename}`}
                     >
                       <div className="relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
                         <img
@@ -743,14 +774,14 @@ export function TransactionDetailModal({
                           className="w-full max-h-64 object-contain bg-gray-50 dark:bg-gray-800 group-hover:opacity-90 transition-opacity"
                         />
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
-                          <ExternalLink className="w-6 h-6 text-white drop-shadow-lg" />
+                          <ZoomIn className="w-6 h-6 text-white drop-shadow-lg" />
                         </div>
                       </div>
                       <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 dark:text-gray-400">
                         <span className="truncate">{att.filename}</span>
                         <span>{formatFileSize(att.size)}</span>
                       </div>
-                    </a>
+                    </button>
                   ) : (
                     <a
                       key={att.path}
@@ -1479,5 +1510,106 @@ export function TransactionDetailModal({
 
       </div>
     </Modal>
+    {previewAttachment && typeof document !== 'undefined' && createPortal(
+      <div
+        className="fixed inset-0 z-[70] bg-black/85 backdrop-blur-sm flex flex-col"
+        onClick={closeImagePreview}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Preview ${previewAttachment.filename}`}
+      >
+        <div
+          className="flex items-center justify-between gap-3 px-4 py-3 text-white"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="min-w-0">
+            <p className="text-sm font-semibold truncate">{previewAttachment.filename}</p>
+            <p className="text-xs text-white/60">{formatFileSize(previewAttachment.size)}</p>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPreviewScale((scale) => Math.max(0.5, Number((scale - 0.25).toFixed(2))));
+              }}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+              title="Perkecil"
+              aria-label="Perkecil"
+            >
+              <ZoomOut className="w-5 h-5" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPreviewScale(1);
+              }}
+              className="hidden sm:inline-flex h-10 px-3 items-center justify-center gap-1.5 rounded-lg text-xs font-semibold text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+              title="Reset zoom"
+            >
+              <RotateCcw className="w-4 h-4" />
+              {Math.round(previewScale * 100)}%
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPreviewScale((scale) => Math.min(3, Number((scale + 0.25).toFixed(2))));
+              }}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+              title="Perbesar"
+              aria-label="Perbesar"
+            >
+              <ZoomIn className="w-5 h-5" />
+            </button>
+            <a
+              href={previewAttachment.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+              title="Buka di tab baru"
+              aria-label="Buka di tab baru"
+            >
+              <ExternalLink className="w-5 h-5" />
+            </a>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                closeImagePreview();
+              }}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+              title="Tutup"
+              aria-label="Tutup"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+
+        <div
+          className="flex-1 min-h-0 overflow-auto px-4 pb-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="min-h-full flex items-center justify-center">
+            <img
+              src={previewAttachment.url}
+              alt={previewAttachment.filename}
+              className="max-w-full max-h-full rounded-lg shadow-2xl select-none"
+              style={{
+                transform: `scale(${previewScale})`,
+                transformOrigin: 'center',
+                transition: 'transform 120ms ease-out',
+              }}
+              draggable={false}
+            />
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+    </>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Calculator, Delete, X, RefreshCw } from 'lucide-react';
+import { Calculator, Check, Delete, Pencil, X, RefreshCw } from 'lucide-react';
 import { useFxRate } from '@/hooks/useFxRate';
 import { CurrencyPill } from './CurrencyPill';
 
@@ -18,6 +18,78 @@ function formatNumberWithSeparator(num: number | string): string {
 function parseFormattedNumber(str: string): number {
   const cleaned = str.replace(/\./g, '');
   return parseInt(cleaned) || 0;
+}
+
+function splitDecimalAmountInput(str: string): { integer: string; fraction: string; hasDecimal: boolean } {
+  const cleaned = str.replace(/[^\d.,]/g, '');
+  const commaIndex = cleaned.indexOf(',');
+  if (commaIndex >= 0) {
+    return {
+      integer: cleaned.slice(0, commaIndex),
+      fraction: cleaned.slice(commaIndex + 1).replace(/[^\d]/g, '').slice(0, 2),
+      hasDecimal: true,
+    };
+  }
+
+  const dotParts = cleaned.split('.');
+  if (dotParts.length === 2 && dotParts[1].length > 0 && dotParts[1].length <= 2) {
+    return {
+      integer: dotParts[0],
+      fraction: dotParts[1].replace(/[^\d]/g, '').slice(0, 2),
+      hasDecimal: true,
+    };
+  }
+
+  return {
+    integer: cleaned,
+    fraction: '',
+    hasDecimal: false,
+  };
+}
+
+function parseAmountInput(str: string, allowDecimal: boolean): number {
+  if (!allowDecimal) return parseFormattedNumber(str);
+  const { integer, fraction, hasDecimal } = splitDecimalAmountInput(str);
+  const normalized = `${integer.replace(/[^\d]/g, '') || '0'}${hasDecimal ? `.${fraction}` : ''}`;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatAmountInput(str: string, allowDecimal: boolean): string {
+  if (!allowDecimal) return formatNumberWithSeparator(parseFormattedNumber(str));
+  const { integer, fraction, hasDecimal } = splitDecimalAmountInput(str);
+  const integerDigits = integer.replace(/[^\d]/g, '');
+  const formattedInteger = integerDigits ? formatNumberWithSeparator(integerDigits) : '';
+  if (hasDecimal) return `${formattedInteger || '0'},${fraction}`;
+  return formattedInteger;
+}
+
+function formatAmountValue(value: number, allowDecimal: boolean): string {
+  if (!allowDecimal) return formatNumberWithSeparator(Math.round(value));
+  if (!Number.isFinite(value) || value === 0) return '';
+  return value.toLocaleString('id-ID', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+}
+
+function parseFxRateValue(str: string): number {
+  const trimmed = str.trim().replace(/rp/gi, '').replace(/\s/g, '');
+  if (!trimmed) return 0;
+
+  const normalized = trimmed.includes(',')
+    ? trimmed.replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, '')
+    : trimmed.replace(/\./g, '').replace(/[^\d]/g, '');
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatFxRateValue(value?: number): string {
+  if (!value || !Number.isFinite(value)) return '';
+  return value.toLocaleString('id-ID', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 8,
+  });
 }
 
 // ─── types ─────────────────────────────────────────────────────────────────
@@ -45,6 +117,8 @@ interface CurrencyInputWithCalculatorProps {
   onFxRateChange?: (value: string) => void;
   fxBookValue?: number;
   fxRateError?: string;
+  fxRateEditable?: boolean;
+  autoApplyFxRate?: boolean;
 }
 
 type CalcOp = '+' | '-' | '×' | '÷' | null;
@@ -81,20 +155,30 @@ export function CurrencyInputWithCalculator({
   onFxRateChange,
   fxBookValue,
   fxRateError,
+  fxRateEditable = false,
+  autoApplyFxRate = true,
 }: CurrencyInputWithCalculatorProps) {
   const activeCurrency = currencyCode ?? 'IDR';
+  const amountAllowsDecimal = activeCurrency !== 'IDR';
   const { rate: autoRate, loading: fxLoading } = useFxRate(activeCurrency);
+  const [editingFxRate, setEditingFxRate] = useState(false);
+  const [fxRateDraft, setFxRateDraft] = useState(() => formatFxRateValue(fxRate));
 
   // Track currency yang rate-nya sudah di-apply, supaya tiap ganti currency selalu
   // apply fresh rate (bukan stale dari currency sebelumnya)
   const appliedCurrencyRef = useRef<string | null>(null);
 
   useEffect(() => {
+    if (!editingFxRate) setFxRateDraft(formatFxRateValue(fxRate));
+  }, [fxRate, editingFxRate]);
+
+  useEffect(() => {
     if (!autoRate || !onFxRateChange) return;
     if (appliedCurrencyRef.current === activeCurrency) return;
     appliedCurrencyRef.current = activeCurrency;
+    if (!autoApplyFxRate && fxRate && fxRate > 1) return;
     onFxRateChange(String(Math.round(autoRate)));
-  }, [autoRate, activeCurrency, onFxRateChange]);
+  }, [autoRate, activeCurrency, onFxRateChange, autoApplyFxRate, fxRate]);
   const [showCalc, setShowCalc] = useState(false);
   const [calcDisplay, setCalcDisplay] = useState('0');
   const [calcPrev, setCalcPrev] = useState<number | null>(null);
@@ -180,9 +264,28 @@ export function CurrencyInputWithCalculator({
   }, [showCalc]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const numeric = parseFormattedNumber(e.target.value);
-    const formatted = formatNumberWithSeparator(numeric);
+    const numeric = parseAmountInput(e.target.value, amountAllowsDecimal);
+    const formatted = formatAmountInput(e.target.value, amountAllowsDecimal);
     onChange(numeric, formatted);
+  };
+
+  const startFxRateEditing = () => {
+    setFxRateDraft(formatFxRateValue(fxRate));
+    setEditingFxRate(true);
+  };
+
+  const finishFxRateEditing = () => {
+    const parsed = parseFxRateValue(fxRateDraft);
+    if (parsed > 0) onFxRateChange?.(String(parsed));
+    setFxRateDraft(formatFxRateValue(parsed || fxRate));
+    setEditingFxRate(false);
+  };
+
+  const handleFxRateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const nextValue = e.target.value.replace(/[^\d.,]/g, '');
+    const parsed = parseFxRateValue(nextValue);
+    setFxRateDraft(nextValue);
+    onFxRateChange?.(String(parsed));
   };
 
   const borderColorClass =
@@ -195,7 +298,7 @@ export function CurrencyInputWithCalculator({
 
   // ── Calc actions ──
 
-  const calcNum = () => parseFormattedNumber(calcDisplay);
+  const calcNum = () => parseAmountInput(calcDisplay, amountAllowsDecimal);
 
   const pressDigit = (d: string) => {
     if (calcWaiting) {
@@ -205,9 +308,9 @@ export function CurrencyInputWithCalculator({
     }
     const raw = calcDisplay.replace(/\./g, '');
     if (raw === '0') {
-      setCalcDisplay(formatNumberWithSeparator(d) || d);
+      setCalcDisplay(formatAmountInput(d, amountAllowsDecimal) || d);
     } else {
-      setCalcDisplay(formatNumberWithSeparator(raw + d));
+      setCalcDisplay(formatAmountInput(raw + d, amountAllowsDecimal));
     }
   };
 
@@ -215,7 +318,7 @@ export function CurrencyInputWithCalculator({
     const current = calcNum();
     if (calcOp && !calcWaiting && calcPrev !== null) {
       const result = Math.round(evalCalc(calcPrev, calcOp, current));
-      setCalcDisplay(formatNumberWithSeparator(result) || '0');
+      setCalcDisplay(formatAmountValue(result, amountAllowsDecimal) || '0');
       setCalcPrev(result);
     } else {
       setCalcPrev(current);
@@ -228,7 +331,7 @@ export function CurrencyInputWithCalculator({
     if (calcOp === null || calcPrev === null) return;
     const current = calcNum();
     const result = Math.round(evalCalc(calcPrev, calcOp, current));
-    const formatted = formatNumberWithSeparator(result) || '0';
+    const formatted = formatAmountValue(result, amountAllowsDecimal) || '0';
     setCalcDisplay(formatted);
     setCalcPrev(null);
     setCalcOp(null);
@@ -248,13 +351,13 @@ export function CurrencyInputWithCalculator({
     if (raw.length <= 1) {
       setCalcDisplay('0');
     } else {
-      setCalcDisplay(formatNumberWithSeparator(raw.slice(0, -1)));
+      setCalcDisplay(formatAmountInput(raw.slice(0, -1), amountAllowsDecimal));
     }
   };
 
   const useResult = () => {
     const num = calcNum();
-    const formatted = formatNumberWithSeparator(num);
+    const formatted = formatAmountValue(num, amountAllowsDecimal);
     onChange(num, formatted);
     setShowCalc(false);
   };
@@ -295,7 +398,7 @@ export function CurrencyInputWithCalculator({
           onChange={handleInputChange}
           className={`input ${calcButtonVariant === 'boxed' ? 'pr-14' : 'pr-12'} ${borderColorClass} ${inputClassName}`}
           placeholder={placeholder}
-          inputMode="numeric"
+          inputMode={amountAllowsDecimal ? 'decimal' : 'numeric'}
           autoFocus={autoFocus}
         />
         {calcButtonVariant === 'boxed' ? (
@@ -334,14 +437,61 @@ export function CurrencyInputWithCalculator({
             <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 whitespace-nowrap">
               1 {activeCurrency} =
             </span>
-            {fxLoading ? (
+            {editingFxRate && onFxRateChange ? (
+              <div className="flex items-center gap-1">
+                <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Rp</span>
+                <input
+                  type="text"
+                  value={fxRateDraft}
+                  onChange={handleFxRateInputChange}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      finishFxRateEditing();
+                    }
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setFxRateDraft(formatFxRateValue(fxRate));
+                      setEditingFxRate(false);
+                    }
+                  }}
+                  className="h-7 w-28 rounded-lg border border-indigo-300 dark:border-indigo-600 bg-white dark:bg-gray-800 px-2 text-xs font-semibold text-gray-800 dark:text-gray-100 tabular-nums focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                  inputMode="decimal"
+                  autoFocus
+                  aria-label={`Kurs ${activeCurrency} ke IDR`}
+                />
+                <button
+                  type="button"
+                  onClick={finishFxRateEditing}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-indigo-600 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                  title="Simpan kurs"
+                  aria-label="Simpan kurs"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : fxRate ? (
+              <>
+                <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 tabular-nums">
+                  Rp {Math.round(fxRate).toLocaleString('id-ID')}
+                </span>
+                {fxLoading && <RefreshCw className="w-3 h-3 animate-spin text-gray-400 dark:text-gray-500" />}
+                {fxRateEditable && onFxRateChange && (
+                  <button
+                    type="button"
+                    onClick={startFxRateEditing}
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
+                    title="Edit kurs"
+                    aria-label="Edit kurs"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </>
+            ) : fxLoading ? (
               <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
                 <RefreshCw className="w-3 h-3 animate-spin" />
                 Memuat kurs...
-              </span>
-            ) : fxRate ? (
-              <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 tabular-nums">
-                Rp {Math.round(fxRate).toLocaleString('id-ID')}
               </span>
             ) : (
               <span className="text-xs text-gray-400 dark:text-gray-500 italic">kurs tidak tersedia</span>
@@ -384,7 +534,7 @@ export function CurrencyInputWithCalculator({
           {/* Display */}
           <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50">
             <div className="text-xs text-right text-gray-400 dark:text-gray-500 h-4">
-              {calcPrev !== null && calcOp ? `${formatNumberWithSeparator(calcPrev)} ${calcOp}` : '\u00A0'}
+              {calcPrev !== null && calcOp ? `${formatAmountValue(calcPrev, amountAllowsDecimal)} ${calcOp}` : '\u00A0'}
             </div>
             <div className="text-right text-3xl font-bold text-gray-800 dark:text-gray-100 truncate">
               {calcDisplay}

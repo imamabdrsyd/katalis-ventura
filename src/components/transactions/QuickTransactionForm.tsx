@@ -251,13 +251,22 @@ export function QuickTransactionForm({
 
   // Unit breakdown handlers
   const formatNum = (n: number) => n ? n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
+  const formatAmountForCurrency = (n: number, code: string) => {
+    if (!n) return '';
+    if (normalizeCurrencyCode(code) === BASE_CURRENCY) return formatNum(Math.round(n));
+    return n.toLocaleString('id-ID', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
+  };
 
   // OCR result handler — pre-fill amount, vendor name, date, account & contact
   const applyOcrResult = async (result: OcrResult) => {
     const { parsed } = result;
+    const parsedCurrency = parsed.currency_code ? normalizeCurrencyCode(parsed.currency_code) : currencyCode;
     if (parsed.total) {
       setAmount(parsed.total);
-      setDisplayAmount(formatNum(parsed.total));
+      setDisplayAmount(formatAmountForCurrency(parsed.total, parsedCurrency));
       if (errors.amount) {
         setErrors((prev) => {
           const n = { ...prev };
@@ -267,9 +276,8 @@ export function QuickTransactionForm({
       }
     }
     if (parsed.currency_code) {
-      const currency = normalizeCurrencyCode(parsed.currency_code);
-      setCurrencyCode(currency);
-      setFxRate(currency === BASE_CURRENCY ? 1 : fxRate || 1);
+      setCurrencyCode(parsedCurrency);
+      setFxRate(parsedCurrency === BASE_CURRENCY ? 1 : fxRate || 1);
     }
     if (parsed.date) setDate(parsed.date);
 

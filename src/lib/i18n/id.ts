@@ -661,7 +661,7 @@ export const id: Translations = {
     journalLines: 'Baris Jurnal',
     account: 'Akun',
     total: 'TOTAL',
-    attachment: 'Lampiran',
+    attachment: 'Source of Document',
     soldInventory: 'Persediaan yang Terjual',
     paidInFull: 'LUNAS',
     paidInFullDesc: 'Piutang telah dilunasi sepenuhnya',

@@ -81,6 +81,18 @@ function formatNumberWithSeparator(num: number | string): string {
   return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
+function formatAmountForCurrency(num: number | string, currencyCode: string): string {
+  const numeric = typeof num === 'number' ? num : Number(num);
+  if (!Number.isFinite(numeric) || numeric === 0) return '';
+  if (normalizeCurrencyCode(currencyCode) === BASE_CURRENCY) {
+    return formatNumberWithSeparator(Math.round(numeric));
+  }
+  return numeric.toLocaleString('id-ID', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+}
+
 // Category-to-account suggestions mapping
 const CATEGORY_SUGGESTIONS: Record<TransactionCategory, { debit: string; credit: string; description: string }> = {
   EARN: {
@@ -180,7 +192,7 @@ export function TransactionForm({
 
   const [displayAmount, setDisplayAmount] = useState<string>(
     initialOriginalAmount
-      ? formatNumberWithSeparator(initialOriginalAmount)
+      ? formatAmountForCurrency(initialOriginalAmount, initialCurrency)
         : ''
   );
 
@@ -269,7 +281,12 @@ export function TransactionForm({
     const currency = normalizeCurrencyCode(currencyValue);
     setFormData(prev => {
       const sourceAmount = prev.original_amount ?? prev.amount;
-      const rate = currency === BASE_CURRENCY ? 1 : Number(prev.fx_rate ?? 1);
+      const previousCurrency = normalizeCurrencyCode(prev.currency_code);
+      const rate = currency === BASE_CURRENCY
+        ? 1
+        : currency === previousCurrency
+          ? Number(prev.fx_rate ?? 1)
+          : 1;
       return {
         ...prev,
         currency_code: currency,
@@ -514,7 +531,7 @@ export function TransactionForm({
       } as TransactionMeta,
     }));
     if (parsed.total) {
-      setDisplayAmount(formatNumberWithSeparator(parsed.total));
+      setDisplayAmount(formatAmountForCurrency(parsed.total, parsed.currency_code ? normalizeCurrencyCode(parsed.currency_code) : selectedCurrency));
     }
     if (errors.amount && parsed.total) {
       setErrors((prev) => {
@@ -737,6 +754,8 @@ export function TransactionForm({
             onFxRateChange={isForeignCurrency ? handleFxRateChange : undefined}
             fxBookValue={isForeignCurrency ? formData.amount : undefined}
             fxRateError={errors.fx_rate}
+            fxRateEditable={!!transaction}
+            autoApplyFxRate={!transaction}
           />
           <UnitBreakdownSection
             unitBreakdown={unitBreakdown}
@@ -792,6 +811,8 @@ export function TransactionForm({
             onFxRateChange={isForeignCurrency ? handleFxRateChange : undefined}
             fxBookValue={isForeignCurrency ? formData.amount : undefined}
             fxRateError={errors.fx_rate}
+            fxRateEditable={!!transaction}
+            autoApplyFxRate={!transaction}
           />
           <UnitBreakdownSection
             unitBreakdown={unitBreakdown}
