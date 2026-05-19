@@ -26,22 +26,22 @@ export function hashFile(buffer: Buffer): string {
 
 /**
  * Lookup hasil cached berdasarkan file hash.
+ * Cache hanya menyimpan raw_text dari OCR provider — parser di-re-run tiap call
+ * supaya improvement di parser langsung kepakai tanpa perlu invalidate cache.
  */
-async function lookupCache(fileHash: string): Promise<OcrResult | null> {
+async function lookupCache(fileHash: string): Promise<{ provider: OcrProvider; raw_text: string } | null> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('ocr_scan_cache')
-    .select('provider, raw_text, parsed_data')
+    .select('provider, raw_text')
     .eq('file_hash', fileHash)
     .maybeSingle();
 
-  if (error || !data) return null;
+  if (error || !data || !data.raw_text) return null;
 
   return {
     provider: data.provider as OcrProvider,
-    raw_text: data.raw_text ?? '',
-    parsed: (data.parsed_data ?? {}) as OcrParsed,
-    cached: true,
+    raw_text: data.raw_text,
   };
 }
 
@@ -86,9 +86,16 @@ export async function scanReceipt(
 ): Promise<OcrResult> {
   const hash = fileHash ?? hashFile(fileBuffer);
 
-  // 1. Cache lookup
+  // 1. Cache lookup — kalau hit, re-parse pakai parser terbaru (jangan pakai parsed_data lama)
   const cached = await lookupCache(hash);
-  if (cached) return cached;
+  if (cached) {
+    return {
+      provider: cached.provider,
+      raw_text: cached.raw_text,
+      parsed: parseReceipt(cached.raw_text),
+      cached: true,
+    };
+  }
 
   // 2. Decide provider berdasarkan usage
   const visionUsage = await getMonthlyUsage('google_vision');

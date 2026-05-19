@@ -177,8 +177,47 @@
   animation: ocr-phrase-fade 280ms ease-out;
 }
 
+/* OCR shimmer — sweeping highlight behind glass loading card */
+@keyframes ocr-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.ocr-shimmer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(129, 140, 248, 0.18) 45%,
+    rgba(165, 180, 252, 0.28) 50%,
+    rgba(129, 140, 248, 0.18) 55%,
+    transparent 100%
+  );
+  animation: ocr-shimmer 2.2s ease-in-out infinite;
+}
+
+.dark .ocr-shimmer::before {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(129, 140, 248, 0.12) 45%,
+    rgba(165, 180, 252, 0.22) 50%,
+    rgba(129, 140, 248, 0.12) 55%,
+    transparent 100%
+  );
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ocr-phrase-fade {
+    animation: none;
+  }
+  .ocr-shimmer::before {
     animation: none;
   }
 }

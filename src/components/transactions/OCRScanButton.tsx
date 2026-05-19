@@ -127,6 +127,12 @@ export default function OCRScanButton({
         ? 'btn-secondary inline-flex items-center gap-2'
         : 'btn-primary inline-flex items-center gap-2';
 
+  // Glass effect for non-compact loading state — replaces solid btn-primary look
+  const glassLoadingClass =
+    variant !== 'compact' && loading
+      ? 'relative overflow-hidden bg-gradient-to-r from-indigo-500/80 via-indigo-400/70 to-indigo-500/80 backdrop-blur-md border border-white/30 text-white shadow-lg shadow-indigo-500/30'
+      : '';
+
   return (
     <div className="inline-flex flex-col gap-1 relative">
       <input
@@ -142,16 +148,19 @@ export default function OCRScanButton({
         type="button"
         onClick={handleClick}
         disabled={disabled || loading}
-        className={`${baseClass} disabled:opacity-50 disabled:cursor-not-allowed`}
+        className={`${baseClass} ${glassLoadingClass} disabled:cursor-not-allowed`}
         title="Scan receipt to auto-fill"
         aria-live="polite"
       >
         {loading ? (
           <>
-            <Spinner />
             {variant !== 'compact' && (
-              <RotatingPhrase phrase={phrase} />
+              <span className="absolute inset-0 ocr-shimmer pointer-events-none" aria-hidden />
             )}
+            <span className="relative z-[1] inline-flex items-center gap-2">
+              <Spinner />
+              {variant !== 'compact' && <RotatingPhrase phrase={phrase} />}
+            </span>
           </>
         ) : (
           <>
@@ -161,11 +170,20 @@ export default function OCRScanButton({
         )}
       </button>
       {loading && variant === 'compact' && phrase && (
-        <div className="absolute top-full right-0 mt-1.5 z-10 pointer-events-none whitespace-nowrap">
-          <RotatingPhrase
-            phrase={phrase}
-            className="inline-block text-[11px] font-medium text-indigo-600 dark:text-indigo-400 bg-white dark:bg-gray-800 border border-indigo-100 dark:border-indigo-900/40 rounded-md px-2 py-0.5 shadow-sm"
-          />
+        <div
+          className="absolute top-full right-0 mt-2 z-20 pointer-events-none"
+          aria-hidden
+        >
+          <div className="relative overflow-hidden flex items-center gap-2 whitespace-nowrap rounded-xl border border-white/40 dark:border-white/10 bg-white/70 dark:bg-gray-900/60 backdrop-blur-xl px-3 py-1.5 shadow-lg shadow-indigo-500/10 dark:shadow-indigo-900/30 ring-1 ring-indigo-500/5">
+            <span className="ocr-shimmer absolute inset-0 pointer-events-none" />
+            <span className="relative z-[1] inline-flex items-center gap-1.5 text-indigo-700 dark:text-indigo-200">
+              <PulseDot />
+              <RotatingPhrase
+                phrase={phrase}
+                className="text-[11px] font-medium tracking-tight"
+              />
+            </span>
+          </div>
         </div>
       )}
       {error && (
@@ -179,6 +197,15 @@ function RotatingPhrase({ phrase, className }: { phrase: string; className?: str
   return (
     <span key={phrase} className={`ocr-phrase-fade ${className ?? ''}`}>
       {phrase}
+    </span>
+  );
+}
+
+function PulseDot() {
+  return (
+    <span className="relative inline-flex w-1.5 h-1.5">
+      <span className="absolute inset-0 rounded-full bg-indigo-500 dark:bg-indigo-400 animate-ping opacity-60" />
+      <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400" />
     </span>
   );
 }
