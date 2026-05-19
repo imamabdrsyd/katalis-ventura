@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
-import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet, ClipboardList, HandCoins, ArrowUpRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet, ClipboardList, HandCoins, ArrowUpRight, ArrowDownLeft, ArrowRight } from 'lucide-react';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useLanguage } from '@/context/LanguageContext';
 import { calculateFinancialSummary, calculateCategoryCounts, calculateIncomeStatementMetrics } from '@/lib/calculations';
@@ -434,7 +434,11 @@ export default function DashboardPage() {
               </div>
               {!transactionsLoading && revenueGrowthData.growth !== null && (
                 <div className={`inline-flex items-center gap-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${revenueGrowthData.growth === 0 ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : revenueGrowthData.growth > 0 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'}`}>
-                  <span>{revenueGrowthData.growth >= 0 ? '▲' : '▼'}</span>
+                  {revenueGrowthData.growth >= 0 ? (
+                    <ArrowUpRight className="w-3 h-3" strokeWidth={2.5} />
+                  ) : (
+                    <ArrowDownLeft className="w-3 h-3" strokeWidth={2.5} />
+                  )}
                   <span>{Math.abs(revenueGrowthData.growth).toFixed(1)}%</span>
                 </div>
               )}
@@ -651,7 +655,7 @@ export default function DashboardPage() {
               aria-label={t.dashboard.viewAll}
               className="p-1.5 rounded-lg text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors cursor-pointer"
             >
-              <ArrowUpRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
 
@@ -836,7 +840,7 @@ export default function DashboardPage() {
               aria-label={t.dashboard.viewAll}
               className="p-1.5 rounded-lg text-primary-500 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors cursor-pointer"
             >
-              <ArrowUpRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
           <div className="overflow-x-auto">

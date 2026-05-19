@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 import { Doughnut } from 'react-chartjs-2';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import {
   Chart as ChartJS,
   ArcElement,
@@ -162,7 +162,7 @@ export default function ExpenseBreakdownChart({ transactions, loading = false, s
             aria-label="Lihat semua expense di Income Statement"
             className="p-1.5 rounded-lg text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors cursor-pointer"
           >
-            <ArrowUpRight className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4" />
           </button>
         )}
       </div>

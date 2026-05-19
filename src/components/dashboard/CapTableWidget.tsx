@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { calculateCapTable } from '@/lib/calculations';
 import { formatCurrency } from '@/lib/utils';
 import type { Transaction } from '@/types';
@@ -67,7 +67,7 @@ export default function CapTableWidget({ transactions, loading = false }: CapTab
           aria-label="Lihat detail di Balance Sheet"
           className="p-1 rounded-md text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors cursor-pointer"
         >
-          <ArrowUpRight className="w-3.5 h-3.5" />
+          <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>
 
