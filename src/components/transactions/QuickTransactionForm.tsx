@@ -281,8 +281,13 @@ export function QuickTransactionForm({
     }
     if (parsed.date) setDate(parsed.date);
 
-    // Smart match: pilih akun berdasarkan keyword semantik dari struk
-    const matchedAccount = matchAccountByKeywords(quickAccounts, parsed.keywords);
+    // Smart match: pilih akun berdasarkan keyword semantik DAN nama vendor itu sendiri,
+    // supaya akun custom yang namanya mengandung "Indomaret"/"Telkomsel"/dst ikut ke-pick.
+    const accountKeywords = [
+      ...(parsed.keywords ?? []),
+      ...(parsed.vendor ? parsed.vendor.toLowerCase().split(/\s+/).filter((t) => t.length >= 3) : []),
+    ];
+    const matchedAccount = matchAccountByKeywords(quickAccounts, accountKeywords);
     if (matchedAccount) {
       setSelectedAccountId(matchedAccount.id);
       if (errors.selectedAccountId) {

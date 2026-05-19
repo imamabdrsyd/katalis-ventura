@@ -283,6 +283,21 @@ function cleanVendorCandidate(raw: string): string {
 }
 
 /**
+ * Normalize casing — ubah ALL CAPS jadi Title Case agar lebih cocok dengan kontak yang
+ * tersimpan. Hanya berlaku kalau string benar-benar semua huruf besar (≥ 3 char),
+ * karena nama proper biasanya sudah Title Case dari sumbernya.
+ */
+function normalizeVendorCasing(raw: string): string {
+  const letters = raw.replace(/[^A-Za-z]/g, '');
+  if (letters.length < 3) return raw;
+  // Anggap "all caps" hanya jika tidak ada huruf kecil sama sekali
+  if (/[a-z]/.test(raw)) return raw;
+  return raw
+    .toLowerCase()
+    .replace(/\b([a-z])([a-z]*)/g, (_, first, rest) => first.toUpperCase() + rest);
+}
+
+/**
  * Parse vendor (nama toko/merchant) dari struk. Strategi berurutan:
  * 1. Inline key:value — "Jenis Transaksi: Telkomsel"
  * 2. Two-column layout — label di satu baris, value di baris ":Telkomsel" di bawah.
@@ -301,7 +316,7 @@ export function parseVendor(text: string): string | undefined {
     const m = line.match(MERCHANT_KEY_PATTERN);
     if (m) {
       const cleaned = cleanVendorCandidate(m[1]);
-      if (cleaned.length >= 2 && !/^\d+$/.test(cleaned)) return cleaned;
+      if (cleaned.length >= 2 && !/^\d+$/.test(cleaned)) return normalizeVendorCasing(cleaned);
     }
   }
 
@@ -326,14 +341,14 @@ export function parseVendor(text: string): string | undefined {
   if (vendorLabelIndex >= 0 && vendorLabelIndex < orderedValues.length) {
     const cleaned = cleanVendorCandidate(orderedValues[vendorLabelIndex]);
     if (cleaned.length >= 2 && !/^\d+$/.test(cleaned) && !ID_LINE_PATTERN.test(cleaned)) {
-      return cleaned;
+      return normalizeVendorCasing(cleaned);
     }
   }
 
   // Strategy 3: brand pattern — scan whole text for known telco/marketplace names
   const brandMatch = text.match(KNOWN_BRAND_PATTERN);
   if (brandMatch) {
-    return brandMatch[0].replace(/\s+/g, ' ').trim();
+    return normalizeVendorCasing(brandMatch[0].replace(/\s+/g, ' ').trim());
   }
 
   // Strategy 4: scan baris awal untuk nama toko eksplisit
@@ -361,7 +376,7 @@ export function parseVendor(text: string): string | undefined {
     if (line.length < 2) continue;
     if (skipPatterns.some((p) => p.test(line))) continue;
     const cleaned = cleanVendorCandidate(line);
-    if (cleaned.length >= 2) return cleaned;
+    if (cleaned.length >= 2) return normalizeVendorCasing(cleaned);
   }
 
   return undefined;
