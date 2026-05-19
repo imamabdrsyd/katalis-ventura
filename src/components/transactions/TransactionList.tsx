@@ -163,7 +163,9 @@ export function TransactionList({
 
   // Category filter dropdown state
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [categoryDropdownStyle, setCategoryDropdownStyle] = useState<CSSProperties>({});
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
+  const categoryMenuRef = useRef<HTMLDivElement>(null);
 
   // Contact filter dropdown state
   const [showContactDropdown, setShowContactDropdown] = useState(false);
@@ -179,6 +181,27 @@ export function TransactionList({
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  const updateCategoryDropdownPosition = useCallback(() => {
+    if (!categoryDropdownRef.current) return;
+    const rect = categoryDropdownRef.current.getBoundingClientRect();
+    const availableWidth = Math.max(160, window.innerWidth - 16);
+    const width = Math.min(Math.max(rect.width, 160), availableWidth);
+    const left = Math.min(Math.max(rect.left, 8), window.innerWidth - width - 8);
+    const spaceBelow = window.innerHeight - rect.bottom - 16;
+    const spaceAbove = rect.top - 16;
+    const openUp = spaceBelow < 160 && spaceAbove > spaceBelow;
+    const maxHeight = Math.max(160, Math.min(320, openUp ? spaceAbove : spaceBelow));
+
+    setCategoryDropdownStyle({
+      position: 'fixed',
+      top: openUp ? Math.max(8, rect.top - maxHeight - 4) : rect.bottom + 4,
+      left,
+      width,
+      maxHeight,
+      zIndex: 9999,
+    });
   }, []);
 
   const updateContactDropdownPosition = useCallback(() => {
@@ -202,6 +225,14 @@ export function TransactionList({
     });
   }, []);
 
+  const toggleCategoryDropdown = () => {
+    setShowCategoryDropdown((open) => {
+      const next = !open;
+      if (next) requestAnimationFrame(updateCategoryDropdownPosition);
+      return next;
+    });
+  };
+
   const toggleContactDropdown = () => {
     setShowContactDropdown((open) => {
       const next = !open;
@@ -209,6 +240,17 @@ export function TransactionList({
       return next;
     });
   };
+
+  useEffect(() => {
+    if (!showCategoryDropdown) return;
+    updateCategoryDropdownPosition();
+    window.addEventListener('scroll', updateCategoryDropdownPosition, true);
+    window.addEventListener('resize', updateCategoryDropdownPosition);
+    return () => {
+      window.removeEventListener('scroll', updateCategoryDropdownPosition, true);
+      window.removeEventListener('resize', updateCategoryDropdownPosition);
+    };
+  }, [showCategoryDropdown, updateCategoryDropdownPosition]);
 
   useEffect(() => {
     if (!showContactDropdown) return;
@@ -224,7 +266,10 @@ export function TransactionList({
   // Close dropdowns on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target as Node)) {
+      if (
+        categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target as Node) &&
+        categoryMenuRef.current && !categoryMenuRef.current.contains(e.target as Node)
+      ) {
         setShowCategoryDropdown(false);
       }
       if (
@@ -296,7 +341,7 @@ export function TransactionList({
             <th className="text-left py-3 pl-1 pr-2 md:py-4 md:pl-2 md:pr-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <div className="relative" ref={categoryDropdownRef}>
                 <button
-                  onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                  onClick={toggleCategoryDropdown}
                   className={`flex items-center gap-1 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${categoryFilter ? 'text-indigo-500 dark:text-indigo-400 font-medium' : ''}`}
                 >
                   {categoryFilter || t.transactions.tableCategory}
@@ -304,8 +349,12 @@ export function TransactionList({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-                {showCategoryDropdown && (
-                  <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[140px] z-20">
+                {mounted && showCategoryDropdown && createPortal(
+                  <div
+                    ref={categoryMenuRef}
+                    style={categoryDropdownStyle}
+                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 overflow-y-auto"
+                  >
                     <button
                       onClick={() => { onCategoryFilterChange?.(''); setShowCategoryDropdown(false); }}
                       className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${!categoryFilter ? 'text-indigo-500 dark:text-indigo-400 font-medium' : 'text-gray-700 dark:text-gray-300'}`}
@@ -333,7 +382,8 @@ export function TransactionList({
                         SETTLE
                       </span>
                     </button>
-                  </div>
+                  </div>,
+                  document.body
                 )}
               </div>
             </th>

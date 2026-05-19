@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Contact, Phone, Mail, MapPin, Plus, Search, Pencil, Trash2, User, Building, Users2, Handshake, UserCog, TrendingUp, ArrowDownLeft, ArrowUpRight, Loader2, X } from 'lucide-react';
+import { Contact, Phone, Mail, Plus, Search, Pencil, Trash2, User, Building, Users2, Handshake, UserCog, TrendingUp, ArrowDownLeft, ArrowUpRight, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { FileUpload } from '@/components/ui/FileUpload';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
@@ -9,6 +9,7 @@ import * as contactsApi from '@/lib/api/contacts';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { CATEGORY_LABELS } from '@/lib/calculations';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
+import { isImageType } from '@/lib/storage/attachments';
 import type { Contact as ContactType, ContactType as ContactTypeEnum, Transaction, TransactionAttachment } from '@/types';
 
 const CONTACT_TYPE_CONFIG: Record<ContactTypeEnum, { label: string; icon: React.ReactNode; className: string }> = {
@@ -75,6 +76,12 @@ const EMPTY_FORM: ContactFormData = {
   id_card_attachments: [],
 };
 
+const CONTACT_DETAIL_STORAGE_PREFIX = 'business-contact-detail-panel';
+
+function getContactDetailStorageKey(businessId: string) {
+  return `${CONTACT_DETAIL_STORAGE_PREFIX}:${businessId}`;
+}
+
 interface ContactListProps {
   businessId: string;
   userId: string;
@@ -107,6 +114,19 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
   // Transaction detail modal
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
 
+  const loadContactTransactions = useCallback(async (contactName: string) => {
+    setLoadingTransactions(true);
+    try {
+      const txns = await contactsApi.getContactTransactions(businessId, contactName);
+      setContactTransactions(txns);
+    } catch (err) {
+      console.error('Failed to fetch contact transactions:', err);
+      setContactTransactions([]);
+    } finally {
+      setLoadingTransactions(false);
+    }
+  }, [businessId]);
+
   const fetchContacts = useCallback(async () => {
     setLoading(true);
     try {
@@ -123,6 +143,20 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
     fetchContacts();
   }, [fetchContacts]);
 
+  useEffect(() => {
+    if (loading || selectedContact || contacts.length === 0) return;
+
+    const storedContactId = window.localStorage.getItem(getContactDetailStorageKey(businessId));
+    const persistedContact = storedContactId
+      ? contacts.find((contact) => contact.id === storedContactId)
+      : null;
+    const contactToShow = persistedContact ?? contacts[0];
+
+    setSelectedContact(contactToShow);
+    window.localStorage.setItem(getContactDetailStorageKey(businessId), contactToShow.id);
+    loadContactTransactions(contactToShow.name);
+  }, [businessId, contacts, loadContactTransactions, loading, selectedContact]);
+
   const filteredContacts = contacts.filter((c) => {
     const matchSearch =
       !search ||
@@ -134,22 +168,11 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
   });
 
   const handleSelectContact = async (contact: ContactType) => {
-    // Toggle off if clicking same contact
-    if (selectedContact?.id === contact.id) {
-      setSelectedContact(null);
-      return;
-    }
+    if (selectedContact?.id === contact.id) return;
+
     setSelectedContact(contact);
-    setLoadingTransactions(true);
-    try {
-      const txns = await contactsApi.getContactTransactions(businessId, contact.name);
-      setContactTransactions(txns);
-    } catch (err) {
-      console.error('Failed to fetch contact transactions:', err);
-      setContactTransactions([]);
-    } finally {
-      setLoadingTransactions(false);
-    }
+    window.localStorage.setItem(getContactDetailStorageKey(businessId), contact.id);
+    loadContactTransactions(contact.name);
   };
 
   const openAddForm = () => {
@@ -207,18 +230,21 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
 
         // Update selectedContact state agar panel tidak stale
         if (selectedContact?.id === editingContact.id) {
-          const updatedContact = { ...selectedContact, name: newName, type: formData.type };
+          const updatedContact = {
+            ...selectedContact,
+            name: newName,
+            type: formData.type,
+            phone: formData.phone.trim() || null,
+            email: formData.email.trim() || null,
+            address: formData.address.trim() || null,
+            notes: formData.notes.trim() || null,
+            id_card_attachments: formData.id_card_attachments,
+          };
           setSelectedContact(updatedContact);
 
           if (nameChanged) {
             // Re-fetch transaksi dengan nama baru
-            setLoadingTransactions(true);
-            try {
-              const txns = await contactsApi.getContactTransactions(businessId, newName);
-              setContactTransactions(txns);
-            } finally {
-              setLoadingTransactions(false);
-            }
+            loadContactTransactions(newName);
           }
         }
       } else {
@@ -256,6 +282,8 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
       setDeleteTarget(null);
       if (selectedContact?.id === deleteTarget.id) {
         setSelectedContact(null);
+        setContactTransactions([]);
+        window.localStorage.removeItem(getContactDetailStorageKey(businessId));
       }
       fetchContacts();
     } catch (err) {
@@ -289,6 +317,7 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
     },
     { totalIn: 0, totalOut: 0, count: 0 }
   );
+  const selectedIdCardImage = selectedContact?.id_card_attachments?.find((attachment) => isImageType(attachment.mime_type));
 
   // Loading skeleton
   if (loading) {
@@ -311,7 +340,7 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
   return (
     <div className="flex gap-6">
       {/* LEFT: Contact List */}
-      <div className={`space-y-4 transition-all duration-200 ${selectedContact ? 'w-1/2 flex-shrink-0' : 'w-full'}`}>
+      <div className={`space-y-4 ${selectedContact ? 'w-1/2 flex-shrink-0' : 'w-full'}`}>
         {/* Search + Filter bar */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -503,13 +532,23 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => setSelectedContact(null)}
-                  className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex-shrink-0"
-                >
-                  <X className="w-4 h-4" />
-                </button>
               </div>
+
+              {selectedIdCardImage && (
+                <a
+                  href={selectedIdCardImage.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block mt-3 aspect-[85.6/54] w-full max-w-md overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={selectedIdCardImage.url}
+                    alt={`ID card ${selectedContact.name}`}
+                    className="h-full w-full object-cover object-center"
+                  />
+                </a>
+              )}
 
               {/* Summary row */}
               {!loadingTransactions && contactTransactions.length > 0 && (
@@ -633,7 +672,7 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
 
           <div>
             <label className="label">Tipe</label>
-            <div className="flex gap-2">
+            <div className="flex gap-2 overflow-x-auto overflow-y-hidden pb-1">
               {(['customer', 'vendor', 'partner', 'staff', 'investor', 'other'] as ContactTypeEnum[]).map((t) => {
                 const config = CONTACT_TYPE_CONFIG[t];
                 const isActive = formData.type === t;
@@ -642,7 +681,7 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
                     key={t}
                     type="button"
                     onClick={() => setFormData((prev) => ({ ...prev, type: t }))}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                    className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
                       isActive
                         ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
                         : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
