@@ -24,6 +24,15 @@ export function formatDate(date: string | Date): string {
   }).format(new Date(date));
 }
 
+export function formatDateWithDay(date: string | Date): string {
+  return new Intl.DateTimeFormat('id-ID', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(new Date(date));
+}
+
 // Format date to short format
 export function formatDateShort(date: string | Date): string {
   return new Intl.DateTimeFormat('id-ID', {
