@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback, type CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Lock, Contact as ContactIcon } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import type { Transaction, TransactionCategory, Contact } from '@/types';
@@ -167,11 +168,58 @@ export function TransactionList({
   // Contact filter dropdown state
   const [showContactDropdown, setShowContactDropdown] = useState(false);
   const [contactSearch, setContactSearch] = useState('');
+  const [contactDropdownStyle, setContactDropdownStyle] = useState<CSSProperties>({});
+  const [mounted, setMounted] = useState(false);
   const contactDropdownRef = useRef<HTMLDivElement>(null);
+  const contactMenuRef = useRef<HTMLDivElement>(null);
 
   // Date filter dropdown state
   const [showDateDropdown, setShowDateDropdown] = useState(false);
   const dateDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const updateContactDropdownPosition = useCallback(() => {
+    if (!contactDropdownRef.current) return;
+    const rect = contactDropdownRef.current.getBoundingClientRect();
+    const availableWidth = Math.max(160, window.innerWidth - 16);
+    const width = Math.min(Math.max(rect.width, 220), availableWidth);
+    const left = Math.min(Math.max(rect.left, 8), window.innerWidth - width - 8);
+    const spaceBelow = window.innerHeight - rect.bottom - 16;
+    const spaceAbove = rect.top - 16;
+    const openUp = spaceBelow < 160 && spaceAbove > spaceBelow;
+    const maxHeight = Math.max(160, Math.min(320, openUp ? spaceAbove : spaceBelow));
+
+    setContactDropdownStyle({
+      position: 'fixed',
+      top: openUp ? Math.max(8, rect.top - maxHeight - 4) : rect.bottom + 4,
+      left,
+      width,
+      maxHeight,
+      zIndex: 9999,
+    });
+  }, []);
+
+  const toggleContactDropdown = () => {
+    setShowContactDropdown((open) => {
+      const next = !open;
+      if (next) requestAnimationFrame(updateContactDropdownPosition);
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (!showContactDropdown) return;
+    updateContactDropdownPosition();
+    window.addEventListener('scroll', updateContactDropdownPosition, true);
+    window.addEventListener('resize', updateContactDropdownPosition);
+    return () => {
+      window.removeEventListener('scroll', updateContactDropdownPosition, true);
+      window.removeEventListener('resize', updateContactDropdownPosition);
+    };
+  }, [showContactDropdown, updateContactDropdownPosition]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -179,7 +227,10 @@ export function TransactionList({
       if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target as Node)) {
         setShowCategoryDropdown(false);
       }
-      if (contactDropdownRef.current && !contactDropdownRef.current.contains(e.target as Node)) {
+      if (
+        contactDropdownRef.current && !contactDropdownRef.current.contains(e.target as Node) &&
+        contactMenuRef.current && !contactMenuRef.current.contains(e.target as Node)
+      ) {
         setShowContactDropdown(false);
       }
       if (dateDropdownRef.current && !dateDropdownRef.current.contains(e.target as Node)) {
@@ -291,7 +342,7 @@ export function TransactionList({
             <th className="text-left py-3 px-2 md:py-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <div className="relative" ref={contactDropdownRef}>
                 <button
-                  onClick={() => setShowContactDropdown(!showContactDropdown)}
+                  onClick={toggleContactDropdown}
                   className={`flex items-center gap-1 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${contactFilter ? 'text-indigo-500 dark:text-indigo-400 font-medium' : ''}`}
                 >
                   <span className={contactFilter ? 'truncate max-w-[140px]' : ''}>{contactFilter || t.transactions.tableSubject}</span>
@@ -299,8 +350,12 @@ export function TransactionList({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-                {showContactDropdown && (
-                  <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[200px] max-h-80 overflow-hidden z-20 flex flex-col">
+                {mounted && showContactDropdown && createPortal(
+                  <div
+                    ref={contactMenuRef}
+                    style={contactDropdownStyle}
+                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 overflow-hidden flex flex-col"
+                  >
                     <div className="px-2 pb-1 border-b border-gray-100 dark:border-gray-700">
                       <input
                         type="text"
@@ -335,7 +390,8 @@ export function TransactionList({
                         </div>
                       )}
                     </div>
-                  </div>
+                  </div>,
+                  document.body
                 )}
               </div>
             </th>
