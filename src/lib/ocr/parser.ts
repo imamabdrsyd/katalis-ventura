@@ -474,9 +474,8 @@ const CATEGORY_FALLBACK_KEYWORDS: Record<TransactionCategory, string[]> = {
 };
 
 /**
- * Ekstrak keyword semantik dari struk untuk matching ke Chart of Accounts.
+ * Ekstrak keyword semantik (spesifik) dari struk untuk matching ke Chart of Accounts.
  * Hasil: array kata kunci lowercase, deduped, urut sesuai urutan rule match.
- * Fallback: kalau tidak ada rule yang match, pakai keyword default dari kategori.
  */
 export function extractKeywords(vendor: string | undefined, rawText: string): string[] {
   const haystack = [vendor ?? '', rawText ?? ''].join(' ');
@@ -488,19 +487,22 @@ export function extractKeywords(vendor: string | undefined, rawText: string): st
       }
     }
   }
-  // Tambahkan fallback dari kategori (selalu, sebagai safety net dengan skor lebih rendah
-  // karena matcher pakai bobot exact/substring — match generik tetap kalah dari match spesifik)
-  const category = inferCategory(vendor, rawText);
-  if (category) {
-    for (const k of CATEGORY_FALLBACK_KEYWORDS[category]) {
-      if (!result.includes(k)) result.push(k);
-    }
-  }
   return result;
 }
 
 /**
- * Main parser: ambil { date, total, vendor, category, keywords } dari raw OCR text.
+ * Keyword fallback dari kategori transaksi — dipakai matcher dengan bobot lebih kecil
+ * (cuma tie-breaker), supaya match minimal nyangkut ke default CoA tanpa mengalahkan
+ * akun yang punya match spesifik.
+ */
+export function extractFallbackKeywords(vendor: string | undefined, rawText: string): string[] {
+  const category = inferCategory(vendor, rawText);
+  return category ? [...CATEGORY_FALLBACK_KEYWORDS[category]] : [];
+}
+
+/**
+ * Main parser: ambil { date, total, vendor, category, keywords, fallback_keywords }
+ * dari raw OCR text.
  */
 export function parseReceipt(rawText: string): OcrParsed {
   const vendor = parseVendor(rawText);
@@ -511,5 +513,6 @@ export function parseReceipt(rawText: string): OcrParsed {
     vendor,
     category: inferCategory(vendor, rawText),
     keywords: extractKeywords(vendor, rawText),
+    fallback_keywords: extractFallbackKeywords(vendor, rawText),
   };
 }

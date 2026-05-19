@@ -281,11 +281,18 @@ export function QuickTransactionForm({
     }
     if (parsed.date) setDate(parsed.date);
 
-    // Smart match: pilih akun berdasarkan keyword semantik DAN nama vendor itu sendiri,
-    // supaya akun custom yang namanya mengandung "Indomaret"/"Telkomsel"/dst ikut ke-pick.
+    // Smart match: pilih akun berdasarkan keyword semantik DAN nama vendor.
+    // - Strong: keyword spesifik dari rule topical (supplies, indomaret, indihome, dll)
+    //   + token nama vendor → dominan menentukan match
+    // - Weak: fallback dari kategori (beban, biaya, operasional) → cuma tie-breaker
+    //   supaya match minimal nyangkut ke CoA default tanpa mengalahkan akun spesifik
+    const vendorTokens = parsed.vendor
+      ? parsed.vendor.toLowerCase().split(/\s+/).filter((t) => t.length >= 3)
+      : [];
     const accountKeywords = [
-      ...(parsed.keywords ?? []),
-      ...(parsed.vendor ? parsed.vendor.toLowerCase().split(/\s+/).filter((t) => t.length >= 3) : []),
+      ...(parsed.keywords ?? []).map((keyword) => ({ keyword, weight: 'strong' as const })),
+      ...vendorTokens.map((keyword) => ({ keyword, weight: 'strong' as const })),
+      ...(parsed.fallback_keywords ?? []).map((keyword) => ({ keyword, weight: 'weak' as const })),
     ];
     const matchedAccount = matchAccountByKeywords(quickAccounts, accountKeywords);
     if (matchedAccount) {

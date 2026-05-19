@@ -9,6 +9,9 @@ export type OcrParsed = {
   // Semantic keywords derived from receipt topic/brand. Used to match the
   // most relevant Chart of Accounts entry (e.g. ["internet","indihome"] → "Internet" account).
   keywords?: string[];
+  // Generic fallback keywords from inferred category (mis. OPEX → ["beban","biaya"]).
+  // Skor matchnya jauh lebih kecil — cuma berfungsi sebagai tie-breaker, bukan utama.
+  fallback_keywords?: string[];
 };
 
 export type OcrResult = {

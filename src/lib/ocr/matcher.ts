@@ -1,18 +1,30 @@
 import type { Account, Contact } from '@/types';
 
 /**
- * Bobot skor matching akun:
+ * Keyword bisa "strong" (spesifik dari rule topical, mis. "supplies", "indomaret")
+ * atau "weak" (fallback generik dari kategori, mis. "beban", "biaya"). Weak keyword
+ * skornya jauh lebih kecil supaya tidak mengalahkan match spesifik di akun lain.
+ */
+export type WeightedKeyword = { keyword: string; weight: 'strong' | 'weak' };
+export type KeywordInput = string | WeightedKeyword;
+
+/**
+ * Bobot skor matching akun (strong keyword):
  * - exact word match di account_name = 10
  * - substring match di account_name = 6
  * - exact word match di description = 5
  * - substring match di description = 3
  * - match di account_code = 1
+ *
+ * Weak keyword (fallback kategori) bobotnya 1/5 dari strong — jadi cuma berfungsi
+ * sebagai tie-breaker, bukan tukang pilih utama.
  */
 const WEIGHT_NAME_EXACT = 10;
 const WEIGHT_NAME_SUBSTR = 6;
 const WEIGHT_DESC_EXACT = 5;
 const WEIGHT_DESC_SUBSTR = 3;
 const WEIGHT_CODE = 1;
+const WEAK_MULTIPLIER = 0.2;
 
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -22,25 +34,37 @@ function wordRegex(keyword: string): RegExp {
   return new RegExp(`\\b${escapeRegex(keyword)}\\b`, 'i');
 }
 
-function scoreAccount(account: Account, keywords: string[]): number {
+function normalizeKeywords(keywords: KeywordInput[]): WeightedKeyword[] {
+  return keywords
+    .map((k): WeightedKeyword | null => {
+      if (typeof k === 'string') {
+        return k ? { keyword: k, weight: 'strong' } : null;
+      }
+      return k.keyword ? k : null;
+    })
+    .filter((k): k is WeightedKeyword => k !== null);
+}
+
+function scoreAccount(account: Account, keywords: WeightedKeyword[]): number {
   if (keywords.length === 0) return 0;
   const name = (account.account_name || '').toLowerCase();
   const desc = (account.description || '').toLowerCase();
   const code = (account.account_code || '').toLowerCase();
 
   let score = 0;
-  for (const kRaw of keywords) {
-    const k = kRaw.toLowerCase();
+  for (const { keyword, weight } of keywords) {
+    const k = keyword.toLowerCase();
     if (!k) continue;
+    const multiplier = weight === 'weak' ? WEAK_MULTIPLIER : 1;
     const wr = wordRegex(k);
 
-    if (wr.test(name)) score += WEIGHT_NAME_EXACT;
-    else if (name.includes(k)) score += WEIGHT_NAME_SUBSTR;
+    if (wr.test(name)) score += WEIGHT_NAME_EXACT * multiplier;
+    else if (name.includes(k)) score += WEIGHT_NAME_SUBSTR * multiplier;
 
-    if (wr.test(desc)) score += WEIGHT_DESC_EXACT;
-    else if (desc.includes(k)) score += WEIGHT_DESC_SUBSTR;
+    if (wr.test(desc)) score += WEIGHT_DESC_EXACT * multiplier;
+    else if (desc.includes(k)) score += WEIGHT_DESC_SUBSTR * multiplier;
 
-    if (code.includes(k)) score += WEIGHT_CODE;
+    if (code.includes(k)) score += WEIGHT_CODE * multiplier;
   }
   return score;
 }
@@ -55,12 +79,14 @@ function scoreAccount(account: Account, keywords: string[]): number {
  */
 export function matchAccountByKeywords(
   accounts: Account[],
-  keywords: string[] | undefined
+  keywords: KeywordInput[] | undefined
 ): Account | undefined {
   if (!keywords || keywords.length === 0) return undefined;
+  const normalized = normalizeKeywords(keywords);
+  if (normalized.length === 0) return undefined;
   let best: { account: Account; score: number } | null = null;
   for (const acc of accounts) {
-    const s = scoreAccount(acc, keywords);
+    const s = scoreAccount(acc, normalized);
     if (s <= 0) continue;
     if (
       !best ||
