@@ -25,10 +25,11 @@ import { ChevronDown, StickyNote, Paperclip, Zap, ArrowDownLeft, ArrowUpRight } 
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { CurrencyPill } from '@/components/ui/CurrencyPill';
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
-import { saveContactFromTransaction } from '@/lib/api/contacts';
+import { saveContactFromTransaction, getContacts } from '@/lib/api/contacts';
 import { useBusinessContext } from '@/context/BusinessContext';
 import OCRScanButton from '@/components/transactions/OCRScanButton';
 import type { OcrResult } from '@/lib/ocr/types';
+import { matchAccountByKeywords, matchContactByVendor } from '@/lib/ocr/matcher';
 import { BASE_CURRENCY, SUPPORTED_CURRENCIES, calculateBaseAmount, normalizeCurrencyCode } from '@/lib/currency';
 
 import type { Transaction, UnitBreakdown } from '@/types';
@@ -252,8 +253,8 @@ export function QuickTransactionForm({
   // Unit breakdown handlers
   const formatNum = (n: number) => n ? n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
 
-  // OCR result handler — pre-fill amount, vendor name, and date
-  const applyOcrResult = (result: OcrResult) => {
+  // OCR result handler — pre-fill amount, vendor name, date, account & contact
+  const applyOcrResult = async (result: OcrResult) => {
     const { parsed } = result;
     if (parsed.total) {
       setAmount(parsed.total);
@@ -271,8 +272,36 @@ export function QuickTransactionForm({
       setCurrencyCode(currency);
       setFxRate(currency === BASE_CURRENCY ? 1 : fxRate || 1);
     }
-    if (parsed.vendor) setName(parsed.vendor);
     if (parsed.date) setDate(parsed.date);
+
+    // Smart match: pilih akun berdasarkan keyword semantik dari struk
+    const matchedAccount = matchAccountByKeywords(quickAccounts, parsed.keywords);
+    if (matchedAccount) {
+      setSelectedAccountId(matchedAccount.id);
+      if (errors.selectedAccountId) {
+        setErrors((prev) => {
+          const n = { ...prev };
+          delete n.selectedAccountId;
+          return n;
+        });
+      }
+    }
+
+    // Smart match: pilih kontak yang sesuai dengan vendor.
+    // Fallback: jika tidak ada kontak match, isi nama vendor mentah ke field.
+    let resolvedContactName = parsed.vendor ?? '';
+    if (businessId && parsed.vendor) {
+      try {
+        const contacts = await getContacts(businessId);
+        const matchedContact = matchContactByVendor(contacts, parsed.vendor, parsed.keywords);
+        if (matchedContact) {
+          resolvedContactName = matchedContact.name;
+        }
+      } catch (err) {
+        console.error('Failed to fetch contacts for OCR match:', err);
+      }
+    }
+    if (resolvedContactName) setName(resolvedContactName);
   };
 
   const handleToggleBreakdown = () => {

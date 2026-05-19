@@ -262,10 +262,33 @@ function normalizeNumber(raw: string): number | undefined {
 const MERCHANT_KEY_PATTERN = /^(?:jenis\s*transaksi|merchant|toko|penerima|kepada|to|provider|operator|nama\s*merchant|nama\s*toko|nama\s*penerima)\s*[:\-]\s*(.+)$/i;
 
 /**
- * Parse vendor (nama toko/merchant) dari struk.
- * Strategi:
- * 1. Cari baris "Jenis Transaksi: X" / "Merchant: X" di seluruh teks
- * 2. Fallback: baris awal yang bukan angka/alamat/noise
+ * Label vendor yang sering muncul sebagai BARIS TERPISAH di e-receipt dua-kolom.
+ * Layout: label di baris X, value di baris Y (dimulai dengan ":"). Lihat parseVendor strat 1b.
+ */
+const VENDOR_LABEL_LINE = /^(jenis\s*transaksi|transaction\s*type|merchant|nama\s*merchant|toko|nama\s*toko|penerima|nama\s*penerima|kepada|provider|operator)\s*[:.]?\s*$/i;
+
+/**
+ * Brand telco/utility yang sering muncul sebagai logo/header di struk.
+ * Jika terdeteksi di teks, dipakai sebagai vendor candidate (skor tinggi karena reliable).
+ */
+const KNOWN_BRAND_PATTERN = /\b(telkomsel|indosat|xl\s*axiata|smartfren|by\.?u|tri|axis|indihome|biznet|myrepublic|firstmedia|pln|pdam|pgn|gojek|grab|tokopedia|shopee|lazada|bukalapak|blibli|indomaret|alfamart|alfamidi|mcdonald|kfc|starbucks|pertamina|shell)\b/i;
+
+/**
+ * Bersihkan kandidat vendor: strip karakter noise di awal/akhir & leading single-char (logo).
+ */
+function cleanVendorCandidate(raw: string): string {
+  const trimmed = raw.trim().replace(/^[*•\-_:\s]+/, '').replace(/[*•\-_]+$/g, '').trim();
+  // Strip leading single char + whitespace (mis. "A Anthropic" → "Anthropic" karena OCR baca logo)
+  return trimmed.replace(/^[A-Za-z]\s+/, '').trim();
+}
+
+/**
+ * Parse vendor (nama toko/merchant) dari struk. Strategi berurutan:
+ * 1. Inline key:value — "Jenis Transaksi: Telkomsel"
+ * 2. Two-column layout — label di satu baris, value di baris ":Telkomsel" di bawah.
+ *    Pair pertama dimana label = "Jenis Transaksi"/"Merchant"/dll dengan value pertama yang lewat.
+ * 3. Brand pattern — scan SELURUH teks, cari nama brand telco/marketplace yang dikenal.
+ * 4. Fallback — baris awal yang bukan noise.
  */
 export function parseVendor(text: string): string | undefined {
   const lines = text
@@ -273,44 +296,72 @@ export function parseVendor(text: string): string | undefined {
     .map((l) => l.trim())
     .filter(Boolean);
 
-  // Strategy 1: cari key:value pattern di SELURUH baris (bukan hanya 5 teratas)
+  // Strategy 1: inline key:value
   for (const line of lines) {
     const m = line.match(MERCHANT_KEY_PATTERN);
     if (m) {
-      const val = m[1].trim().replace(/[*•\-_]+$/g, '').trim();
-      // Strip leading single char + whitespace (mis. "A Anthropic" → "Anthropic" karena OCR baca logo)
-      const cleaned = val.replace(/^[A-Za-z]\s+/, '').trim();
+      const cleaned = cleanVendorCandidate(m[1]);
       if (cleaned.length >= 2 && !/^\d+$/.test(cleaned)) return cleaned;
     }
   }
 
-  // Strategy 2: scan baris awal untuk nama toko eksplisit
-  const topLines = lines.slice(0, 8); // perluas dari 5 ke 8 baris
+  // Strategy 2: two-column layout (label list di atas, value list ":..." di bawah).
+  // Kumpulkan SEMUA label utama (yang tidak diikuti ":" inline), lalu pasangkan dengan
+  // value lines (baris dimulai ":") secara berurutan. Ordinal label "Jenis Transaksi"
+  // menentukan value mana yang dipakai sebagai vendor.
+  const KNOWN_LABEL_LINE = /^(waktu\s*transaksi|transaction\s*time|jenis\s*transaksi|transaction\s*type|no\.?\s*transaksi|transaction\s*number|periode\s*tagihan|billing\s*period[e]?|no\.?\s*pelanggan|no\.?\s*customer|nama\s*pelanggan|customer'?s?\s*name|metode\s*bayar|payment\s*method|merchant|toko|provider|operator)\s*[:.]?\s*$/i;
+
+  const orderedLabels: string[] = [];
+  const orderedValues: string[] = [];
+
+  for (const line of lines) {
+    if (KNOWN_LABEL_LINE.test(line)) {
+      orderedLabels.push(line.toLowerCase());
+    } else if (/^:\s*\S/.test(line)) {
+      orderedValues.push(line.replace(/^:\s*/, ''));
+    }
+  }
+  // Cari ordinal label vendor (Jenis Transaksi / Merchant / dll)
+  const vendorLabelIndex = orderedLabels.findIndex((l) => VENDOR_LABEL_LINE.test(l));
+  if (vendorLabelIndex >= 0 && vendorLabelIndex < orderedValues.length) {
+    const cleaned = cleanVendorCandidate(orderedValues[vendorLabelIndex]);
+    if (cleaned.length >= 2 && !/^\d+$/.test(cleaned) && !ID_LINE_PATTERN.test(cleaned)) {
+      return cleaned;
+    }
+  }
+
+  // Strategy 3: brand pattern — scan whole text for known telco/marketplace names
+  const brandMatch = text.match(KNOWN_BRAND_PATTERN);
+  if (brandMatch) {
+    return brandMatch[0].replace(/\s+/g, ' ').trim();
+  }
+
+  // Strategy 4: scan baris awal untuk nama toko eksplisit
+  const topLines = lines.slice(0, 8);
 
   const skipPatterns = [
     /^\d/,                              // baris diawali angka
+    /^:/,                               // value line di kolom kanan layout dua-kolom
     /^(jl|jalan|alamat|no\.?\s*\d)/i,   // alamat
     /\b(telp|telepon|phone|hp|wa|whatsapp)\b[:.\s]/i,
     /npwp/i,
     /struk|receipt|invoice|kwitansi/i,
     /^[\W_]+$/,
     /^(thank\s*you|terima\s*kasih|tq|thanks|hello|hi|halo|selamat)\b/i,
-    /\b(berhasil|successful|sukses|completed|complete|failed|gagal)\b/i,
+    /\b(berhasil|successful|sukses|successfull|completed|complete|failed|gagal)\b/i,
     /^(rp|idr)\b/i,
     /\b(pembayaran|payment|transaksi|transaction|bill\s*payment)\b/i,
     /\b(purchase|order|nota|faktur)\b/i,
     /\b(periode|period|tanggal|date|waktu|time)\b[:.\s]/i,
     /\b(no|ref|id|kode)\b[.\s:#-]/i,   // reference number lines
+    /\b(detail|details)\b/i,           // "Detail Transaksi", "Transaction Details"
   ];
 
   for (const line of topLines) {
     if (line.length < 2) continue;
     if (skipPatterns.some((p) => p.test(line))) continue;
-
-    const cleaned = line.replace(/[*•\-_]+$/g, '').trim();
-    // Strip leading single char + whitespace (mis. OCR baca logo sebagai single letter)
-    const stripped = cleaned.replace(/^[A-Za-z]\s+/, '').trim();
-    if (stripped.length >= 2) return stripped;
+    const cleaned = cleanVendorCandidate(line);
+    if (cleaned.length >= 2) return cleaned;
   }
 
   return undefined;
@@ -352,7 +403,66 @@ export function inferCategory(vendor: string | undefined, rawText?: string): Tra
 }
 
 /**
- * Main parser: ambil { date, total, vendor, category } dari raw OCR text.
+ * Topic keyword groups. Each rule matches anywhere in the raw OCR text + vendor name,
+ * and emits its `keywords` list — used by the matcher to find a Chart of Accounts entry
+ * with overlapping wording (e.g. account named "Internet" / description "Wifi bulanan").
+ *
+ * Order is irrelevant; multiple groups can match (their keywords are merged & deduped).
+ */
+const KEYWORD_RULES: Array<{ pattern: RegExp; keywords: string[] }> = [
+  // Telco / internet / WiFi (typo-tolerant for OCR errors: Inditiame, lndihome, etc.)
+  {
+    pattern: /\b(wifi|internet|indi\s*home|ind[il]ti?ame|biznet|myrepublic|firstmedia|first\s*media|speedy|fiber|eznet|ez\s*net)\b/i,
+    keywords: ['internet', 'wifi', 'indihome', 'telkom'],
+  },
+  // Cellular pulsa / data
+  {
+    pattern: /\b(pulsa|paket\s*data|kuota|telkomsel|indosat|xl\s*axiata|axis|smartfren|tri\b|3\b|by\.?u)\b/i,
+    keywords: ['pulsa', 'telepon', 'komunikasi', 'telkomsel', 'telkom', 'data'],
+  },
+  // Utilities
+  { pattern: /\b(pln|listrik|token\s*listrik|electricity)\b/i, keywords: ['listrik', 'utilitas', 'pln'] },
+  { pattern: /\b(pdam|air|water)\b/i, keywords: ['air', 'utilitas', 'pdam'] },
+  { pattern: /\b(pgn|gas\s*negara|gas)\b/i, keywords: ['gas', 'utilitas'] },
+  // Transport
+  { pattern: /\b(grab|gojek|gocar|goride|maxim|blue\s*bird|taxi|taksi)\b/i, keywords: ['transportasi', 'transport', 'taxi'] },
+  { pattern: /\b(pertamina|shell|vivo|bp|total\s*oil|bensin|solar|pertalite|pertamax)\b/i, keywords: ['bbm', 'bensin', 'bahan bakar'] },
+  // Food
+  { pattern: /\b(gofood|grabfood|shopeefood|mcdonald|kfc|burger|pizza|starbucks|kopi)\b/i, keywords: ['konsumsi', 'makan', 'food', 'meals'] },
+  // Marketplaces / shopping
+  { pattern: /\b(tokopedia|shopee|lazada|bukalapak|blibli|jd\.id)\b/i, keywords: ['pembelian', 'belanja', 'marketplace'] },
+  // Minimarket
+  { pattern: /\b(indomaret|alfamart|alfamidi|circle\s*k|lawson|familymart|7-?eleven|hypermart|lottemart|transmart|carrefour)\b/i, keywords: ['perlengkapan', 'belanja', 'supplies'] },
+  // Tax
+  { pattern: /\b(pajak|ppn|pph|samsat|bea\s*cukai)\b/i, keywords: ['pajak', 'tax'] },
+  { pattern: /\b(bpjs)\b/i, keywords: ['bpjs', 'asuransi', 'jaminan'] },
+  // Banking / loan
+  { pattern: /\b(cicilan|angsuran|kredit|pinjaman|loan)\b/i, keywords: ['pinjaman', 'kredit', 'hutang'] },
+  { pattern: /\b(bunga|interest)\b/i, keywords: ['bunga', 'interest'] },
+  // E-wallet topup
+  { pattern: /\b(top\s*up|topup|isi\s*saldo)\b/i, keywords: ['saldo', 'topup'] },
+  { pattern: /\b(ovo|dana|gopay|linkaja|shopeepay|sakuku)\b/i, keywords: ['e-wallet', 'dompet digital'] },
+];
+
+/**
+ * Ekstrak keyword semantik dari struk untuk matching ke Chart of Accounts.
+ * Hasil: array kata kunci lowercase, deduped, urut sesuai urutan rule match.
+ */
+export function extractKeywords(vendor: string | undefined, rawText: string): string[] {
+  const haystack = [vendor ?? '', rawText ?? ''].join(' ');
+  const result: string[] = [];
+  for (const rule of KEYWORD_RULES) {
+    if (rule.pattern.test(haystack)) {
+      for (const k of rule.keywords) {
+        if (!result.includes(k)) result.push(k);
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * Main parser: ambil { date, total, vendor, category, keywords } dari raw OCR text.
  */
 export function parseReceipt(rawText: string): OcrParsed {
   const vendor = parseVendor(rawText);
@@ -362,5 +472,6 @@ export function parseReceipt(rawText: string): OcrParsed {
     currency_code: parseCurrency(rawText),
     vendor,
     category: inferCategory(vendor, rawText),
+    keywords: extractKeywords(vendor, rawText),
   };
 }

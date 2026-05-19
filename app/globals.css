@@ -161,6 +161,28 @@
   }
 }
 
+/* OCR rotating phrase fade-in (Claude Code style) */
+@keyframes ocr-phrase-fade {
+  0% {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ocr-phrase-fade {
+  animation: ocr-phrase-fade 280ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ocr-phrase-fade {
+    animation: none;
+  }
+}
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none;

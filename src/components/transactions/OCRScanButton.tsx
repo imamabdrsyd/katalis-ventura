@@ -1,9 +1,38 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScanText } from 'lucide-react';
 import { uploadAttachment, validateFile } from '@/lib/storage/attachments';
 import type { OcrResult } from '@/lib/ocr/types';
+
+type OcrStage = 'uploading' | 'scanning' | 'parsing';
+
+const STAGE_PHRASES: Record<OcrStage, string[]> = {
+  uploading: ['Mengunggah struk...', 'Menyiapkan gambar...', 'Mengirim ke cloud...'],
+  scanning: ['Memindai struk...', 'Membaca teks...', 'Menganalisis layout...', 'Mengenali angka...'],
+  parsing: ['Mengekstrak nominal...', 'Mendeteksi vendor...', 'Menyusun tanggal...', 'Mencocokkan akun...', 'Hampir selesai...'],
+};
+
+function useRotatingPhrase(stage: OcrStage | null, intervalMs = 1400) {
+  const [phrase, setPhrase] = useState<string>('');
+
+  useEffect(() => {
+    if (!stage) {
+      setPhrase('');
+      return;
+    }
+    const phrases = STAGE_PHRASES[stage];
+    let idx = 0;
+    setPhrase(phrases[0]);
+    const id = setInterval(() => {
+      idx = (idx + 1) % phrases.length;
+      setPhrase(phrases[idx]);
+    }, intervalMs);
+    return () => clearInterval(id);
+  }, [stage, intervalMs]);
+
+  return phrase;
+}
 
 type Props = {
   businessId: string;
@@ -30,8 +59,10 @@ export default function OCRScanButton({
   label = 'Scan Struk',
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [loading, setLoading] = useState(false);
+  const [stage, setStage] = useState<OcrStage | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const loading = stage !== null;
+  const phrase = useRotatingPhrase(stage);
 
   const handleClick = () => {
     if (loading || disabled) return;
@@ -50,14 +81,15 @@ export default function OCRScanButton({
     }
 
     setError(null);
-    setLoading(true);
+    setStage('uploading');
 
     try {
       // 1. Upload ke Cloudinary
       const attachment = await uploadAttachment(businessId, file);
 
-      // 2. Panggil OCR API
-      const res = await fetch('/api/ocr/scan', {
+      // 2. Panggil OCR API (scanning + parsing happen server-side)
+      setStage('scanning');
+      const scanPromise = fetch('/api/ocr/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -65,6 +97,13 @@ export default function OCRScanButton({
           image_url: attachment.url,
         }),
       });
+
+      // Switch to "parsing" phrases mid-flight so user sees progression
+      // even though it's a single API call
+      const parsingTimer = setTimeout(() => setStage('parsing'), 2500);
+
+      const res = await scanPromise;
+      clearTimeout(parsingTimer);
 
       const json = await res.json();
       if (!res.ok) {
@@ -77,7 +116,7 @@ export default function OCRScanButton({
       const msg = err instanceof Error ? err.message : 'Gagal memproses gambar';
       setError(msg);
     } finally {
-      setLoading(false);
+      setStage(null);
     }
   };
 
@@ -89,7 +128,7 @@ export default function OCRScanButton({
         : 'btn-primary inline-flex items-center gap-2';
 
   return (
-    <div className="inline-flex flex-col gap-1">
+    <div className="inline-flex flex-col gap-1 relative">
       <input
         ref={inputRef}
         type="file"
@@ -105,11 +144,14 @@ export default function OCRScanButton({
         disabled={disabled || loading}
         className={`${baseClass} disabled:opacity-50 disabled:cursor-not-allowed`}
         title="Scan receipt to auto-fill"
+        aria-live="polite"
       >
         {loading ? (
           <>
             <Spinner />
-            {variant !== 'compact' && <span>Memindai...</span>}
+            {variant !== 'compact' && (
+              <RotatingPhrase phrase={phrase} />
+            )}
           </>
         ) : (
           <>
@@ -118,10 +160,26 @@ export default function OCRScanButton({
           </>
         )}
       </button>
+      {loading && variant === 'compact' && phrase && (
+        <div className="absolute top-full right-0 mt-1.5 z-10 pointer-events-none whitespace-nowrap">
+          <RotatingPhrase
+            phrase={phrase}
+            className="inline-block text-[11px] font-medium text-indigo-600 dark:text-indigo-400 bg-white dark:bg-gray-800 border border-indigo-100 dark:border-indigo-900/40 rounded-md px-2 py-0.5 shadow-sm"
+          />
+        </div>
+      )}
       {error && (
         <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
       )}
     </div>
+  );
+}
+
+function RotatingPhrase({ phrase, className }: { phrase: string; className?: string }) {
+  return (
+    <span key={phrase} className={`ocr-phrase-fade ${className ?? ''}`}>
+      {phrase}
+    </span>
   );
 }
 

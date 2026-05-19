@@ -6,6 +6,9 @@ export type OcrParsed = {
   currency_code?: string; // ISO-4217 currency code detected from the receipt
   vendor?: string;  // merchant name
   category?: 'EARN' | 'OPEX' | 'VAR' | 'CAPEX' | 'TAX' | 'FIN'; // inferred category hint
+  // Semantic keywords derived from receipt topic/brand. Used to match the
+  // most relevant Chart of Accounts entry (e.g. ["internet","indihome"] → "Internet" account).
+  keywords?: string[];
 };
 
 export type OcrResult = {

@@ -108,7 +108,7 @@ export function FileUpload({ businessId, value, onChange, disabled = false }: Fi
                 {!disabled && (
                   <button type="button" onClick={() => handleRemove(att)}
                     className="flex-shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-900/20 transition-colors"
-                    title="Hapus lampiran">
+                    title="Remove attachment">
                     <X className="w-4 h-4" />
                   </button>
                 )}
@@ -137,12 +137,12 @@ export function FileUpload({ businessId, value, onChange, disabled = false }: Fi
           {uploading ? (
             <>
               <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
-              <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">Mengupload...</p>
+              <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">Uploading...</p>
             </>
           ) : value.length > 0 ? (
             <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
               <Plus className="w-4 h-4" />
-              <span>Tambah file ({value.length}/{MAX_FILES})</span>
+              <span>Add file ({value.length}/{MAX_FILES})</span>
             </div>
           ) : (
             <>
@@ -151,11 +151,11 @@ export function FileUpload({ businessId, value, onChange, disabled = false }: Fi
               </div>
               <div className="text-center">
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  <span className="font-semibold text-indigo-600 dark:text-indigo-400">Klik untuk upload</span>
-                  {' '}atau drag & drop
+                  <span className="font-semibold text-indigo-600 dark:text-indigo-400">Click to upload</span>
+                  {' '}or drag & drop
                 </p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                  JPG, PNG, WebP, PDF (maks. 5MB · hingga {MAX_FILES} file)
+                  JPG, PNG, WebP, PDF (max 5MB · up to {MAX_FILES} files)
                 </p>
               </div>
             </>
@@ -199,7 +199,7 @@ export function FileUploadCompact({ businessId, value, onChange, disabled = fals
         disabled={disabled}
       >
         <Paperclip className="w-4 h-4" />
-        <span>+ Tambah lampiran</span>
+        <span>+ Add attachment</span>
       </button>
     );
   }
@@ -209,7 +209,7 @@ export function FileUploadCompact({ businessId, value, onChange, disabled = fals
       <div className="flex items-center justify-between">
         <label className="label text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
           <Paperclip className="w-3.5 h-3.5" />
-          Lampiran (opsional)
+          Attachments (optional)
         </label>
         {value.length === 0 && (
           <button
