@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { toast } from 'sonner';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { isManagerRole } from '@/lib/roles';
 import * as invoicesApi from '@/lib/api/invoices';
@@ -94,7 +95,7 @@ export function useInvoices() {
       fetchSettings();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Gagal membuat invoice';
-      alert(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -110,7 +111,7 @@ export function useInvoices() {
       fetchInvoices();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Gagal mengupdate invoice';
-      alert(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -127,7 +128,7 @@ export function useInvoices() {
       fetchSettings();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Gagal menghapus invoice';
-      alert(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -162,7 +163,7 @@ export function useInvoices() {
       fetchInvoices();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Gagal mengupdate status';
-      alert(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -176,7 +177,7 @@ export function useInvoices() {
       fetchInvoices();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Gagal mengupdate status';
-      alert(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -193,7 +194,7 @@ export function useInvoices() {
       setNextInvoiceNumber(nextNum);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Gagal menyimpan pengaturan';
-      alert(message);
+      toast.error(message);
     }
   }, [businessId]);
 

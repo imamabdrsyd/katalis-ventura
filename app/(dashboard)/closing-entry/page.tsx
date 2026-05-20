@@ -1,6 +1,7 @@
 'use client';
 
 import React, { Suspense, useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import { BookCheck, Calendar, AlertTriangle, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -58,7 +59,7 @@ function ClosingEntryPageInner() {
   const handleExecute = useCallback(async () => {
     if (!preview || !businessId || !user) return;
     if (!preview.retainedEarningsAccountId) {
-      alert(t.closingEntry.retainedEarningsAlert);
+      toast.warning(t.closingEntry.retainedEarningsAlert);
       return;
     }
 
@@ -78,7 +79,7 @@ function ClosingEntryPageInner() {
       setPreview(null);
       queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
     } catch (err: any) {
-      alert(err.message || t.closingEntry.executeFailed);
+      toast.error(err.message || t.closingEntry.executeFailed);
       setResult({ success: false, count: 0 });
     } finally {
       setExecuting(false);

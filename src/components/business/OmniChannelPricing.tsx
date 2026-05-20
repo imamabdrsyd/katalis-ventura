@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { DollarSign, Plus, Trash2, Loader2, Calendar } from 'lucide-react';
 import type { BusinessOmniChannel, PricingRule } from '@/types';
 import { upsertOmniChannel, createPricingRule, deletePricingRule } from '@/lib/api/omniChannel';
@@ -125,7 +126,7 @@ export function OmniChannelPricing({ businessId, userId, channel, onChanged, bar
       await deletePricingRule(businessId, rule.id);
       onChanged();
     } catch (err: any) {
-      alert(err.message || 'Gagal menghapus aturan');
+      toast.error(err.message || 'Gagal menghapus aturan');
     }
   }
 

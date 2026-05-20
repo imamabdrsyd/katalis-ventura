@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Zap } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { QuickTransactionForm } from './QuickTransactionForm';
@@ -56,8 +57,9 @@ export function FloatingQuickAdd({
         });
         setIsOpen(false);
         window.dispatchEvent(new CustomEvent('transaction-saved'));
+        toast.success('Transaksi berhasil disimpan');
       } catch (err: any) {
-        alert(err.message || 'Gagal menambahkan transaksi');
+        toast.error(err.message || 'Gagal menambahkan transaksi');
       } finally {
         setSaving(false);
       }

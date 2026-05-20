@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { toast } from 'sonner';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, RotateCcw, X, Loader2 } from 'lucide-react';
 import type { Account } from '@/types';
@@ -138,7 +139,7 @@ export function IncomeStatementConfigModal({ isOpen, onClose, accounts, business
       onClose();
     } catch (err) {
       console.error('[IncomeStatementConfigModal] Save failed:', err);
-      alert('Gagal menyimpan konfigurasi. Coba lagi.');
+      toast.error('Gagal menyimpan konfigurasi. Coba lagi.');
     } finally {
       setSaving(false);
     }

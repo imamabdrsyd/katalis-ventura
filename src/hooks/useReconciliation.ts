@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { createClient } from '@/lib/supabase';
 import {
@@ -280,7 +281,7 @@ export function useReconciliation() {
       setSelectedIds(new Set());
       queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
     } catch (err: any) {
-      alert(err.message || 'Gagal reconcile transaksi');
+      toast.error(err.message || 'Gagal reconcile transaksi');
     } finally {
       setSaving(false);
     }
@@ -307,7 +308,7 @@ export function useReconciliation() {
       }
       await saveSessionMatches(session.id, [...selectedIds], user.id);
     } catch (err: any) {
-      alert(err.message || 'Gagal menyimpan progres');
+      toast.error(err.message || 'Gagal menyimpan progres');
     } finally {
       setSaving(false);
     }
@@ -330,7 +331,7 @@ export function useReconciliation() {
       const completed = await completeReconciliationSession(activeSession.id, user.id);
       setActiveSession(completed);
     } catch (err: any) {
-      alert(err.message || 'Gagal menyelesaikan sesi rekonsiliasi');
+      toast.error(err.message || 'Gagal menyelesaikan sesi rekonsiliasi');
     } finally {
       setSaving(false);
     }
@@ -354,7 +355,7 @@ export function useReconciliation() {
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
     } catch (err: any) {
-      alert(err.message || 'Gagal un-reconcile transaksi');
+      toast.error(err.message || 'Gagal un-reconcile transaksi');
     } finally {
       setSaving(false);
     }

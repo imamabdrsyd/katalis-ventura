@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { Modal } from '@/components/ui/Modal';
@@ -136,7 +137,7 @@ export default function BusinessesPage() {
     } catch (err: any) {
       console.error('Failed to create business:', err);
       const errorMessage = err?.message || err?.error?.message || JSON.stringify(err) || 'Unknown error';
-      alert(`Gagal menambahkan bisnis: ${errorMessage}`);
+      toast.error(`Gagal menambahkan bisnis: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -160,7 +161,7 @@ export default function BusinessesPage() {
     } catch (err: any) {
       console.error('Failed to update business:', err);
       const errorMessage = err?.message || err?.error?.message || JSON.stringify(err) || 'Unknown error';
-      alert(`Gagal mengupdate bisnis: ${errorMessage}`);
+      toast.error(`Gagal mengupdate bisnis: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -209,7 +210,7 @@ export default function BusinessesPage() {
     } catch (err: any) {
       console.error('Failed to hard delete business:', err);
       const errorMessage = err?.message || err?.error?.message || JSON.stringify(err) || 'Unknown error';
-      alert(`Gagal menghapus bisnis: ${errorMessage}`);
+      toast.error(`Gagal menghapus bisnis: ${errorMessage}`);
     } finally {
       setLoading(false);
     }

@@ -5,6 +5,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { QueryProvider } from '@/components/providers/QueryProvider';
 import { LanguageProvider } from '@/context/LanguageContext';
+import { Toaster } from 'sonner';
 import './globals.css';
 
 const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ['latin'], display: 'swap' });
@@ -135,7 +136,10 @@ export default function RootLayout({
       <body className={plusJakartaSans.className}>
         <QueryProvider>
           <LanguageProvider>
-            <ThemeProvider>{children}</ThemeProvider>
+            <ThemeProvider>
+              {children}
+              <Toaster richColors position="top-right" closeButton />
+            </ThemeProvider>
           </LanguageProvider>
         </QueryProvider>
         <Analytics />

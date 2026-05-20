@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { RefreshCw, Pause, Play, Square, Trash2, Calendar } from 'lucide-react';
 import { formatFrequency } from '@/lib/api/recurring';
 import type { RecurringTransaction } from '@/types';
@@ -37,7 +38,7 @@ export function RecurringList({ items, loading, onPause, onResume, onStop, onDel
     try {
       await action(id);
     } catch (err: any) {
-      alert(err.message || 'Gagal melakukan aksi');
+      toast.error(err.message || 'Gagal melakukan aksi');
     } finally {
       setActionLoading(null);
     }

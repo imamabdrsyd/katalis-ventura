@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { MemberList } from '@/components/business/MemberList';
@@ -321,7 +322,7 @@ export default function BusinessMembersPage() {
       router.push('/businesses');
     } catch (err) {
       console.error('Failed to leave business:', err);
-      alert('Gagal keluar dari bisnis. Silakan coba lagi.');
+      toast.error('Gagal keluar dari bisnis. Silakan coba lagi.');
     } finally {
       setLeaveLoading(false);
     }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { toast } from 'sonner';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { isManagerRole } from '@/lib/roles';
 import * as budgetsApi from '@/lib/api/budgets';
@@ -179,7 +180,7 @@ export function useBudget() {
       setSelectedBudgetId(budget.id);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Gagal membuat budget';
-      alert(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -195,7 +196,7 @@ export function useBudget() {
       await fetchBudgetDetail(selectedBudgetId);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Gagal mengupdate budget';
-      alert(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -209,7 +210,7 @@ export function useBudget() {
       await fetchBudgetDetail(selectedBudgetId);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Gagal menyimpan budget lines';
-      alert(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -224,7 +225,7 @@ export function useBudget() {
       await fetchBudgetDetail(selectedBudgetId);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Gagal mengubah status budget';
-      alert(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -241,7 +242,7 @@ export function useBudget() {
       await fetchBudgets();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Gagal menghapus budget';
-      alert(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -255,7 +256,7 @@ export function useBudget() {
       await fetchBudgetDetail(selectedBudgetId);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Gagal menyalin budget';
-      alert(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }

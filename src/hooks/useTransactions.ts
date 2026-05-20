@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { isManagerRole } from '@/lib/roles';
 import * as transactionsApi from '@/lib/api/transactions';
@@ -190,8 +191,9 @@ export function useTransactions() {
       setTransactionMode(null);
       invalidateTransactions();
       queryClient.invalidateQueries({ queryKey: ['recurring-transactions', businessId] });
+      toast.success('Transaksi berhasil disimpan');
     } catch (err: any) {
-      alert(err.message || 'Gagal menambahkan transaksi');
+      toast.error(err.message || 'Gagal menambahkan transaksi');
     } finally {
       setSaving(false);
     }
@@ -215,8 +217,9 @@ export function useTransactions() {
       setShowAddModal(false);
       setTransactionMode(null);
       invalidateTransactions();
+      toast.success('Jurnal multi-line berhasil disimpan');
     } catch (err: any) {
-      alert(err.message || 'Gagal menambahkan transaksi multi-line');
+      toast.error(err.message || 'Gagal menambahkan transaksi multi-line');
     } finally {
       setSaving(false);
     }
@@ -240,8 +243,9 @@ export function useTransactions() {
       });
       setEditTransaction(null);
       invalidateTransactions();
+      toast.success('Jurnal multi-line berhasil diperbarui');
     } catch (err: any) {
-      alert(err.message || 'Gagal mengupdate transaksi');
+      toast.error(err.message || 'Gagal mengupdate transaksi');
     } finally {
       setSaving(false);
     }
@@ -297,8 +301,9 @@ export function useTransactions() {
       setEditTransaction(null);
       invalidateTransactions();
       queryClient.invalidateQueries({ queryKey: ['recurring-transactions', businessId] });
+      toast.success('Transaksi berhasil diperbarui');
     } catch (err: any) {
-      alert(err.message || 'Gagal mengupdate transaksi');
+      toast.error(err.message || 'Gagal mengupdate transaksi');
     } finally {
       setSaving(false);
     }
@@ -311,8 +316,9 @@ export function useTransactions() {
       await transactionsApi.deleteTransaction(deleteTransaction.id);
       setDeleteTransaction(null);
       invalidateTransactions();
+      toast.success('Transaksi berhasil dihapus');
     } catch (err: any) {
-      alert(err.message || 'Gagal menghapus transaksi');
+      toast.error(err.message || 'Gagal menghapus transaksi');
     } finally {
       setSaving(false);
     }
@@ -348,8 +354,9 @@ export function useTransactions() {
       });
       setShowQuickAddModal(false);
       invalidateTransactions();
+      toast.success('Transaksi berhasil disimpan');
     } catch (err: any) {
-      alert(err.message || 'Gagal menambahkan transaksi');
+      toast.error(err.message || 'Gagal menambahkan transaksi');
     } finally {
       setSaving(false);
     }
@@ -405,11 +412,13 @@ export function useTransactions() {
       for (const id of selectedIds) {
         await transactionsApi.deleteTransaction(id);
       }
+      const count = selectedIds.size;
       setSelectedIds(new Set());
       setSelectMode(false);
       invalidateTransactions();
+      toast.success(`${count} transaksi berhasil dihapus`);
     } catch (err: any) {
-      alert(err.message || 'Gagal menghapus transaksi');
+      toast.error(err.message || 'Gagal menghapus transaksi');
     } finally {
       setSaving(false);
     }
@@ -422,8 +431,9 @@ export function useTransactions() {
       await transactionsApi.postTransaction(id);
       setDetailTransaction(null);
       invalidateTransactions();
+      toast.success('Transaksi berhasil diposting');
     } catch (err: any) {
-      alert(err.message || 'Gagal memposting transaksi');
+      toast.error(err.message || 'Gagal memposting transaksi');
     } finally {
       setSaving(false);
     }
@@ -439,16 +449,16 @@ export function useTransactions() {
         return tx?.status === 'draft';
       });
       if (draftIds.length === 0) {
-        alert('Tidak ada transaksi draft yang dipilih');
+        toast.warning('Tidak ada transaksi draft yang dipilih');
         return;
       }
       const posted = await transactionsApi.postTransactionsBulk(draftIds);
       setSelectedIds(new Set());
       setSelectMode(false);
       invalidateTransactions();
-      alert(`${posted} transaksi berhasil diposting`);
+      toast.success(`${posted} transaksi berhasil diposting`);
     } catch (err: any) {
-      alert(err.message || 'Gagal memposting transaksi');
+      toast.error(err.message || 'Gagal memposting transaksi');
     } finally {
       setSaving(false);
     }
@@ -483,8 +493,9 @@ export function useTransactions() {
       });
 
       invalidateTransactions();
+      toast.success('Piutang berhasil dilunasi');
     } catch (err: any) {
-      alert(err.message || 'Gagal melunasi piutang');
+      toast.error(err.message || 'Gagal melunasi piutang');
     } finally {
       setSaving(false);
     }
@@ -515,6 +526,7 @@ export function useTransactions() {
       });
 
       invalidateTransactions();
+      toast.success('Pelunasan sebagian piutang berhasil dicatat');
     } catch (err: any) {
       throw err;
     } finally {
@@ -543,8 +555,9 @@ export function useTransactions() {
       });
 
       invalidateTransactions();
+      toast.success('Dividen berhasil dilunasi');
     } catch (err: any) {
-      alert(err.message || 'Gagal melunasi dividen');
+      toast.error(err.message || 'Gagal melunasi dividen');
     } finally {
       setSaving(false);
     }
@@ -575,6 +588,7 @@ export function useTransactions() {
       });
 
       invalidateTransactions();
+      toast.success('Pelunasan sebagian dividen berhasil dicatat');
     } catch (err: any) {
       throw err;
     } finally {

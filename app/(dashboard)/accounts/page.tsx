@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { toast } from 'sonner';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
 import type { Account, AccountType } from '@/types';
@@ -152,7 +153,7 @@ export default function AccountsPage() {
       setPreselectedParentId(null);
     } catch (err) {
       console.error('Failed to create account:', err);
-      alert(t.accounts.createFailed);
+      toast.error(t.accounts.createFailed);
     } finally {
       setSaving(false);
     }
@@ -199,7 +200,7 @@ export default function AccountsPage() {
       setEditAccount(null);
     } catch (err) {
       console.error('Failed to update account:', err);
-      alert(t.accounts.updateFailed);
+      toast.error(t.accounts.updateFailed);
     } finally {
       setSaving(false);
     }
@@ -218,7 +219,7 @@ export default function AccountsPage() {
       setDeleteAccount(null);
     } catch (err) {
       console.error('Failed to deactivate account:', err);
-      alert(t.accounts.deactivateFailed);
+      toast.error(t.accounts.deactivateFailed);
     } finally {
       setSaving(false);
     }
@@ -236,7 +237,7 @@ export default function AccountsPage() {
       setAccounts(updatedAccounts);
     } catch (err) {
       console.error('Failed to activate account:', err);
-      alert(t.accounts.activateFailed);
+      toast.error(t.accounts.activateFailed);
     } finally {
       setSaving(false);
     }
