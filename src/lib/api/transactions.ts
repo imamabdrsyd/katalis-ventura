@@ -142,7 +142,8 @@ export async function createMultiLineTransaction(
   });
 }
 
-// Update a multi-line journal entry (routes through PATCH /api/transactions/[id]/multi-line)
+// Update a multi-line journal entry (routes through PATCH /api/transactions/[id]/multi-line;
+// header + line replacement are handled atomically server-side).
 export async function updateMultiLineTransaction(
   id: string,
   updates: Partial<Omit<MultiLineTransactionInsert, 'business_id'>>

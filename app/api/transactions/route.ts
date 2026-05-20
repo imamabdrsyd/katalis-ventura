@@ -122,9 +122,20 @@ export async function POST(request: NextRequest) {
         fx_rate_date: parsed.data.fx_rate_date ?? parsed.data.date,
       });
 
-      const { data: transaction, error: insertErr } = await supabase
-        .from('transactions')
-        .insert({
+      const lines = parsed.data.journal_lines.map((l, i) => ({
+        account_id: l.account_id,
+        debit_amount: l.debit_amount,
+        credit_amount: l.credit_amount,
+        currency_code: l.currency_code ?? 'IDR',
+        original_debit_amount: l.original_debit_amount ?? l.debit_amount,
+        original_credit_amount: l.original_credit_amount ?? l.credit_amount,
+        fx_rate: l.fx_rate ?? 1,
+        description: l.description ?? null,
+        sort_order: l.sort_order ?? i,
+      }));
+
+      const { data: rpcData, error: rpcErr } = await supabase.rpc('create_multi_line_transaction', {
+        p_header: {
           business_id: parsed.data.business_id,
           date: parsed.data.date,
           category: parsed.data.category,
@@ -139,35 +150,14 @@ export async function POST(request: NextRequest) {
           fx_gain_loss_amount: parsed.data.fx_gain_loss_amount ?? 0,
           account: 'Multi-line journal entry',
           status: parsed.data.status ?? 'draft',
-          is_multi_line: true,
-          is_double_entry: false,
           meta: parsed.data.meta ?? null,
-          created_by: user.id,
-        })
-        .select()
-        .single();
+        },
+        p_lines: lines,
+      });
 
-      if (insertErr || !transaction) {
-        return NextResponse.json({ error: insertErr?.message ?? 'Insert failed' }, { status: 500 });
-      }
-
-      const lines = parsed.data.journal_lines.map((l, i) => ({
-        transaction_id: transaction.id,
-        account_id: l.account_id,
-        debit_amount: l.debit_amount,
-        credit_amount: l.credit_amount,
-        currency_code: l.currency_code ?? 'IDR',
-        original_debit_amount: l.original_debit_amount ?? l.debit_amount,
-        original_credit_amount: l.original_credit_amount ?? l.credit_amount,
-        fx_rate: l.fx_rate ?? 1,
-        description: l.description ?? null,
-        sort_order: l.sort_order ?? i,
-      }));
-
-      const { error: linesErr } = await supabase.from('journal_lines').insert(lines);
-      if (linesErr) {
-        await supabase.from('transactions').delete().eq('id', transaction.id);
-        return NextResponse.json({ error: linesErr.message }, { status: 500 });
+      const transaction = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+      if (rpcErr || !transaction) {
+        return NextResponse.json({ error: rpcErr?.message ?? 'Insert failed' }, { status: 500 });
       }
 
       return NextResponse.json({ data: transaction }, { status: 201 });

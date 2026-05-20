@@ -36,6 +36,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       .maybeSingle();
 
     if (fetchErr || !existing) return notFound('Transaksi tidak ditemukan');
+    if (!existing.is_multi_line) return badRequest('Transaksi ini bukan jurnal multi-line');
+
     if (!(await canManageBusiness(supabase, user.id, existing.business_id))) {
       return forbidden('Hanya manager bisnis yang dapat mengubah transaksi');
     }
@@ -62,7 +64,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       .eq('id', existing.business_id)
       .single();
 
-    if (biz?.closed_until_date && existing.date <= biz.closed_until_date && !isSuperadmin) {
+    const effectiveDate = parsed.data.date ?? existing.date;
+    if (
+      biz?.closed_until_date &&
+      (existing.date <= biz.closed_until_date || effectiveDate <= biz.closed_until_date) &&
+      !isSuperadmin
+    ) {
       return NextResponse.json(
         { error: `Periode hingga ${biz.closed_until_date} sudah dikunci. Transaksi tidak dapat diedit.` },
         { status: 423 }
@@ -70,7 +77,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     // Build header update payload
-    const headerUpdate: Record<string, unknown> = { updated_by: user.id };
+    const headerUpdate: Record<string, unknown> = {};
     if (parsed.data.date !== undefined) headerUpdate.date = parsed.data.date;
     if (parsed.data.category !== undefined) headerUpdate.category = parsed.data.category;
     if (parsed.data.name !== undefined) headerUpdate.name = parsed.data.name;
@@ -125,21 +132,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       });
     }
 
-    if (parsed.data.status === 'posted' && existing.status === 'draft') {
-      headerUpdate.posted_at = new Date().toISOString();
-    }
-
-    const { data: updated, error: updateErr } = await supabase
-      .from('transactions')
-      .update(headerUpdate)
-      .eq('id', parsedId.data)
-      .select()
-      .single();
-
-    if (updateErr || !updated) return serverError(updateErr ?? new Error('Update failed'));
-
+    let lines: Array<Record<string, unknown>> | null = null;
     if (parsed.data.journal_lines) {
-      const lines = parsed.data.journal_lines.map((l, i) => ({
+      lines = parsed.data.journal_lines.map((l, i) => ({
         account_id: l.account_id,
         debit_amount: l.debit_amount,
         credit_amount: l.credit_amount,
@@ -150,14 +145,17 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         description: l.description ?? null,
         sort_order: l.sort_order ?? i,
       }));
-
-      const { error: rpcErr } = await supabase.rpc('replace_journal_lines', {
-        p_transaction_id: parsedId.data,
-        p_lines: lines,
-      });
-
-      if (rpcErr) return serverError(rpcErr);
     }
+
+    const { data: rpcData, error: rpcErr } = await supabase.rpc('update_multi_line_transaction', {
+      p_transaction_id: parsedId.data,
+      p_header: headerUpdate,
+      p_lines: lines,
+    });
+
+    if (rpcErr) return serverError(rpcErr);
+    const updated = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+    if (!updated) return serverError(new Error('Update failed'));
 
     return NextResponse.json({ data: updated });
   } catch (err) {
