@@ -11,6 +11,15 @@ interface Props {
 export function OmnichannelFeaturedProduct({ product }: Props) {
   if (!product.show) return null;
 
+  const fit = product.image_fit ?? 'cover';
+  const posX = product.image_position_x ?? 50;
+  const posY = product.image_position_y ?? 50;
+  const priceDisplay = product.price_label
+    ? /^[Rr][Pp]/.test(product.price_label.trim())
+      ? product.price_label
+      : `Rp ${product.price_label}`
+    : null;
+
   return (
     <div className="mt-6 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
       {product.image_url && (
@@ -19,7 +28,8 @@ export function OmnichannelFeaturedProduct({ product }: Props) {
             src={product.image_url}
             alt={product.name}
             fill
-            className="object-cover"
+            className={fit === 'contain' ? 'object-contain' : 'object-cover'}
+            style={fit === 'cover' ? { objectPosition: `${posX}% ${posY}%` } : undefined}
             unoptimized
           />
         </div>
@@ -36,11 +46,11 @@ export function OmnichannelFeaturedProduct({ product }: Props) {
           </p>
         )}
 
-        {product.price_label && (
+        {priceDisplay && (
           <div className="flex items-center gap-1.5">
             <Tag className="w-3.5 h-3.5 text-indigo-500" />
             <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
-              {product.price_label}
+              {priceDisplay}
             </span>
           </div>
         )}

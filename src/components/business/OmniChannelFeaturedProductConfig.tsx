@@ -1,9 +1,15 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { Camera, ImageIcon, Loader2, Package, X } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Camera, Crop, ImageIcon, Loader2, Maximize2, Package, X } from 'lucide-react';
 import type { BusinessOmniChannel, FeaturedProduct } from '@/types';
 import { upsertOmniChannel } from '@/lib/api/omniChannel';
+
+function formatPriceInput(value: string): string {
+  const digits = value.replace(/\D/g, '');
+  if (!digits) return '';
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
 
 interface Props {
   businessId: string;
@@ -28,7 +34,10 @@ export function OmniChannelFeaturedProductConfig({ businessId, userId, channel, 
   const [name, setName] = useState(existing?.name ?? '');
   const [description, setDescription] = useState(existing?.description ?? '');
   const [imageUrl, setImageUrl] = useState(existing?.image_url ?? '');
-  const [priceLabel, setPriceLabel] = useState(existing?.price_label ?? '');
+  const [imageFit, setImageFit] = useState<'cover' | 'contain'>(existing?.image_fit ?? 'cover');
+  const [posX, setPosX] = useState<number>(existing?.image_position_x ?? 50);
+  const [posY, setPosY] = useState<number>(existing?.image_position_y ?? 50);
+  const [priceLabel, setPriceLabel] = useState(formatPriceInput(existing?.price_label ?? ''));
   const [linkUrl, setLinkUrl] = useState(existing?.link_url ?? '');
   const [linkLabel, setLinkLabel] = useState(existing?.link_label ?? '');
 
@@ -36,14 +45,19 @@ export function OmniChannelFeaturedProductConfig({ businessId, userId, channel, 
   const [uploadError, setUploadError] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [draggingFocal, setDraggingFocal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const focalAreaRef = useRef<HTMLDivElement>(null);
 
   const savedRef = useRef({
     show: existing?.show ?? false,
     name: existing?.name ?? '',
     description: existing?.description ?? '',
     imageUrl: existing?.image_url ?? '',
-    priceLabel: existing?.price_label ?? '',
+    imageFit: existing?.image_fit ?? 'cover',
+    posX: existing?.image_position_x ?? 50,
+    posY: existing?.image_position_y ?? 50,
+    priceLabel: formatPriceInput(existing?.price_label ?? ''),
     linkUrl: existing?.link_url ?? '',
     linkLabel: existing?.link_label ?? '',
   });
@@ -53,9 +67,42 @@ export function OmniChannelFeaturedProductConfig({ businessId, userId, channel, 
     name !== savedRef.current.name ||
     description !== savedRef.current.description ||
     imageUrl !== savedRef.current.imageUrl ||
+    imageFit !== savedRef.current.imageFit ||
+    posX !== savedRef.current.posX ||
+    posY !== savedRef.current.posY ||
     priceLabel !== savedRef.current.priceLabel ||
     linkUrl !== savedRef.current.linkUrl ||
     linkLabel !== savedRef.current.linkLabel;
+
+  const updateFocalFromEvent = (clientX: number, clientY: number) => {
+    const el = focalAreaRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
+    setPosX(Math.round(x));
+    setPosY(Math.round(y));
+  };
+
+  useEffect(() => {
+    if (!draggingFocal) return;
+    const onMove = (e: MouseEvent) => updateFocalFromEvent(e.clientX, e.clientY);
+    const onTouch = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (t) updateFocalFromEvent(t.clientX, t.clientY);
+    };
+    const onUp = () => setDraggingFocal(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onTouch);
+    window.addEventListener('touchend', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onTouch);
+      window.removeEventListener('touchend', onUp);
+    };
+  }, [draggingFocal]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -99,6 +146,9 @@ export function OmniChannelFeaturedProductConfig({ businessId, userId, channel, 
         name,
         description: description || undefined,
         image_url: imageUrl || undefined,
+        image_fit: imageUrl ? imageFit : undefined,
+        image_position_x: imageUrl && imageFit === 'cover' ? posX : undefined,
+        image_position_y: imageUrl && imageFit === 'cover' ? posY : undefined,
         price_label: priceLabel || undefined,
         link_url: linkUrl || undefined,
         link_label: linkLabel || undefined,
@@ -112,7 +162,7 @@ export function OmniChannelFeaturedProductConfig({ businessId, userId, channel, 
         is_published: channel.is_published,
         featured_product: fp,
       }, userId);
-      savedRef.current = { show, name, description, imageUrl, priceLabel, linkUrl, linkLabel };
+      savedRef.current = { show, name, description, imageUrl, imageFit, posX, posY, priceLabel, linkUrl, linkLabel };
       onChanged();
     } catch (err: any) {
       setSaveError(err.message || 'Gagal menyimpan');
@@ -176,6 +226,62 @@ export function OmniChannelFeaturedProductConfig({ businessId, userId, channel, 
                 {uploadError && <p className="text-xs text-red-500 mt-1">{uploadError}</p>}
               </div>
             </div>
+
+            {imageUrl && (
+              <div className="mt-4 space-y-3">
+                {/* Fit mode toggle */}
+                <div className="inline-flex rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setImageFit('cover')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${imageFit === 'cover' ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-600 dark:text-gray-300'}`}
+                  >
+                    <Crop className="w-3.5 h-3.5" />
+                    Potong (Crop)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setImageFit('contain')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${imageFit === 'contain' ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-600 dark:text-gray-300'}`}
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                    Tampilkan Penuh
+                  </button>
+                </div>
+
+                {imageFit === 'cover' && (
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                      Klik atau geser titik pada gambar untuk memilih bagian yang akan ditampilkan.
+                    </p>
+                    <div
+                      ref={focalAreaRef}
+                      onMouseDown={(e) => { setDraggingFocal(true); updateFocalFromEvent(e.clientX, e.clientY); }}
+                      onTouchStart={(e) => {
+                        const t = e.touches[0];
+                        if (t) { setDraggingFocal(true); updateFocalFromEvent(t.clientX, t.clientY); }
+                      }}
+                      className="relative w-full max-w-sm aspect-[4/3] rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 cursor-crosshair select-none"
+                    >
+                      <img
+                        src={imageUrl}
+                        alt="Preview crop"
+                        draggable={false}
+                        className="w-full h-full object-cover pointer-events-none"
+                        style={{ objectPosition: `${posX}% ${posY}%` }}
+                      />
+                      <div
+                        className="absolute w-6 h-6 rounded-full border-2 border-white shadow-lg bg-indigo-500/80 -translate-x-1/2 -translate-y-1/2 pointer-events-none ring-2 ring-indigo-500/30"
+                        style={{ left: `${posX}%`, top: `${posY}%` }}
+                      />
+                    </div>
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5 font-mono">
+                      Fokus: {posX}% · {posY}%
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Name */}
@@ -214,14 +320,18 @@ export function OmniChannelFeaturedProductConfig({ businessId, userId, channel, 
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Harga <span className="text-gray-400 font-normal">(opsional)</span>
               </label>
-              <input
-                type="text"
-                value={priceLabel}
-                onChange={(e) => setPriceLabel(e.target.value)}
-                placeholder="Rp 85.000"
-                maxLength={100}
-                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400 pointer-events-none">Rp</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={priceLabel}
+                  onChange={(e) => setPriceLabel(formatPriceInput(e.target.value))}
+                  placeholder="85.000"
+                  maxLength={100}
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
             </div>
 
             {/* CTA label */}

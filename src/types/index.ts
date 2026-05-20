@@ -468,6 +468,9 @@ export interface FeaturedProduct {
   name: string;
   description?: string;
   image_url?: string;
+  image_fit?: 'cover' | 'contain';
+  image_position_x?: number;
+  image_position_y?: number;
   price_label?: string;
   link_url?: string;
   link_label?: string;
