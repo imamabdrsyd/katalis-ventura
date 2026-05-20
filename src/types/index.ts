@@ -29,6 +29,8 @@ export interface TransactionAttachment {
   mime_type: string;
   /** ISO timestamp of upload */
   uploaded_at: string;
+  /** Cloudinary resource_type: 'image' untuk gambar, 'raw' untuk PDF. Default 'image' untuk attachment lama. */
+  resource_type?: 'image' | 'raw' | 'video';
 }
 
 export interface TransactionMeta {

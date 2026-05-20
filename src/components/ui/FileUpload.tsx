@@ -75,7 +75,7 @@ export function FileUpload({ businessId, value, onChange, disabled = false }: Fi
 
   const handleRemove = async (att: TransactionAttachment) => {
     if (disabled) return;
-    deleteAttachment(att.path, businessId);
+    deleteAttachment(att.path, businessId, att.resource_type ?? 'image');
     onChange(value.filter((a) => a.path !== att.path));
     setError(null);
   };

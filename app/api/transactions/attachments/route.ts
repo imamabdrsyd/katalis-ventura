@@ -13,6 +13,9 @@ export async function DELETE(req: NextRequest) {
   const url = new URL(req.url);
   const publicId = url.searchParams.get('public_id');
   const businessId = url.searchParams.get('businessId');
+  const resourceTypeParam = url.searchParams.get('resource_type');
+  const resourceType: 'image' | 'raw' | 'video' =
+    resourceTypeParam === 'raw' || resourceTypeParam === 'video' ? resourceTypeParam : 'image';
 
   if (!publicId || !businessId) {
     return NextResponse.json({ error: 'public_id dan businessId wajib disertakan' }, { status: 400 });
@@ -38,7 +41,7 @@ export async function DELETE(req: NextRequest) {
   const signature = crypto.createHash('sha256').update(signatureStr).digest('hex');
 
   const cloudRes = await fetch(
-    `https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`,
+    `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/destroy`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -47,20 +47,23 @@ export async function uploadAttachment(
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
   const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!;
 
+  // Cloudinary memisahkan PDF (resource_type=raw) dan gambar (resource_type=image).
+  // PDF yang di-upload ke /image/upload tidak bisa di-deliver tanpa add-on PDF.
+  // Pakai /auto/upload supaya Cloudinary auto-detect: PDF jadi raw, image jadi image.
   const formData = new FormData();
   formData.append('file', file);
   formData.append('upload_preset', uploadPreset);
   formData.append('folder', `axion/attachments/${businessId}`);
 
   const res = await fetch(
-    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+    `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
     { method: 'POST', body: formData }
   );
   if (!res.ok) {
     const err = await res.json();
     throw new Error(err.error?.message || 'Gagal upload ke Cloudinary');
   }
-  const { secure_url, public_id } = await res.json();
+  const { secure_url, public_id, resource_type } = await res.json();
 
   return {
     path: public_id,
@@ -69,12 +72,17 @@ export async function uploadAttachment(
     size: file.size,
     mime_type: file.type || `image/${getExtension(file.name)}`,
     uploaded_at: new Date().toISOString(),
+    resource_type: resource_type || 'image',
   };
 }
 
-export async function deleteAttachment(publicId: string, businessId: string): Promise<void> {
+export async function deleteAttachment(
+  publicId: string,
+  businessId: string,
+  resourceType: 'image' | 'raw' | 'video' = 'image'
+): Promise<void> {
   await fetch(
-    `/api/transactions/attachments?public_id=${encodeURIComponent(publicId)}&businessId=${encodeURIComponent(businessId)}`,
+    `/api/transactions/attachments?public_id=${encodeURIComponent(publicId)}&businessId=${encodeURIComponent(businessId)}&resource_type=${encodeURIComponent(resourceType)}`,
     { method: 'DELETE' }
   ).catch(() => {});
 }
