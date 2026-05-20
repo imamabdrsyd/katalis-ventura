@@ -9,6 +9,7 @@ import * as transactionsApi from '@/lib/api/transactions';
 import * as recurringApi from '@/lib/api/recurring';
 import * as contactsApi from '@/lib/api/contacts';
 import { getAccounts } from '@/lib/api/accounts';
+import { showTransactionSavedToast } from '@/lib/transactionToast';
 import { findCogsAccount } from '@/lib/utils/inventoryHelper';
 import { buildSettlementPrefill, buildPartialSettlementPrefill, getOutstandingAmount } from '@/lib/accounting/guidance/receivableSettlement';
 import {
@@ -149,13 +150,27 @@ export function useTransactions() {
     invalidateTransactions();
   }, [invalidateTransactions]);
 
+  const openCreatedTransactionDetail = useCallback(async (transaction: Transaction) => {
+    if (!businessId) {
+      setDetailTransaction(transaction);
+      return;
+    }
+
+    try {
+      const latestTransactions = await transactionsApi.getTransactions(businessId);
+      setDetailTransaction(latestTransactions.find((item) => item.id === transaction.id) ?? transaction);
+    } catch {
+      setDetailTransaction(transaction);
+    }
+  }, [businessId]);
+
   // CRUD handlers
   const handleAddTransaction = useCallback(async (data: TransactionFormData) => {
     if (!businessId || !user) return;
     setSaving(true);
     try {
       const { recurring, ...transactionData } = data;
-      await transactionsApi.createTransaction({
+      const createdTransaction = await transactionsApi.createTransaction({
         ...transactionData,
         business_id: businessId,
         created_by: user.id,
@@ -191,19 +206,23 @@ export function useTransactions() {
       setTransactionMode(null);
       invalidateTransactions();
       queryClient.invalidateQueries({ queryKey: ['recurring-transactions', businessId] });
-      toast.success('Transaksi berhasil disimpan');
+      showTransactionSavedToast({
+        message: 'Transaksi berhasil disimpan',
+        createdAt: createdTransaction.created_at,
+        onOpenDetail: () => openCreatedTransactionDetail(createdTransaction),
+      });
     } catch (err: any) {
       toast.error(err.message || 'Gagal menambahkan transaksi');
     } finally {
       setSaving(false);
     }
-  }, [businessId, user, invalidateTransactions, queryClient]);
+  }, [businessId, user, invalidateTransactions, queryClient, openCreatedTransactionDetail]);
 
   const handleAddMultiLineTransaction = useCallback(async (data: MultiLineFormData) => {
     if (!businessId || !user) return;
     setSaving(true);
     try {
-      await transactionsApi.createMultiLineTransaction({
+      const createdTransaction = await transactionsApi.createMultiLineTransaction({
         business_id: businessId,
         created_by: user.id,
         date: data.date,
@@ -217,13 +236,17 @@ export function useTransactions() {
       setShowAddModal(false);
       setTransactionMode(null);
       invalidateTransactions();
-      toast.success('Jurnal multi-line berhasil disimpan');
+      showTransactionSavedToast({
+        message: 'Jurnal multi-line berhasil disimpan',
+        createdAt: createdTransaction.created_at,
+        onOpenDetail: () => openCreatedTransactionDetail(createdTransaction),
+      });
     } catch (err: any) {
       toast.error(err.message || 'Gagal menambahkan transaksi multi-line');
     } finally {
       setSaving(false);
     }
-  }, [businessId, user, invalidateTransactions]);
+  }, [businessId, user, invalidateTransactions, openCreatedTransactionDetail]);
 
   const handleEditMultiLineTransaction = useCallback(async (data: MultiLineFormData) => {
     if (!editTransaction || !businessId) return;
@@ -347,20 +370,24 @@ export function useTransactions() {
     setSaving(true);
     try {
       const { recurring, ...transactionData } = data;
-      await transactionsApi.createTransaction({
+      const createdTransaction = await transactionsApi.createTransaction({
         ...transactionData,
         business_id: businessId,
         created_by: user.id,
       });
       setShowQuickAddModal(false);
       invalidateTransactions();
-      toast.success('Transaksi berhasil disimpan');
+      showTransactionSavedToast({
+        message: 'Transaksi berhasil disimpan',
+        createdAt: createdTransaction.created_at,
+        onOpenDetail: () => openCreatedTransactionDetail(createdTransaction),
+      });
     } catch (err: any) {
       toast.error(err.message || 'Gagal menambahkan transaksi');
     } finally {
       setSaving(false);
     }
-  }, [businessId, user, invalidateTransactions]);
+  }, [businessId, user, invalidateTransactions, openCreatedTransactionDetail]);
 
   // Convert stock transactions to COGS: change debit from Inventory to COGS account
   const handleConvertStockToCOGS = useCallback(async (transactionIds: string[]) => {

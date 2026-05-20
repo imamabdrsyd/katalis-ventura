@@ -138,7 +138,24 @@ export default function RootLayout({
           <LanguageProvider>
             <ThemeProvider>
               {children}
-              <Toaster richColors position="top-right" closeButton />
+              <Toaster
+                position="top-center"
+                closeButton
+                toastOptions={{
+                  style: {
+                    background: '#ffffff',
+                    color: '#111827',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '12px',
+                    boxShadow: '0 18px 45px rgba(15, 23, 42, 0.14), 0 6px 18px rgba(15, 23, 42, 0.08)',
+                  },
+                  classNames: {
+                    title: 'text-sm font-semibold text-gray-950',
+                    description: 'text-sm text-gray-600',
+                    closeButton: 'bg-white text-gray-600 border-gray-200',
+                  },
+                }}
+              />
             </ThemeProvider>
           </LanguageProvider>
         </QueryProvider>

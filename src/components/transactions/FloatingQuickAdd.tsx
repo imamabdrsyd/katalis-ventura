@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Zap } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
@@ -9,6 +10,7 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import * as transactionsApi from '@/lib/api/transactions';
 import { getAccounts } from '@/lib/api/accounts';
 import { findCogsAccount } from '@/lib/utils/inventoryHelper';
+import { showTransactionSavedToast } from '@/lib/transactionToast';
 import { isManagerRole } from '@/lib/roles';
 import type { Transaction, Account } from '@/types';
 import type { TransactionFormData } from './TransactionForm';
@@ -25,6 +27,7 @@ export function FloatingQuickAdd({
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
 } = {}) {
+  const router = useRouter();
   const { user, activeBusinessId: businessId, userRole } = useBusinessContext();
   const canManage = isManagerRole(userRole);
 
@@ -50,21 +53,25 @@ export function FloatingQuickAdd({
       if (!businessId || !user) return;
       setSaving(true);
       try {
-        await transactionsApi.createTransaction({
+        const createdTransaction = await transactionsApi.createTransaction({
           ...data,
           business_id: businessId,
           created_by: user.id,
         });
         setIsOpen(false);
         window.dispatchEvent(new CustomEvent('transaction-saved'));
-        toast.success('Transaksi berhasil disimpan');
+        showTransactionSavedToast({
+          message: 'Transaksi berhasil disimpan',
+          createdAt: createdTransaction.created_at,
+          onOpenDetail: () => router.push(`/transactions?detail=${createdTransaction.id}`),
+        });
       } catch (err: any) {
         toast.error(err.message || 'Gagal menambahkan transaksi');
       } finally {
         setSaving(false);
       }
     },
-    [businessId, user]
+    [businessId, router, setIsOpen, user]
   );
 
   const handleConvertStockToCOGS = useCallback(

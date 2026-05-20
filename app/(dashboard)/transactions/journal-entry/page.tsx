@@ -24,6 +24,7 @@ import { AccountDropdown } from '@/components/transactions/AccountDropdown';
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
 import { saveContactFromTransaction } from '@/lib/api/contacts';
 import { validateCategoryConsistency } from '@/lib/accounting/validators/transactionValidator';
+import { showTransactionSavedToast } from '@/lib/transactionToast';
 import type { Account, AccountType, TransactionCategory, Transaction, UnitBreakdown, TransactionAttachment, JournalLineInput } from '@/types';
 import {
   ArrowLeft,
@@ -36,7 +37,6 @@ import {
   Wallet,
   ArrowRightLeft,
   PiggyBank,
-  CheckCircle2,
   Clock,
   AlertTriangle,
   RotateCcw,
@@ -457,7 +457,6 @@ export default function JournalEntryPage() {
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [successMessage, setSuccessMessage] = useState('');
 
   // fetch accounts + transactions
   useEffect(() => {
@@ -825,6 +824,8 @@ export default function JournalEntryPage() {
 
     setSaving(true);
     try {
+      let savedTransaction: Transaction | null = null;
+
       if (isMultiLineMode) {
         // ── Multi-line save ──
         const journalLines: JournalLineInput[] = mlLines.map((l, i) => ({
@@ -835,7 +836,7 @@ export default function JournalEntryPage() {
           sort_order: i,
         }));
 
-        await createMultiLineTransaction({
+        savedTransaction = await createMultiLineTransaction({
           business_id: businessId,
           created_by: user.id,
           date,
@@ -875,7 +876,7 @@ export default function JournalEntryPage() {
           meta.attachments = attachments;
         }
 
-        await createTransaction({
+        savedTransaction = await createTransaction({
           business_id: businessId,
           created_by: user.id,
           date,
@@ -907,8 +908,15 @@ export default function JournalEntryPage() {
       setMlDisplayDebit(['', '']);
       setMlDisplayCredit(['', '']);
       setErrors({});
-      setSuccessMessage('Transaksi berhasil disimpan!');
-      setTimeout(() => setSuccessMessage(''), 3000);
+
+      if (savedTransaction) {
+        const transactionId = savedTransaction.id;
+        showTransactionSavedToast({
+          message: 'Transaksi berhasil disimpan',
+          createdAt: savedTransaction.created_at,
+          onOpenDetail: () => router.push(`/transactions?detail=${transactionId}`),
+        });
+      }
 
       // Refresh transactions list for inventory picker
       const txns = await getTransactions(businessId);
@@ -1088,14 +1096,6 @@ export default function JournalEntryPage() {
 
         {/* Right Panel: Form */}
         <div className="flex-1 overflow-y-auto flex flex-col min-w-0">
-          {/* Success message */}
-          {successMessage && (
-            <div className="mr-8 ml-3 mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center gap-3">
-              <CheckCircle2 className="w-5 h-5 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
-              <p className="text-sm text-emerald-500 dark:text-emerald-300 font-medium">{successMessage}</p>
-            </div>
-          )}
-
           {/* Form */}
           <div className="flex-1 pl-3 pr-8 pt-8 pb-8">
             {/* Entry type description — sejajar dengan label "Jenis Transaksi" di kiri */}

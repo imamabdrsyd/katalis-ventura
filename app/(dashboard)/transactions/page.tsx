@@ -228,6 +228,8 @@ function TransactionsPageInner() {
 
   // Read filters from URL search params (e.g., /transactions?category=EARN&start=2026-01-01&end=2026-01-31)
   const searchParams = useSearchParams();
+  const detailParam = searchParams.get('detail');
+
   useEffect(() => {
     const view = searchParams.get('view');
     if (view === 'recurring') {
@@ -244,6 +246,27 @@ function TransactionsPageInner() {
       setDateRange({ start: start ?? '', end: end ?? '' });
     }
   }, [searchParams, setCategoryFilter, setDateRange]);
+
+  useEffect(() => {
+    if (!detailParam) return;
+    const transaction =
+      allTransactions.find((item) => item.id === detailParam) ??
+      transactions.find((item) => item.id === detailParam);
+
+    if (transaction) {
+      setDetailTransaction(transaction);
+    }
+  }, [allTransactions, detailParam, setDetailTransaction, transactions]);
+
+  const handleCloseDetailModal = useCallback(() => {
+    setDetailTransaction(null);
+
+    if (!detailParam) return;
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete('detail');
+    const queryString = nextParams.toString();
+    router.replace(queryString ? `/transactions?${queryString}` : '/transactions', { scroll: false });
+  }, [detailParam, router, searchParams, setDetailTransaction]);
 
   // Compute highlighted transaction IDs based on ?highlight param
   const highlightParam = searchParams.get('highlight');
@@ -737,7 +760,7 @@ function TransactionsPageInner() {
       <TransactionDetailModal
         transaction={detailTransaction}
         isOpen={!!detailTransaction}
-        onClose={() => setDetailTransaction(null)}
+        onClose={handleCloseDetailModal}
         onEdit={canManageTransactions ? setEditTransaction : undefined}
         onDelete={canManageTransactions ? setDeleteTransaction : undefined}
         onPost={canManageTransactions ? handlePostTransaction : undefined}
