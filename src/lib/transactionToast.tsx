@@ -43,7 +43,7 @@ export function showTransactionSavedToast({
         aria-label={message}
       >
         <p className="text-sm font-medium leading-5 text-gray-800">{message}</p>
-        <p className="mt-1 text-xs leading-5 text-gray-400">{createdTime}</p>
+        <p className="mt-1 text-sm leading-5 text-gray-400">{createdTime}</p>
       </button>
     );
   });
