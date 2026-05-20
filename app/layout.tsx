@@ -144,15 +144,15 @@ export default function RootLayout({
                 toastOptions={{
                   style: {
                     background: '#ffffff',
-                    color: '#111827',
-                    border: '1px solid #e5e7eb',
+                    color: '#374151',
+                    border: '1px solid #f3f4f6',
                     borderRadius: '12px',
-                    boxShadow: '0 18px 45px rgba(15, 23, 42, 0.14), 0 6px 18px rgba(15, 23, 42, 0.08)',
+                    boxShadow: '0 2px 8px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04)',
                   },
                   classNames: {
-                    title: 'text-sm font-semibold text-gray-950',
-                    description: 'text-sm text-gray-600',
-                    closeButton: 'bg-white text-gray-600 border-gray-200',
+                    title: 'text-sm font-medium text-gray-700',
+                    description: 'text-xs text-gray-400',
+                    closeButton: 'bg-white text-gray-400 border-gray-100',
                   },
                 }}
               />
