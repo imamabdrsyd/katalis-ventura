@@ -48,8 +48,8 @@ export function OmnichannelFeaturedProduct({ product }: Props) {
 
         {priceDisplay && (
           <div className="flex items-center gap-1.5">
-            <Tag className="w-3.5 h-3.5 text-indigo-500" />
-            <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+            <Tag className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
               {priceDisplay}
             </span>
           </div>
