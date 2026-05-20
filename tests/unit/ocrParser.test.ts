@@ -6,6 +6,9 @@ import {
   parseReceipt,
   inferCategory,
   parseCurrency,
+  parseLineItems,
+  parseCharges,
+  extractLineItemKeywords,
 } from '@/lib/ocr/parser';
 
 describe('parseDate', () => {
@@ -154,14 +157,15 @@ describe('parseCurrency', () => {
 });
 
 describe('parseVendor', () => {
-  it('returns first non-noise line', () => {
+  it('returns first non-noise line (normalized to Title Case)', () => {
     const text = 'INDOMARET\nJl. Sudirman No. 10\n18/05/2026\nTOTAL 150.000';
-    expect(parseVendor(text)).toBe('INDOMARET');
+    expect(parseVendor(text)).toBe('Indomaret');
   });
 
   it('skips lines starting with numbers', () => {
     const text = '12345-001\nALFAMART CABANG PUSAT\nJl. Thamrin';
-    expect(parseVendor(text)).toBe('ALFAMART CABANG PUSAT');
+    // Brand pattern "alfamart" match → output Title Case
+    expect(parseVendor(text)).toBe('Alfamart');
   });
 
   it('skips address lines', () => {
@@ -335,7 +339,7 @@ TERIMA KASIH
     const result = parseReceipt(text);
     expect(result.date).toBe('2026-05-18');
     expect(result.total).toBe(51_060);
-    expect(result.vendor).toBe('INDOMARET');
+    expect(result.vendor).toBe('Indomaret');
   });
 
   it('parses warung-style handwritten receipt', () => {
@@ -359,5 +363,171 @@ Total: 30.000
     expect(result.date).toBeUndefined();
     expect(result.total).toBeUndefined();
     expect(result.vendor).toBe('asdf qwerty');
+  });
+});
+
+describe('parseLineItems', () => {
+  it('parses simple "deskripsi nominal" rows', () => {
+    const text = `
+Warung Bu Tini
+12 Mei 2026
+
+Nasi Goreng       25.000
+Es Teh Manis      5.000
+Kerupuk Udang     3.000
+
+Total: 33.000
+    `;
+    const items = parseLineItems(text);
+    expect(items.length).toBeGreaterThanOrEqual(3);
+    const descs = items.map((i) => i.description);
+    expect(descs).toContain('Nasi Goreng');
+    expect(descs).toContain('Es Teh Manis');
+    expect(descs).toContain('Kerupuk Udang');
+    expect(items.find((i) => i.description === 'Nasi Goreng')?.amount).toBe(25_000);
+  });
+
+  it('strips total/subtotal/tax lines from item list', () => {
+    const text = `
+Beras Premium    50.000
+Minyak Goreng    30.000
+Subtotal         80.000
+PPN 11%          8.800
+Total           88.800
+    `;
+    const items = parseLineItems(text);
+    const descs = items.map((i) => i.description.toLowerCase());
+    expect(descs).toContain('beras premium');
+    expect(descs).toContain('minyak goreng');
+    expect(descs.some((d) => d.includes('total'))).toBe(false);
+    expect(descs.some((d) => d.includes('ppn'))).toBe(false);
+  });
+
+  it('parses qty x item format', () => {
+    const text = `
+2x Indomie Goreng    7.000
+3 pcs Aqua 600ml     15.000
+    `;
+    const items = parseLineItems(text);
+    expect(items.length).toBeGreaterThanOrEqual(2);
+    const indomie = items.find((i) => i.description.toLowerCase().includes('indomie'));
+    expect(indomie?.quantity).toBe(2);
+  });
+
+  it('parses qty unit_price total format', () => {
+    const text = `
+Kopi Susu      2   25.000   50.000
+Roti Bakar     1   15.000   15.000
+    `;
+    const items = parseLineItems(text);
+    expect(items.length).toBe(2);
+    const kopi = items.find((i) => i.description.toLowerCase().includes('kopi'));
+    expect(kopi?.quantity).toBe(2);
+    expect(kopi?.unit_price).toBe(25_000);
+    expect(kopi?.amount).toBe(50_000);
+  });
+
+  it('attaches semantic keywords per item', () => {
+    const text = `
+Beras Premium 5kg    50.000
+Sabun Lifebuoy        15.000
+    `;
+    const items = parseLineItems(text);
+    const beras = items.find((i) => i.description.toLowerCase().includes('beras'));
+    const sabun = items.find((i) => i.description.toLowerCase().includes('sabun'));
+    expect(beras?.keywords).toContain('bahan pokok');
+    expect(sabun?.keywords).toContain('perlengkapan');
+  });
+
+  it('returns empty array for receipt without line items', () => {
+    expect(parseLineItems('Total: 50.000')).toEqual([]);
+    expect(parseLineItems('')).toEqual([]);
+  });
+});
+
+describe('parseCharges', () => {
+  it('detects PPN/tax line', () => {
+    const text = `
+Subtotal      100.000
+PPN 11%        11.000
+Total         111.000
+    `;
+    const charges = parseCharges(text);
+    const tax = charges.find((c) => c.type === 'tax');
+    expect(tax).toBeDefined();
+    expect(tax?.amount).toBe(11_000);
+    expect(tax?.keywords).toContain('pajak');
+  });
+
+  it('detects service charge', () => {
+    const text = `
+Subtotal           100.000
+Service Charge       5.000
+PPN 11%             11.550
+Total              116.550
+    `;
+    const charges = parseCharges(text);
+    const service = charges.find((c) => c.type === 'service');
+    expect(service?.amount).toBe(5_000);
+  });
+
+  it('detects discount as negative amount', () => {
+    const text = `
+Subtotal       100.000
+Diskon 10%      10.000
+Total           90.000
+    `;
+    const charges = parseCharges(text);
+    const discount = charges.find((c) => c.type === 'discount');
+    expect(discount?.amount).toBe(-10_000);
+  });
+});
+
+describe('extractLineItemKeywords', () => {
+  it('detects sembako keywords', () => {
+    expect(extractLineItemKeywords('Beras Premium 5kg')).toContain('bahan pokok');
+    expect(extractLineItemKeywords('Minyak Goreng Bimoli')).toContain('bahan pokok');
+  });
+
+  it('detects supplies keywords', () => {
+    expect(extractLineItemKeywords('Sabun Lifebuoy')).toContain('perlengkapan');
+    expect(extractLineItemKeywords('Tissue Paseo 250 sheet')).toContain('perlengkapan');
+  });
+
+  it('returns empty for unknown items', () => {
+    expect(extractLineItemKeywords('Barang Aneh XYZ')).toEqual([]);
+  });
+});
+
+describe('parseReceipt — multi-line integration', () => {
+  it('returns line_items and charges on multi-item receipt', () => {
+    const text = `
+Indomaret Cabang Sudirman
+20 Mei 2026
+
+Beras Premium 5kg    65.000
+Minyak Goreng 2L     35.000
+Sabun Lifebuoy       12.000
+
+Subtotal            112.000
+PPN 11%              12.320
+Total              124.320
+    `;
+    const result = parseReceipt(text);
+    expect(result.line_items?.length).toBeGreaterThanOrEqual(3);
+    expect(result.charges?.length).toBeGreaterThanOrEqual(1);
+    expect(result.charges?.find((c) => c.type === 'tax')).toBeDefined();
+    expect(result.total).toBe(124_320);
+  });
+
+  it('returns undefined line_items for single-purpose receipt', () => {
+    const text = `
+PLN
+Tagihan listrik
+Total: Rp 250.000
+    `;
+    const result = parseReceipt(text);
+    // PLN bill biasanya tidak punya line items detail
+    expect(result.line_items).toBeUndefined();
   });
 });

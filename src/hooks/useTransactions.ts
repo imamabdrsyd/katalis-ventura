@@ -197,6 +197,31 @@ export function useTransactions() {
     }
   }, [businessId, user, invalidateTransactions, queryClient]);
 
+  const handleAddMultiLineTransaction = useCallback(async (data: MultiLineFormData) => {
+    if (!businessId || !user) return;
+    setSaving(true);
+    try {
+      await transactionsApi.createMultiLineTransaction({
+        business_id: businessId,
+        created_by: user.id,
+        date: data.date,
+        category: data.category,
+        name: data.name,
+        description: data.description,
+        notes: data.notes,
+        attachments: data.attachments,
+        journal_lines: data.journal_lines,
+      });
+      setShowAddModal(false);
+      setTransactionMode(null);
+      invalidateTransactions();
+    } catch (err: any) {
+      alert(err.message || 'Gagal menambahkan transaksi multi-line');
+    } finally {
+      setSaving(false);
+    }
+  }, [businessId, user, invalidateTransactions]);
+
   const handleEditMultiLineTransaction = useCallback(async (data: MultiLineFormData) => {
     if (!editTransaction || !businessId) return;
     setSaving(true);
@@ -637,6 +662,7 @@ export function useTransactions() {
     // Actions
     fetchTransactions,
     handleAddTransaction,
+    handleAddMultiLineTransaction,
     handleQuickAddTransaction,
     handleEditTransaction,
     handleEditMultiLineTransaction,

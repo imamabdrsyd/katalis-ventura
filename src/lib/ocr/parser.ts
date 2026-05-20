@@ -1,4 +1,4 @@
-import type { OcrParsed } from './types';
+import type { OcrParsed, OcrLineItem, OcrCharge } from './types';
 
 type TransactionCategory = 'EARN' | 'OPEX' | 'VAR' | 'CAPEX' | 'TAX' | 'FIN';
 
@@ -501,11 +501,194 @@ export function extractFallbackKeywords(vendor: string | undefined, rawText: str
 }
 
 /**
- * Main parser: ambil { date, total, vendor, category, keywords, fallback_keywords }
- * dari raw OCR text.
+ * Pattern untuk skip baris yang BUKAN line item — header, footer, total, alamat, dll.
+ * Dipakai di parseLineItems untuk eliminasi noise sebelum match item pattern.
+ */
+const LINE_ITEM_SKIP_PATTERN = /\b(sub\s*total|subtotal|grand\s*total|total\s*akhir|total\s*bayar|total\s*belanja|jumlah\s*bayar|total\b|jumlah\b|tagihan|amount\s*due|amount\s*paid|invoice\s*total|kembali|kembalian|hemat|diskon|discount|ppn|tax|pajak|service\s*charge|tunai|cash|bayar\s+dengan|kasir|cashier|npwp|telp|telepon|phone|alamat|address|jl\b|jalan|struk|receipt|invoice|kwitansi|nota|faktur|terima\s*kasih|thank\s*you|tanggal|date|waktu|time|no\.?\s*transaksi|no\.?\s*ref)\b/i;
+
+/**
+ * Pattern keyword untuk komponen biaya — dipakai parseCharges.
+ */
+const CHARGE_PATTERNS: Array<{ type: OcrCharge['type']; pattern: RegExp; keywords: string[] }> = [
+  { type: 'tax', pattern: /\b(ppn|pajak|tax|pb1|pajak\s*restoran|service\s*tax|vat)\b/i, keywords: ['pajak', 'ppn', 'tax'] },
+  { type: 'service', pattern: /\b(service\s*charge|biaya\s*layanan|biaya\s*service|service\s*fee)\b/i, keywords: ['biaya layanan', 'service'] },
+  { type: 'discount', pattern: /\b(diskon|discount|potongan|promo|voucher)\b/i, keywords: ['diskon', 'potongan'] },
+];
+
+/**
+ * Pattern line item — format umum di struk Indonesia:
+ *   "Beras Premium 5kg     50.000"
+ *   "2x  Indomie Goreng    7.000"
+ *   "Sabun Lifebuoy 250ml  Rp 15.500"
+ *   "Kopi Susu  1  25.000  25.000"  (deskripsi qty unit_price total)
+ *
+ * Strategi: cari baris yang mengandung minimal 1 angka berformat nominal di akhir,
+ * didahului oleh teks deskriptif (≥ 3 char alfabet).
+ */
+const LINE_ITEM_PATTERN = /^(.+?)\s+(?:Rp\.?\s*)?((?:\d{1,3}(?:[.,]\d{3})+|\d{4,})(?:[.,]\d{1,2})?)\s*$/i;
+
+/**
+ * Pattern qty di awal item. Mendukung:
+ *   "2x Indomie", "2 x Indomie", "2 Indomie", "2pcs Indomie"
+ */
+const QTY_PREFIX_PATTERN = /^(\d{1,3})\s*(?:x|pcs|pc|pack|btl|bks|kg|gr|ml|ltr|l)\b\s*(.+)$/i;
+
+/**
+ * Pattern baris "qty unit_price total" — biasanya 3 angka di akhir baris.
+ *   "Kopi Susu   2  25.000   50.000"
+ */
+const QTY_PRICE_TOTAL_PATTERN = /^(.+?)\s+(\d{1,3})\s+((?:\d{1,3}(?:[.,]\d{3})+|\d{4,})(?:[.,]\d{1,2})?)\s+((?:\d{1,3}(?:[.,]\d{3})+|\d{4,})(?:[.,]\d{1,2})?)\s*$/i;
+
+/**
+ * Topical keyword rules untuk match akun per line item (mis. "Beras" → ["bahan pokok"]).
+ * Lebih granular dari KEYWORD_RULES global karena dievaluasi per-item.
+ */
+const LINE_ITEM_KEYWORD_RULES: Array<{ pattern: RegExp; keywords: string[] }> = [
+  { pattern: /\b(beras|gula|minyak|tepung|garam|telur|susu|kopi|teh|mie|indomie)\b/i, keywords: ['bahan pokok', 'sembako', 'konsumsi'] },
+  { pattern: /\b(sabun|shampoo|pasta\s*gigi|deterjen|tissue|tisu|pewangi)\b/i, keywords: ['perlengkapan', 'kebersihan', 'supplies'] },
+  { pattern: /\b(rokok|sampoerna|gudang\s*garam|djarum|marlboro|lucky)\b/i, keywords: ['rokok', 'konsumsi'] },
+  { pattern: /\b(air\s*mineral|aqua|le\s*minerale|nestle|club|cleo|prima)\b/i, keywords: ['minuman', 'konsumsi'] },
+  { pattern: /\b(kertas|pulpen|pensil|buku|map|stapler|tinta|printer|atk)\b/i, keywords: ['atk', 'alat tulis', 'supplies'] },
+  { pattern: /\b(kabel|baterai|battery|lampu|colokan|stop\s*kontak)\b/i, keywords: ['perlengkapan', 'listrik'] },
+  { pattern: /\b(nasi|ayam|sapi|ikan|burger|pizza|kopi|teh|jus|soda|nasgor|mie\s*goreng)\b/i, keywords: ['makanan', 'konsumsi', 'meals'] },
+];
+
+/**
+ * Ekstrak keywords spesifik untuk satu line item berdasarkan deskripsinya.
+ */
+export function extractLineItemKeywords(description: string): string[] {
+  const result: string[] = [];
+  for (const rule of LINE_ITEM_KEYWORD_RULES) {
+    if (rule.pattern.test(description)) {
+      for (const k of rule.keywords) {
+        if (!result.includes(k)) result.push(k);
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * Parse line items dari body struk. Strategi:
+ * 1. Coba pattern "deskripsi qty unit_price total" dulu (paling spesifik)
+ * 2. Fallback ke pattern "deskripsi nominal" (paling umum)
+ * 3. Strip skip-keywords (total, ppn, alamat, dll)
+ * 4. Eliminasi item dengan deskripsi terlalu pendek/numerik
+ */
+export function parseLineItems(text: string): OcrLineItem[] {
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const items: OcrLineItem[] = [];
+
+  for (const line of lines) {
+    if (LINE_ITEM_SKIP_PATTERN.test(line)) continue;
+    if (ID_LINE_PATTERN.test(line)) continue;
+    if (line.length < 5) continue;
+
+    // Strategy 1: "deskripsi qty unit_price total"
+    const qpt = line.match(QTY_PRICE_TOTAL_PATTERN);
+    if (qpt) {
+      const [, descRaw, qtyRaw, unitRaw, totalRaw] = qpt;
+      const description = cleanLineItemDescription(descRaw);
+      const quantity = parseInt(qtyRaw, 10);
+      const unit_price = normalizeNumber(unitRaw);
+      const amount = normalizeNumber(totalRaw);
+      if (description && amount && amount > 0 && amount <= MAX_REALISTIC_AMOUNT) {
+        items.push({
+          description,
+          amount,
+          quantity: Number.isFinite(quantity) ? quantity : undefined,
+          unit_price,
+          keywords: extractLineItemKeywords(description),
+        });
+        continue;
+      }
+    }
+
+    // Strategy 2: "deskripsi nominal"
+    const simple = line.match(LINE_ITEM_PATTERN);
+    if (simple) {
+      const [, descRaw, amountRaw] = simple;
+      let description = cleanLineItemDescription(descRaw);
+      const amount = normalizeNumber(amountRaw);
+
+      // Cek qty prefix di description (mis. "2x Indomie Goreng")
+      let quantity: number | undefined;
+      const qtyMatch = description.match(QTY_PREFIX_PATTERN);
+      if (qtyMatch) {
+        quantity = parseInt(qtyMatch[1], 10);
+        description = qtyMatch[2].trim();
+      }
+
+      // Validasi: deskripsi harus punya minimal 3 char alfabet, amount realistis,
+      // dan tidak boleh terlalu kecil (di bawah 500 = kemungkinan kode/nomor).
+      if (
+        description &&
+        amount &&
+        amount >= 500 &&
+        amount <= MAX_REALISTIC_AMOUNT &&
+        /[a-z]{3,}/i.test(description)
+      ) {
+        items.push({
+          description,
+          amount,
+          quantity,
+          keywords: extractLineItemKeywords(description),
+        });
+      }
+    }
+  }
+
+  return items;
+}
+
+/**
+ * Bersihkan deskripsi line item — strip leading/trailing noise + qty unit suffix.
+ */
+function cleanLineItemDescription(raw: string): string {
+  return raw
+    .trim()
+    .replace(/^[*•\-_:\s]+/, '')
+    .replace(/[*•\-_:\s]+$/, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+/**
+ * Parse komponen biaya (PPN/service/diskon) dari struk.
+ * Untuk tiap baris yang match charge pattern, ekstrak nominalnya.
+ */
+export function parseCharges(text: string): OcrCharge[] {
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const charges: OcrCharge[] = [];
+
+  for (const line of lines) {
+    for (const rule of CHARGE_PATTERNS) {
+      if (!rule.pattern.test(line)) continue;
+      const amount = extractFormattedNumber(line) ?? extractLargestNumber(line);
+      if (!amount || amount <= 0 || amount > MAX_REALISTIC_AMOUNT) continue;
+
+      const isDiscount = rule.type === 'discount';
+      charges.push({
+        type: rule.type,
+        label: line.replace(/\s+/g, ' ').trim(),
+        amount: isDiscount ? -Math.abs(amount) : amount,
+        keywords: [...rule.keywords],
+      });
+      break; // satu baris cuma boleh match satu charge type
+    }
+  }
+
+  return charges;
+}
+
+/**
+ * Main parser: ambil { date, total, vendor, category, keywords, fallback_keywords,
+ * line_items, charges } dari raw OCR text.
  */
 export function parseReceipt(rawText: string): OcrParsed {
   const vendor = parseVendor(rawText);
+  const line_items = parseLineItems(rawText);
+  const charges = parseCharges(rawText);
   return {
     date: parseDate(rawText),
     total: parseTotal(rawText),
@@ -514,5 +697,7 @@ export function parseReceipt(rawText: string): OcrParsed {
     category: inferCategory(vendor, rawText),
     keywords: extractKeywords(vendor, rawText),
     fallback_keywords: extractFallbackKeywords(vendor, rawText),
+    line_items: line_items.length > 0 ? line_items : undefined,
+    charges: charges.length > 0 ? charges : undefined,
   };
 }

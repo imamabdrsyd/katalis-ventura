@@ -1,4 +1,5 @@
 import type { Account, Contact } from '@/types';
+import type { OcrLineItem, OcrCharge } from './types';
 
 /**
  * Keyword bisa "strong" (spesifik dari rule topical, mis. "supplies", "indomaret")
@@ -85,9 +86,11 @@ export function matchAccountByKeywords(
   const normalized = normalizeKeywords(keywords);
   if (normalized.length === 0) return undefined;
   let best: { account: Account; score: number } | null = null;
+  const scores: Array<{ name: string; score: number }> = [];
   for (const acc of accounts) {
     const s = scoreAccount(acc, normalized);
     if (s <= 0) continue;
+    scores.push({ name: acc.account_name, score: s });
     if (
       !best ||
       s > best.score ||
@@ -96,6 +99,8 @@ export function matchAccountByKeywords(
       best = { account: acc, score: s };
     }
   }
+  console.log('[OCR Matcher] Keywords:', normalized.map((k) => `${k.keyword}(${k.weight})`));
+  console.log('[OCR Matcher] Scores:', scores.sort((a, b) => b.score - a.score).slice(0, 5));
   return best?.account;
 }
 
@@ -183,4 +188,63 @@ export function matchContactByVendor(
   }
 
   return best?.contact;
+}
+
+/**
+ * Saran akun untuk satu line item OCR. Field `account` undefined jika tidak ada
+ * akun yang skornya > 0 — frontend perlu menampilkan dropdown akun kosong.
+ */
+export type LineItemAccountSuggestion = {
+  account?: Account;
+  // Keywords yang akhirnya dipakai untuk match (line-specific + global strong + global weak).
+  // Berguna untuk debugging dan untuk preview di UI.
+  used_keywords: WeightedKeyword[];
+};
+
+/**
+ * Saran akun per line item.
+ *
+ * Strategi:
+ * 1. Line-specific keywords (dari `OcrLineItem.keywords`) jadi STRONG keyword utama
+ * 2. Global strong keywords (vendor/topical) ditambahkan sebagai STRONG juga karena
+ *    line item biasanya seputar topik struk (mis. semua item di Indomaret = supplies)
+ * 3. Global fallback keywords ditambahkan sebagai WEAK (tie-breaker)
+ *
+ * Kalau line item tidak punya keywords spesifik, akun yang dipilih akan sama dengan
+ * akun global — itu OK, user bisa override per-line.
+ */
+export function suggestAccountsForLineItems(
+  accounts: Account[],
+  lineItems: OcrLineItem[],
+  globalKeywords: string[] = [],
+  globalFallbackKeywords: string[] = []
+): LineItemAccountSuggestion[] {
+  const globalStrong: WeightedKeyword[] = globalKeywords.map((k) => ({ keyword: k, weight: 'strong' }));
+  const globalWeak: WeightedKeyword[] = globalFallbackKeywords.map((k) => ({ keyword: k, weight: 'weak' }));
+
+  return lineItems.map((item) => {
+    const itemStrong: WeightedKeyword[] = (item.keywords ?? []).map((k) => ({ keyword: k, weight: 'strong' }));
+    // Item-specific keywords first → mereka punya prioritas urutan (matchAccountByKeywords
+    // tidak peduli urutan, tapi konsisten dengan logic global keyword).
+    const combined: WeightedKeyword[] = [...itemStrong, ...globalStrong, ...globalWeak];
+    const account = matchAccountByKeywords(accounts, combined);
+    return { account, used_keywords: combined };
+  });
+}
+
+/**
+ * Saran akun untuk charges (PPN/service/diskon). Biasanya:
+ * - tax → akun "Beban Pajak" / "PPN Masukan"
+ * - service → akun "Beban Layanan" / "Service Charge"
+ * - discount → akun "Diskon Penjualan" / "Potongan"
+ */
+export function suggestAccountsForCharges(
+  accounts: Account[],
+  charges: OcrCharge[]
+): LineItemAccountSuggestion[] {
+  return charges.map((charge) => {
+    const strong: WeightedKeyword[] = (charge.keywords ?? []).map((k) => ({ keyword: k, weight: 'strong' }));
+    const account = matchAccountByKeywords(accounts, strong);
+    return { account, used_keywords: strong };
+  });
 }

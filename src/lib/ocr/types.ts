@@ -1,5 +1,30 @@
 export type OcrProvider = 'google_vision' | 'ocr_space';
 
+/**
+ * Satu baris item belanja yang terdeteksi dari body struk.
+ * Setiap line_item bisa dipetakan ke satu journal line dengan akun beban berbeda.
+ */
+export type OcrLineItem = {
+  description: string;       // Nama item, mis. "Beras Premium 5kg"
+  amount: number;            // Subtotal item (qty × unit_price)
+  quantity?: number;         // Kuantitas, kalau terdeteksi
+  unit_price?: number;       // Harga satuan, kalau terdeteksi
+  // Keywords spesifik untuk match akun per line (mis. ["beras","bahan pokok"]).
+  // Digabung dengan keywords global saat scoring akun.
+  keywords?: string[];
+};
+
+/**
+ * Komponen biaya tambahan di struk (PPN, service charge, diskon).
+ * Dipisah ke journal line tersendiri agar akun pajak/diskon tercatat benar.
+ */
+export type OcrCharge = {
+  type: 'tax' | 'service' | 'discount' | 'other';
+  label: string;             // Label asli di struk, mis. "PPN 11%", "Service Charge"
+  amount: number;            // Nominal (positif untuk tax/service, negatif untuk diskon)
+  keywords?: string[];       // Hint untuk match akun (mis. ["pajak","ppn"])
+};
+
 export type OcrParsed = {
   date?: string;    // ISO YYYY-MM-DD
   total?: number;   // numeric amount in detected currency
@@ -12,6 +37,11 @@ export type OcrParsed = {
   // Generic fallback keywords from inferred category (mis. OPEX → ["beban","biaya"]).
   // Skor matchnya jauh lebih kecil — cuma berfungsi sebagai tie-breaker, bukan utama.
   fallback_keywords?: string[];
+  // Line items belanja yang terdeteksi dari body struk. Kalau >= 2 item,
+  // frontend bisa auto-switch ke MultiLineJournalForm.
+  line_items?: OcrLineItem[];
+  // Komponen biaya tambahan (PPN, service charge, diskon).
+  charges?: OcrCharge[];
 };
 
 export type OcrResult = {

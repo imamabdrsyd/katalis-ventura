@@ -102,6 +102,7 @@ function TransactionsPageInner() {
     // Actions
     fetchTransactions,
     handleAddTransaction,
+    handleAddMultiLineTransaction,
     handleQuickAddTransaction,
     handleEditTransaction,
     handleEditMultiLineTransaction,
@@ -136,6 +137,10 @@ function TransactionsPageInner() {
 
   // Main view tab: 'transactions' or 'recurring'
   const [activeView, setActiveView] = useState<'transactions' | 'recurring'>('transactions');
+
+  // Multi-line prefill dari OCR scan — kalau ada, modal add render MultiLineJournalForm
+  // bukan TransactionForm. Di-reset ke null saat modal ditutup.
+  const [multiLineOcrPrefill, setMultiLineOcrPrefill] = useState<MultiLineFormData | null>(null);
 
   // Tag filter state
   const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);
@@ -651,25 +656,41 @@ function TransactionsPageInner() {
       {/* Add Modal */}
       <Modal
         isOpen={showAddModal}
-        onClose={() => { setShowAddModal(false); setTransactionMode(null); setFollowUpPrefill(null); }}
+        onClose={() => { setShowAddModal(false); setTransactionMode(null); setFollowUpPrefill(null); setMultiLineOcrPrefill(null); }}
         title={
+          multiLineOcrPrefill ? 'Jurnal Multi-Item (dari Struk)' :
           followUpPrefill ? t.transactions.createCOGSEntry :
           transactionMode === 'in' ? t.transactions.moneyIn :
           transactionMode === 'out' ? t.transactions.moneyOut :
           t.transactions.fullForm
         }
       >
-        <TransactionForm
-          mode={transactionMode || 'full'}
-          initialValues={followUpPrefill ?? undefined}
-          onSubmit={async (data) => {
-            await handleAddTransaction(data);
-            setFollowUpPrefill(null);
-          }}
-          onCancel={() => { setShowAddModal(false); setTransactionMode(null); setFollowUpPrefill(null); }}
-          loading={saving}
-          businessId={businessId || undefined}
-        />
+        {multiLineOcrPrefill ? (
+          <MultiLineJournalForm
+            initialData={multiLineOcrPrefill}
+            onSubmit={async (data) => {
+              await handleAddMultiLineTransaction(data);
+              setMultiLineOcrPrefill(null);
+            }}
+            onCancel={() => { setShowAddModal(false); setTransactionMode(null); setMultiLineOcrPrefill(null); }}
+            loading={saving}
+            businessId={businessId || undefined}
+            submitLabel="Simpan Jurnal"
+          />
+        ) : (
+          <TransactionForm
+            mode={transactionMode || 'full'}
+            initialValues={followUpPrefill ?? undefined}
+            onSubmit={async (data) => {
+              await handleAddTransaction(data);
+              setFollowUpPrefill(null);
+            }}
+            onCancel={() => { setShowAddModal(false); setTransactionMode(null); setFollowUpPrefill(null); }}
+            loading={saving}
+            businessId={businessId || undefined}
+            onRequestMultiLine={(data) => setMultiLineOcrPrefill(data)}
+          />
+        )}
       </Modal>
 
       {/* Edit Modal */}

@@ -20,6 +20,8 @@ import { getTransactionTemplates, createTransactionTemplate, deleteTransactionTe
 import { getRecurringTransactions } from '@/lib/api/recurring';
 import OCRScanButton from '@/components/transactions/OCRScanButton';
 import type { OcrResult } from '@/lib/ocr/types';
+import { buildMultiLineFromOcr, shouldUseMultiLine } from '@/lib/ocr/multiLineBuilder';
+import type { MultiLineFormData } from '@/components/transactions/MultiLineJournalForm';
 import {
   BASE_CURRENCY,
   SUPPORTED_CURRENCIES,
@@ -69,6 +71,13 @@ interface TransactionFormProps {
   allowedCategories?: TransactionCategory[];
   businessId?: string;
   mode?: 'in' | 'out' | 'full'; // NEW: mode prop
+  /**
+   * Dipanggil ketika OCR scan menghasilkan struk multi-item (>= 2 line items,
+   * atau item + charge). Parent diharapkan switch ke MultiLineJournalForm dengan
+   * `initialData` dari argumen ini. Kalau tidak disediakan, OCR fallback ke
+   * single-line prefill (perilaku lama).
+   */
+  onRequestMultiLine?: (data: MultiLineFormData) => void;
 }
 
 const ALL_CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
@@ -137,6 +146,7 @@ export function TransactionForm({
   allowedCategories,
   businessId: businessIdProp,
   mode = 'full', // Default to full mode for backward compatibility
+  onRequestMultiLine,
 }: TransactionFormProps) {
   const params = useParams();
   const businessId = businessIdProp || (params?.businessId as string);
@@ -501,6 +511,14 @@ export function TransactionForm({
 
   // Apply OCR scan result to form (pre-fill date, amount, vendor name, description, category)
   const applyOcrResult = (result: OcrResult) => {
+    // Auto-detect multi-line: kalau struk punya >= 2 line items atau item + charge,
+    // delegate ke parent untuk switch ke MultiLineJournalForm.
+    if (onRequestMultiLine && shouldUseMultiLine(result) && accounts.length > 0) {
+      const { data } = buildMultiLineFromOcr(result, accounts);
+      onRequestMultiLine(data);
+      return;
+    }
+
     const { parsed } = result;
     setFormData((prev) => ({
       ...prev,
