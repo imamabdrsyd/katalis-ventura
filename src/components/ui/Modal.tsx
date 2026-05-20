@@ -53,7 +53,7 @@ export function Modal({ isOpen, onClose, title, children, footer, sideNavPrev, s
 
   const modalContent = (
     <div
-      className={`fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-200 ease-out ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+      className={`fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ease-out ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       onClick={onClose}
     >
       {/* Side nav — prev */}

@@ -14,7 +14,7 @@ const DEFAULT_PANEL =
   'bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto';
 
 const DEFAULT_BACKDROP =
-  'fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm';
+  'fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4';
 
 export function AnimatedDialog({
   isOpen,
