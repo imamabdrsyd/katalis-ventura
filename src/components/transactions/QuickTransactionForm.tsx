@@ -20,7 +20,7 @@ import { findDividendPayableAccount } from '@/lib/accounting/guidance/dividendSe
 import { getStockTransactions } from '@/lib/utils/inventoryHelper';
 import { InventoryPicker } from './InventoryPicker';
 import { UnitBreakdownSection } from './UnitBreakdownSection';
-import { FileUploadCompact } from '@/components/ui/FileUpload';
+import { FileUpload } from '@/components/ui/FileUpload';
 import { ChevronDown, StickyNote, Paperclip, Zap, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { CurrencyPill } from '@/components/ui/CurrencyPill';
@@ -61,6 +61,8 @@ const ACCOUNT_TYPE_COLORS: Record<AccountType, string> = {
   EXPENSE: 'text-red-500 dark:text-red-400',
 };
 
+type SupplementaryTab = 'note' | 'attachment';
+
 export function QuickTransactionForm({
   onSubmit,
   onCancel,
@@ -82,7 +84,7 @@ export function QuickTransactionForm({
   const [name, setName] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
-  const [showNotes, setShowNotes] = useState(false);
+  const [activeSupplementaryTab, setActiveSupplementaryTab] = useState<SupplementaryTab | null>(null);
 
   // Attachment state
   const [attachments, setAttachments] = useState<TransactionAttachment[]>([]);
@@ -491,7 +493,7 @@ export function QuickTransactionForm({
               setAmount(numeric);
               if (errors.amount) setErrors(prev => { const n = { ...prev }; delete n.amount; return n; });
             }}
-            inputClassName="text-3xl font-bold tabular-nums leading-tight bg-transparent border-0 p-0 focus:ring-0"
+            inputClassName="text-3xl font-bold tabular-nums leading-tight !border-0 !bg-transparent dark:!bg-transparent !py-0 !pl-0 !pr-14 !shadow-none focus:!ring-0"
             colorVariant={flowDirection === 'in' ? 'green' : flowDirection === 'out' ? 'red' : 'default'}
             calcButtonVariant="boxed"
             error={errors.amount}
@@ -522,10 +524,10 @@ export function QuickTransactionForm({
         </div>
       </div>
 
-      {/* 2. KATEGORI (Account Dropdown) */}
+      {/* 2. CATEGORY */}
       <div>
         <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
-          Account
+          Category
         </label>
 
         {/* Combobox trigger — search happens inline */}
@@ -751,52 +753,84 @@ export function QuickTransactionForm({
         </div>
       </div>
 
-      {/* 5. CATATAN + LAMPIRAN (Collapsible) */}
-      <div className="border border-gray-100 dark:border-gray-700 rounded-lg overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setShowNotes((prev) => !prev)}
-          className="w-full flex items-center justify-between px-3 py-2.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+      {/* 5. CATATAN + LAMPIRAN (Tabs) */}
+      <div className="space-y-2">
+        <div
+          role="tablist"
+          aria-label="Transaction note and attachment"
+          className={[
+            'flex items-center justify-start transition-colors',
+            activeSupplementaryTab
+              ? 'inline-flex w-fit gap-1 rounded-2xl bg-gray-100 p-1 dark:bg-gray-800'
+              : 'gap-2 rounded-xl border border-gray-100 bg-white px-3 py-1 dark:border-gray-600 dark:bg-gray-700/40',
+          ].join(' ')}
         >
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <StickyNote className="w-4 h-4" />
-              <span>Add note</span>
-            </div>
-            {businessId && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-gray-300 dark:text-gray-600">·</span>
-                <Paperclip className="w-4 h-4" />
-                <span>attachment</span>
+          {([
+            { value: 'note' as const, label: 'Add note', icon: StickyNote },
+            ...(businessId ? [{ value: 'attachment' as const, label: 'Attach', icon: Paperclip }] : []),
+          ]).map((tab, index) => {
+            const Icon = tab.icon;
+            const isActive = activeSupplementaryTab === tab.value;
+            return (
+              <div key={tab.value} className="flex items-center gap-2">
+                {!activeSupplementaryTab && index > 0 && (
+                  <span className="text-gray-300 dark:text-gray-600" aria-hidden="true">
+                    ·
+                  </span>
+                )}
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-controls={`quick-transaction-${tab.value}-panel`}
+                  onClick={() => setActiveSupplementaryTab((current) => current === tab.value ? null : tab.value)}
+                  className={[
+                    'inline-flex h-8 min-w-0 items-center justify-center gap-2 rounded-xl text-sm font-normal transition-all',
+                    activeSupplementaryTab ? 'px-3' : 'px-0',
+                    isActive
+                      ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5 dark:bg-gray-900 dark:text-gray-100 dark:ring-white/10'
+                      : activeSupplementaryTab
+                        ? 'text-gray-500 hover:bg-white/60 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700/70 dark:hover:text-gray-200'
+                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
+                  ].join(' ')}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{tab.label}</span>
+                  {tab.value === 'attachment' && attachments.length > 0 && (
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-100 px-1.5 text-[11px] font-semibold text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300">
+                      {attachments.length}
+                    </span>
+                  )}
+                </button>
               </div>
-            )}
-          </div>
-          <ChevronDown
-            className={`w-4 h-4 transition-transform ${showNotes ? 'rotate-180' : ''}`}
-          />
-        </button>
+            );
+          })}
+        </div>
 
-        {showNotes && (
-          <div className="px-3 pb-3 space-y-3 border-t border-gray-100 dark:border-gray-700 pt-3">
-            <div>
-              <label className="label text-sm text-gray-500 dark:text-gray-400">Note (optional)</label>
+        {activeSupplementaryTab && (
+          <div
+            id={`quick-transaction-${activeSupplementaryTab}-panel`}
+            role="tabpanel"
+            className="rounded-2xl border border-gray-100 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-900"
+          >
+            {activeSupplementaryTab === 'note' ? (
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 className="input"
                 rows={2}
                 placeholder="Brief description..."
+                aria-label="Note"
                 autoFocus
               />
-            </div>
-            {businessId && (
-              <FileUploadCompact
+            ) : businessId ? (
+              <FileUpload
                 businessId={businessId}
                 value={attachments}
                 onChange={setAttachments}
                 disabled={loading}
               />
-            )}
+            ) : null}
           </div>
         )}
       </div>
