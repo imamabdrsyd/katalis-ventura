@@ -663,17 +663,32 @@ function TransactionsPageInner() {
       {/* Quick Add Modal */}
       <Modal
         isOpen={showQuickAddModal}
-        onClose={() => setShowQuickAddModal(false)}
-        title={t.transactions.addTransaction}
+        onClose={() => { setShowQuickAddModal(false); setMultiLineOcrPrefill(null); }}
+        title={multiLineOcrPrefill ? 'Jurnal Multi-Item (dari Struk)' : t.transactions.addTransaction}
       >
-        <QuickTransactionForm
-          onSubmit={handleQuickAddTransaction}
-          onCancel={() => setShowQuickAddModal(false)}
-          loading={saving}
-          businessId={businessId || undefined}
-          transactions={transactions}
-          onConvertStockToCOGS={handleConvertStockToCOGS}
-        />
+        {multiLineOcrPrefill ? (
+          <MultiLineJournalForm
+            initialData={multiLineOcrPrefill}
+            onSubmit={async (data) => {
+              await handleAddMultiLineTransaction(data);
+              setMultiLineOcrPrefill(null);
+            }}
+            onCancel={() => { setShowQuickAddModal(false); setMultiLineOcrPrefill(null); }}
+            loading={saving}
+            businessId={businessId || undefined}
+            submitLabel="Simpan Jurnal"
+          />
+        ) : (
+          <QuickTransactionForm
+            onSubmit={handleQuickAddTransaction}
+            onCancel={() => setShowQuickAddModal(false)}
+            loading={saving}
+            businessId={businessId || undefined}
+            transactions={transactions}
+            onConvertStockToCOGS={handleConvertStockToCOGS}
+            onRequestMultiLine={(data) => setMultiLineOcrPrefill(data)}
+          />
+        )}
       </Modal>
 
       {/* Add Modal */}

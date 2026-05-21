@@ -28,6 +28,8 @@ import { ContactAutocomplete } from '@/components/transactions/ContactAutocomple
 import { saveContactFromTransaction, getContacts } from '@/lib/api/contacts';
 import { useBusinessContext } from '@/context/BusinessContext';
 import OCRScanButton from '@/components/transactions/OCRScanButton';
+import { buildMultiLineFromOcr, shouldUseMultiLine } from '@/lib/ocr/multiLineBuilder';
+import type { MultiLineFormData } from '@/components/transactions/MultiLineJournalForm';
 import type { OcrResult } from '@/lib/ocr/types';
 import { matchAccountByKeywords, matchContactByVendor } from '@/lib/ocr/matcher';
 import { BASE_CURRENCY, SUPPORTED_CURRENCIES, calculateBaseAmount, normalizeCurrencyCode } from '@/lib/currency';
@@ -43,6 +45,11 @@ interface QuickTransactionFormProps {
   transactions?: Transaction[];
   /** Callback to convert stock transactions to COGS */
   onConvertStockToCOGS?: (transactionIds: string[]) => Promise<void>;
+  /**
+   * Dipanggil ketika OCR scan menghasilkan struk multi-item (>= 2 line items,
+   * atau item + charge). Parent diharapkan switch ke MultiLineJournalForm.
+   */
+  onRequestMultiLine?: (data: MultiLineFormData) => void;
 }
 
 const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
@@ -70,6 +77,7 @@ export function QuickTransactionForm({
   businessId: businessIdProp,
   transactions: allTransactions = [],
   onConvertStockToCOGS,
+  onRequestMultiLine,
 }: QuickTransactionFormProps) {
   const params = useParams();
   const businessId = businessIdProp || (params?.businessId as string);
@@ -264,6 +272,14 @@ export function QuickTransactionForm({
 
   // OCR result handler — pre-fill amount, vendor name, date, account & contact
   const applyOcrResult = async (result: OcrResult) => {
+    // Auto-detect multi-line: kalau struk punya >= 2 line items atau item + charge,
+    // delegate ke parent untuk switch ke MultiLineJournalForm.
+    if (onRequestMultiLine && shouldUseMultiLine(result) && accounts.length > 0) {
+      const { data } = buildMultiLineFromOcr(result, accounts);
+      onRequestMultiLine(data);
+      return;
+    }
+
     const { parsed } = result;
     const parsedCurrency = parsed.currency_code ? normalizeCurrencyCode(parsed.currency_code) : currencyCode;
     if (parsed.total) {

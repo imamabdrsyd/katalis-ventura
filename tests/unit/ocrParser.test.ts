@@ -443,6 +443,30 @@ Sabun Lifebuoy        15.000
     expect(parseLineItems('Total: 50.000')).toEqual([]);
     expect(parseLineItems('')).toEqual([]);
   });
+
+  it('parses POS-style "ITEM Nx PRICE" format (restoran/cafe)', () => {
+    const text = `
+Order Details
+Item Name        Qty    Price
+SEKAR CAN        1x     39.000
+ICE AMERICANO    1x     32.000
+NASI GORENG MAMAK 1x    60.000
+AIR MINERAL      2x     36.000
+PISANG GORENG MADU 1x   35.000
+Total Item       8     299.000
+    `;
+    const items = parseLineItems(text);
+    const descs = items.map((i) => i.description);
+    expect(descs).toContain('SEKAR CAN');
+    expect(descs).toContain('ICE AMERICANO');
+    expect(descs).toContain('NASI GORENG MAMAK');
+    expect(descs).toContain('AIR MINERAL');
+    const air = items.find((i) => i.description === 'AIR MINERAL');
+    expect(air?.quantity).toBe(2);
+    expect(air?.amount).toBe(36_000);
+    // "Total Item" harus terstrip karena ada keyword "total"
+    expect(descs.some((d) => d.toLowerCase().includes('total'))).toBe(false);
+  });
 });
 
 describe('parseCharges', () => {
@@ -529,5 +553,32 @@ Total: Rp 250.000
     const result = parseReceipt(text);
     // PLN bill biasanya tidak punya line items detail
     expect(result.line_items).toBeUndefined();
+  });
+
+  it('parses restaurant receipt with PB1 tax + service charge', () => {
+    const text = `
+Order Details
+Item Name        Qty    Price
+SEKAR CAN        1x     39.000
+ICE AMERICANO    1x     32.000
+NASI GORENG MAMAK 1x    60.000
+ES KOPI SUSU AGREYA 1x  32.000
+NASI MANDHI AYAM 1x     65.000
+AIR MINERAL      2x     36.000
+PISANG GORENG MADU 1x   35.000
+
+Total Item       8     299.000
+
+Total
+Subtotal              299.000
+Service Charge          8.970
+PB1                    30.797
+Grand Total           338.767
+    `;
+    const result = parseReceipt(text);
+    expect(result.line_items?.length).toBeGreaterThanOrEqual(6);
+    expect(result.charges?.find((c) => c.type === 'tax')?.amount).toBe(30_797);
+    expect(result.charges?.find((c) => c.type === 'service')?.amount).toBe(8_970);
+    expect(result.total).toBe(338_767);
   });
 });

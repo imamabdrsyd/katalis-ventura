@@ -540,6 +540,15 @@ const QTY_PREFIX_PATTERN = /^(\d{1,3})\s*(?:x|pcs|pc|pack|btl|bks|kg|gr|ml|ltr|l
 const QTY_PRICE_TOTAL_PATTERN = /^(.+?)\s+(\d{1,3})\s+((?:\d{1,3}(?:[.,]\d{3})+|\d{4,})(?:[.,]\d{1,2})?)\s+((?:\d{1,3}(?:[.,]\d{3})+|\d{4,})(?:[.,]\d{1,2})?)\s*$/i;
 
 /**
+ * Pattern POS-style: "ITEM   Nx   PRICE" dengan qty di tengah (suffix x/pcs/dll).
+ * Contoh struk restoran/cafe (Loyverse, Olsera, Moka, Majoo):
+ *   "SEKAR CAN          1x    39.000"
+ *   "AIR MINERAL        2x    36.000"
+ *   "Es Kopi Susu       3     25.000"
+ */
+const POS_QTY_INLINE_PATTERN = /^(.+?)\s+(\d{1,3})\s*(?:x|pcs|pc|pack|btl|bks)?\s+(?:Rp\.?\s*)?((?:\d{1,3}(?:[.,]\d{3})+|\d{4,})(?:[.,]\d{1,2})?)\s*$/i;
+
+/**
  * Topical keyword rules untuk match akun per line item (mis. "Beras" → ["bahan pokok"]).
  * Lebih granular dari KEYWORD_RULES global karena dievaluasi per-item.
  */
@@ -550,7 +559,7 @@ const LINE_ITEM_KEYWORD_RULES: Array<{ pattern: RegExp; keywords: string[] }> = 
   { pattern: /\b(air\s*mineral|aqua|le\s*minerale|nestle|club|cleo|prima)\b/i, keywords: ['minuman', 'konsumsi'] },
   { pattern: /\b(kertas|pulpen|pensil|buku|map|stapler|tinta|printer|atk)\b/i, keywords: ['atk', 'alat tulis', 'supplies'] },
   { pattern: /\b(kabel|baterai|battery|lampu|colokan|stop\s*kontak)\b/i, keywords: ['perlengkapan', 'listrik'] },
-  { pattern: /\b(nasi|ayam|sapi|ikan|burger|pizza|kopi|teh|jus|soda|nasgor|mie\s*goreng)\b/i, keywords: ['makanan', 'konsumsi', 'meals'] },
+  { pattern: /\b(nasi|ayam|sapi|ikan|burger|pizza|kopi|teh|jus|soda|nasgor|mie\s*goreng|americano|latte|cappuccino|espresso|matcha|kopi\s*susu|es\s*kopi|es\s*teh|nasgor|mandhi|goreng|bakar|sate|soto|bakso|pisang)\b/i, keywords: ['makanan', 'minuman', 'konsumsi', 'meals'] },
 ];
 
 /**
@@ -584,7 +593,7 @@ export function parseLineItems(text: string): OcrLineItem[] {
     if (ID_LINE_PATTERN.test(line)) continue;
     if (line.length < 5) continue;
 
-    // Strategy 1: "deskripsi qty unit_price total"
+    // Strategy 1: "deskripsi qty unit_price total" — 3 angka, paling spesifik
     const qpt = line.match(QTY_PRICE_TOTAL_PATTERN);
     if (qpt) {
       const [, descRaw, qtyRaw, unitRaw, totalRaw] = qpt;
@@ -604,7 +613,32 @@ export function parseLineItems(text: string): OcrLineItem[] {
       }
     }
 
-    // Strategy 2: "deskripsi nominal"
+    // Strategy 2: POS-style "deskripsi  Nx  price" — qty di tengah dengan suffix x/pcs
+    // (umum di struk restoran/cafe Indonesia: Loyverse, Olsera, Moka, Majoo).
+    const pos = line.match(POS_QTY_INLINE_PATTERN);
+    if (pos) {
+      const [, descRaw, qtyRaw, priceRaw] = pos;
+      const description = cleanLineItemDescription(descRaw);
+      const quantity = parseInt(qtyRaw, 10);
+      const amount = normalizeNumber(priceRaw);
+      if (
+        description &&
+        amount &&
+        amount >= 500 &&
+        amount <= MAX_REALISTIC_AMOUNT &&
+        /[a-z]{3,}/i.test(description)
+      ) {
+        items.push({
+          description,
+          amount,
+          quantity: Number.isFinite(quantity) ? quantity : undefined,
+          keywords: extractLineItemKeywords(description),
+        });
+        continue;
+      }
+    }
+
+    // Strategy 3: "deskripsi nominal"
     const simple = line.match(LINE_ITEM_PATTERN);
     if (simple) {
       const [, descRaw, amountRaw] = simple;
