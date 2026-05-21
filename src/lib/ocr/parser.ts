@@ -578,11 +578,125 @@ export function extractLineItemKeywords(description: string): string[] {
 }
 
 /**
+ * Tokenized parser untuk struk yang OCR-nya memisah per-kolom (mis. Google Vision
+ * pada struk POS Loyverse/Olsera/Moka). Format raw text-nya:
+ *
+ *   1x            <- qty
+ *   39.000        <- price
+ *   SEKAR CAN     <- name
+ *   1x
+ *   32.000
+ *   ICE AMERICANO
+ *   NASI GORENG MAMAK 1x   <- kadang name+qty inline di satu baris
+ *   60.000
+ *   ES KOPI SUSU AGREYA    <- kadang name duluan, qty/price di bawah
+ *   1x
+ *   32.000
+ *
+ * Algoritma: scan dengan 3 pola yang mungkin (qty-price-name, name-qty-price,
+ * name+qty inline lalu price). Setiap baris yang sudah dipakai oleh satu pola
+ * tidak boleh dipakai pola lain (consumed set).
+ */
+function parseLineItemsTokenized(lines: string[]): OcrLineItem[] {
+  const isQtyToken = (s: string) => /^\d{1,3}\s*(?:x|pcs|pc|pack|btl|bks)$/i.test(s);
+  const extractQtyToken = (s: string): number | undefined => {
+    const m = s.match(/^(\d{1,3})\s*(?:x|pcs|pc|pack|btl|bks)?$/i);
+    return m ? parseInt(m[1], 10) : undefined;
+  };
+  const isPriceToken = (s: string): number | undefined => {
+    if (!/^(?:Rp\.?\s*)?(?:\d{1,3}(?:[.,]\d{3})+|\d{4,})(?:[.,]\d{1,2})?$/.test(s)) return undefined;
+    const num = normalizeNumber(s.replace(/^Rp\.?\s*/i, ''));
+    return num && num >= 500 && num <= MAX_REALISTIC_AMOUNT ? num : undefined;
+  };
+  // Header kolom yang sering muncul standalone di output OCR (Google Vision).
+  // Tanpa filter ini, "Price" / "Qty" / "Item Name" bisa dianggap nama item palsu.
+  const COLUMN_HEADER_PATTERN = /^(item\s*name|qty|price|harga|jumlah|kuantitas|kuantiti|nama\s*item|nama\s*barang|product|produk|name|description|keterangan)$/i;
+  const isNameToken = (s: string): boolean => {
+    if (LINE_ITEM_SKIP_PATTERN.test(s)) return false;
+    if (COLUMN_HEADER_PATTERN.test(s)) return false;
+    if (ID_LINE_PATTERN.test(s)) return false;
+    if (s.startsWith('+')) return false;
+    if (/^\d/.test(s)) return false;
+    if (s.length < 3) return false;
+    return /[a-z]{3,}/i.test(s);
+  };
+  const isInlineNameQty = (s: string): { name: string; qty: number } | undefined => {
+    const m = s.match(/^(.+?)\s+(\d{1,3})\s*(?:x|pcs|pc|pack|btl|bks)?$/i);
+    if (!m) return undefined;
+    const name = m[1].trim();
+    if (!isNameToken(name)) return undefined;
+    return { name, qty: parseInt(m[2], 10) };
+  };
+
+  const consumed = new Set<number>();
+  const items: OcrLineItem[] = [];
+  const push = (description: string, amount: number, quantity?: number) => {
+    const clean = cleanLineItemDescription(description);
+    if (!clean) return;
+    items.push({
+      description: clean,
+      amount,
+      quantity,
+      keywords: extractLineItemKeywords(clean),
+    });
+  };
+
+  // Pass 1: "name+qty" inline + "price" pada baris berikutnya (paling spesifik).
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (consumed.has(i) || consumed.has(i + 1)) continue;
+    const inline = isInlineNameQty(lines[i]);
+    const price = isPriceToken(lines[i + 1]);
+    if (inline && price) {
+      push(inline.name, price, inline.qty);
+      consumed.add(i);
+      consumed.add(i + 1);
+    }
+  }
+
+  // Pass 2: "qty" + "price" + "name" (3 baris berurutan, name di bawah).
+  // Dieksekusi DULU sebelum name-qty-price karena qty-price-name lebih "self-contained":
+  // qty dan price selalu berpasangan, sehingga tidak akan mencuri qty/price milik item
+  // sebelah. Pass name-qty-price bisa "mencuri" qty+price dari item berikutnya kalau
+  // dijalankan duluan (mis. "SEKAR CAN" salah dipasangkan dengan qty+price ICE AMERICANO).
+  for (let i = 0; i < lines.length - 2; i++) {
+    if (consumed.has(i) || consumed.has(i + 1) || consumed.has(i + 2)) continue;
+    if (isQtyToken(lines[i])) {
+      const price = isPriceToken(lines[i + 1]);
+      if (price && isNameToken(lines[i + 2])) {
+        push(lines[i + 2], price, extractQtyToken(lines[i]));
+        consumed.add(i);
+        consumed.add(i + 1);
+        consumed.add(i + 2);
+      }
+    }
+  }
+
+  // Pass 3: "name" + "qty" + "price" (3 baris berurutan, name di atas).
+  for (let i = 0; i < lines.length - 2; i++) {
+    if (consumed.has(i) || consumed.has(i + 1) || consumed.has(i + 2)) continue;
+    if (isNameToken(lines[i]) && isQtyToken(lines[i + 1])) {
+      const price = isPriceToken(lines[i + 2]);
+      if (price) {
+        push(lines[i], price, extractQtyToken(lines[i + 1]));
+        consumed.add(i);
+        consumed.add(i + 1);
+        consumed.add(i + 2);
+      }
+    }
+  }
+
+  return items;
+}
+
+/**
  * Parse line items dari body struk. Strategi:
- * 1. Coba pattern "deskripsi qty unit_price total" dulu (paling spesifik)
- * 2. Fallback ke pattern "deskripsi nominal" (paling umum)
- * 3. Strip skip-keywords (total, ppn, alamat, dll)
- * 4. Eliminasi item dengan deskripsi terlalu pendek/numerik
+ * 1. Coba pattern per-baris dulu (struk dengan layout rapi tabular):
+ *    a. "deskripsi qty unit_price total" (3 angka, paling spesifik)
+ *    b. POS-style "deskripsi Nx price"
+ *    c. "deskripsi nominal"
+ * 2. Kalau hasilnya < 2 items, fallback ke tokenized parser yang
+ *    handle struk multi-kolom dari Google Vision (qty, price, name
+ *    di baris terpisah).
  */
 export function parseLineItems(text: string): OcrLineItem[] {
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
@@ -672,6 +786,14 @@ export function parseLineItems(text: string): OcrLineItem[] {
     }
   }
 
+  // Fallback: kalau line-based parser cuma temukan < 2 items, coba tokenized
+  // parser yang handle layout multi-kolom Google Vision (qty, price, name
+  // di baris terpisah).
+  if (items.length < 2) {
+    const tokenized = parseLineItemsTokenized(lines);
+    if (tokenized.length > items.length) return tokenized;
+  }
+
   return items;
 }
 
@@ -689,16 +811,33 @@ function cleanLineItemDescription(raw: string): string {
 
 /**
  * Parse komponen biaya (PPN/service/diskon) dari struk.
- * Untuk tiap baris yang match charge pattern, ekstrak nominalnya.
+ * Untuk tiap baris yang match charge pattern, ekstrak nominalnya — di baris yang
+ * sama, atau di baris berikutnya kalau label dan nominal terpisah (umum di output
+ * Google Vision multi-kolom).
  */
 export function parseCharges(text: string): OcrCharge[] {
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   const charges: OcrCharge[] = [];
 
-  for (const line of lines) {
+  // Helper: ekstrak nominal yang BERFORMAT (punya separator atau ≥4 digit).
+  // Tidak menerima angka kecil tunggal seperti "1" di "PB1".
+  const extractAmountFromLine = (s: string): number | undefined => {
+    const formatted = extractFormattedNumber(s);
+    if (formatted && formatted >= 500) return formatted;
+    return undefined;
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     for (const rule of CHARGE_PATTERNS) {
       if (!rule.pattern.test(line)) continue;
-      const amount = extractFormattedNumber(line) ?? extractLargestNumber(line);
+
+      // Strategi 1: nominal di baris yang sama (mis. "PPN 11%  11.000")
+      let amount = extractAmountFromLine(line);
+      // Strategi 2: nominal di baris berikutnya (label standalone, mis. "PB1\n30.797")
+      if (!amount && i + 1 < lines.length) {
+        amount = extractAmountFromLine(lines[i + 1]);
+      }
       if (!amount || amount <= 0 || amount > MAX_REALISTIC_AMOUNT) continue;
 
       const isDiscount = rule.type === 'discount';

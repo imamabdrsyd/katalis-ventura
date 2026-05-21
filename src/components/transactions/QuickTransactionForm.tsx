@@ -272,20 +272,6 @@ export function QuickTransactionForm({
 
   // OCR result handler — pre-fill amount, vendor name, date, account & contact
   const applyOcrResult = async (result: OcrResult) => {
-    // [TEMP DEBUG] Dump OCR result untuk diagnose multi-line detection.
-    // Hapus setelah parser terbukti reliable di berbagai struk POS.
-    console.log('[OCR] Provider:', result.provider, 'Cached:', result.cached);
-    console.log('[OCR] Raw text:\n', result.raw_text);
-    console.log('[OCR] Parsed:', {
-      total: result.parsed.total,
-      vendor: result.parsed.vendor,
-      line_items_count: result.parsed.line_items?.length ?? 0,
-      line_items: result.parsed.line_items,
-      charges_count: result.parsed.charges?.length ?? 0,
-      charges: result.parsed.charges,
-      should_use_multi_line: shouldUseMultiLine(result),
-    });
-
     // Auto-detect multi-line: kalau struk punya >= 2 line items atau item + charge,
     // delegate ke parent untuk switch ke MultiLineJournalForm.
     if (onRequestMultiLine && shouldUseMultiLine(result) && accounts.length > 0) {

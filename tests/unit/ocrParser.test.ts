@@ -555,6 +555,79 @@ Total: Rp 250.000
     expect(result.line_items).toBeUndefined();
   });
 
+  it('parses Google Vision multi-column layout (qty/price/name di baris terpisah)', () => {
+    // Raw text aktual dari Google Vision untuk struk Kopi Nusantara
+    const text = `tomer Name
+Mufti Syahidi
+22.25
+66
+Membership
+Mufti Syahidi
+Phone Number
+0919-1901-049
+<
+Table Number
+015
+Order Details
+Item Name
+Qty
+Price
+1x
+39.000
+SEKAR CAN
+1x
+32.000
+ICE AMERICANO
++ ICE AMERICANO
+NASI GORENG MAMAK 1x
+60.000
+ES KOPI SUSU AGREYA
+1x
+32.000
++ ES KOPI SUSU
+AGREYA
+NASI MANDHI AYAM
+1x
+65.000
+2x
+36.000
+AIR MINERAL
+PISANG GORENG
+1x
+35.000
+MADU NIKMAT
+Total Item
+00
+8
+299.000
+Total
+Subtotal
+299.000
+Service Charge
+8.970
+PB1
+30.797
+Grand Total (Incl. Tax)
+338.767
+Payment Method`;
+    const result = parseReceipt(text);
+    expect(result.line_items?.length).toBeGreaterThanOrEqual(7);
+    const descs = result.line_items?.map((i) => i.description) ?? [];
+    expect(descs).toContain('SEKAR CAN');
+    expect(descs).toContain('ICE AMERICANO');
+    expect(descs).toContain('NASI GORENG MAMAK');
+    expect(descs).toContain('ES KOPI SUSU AGREYA');
+    expect(descs).toContain('NASI MANDHI AYAM');
+    expect(descs).toContain('AIR MINERAL');
+    const air = result.line_items?.find((i) => i.description === 'AIR MINERAL');
+    expect(air?.amount).toBe(36_000);
+    expect(air?.quantity).toBe(2);
+    // Charges juga harus ke-detect
+    expect(result.charges?.find((c) => c.type === 'tax')?.amount).toBe(30_797);
+    expect(result.charges?.find((c) => c.type === 'service')?.amount).toBe(8_970);
+    expect(result.total).toBe(338_767);
+  });
+
   it('parses restaurant receipt with PB1 tax + service charge', () => {
     const text = `
 Order Details
