@@ -12,11 +12,12 @@ import './globals.css';
 const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ['latin'], display: 'swap' });
 
 const baseUrl = 'https://axionventura.com';
+const siteTitle = 'AXION — Financial Hub untuk Pengelola Bisnis dan Investor Indonesia';
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: 'AXION — Platform Akuntansi Double-Entry untuk UKM Indonesia',
+    default: siteTitle,
     template: '%s | AXION',
   },
   description:
@@ -48,7 +49,7 @@ export const metadata: Metadata = {
     locale: 'id_ID',
     url: baseUrl,
     siteName: 'AXION',
-    title: 'AXION — Platform Akuntansi Double-Entry untuk UKM Indonesia',
+    title: siteTitle,
     description:
       'Kelola keuangan bisnis secara profesional dengan double-entry bookkeeping, laporan otomatis, dan transparansi data untuk investor. Gratis untuk bisnis pertama.',
     images: [
@@ -62,7 +63,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AXION — Platform Akuntansi Double-Entry untuk UKM Indonesia',
+    title: siteTitle,
     description:
       'Kelola keuangan bisnis secara profesional. Laporan laba rugi, neraca, arus kas otomatis untuk UKM Indonesia.',
     images: ['/images/axion.png'],

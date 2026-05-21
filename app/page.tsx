@@ -72,7 +72,7 @@ const content = {
     healthFullLink: 'Buka di halaman penuh',
     closingEyebrow: 'Mulai sekarang',
     closingTitle: 'Kelola bisnis lebih cerdas.',
-    closingLead: 'Gratis untuk satu bisnis. Tanpa kartu kredit. Pindah dari spreadsheet dalam hitungan menit.',
+    closingLead: 'Mulai dengan bisnis pertama kamu. Pindah dari spreadsheet dalam hitungan menit.',
     closingCta: 'Buka akun AXION',
     footerLabel: 'Platform Keuangan Bisnis',
     footerCta: 'Limited Partner Login',
@@ -129,7 +129,7 @@ const content = {
     healthFullLink: 'Open in full page',
     closingEyebrow: 'Start now',
     closingTitle: 'Run your business smarter.',
-    closingLead: 'Free for one business. No credit card. Move off spreadsheets in minutes.',
+    closingLead: 'Start with your first business. Move off spreadsheets in minutes.',
     closingCta: 'Open AXION account',
     footerLabel: 'Business Finance Platform',
     footerCta: 'Limited Partner Login',
@@ -285,7 +285,7 @@ export default function LandingPage() {
               href="/login"
               className="text-sm font-semibold px-4 py-2 rounded-full bg-gray-900 text-white hover:bg-primary-600 dark:bg-white dark:text-gray-900 dark:hover:bg-primary-500 dark:hover:text-white transition-colors cursor-pointer"
             >
-              {t.heroCta.split(' ')[0]}
+              Limited Partner
             </Link>
           </div>
         </nav>
