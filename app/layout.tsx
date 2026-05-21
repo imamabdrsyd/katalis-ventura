@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { QueryProvider } from '@/components/providers/QueryProvider';
 import { LanguageProvider } from '@/context/LanguageContext';
 import { Toaster } from 'sonner';
+import { CheckCircle2, CircleAlert, CircleX, Info, Loader2 } from 'lucide-react';
 import './globals.css';
 
 const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ['latin'], display: 'swap' });
@@ -141,6 +142,13 @@ export default function RootLayout({
               <Toaster
                 position="top-center"
                 closeButton
+                icons={{
+                  success: <CheckCircle2 className="h-5 w-5 text-emerald-500" aria-hidden="true" />,
+                  error: <CircleX className="h-5 w-5 text-red-500" aria-hidden="true" />,
+                  warning: <CircleAlert className="h-5 w-5 text-amber-500" aria-hidden="true" />,
+                  info: <Info className="h-5 w-5 text-sky-500" aria-hidden="true" />,
+                  loading: <Loader2 className="h-5 w-5 animate-spin text-gray-500" aria-hidden="true" />,
+                }}
                 toastOptions={{
                   style: {
                     background: '#ffffff',

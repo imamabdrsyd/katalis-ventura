@@ -1,6 +1,7 @@
 'use client';
 
 import { toast } from 'sonner';
+import { CheckCircle2 } from 'lucide-react';
 
 type TransactionSavedToastOptions = {
   message: string;
@@ -39,11 +40,14 @@ export function showTransactionSavedToast({
       <button
         type="button"
         onClick={handleClick}
-        className="w-full max-w-[min(92vw,520px)] cursor-pointer rounded-xl border border-gray-100 bg-white px-5 py-4 text-left shadow-[0_2px_8px_rgba(15,23,42,0.06),0_1px_3px_rgba(15,23,42,0.04)] transition-colors hover:bg-gray-50/70 focus:outline-none focus:ring-2 focus:ring-gray-200"
+        className="flex w-[var(--width,356px)] max-w-[calc(100vw-32px)] cursor-pointer items-start gap-3 rounded-xl border border-gray-100 bg-white px-4 py-4 text-left shadow-[0_2px_8px_rgba(15,23,42,0.06),0_1px_3px_rgba(15,23,42,0.04)] transition-colors hover:bg-gray-50/70 focus:outline-none focus:ring-2 focus:ring-gray-200"
         aria-label={message}
       >
-        <p className="text-sm font-medium leading-5 text-gray-800">{message}</p>
-        <p className="mt-1 text-sm leading-5 text-gray-400">{createdTime}</p>
+        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" aria-hidden="true" />
+        <span className="min-w-0">
+          <span className="block text-sm font-medium leading-5 text-gray-800">{message}</span>
+          <span className="mt-1 block text-sm leading-5 text-gray-400">{createdTime}</span>
+        </span>
       </button>
     );
   });
