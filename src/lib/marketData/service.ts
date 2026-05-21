@@ -4,7 +4,6 @@ import {
   isFresh,
   upsertMarketCache,
   markCacheStale,
-  incrementHitCount,
   extendCacheExpiry,
 } from './cache';
 import { fetchStockNewsRss, fetchVcPeSmeArticlesRss } from './rss';
@@ -45,7 +44,6 @@ async function cacheFirst<T>(params: {
   const cached = await getMarketCache<T>(params.cacheKey);
 
   if (isFresh(cached) && cached) {
-    void incrementHitCount(params.cacheKey);
     return {
       data: cached.payload,
       status: cached.fetch_status,

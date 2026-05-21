@@ -187,7 +187,7 @@ export default function LandingPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('/api/stats', { cache: 'no-store' });
+        const response = await fetch('/api/stats');
         if (response.ok) {
           const data = await response.json();
           setStats(data);

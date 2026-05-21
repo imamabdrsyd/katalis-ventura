@@ -1,4 +1,5 @@
 import type { StockNews, FmpArticle } from './types';
+import { CACHE_TTL } from './constants';
 
 /**
  * Lightweight RSS fetcher untuk berita keuangan publik.
@@ -116,9 +117,9 @@ function parseFeed(xml: string): ParsedItem[] {
   return items;
 }
 
-async function fetchFeed(source: RssFeedSource): Promise<ParsedItem[]> {
+async function fetchFeed(source: RssFeedSource, revalidateSeconds: number): Promise<ParsedItem[]> {
   const res = await fetch(source.url, {
-    cache: 'no-store',
+    next: { revalidate: revalidateSeconds },
     headers: { 'User-Agent': 'Mozilla/5.0 (AXION Market Tracker)' },
     signal: AbortSignal.timeout(8000),
   });
@@ -140,11 +141,12 @@ function toIsoDate(s: string): string {
  */
 async function fetchFromFeeds(
   feeds: RssFeedSource[],
-  limit: number
+  limit: number,
+  revalidateSeconds: number
 ): Promise<Array<ParsedItem & { siteName: string }>> {
   const results = await Promise.allSettled(
     feeds.map(async (f) => {
-      const items = await fetchFeed(f);
+      const items = await fetchFeed(f, revalidateSeconds);
       return items.map((i) => ({ ...i, siteName: f.name }));
     })
   );
@@ -169,7 +171,7 @@ async function fetchFromFeeds(
 }
 
 export async function fetchStockNewsRss(limit = 12): Promise<StockNews[]> {
-  const items = await fetchFromFeeds(STOCK_NEWS_FEEDS, limit);
+  const items = await fetchFromFeeds(STOCK_NEWS_FEEDS, limit, CACHE_TTL.RSS_STOCK_NEWS);
   return items.map((i) => ({
     symbol: null,
     publishedDate: toIsoDate(i.pubDate),
@@ -182,7 +184,7 @@ export async function fetchStockNewsRss(limit = 12): Promise<StockNews[]> {
 }
 
 export async function fetchVcPeSmeArticlesRss(limit = 20): Promise<FmpArticle[]> {
-  const items = await fetchFromFeeds(VC_PE_SME_FEEDS, limit);
+  const items = await fetchFromFeeds(VC_PE_SME_FEEDS, limit, CACHE_TTL.RSS_GENERAL_ARTICLES);
   return items.map((i) => ({
     title: i.title,
     date: toIsoDate(i.pubDate),

@@ -1,4 +1,4 @@
-import { FRED_SERIES } from './constants';
+import { CACHE_TTL, FRED_SERIES } from './constants';
 import type { MacroSeries, MacroSeriesPoint } from './types';
 import { RateLimitError, parseRetryAfter } from './errors';
 
@@ -32,7 +32,7 @@ export async function fetchSeries(
   const obsUrl =
     `${FRED_BASE}/series/observations?series_id=${encodeURIComponent(seriesId)}` +
     `&limit=${limit}&sort_order=desc&api_key=${apiKey}&file_type=json`;
-  const obsRes = await fetch(obsUrl, { cache: 'no-store' });
+  const obsRes = await fetch(obsUrl, { next: { revalidate: CACHE_TTL.FRED_SERIES } });
   if (obsRes.status === 429) {
     throw new RateLimitError(
       'fred',

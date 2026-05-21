@@ -1,5 +1,6 @@
 import type { FxRate } from './types';
 import { RateLimitError, parseRetryAfter } from './errors';
+import { CACHE_TTL } from './constants';
 
 function getApiKey(): string {
   const key = process.env.EXCHANGERATE_API_KEY;
@@ -23,7 +24,7 @@ interface PairResponse {
  */
 export async function fetchFxPair(from: string, to = 'IDR'): Promise<FxRate> {
   const url = `https://v6.exchangerate-api.com/v6/${getApiKey()}/pair/${from}/${to}`;
-  const res = await fetch(url, { cache: 'no-store' });
+  const res = await fetch(url, { next: { revalidate: CACHE_TTL.EXCHANGE_RATE } });
   if (res.status === 429) {
     throw new RateLimitError(
       'exchangerate',

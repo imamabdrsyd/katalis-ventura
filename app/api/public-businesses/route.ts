@@ -1,5 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
+import { withRouteTiming } from '@/lib/api/server/timing';
+
+const CACHE_CONTROL = 'public, s-maxage=300, stale-while-revalidate=1800';
 
 export interface PublicGalleryImage {
   url: string;
@@ -125,14 +128,15 @@ function normalizeLayoutMode(raw: unknown): 'classic' | 'modern' | 'clean' {
  * Returns bisnis yang opt-in tampil di landing page (is_public = true),
  * lengkap dengan gallery & links omni-channel (jika halaman publik di-publish).
  */
-export async function GET() {
-  try {
-    const supabase = createAdminClient();
+export async function GET(request: NextRequest) {
+  return withRouteTiming(request, '/api/public-businesses', async () => {
+    try {
+      const supabase = createAdminClient();
 
-    const { data, error } = await supabase
-      .from('businesses')
-      .select(
-        `
+      const { data, error } = await supabase
+        .from('businesses')
+        .select(
+          `
           id, business_name, business_type, business_sector,
           city, whatsapp_number, widget_action_label, logo_url,
           omni_channel:business_omni_channels (
@@ -144,83 +148,93 @@ export async function GET() {
             pricing_rules:business_pricing_rules ( id, date_from, date_to, price, label )
           )
         `
-      )
-      .eq('is_public', true)
-      .eq('is_archived', false)
-      .order('business_name', { ascending: true });
+        )
+        .eq('is_public', true)
+        .eq('is_archived', false)
+        .order('business_name', { ascending: true });
 
-    if (error) {
-      console.error('Failed to fetch public businesses:', error);
-      return NextResponse.json({ businesses: [] }, { status: 200 });
-    }
+      if (error) {
+        console.error('Failed to fetch public businesses:', error);
+        return NextResponse.json(
+          { businesses: [] },
+          { status: 200, headers: { 'Cache-Control': CACHE_CONTROL } }
+        );
+      }
 
-    const businesses: PublicBusiness[] = (data as unknown as RawBusinessRow[] ?? []).map((row) => {
-      // omni_channel bisa berupa object (1:1) atau array tergantung Supabase resolver — normalize ke object
-      const oc = Array.isArray(row.omni_channel) ? row.omni_channel[0] : row.omni_channel;
-      const isPublished = !!oc?.is_published;
+      const businesses: PublicBusiness[] = (data as unknown as RawBusinessRow[] ?? []).map((row) => {
+        // omni_channel bisa berupa object (1:1) atau array tergantung Supabase resolver — normalize ke object
+        const oc = Array.isArray(row.omni_channel) ? row.omni_channel[0] : row.omni_channel;
+        const isPublished = !!oc?.is_published;
 
-      const gallery = isPublished ? normalizeGallery(oc?.gallery_images) : [];
-      const showcase = isPublished ? normalizeGallery(oc?.showcase_images) : [];
-      const layoutMode = normalizeLayoutMode(oc?.layout_mode);
-      const links: PublicLink[] = isPublished
-        ? (oc?.links ?? [])
-            .filter((l) => l.is_active)
-            .sort((a, b) => a.sort_order - b.sort_order)
-            .map(({ id, channel_type, label, subtitle, url, is_primary, sort_order, lucide_icon }) => ({
-              id,
-              channel_type,
-              label,
-              subtitle: subtitle ?? null,
-              url,
-              is_primary: !!is_primary,
-              sort_order,
-              lucide_icon: lucide_icon ?? null,
+        const gallery = isPublished ? normalizeGallery(oc?.gallery_images) : [];
+        const showcase = isPublished ? normalizeGallery(oc?.showcase_images) : [];
+        const layoutMode = normalizeLayoutMode(oc?.layout_mode);
+        const links: PublicLink[] = isPublished
+          ? (oc?.links ?? [])
+              .filter((l) => l.is_active)
+              .sort((a, b) => a.sort_order - b.sort_order)
+              .map(({ id, channel_type, label, subtitle, url, is_primary, sort_order, lucide_icon }) => ({
+                id,
+                channel_type,
+                label,
+                subtitle: subtitle ?? null,
+                url,
+                is_primary: !!is_primary,
+                sort_order,
+                lucide_icon: lucide_icon ?? null,
+              }))
+          : [];
+
+        const showPricing = isPublished && !!oc?.show_pricing;
+        const pricingRules: PublicPricingRule[] = showPricing
+          ? (oc?.pricing_rules ?? []).map((r) => ({
+              id: r.id,
+              date_from: r.date_from,
+              date_to: r.date_to,
+              price: typeof r.price === 'string' ? parseFloat(r.price) : r.price,
+              label: r.label,
             }))
-        : [];
+          : [];
 
-      const showPricing = isPublished && !!oc?.show_pricing;
-      const pricingRules: PublicPricingRule[] = showPricing
-        ? (oc?.pricing_rules ?? []).map((r) => ({
-            id: r.id,
-            date_from: r.date_from,
-            date_to: r.date_to,
-            price: typeof r.price === 'string' ? parseFloat(r.price) : r.price,
-            label: r.label,
-          }))
-        : [];
+        return {
+          id: row.id,
+          business_name: row.business_name,
+          slug: oc?.slug ?? null,
+          business_type: row.business_type,
+          business_sector: row.business_sector,
+          city: row.city,
+          whatsapp_number: row.whatsapp_number,
+          widget_action_label: row.widget_action_label,
+          logo_url: row.logo_url,
+          gallery,
+          showcase,
+          layout_mode: layoutMode,
+          show_gallery: oc?.show_gallery !== false,
+          show_showcase: oc?.show_showcase !== false,
+          show_widget: oc?.show_widget !== false,
+          show_links: oc?.show_links !== false,
+          links,
+          widget_date_mode: (oc?.widget_date_mode as 'single' | 'double') ?? 'double',
+          widget_labels: (oc?.widget_labels ?? {}) as PublicWidgetLabels,
+          show_pricing: showPricing,
+          default_price: showPricing && oc?.default_price != null
+            ? (typeof oc.default_price === 'string' ? parseFloat(oc.default_price) : oc.default_price)
+            : null,
+          price_unit: showPricing ? oc?.price_unit ?? null : null,
+          pricing_rules: pricingRules,
+        };
+      });
 
-      return {
-        id: row.id,
-        business_name: row.business_name,
-        slug: oc?.slug ?? null,
-        business_type: row.business_type,
-        business_sector: row.business_sector,
-        city: row.city,
-        whatsapp_number: row.whatsapp_number,
-        widget_action_label: row.widget_action_label,
-        logo_url: row.logo_url,
-        gallery,
-        showcase,
-        layout_mode: layoutMode,
-        show_gallery: oc?.show_gallery !== false,
-        show_showcase: oc?.show_showcase !== false,
-        show_widget: oc?.show_widget !== false,
-        show_links: oc?.show_links !== false,
-        links,
-        widget_date_mode: (oc?.widget_date_mode as 'single' | 'double') ?? 'double',
-        widget_labels: (oc?.widget_labels ?? {}) as PublicWidgetLabels,
-        show_pricing: showPricing,
-        default_price: showPricing && oc?.default_price != null
-          ? (typeof oc.default_price === 'string' ? parseFloat(oc.default_price) : oc.default_price)
-          : null,
-        price_unit: showPricing ? oc?.price_unit ?? null : null,
-        pricing_rules: pricingRules,
-      };
-    });
-
-    return NextResponse.json({ businesses });
-  } catch (err) {
-    console.error('public-businesses route error:', err);
-    return NextResponse.json({ businesses: [] }, { status: 200 });
-  }
+      return NextResponse.json(
+        { businesses },
+        { headers: { 'Cache-Control': CACHE_CONTROL } }
+      );
+    } catch (err) {
+      console.error('public-businesses route error:', err);
+      return NextResponse.json(
+        { businesses: [] },
+        { status: 200, headers: { 'Cache-Control': CACHE_CONTROL } }
+      );
+    }
+  });
 }

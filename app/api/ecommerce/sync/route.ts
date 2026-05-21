@@ -5,6 +5,7 @@ import { getValidToken } from '@/lib/ecommerce/shopee/orders';
 import { fetchOrderList, fetchOrderDetails } from '@/lib/ecommerce/shopee/orders';
 import { mapOrdersToTransactions } from '@/lib/ecommerce/shopee/mapper';
 import { encryptToken, decryptToken, isEncrypted } from '@/lib/utils/tokenCrypto';
+import { withRouteTiming } from '@/lib/api/server/timing';
 
 /**
  * POST /api/ecommerce/sync
@@ -13,7 +14,7 @@ import { encryptToken, decryptToken, isEncrypted } from '@/lib/utils/tokenCrypto
  * Trigger manual sync: ambil order dari Shopee, insert sebagai transaksi.
  * Deduplikasi via meta->>'shopee_order_sn'.
  */
-export async function POST(request: NextRequest) {
+async function handleSyncPost(request: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -246,7 +247,7 @@ export async function POST(request: NextRequest) {
  * GET /api/ecommerce/sync?businessId=<uuid>
  * Ambil riwayat sync logs untuk bisnis ini.
  */
-export async function GET(request: NextRequest) {
+async function handleSyncGet(request: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -274,4 +275,12 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({ data });
+}
+
+export async function POST(request: NextRequest) {
+  return withRouteTiming(request, '/api/ecommerce/sync', () => handleSyncPost(request));
+}
+
+export async function GET(request: NextRequest) {
+  return withRouteTiming(request, '/api/ecommerce/sync', () => handleSyncGet(request));
 }

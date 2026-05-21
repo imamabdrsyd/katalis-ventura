@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleTelegramUpdate } from '@/lib/telegram';
 import { TelegramUpdate } from '@/lib/telegram/types';
+import { withRouteTiming } from '@/lib/api/server/timing';
 
 const BOT_API = () => `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 
 // GET ?action=status  — cek status webhook saat ini
 // GET ?action=setup   — daftarkan webhook ke Telegram (panggil sekali setelah deploy)
 // Semua dilindungi header x-admin-secret = TELEGRAM_WEBHOOK_SECRET
-export async function GET(request: NextRequest) {
+async function handleWebhookGet(request: NextRequest) {
   const secret = request.headers.get('x-admin-secret');
   if (!secret || secret !== process.env.TELEGRAM_WEBHOOK_SECRET) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ action: 'status', result: data });
 }
 
-export async function POST(request: NextRequest) {
+async function handleWebhookPost(request: NextRequest) {
   // Verifikasi secret token dari Telegram
   const secret = request.headers.get('x-telegram-bot-api-secret-token');
   if (!secret || secret !== process.env.TELEGRAM_WEBHOOK_SECRET) {
@@ -59,4 +60,12 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ ok: true });
+}
+
+export async function GET(request: NextRequest) {
+  return withRouteTiming(request, '/api/telegram/webhook', () => handleWebhookGet(request));
+}
+
+export async function POST(request: NextRequest) {
+  return withRouteTiming(request, '/api/telegram/webhook', () => handleWebhookPost(request));
 }

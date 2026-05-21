@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase-server';
 import { businessIdSchema } from '@/lib/validations';
+import { withRouteTiming } from '@/lib/api/server/timing';
 
 type SearchSource =
   | 'business'
@@ -201,7 +202,8 @@ function dedupeAndSort(results: SearchResult[], limit: number): SearchResult[] {
 }
 
 export async function GET(request: NextRequest) {
-  try {
+  return withRouteTiming(request, '/api/search', async () => {
+    try {
     const supabase = await createServerClient();
     const {
       data: { user },
@@ -580,9 +582,10 @@ export async function GET(request: NextRequest) {
       })),
     ];
 
-    return NextResponse.json({ data: dedupeAndSort(results, limit) });
-  } catch (error) {
-    console.error('Search GET error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
+      return NextResponse.json({ data: dedupeAndSort(results, limit) });
+    } catch (error) {
+      console.error('Search GET error:', error);
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    }
+  });
 }
