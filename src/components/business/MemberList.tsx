@@ -13,15 +13,15 @@ import type { ContactType } from '@/types';
 const ROLE_BADGE: Record<string, { label: string; className: string }> = {
   business_manager: {
     label: 'Business Manager',
-    className: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 ring-1 ring-indigo-500/20',
+    className: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 ring-1 ring-inset ring-indigo-500/20',
   },
   investor: {
     label: 'Investor',
-    className: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 ring-1 ring-indigo-500/20',
+    className: 'bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 ring-1 ring-inset ring-sky-500/20',
   },
   superadmin: {
     label: 'Super Admin',
-    className: 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/20',
+    className: 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30 text-amber-700 dark:text-amber-300 ring-1 ring-inset ring-amber-500/30',
   },
 };
 
@@ -47,15 +47,21 @@ function KebabMenu({
   businessId,
   onRemove,
   onContactResult,
+  onOpenChange,
 }: {
   member: BusinessMember;
   businessId: string;
   onRemove: () => void;
   onContactResult: (msg: string, isError?: boolean) => void;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const name = member.profile?.full_name || 'Unknown User';
+
+  useEffect(() => {
+    onOpenChange?.(open);
+  }, [open, onOpenChange]);
 
   useEffect(() => {
     if (!open) return;
@@ -101,7 +107,7 @@ function KebabMenu({
         <MoreVertical className="w-4 h-4" />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-10 py-1 overflow-hidden">
+        <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-30 py-1 overflow-hidden">
           <button
             onClick={handleAddToContact}
             className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
@@ -127,6 +133,7 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
   const [removing, setRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; isError: boolean } | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const showToast = (msg: string, isError = false) => {
     setToast({ msg, isError });
@@ -161,14 +168,15 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
 
   if (loading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-white dark:bg-gray-800 animate-pulse">
-            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700" />
+          <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 animate-pulse">
+            <div className="w-11 h-11 rounded-full bg-gray-200 dark:bg-gray-700" />
             <div className="flex-1 space-y-2">
-              <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-              <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
+              <div className="h-3.5 w-36 bg-gray-200 dark:bg-gray-700 rounded-full" />
+              <div className="h-2.5 w-24 bg-gray-200 dark:bg-gray-700 rounded-full" />
             </div>
+            <div className="h-6 w-24 bg-gray-200 dark:bg-gray-700 rounded-full" />
           </div>
         ))}
       </div>
@@ -177,12 +185,15 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
 
   if (members.length === 0) {
     return (
-      <div className="text-center py-12">
-        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Users className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+      <div className="text-center py-14 rounded-2xl bg-white dark:bg-gray-800 border border-dashed border-gray-200 dark:border-gray-700">
+        <div className="relative w-16 h-16 mx-auto mb-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-100 to-indigo-50 dark:from-indigo-900/40 dark:to-indigo-900/10 rounded-full" />
+          <div className="relative w-full h-full flex items-center justify-center">
+            <Users className="w-7 h-7 text-indigo-400 dark:text-indigo-300" />
+          </div>
         </div>
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Belum ada anggota</h3>
-        <p className="text-gray-500 dark:text-gray-400">Undang anggota untuk bergabung ke bisnis ini</p>
+        <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100 mb-1">Belum ada anggota</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Undang anggota untuk bergabung ke bisnis ini</p>
       </div>
     );
   }
@@ -202,50 +213,68 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
       <div className="space-y-3">
         {members.map((member) => {
           const name = member.profile?.full_name || 'Unknown User';
-          const badge = ROLE_BADGE[normalizeRole(member.role) ?? member.role] || ROLE_BADGE.business_manager;
+          const normalizedRole = normalizeRole(member.role) ?? member.role;
+          const badge = ROLE_BADGE[normalizedRole] || ROLE_BADGE.business_manager;
           const canRemove = isCreator && !member.is_creator;
+          const isSuperadmin = normalizedRole === 'superadmin';
+          const highlight = member.is_creator || isSuperadmin;
+          const isMenuOpen = openMenuId === member.id;
 
           return (
             <div
               key={member.id}
-              className="flex items-center gap-4 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+              className={`group relative flex items-center gap-3.5 p-4 rounded-2xl bg-white dark:bg-gray-800 border transition-all duration-200 ${
+                isMenuOpen ? 'z-20 shadow-sm' : 'hover:shadow-sm hover:-translate-y-px'
+              } ${
+                highlight
+                  ? 'border-indigo-200/70 dark:border-indigo-800/50'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+              }`}
             >
               {/* Avatar */}
-              {member.profile?.avatar_url ? (
-                <img
-                  src={member.profile.avatar_url}
-                  alt={name}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center">
-                  <span className="text-sm font-semibold text-indigo-500 dark:text-indigo-400">
-                    {getInitials(name)}
-                  </span>
-                </div>
-              )}
+              <div className="relative flex-shrink-0">
+                {highlight && (
+                  <div className="absolute -inset-0.5 rounded-full bg-gradient-to-br from-indigo-400/40 via-violet-400/30 to-indigo-500/40 blur-[2px]" />
+                )}
+                {member.profile?.avatar_url ? (
+                  <img
+                    src={member.profile.avatar_url}
+                    alt={name}
+                    className={`relative w-11 h-11 rounded-full object-cover ${highlight ? 'ring-2 ring-white dark:ring-gray-800' : ''}`}
+                  />
+                ) : (
+                  <div className={`relative w-11 h-11 rounded-full flex items-center justify-center ${
+                    highlight
+                      ? 'bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-900/60 dark:to-violet-900/60 ring-2 ring-white dark:ring-gray-800'
+                      : 'bg-indigo-50 dark:bg-indigo-900/40'
+                  }`}>
+                    <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-300">
+                      {getInitials(name)}
+                    </span>
+                  </div>
+                )}
+              </div>
 
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
                   {name}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Bergabung {formatDate(member.joined_at)}
-                </p>
+                <div className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  {member.is_creator && (
+                    <>
+                      <span className="font-medium text-gray-600 dark:text-gray-300">Creator</span>
+                      <span className="text-gray-300 dark:text-gray-600">•</span>
+                    </>
+                  )}
+                  <span className="truncate">Bergabung {formatDate(member.joined_at)}</span>
+                </div>
               </div>
 
-              {/* Badges */}
-              <div className="flex items-center gap-1.5">
-                {member.is_creator && (
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-                    Creator
-                  </span>
-                )}
-                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${badge.className}`}>
-                  {badge.label}
-                </span>
-              </div>
+              {/* Badge */}
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${badge.className}`}>
+                {badge.label}
+              </span>
 
               {/* Kebab menu */}
               {canRemove && businessId && (
@@ -254,6 +283,13 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
                   businessId={businessId}
                   onRemove={() => setRemoveConfirm({ memberId: member.id, memberName: name })}
                   onContactResult={showToast}
+                  onOpenChange={(open) => {
+                    if (open) {
+                      setOpenMenuId(member.id);
+                    } else {
+                      setOpenMenuId((prev) => (prev === member.id ? null : prev));
+                    }
+                  }}
                 />
               )}
             </div>

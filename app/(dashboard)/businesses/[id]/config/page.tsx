@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
@@ -9,7 +9,7 @@ import { InviteCodeManager } from '@/components/business/InviteCodeManager';
 import { JoinRequestList } from '@/components/business/JoinRequestList';
 import { getBusinessMembers, type BusinessMember } from '@/lib/api/members';
 import Image from 'next/image';
-import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut, ShoppingBag, Contact, CalendarDays, Rocket, Pencil, Check, X, Info } from 'lucide-react';
+import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut, ShoppingBag, Contact, CalendarDays, Rocket, Pencil, Check, X, Info, FileText, Landmark, MapPinned, MoreVertical } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { Tabs } from '@/components/ui/Tabs';
@@ -38,6 +38,17 @@ const BUSINESS_TYPE_LABELS: Record<string, string> = {
   dagang: 'Dagang',
 };
 
+const LEGAL_ENTITY_TYPES: { value: string; label: string }[] = [
+  { value: 'PT', label: 'PT (Perseroan Terbatas)' },
+  { value: 'PT Perorangan', label: 'PT Perorangan' },
+  { value: 'CV', label: 'CV (Persekutuan Komanditer)' },
+  { value: 'UD', label: 'UD (Usaha Dagang)' },
+  { value: 'Firma', label: 'Firma' },
+  { value: 'Koperasi', label: 'Koperasi' },
+  { value: 'Yayasan', label: 'Yayasan' },
+  { value: 'Perorangan', label: 'Perorangan / Individu' },
+];
+
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
   agribusiness: <Wheat className="w-6 h-6" />,
   personal_care: <Heart className="w-6 h-6" />,
@@ -49,6 +60,174 @@ const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
   property_management: <Building2 className="w-6 h-6" />,
   real_estate: <Building2 className="w-6 h-6" />,
 };
+
+function InlineEditableField({
+  icon,
+  label,
+  value,
+  displayValue,
+  emptyText = 'Belum di-set',
+  canEdit,
+  inputType = 'text',
+  options,
+  helper,
+  allowClear = false,
+  onSave,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | null | undefined;
+  displayValue?: React.ReactNode;
+  emptyText?: string;
+  canEdit: boolean;
+  inputType?: 'text' | 'textarea' | 'date' | 'select';
+  options?: { value: string; label: string }[];
+  helper?: React.ReactNode;
+  allowClear?: boolean;
+  onSave: (value: string | null) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Auto-close editor saat parent keluar dari edit mode
+  useEffect(() => {
+    if (!canEdit && editing) {
+      setEditing(false);
+      setError(null);
+    }
+  }, [canEdit, editing]);
+
+  // Sembunyikan field kosong saat view mode — tampil lagi di edit mode
+  if (!value && !canEdit) {
+    return null;
+  }
+
+  const startEdit = () => {
+    setDraft(value ?? '');
+    setError(null);
+    setEditing(true);
+  };
+
+  const submit = async (val: string | null) => {
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave(val);
+      setEditing(false);
+    } catch (err: any) {
+      setError(err?.message || 'Gagal menyimpan');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex items-start gap-3">
+      <div className="text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5">{icon}</div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
+          {canEdit && !editing && (
+            <button
+              type="button"
+              onClick={startEdit}
+              className="text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+              title={value ? `Ubah ${label}` : `Isi ${label}`}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {editing ? (
+          <div className="mt-1.5 space-y-2">
+            {inputType === 'text' && (
+              <input
+                type="text"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                autoFocus
+                className="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            )}
+            {inputType === 'date' && (
+              <input
+                type="date"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                className="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            )}
+            {inputType === 'textarea' && (
+              <textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                rows={3}
+                autoFocus
+                className="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              />
+            )}
+            {inputType === 'select' && (
+              <select
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                autoFocus
+                className="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">— Pilih —</option>
+                {options?.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            )}
+            {helper}
+            {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => submit(draft.trim() ? draft.trim() : null)}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors"
+              >
+                <Check className="w-3.5 h-3.5" />
+                {saving ? 'Menyimpan...' : 'Simpan'}
+              </button>
+              {allowClear && value && (
+                <button
+                  type="button"
+                  onClick={() => submit(null)}
+                  disabled={saving}
+                  className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  Hapus
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => { setEditing(false); setError(null); }}
+                disabled={saving}
+                className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              >
+                <X className="w-3.5 h-3.5" />
+                Batal
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="text-sm text-gray-800 dark:text-gray-200 leading-snug">
+            {value ? (
+              displayValue ?? value
+            ) : (
+              <span className="italic text-gray-400 dark:text-gray-500">{emptyText}</span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function BusinessDetailCard({
   business,
@@ -65,41 +244,83 @@ function BusinessDetailCard({
   const sectorLabel = BUSINESS_SECTOR_LABELS[business.business_sector ?? ''] || business.business_sector;
   const typeLabel = business.business_type ? BUSINESS_TYPE_LABELS[business.business_type] : null;
 
-  const [isEditingOpStart, setIsEditingOpStart] = useState(false);
-  const [opStartDraft, setOpStartDraft] = useState(business.operations_start_date ?? '');
-  const [savingOpStart, setSavingOpStart] = useState(false);
-  const [opStartError, setOpStartError] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [kebabOpen, setKebabOpen] = useState(false);
+  const kebabRef = useRef<HTMLDivElement>(null);
 
-  const opStartDate = business.operations_start_date;
+  useEffect(() => {
+    if (!kebabOpen) return;
+    function handler(e: MouseEvent) {
+      if (kebabRef.current && !kebabRef.current.contains(e.target as Node)) {
+        setKebabOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [kebabOpen]);
 
   const formatDateID = (iso: string) =>
     new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
-  const saveOpStart = async (value: string | null) => {
-    setSavingOpStart(true);
-    setOpStartError(null);
-    try {
-      const updated = await businessesApi.updateBusiness(business.id, {
-        operations_start_date: value,
-      });
-      onBusinessUpdated?.(updated);
-      setIsEditingOpStart(false);
-    } catch (err: any) {
-      setOpStartError(err?.message || 'Gagal menyimpan');
-    } finally {
-      setSavingOpStart(false);
-    }
+  const saveField = async (patch: Partial<Business>) => {
+    const updated = await businessesApi.updateBusiness(business.id, patch);
+    onBusinessUpdated?.(updated);
   };
 
+  const entityLabel = business.legal_entity_type
+    ? LEGAL_ENTITY_TYPES.find((t) => t.value === business.legal_entity_type)?.label ?? business.legal_entity_type
+    : null;
+
+  const fieldEditable = editMode && canManage;
+
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 flex-1 self-stretch">
-      {/* Business icon/logo */}
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden mb-4 ${business.logo_url ? 'bg-white' : 'text-indigo-500 dark:text-indigo-400'}`}>
-        {business.logo_url ? (
-          <Image src={business.logo_url} alt={business.business_name} width={48} height={48} className={`w-full h-full ${business.logo_fit === 'contain' ? 'object-contain p-0.5' : 'object-cover'}`} unoptimized />
+    <div className={`bg-white dark:bg-gray-800 rounded-2xl border p-6 w-full lg:flex-1 self-start transition-colors ${
+      editMode ? 'border-indigo-200 dark:border-indigo-800/60 ring-1 ring-inset ring-indigo-500/10' : 'border-gray-200 dark:border-gray-700'
+    }`}>
+      {/* Header row: logo + kebab/done */}
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden ${business.logo_url ? 'bg-white' : 'text-indigo-500 dark:text-indigo-400'}`}>
+          {business.logo_url ? (
+            <Image src={business.logo_url} alt={business.business_name} width={48} height={48} className={`w-full h-full ${business.logo_fit === 'contain' ? 'object-contain p-0.5' : 'object-cover'}`} unoptimized />
+          ) : (
+            icon
+          )}
+        </div>
+
+        {canManage && (editMode ? (
+          <button
+            type="button"
+            onClick={() => setEditMode(false)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded-lg transition-colors"
+          >
+            <Check className="w-3.5 h-3.5" />
+            Selesai
+          </button>
         ) : (
-          icon
-        )}
+          <div ref={kebabRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setKebabOpen((v) => !v)}
+              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              title="Opsi"
+              aria-label="Opsi card detail bisnis"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
+            {kebabOpen && (
+              <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-30 py-1 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => { setKebabOpen(false); setEditMode(true); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                >
+                  <Pencil className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                  Edit informasi
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
       {/* Business name */}
@@ -108,7 +329,7 @@ function BusinessDetailCard({
       </h2>
 
       {/* Badges: sector + type */}
-      <div className="flex items-center gap-1.5 flex-wrap mb-4">
+      <div className="flex items-center gap-1.5 flex-wrap mb-5">
         {sectorLabel && (
           <span className="badge bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
             {sectorLabel}
@@ -121,129 +342,112 @@ function BusinessDetailCard({
         )}
       </div>
 
-      <div className="space-y-3">
-        {/* Capital */}
-        <div className="flex items-start gap-3">
-          <Banknote className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Modal Bisnis</p>
-            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-              {formatCurrency(business.capital_investment)}
-            </p>
+      {/* Section: Identitas Legal — hide entirely jika kosong di view mode */}
+      {(fieldEditable || business.legal_name || business.legal_entity_type) && (
+        <section className="mb-6">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
+            Identitas Legal
+          </p>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-x-6 gap-y-4">
+            <InlineEditableField
+              icon={<FileText className="w-4 h-4" />}
+              label="Nama Legal"
+              value={business.legal_name}
+              canEdit={fieldEditable}
+              inputType="text"
+              onSave={(v) => saveField({ legal_name: v })}
+            />
+            <InlineEditableField
+              icon={<Landmark className="w-4 h-4" />}
+              label="Bentuk Badan Usaha"
+              value={business.legal_entity_type}
+              displayValue={entityLabel}
+              canEdit={fieldEditable}
+              inputType="select"
+              options={LEGAL_ENTITY_TYPES}
+              onSave={(v) => saveField({ legal_entity_type: v })}
+            />
           </div>
-        </div>
+        </section>
+      )}
 
-        {/* Address */}
-        {(business.city || business.property_address) && (
+      {/* Section: Keuangan & Lokasi */}
+      <section className="mb-6">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
+          Keuangan & Lokasi
+        </p>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-x-6 gap-y-4">
           <div className="flex items-start gap-3">
-            <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Lokasi</p>
-              <p className="text-sm text-gray-800 dark:text-gray-200 leading-snug">
-                {business.city || business.property_address}
+            <Banknote className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Modal Bisnis</p>
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                {formatCurrency(business.capital_investment)}
               </p>
             </div>
           </div>
-        )}
 
-        {/* Created at */}
-        {business.created_at && (
-          <div className="flex items-start gap-3">
-            <CalendarDays className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Dibuat</p>
-              <p className="text-sm text-gray-800 dark:text-gray-200">
-                {formatDateID(business.created_at)}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Operations start date */}
-        <div className="flex items-start gap-3">
-          <Rocket className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-gray-500 dark:text-gray-400">Mulai Beroperasi</p>
-              {canManage && !isEditingOpStart && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpStartDraft(opStartDate ?? '');
-                    setOpStartError(null);
-                    setIsEditingOpStart(true);
-                  }}
-                  className="text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
-                  title={opStartDate ? 'Ubah tanggal mulai operasi' : 'Set tanggal mulai operasi'}
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-
-            {isEditingOpStart ? (
-              <div className="mt-1.5 space-y-2">
-                <input
-                  type="date"
-                  value={opStartDraft}
-                  onChange={(e) => setOpStartDraft(e.target.value)}
-                  className="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <p className="flex items-start gap-1.5 text-xs text-gray-500 dark:text-gray-400 leading-snug">
-                  <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                  <span>Jika di-set, ROI di dashboard dihitung sejak tanggal ini (operating ROI). Jika kosong, dihitung sejak transaksi pertama (holding period return).</span>
+          {(business.city || business.property_address) && (
+            <div className="flex items-start gap-3">
+              <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Lokasi Operasional</p>
+                <p className="text-sm text-gray-800 dark:text-gray-200 leading-snug truncate">
+                  {business.city || business.property_address}
                 </p>
-                {opStartError && (
-                  <p className="text-xs text-red-600 dark:text-red-400">{opStartError}</p>
-                )}
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => saveOpStart(opStartDraft || null)}
-                    disabled={savingOpStart}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    {savingOpStart ? 'Menyimpan...' : 'Simpan'}
-                  </button>
-                  {opStartDate && (
-                    <button
-                      type="button"
-                      onClick={() => saveOpStart(null)}
-                      disabled={savingOpStart}
-                      className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                    >
-                      Hapus
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsEditingOpStart(false);
-                      setOpStartError(null);
-                    }}
-                    disabled={savingOpStart}
-                    className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                    Batal
-                  </button>
-                </div>
               </div>
-            ) : (
-              <p className="text-sm text-gray-800 dark:text-gray-200">
-                {opStartDate ? (
-                  formatDateID(opStartDate)
-                ) : (
-                  <span className="italic text-gray-400 dark:text-gray-500">
-                    Belum di-set
-                  </span>
-                )}
-              </p>
-            )}
+            </div>
+          )}
+
+          <div className="col-span-full">
+            <InlineEditableField
+              icon={<MapPinned className="w-4 h-4" />}
+              label="Alamat Terdaftar"
+              value={business.registered_address}
+              canEdit={fieldEditable}
+              inputType="textarea"
+              onSave={(v) => saveField({ registered_address: v })}
+            />
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* Section: Timeline */}
+      <section>
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
+          Timeline
+        </p>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-x-6 gap-y-4">
+          {business.created_at && (
+            <div className="flex items-start gap-3">
+              <CalendarDays className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Dibuat</p>
+                <p className="text-sm text-gray-800 dark:text-gray-200">
+                  {formatDateID(business.created_at)}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <InlineEditableField
+            icon={<Rocket className="w-4 h-4" />}
+            label="Mulai Beroperasi"
+            value={business.operations_start_date}
+            displayValue={business.operations_start_date ? formatDateID(business.operations_start_date) : undefined}
+            canEdit={fieldEditable}
+            inputType="date"
+            allowClear
+            helper={
+              <p className="flex items-start gap-1.5 text-xs text-gray-500 dark:text-gray-400 leading-snug">
+                <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                <span>Jika di-set, ROI di dashboard dihitung sejak tanggal ini (operating ROI). Jika kosong, dihitung sejak transaksi pertama (holding period return).</span>
+              </p>
+            }
+            onSave={(v) => saveField({ operations_start_date: v })}
+          />
+        </div>
+      </section>
 
       {onLeave && (
         <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -330,40 +534,56 @@ export default function BusinessMembersPage() {
 
   return (
     <div className="p-4 md:p-8">
-      {/* Header row */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-        <div className="flex items-center gap-4 min-w-0">
-          {/* Back button */}
-          <button
-            onClick={() => router.push('/businesses')}
-            className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0"
-            title="Kembali ke Business"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          {business?.logo_url ? (
-            <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-white border border-gray-200 dark:border-gray-700">
-              <Image src={business.logo_url} alt={business.business_name} width={48} height={48} className={`w-full h-full ${business.logo_fit === 'contain' ? 'object-contain p-0.5' : 'object-cover'}`} unoptimized />
-            </div>
-          ) : business ? (
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400">
-              {BUSINESS_TYPE_ICONS[business.business_sector ?? ''] || <Building2 className="w-6 h-6" />}
-            </div>
-          ) : null}
-          <div className="min-w-0">
-            <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1 truncate">
-              {business?.business_name || '—'}
-            </h1>
-            <p className="text-gray-500 dark:text-gray-400 text-sm">
-              Kelola dan konfigurasi bisnis kamu
-            </p>
-          </div>
-        </div>
+      {/* Header row: back + tabs + CTA */}
+      <div className="flex items-center gap-4 mb-6">
+        <button
+          onClick={() => router.push('/businesses')}
+          className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0"
+          title="Kembali ke Business"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+
+        <Tabs<'members' | 'contacts' | 'omni-channel' | 'integrations'>
+          value={activeTab}
+          onChange={setActiveTab}
+          scrollable
+          className="flex-1 min-w-0"
+          tabs={[
+            {
+              value: 'members',
+              label: 'Anggota',
+              icon: <Users className="w-4 h-4" />,
+              badge: !loading ? (
+                <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300 rounded-full text-xs">
+                  {members.length}
+                </span>
+              ) : undefined,
+            },
+            {
+              value: 'contacts',
+              label: 'Kontak',
+              icon: <Contact className="w-4 h-4" />,
+            },
+            {
+              value: 'omni-channel',
+              label: 'Omnichannel',
+              icon: <Globe className="w-4 h-4" />,
+              hidden: isInvestor,
+            },
+            {
+              value: 'integrations',
+              label: 'Integrasi',
+              icon: <ShoppingBag className="w-4 h-4" />,
+              hidden: isInvestor,
+            },
+          ]}
+        />
 
         {activeTab === 'members' && !isInvestor && (
           <button
             onClick={() => setShowInviteManager(true)}
-            className="btn-primary flex items-center justify-center gap-2 flex-shrink-0 w-full sm:w-auto"
+            className="btn-primary-glow flex items-center justify-center gap-2 flex-shrink-0"
           >
             <UserPlus className="h-4 w-4" />
             Undang Anggota
@@ -371,47 +591,10 @@ export default function BusinessMembersPage() {
         )}
       </div>
 
-      {/* Tab Switcher */}
-      <Tabs<'members' | 'contacts' | 'omni-channel' | 'integrations'>
-        value={activeTab}
-        onChange={setActiveTab}
-        scrollable
-        className="mb-6"
-        tabs={[
-          {
-            value: 'members',
-            label: 'Anggota',
-            icon: <Users className="w-4 h-4" />,
-            badge: !loading ? (
-              <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300 rounded-full text-xs">
-                {members.length}
-              </span>
-            ) : undefined,
-          },
-          {
-            value: 'contacts',
-            label: 'Kontak',
-            icon: <Contact className="w-4 h-4" />,
-          },
-          {
-            value: 'omni-channel',
-            label: 'Omnichannel',
-            icon: <Globe className="w-4 h-4" />,
-            hidden: isInvestor,
-          },
-          {
-            value: 'integrations',
-            label: 'Integrasi',
-            icon: <ShoppingBag className="w-4 h-4" />,
-            hidden: isInvestor,
-          },
-        ]}
-      />
-
       {/* Tab Content */}
       {activeTab === 'members' && (
-        <div className="flex flex-col lg:flex-row items-stretch gap-6 lg:gap-8">
-          <div className="max-w-2xl w-full space-y-8">
+        <div className="flex flex-col lg:flex-row items-start gap-6 lg:gap-8">
+          <div className="w-full lg:max-w-2xl min-w-0 space-y-8">
             <MemberList 
               members={members} 
               loading={loading}
@@ -423,9 +606,12 @@ export default function BusinessMembersPage() {
             {/* Join Requests — hanya tampil untuk creator/superadmin */}
             {isCreator && user && business && (
               <div>
-                <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100 mb-4">
-                  Permintaan Bergabung
-                </h2>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="h-7 w-1 rounded-full bg-gradient-to-b from-indigo-400 to-indigo-600" />
+                  <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100">
+                    Permintaan Bergabung
+                  </h2>
+                </div>
                 <JoinRequestList
                   businessId={business.id}
                   reviewerId={user.id}

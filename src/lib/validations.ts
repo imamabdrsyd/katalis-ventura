@@ -332,6 +332,9 @@ export const updateBusinessSchema = z.object({
   show_in_logo_slide: z.boolean().optional(),
   is_archived: z.boolean().optional(),
   operations_start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  legal_name: z.string().max(200).nullable().optional(),
+  legal_entity_type: z.string().max(50).nullable().optional(),
+  registered_address: z.string().max(500).nullable().optional(),
 });
 
 // ============================================
