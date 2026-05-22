@@ -13,7 +13,7 @@ import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCa
 import { UnitBreakdownSection } from '@/components/transactions/UnitBreakdownSection';
 import { FileUpload } from '@/components/ui/FileUpload';
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
-import { saveContactFromTransaction } from '@/lib/api/contacts';
+import { resolveContactTypeFromCategory, saveContactFromTransaction } from '@/lib/api/contacts';
 import { useBusinessContext } from '@/context/BusinessContext';
 import type { UnitBreakdown } from '@/types';
 import { getTransactionTemplates, createTransactionTemplate, deleteTransactionTemplate } from '@/lib/api/transactionTemplates';
@@ -874,7 +874,11 @@ export function TransactionForm({
           onSaveAsContact={async (name) => {
             if (!businessId || !user) return;
             try {
-              const contactType = mode === 'in' ? 'customer' : mode === 'out' ? 'vendor' : 'other';
+              const contactType = mode === 'in'
+                ? 'customer'
+                : mode === 'out'
+                  ? 'vendor'
+                  : resolveContactTypeFromCategory(formData.category);
               await saveContactFromTransaction(businessId, name, contactType, user.id);
             } catch (err) {
               console.error('Failed to save contact:', err);

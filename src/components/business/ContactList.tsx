@@ -16,32 +16,32 @@ const CONTACT_TYPE_CONFIG: Record<ContactTypeEnum, { label: string; icon: React.
   customer: {
     label: 'Customer',
     icon: <User className="w-3.5 h-3.5" />,
-    className: 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400',
+    className: 'text-gray-500 dark:text-gray-400',
   },
   vendor: {
     label: 'Vendor',
     icon: <Building className="w-3.5 h-3.5" />,
-    className: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
+    className: 'text-gray-500 dark:text-gray-400',
   },
   partner: {
     label: 'Partner',
     icon: <Handshake className="w-3.5 h-3.5" />,
-    className: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
+    className: 'text-gray-500 dark:text-gray-400',
   },
   staff: {
     label: 'Staff',
     icon: <UserCog className="w-3.5 h-3.5" />,
-    className: 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400',
+    className: 'text-gray-500 dark:text-gray-400',
   },
   investor: {
     label: 'Investor',
     icon: <TrendingUp className="w-3.5 h-3.5" />,
-    className: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
+    className: 'text-gray-500 dark:text-gray-400',
   },
   other: {
     label: 'Lainnya',
     icon: <Users2 className="w-3.5 h-3.5" />,
-    className: 'bg-gray-100 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400',
+    className: 'text-gray-500 dark:text-gray-400',
   },
 };
 
@@ -413,6 +413,7 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
           <div className="overflow-y-auto max-h-[calc(100vh-280px)] space-y-2 pr-1">
             {filteredContacts.map((contact) => {
               const typeConfig = CONTACT_TYPE_CONFIG[contact.type];
+              const showTypeLabel = contact.type !== 'other';
               const isSelected = selectedContact?.id === contact.id;
               return (
                 <div
@@ -425,12 +426,8 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
                   onClick={() => handleSelectContact(contact)}
                 >
                   {/* Avatar */}
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    isSelected
-                      ? 'bg-indigo-200 dark:bg-indigo-800'
-                      : 'bg-indigo-100 dark:bg-indigo-900/50'
-                  }`}>
-                    <span className="text-xs font-semibold text-indigo-500 dark:text-indigo-400">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 bg-gray-100 dark:bg-gray-700/60">
+                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                       {getInitials(contact.name)}
                     </span>
                   </div>
@@ -445,10 +442,12 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
                       }`}>
                         {contact.name}
                       </p>
-                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0 ${typeConfig.className}`}>
-                        {typeConfig.icon}
-                        {typeConfig.label}
-                      </span>
+                      {showTypeLabel && (
+                        <span className={`inline-flex items-center gap-1 text-xs font-medium flex-shrink-0 ${typeConfig.className}`}>
+                          {typeConfig.icon}
+                          {typeConfig.label}
+                        </span>
+                      )}
                     </div>
                     {/* Show compact info */}
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -501,8 +500,8 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
             <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-bold text-indigo-500 dark:text-indigo-400">
+                  <div className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700/60 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
                       {getInitials(selectedContact.name)}
                     </span>
                   </div>
@@ -511,10 +510,12 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
                       <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
                         {selectedContact.name}
                       </h3>
-                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0 ${CONTACT_TYPE_CONFIG[selectedContact.type].className}`}>
-                        {CONTACT_TYPE_CONFIG[selectedContact.type].icon}
-                        {CONTACT_TYPE_CONFIG[selectedContact.type].label}
-                      </span>
+                      {selectedContact.type !== 'other' && (
+                        <span className={`inline-flex items-center gap-1 text-xs font-medium flex-shrink-0 ${CONTACT_TYPE_CONFIG[selectedContact.type].className}`}>
+                          {CONTACT_TYPE_CONFIG[selectedContact.type].icon}
+                          {CONTACT_TYPE_CONFIG[selectedContact.type].label}
+                        </span>
+                      )}
                     </div>
                     <div className="flex gap-x-3 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                       {selectedContact.phone && (

@@ -25,7 +25,7 @@ import { ChevronDown, StickyNote, Paperclip, Zap, ArrowDownLeft, ArrowUpRight } 
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { CurrencyPill } from '@/components/ui/CurrencyPill';
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
-import { saveContactFromTransaction, getContacts } from '@/lib/api/contacts';
+import { resolveContactTypeFromFlow, saveContactFromTransaction, getContacts } from '@/lib/api/contacts';
 import { useBusinessContext } from '@/context/BusinessContext';
 import OCRScanButton from '@/components/transactions/OCRScanButton';
 import type { OcrResult } from '@/lib/ocr/types';
@@ -774,8 +774,12 @@ export function QuickTransactionForm({
             onSaveAsContact={async (contactName) => {
               if (!businessId || !user) return;
               try {
-                const contactType = flowDirection === 'in' ? 'customer' : flowDirection === 'out' ? 'vendor' : 'other';
-                await saveContactFromTransaction(businessId, contactName, contactType, user.id);
+                await saveContactFromTransaction(
+                  businessId,
+                  contactName,
+                  resolveContactTypeFromFlow(flowDirection),
+                  user.id
+                );
               } catch (err) {
                 console.error('Failed to save contact:', err);
               }

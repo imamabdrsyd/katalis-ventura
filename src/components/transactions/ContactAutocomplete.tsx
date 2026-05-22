@@ -21,7 +21,7 @@ const TYPE_LABEL: Record<ContactType, string> = {
   partner: 'Partner',
   staff: 'Staff',
   investor: 'Investor',
-  other: 'Lainnya',
+  other: '',
 };
 
 interface ContactAutocompleteProps {
@@ -253,9 +253,13 @@ export function ContactAutocomplete({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{contact.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {TYPE_LABEL[contact.type]}{contact.phone ? ` · ${contact.phone}` : ''}
-                    </p>
+                    {(TYPE_LABEL[contact.type] || contact.phone) && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {TYPE_LABEL[contact.type]}
+                        {TYPE_LABEL[contact.type] && contact.phone ? ' · ' : ''}
+                        {contact.phone ?? ''}
+                      </p>
+                    )}
                   </div>
                 </button>
               ))
@@ -276,9 +280,13 @@ export function ContactAutocomplete({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{contact.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {TYPE_LABEL[contact.type]}{contact.phone ? ` · ${contact.phone}` : ''}
-                    </p>
+                    {(TYPE_LABEL[contact.type] || contact.phone) && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {TYPE_LABEL[contact.type]}
+                        {TYPE_LABEL[contact.type] && contact.phone ? ' · ' : ''}
+                        {contact.phone ?? ''}
+                      </p>
+                    )}
                   </div>
                 </button>
               ))}

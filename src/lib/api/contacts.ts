@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase';
-import type { Contact, ContactType, Transaction, TransactionAttachment } from '@/types';
+import type { Contact, ContactType, Transaction, TransactionAttachment, TransactionCategory } from '@/types';
 
 export interface ContactInsert {
   business_id: string;
@@ -21,6 +21,18 @@ export interface ContactUpdate {
   address?: string | null;
   notes?: string | null;
   id_card_attachments?: TransactionAttachment[];
+}
+
+export function resolveContactTypeFromCategory(category: TransactionCategory): ContactType {
+  if (category === 'EARN') return 'customer';
+  if (category === 'FIN') return 'partner';
+  return 'vendor';
+}
+
+export function resolveContactTypeFromFlow(direction: 'in' | 'out' | 'neutral' | null | undefined): ContactType {
+  if (direction === 'in') return 'customer';
+  if (direction === 'out') return 'vendor';
+  return 'partner';
 }
 
 /** Ambil semua kontak bisnis, sorted by name */

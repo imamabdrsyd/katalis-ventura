@@ -22,7 +22,7 @@ import { updateTransaction } from '@/lib/api/transactions';
 import { InventoryPicker } from '@/components/transactions/InventoryPicker';
 import { AccountDropdown } from '@/components/transactions/AccountDropdown';
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
-import { saveContactFromTransaction } from '@/lib/api/contacts';
+import { resolveContactTypeFromCategory, saveContactFromTransaction } from '@/lib/api/contacts';
 import { validateCategoryConsistency } from '@/lib/accounting/validators/transactionValidator';
 import { showTransactionSavedToast } from '@/lib/transactionToast';
 import type { Account, AccountType, TransactionCategory, Transaction, UnitBreakdown, TransactionAttachment, JournalLineInput } from '@/types';
@@ -1440,10 +1440,12 @@ export default function JournalEntryPage() {
                   onSaveAsContact={async (contactName) => {
                     if (!businessId || !user) return;
                     try {
-                      const contactType = selectedEntryType!.suggestedCategory === 'EARN' ? 'customer'
-                        : ['OPEX', 'VAR', 'CAPEX', 'TAX'].includes(selectedEntryType!.suggestedCategory) ? 'vendor'
-                        : 'other';
-                      await saveContactFromTransaction(businessId, contactName, contactType, user.id);
+                      await saveContactFromTransaction(
+                        businessId,
+                        contactName,
+                        resolveContactTypeFromCategory(selectedEntryType!.suggestedCategory),
+                        user.id
+                      );
                     } catch (err) {
                       console.error('Failed to save contact:', err);
                     }

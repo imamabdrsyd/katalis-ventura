@@ -5,7 +5,7 @@ import { PlusCircle, Trash2, AlertCircle } from 'lucide-react';
 import { AccountDropdown } from './AccountDropdown';
 import { ContactAutocomplete } from './ContactAutocomplete';
 import { getAccounts } from '@/lib/api/accounts';
-import { saveContactFromTransaction } from '@/lib/api/contacts';
+import { resolveContactTypeFromCategory, saveContactFromTransaction } from '@/lib/api/contacts';
 import { useParams } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { CATEGORY_LABELS } from '@/lib/calculations';
@@ -241,7 +241,12 @@ export function MultiLineJournalForm({
           onSaveAsContact={async (name) => {
             if (!businessId || !user) return;
             try {
-              await saveContactFromTransaction(businessId, name, 'other', user.id);
+              await saveContactFromTransaction(
+                businessId,
+                name,
+                resolveContactTypeFromCategory(formData.category),
+                user.id
+              );
             } catch (err) {
               console.error('Failed to save contact:', err);
             }
