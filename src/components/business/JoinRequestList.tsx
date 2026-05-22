@@ -11,6 +11,15 @@ interface JoinRequestListProps {
   onApproved?: () => void;
 }
 
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((word) => word[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
+
 export function JoinRequestList({ businessId, reviewerId, onApproved }: JoinRequestListProps) {
   const [requests, setRequests] = useState<JoinRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,7 +155,7 @@ function RequestCard({
   const isPending = request.status === 'pending';
   const name = request.requester?.full_name || 'Pengguna';
   const avatar = request.requester?.avatar_url;
-  const initials = name.charAt(0).toUpperCase();
+  const initials = getInitials(name);
 
   const timestamp = request.status === 'pending'
     ? request.created_at
@@ -171,10 +180,7 @@ function RequestCard({
 
       {/* Avatar */}
       <div className="relative flex-shrink-0">
-        {isPending && (
-          <div className="absolute -inset-0.5 rounded-full bg-gradient-to-br from-indigo-400/40 to-violet-400/40 blur-[2px]" />
-        )}
-        <div className="relative w-11 h-11 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white font-semibold text-sm overflow-hidden ring-2 ring-white dark:ring-gray-800">
+        <div className="relative w-11 h-11 rounded-full bg-gray-100 dark:bg-gray-700/60 flex items-center justify-center text-gray-700 dark:text-gray-300 font-semibold text-sm overflow-hidden ring-2 ring-white dark:ring-gray-800">
           {avatar ? (
             <Image src={avatar} alt={name} width={44} height={44} className="w-full h-full object-cover" unoptimized />
           ) : initials}
@@ -223,11 +229,11 @@ function RequestCard({
       ) : (
         <div className="flex-shrink-0">
           {request.status === 'approved' ? (
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700/60 ring-1 ring-inset ring-gray-500/20 px-2.5 py-1 rounded-full">
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700/60 px-2.5 py-1 rounded-full">
               <CheckCircle className="w-3.5 h-3.5" /> Disetujui
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700/60 ring-1 ring-inset ring-gray-500/20 px-2.5 py-1 rounded-full">
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700/60 px-2.5 py-1 rounded-full">
               <XCircle className="w-3.5 h-3.5" /> Ditolak
             </span>
           )}

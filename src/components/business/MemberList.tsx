@@ -243,12 +243,10 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
                     className={`relative w-11 h-11 rounded-full object-cover ${highlight ? 'ring-2 ring-white dark:ring-gray-800' : ''}`}
                   />
                 ) : (
-                  <div className={`relative w-11 h-11 rounded-full flex items-center justify-center ${
-                    highlight
-                      ? 'bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-900/60 dark:to-violet-900/60 ring-2 ring-white dark:ring-gray-800'
-                      : 'bg-indigo-50 dark:bg-indigo-900/40'
+                  <div className={`relative w-11 h-11 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-700/60 ${
+                    highlight ? 'ring-2 ring-white dark:ring-gray-800' : ''
                   }`}>
-                    <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-300">
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                       {getInitials(name)}
                     </span>
                   </div>
