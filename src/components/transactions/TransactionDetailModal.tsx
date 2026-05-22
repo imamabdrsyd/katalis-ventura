@@ -356,7 +356,7 @@ export function TransactionDetailModal({
       {onPost && isDraft && (
         <button
           onClick={() => onPost(transaction.id)}
-          className="btn-primary flex-1 flex items-center justify-center gap-2"
+          className="btn-primary-glow flex-1 flex items-center justify-center gap-2"
         >
           <CheckCircle2 className="w-4 h-4" />
           {t.transactionDetail.postBtn}

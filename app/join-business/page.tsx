@@ -268,7 +268,7 @@ export default function JoinBusinessPage() {
               </button>
               <button
                 onClick={handleJoinWithCode}
-                className="btn-primary flex-1 py-3"
+                className="btn-primary-glow flex-1 py-3"
                 disabled={!inviteCode.trim() || inviteCode.length !== 8 || joining}
               >
                 {joining ? 'Bergabung...' : 'Bergabung'}
@@ -386,7 +386,7 @@ export default function JoinBusinessPage() {
               </button>
               <button
                 onClick={handleRequestJoin}
-                className="btn-primary flex-1 py-3"
+                className="btn-primary-glow flex-1 py-3"
                 disabled={!canRequest || joining}
               >
                 {joining ? 'Mengirim...' : 'Kirim Permintaan'}

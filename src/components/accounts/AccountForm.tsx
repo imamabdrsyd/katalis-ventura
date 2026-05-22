@@ -762,7 +762,7 @@ export function AccountForm({
         </button>
         <button
           type="submit"
-          className="btn-primary flex-1"
+          className="btn-primary-glow flex-1"
           disabled={loading || loadingCode || !!codeRangeError || (!isEditMode && !formData.parent_account_id) || (codeValidation !== null && !codeValidation.valid)}
         >
           {loading ? 'Menyimpan...' : isEditMode ? 'Simpan Perubahan' : 'Buat Akun'}

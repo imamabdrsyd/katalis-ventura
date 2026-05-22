@@ -161,6 +161,16 @@ function TransactionsPageInner() {
     setOcrPreviewResult(null);
   }, []);
 
+  const ocrSidePanel = ocrPreviewResult ? (
+    <OcrResultPreviewModal
+      result={ocrPreviewResult}
+      accounts={accounts}
+      onChooseSingle={handleConfirmSingleOcr}
+      onChooseMultiLine={handleConfirmMultiLineOcr}
+      onClose={() => setOcrPreviewResult(null)}
+    />
+  ) : null;
+
   // Tag filter state
   const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);
 
@@ -361,7 +371,7 @@ function TransactionsPageInner() {
 
             <button
               onClick={() => router.push('/transactions/journal-entry')}
-              className="btn-primary flex items-center gap-2"
+              className="btn-primary-glow flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
               {t.transactions.journalEntry}
@@ -684,6 +694,8 @@ function TransactionsPageInner() {
         isOpen={showQuickAddModal}
         onClose={() => { setShowQuickAddModal(false); setMultiLineOcrPrefill(null); setOcrPreviewResult(null); setPendingOcrApply(null); }}
         title={multiLineOcrPrefill ? 'Jurnal Multi-Item (dari Struk)' : t.transactions.addTransaction}
+        size={multiLineOcrPrefill ? '3xl' : 'md'}
+        sidePanel={ocrSidePanel}
       >
         {multiLineOcrPrefill ? (
           <MultiLineJournalForm
@@ -722,6 +734,8 @@ function TransactionsPageInner() {
           transactionMode === 'out' ? t.transactions.moneyOut :
           t.transactions.fullForm
         }
+        size={multiLineOcrPrefill ? '3xl' : 'md'}
+        sidePanel={ocrSidePanel}
       >
         {multiLineOcrPrefill ? (
           <MultiLineJournalForm
@@ -757,6 +771,7 @@ function TransactionsPageInner() {
         isOpen={!!editTransaction}
         onClose={() => setEditTransaction(null)}
         title={t.transactions.editTransaction}
+        size={editTransaction?.is_multi_line ? '3xl' : 'md'}
       >
         {editTransaction?.is_multi_line ? (
           <MultiLineJournalForm
@@ -825,15 +840,6 @@ function TransactionsPageInner() {
         onConfirm={handleDeleteTransaction}
         loading={saving}
         transactionDescription={deleteTransaction?.description || ''}
-      />
-
-      {/* OCR Result Preview Panel — side-by-side dengan modal transaksi */}
-      <OcrResultPreviewModal
-        result={ocrPreviewResult}
-        accounts={accounts}
-        onChooseSingle={handleConfirmSingleOcr}
-        onChooseMultiLine={handleConfirmMultiLineOcr}
-        onClose={() => setOcrPreviewResult(null)}
       />
 
       {/* Import Modal */}

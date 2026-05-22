@@ -389,7 +389,7 @@ export function BusinessForm({
         >
           Batal
         </button>
-        <button type="submit" className="btn-primary flex-1" disabled={loading}>
+        <button type="submit" className="btn-primary-glow flex-1" disabled={loading}>
           {loading ? 'Menyimpan...' : business ? 'Update Bisnis' : 'Tambah Bisnis'}
         </button>
       </div>

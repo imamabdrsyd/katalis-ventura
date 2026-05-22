@@ -1533,7 +1533,7 @@ export default function JournalEntryPage() {
               </button>
               <button
                 type="submit"
-                className="btn-primary flex-1 flex items-center justify-center gap-2"
+                className="btn-primary-glow flex-1 flex items-center justify-center gap-2"
                 disabled={saving || loadingAccounts || (isMultiLineMode && (!mlIsBalanced || mlTotalDebit === 0))}
               >
                 {saving ? (

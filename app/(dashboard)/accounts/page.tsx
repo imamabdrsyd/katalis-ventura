@@ -276,7 +276,7 @@ export default function AccountsPage() {
           {canManageAccounts && (
             <button
               onClick={() => setShowAddModal(true)}
-              className="btn-primary flex items-center gap-2"
+              className="btn-primary-glow flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               {t.accounts.addAccount}

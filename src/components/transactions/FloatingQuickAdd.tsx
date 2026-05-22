@@ -141,6 +141,22 @@ export function FloatingQuickAdd({
 
   if (!canManage || !businessId) return null;
 
+  const ocrSidePanel = ocrPreviewResult ? (
+    <OcrResultPreviewModal
+      result={ocrPreviewResult}
+      accounts={accounts}
+      onChooseSingle={(result) => {
+        setPendingOcrApply(result);
+        setOcrPreviewResult(null);
+      }}
+      onChooseMultiLine={(data) => {
+        setMultiLineOcrPrefill(data);
+        setOcrPreviewResult(null);
+      }}
+      onClose={() => setOcrPreviewResult(null)}
+    />
+  ) : null;
+
   return (
     <>
       {/* FAB Button */}
@@ -158,6 +174,8 @@ export function FloatingQuickAdd({
         isOpen={isOpen}
         onClose={handleCloseModal}
         title={multiLineOcrPrefill ? 'Jurnal Multi-Item (dari Struk)' : 'Add Transaction'}
+        size={multiLineOcrPrefill ? '3xl' : 'md'}
+        sidePanel={ocrSidePanel}
       >
         {multiLineOcrPrefill ? (
           <MultiLineJournalForm
@@ -181,21 +199,6 @@ export function FloatingQuickAdd({
           />
         )}
       </Modal>
-
-      {/* OCR Result Preview Panel */}
-      <OcrResultPreviewModal
-        result={ocrPreviewResult}
-        accounts={accounts}
-        onChooseSingle={(result) => {
-          setPendingOcrApply(result);
-          setOcrPreviewResult(null);
-        }}
-        onChooseMultiLine={(data) => {
-          setMultiLineOcrPrefill(data);
-          setOcrPreviewResult(null);
-        }}
-        onClose={() => setOcrPreviewResult(null)}
-      />
     </>
   );
 }

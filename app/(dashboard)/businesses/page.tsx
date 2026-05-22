@@ -241,7 +241,7 @@ export default function BusinessesPage() {
           </p> */}
         </div>
         {canManage && (
-          <button onClick={() => setIsFormOpen(true)} className="btn-primary">
+          <button onClick={() => setIsFormOpen(true)} className="btn-primary-glow">
             + {t.businesses.addBusiness}
           </button>
         )}

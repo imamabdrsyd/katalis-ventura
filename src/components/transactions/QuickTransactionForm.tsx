@@ -870,7 +870,7 @@ export function QuickTransactionForm({
       <div className="flex items-center gap-4 pt-1">
         <button
           type="submit"
-          className="btn-primary flex-1 flex items-center justify-center gap-2"
+          className="btn-primary-glow flex-1 flex items-center justify-center gap-2"
           disabled={loading || loadingAccounts}
         >
           {loading ? (

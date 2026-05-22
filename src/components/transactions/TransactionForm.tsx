@@ -1286,7 +1286,7 @@ export function TransactionForm({
         >
           Batal
         </button>
-        <button type="submit" className="btn-primary flex-1" disabled={loading}>
+        <button type="submit" className="btn-primary-glow flex-1" disabled={loading}>
           {loading ? 'Menyimpan...' : transaction ? 'Update Transaksi' : 'Simpan'}
         </button>
       </div>
