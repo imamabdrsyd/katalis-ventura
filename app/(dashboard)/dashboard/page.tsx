@@ -489,7 +489,7 @@ export default function DashboardPage() {
                 <BarChart3 className="w-5 h-5" />
               </div>
               {!transactionsLoading && netMargin !== null && (
-                <div className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${netMargin === 0 ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : netMargin > 0 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'}`}>
+                <div className={`text-[11px] font-semibold ${netMargin === 0 ? 'text-gray-500 dark:text-gray-400' : netMargin > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
                   {t.dashboard.margin.replace('{n}', netMargin.toFixed(1))}
                 </div>
               )}
@@ -528,7 +528,7 @@ export default function DashboardPage() {
               </div>
               {!transactionsLoading && investedCapital.remainingInvestedCapital > 0 && (
                 <div
-                  className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${remainingCapitalRoi === 0 ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : remainingCapitalRoi > 0 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'}`}
+                  className={`text-[11px] font-semibold ${remainingCapitalRoi === 0 ? 'text-gray-500 dark:text-gray-400' : remainingCapitalRoi > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}
                   title="ROI atas modal yang masih tertanam"
                 >
                   {t.dashboard.remainingCapitalRoi.replace('{n}', formatPercentage(remainingCapitalRoi))}
@@ -802,12 +802,10 @@ export default function DashboardPage() {
                           </span>
                           <div className="flex items-center gap-2">
                             {row.margin !== null && (
-                              <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                              <span className={`text-xs font-medium ${
                                 row.bold
-                                  ? row.margin >= 0
-                                    ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-                                    : 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'
-                                  : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                                  ? row.margin >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
+                                  : 'text-gray-500 dark:text-gray-400'
                               }`}>
                                 {formatPercentage(row.margin)}
                               </span>

@@ -166,6 +166,7 @@ function RequestCard({
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: true,
   });
 
   return (
@@ -229,11 +230,11 @@ function RequestCard({
       ) : (
         <div className="flex-shrink-0">
           {request.status === 'approved' ? (
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700/60 px-2.5 py-1 rounded-full">
+            <span className="inline-flex items-center gap-1 text-xs font-normal text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700/60 px-2.5 py-1 rounded-full">
               <CheckCircle className="w-3.5 h-3.5" /> Disetujui
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700/60 px-2.5 py-1 rounded-full">
+            <span className="inline-flex items-center gap-1 text-xs font-normal text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700/60 px-2.5 py-1 rounded-full">
               <XCircle className="w-3.5 h-3.5" /> Ditolak
             </span>
           )}

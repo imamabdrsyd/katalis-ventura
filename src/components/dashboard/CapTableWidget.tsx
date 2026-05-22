@@ -9,6 +9,7 @@ import type { Transaction } from '@/types';
 
 const OWNER_COLORS = [
   '#6366f1',
+  '#3b82f6',
   '#ec4899',
   '#10b981',
   '#f59e0b',
