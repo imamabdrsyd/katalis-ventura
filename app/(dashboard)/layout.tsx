@@ -686,7 +686,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
         {/* Real-time Date Widget */}
         {currentTime && (
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-xs text-gray-700 dark:text-gray-200">
-            <Calendar className="w-4 h-4 text-primary-500 flex-shrink-0" />
+            <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
             <span>
               {currentTime.toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </span>

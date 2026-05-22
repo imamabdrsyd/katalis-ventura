@@ -62,15 +62,15 @@ function ScenarioCard({
 }) {
   const colorMap = {
     green: {
-      bg: 'bg-emerald-50 dark:bg-emerald-900/20',
-      border: 'border-emerald-200 dark:border-emerald-800',
+      bg: 'bg-white dark:bg-gray-800',
+      border: 'border-gray-200 dark:border-gray-700',
       title: 'text-emerald-800 dark:text-emerald-300',
       accent: 'text-emerald-500 dark:text-emerald-400',
       iconBg: 'bg-emerald-50 dark:bg-emerald-900/40',
     },
     red: {
-      bg: 'bg-red-50 dark:bg-red-900/20',
-      border: 'border-red-200 dark:border-red-800',
+      bg: 'bg-white dark:bg-gray-800',
+      border: 'border-gray-200 dark:border-gray-700',
       title: 'text-red-800 dark:text-red-300',
       accent: 'text-red-500 dark:text-red-400',
       iconBg: 'bg-red-50 dark:bg-red-900/40',
