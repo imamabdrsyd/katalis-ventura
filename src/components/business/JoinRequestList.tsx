@@ -148,8 +148,15 @@ function RequestCard({
   const avatar = request.requester?.avatar_url;
   const initials = name.charAt(0).toUpperCase();
 
-  const date = new Date(request.created_at).toLocaleDateString('id-ID', {
-    day: 'numeric', month: 'short', year: 'numeric',
+  const timestamp = request.status === 'pending'
+    ? request.created_at
+    : request.reviewed_at || request.updated_at || request.created_at;
+  const dateTime = new Date(timestamp).toLocaleString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 
   return (
@@ -177,7 +184,7 @@ function RequestCard({
       {/* Info */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{name}</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{date}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{dateTime}</p>
         {request.message && (
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 italic truncate">&ldquo;{request.message}&rdquo;</p>
         )}
@@ -216,11 +223,11 @@ function RequestCard({
       ) : (
         <div className="flex-shrink-0">
           {request.status === 'approved' ? (
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 ring-1 ring-inset ring-emerald-500/20 px-2.5 py-1 rounded-full">
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700/60 ring-1 ring-inset ring-gray-500/20 px-2.5 py-1 rounded-full">
               <CheckCircle className="w-3.5 h-3.5" /> Disetujui
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 ring-1 ring-inset ring-red-500/20 px-2.5 py-1 rounded-full">
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700/60 ring-1 ring-inset ring-gray-500/20 px-2.5 py-1 rounded-full">
               <XCircle className="w-3.5 h-3.5" /> Ditolak
             </span>
           )}

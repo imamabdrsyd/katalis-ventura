@@ -21,7 +21,7 @@ const ROLE_BADGE: Record<string, { label: string; className: string }> = {
   },
   superadmin: {
     label: 'Super Admin',
-    className: 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30 text-amber-700 dark:text-amber-300 ring-1 ring-inset ring-amber-500/30',
+    className: 'bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 ring-1 ring-inset ring-gray-500/20',
   },
 };
 
