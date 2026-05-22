@@ -28,8 +28,6 @@ import { ContactAutocomplete } from '@/components/transactions/ContactAutocomple
 import { saveContactFromTransaction, getContacts } from '@/lib/api/contacts';
 import { useBusinessContext } from '@/context/BusinessContext';
 import OCRScanButton from '@/components/transactions/OCRScanButton';
-import { buildMultiLineFromOcr, shouldUseMultiLine } from '@/lib/ocr/multiLineBuilder';
-import type { MultiLineFormData } from '@/components/transactions/MultiLineJournalForm';
 import type { OcrResult } from '@/lib/ocr/types';
 import { matchAccountByKeywords, matchContactByVendor } from '@/lib/ocr/matcher';
 import { BASE_CURRENCY, SUPPORTED_CURRENCIES, calculateBaseAmount, normalizeCurrencyCode } from '@/lib/currency';
@@ -46,10 +44,16 @@ interface QuickTransactionFormProps {
   /** Callback to convert stock transactions to COGS */
   onConvertStockToCOGS?: (transactionIds: string[]) => Promise<void>;
   /**
-   * Dipanggil ketika OCR scan menghasilkan struk multi-item (>= 2 line items,
-   * atau item + charge). Parent diharapkan switch ke MultiLineJournalForm.
+   * Dipanggil saat OCR scan selesai. Kalau provided, form TIDAK auto-apply hasil
+   * scan — parent yang putuskan (mis. tampilkan preview modal dulu).
    */
-  onRequestMultiLine?: (data: MultiLineFormData) => void;
+  onOcrResult?: (result: OcrResult) => void;
+  /**
+   * Hasil OCR yang HARUS langsung di-apply ke form (skip preview gate). Dipakai
+   * parent untuk "push" hasil scan setelah user pilih opsi "single transaction"
+   * dari preview modal.
+   */
+  pendingOcrApply?: OcrResult | null;
 }
 
 const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
@@ -77,7 +81,8 @@ export function QuickTransactionForm({
   businessId: businessIdProp,
   transactions: allTransactions = [],
   onConvertStockToCOGS,
-  onRequestMultiLine,
+  onOcrResult,
+  pendingOcrApply,
 }: QuickTransactionFormProps) {
   const params = useParams();
   const businessId = businessIdProp || (params?.businessId as string);
@@ -271,15 +276,7 @@ export function QuickTransactionForm({
   };
 
   // OCR result handler — pre-fill amount, vendor name, date, account & contact
-  const applyOcrResult = async (result: OcrResult) => {
-    // Auto-detect multi-line: kalau struk punya >= 2 line items atau item + charge,
-    // delegate ke parent untuk switch ke MultiLineJournalForm.
-    if (onRequestMultiLine && shouldUseMultiLine(result) && accounts.length > 0) {
-      const { data } = buildMultiLineFromOcr(result, accounts);
-      onRequestMultiLine(data);
-      return;
-    }
-
+  const applyOcrResultInternal = async (result: OcrResult) => {
     const { parsed } = result;
     const parsedCurrency = parsed.currency_code ? normalizeCurrencyCode(parsed.currency_code) : currencyCode;
     if (parsed.total) {
@@ -340,6 +337,24 @@ export function QuickTransactionForm({
     }
     if (resolvedContactName) setName(resolvedContactName);
   };
+
+  // Gate OCR result melalui parent kalau `onOcrResult` provided (preview modal mode).
+  const handleOcrParsed = (result: OcrResult) => {
+    if (onOcrResult) {
+      onOcrResult(result);
+      return;
+    }
+    void applyOcrResultInternal(result);
+  };
+
+  // Watch `pendingOcrApply`: parent set ini saat user pilih "single transaction"
+  // dari preview modal — apply langsung tanpa gate.
+  useEffect(() => {
+    if (pendingOcrApply) {
+      void applyOcrResultInternal(pendingOcrApply);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingOcrApply]);
 
   const handleToggleBreakdown = () => {
     if (!showBreakdown) {
@@ -494,7 +509,7 @@ export function QuickTransactionForm({
             {businessId && (
               <OCRScanButton
                 businessId={businessId}
-                onParsed={applyOcrResult}
+                onParsed={handleOcrParsed}
                 variant="compact"
               />
             )}

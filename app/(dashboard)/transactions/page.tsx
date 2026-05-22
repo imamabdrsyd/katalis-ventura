@@ -5,6 +5,8 @@ import { Modal } from '@/components/ui/Modal';
 import { TransactionForm } from '@/components/transactions/TransactionForm';
 import { MultiLineJournalForm } from '@/components/transactions/MultiLineJournalForm';
 import type { MultiLineFormData } from '@/components/transactions/MultiLineJournalForm';
+import { OcrResultPreviewModal } from '@/components/transactions/OcrResultPreviewModal';
+import type { OcrResult } from '@/lib/ocr/types';
 import { TransactionList } from '@/components/transactions/TransactionList';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import { DeleteConfirmModal } from '@/components/transactions/DeleteConfirmModal';
@@ -141,6 +143,23 @@ function TransactionsPageInner() {
   // Multi-line prefill dari OCR scan — kalau ada, modal add render MultiLineJournalForm
   // bukan TransactionForm. Di-reset ke null saat modal ditutup.
   const [multiLineOcrPrefill, setMultiLineOcrPrefill] = useState<MultiLineFormData | null>(null);
+
+  // OCR preview state — hasil scan struk yang sedang ditampilkan di panel preview
+  // di samping modal transaksi. Null = panel tidak muncul.
+  const [ocrPreviewResult, setOcrPreviewResult] = useState<OcrResult | null>(null);
+  // Hasil OCR yang sudah dikonfirmasi user untuk di-apply sebagai single transaction.
+  // Form yang aktif (quick/full) akan watch prop ini dan apply ke field-fieldnya.
+  const [pendingOcrApply, setPendingOcrApply] = useState<OcrResult | null>(null);
+
+  const handleConfirmSingleOcr = useCallback((result: OcrResult) => {
+    setPendingOcrApply(result);
+    setOcrPreviewResult(null);
+  }, []);
+
+  const handleConfirmMultiLineOcr = useCallback((data: MultiLineFormData) => {
+    setMultiLineOcrPrefill(data);
+    setOcrPreviewResult(null);
+  }, []);
 
   // Tag filter state
   const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);
@@ -663,7 +682,7 @@ function TransactionsPageInner() {
       {/* Quick Add Modal */}
       <Modal
         isOpen={showQuickAddModal}
-        onClose={() => { setShowQuickAddModal(false); setMultiLineOcrPrefill(null); }}
+        onClose={() => { setShowQuickAddModal(false); setMultiLineOcrPrefill(null); setOcrPreviewResult(null); setPendingOcrApply(null); }}
         title={multiLineOcrPrefill ? 'Jurnal Multi-Item (dari Struk)' : t.transactions.addTransaction}
       >
         {multiLineOcrPrefill ? (
@@ -686,7 +705,8 @@ function TransactionsPageInner() {
             businessId={businessId || undefined}
             transactions={transactions}
             onConvertStockToCOGS={handleConvertStockToCOGS}
-            onRequestMultiLine={(data) => setMultiLineOcrPrefill(data)}
+            onOcrResult={setOcrPreviewResult}
+            pendingOcrApply={pendingOcrApply}
           />
         )}
       </Modal>
@@ -694,7 +714,7 @@ function TransactionsPageInner() {
       {/* Add Modal */}
       <Modal
         isOpen={showAddModal}
-        onClose={() => { setShowAddModal(false); setTransactionMode(null); setFollowUpPrefill(null); setMultiLineOcrPrefill(null); }}
+        onClose={() => { setShowAddModal(false); setTransactionMode(null); setFollowUpPrefill(null); setMultiLineOcrPrefill(null); setOcrPreviewResult(null); setPendingOcrApply(null); }}
         title={
           multiLineOcrPrefill ? 'Jurnal Multi-Item (dari Struk)' :
           followUpPrefill ? t.transactions.createCOGSEntry :
@@ -726,7 +746,8 @@ function TransactionsPageInner() {
             onCancel={() => { setShowAddModal(false); setTransactionMode(null); setFollowUpPrefill(null); }}
             loading={saving}
             businessId={businessId || undefined}
-            onRequestMultiLine={(data) => setMultiLineOcrPrefill(data)}
+            onOcrResult={setOcrPreviewResult}
+            pendingOcrApply={pendingOcrApply}
           />
         )}
       </Modal>
@@ -804,6 +825,15 @@ function TransactionsPageInner() {
         onConfirm={handleDeleteTransaction}
         loading={saving}
         transactionDescription={deleteTransaction?.description || ''}
+      />
+
+      {/* OCR Result Preview Panel — side-by-side dengan modal transaksi */}
+      <OcrResultPreviewModal
+        result={ocrPreviewResult}
+        accounts={accounts}
+        onChooseSingle={handleConfirmSingleOcr}
+        onChooseMultiLine={handleConfirmMultiLineOcr}
+        onClose={() => setOcrPreviewResult(null)}
       />
 
       {/* Import Modal */}

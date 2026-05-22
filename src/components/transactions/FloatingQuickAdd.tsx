@@ -6,6 +6,9 @@ import { toast } from 'sonner';
 import { Zap } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { QuickTransactionForm } from './QuickTransactionForm';
+import { MultiLineJournalForm } from './MultiLineJournalForm';
+import type { MultiLineFormData } from './MultiLineJournalForm';
+import { OcrResultPreviewModal } from './OcrResultPreviewModal';
 import { useBusinessContext } from '@/context/BusinessContext';
 import * as transactionsApi from '@/lib/api/transactions';
 import { getAccounts } from '@/lib/api/accounts';
@@ -14,6 +17,7 @@ import { showTransactionSavedToast } from '@/lib/transactionToast';
 import { isManagerRole } from '@/lib/roles';
 import type { Transaction, Account } from '@/types';
 import type { TransactionFormData } from './TransactionForm';
+import type { OcrResult } from '@/lib/ocr/types';
 
 /**
  * Floating Action Button for Quick Add Transaction.
@@ -35,6 +39,11 @@ export function FloatingQuickAdd({
   const [saving, setSaving] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+
+  // OCR preview & multi-line state
+  const [ocrPreviewResult, setOcrPreviewResult] = useState<OcrResult | null>(null);
+  const [pendingOcrApply, setPendingOcrApply] = useState<OcrResult | null>(null);
+  const [multiLineOcrPrefill, setMultiLineOcrPrefill] = useState<MultiLineFormData | null>(null);
 
   // Use controlled state if provided, otherwise use internal state
   const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
@@ -74,6 +83,46 @@ export function FloatingQuickAdd({
     [businessId, router, setIsOpen, user]
   );
 
+  const handleSubmitMultiLine = useCallback(
+    async (data: MultiLineFormData) => {
+      if (!businessId || !user) return;
+      setSaving(true);
+      try {
+        const created = await transactionsApi.createMultiLineTransaction({
+          business_id: businessId,
+          created_by: user.id,
+          date: data.date,
+          category: data.category,
+          name: data.name,
+          description: data.description,
+          notes: data.notes,
+          journal_lines: data.journal_lines,
+          attachments: data.attachments,
+        });
+        setIsOpen(false);
+        setMultiLineOcrPrefill(null);
+        window.dispatchEvent(new CustomEvent('transaction-saved'));
+        showTransactionSavedToast({
+          message: 'Jurnal multi-baris berhasil disimpan',
+          createdAt: created.created_at,
+          onOpenDetail: () => router.push(`/transactions?detail=${created.id}`),
+        });
+      } catch (err: any) {
+        toast.error(err.message || 'Gagal menyimpan jurnal');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [businessId, router, setIsOpen, user]
+  );
+
+  const handleCloseModal = useCallback(() => {
+    setIsOpen(false);
+    setMultiLineOcrPrefill(null);
+    setOcrPreviewResult(null);
+    setPendingOcrApply(null);
+  }, [setIsOpen]);
+
   const handleConvertStockToCOGS = useCallback(
     async (transactionIds: string[]) => {
       if (transactionIds.length === 0) return;
@@ -107,18 +156,46 @@ export function FloatingQuickAdd({
       {/* Quick Add Modal */}
       <Modal
         isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        title="Add Transaction"
+        onClose={handleCloseModal}
+        title={multiLineOcrPrefill ? 'Jurnal Multi-Item (dari Struk)' : 'Add Transaction'}
       >
-        <QuickTransactionForm
-          onSubmit={handleSubmit}
-          onCancel={() => setIsOpen(false)}
-          loading={saving}
-          businessId={businessId}
-          transactions={transactions}
-          onConvertStockToCOGS={handleConvertStockToCOGS}
-        />
+        {multiLineOcrPrefill ? (
+          <MultiLineJournalForm
+            initialData={multiLineOcrPrefill}
+            onSubmit={handleSubmitMultiLine}
+            onCancel={handleCloseModal}
+            loading={saving}
+            businessId={businessId}
+            submitLabel="Simpan Jurnal"
+          />
+        ) : (
+          <QuickTransactionForm
+            onSubmit={handleSubmit}
+            onCancel={() => setIsOpen(false)}
+            loading={saving}
+            businessId={businessId}
+            transactions={transactions}
+            onConvertStockToCOGS={handleConvertStockToCOGS}
+            onOcrResult={setOcrPreviewResult}
+            pendingOcrApply={pendingOcrApply}
+          />
+        )}
       </Modal>
+
+      {/* OCR Result Preview Panel */}
+      <OcrResultPreviewModal
+        result={ocrPreviewResult}
+        accounts={accounts}
+        onChooseSingle={(result) => {
+          setPendingOcrApply(result);
+          setOcrPreviewResult(null);
+        }}
+        onChooseMultiLine={(data) => {
+          setMultiLineOcrPrefill(data);
+          setOcrPreviewResult(null);
+        }}
+        onClose={() => setOcrPreviewResult(null)}
+      />
     </>
   );
 }
