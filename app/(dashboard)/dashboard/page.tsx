@@ -489,7 +489,7 @@ export default function DashboardPage() {
                 <BarChart3 className="w-5 h-5" />
               </div>
               {!transactionsLoading && netMargin !== null && (
-                <div className={`text-[11px] font-semibold ${netMargin === 0 ? 'text-gray-500 dark:text-gray-400' : netMargin > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+                <div className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
                   {t.dashboard.margin.replace('{n}', netMargin.toFixed(1))}
                 </div>
               )}
@@ -528,7 +528,7 @@ export default function DashboardPage() {
               </div>
               {!transactionsLoading && investedCapital.remainingInvestedCapital > 0 && (
                 <div
-                  className={`text-[11px] font-semibold ${remainingCapitalRoi === 0 ? 'text-gray-500 dark:text-gray-400' : remainingCapitalRoi > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}
+                  className="text-[11px] font-semibold text-gray-500 dark:text-gray-400"
                   title="ROI atas modal yang masih tertanam"
                 >
                   {t.dashboard.remainingCapitalRoi.replace('{n}', formatPercentage(remainingCapitalRoi))}
