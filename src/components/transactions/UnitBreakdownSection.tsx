@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Minus, Plus } from 'lucide-react';
 import type { UnitBreakdown } from '@/types';
 
 const UNIT_OPTIONS = ['pcs', 'gram', 'galon', 'ikat', 'orang', 'trip'] as const;
@@ -82,6 +82,17 @@ export function UnitBreakdownSection({
     onQuantityChange(num);
   };
 
+  const setQuantity = (value: number) => {
+    const next = Math.max(0, value);
+    setQtyDisplay(next ? formatNumberWithSeparator(next) : '');
+    onQuantityChange(next);
+  };
+
+  const handleQtyStep = (delta: number) => {
+    const current = unitBreakdown?.quantity ?? (parseInt(qtyDisplay.replace(/\./g, '')) || 0);
+    setQuantity(current + delta);
+  };
+
   const handleUnitSelect = (value: string) => {
     if (value === '__custom__') {
       setShowCustomUnit(true);
@@ -138,14 +149,35 @@ export function UnitBreakdownSection({
           <label className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
             Quantity
           </label>
-          <input
-            type="text"
-            value={qtyDisplay}
-            onChange={handleQtyInput}
-            placeholder="0"
-            inputMode="numeric"
-            className="w-full mt-0.5 px-2.5 py-1.5 text-sm border border-indigo-300 dark:border-indigo-500 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
+          <div className="relative mt-0.5">
+            <input
+              type="text"
+              value={qtyDisplay}
+              onChange={handleQtyInput}
+              placeholder="0"
+              inputMode="numeric"
+              className="w-full px-2.5 py-1.5 pr-16 text-sm border border-indigo-300 dark:border-indigo-500 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center overflow-hidden rounded border border-gray-200 dark:border-gray-600">
+              <button
+                type="button"
+                onClick={() => handleQtyStep(-1)}
+                disabled={(unitBreakdown?.quantity || 0) <= 0}
+                className="flex h-6 w-6 items-center justify-center bg-gray-50 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-gray-100"
+                aria-label="Decrease quantity"
+              >
+                <Minus className="h-3 w-3" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQtyStep(1)}
+                className="flex h-6 w-6 items-center justify-center border-l border-gray-200 bg-gray-50 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-gray-100"
+                aria-label="Increase quantity"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Unit selector */}
