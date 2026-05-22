@@ -161,7 +161,7 @@ export default function RootLayout({
                   classNames: {
                     title: 'text-sm font-medium text-gray-700',
                     description: 'text-xs text-gray-400',
-                    closeButton: 'bg-white text-gray-400 border-gray-100',
+                    closeButton: '!left-auto !right-2 !top-2 !translate-x-0 bg-white text-gray-400 border-gray-100',
                   },
                 }}
               />
