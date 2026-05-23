@@ -169,6 +169,34 @@ function IncomeStatementPageInner() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showConfigModal, setShowConfigModal] = useState(false);
 
+  const monthDropdownYear = (() => {
+    const year = Number(startDate.slice(0, 4));
+    return Number.isFinite(year) && year > 0 ? year : new Date().getFullYear();
+  })();
+
+  const selectedMonthValue = (() => {
+    if (!startDate || !endDate) return '';
+    const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+    if (!startYear || !startMonth || !startDay || !endYear || !endMonth || !endDay) return '';
+    if (startYear !== endYear || startMonth !== endMonth || startDay !== 1) return '';
+
+    const lastDay = new Date(startYear, startMonth, 0).getDate();
+    return endDay === lastDay ? `${startYear}-${String(startMonth).padStart(2, '0')}` : '';
+  })();
+
+  const handleMonthDropdownChange = (value: string) => {
+    if (!value) return;
+
+    const [year, month] = value.split('-').map(Number);
+    if (!year || !month) return;
+
+    const lastDay = new Date(year, month, 0).getDate();
+    setStartDate(`${year}-${String(month).padStart(2, '0')}-01`);
+    setEndDate(`${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`);
+    setPeriod('custom');
+  };
+
   // Scroll to section from URL param (e.g., /income-statement?scrollTo=net-income)
   const searchParams = useSearchParams();
   useEffect(() => {
@@ -234,7 +262,7 @@ function IncomeStatementPageInner() {
               <div>
                 <label className="label">Periode</label>
                 <div className="flex flex-wrap gap-2">
-                  {(['month', 'quarter', 'year', 'custom'] as Period[]).map((p) => (
+                  {(['month', 'quarter', 'year'] as Period[]).map((p) => (
                     <button
                       key={p}
                       onClick={() => handlePeriodChange(p)}
@@ -244,9 +272,29 @@ function IncomeStatementPageInner() {
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                       }`}
                     >
-                      {p === 'month' ? 'Bulan Ini' : p === 'quarter' ? 'Kuartal' : p === 'year' ? 'Tahun Ini' : 'Custom'}
+                      {p === 'month' ? 'Bulan Ini' : p === 'quarter' ? 'Kuartal' : 'Tahun Ini'}
                     </button>
                   ))}
+                  <select
+                    value={selectedMonthValue}
+                    onChange={(e) => handleMonthDropdownChange(e.target.value)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors outline-none ${
+                      selectedMonthValue && period === 'custom'
+                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                    aria-label="Pilih bulan laporan"
+                  >
+                    <option value="">Pilih Bulan</option>
+                    {t.dashboard.months.map((monthName, index) => {
+                      const month = String(index + 1).padStart(2, '0');
+                      return (
+                        <option key={month} value={`${monthDropdownYear}-${month}`}>
+                          {monthName}
+                        </option>
+                      );
+                    })}
+                  </select>
                 </div>
               </div>
 

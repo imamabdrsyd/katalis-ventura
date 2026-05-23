@@ -10,6 +10,13 @@ import type { Transaction } from '@/types';
 
 export type Period = 'month' | 'quarter' | 'year' | 'custom';
 
+function formatLocalDateInput(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export interface UseReportDataReturn {
   activeBusiness: ReturnType<typeof useBusinessContext>['activeBusiness'];
   transactions: Transaction[];
@@ -52,8 +59,8 @@ export function useReportData(): UseReportDataReturn {
       const now = new Date();
       const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
       const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      setStartDate(firstDay.toISOString().split('T')[0]);
-      setEndDate(lastDay.toISOString().split('T')[0]);
+      setStartDate(formatLocalDateInput(firstDay));
+      setEndDate(formatLocalDateInput(lastDay));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -105,8 +112,8 @@ export function useReportData(): UseReportDataReturn {
         return;
     }
 
-    setStartDate(start.toISOString().split('T')[0]);
-    setEndDate(end.toISOString().split('T')[0]);
+    setStartDate(formatLocalDateInput(start));
+    setEndDate(formatLocalDateInput(end));
   }, []);
 
   // Close export menu when clicking outside
