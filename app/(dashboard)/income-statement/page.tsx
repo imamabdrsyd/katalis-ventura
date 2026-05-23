@@ -11,6 +11,7 @@ import type { Transaction } from '@/types';
 import type { AccountLineItem } from '@/lib/calculations';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import { IncomeStatementConfigModal } from '@/components/reports/IncomeStatementConfigModal';
+import { PeriodFilterCard } from '@/components/reports/PeriodFilterCard';
 
 function TransactionRow({ tx, onClick }: { tx: Transaction; onClick: (tx: Transaction) => void }) {
   return (
@@ -255,111 +256,18 @@ function IncomeStatementPageInner() {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* LEFT COLUMN — Filters + Summary */}
         <div className="w-full lg:w-80 xl:w-96 flex-shrink-0 space-y-6">
-          {/* Filters */}
-          <div className="card-static">
-            <div className="space-y-4">
-              {/* Period Selector */}
-              <div>
-                <label className="label">Periode</label>
-                <div className="flex flex-wrap gap-2">
-                  {(['month', 'quarter', 'year'] as Period[]).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => handlePeriodChange(p)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                        period === p
-                          ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {p === 'month' ? 'Bulan Ini' : p === 'quarter' ? 'Kuartal' : 'Tahun Ini'}
-                    </button>
-                  ))}
-                  <select
-                    value={selectedMonthValue}
-                    onChange={(e) => handleMonthDropdownChange(e.target.value)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors outline-none ${
-                      selectedMonthValue && period === 'custom'
-                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                    aria-label="Pilih bulan laporan"
-                  >
-                    <option value="">Pilih Bulan</option>
-                    {t.dashboard.months.map((monthName, index) => {
-                      const month = String(index + 1).padStart(2, '0');
-                      return (
-                        <option key={month} value={`${monthDropdownYear}-${month}`}>
-                          {monthName}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-              </div>
-
-              {/* Date Range */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label flex items-center gap-1.5 text-xs">
-                    <Calendar className="w-3.5 h-3.5" />
-                    Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => {
-                      setStartDate(e.target.value);
-                      setPeriod('custom');
-                    }}
-                    className="input text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="label text-xs">End Date</label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => {
-                      setEndDate(e.target.value);
-                      setPeriod('custom');
-                    }}
-                    className="input text-sm"
-                  />
-                </div>
-              </div>
-
-              {/* Export Button */}
-              <div className="relative" ref={exportButtonRef}>
-                <button
-                  onClick={() => setShowExportMenu(!showExportMenu)}
-                  className="btn-secondary flex items-center gap-2 w-full justify-center"
-                >
-                  <Download className="w-4 h-4" />
-                  Export
-                </button>
-
-                {showExportMenu && (
-                  <div className="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-10">
-                    <button
-                      onClick={handleExportPDF}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3"
-                    >
-                      <FileText className="w-4 h-4 text-red-500" />
-                      Export as PDF
-                    </button>
-                    <button
-                      onClick={handleExportExcel}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3"
-                    >
-                      <FileSpreadsheet className="w-4 h-4 text-green-500" />
-                      Export as Excel
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          {/* Period Filter Card */}
+          <PeriodFilterCard
+            period={period}
+            startDate={startDate}
+            endDate={endDate}
+            onPeriodChange={handlePeriodChange}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            onExportPDF={handleExportPDF}
+            onExportExcel={handleExportExcel}
+            months={t.dashboard.months}
+          />
 
           {/* Summary — Waterfall breakdown */}
           <div className="card-static space-y-3">
