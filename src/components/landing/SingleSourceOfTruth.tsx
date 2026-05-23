@@ -7,7 +7,7 @@ type Lang = 'id' | 'en';
 
 const copy = {
   id: {
-    engineLabel: 'Journal Entry Ledger',
+    engineLabel: 'Journal Entry',
     engineSub: 'Catat sekali',
     engineCaption: 'Single Source of Truth',
     calcCaption: 'Logic engine',
@@ -34,7 +34,7 @@ const copy = {
     },
   },
   en: {
-    engineLabel: 'Journal Entry Ledger',
+    engineLabel: 'Journal Entry',
     engineSub: 'Record once',
     engineCaption: 'Single Source of Truth',
     calcCaption: 'Logic engine',
