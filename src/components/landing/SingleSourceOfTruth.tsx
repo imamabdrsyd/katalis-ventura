@@ -71,10 +71,10 @@ const cardRows = {
     { code: '——', label: 'Net Profit', emphasis: true },
   ],
   balanceSheet: [
-    { code: '1100', label: 'Cash', emphasis: false },
-    { code: '1300', label: 'Fixed Assets', emphasis: false },
-    { code: '2100', label: 'Loans Payable', emphasis: false },
-    { code: '3100', label: "Owner's Capital", emphasis: false },
+    { code: '1000', label: 'Assets', emphasis: false },
+    { code: '2000', label: 'Liabilities', emphasis: false },
+    { code: '3000', label: 'Equity', emphasis: false },
+    { code: '——', label: 'Assets = L + E', emphasis: true },
   ],
   cashFlow: [
     { code: 'CFO', label: 'Operating', emphasis: false },

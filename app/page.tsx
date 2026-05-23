@@ -37,7 +37,7 @@ const content = {
       'Ada cerita di balik angka bisnis kamu entah kamu dengerin atau engga. AXION bantu kamu nangkep cerita itu, biar kamu tinggal ambil setiap keputusan berdasarkan data, bukan dugaan.',
     heroCta: 'Enter AXION',
     heroCtaSecondary: 'Lihat cara kerjanya',
-    aumEyebrow: 'Dipercaya oleh',
+    aumEyebrow: 'AXION Partners',
     aum: 'Assets Under Management',
     section1Eyebrow: 'Pembukuan otomatis',
     section1Title: 'Pembukuan double-entry, tanpa effort spreadsheet.',
@@ -99,7 +99,7 @@ const content = {
       "The numbers in your business are telling a story — whether you're listening or not. AXION helps you listen, so every decision is built on data, not guesswork.",
     heroCta: 'Enter AXION',
     heroCtaSecondary: 'See how it works',
-    aumEyebrow: 'Trusted by Indonesian businesses',
+    aumEyebrow: 'AXION Partners',
     aum: 'Assets Under Management',
     section1Eyebrow: 'Automatic bookkeeping',
     section1Title: 'Double-entry accounting, without the spreadsheet effort.',
@@ -396,7 +396,7 @@ export default function LandingPage() {
                 </Link>
 
                 <a
-                  href="#section-accounting"
+                  href="#section-ssot"
                   className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors group cursor-pointer"
                 >
                   {t.heroCtaSecondary}
