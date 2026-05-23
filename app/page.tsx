@@ -7,6 +7,7 @@ import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import { OmnichannelSection } from '@/components/omnichannel/OmnichannelSection';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import HealthScoreCalculator from '@/components/landing/HealthScoreCalculator';
+import SingleSourceOfTruth from '@/components/landing/SingleSourceOfTruth';
 
 interface BusinessLogo {
   id: string;
@@ -26,6 +27,7 @@ type Lang = 'id' | 'en';
 const content = {
   id: {
     navAccounting: 'Accounting Engine',
+    navSsot: 'Single Source of Truth',
     navOmnichannel: 'Omnichannel',
     navEcommerce: 'Ecommerce Integration',
     eyebrowHero: 'Accounting Engine',
@@ -58,6 +60,10 @@ const content = {
         body: 'Setiap perubahan tercatat: siapa, kapan, dari nilai apa ke nilai apa. Tidak ada angka yang hilang diam-diam.',
       },
     ],
+    ssotEyebrow: 'Single Source of Truth',
+    ssotTitle: 'Catat sekali, semua laporan otomatis.',
+    ssotLead:
+      'Satu jurnal mengalir ke laba rugi, neraca, arus kas, dan dashboard investor — tidak ada rekonsiliasi manual, tidak ada angka yang berbeda antar laporan.',
     section2Eyebrow: 'Omnichannel inventory',
     section2Title: 'Satu stok, semua channel.',
     section2Lead:
@@ -83,6 +89,7 @@ const content = {
   },
   en: {
     navAccounting: 'Accounting Engine',
+    navSsot: 'Single Source of Truth',
     navOmnichannel: 'Omnichannel',
     navEcommerce: 'Ecommerce Integration',
     eyebrowHero: 'Accounting Engine',
@@ -115,6 +122,10 @@ const content = {
         body: 'Every change recorded: who, when, from what value to what value. No silent edits.',
       },
     ],
+    ssotEyebrow: 'Single Source of Truth',
+    ssotTitle: 'Record once, every report updates.',
+    ssotLead:
+      'One journal feeds the income statement, balance sheet, cash flow, and investor dashboard — no manual reconciliation, no numbers that disagree between reports.',
     section2Eyebrow: 'Omnichannel inventory',
     section2Title: 'One stock, every channel.',
     section2Lead:
@@ -266,6 +277,7 @@ export default function LandingPage() {
               {(
                 [
                   { label: t.navAccounting, href: '#section-accounting' },
+                  { label: t.navSsot, href: '#section-ssot' },
                   { label: t.navOmnichannel, href: '#section-omnichannel' },
                   { label: t.navEcommerce, href: '#section-ecommerce' },
                 ] as const
@@ -540,6 +552,34 @@ export default function LandingPage() {
                 ))}
               </div>
             </div>
+          </div>
+        </motion.section>
+
+        {/* ───────── Section 1.5: Single Source of Truth ───────── */}
+        <motion.section
+          id="section-ssot"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-100px' }}
+          variants={fadeUpStagger}
+          className="pb-24 md:pb-32"
+        >
+          <div className="container mx-auto px-6 max-w-6xl">
+            <motion.div variants={fadeUp} className="max-w-2xl mb-14">
+              <p className="text-xs font-semibold tracking-[0.18em] uppercase text-gray-500 dark:text-gray-400 mb-5">
+                {t.ssotEyebrow}
+              </p>
+              <h2 className="text-3xl md:text-4xl lg:text-[2.75rem] font-bold leading-[1.05] tracking-[-0.02em] mb-6">
+                {t.ssotTitle}
+              </h2>
+              <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
+                {t.ssotLead}
+              </p>
+            </motion.div>
+
+            <motion.div variants={fadeUp}>
+              <SingleSourceOfTruth lang={lang} />
+            </motion.div>
           </div>
         </motion.section>
 
