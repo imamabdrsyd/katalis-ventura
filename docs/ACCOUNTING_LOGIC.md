@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 15 Mei 2026 (Section 19 Issue #20: VAR-Inventory double-count dashboard-wide — diperbaiki di MonitoringChart, ExpenseBreakdownChart, sparkline KPI, dan expense month counter; Issue #21: label UI `is_stock` direname menjadi "Share/Saham" + DB CHECK constraint `is_stock` hanya untuk akun EQUITY)
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 23 Mei 2026 (multi-currency support + akun 4200 FX Gain / 5400 FX Loss + RPC `settle_transaction` dengan realisasi FX gain/loss — migr 079; trigger `set_created_by` di transactions — migr 080; atomic multi-line create/update RPC — migr 082; `calculateCapTable` untuk dashboard & balance sheet; EBITDA di income statement; ROI mode `operations_start_date` — migr 076)
 
 ---
 
@@ -149,14 +149,18 @@
 
 4000 Revenue      (Normal Balance: CREDIT)
 ├── 4100 Sales Revenue
+├── 4200 FX Gain               (is_system: true, default_category: FIN) — keuntungan selisih kurs terealisasi
 └── 4xxx [User-defined sub-accounts]
 
 5000 Expenses     (Normal Balance: DEBIT)
 ├── 5100 Operating Expenses    (default_category: OPEX)
 ├── 5200 Variable Cost (COGS)  (default_category: VAR)
 ├── 5300 Tax Expenses          (default_category: TAX)
+├── 5400 FX Loss               (is_system: true, default_category: FIN) — kerugian selisih kurs terealisasi
 └── 5xxx [User-defined sub-accounts]
 ```
+
+**Multi-currency (sejak migrasi 079):** Tiap business punya `base_currency_code` (default `IDR`) — semua laporan keuangan tetap dilaporkan dalam mata uang fungsional ini. Tiap akun, transaksi, dan journal line bisa punya `currency_code` sendiri plus `fx_rate` saat posting. Untuk transaksi non-IDR: `amount` menyimpan nilai fungsional (original_amount × fx_rate), `original_amount` menyimpan nilai sumber. Akun 4200/5400 dipakai oleh RPC `settle_transaction` untuk mencatat realisasi FX gain/loss saat pelunasan piutang/hutang berbeda kurs (lihat §14.7).
 
 ### 2.2 Account Code Convention
 
@@ -189,7 +193,7 @@ Setiap business baru otomatis mendapat Chart of Accounts lengkap. Flow:
 2. User diberi role `business_manager` → INSERT ke `user_business_roles`
 3. `create_default_accounts(business_id)` dipanggil via `supabase.rpc()` — function berjalan sebagai `SECURITY DEFINER` (bypass RLS) sehingga dapat INSERT ke `accounts` meski RLS aktif
 
-Lihat `database/migrations/001_add_double_entry_bookkeeping.sql`, `012_fix_accounts_rls_and_function.sql`, dan `016_ensure_equity_subaccount.sql` (definisi terbaru — menambah 3100 Owner's Capital sebagai system account + backfill bisnis lama).
+Lihat `database/migrations/001_add_double_entry_bookkeeping.sql`, `012_fix_accounts_rls_and_function.sql`, dan `016_ensure_equity_subaccount.sql` (definisi terbaru — menambah 3100 Owner's Capital sebagai system account + backfill bisnis lama). Migrasi `079_multi_currency_support.sql` memperluas `create_default_accounts()` agar otomatis mem-provisioning akun 4200 FX Gain & 5400 FX Loss (juga backfill ke seluruh bisnis lama).
 
 ### 2.5 Account Code Generation (Smart Auto-Code)
 
@@ -283,6 +287,8 @@ Selain simple 2-line (1 debit + 1 credit), sistem mendukung **compound/multi-lin
   - Pengeluaran: debit → EXPENSE atau ASSET, kredit → ASSET atau LIABILITY
   - Terima Pinjaman: debit → ASSET atau EXPENSE (biaya layanan, admin fee, provisi), kredit → LIABILITY saja
 - Saat disimpan dalam mode multi-line, data dikirim via `createMultiLineTransaction()` (`is_multi_line: true`). Mode single-line tetap menggunakan `createTransaction()` (`is_double_entry: true`).
+
+**Atomic create/update (sejak migrasi 082):** Header transaksi dan baris `journal_lines` sekarang disimpan dalam satu RPC server-side (`create_multi_line_transaction(p_header JSONB, p_lines JSONB)` dan `update_multi_line_transaction(...)`). Sebelumnya API route melakukan INSERT header + INSERT lines sebagai dua request terpisah — jika request kedua gagal, transaksi tertinggal tanpa lines. Route handler `/api/transactions` dan `/api/transactions/[id]/multi-line` sekarang memanggil RPC ini sehingga seluruh mutasi bersifat all-or-nothing. RPC juga memvalidasi: total debit ≈ total kredit (tolerance 0.01), minimal 2 baris, semua akun milik business yang sama, dan tepat satu sisi non-zero per baris.
 
 ### 3.3 Prinsip Accounting Equation
 
@@ -431,6 +437,7 @@ const transactions = useMemo(
               │  Database INSERT         │
               │  • FK to accounts        │
               │  • check_different_accts │
+              │  • set_created_by trigger│
               │  • Audit log trigger     │
               └────────────┬────────────┘
                            │
@@ -439,6 +446,30 @@ const transactions = useMemo(
               │  (client-side, on fetch)│
               └─────────────────────────┘
 ```
+
+### 4.5 Audit Trail: `created_by` Enforcement
+
+Sejak migrasi `080_ensure_created_by_transactions.sql` (19 Mei 2026), tabel `transactions` punya trigger `BEFORE INSERT set_created_by()` yang otomatis mengisi `created_by := auth.uid()` jika request datang dari context terautentikasi. Service-role insert tetap diizinkan dengan NOTICE (untuk jalur import/seed yang tidak punya `auth.uid()`). Backfill 937 transaksi lama dengan `created_by IS NULL` ke business manager dijalankan dalam migrasi yang sama. Jika populasi pasca-backfill bersih, constraint `NOT NULL` di-attach.
+
+API route `/api/transactions` juga secara eksplisit mengisi `created_by` sebagai defense-in-depth, sehingga trigger jadi fail-safe untuk jalur lain (RPC, import bulk).
+
+### 4.6 Multi-Currency Fields
+
+Setiap baris transaksi membawa field FX (default IDR 1:1 untuk transaksi domestik):
+
+| Field | Lokasi | Deskripsi |
+|-------|--------|-----------|
+| `businesses.base_currency_code` | header bisnis | Mata uang fungsional/pelaporan (default `IDR`) |
+| `accounts.currency_code` | per akun | Mata uang denominasi akun (kas USD, piutang USD, dll) |
+| `transactions.currency_code` | per transaksi | Mata uang sumber transaksi |
+| `transactions.original_amount` | per transaksi | Nilai dalam currency sumber |
+| `transactions.amount` | per transaksi | Nilai fungsional (= `original_amount × fx_rate`) — semua kalkulasi laporan pakai field ini |
+| `transactions.fx_rate` | per transaksi | Kurs saat posting |
+| `transactions.fx_rate_date` | per transaksi | Tanggal kurs yang diambil |
+| `transactions.fx_gain_loss_amount` | per transaksi | Realisasi gain/loss FX (>0 gain, <0 loss) — diisi RPC `settle_transaction` |
+| `journal_lines.currency_code` & `fx_rate` | per baris | Mirror field untuk konsistensi compound entries |
+
+Constraint DB: `currency_code ~ '^[A-Z]{3}$'`, `fx_rate > 0`. Helper di `src/lib/currency.ts` (`SUPPORTED_CURRENCIES`, `normalizeCurrencyFields`, `calculateBaseAmount`, `formatMoney`) dan `src/hooks/useFxRate.ts` (auto-fetch kurs ke `/api/market/fx` dengan cache 5 menit).
 
 ---
 
@@ -538,9 +569,18 @@ Untuk bisnis lama yang setup capital sebelum sistem double-entry, nilai `busines
 Card ROI di `app/(dashboard)/dashboard/page.tsx` menampilkan:
 1. **ROI utama** — % atas `grossInvestedCapital`
 2. **Remaining ROI** (jika ada withdrawal) — % atas `remainingInvestedCapital`
-3. **Konteks periode** — "Sejak {bulan tahun} · {n} bulan" dihitung dari tanggal transaksi paling awal
+3. **Konteks periode** — "Sejak {bulan tahun} · {n} bulan" dihitung dari tanggal transaksi paling awal **atau** dari `business.operations_start_date` jika di-set
 
 Konteks periode wajib agar pembaca tidak salah interpretasi: ROI 50% dalam 3 bulan jauh berbeda dari ROI 50% dalam 5 tahun. Annualized ROI belum diimplementasi.
+
+#### Operating ROI vs Holding-Period Return (`operations_start_date`)
+
+Migrasi `076_add_operations_start_date.sql` menambah kolom `businesses.operations_start_date DATE NULL`. Field ini diatur manager via inline date picker di `/businesses/[id]/config`.
+
+- **Jika `operations_start_date IS NULL`** → ROI dihitung dari tanggal transaksi paling awal (holding-period return). Cocok untuk bisnis yang langsung beroperasi sejak hari pertama.
+- **Jika `operations_start_date` di-set** → ROI mode **operating ROI**: dashboard hanya menghitung net profit dari transaksi dengan `date >= operations_start_date`. Label periode juga berubah menjadi "Sejak {operations_start_date} · {n} bulan".
+
+Motivasi: untuk bisnis seperti property/Hillside Studio yang membeli aset berbulan-bulan sebelum mulai menyewa, holding-period return akan terlihat negatif sepanjang fase konstruksi karena ada CAPEX & OPEX tanpa revenue. Operating ROI memberikan denominator periode yang relevan dengan masa operasi aktif. Invested capital (numerator denominator) tetap dihitung kumulatif dari semua transaksi modal (termasuk yang sebelum operasi mulai).
 
 #### Helper
 
@@ -622,6 +662,23 @@ netEquityMovements = totalEquityCredit - totalEquityDebit
 
 Fallback: Jika tidak ada equity transactions dari double-entry DAN `capital_investment > 0`, gunakan `capital_investment` dari business settings.
 
+#### Cap Table (Kepemilikan Dinamis)
+
+Fungsi `calculateCapTable(transactions): CapTable` di `src/lib/calculations.ts` membangun **cap table dinamis** dari saldo akun EQUITY ber-flag `is_stock=true`.
+
+```
+Untuk setiap akun stock:
+  net_kontribusi = sum(credit) - sum(debit)   // net karena penarikan kembali setoran (rare) ikut menyesuaikan
+
+percentage = net_kontribusi / totalContributed × 100
+```
+
+Multi-line aware: iterasi `journal_lines` jika `is_multi_line=true`, fallback ke `debit_account`/`credit_account` untuk simple double-entry. Akun ber-flag `is_dividend=true` **sengaja tidak dihitung** — itu distribusi laba, bukan modal disetor.
+
+**Konsumen:**
+- **Balance Sheet** (`/balance-sheet`): breakdown per pemilik dengan kolom % di section Ekuitas.
+- **Dashboard** (`CapTableWidget`): widget di samping AR Tracker, layout 2/3 + 1/3.
+
 ### 6.4 Retained Earnings
 
 ```
@@ -652,6 +709,8 @@ Revenue (EARN)
 ─────────────────────────
 = Gross Profit
 ─ Operating Expenses (OPEX)
+─────────────────────────
+= EBITDA  (Earnings Before Interest, Tax, Depreciation & Amortization)
 ─ Beban Penyusutan (totalDepreciation, PSAK 16 straight-line)
 ─────────────────────────
 = Operating Income
@@ -662,6 +721,15 @@ Revenue (EARN)
 ─────────────────────────
 = Net Income
 ```
+
+**EBITDA & ebitdaMargin** dihitung di `calculateIncomeStatementMetrics()` (`src/lib/calculations.ts`):
+
+```
+ebitda       = grossProfit - totalOpex
+ebitdaMargin = totalEarn > 0 ? (ebitda / totalEarn) × 100 : 0
+```
+
+Kotak EBITDA muncul di halaman Income Statement di antara OPEX dan Beban Penyusutan; hanya ditampilkan kalau ada depreciation (kalau tidak, EBITDA == Operating Income jadi redundant). Juga muncul di waterfall summary di left panel.
 
 **PENTING:** Financing Costs hanya menampilkan `totalInterest` (FIN yang debit EXPENSE account), bukan semua FIN. FIN yang menyentuh LIABILITY/EQUITY (loan received, capital injection, loan repayment) TIDAK masuk income statement.
 
@@ -1214,6 +1282,32 @@ Kalau true, render section "Pelunasan Dividen" dengan dua tombol:
 - **Pay setelah declare**: Liability berkurang, Kas berkurang — Equity TIDAK kena lagi (sudah berkurang saat declare)
 
 ⚠️ **Common pitfall yang dicegah**: Kalau user pakai pola lama (Dr Dividen / Cr Bank) untuk pay setelah declare, equity akan berkurang 2× dan Hutang Dividen tetap tertinggal di neraca selamanya. Flow declare → pay yang benar adalah `Dr Hutang Dividen / Cr Bank`.
+
+### 14.7 FX Gain/Loss saat Settlement (Multi-Currency)
+
+Sejak migrasi 079, pelunasan piutang/hutang dalam mata uang asing dilakukan via RPC `settle_transaction(p_original_id, p_settlement_data, p_actual_base_amount, p_settlement_amount)`. RPC menghitung selisih kurs antara saat piutang/hutang dicatat (kurs historis) dan saat dilunasi (kurs spot):
+
+```
+v_fx_gain_loss =
+  v_actual_base_amount - v_settlement_amount   (piutang)
+  v_settlement_amount - v_actual_base_amount   (hutang)
+```
+
+Hasil ditulis ke `transactions.fx_gain_loss_amount` (>0 gain, <0 loss). RPC otomatis menambahkan baris journal:
+
+- `v_fx_gain_loss > 0` → tambah baris `Cr 4200 FX Gain` ke entry settlement
+- `v_fx_gain_loss < 0` → tambah baris `Dr 5400 FX Loss` ke entry settlement
+
+Kalau akun 4200/5400 belum ada di bisnis, RPC akan raise exception (akun seharusnya di-provision otomatis oleh migrasi 079 untuk semua bisnis baru maupun lama).
+
+**Contoh piutang USD yang menguat saat dilunasi:**
+```
+Asli (1 Mar):     Dr Piutang USD 1.000 (Rp 15.500.000) / Cr Revenue (Rp 15.500.000)   @ kurs 15.500
+Settlement (1 Apr): Dr Bank IDR 16.000.000 / Cr Piutang USD (Rp 15.500.000)            @ kurs 16.000
+                    Cr 4200 FX Gain Rp 500.000
+```
+
+Hasil: revenue tetap di Rp 15.500.000 (sesuai accrual basis saat transaksi), gain kurs Rp 500.000 muncul sebagai REVENUE line FX Gain di income statement, bukan inflate revenue operasional.
 
 ---
 
