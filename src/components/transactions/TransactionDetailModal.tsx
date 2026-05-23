@@ -591,7 +591,6 @@ export function TransactionDetailModal({
                   title="Kelola kontak"
                 >
                   <span>{transaction.name}</span>
-                  <ExternalLink className="w-3 h-3" />
                 </Link>
               ) : (
                 <span className="font-medium text-gray-700 dark:text-gray-300">-</span>

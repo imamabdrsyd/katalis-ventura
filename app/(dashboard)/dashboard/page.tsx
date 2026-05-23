@@ -13,7 +13,9 @@ import { CategoryBadge } from '@/components/ui/CategoryBadge';
 import { Sparkline } from '@/components/ui/Sparkline';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { FxMiniWidget } from '@/components/market/FxMiniWidget';
+import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import { isTradeReceivableTransaction, isSettled, isSettlementEntry, getOutstandingAmount } from '@/lib/accounting/guidance/receivableSettlement';
+import type { Transaction } from '@/types';
 
 // Lazy-load chart components — chart.js (~6.2 MB) only loads when charts render
 const MonitoringChart = dynamic(() => import('@/components/charts/MonitoringChart'), {
@@ -84,6 +86,7 @@ export default function DashboardPage() {
   // --- Global year + month filter ---
   const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null); // null = Yearly, 0-11 = specific month
+  const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
   const userPickedYearRef = useRef(false);
   const dashboardAnimationKey = `${selectedYear}-${selectedMonth ?? 'year'}-${transactionsLoading ? 'loading' : 'ready'}`;
 
@@ -867,11 +870,11 @@ export default function DashboardPage() {
                     key={transaction.id}
                     role="button"
                     tabIndex={0}
-                    onClick={() => router.push(`/transactions?detail=${encodeURIComponent(transaction.id)}`)}
+                    onClick={() => setDetailTransaction(transaction)}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
-                        router.push(`/transactions?detail=${encodeURIComponent(transaction.id)}`);
+                        setDetailTransaction(transaction);
                       }
                     }}
                     className="cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800"
@@ -926,6 +929,14 @@ export default function DashboardPage() {
           )}
         </div>
       )}
+
+      <TransactionDetailModal
+        transaction={detailTransaction}
+        isOpen={!!detailTransaction}
+        onClose={() => setDetailTransaction(null)}
+        allTransactions={transactions}
+        onTransactionUpdated={setDetailTransaction}
+      />
     </div>
   );
 }
