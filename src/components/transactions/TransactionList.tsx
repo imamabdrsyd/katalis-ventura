@@ -164,6 +164,7 @@ export function TransactionList({
   const { t } = useLanguage();
   const showActions = (onEdit || onDelete || onEnterSelectMode) && !selectMode;
   const allSelected = selectMode && transactions.length > 0 && transactions.every((t) => selectedIds?.has(t.id));
+  const tableColumnCount = 7 + (selectMode ? 1 : 0) + (showActions ? 1 : 0);
 
   // Category filter dropdown state
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
@@ -297,31 +298,6 @@ export function TransactionList({
           <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
           <p className="text-gray-500 dark:text-gray-400">{t.transactions.loadingTransactions}</p>
         </div>
-      </div>
-    );
-  }
-
-  if (transactions.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-          <ClipboardList className="w-8 h-8 text-gray-400 dark:text-gray-500" />
-        </div>
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">
-          {hasActiveFilters ? t.transactions.noTransactionsFiltered : t.transactions.noTransactions}
-        </h3>
-        <p className="text-gray-500 dark:text-gray-400">
-          {hasActiveFilters ? t.transactions.noTransactionsFilteredHint : t.transactions.noTransactionsHint}
-        </p>
-        {hasActiveFilters && onResetFilters && (
-          <button
-            type="button"
-            onClick={onResetFilters}
-            className="mt-5 px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg transition-colors"
-          >
-            {t.common.reset} {t.common.filter}
-          </button>
-        )}
       </div>
     );
   }
@@ -513,7 +489,32 @@ export function TransactionList({
           </tr>
         </thead>
         <tbody>
-          {transactions.map((transaction, index) => {
+          {transactions.length === 0 ? (
+            <tr>
+              <td colSpan={tableColumnCount} className="py-16">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <ClipboardList className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">
+                    {hasActiveFilters ? t.transactions.noTransactionsFiltered : t.transactions.noTransactions}
+                  </h3>
+                  <p className="text-gray-500 dark:text-gray-400">
+                    {hasActiveFilters ? t.transactions.noTransactionsFilteredHint : t.transactions.noTransactionsHint}
+                  </p>
+                  {hasActiveFilters && onResetFilters && (
+                    <button
+                      type="button"
+                      onClick={onResetFilters}
+                      className="mt-5 px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg transition-colors"
+                    >
+                      {t.common.reset} {t.common.filter}
+                    </button>
+                  )}
+                </div>
+              </td>
+            </tr>
+          ) : transactions.map((transaction, index) => {
             const isNewMonth = index > 0 && getMonthKey(transaction.date) !== getMonthKey(transactions[index - 1].date);
             const isHighlighted = highlightAfter && transaction.created_at && transaction.created_at >= highlightAfter;
             const isIdHighlighted = highlightIds?.has(transaction.id);

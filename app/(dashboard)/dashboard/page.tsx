@@ -862,27 +862,40 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {recentTransactions.map((t) => (
-                  <tr key={t.id}>
+                {recentTransactions.map((transaction) => (
+                  <tr
+                    key={transaction.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => router.push(`/transactions?detail=${encodeURIComponent(transaction.id)}`)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        router.push(`/transactions?detail=${encodeURIComponent(transaction.id)}`);
+                      }
+                    }}
+                    className="cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800"
+                    title="Lihat detail transaksi"
+                  >
                     <td className="py-3 pr-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                      {formatRelativeTime(t.created_at, t.date)}
+                      {formatRelativeTime(transaction.created_at, transaction.date)}
                     </td>
                     <td className="py-3 pr-4 text-sm text-gray-800 dark:text-gray-200 font-medium truncate max-w-[200px]">
-                      {t.description || t.name}
+                      {transaction.description || transaction.name}
                     </td>
                     <td className="py-3 pr-4">
-                      <CategoryBadge category={t.category} size="xs" />
+                      <CategoryBadge category={transaction.category} size="xs" />
                     </td>
                     <td className={`py-3 text-sm font-semibold text-right whitespace-nowrap ${
-                      t.amount === 0
+                      transaction.amount === 0
                         ? 'text-gray-500 dark:text-gray-400'
-                        : t.category === 'EARN'
+                        : transaction.category === 'EARN'
                           ? 'text-emerald-500 dark:text-emerald-400'
-                          : (t.category === 'VAR' || t.category === 'OPEX')
+                          : (transaction.category === 'VAR' || transaction.category === 'OPEX')
                             ? 'text-red-500 dark:text-red-400'
                             : 'text-gray-800 dark:text-gray-200'
                     }`}>
-                      {t.category === 'EARN' ? '+' : ''}{formatCurrency(t.amount)}
+                      {transaction.category === 'EARN' ? '+' : ''}{formatCurrency(transaction.amount)}
                     </td>
                   </tr>
                 ))}

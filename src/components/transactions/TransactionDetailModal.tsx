@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import { createPortal } from 'react-dom';
 import { Modal } from '@/components/ui/Modal';
 import type { Transaction, Account, AuditLog, Contact, TransactionAttachment } from '@/types';
@@ -177,6 +178,27 @@ export function TransactionDetailModal({
       (t) => !tags.includes(t) && (q === '' || t.toLowerCase().includes(q))
     );
   }, [allTags, tags, tagInput]);
+
+  const matchedContact = useMemo(() => {
+    if (!transaction?.name) return null;
+    return contacts?.find((contact) =>
+      contact.id === transaction.contact_id ||
+      contact.name.toLowerCase() === transaction.name.toLowerCase()
+    ) ?? null;
+  }, [contacts, transaction?.contact_id, transaction?.name]);
+
+  const contactManageHref = useMemo(() => {
+    if (!transaction) return '#';
+
+    const baseHref = `/businesses/${transaction.business_id}/config?tab=contacts`;
+    if (matchedContact) {
+      return `${baseHref}&contact=${encodeURIComponent(matchedContact.id)}`;
+    }
+
+    return transaction.name
+      ? `${baseHref}&search=${encodeURIComponent(transaction.name)}`
+      : baseHref;
+  }, [matchedContact, transaction]);
 
   // Sync tags from transaction meta
   useEffect(() => {
@@ -559,10 +581,21 @@ export function TransactionDetailModal({
               {transaction.description}
             </p>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-              {contacts?.some((contact: Contact) => contact.name === transaction.name) && (
+              {matchedContact && (
                 <ContactIcon className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
               )}
-              <span className="font-medium text-gray-700 dark:text-gray-300">{transaction.name}</span>
+              {transaction.name ? (
+                <Link
+                  href={contactManageHref}
+                  className="inline-flex items-center gap-1 font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-300 hover:underline underline-offset-2 transition-colors"
+                  title="Kelola kontak"
+                >
+                  <span>{transaction.name}</span>
+                  <ExternalLink className="w-3 h-3" />
+                </Link>
+              ) : (
+                <span className="font-medium text-gray-700 dark:text-gray-300">-</span>
+              )}
               <span className="text-gray-300 dark:text-gray-600">·</span>
               <span>{getNameLabel(transaction.category)}</span>
             </p>

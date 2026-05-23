@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Contact, Phone, Mail, Plus, Search, Pencil, Trash2, User, Building, Users2, Handshake, UserCog, TrendingUp, ArrowDownLeft, ArrowUpRight, Loader2, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { FileUpload } from '@/components/ui/FileUpload';
@@ -89,6 +90,9 @@ interface ContactListProps {
 }
 
 export function ContactList({ businessId, userId, canManage }: ContactListProps) {
+  const searchParams = useSearchParams();
+  const contactParam = searchParams.get('contact');
+  const contactSearchParam = searchParams.get('search') ?? '';
   const [contacts, setContacts] = useState<ContactType[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -144,7 +148,25 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
   }, [fetchContacts]);
 
   useEffect(() => {
-    if (loading || selectedContact || contacts.length === 0) return;
+    if (!contactSearchParam || contactParam) return;
+    setSearch(contactSearchParam);
+  }, [contactParam, contactSearchParam]);
+
+  useEffect(() => {
+    if (loading || contacts.length === 0 || !contactParam) return;
+
+    const contactToShow = contacts.find((contact) => contact.id === contactParam);
+    if (!contactToShow || selectedContact?.id === contactToShow.id) return;
+
+    setSelectedContact(contactToShow);
+    setSearch('');
+    setFilterType('all');
+    window.localStorage.setItem(getContactDetailStorageKey(businessId), contactToShow.id);
+    loadContactTransactions(contactToShow.name);
+  }, [businessId, contactParam, contacts, loadContactTransactions, loading, selectedContact?.id]);
+
+  useEffect(() => {
+    if (loading || selectedContact || contacts.length === 0 || contactParam) return;
 
     const storedContactId = window.localStorage.getItem(getContactDetailStorageKey(businessId));
     const persistedContact = storedContactId
@@ -155,7 +177,7 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
     setSelectedContact(contactToShow);
     window.localStorage.setItem(getContactDetailStorageKey(businessId), contactToShow.id);
     loadContactTransactions(contactToShow.name);
-  }, [businessId, contacts, loadContactTransactions, loading, selectedContact]);
+  }, [businessId, contactParam, contacts, loadContactTransactions, loading, selectedContact]);
 
   const filteredContacts = contacts.filter((c) => {
     const matchSearch =
