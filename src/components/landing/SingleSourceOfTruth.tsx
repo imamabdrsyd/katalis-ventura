@@ -276,8 +276,8 @@ export default function SingleSourceOfTruth({ lang }: { lang: Lang }) {
               </div>
 
               {/* Data sources */}
-              <div className="mt-3.5 pt-3.5 border-t border-primary-100/80 dark:border-primary-900/40 flex flex-wrap items-center gap-2">
-                <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-primary-400 dark:text-primary-600 mr-1">
+              <div className="mt-3.5 pt-3.5 border-t border-primary-100/80 dark:border-primary-900/40 flex items-center gap-2 flex-nowrap overflow-x-auto">
+                <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-primary-400 dark:text-primary-600 mr-1 shrink-0">
                   channels
                 </span>
                 <SourceBadge icon={<IconShopee />} label="Shopee API" color="text-orange-500" />
@@ -681,7 +681,7 @@ function SourceBadge({
   color: string;
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 ring-1 ring-inset ring-gray-200 dark:ring-gray-700 rounded-md px-2.5 py-1">
+    <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800/80 ring-1 ring-inset ring-gray-200 dark:ring-gray-700/80 rounded-md px-2.5 py-1 shrink-0">
       <span className={color}>{icon}</span>
       {label}
     </span>
