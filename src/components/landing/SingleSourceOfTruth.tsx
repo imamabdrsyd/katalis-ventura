@@ -278,11 +278,11 @@ export default function SingleSourceOfTruth({ lang }: { lang: Lang }) {
               {/* Data sources */}
               <div className="mt-3.5 pt-3.5 border-t border-primary-100/80 dark:border-primary-900/40 flex flex-wrap items-center gap-2">
                 <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-primary-400 dark:text-primary-600 mr-1">
-                  sources
+                  channels
                 </span>
                 <SourceBadge icon={<IconShopee />} label="Shopee" color="text-orange-500" />
                 <SourceBadge icon={<IconTelegram />} label="Telegram Bot" color="text-sky-500" />
-                <SourceBadge icon={<IconOCR />} label="OCR Scan" color="text-violet-500" />
+                <SourceBadge icon={<IconOCR />} label="OCR Scan" color="text-primary-500" />
               </div>
               </div>
             </div>
