@@ -189,6 +189,8 @@ export interface Translations {
     fullForm: string;
     noTransactions: string;
     noTransactionsHint: string;
+    noTransactionsFiltered: string;
+    noTransactionsFilteredHint: string;
     loadingTransactions: string;
     subject: string;
     cashFlowDir: string;

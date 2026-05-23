@@ -29,6 +29,8 @@ interface TransactionListProps {
   closedUntilDate?: string | null;
   rowOffset?: number;
   contacts?: Contact[];
+  hasActiveFilters?: boolean;
+  onResetFilters?: () => void;
 }
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
@@ -156,6 +158,8 @@ export function TransactionList({
   closedUntilDate,
   rowOffset = 0,
   contacts = [],
+  hasActiveFilters = false,
+  onResetFilters,
 }: TransactionListProps) {
   const { t } = useLanguage();
   const showActions = (onEdit || onDelete || onEnterSelectMode) && !selectMode;
@@ -303,8 +307,21 @@ export function TransactionList({
         <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
           <ClipboardList className="w-8 h-8 text-gray-400 dark:text-gray-500" />
         </div>
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">{t.transactions.noTransactions}</h3>
-        <p className="text-gray-500 dark:text-gray-400">{t.transactions.noTransactionsHint}</p>
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">
+          {hasActiveFilters ? t.transactions.noTransactionsFiltered : t.transactions.noTransactions}
+        </h3>
+        <p className="text-gray-500 dark:text-gray-400">
+          {hasActiveFilters ? t.transactions.noTransactionsFilteredHint : t.transactions.noTransactionsHint}
+        </p>
+        {hasActiveFilters && onResetFilters && (
+          <button
+            type="button"
+            onClick={onResetFilters}
+            className="mt-5 px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg transition-colors"
+          >
+            {t.common.reset} {t.common.filter}
+          </button>
+        )}
       </div>
     );
   }

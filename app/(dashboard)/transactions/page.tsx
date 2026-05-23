@@ -174,12 +174,13 @@ function TransactionsPageInner() {
   // Tag filter state
   const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);
 
-  // Collect all unique tags from all transactions
+  // Collect all unique tags from the full transaction dataset so tag chips
+  // stay available even when the current page/filter result is empty.
   const allTags = useMemo(() => {
     const set = new Set<string>();
-    transactions.forEach((t) => t.meta?.tags?.forEach((tag) => set.add(tag)));
+    allTransactions.forEach((t) => t.meta?.tags?.forEach((tag) => set.add(tag)));
     return Array.from(set).sort();
-  }, [transactions]);
+  }, [allTransactions]);
 
   // Apply tag filter on top of visibleTransactions
   const tagFilteredTransactions = useMemo(() => {
@@ -237,6 +238,23 @@ function TransactionsPageInner() {
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
   };
+
+  const hasActiveTransactionFilters = statusFilter !== 'all'
+    || Boolean(categoryFilter)
+    || Boolean(contactFilter)
+    || Boolean(dateRange.start)
+    || Boolean(dateRange.end)
+    || activeTagFilters.length > 0;
+
+  const resetTransactionFilters = useCallback(() => {
+    setActiveView('transactions');
+    setStatusFilter('all');
+    setCategoryFilter('');
+    setContactFilter('');
+    setDateRange({ start: '', end: '' });
+    setActiveTagFilters([]);
+    setCurrentPage(1);
+  }, [setCategoryFilter, setContactFilter, setCurrentPage, setDateRange, setStatusFilter]);
 
   // Highlight recently imported transactions
   const [highlightAfter, setHighlightAfter] = useState<string | null>(null);
@@ -421,7 +439,7 @@ function TransactionsPageInner() {
         <div className="flex items-center mb-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-1 flex-1">
             <button
-              onClick={() => { setActiveView('transactions'); setStatusFilter('all'); }}
+              onClick={resetTransactionFilters}
               className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                 activeView === 'transactions' && statusFilter === 'all'
                   ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
@@ -606,6 +624,8 @@ function TransactionsPageInner() {
             closedUntilDate={closedUntilDate}
             rowOffset={(currentPage - 1) * rowsPerPage}
             contacts={contacts}
+            hasActiveFilters={hasActiveTransactionFilters}
+            onResetFilters={resetTransactionFilters}
           />
         </div>
 

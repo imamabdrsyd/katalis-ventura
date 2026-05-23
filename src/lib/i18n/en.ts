@@ -183,6 +183,8 @@ export const en: Translations = {
     fullForm: 'Add Transaction (Full Form)',
     noTransactions: 'No transactions yet',
     noTransactionsHint: 'Start by adding your first transaction',
+    noTransactionsFiltered: 'No transactions match these filters',
+    noTransactionsFilteredHint: 'Reset the filters to show all transactions again',
     loadingTransactions: 'Loading transactions...',
     subject: 'Contact',
     cashFlowDir: 'Cash Flow',

@@ -183,6 +183,8 @@ export const id: Translations = {
     fullForm: 'Tambah Transaksi (Form Lengkap)',
     noTransactions: 'Belum ada transaksi',
     noTransactionsHint: 'Mulai dengan menambahkan transaksi pertama Anda',
+    noTransactionsFiltered: 'Tidak ada transaksi yang cocok dengan filter ini',
+    noTransactionsFilteredHint: 'Reset filter untuk menampilkan semua transaksi lagi',
     loadingTransactions: 'Memuat transaksi...',
     subject: 'Kontak',
     cashFlowDir: 'Arus Kas',
