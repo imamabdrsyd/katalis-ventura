@@ -9,7 +9,7 @@ const copy = {
   id: {
     engineLabel: 'Journal Entry Ledger',
     engineSub: 'Catat sekali',
-    engineCaption: 'Sumber tunggal',
+    engineCaption: 'Single Source of Truth',
     calcCaption: 'Logic engine',
     calcLabel: 'calculations.ts',
     calcSub: 'Query & Aggregate',
@@ -36,7 +36,7 @@ const copy = {
   en: {
     engineLabel: 'Journal Entry Ledger',
     engineSub: 'Record once',
-    engineCaption: 'Single source',
+    engineCaption: 'Single Source of Truth',
     calcCaption: 'Logic engine',
     calcLabel: 'calculations.ts',
     calcSub: 'Query & Aggregate',
@@ -253,7 +253,7 @@ export default function SingleSourceOfTruth({ lang }: { lang: Lang }) {
                   />
                 </>
               )}
-              <div className="relative rounded-2xl border border-primary-200 dark:border-primary-800/60 bg-gradient-to-b from-primary-50/80 to-white dark:from-primary-950/60 dark:via-gray-900 dark:to-gray-900 p-5 md:p-6 shadow-[0_12px_40px_-16px_rgba(99,102,241,0.45)] dark:shadow-[0_12px_40px_-16px_rgba(99,102,241,0.55)]">
+              <div className="relative rounded-2xl border border-primary-200 dark:border-primary-800/60 bg-gradient-to-b from-primary-50/80 to-white dark:[background:none] dark:bg-gray-900 p-5 md:p-6 shadow-[0_12px_40px_-16px_rgba(99,102,241,0.45)] dark:shadow-[0_12px_40px_-16px_rgba(99,102,241,0.55)]">
               <div className="flex items-start justify-between gap-4 mb-4">
                 <div className="min-w-0">
                   <p className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100 leading-tight">
@@ -280,7 +280,7 @@ export default function SingleSourceOfTruth({ lang }: { lang: Lang }) {
                 <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-primary-400 dark:text-primary-600 mr-1">
                   channels
                 </span>
-                <SourceBadge icon={<IconShopee />} label="Shopee" color="text-orange-500" />
+                <SourceBadge icon={<IconShopee />} label="Shopee API" color="text-orange-500" />
                 <SourceBadge icon={<IconTelegram />} label="Telegram Bot" color="text-sky-500" />
                 <SourceBadge icon={<IconOCR />} label="OCR Scan" color="text-primary-500" />
               </div>
