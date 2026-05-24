@@ -585,6 +585,17 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
           className="flex items-center gap-2 text-gray-800 dark:text-gray-200 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
         >
           <span className="font-semibold">{activeBusiness?.business_name || t.nav.selectBusiness}</span>
+          {activeBusiness?.business_type && (
+            <span className="flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+              {activeBusiness.business_type === 'jasa'
+                ? t.businessForm.categoryJasa
+                : activeBusiness.business_type === 'produk'
+                ? t.businessForm.categoryProduk
+                : activeBusiness.business_type === 'dagang'
+                ? t.businessForm.categoryDagang
+                : null}
+            </span>
+          )}
           <ChevronDown className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
         </button>
 

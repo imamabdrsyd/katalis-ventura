@@ -167,8 +167,8 @@ database/
 ### Tabel Inti
 
 **`businesses`** — Entitas bisnis
-- `id`, `business_name`, `business_type` (agribusiness, food_and_beverage, accommodation, short_term_rental, real_estate, creative_agency, personal_care, property_management)
-- `business_category` ('jasa'|'produk'|'dagang'), `capital_investment` NUMERIC
+- `id`, `business_name`, `business_sector` (agribusiness, food_and_beverage, accommodation, short_term_rental, real_estate, creative_agency, personal_care, property_management)
+- `business_type` ('jasa'|'produk'|'dagang'), `capital_investment` NUMERIC
 - `property_address`, `property_details` JSONB, `is_archived`
 - Audit: `created_by`, `updated_by`, `created_at`, `updated_at`
 
