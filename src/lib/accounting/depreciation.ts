@@ -97,12 +97,23 @@ export function calculateDepreciationSummary(
 
     // Period depreciation: only months within [startDate, reportDate]
     if (startDate) {
-      const monthsAtStart = getMonthsElapsed(acquisitionDate, startDate);
-      const monthsAtEnd = getMonthsElapsed(acquisitionDate, reportDate);
-      const cappedStart = Math.min(Math.max(0, monthsAtStart), account.useful_life_months!);
-      const cappedEnd = Math.min(Math.max(0, monthsAtEnd), account.useful_life_months!);
-      const periodMonths = cappedEnd - cappedStart;
-      periodDepreciation += result.monthlyDepreciation * Math.max(0, periodMonths);
+      // Count calendar months overlapping the period.
+      // A month is counted if the asset was acquired before or during that month
+      // and the month falls within [startDate, endDate].
+      // We iterate from the first calendar month of startDate to the last of reportDate.
+      const periodStart = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      const periodEnd = new Date(reportDate.getFullYear(), reportDate.getMonth(), 1);
+      let periodMonths = 0;
+      const cursor = new Date(periodStart);
+      while (cursor <= periodEnd) {
+        // Month number since acquisition (1-indexed: first month = month 1)
+        const monthNum = getMonthsElapsed(acquisitionDate, cursor) + 1;
+        if (monthNum > 0 && monthNum <= account.useful_life_months!) {
+          periodMonths++;
+        }
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
+      periodDepreciation += result.monthlyDepreciation * periodMonths;
     } else {
       periodDepreciation += result.accumulatedDepreciation;
     }

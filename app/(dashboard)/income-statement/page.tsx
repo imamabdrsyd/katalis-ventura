@@ -49,15 +49,7 @@ function AccountBreakdownSection({
 }) {
   const [expandedAccount, setExpandedAccount] = useState<string | null>(null);
 
-  if (items.length === 0) {
-    return (
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
-          Tidak ada transaksi
-        </p>
-      </div>
-    );
-  }
+  if (items.length === 0) return null;
 
   const colorClass = amountColor === 'green'
     ? 'text-green-600 dark:text-green-400'
