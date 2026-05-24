@@ -59,6 +59,7 @@ export function BusinessSwitcher() {
         {
           business_name: businessData.business_name,
           business_sector: businessData.business_sector,
+          business_type: businessData.business_type,
           property_address: businessData.property_address,
         },
         user?.id!
