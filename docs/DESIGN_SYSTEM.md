@@ -172,7 +172,8 @@ Preferensikan utility class sebelum menulis classes Tailwind panjang. Yang terse
 |-------|------------------|
 | `.card` | Card default dengan hover lift |
 | `.card-static` | Card tanpa hover (untuk dashboard/detail) |
-| `.btn-primary` | Tombol utama indigo solid |
+| `.btn-primary` | Tombol utama indigo solid — untuk aksi dalam modal/tabel/footer |
+| `.btn-primary-glow` | CTA primer high-emphasis — gradien + glow, untuk auth & form halaman penuh |
 | `.btn-secondary` | Tombol sekunder abu solid |
 | `.btn-outline` | Tombol border primary (aksi penting tapi bukan CTA utama, contoh: Quick Entry) |
 | `.btn-ghost` | Tombol dengan border abu (secondary action, cancel, import) |
@@ -261,10 +262,20 @@ Preferensikan utility class sebelum menulis classes Tailwind panjang. Yang terse
 Semua variant sudah di `globals.css`. Aturan:
 
 - **`.btn-primary`** — 1 aksi utama per view (Submit, Save, Create)
+- **`.btn-primary-glow`** — CTA primer yang perlu lebih menonjol: halaman auth (Sign In, Create Account), onboarding, form simpan transaksi. Gradien `indigo-500→600` + `shadow-indigo-500/20`. Gunakan sebagai pengganti `.btn-primary` saat tombol adalah satu-satunya CTA di layar atau butuh emphasis visual lebih tinggi.
 - **`.btn-ghost`** — aksi sekunder dengan border (Cancel/Batal, Import, Copy, secondary CTA berpasangan dengan primary)
 - **`.btn-secondary`** — aksi netral tanpa border, background abu (filter, toggle mode, aksi yang tidak bersebelahan dengan primary)
 - **`.btn-danger`** — aksi destructive (Delete, Hapus, Disconnect)
 - **`.btn-icon`** — icon-only, tidak ada teks. Wajib `title` + `aria-label`. Contoh: Settings gear, close X di toolbar
+
+**Kapan pakai `.btn-primary` vs `.btn-primary-glow`:**
+
+| Konteks | Variant |
+|---------|---------|
+| Tombol di dalam form multi-field di halaman penuh (Tambah Transaksi, Edit Akun) | `.btn-primary-glow` |
+| Tombol CTA tunggal di halaman auth / onboarding | `.btn-primary-glow` |
+| Tombol di dalam modal, dropdown, row tabel | `.btn-primary` |
+| Tombol berpasangan dengan secondary/cancel di footer modal | `.btn-primary` |
 
 **Ukuran (sudah ter-include):**
 - Default: `px-4 py-2 text-sm` — standar semua button utama
