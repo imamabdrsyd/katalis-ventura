@@ -247,13 +247,15 @@ function BalanceSheetPageInner() {
                   <div className="pl-8 space-y-1.5 py-1">
                     {capTable.entries.map((entry) => (
                       <div key={entry.accountId} className="flex items-center justify-between text-sm">
-                        <span className="text-gray-500 dark:text-gray-400 truncate flex-1 min-w-0 pr-3">
-                          {entry.accountName}
-                        </span>
-                        <div className="flex items-center gap-3 flex-shrink-0">
-                          <span className="text-xs font-medium text-primary-600 dark:text-primary-400 tabular-nums w-12 text-right">
-                            {entry.percentage.toFixed(2)}%
+                        <div className="flex items-center gap-2 min-w-0 flex-1 pr-3">
+                          <span className="text-gray-500 dark:text-gray-400 truncate">
+                            {entry.accountName}
                           </span>
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex-shrink-0">
+                            Share {entry.percentage.toFixed(2)}%
+                          </span>
+                        </div>
+                        <div className="flex items-center flex-shrink-0">
                           <span className="text-gray-600 dark:text-gray-400 tabular-nums">
                             {formatCurrency(entry.contributed)}
                           </span>
