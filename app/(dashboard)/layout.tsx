@@ -685,7 +685,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
         {/* Search */}
         <button
           onClick={() => setIsSearchOpen(true)}
-          className="hidden md:flex items-center gap-2 px-4 py-1.5 text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-colors border border-gray-200 dark:border-gray-600 min-w-[220px]"
+          className="hidden md:flex items-center gap-2 px-4 py-1.5 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/60 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors border border-gray-300 dark:border-gray-600 min-w-[220px]"
         >
           <Search className="w-4 h-4" />
           <span>{t.nav.searchPlaceholder}</span>
