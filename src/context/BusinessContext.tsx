@@ -67,8 +67,8 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
 
       setUser(user);
 
-      // Batch profile + business membership queries in parallel (saves ~200-300ms)
-      const [profileResult, rolesResult, createdBusinessesResult] = await Promise.all([
+      // Batch profile + membership queries in parallel
+      const [profileResult, rolesResult] = await Promise.all([
         supabase
           .from('profiles')
           .select('default_role')
@@ -76,17 +76,30 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
           .single(),
         supabase
           .from('user_business_roles')
-          .select('role, business_id, businesses(*)')
+          .select('role, business_id')
           .eq('user_id', user.id),
-        supabase
-          .from('businesses')
-          .select('*')
-          .eq('created_by', user.id),
       ]);
 
       const { data: profile } = profileResult;
       const { data: rolesData, error: rolesError } = rolesResult;
-      const { data: createdBusinessesData } = createdBusinessesResult;
+
+      // Collect all business IDs the user is linked to (member or creator)
+      const memberBusinessIds = (rolesData || []).map((r) => r.business_id);
+
+      // Fetch all businesses in one query with select('*') so every column
+      // (including business_type) is always present — avoids join stripping columns
+      const { data: createdBusinessesData } = await supabase
+        .from('businesses')
+        .select('*')
+        .eq('created_by', user.id);
+
+      const allBusinessIds = Array.from(
+        new Set([...memberBusinessIds, ...(createdBusinessesData || []).map((b) => b.id)])
+      );
+
+      const { data: allBusinessesData } = allBusinessIds.length > 0
+        ? await supabase.from('businesses').select('*').in('id', allBusinessIds)
+        : { data: [] };
 
       const userIsSuperadmin = normalizeRole(profile?.default_role) === 'superadmin';
       setIsSuperadmin(userIsSuperadmin);
@@ -121,22 +134,14 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
       let businessList: Business[];
       let primaryRole: UserRole;
 
-      // Extract businesses and determine user role.
-      // Super Admin is membership-scoped: no invisible global business access.
-      const membershipBusinesses = (rolesData || [])
-        .map((item) => item.businesses as unknown as Business)
-        .filter((b): b is Business => b !== null && !b.is_archived);
-      const createdBusinesses = (createdBusinessesData || [])
-        .filter((b): b is Business => b !== null && !b.is_archived);
-      const businessById = new Map<string, Business>();
-      [...membershipBusinesses, ...createdBusinesses].forEach((business) => {
-        businessById.set(business.id, business);
-      });
-      businessList = Array.from(businessById.values());
+      // Build business list from the full select('*') fetch — ensures all columns
+      // (including business_type) are always present regardless of join behaviour.
+      businessList = (allBusinessesData || []).filter((b): b is Business => !b.is_archived);
 
       const roles = (rolesData || []).map((item) => item.role);
+      const hasCreatedBusiness = (createdBusinessesData || []).length > 0;
       primaryRole = userIsSuperadmin ? 'superadmin' : pickHighestRole(
-        createdBusinesses.length > 0 ? [...roles, 'business_manager'] : roles
+        hasCreatedBusiness ? [...roles, 'business_manager'] : roles
       );
 
       setBusinesses(businessList);
