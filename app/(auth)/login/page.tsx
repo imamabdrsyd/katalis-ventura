@@ -136,7 +136,7 @@ export default function LoginPage() {
           </Link>
         </div>
 
-        <button type="submit" disabled={loading} className="btn-primary w-full py-3">
+        <button type="submit" disabled={loading} className="btn-primary-glow w-full py-3">
           {loading ? 'Enter AXION...' : 'Sign In'}
         </button>
       </form>
