@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
+import type { User } from '@supabase/supabase-js';
 import type { Business } from '@/types';
 
 interface UseBusinessReturn {
-  user: any;
+  user: User | null;
   business: Business | null;
   businessId: string | null;
   loading: boolean;
@@ -14,7 +15,7 @@ interface UseBusinessReturn {
 }
 
 export function useBusiness(): UseBusinessReturn {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [business, setBusiness] = useState<Business | null>(null);
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
