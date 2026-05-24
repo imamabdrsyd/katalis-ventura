@@ -305,7 +305,7 @@ function ArApPageInner() {
         {/* Period Filter */}
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-gray-400" />
-          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+          <div className="flex bg-[#EEF0F2] dark:bg-gray-800 rounded-lg p-0.5">
             {(['month', 'quarter', 'year', 'custom'] as Period[]).map((p) => (
               <button
                 key={p}

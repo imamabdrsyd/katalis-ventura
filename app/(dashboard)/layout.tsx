@@ -1176,7 +1176,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   }, [sidebarOpen]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-[#F7F8FA] dark:bg-gray-900">
       {/* Fixed Sidebar */}
       <Sidebar
         isOpen={sidebarOpen}

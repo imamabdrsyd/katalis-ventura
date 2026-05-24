@@ -59,7 +59,7 @@ export function Tabs<T extends string = string>({
 
   return (
     <div className={`${wrapperCls} ${className ?? ''}`}>
-      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-[#EEF0F2] dark:bg-gray-800 rounded-xl p-1 w-fit">
         {visibleTabs.map((tab) => (
           <button
             key={tab.value}

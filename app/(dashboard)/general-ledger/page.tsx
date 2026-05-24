@@ -155,7 +155,7 @@ function GeneralLedgerPageInner() {
             </div>
           ) : (
             /* Normal mode: pill buttons */
-            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+            <div className="flex bg-[#EEF0F2] dark:bg-gray-800 rounded-lg p-0.5">
               <button
                 onClick={handleAllTime}
                 className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${

@@ -359,7 +359,7 @@ export default function DashboardPage() {
         <div className="flex-1 min-w-0 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <div className="flex items-center gap-2 min-w-max">
           {/* Year nav pill */}
-          <div className="inline-flex items-center gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 shadow-sm">
+          <div className="inline-flex items-center gap-0.5 bg-[#EEF0F2] dark:bg-gray-800 rounded-xl p-1 shadow-sm">
             <button
               onClick={() => {
                 userPickedYearRef.current = true;
@@ -388,7 +388,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Month tabs pill */}
-          <div className="inline-flex items-center gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 shadow-sm">
+          <div className="inline-flex items-center gap-0.5 bg-[#EEF0F2] dark:bg-gray-800 rounded-xl p-1 shadow-sm">
             <button
               onClick={() => setSelectedMonth(null)}
               className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
