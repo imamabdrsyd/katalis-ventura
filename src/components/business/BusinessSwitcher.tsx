@@ -7,6 +7,7 @@ import { BusinessForm, type BusinessFormData } from './BusinessForm';
 import * as businessesApi from '@/lib/api/businesses';
 import Image from 'next/image';
 import { Building2, Palette, Heart, Wheat, UtensilsCrossed, Home, Plus, UserPlus } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
   agribusiness: <Wheat className="w-4 h-4" />,
@@ -21,7 +22,18 @@ const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
 
 export function BusinessSwitcher() {
   const { user, businesses, activeBusiness, setActiveBusiness, userRole, refetch } = useBusinessContext();
+  const { t } = useLanguage();
   const isInvestor = userRole === 'investor';
+
+  const businessTypeBadge = (type?: string) => {
+    if (!type) return null;
+    const map: Record<string, string> = {
+      jasa: t.businessForm.categoryJasa,
+      produk: t.businessForm.categoryProduk,
+      dagang: t.businessForm.categoryDagang,
+    };
+    return map[type] ?? null;
+  };
   const [isOpen, setIsOpen] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -89,8 +101,15 @@ export function BusinessSwitcher() {
           )}
         </div>
         <div className="flex-1 text-left min-w-0">
-          <div className="text-sm font-semibold text-gray-800 truncate">
-            {activeBusiness.business_name}
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
+              {activeBusiness.business_name}
+            </span>
+            {businessTypeBadge(activeBusiness.business_type) && (
+              <span className="flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                {businessTypeBadge(activeBusiness.business_type)}
+              </span>
+            )}
           </div>
         </div>
         <svg
