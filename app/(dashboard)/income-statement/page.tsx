@@ -381,9 +381,9 @@ function IncomeStatementPageInner() {
                   <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Revenue</h3>
                 </div>
                 <AccountBreakdownSection items={lineItems.revenue} onTransactionClick={setSelectedTransaction} amountColor="green" />
-                <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
-                  <span className="text-gray-800 dark:text-gray-100">Total Revenue</span>
-                  <span className={summary.totalEarn === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-green-600 dark:text-green-400'}>{formatCurrency(summary.totalEarn)}</span>
+                <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 border-t border-gray-200 dark:border-gray-700 mt-1">
+                  <span className="text-gray-800 dark:text-gray-100 font-normal">Total Revenue</span>
+                  <span className={`font-semibold ${summary.totalEarn === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-green-600 dark:text-green-400'}`}>{formatCurrency(summary.totalEarn)}</span>
                 </div>
               </div>
 
@@ -393,9 +393,9 @@ function IncomeStatementPageInner() {
                   <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Cost of Revenue</h3>
                 </div>
                 <AccountBreakdownSection items={lineItems.cogs} onTransactionClick={setSelectedTransaction} amountColor="red" />
-                <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
-                  <span className="text-gray-800 dark:text-gray-100">Total Cost of Revenue</span>
-                  <span className={summary.totalVar === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-red-500 dark:text-red-400'}>({formatCurrency(summary.totalVar)})</span>
+                <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 border-t border-gray-200 dark:border-gray-700 mt-1">
+                  <span className="text-gray-800 dark:text-gray-100 font-normal">Total Cost of Revenue</span>
+                  <span className={`font-semibold ${summary.totalVar === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-red-500 dark:text-red-400'}`}>({formatCurrency(summary.totalVar)})</span>
                 </div>
               </div>
 
@@ -433,9 +433,9 @@ function IncomeStatementPageInner() {
                   <h3 className="font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">Operating Expenses</h3>
                 </div>
                 <AccountBreakdownSection items={lineItems.opex} onTransactionClick={setSelectedTransaction} amountColor="red" />
-                <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
-                  <span className="text-gray-800 dark:text-gray-100">Total Operating Expenses</span>
-                  <span className={summary.totalOpex === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-red-500 dark:text-red-400'}>({formatCurrency(summary.totalOpex)})</span>
+                <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 border-t border-gray-200 dark:border-gray-700 mt-1">
+                  <span className="text-gray-800 dark:text-gray-100 font-normal">Total Operating Expenses</span>
+                  <span className={`font-semibold ${summary.totalOpex === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-red-500 dark:text-red-400'}`}>({formatCurrency(summary.totalOpex)})</span>
                 </div>
               </div>
 
@@ -477,9 +477,9 @@ function IncomeStatementPageInner() {
                     <span className="text-gray-600 dark:text-gray-400">Penyusutan Aset Tetap (Straight-Line)</span>
                     <span className="text-red-500 dark:text-red-400">({formatCurrency(summary.totalDepreciation)})</span>
                   </div>
-                  <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
-                    <span className="text-gray-800 dark:text-gray-100">Total Beban Penyusutan</span>
-                    <span className="text-red-500 dark:text-red-400">({formatCurrency(summary.totalDepreciation)})</span>
+                  <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 border-t border-gray-200 dark:border-gray-700 mt-1">
+                    <span className="text-gray-800 dark:text-gray-100 font-normal">Total Beban Penyusutan</span>
+                    <span className="text-red-500 dark:text-red-400 font-semibold">({formatCurrency(summary.totalDepreciation)})</span>
                   </div>
                 </div>
               )}

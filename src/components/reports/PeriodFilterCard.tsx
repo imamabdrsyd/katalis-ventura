@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Calendar, Download, ChevronDown } from 'lucide-react';
+import { useRef, useState, useEffect } from 'react';
+import { Calendar, ChevronLeft, ChevronRight, Download, FileText, FileSpreadsheet } from 'lucide-react';
 import type { Period } from '@/hooks/useReportData';
 
 interface PeriodFilterCardProps {
@@ -31,8 +31,20 @@ export function PeriodFilterCard({
   isExporting = false,
   months,
 }: PeriodFilterCardProps) {
-  const [isDateInputsExpanded, setIsDateInputsExpanded] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+    if (showExportMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showExportMenu]);
 
   const monthDropdownYear = (() => {
     const year = Number(startDate.slice(0, 4));
@@ -50,6 +62,26 @@ export function PeriodFilterCard({
     return endDay === lastDay ? `${startYear}-${String(startMonth).padStart(2, '0')}` : '';
   })();
 
+  // Detect kuartal mana yang sedang aktif (Q1-Q4)
+  const selectedQuarterValue = (() => {
+    if (!startDate || !endDate) return '';
+    const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+    if (!startYear || !startMonth || !startDay || !endYear || !endMonth || !endDay) return '';
+    if (startYear !== endYear || startDay !== 1) return '';
+
+    // Q1: Jan 1 - Mar 31, Q2: Apr 1 - Jun 30, Q3: Jul 1 - Sep 30, Q4: Oct 1 - Dec 31
+    const quarterMap: Record<string, number> = {
+      '1-3-31': 1,
+      '4-6-30': 2,
+      '7-9-30': 3,
+      '10-12-31': 4,
+    };
+    const key = `${startMonth}-${endMonth}-${endDay}`;
+    const q = quarterMap[key];
+    return q ? `${startYear}-Q${q}` : '';
+  })();
+
   const handleMonthDropdownChange = (value: string) => {
     if (!value) return;
 
@@ -62,191 +94,241 @@ export function PeriodFilterCard({
     onPeriodChange('custom');
   };
 
-  const periodOptions: { value: Period; label: string; description: string }[] = [
-    { value: 'month', label: 'Bulan Ini', description: 'Current month' },
-    { value: 'quarter', label: 'Kuartal', description: 'Current quarter' },
-    { value: 'year', label: 'Tahun Ini', description: 'Current year' },
-  ];
+  // Tentukan bulan aktif (dari selectedMonthValue atau bulan sekarang sbg default)
+  const activeMonth = (() => {
+    if (selectedMonthValue) {
+      const [y, m] = selectedMonthValue.split('-').map(Number);
+      return { year: y, month: m };
+    }
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() + 1 };
+  })();
 
-  const formattedStartDate = startDate ? new Date(startDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-  const formattedEndDate = endDate ? new Date(endDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+  const activeMonthLabel = months[activeMonth.month - 1] ?? '';
+
+  const handleMonthShift = (delta: number) => {
+    let newMonth = activeMonth.month + delta;
+    let newYear = activeMonth.year;
+    if (newMonth < 1) {
+      newMonth = 12;
+      newYear -= 1;
+    } else if (newMonth > 12) {
+      newMonth = 1;
+      newYear += 1;
+    }
+    handleMonthDropdownChange(`${newYear}-${String(newMonth).padStart(2, '0')}`);
+  };
+
+  const handleQuarterDropdownChange = (value: string) => {
+    if (!value) return;
+
+    const [yearStr, qStr] = value.split('-Q');
+    const year = Number(yearStr);
+    const quarter = Number(qStr);
+    if (!year || !quarter || quarter < 1 || quarter > 4) return;
+
+    // Q1: Jan-Mar, Q2: Apr-Jun, Q3: Jul-Sep, Q4: Oct-Dec
+    const startMonth = (quarter - 1) * 3 + 1;
+    const endMonth = quarter * 3;
+    const endDay = new Date(year, endMonth, 0).getDate();
+
+    onStartDateChange(`${year}-${String(startMonth).padStart(2, '0')}-01`);
+    onEndDateChange(`${year}-${String(endMonth).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`);
+    onPeriodChange('custom');
+  };
+
+  // Kuartal saat ini berdasarkan tanggal hari ini
+  const currentQuarter = Math.floor(new Date().getMonth() / 3) + 1;
+  const currentYear = new Date().getFullYear();
+
+  const hasMultipleExports = onExportPDF && onExportExcel;
+
+  const handleSingleExport = () => {
+    if (onExport) onExport();
+    else if (onExportPDF) onExportPDF();
+    else if (onExportExcel) onExportExcel();
+  };
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-      {/* Header */}
-      <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-800">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Periode Laporan
-        </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Pilih rentang tanggal untuk laporan keuangan
-        </p>
-      </div>
-
-      {/* Content */}
-      <div className="px-6 py-6 space-y-6">
-        {/* Period Buttons */}
-        <div className="space-y-3">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Periode Cepat
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
+      <div className="space-y-4">
+        {/* Period Label + Buttons + Month Dropdown — all in one row, wraps */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-800 dark:text-gray-100 mb-3">
+            Periode
           </label>
-          <div className="grid grid-cols-3 gap-2">
-            {periodOptions.map(({ value, label }) => (
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Month picker — prev | dropdown | next (chevron down dihilangkan, klik teks bulan untuk buka dropdown) */}
+            <div
+              className={`flex items-stretch rounded-lg ${
+                selectedMonthValue && period === 'custom'
+                  ? 'bg-indigo-100 dark:bg-indigo-900/40'
+                  : 'bg-gray-100 dark:bg-gray-800'
+              }`}
+            >
               <button
-                key={value}
-                onClick={() => onPeriodChange(value)}
-                className={`relative px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 overflow-hidden group ${
-                  period === value
-                    ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                type="button"
+                onClick={() => handleMonthShift(-1)}
+                aria-label="Bulan sebelumnya"
+                className={`pl-2 pr-1 flex items-center justify-center cursor-pointer transition-colors rounded-l-lg ${
+                  selectedMonthValue && period === 'custom'
+                    ? 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200/60 dark:hover:bg-indigo-800/40'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
               >
-                <span className="relative z-10">{label}</span>
-                {period === value && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-400/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                )}
+                <ChevronLeft className="w-4 h-4" />
               </button>
-            ))}
-          </div>
-        </div>
 
-        {/* Month Dropdown */}
-        <div className="space-y-3">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Pilih Bulan
-          </label>
-          <div className="relative">
-            <select
-              value={selectedMonthValue}
-              onChange={(e) => handleMonthDropdownChange(e.target.value)}
-              className={`w-full appearance-none px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 outline-none cursor-pointer ${
-                selectedMonthValue && period === 'custom'
-                  ? 'bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 text-indigo-900 dark:text-indigo-100'
-                  : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
-              aria-label="Pilih bulan laporan"
-            >
-              <option value="">Pilih Bulan...</option>
-              {months.map((monthName, index) => {
-                const month = String(index + 1).padStart(2, '0');
-                return (
-                  <option key={month} value={`${monthDropdownYear}-${month}`}>
-                    {monthName} {monthDropdownYear}
-                  </option>
-                );
-              })}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
-          </div>
-        </div>
+              <select
+                value={selectedMonthValue || `${activeMonth.year}-${String(activeMonth.month).padStart(2, '0')}`}
+                onChange={(e) => handleMonthDropdownChange(e.target.value)}
+                className={`appearance-none bg-transparent px-1 py-2 text-sm font-medium outline-none cursor-pointer text-center ${
+                  selectedMonthValue && period === 'custom'
+                    ? 'text-indigo-600 dark:text-indigo-400'
+                    : 'text-gray-700 dark:text-gray-300'
+                }`}
+                aria-label="Pilih bulan laporan"
+              >
+                {months.map((monthName, index) => {
+                  const month = String(index + 1).padStart(2, '0');
+                  return (
+                    <option key={month} value={`${monthDropdownYear}-${month}`}>
+                      {monthName}
+                    </option>
+                  );
+                })}
+              </select>
 
-        {/* Custom Date Range */}
-        <div>
-          <button
-            onClick={() => setIsDateInputsExpanded(!isDateInputsExpanded)}
-            className="w-full px-4 py-2.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-between group"
-          >
-            <span className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-              Tanggal Kustom
-            </span>
-            <ChevronDown className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${isDateInputsExpanded ? 'rotate-180' : ''}`} />
-          </button>
-
-          {isDateInputsExpanded && (
-            <div className="mt-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg space-y-3 border border-gray-200 dark:border-gray-700 animate-in fade-in slide-in-from-top-2">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
-                    Tanggal Mulai
-                  </label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => {
-                      onStartDateChange(e.target.value);
-                      onPeriodChange('custom');
-                    }}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
-                    Tanggal Akhir
-                  </label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => {
-                      onEndDateChange(e.target.value);
-                      onPeriodChange('custom');
-                    }}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors"
-                  />
-                </div>
-              </div>
-              {formattedStartDate && formattedEndDate && (
-                <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{formattedStartDate}</span>
-                    {' '} hingga {' '}
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{formattedEndDate}</span>
-                  </p>
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={() => handleMonthShift(1)}
+                aria-label="Bulan berikutnya"
+                className={`pr-2 pl-1 flex items-center justify-center cursor-pointer transition-colors rounded-r-lg ${
+                  selectedMonthValue && period === 'custom'
+                    ? 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200/60 dark:hover:bg-indigo-800/40'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
-          )}
+
+            {/* Kuartal dropdown — default ke kuartal saat ini (Q2, dll) */}
+            <div className="relative">
+              <select
+                value={selectedQuarterValue || `${currentYear}-Q${currentQuarter}`}
+                onChange={(e) => handleQuarterDropdownChange(e.target.value)}
+                className={`appearance-none pl-4 pr-9 py-2 rounded-lg text-sm font-medium transition-all duration-200 outline-none cursor-pointer ${
+                  selectedQuarterValue
+                    ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+                aria-label="Pilih kuartal laporan"
+              >
+                {[1, 2, 3, 4].map((q) => (
+                  <option key={q} value={`${monthDropdownYear}-Q${q}`}>
+                    Q{q}
+                  </option>
+                ))}
+              </select>
+              <svg
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400 pointer-events-none"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+
+            {/* Tahun Ini */}
+            <button
+              onClick={() => onPeriodChange('year')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
+                period === 'year'
+                  ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
+            >
+              Tahun Ini
+            </button>
+          </div>
+        </div>
+
+        {/* Date Range Inputs */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+              <Calendar className="w-3.5 h-3.5" />
+              Start Date
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                onStartDateChange(e.target.value);
+                onPeriodChange('custom');
+              }}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+              End Date
+            </label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                onEndDateChange(e.target.value);
+                onPeriodChange('custom');
+              }}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors"
+            />
+          </div>
         </div>
 
         {/* Export Button */}
-        <div className="relative">
+        <div className="relative" ref={exportRef}>
           <button
-            onClick={() => setShowExportMenu(!showExportMenu)}
+            onClick={() => {
+              if (hasMultipleExports) {
+                setShowExportMenu(!showExportMenu);
+              } else {
+                handleSingleExport();
+              }
+            }}
             disabled={isExporting}
-            className="w-full px-4 py-3 rounded-lg bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-400 text-white font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md active:scale-95 disabled:cursor-not-allowed"
+            className="w-full px-4 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-100 font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className={`w-4 h-4 ${isExporting ? 'animate-bounce' : ''}`} />
-            {isExporting ? 'Mengunduh...' : 'Unduh Laporan'}
+            {isExporting ? 'Mengunduh...' : 'Export'}
           </button>
 
-          {showExportMenu && (onExportPDF || onExportExcel) && (
-            <div className="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 py-2 z-10">
-              {onExportPDF && (
-                <button
-                  onClick={() => {
-                    onExportPDF();
-                    setShowExportMenu(false);
-                  }}
-                  className="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-3 transition-colors"
-                >
-                  <FileText className="w-4 h-4 text-red-500 flex-shrink-0" />
-                  <span>Unduh sebagai PDF</span>
-                </button>
-              )}
-              {onExportExcel && (
-                <button
-                  onClick={() => {
-                    onExportExcel();
-                    setShowExportMenu(false);
-                  }}
-                  className="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-3 transition-colors"
-                >
-                  <FileSpreadsheet className="w-4 h-4 text-green-500 flex-shrink-0" />
-                  <span>Unduh sebagai Excel</span>
-                </button>
-              )}
+          {showExportMenu && hasMultipleExports && (
+            <div className="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 py-2 z-20">
+              <button
+                onClick={() => {
+                  onExportPDF?.();
+                  setShowExportMenu(false);
+                }}
+                className="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-3 transition-colors cursor-pointer"
+              >
+                <FileText className="w-4 h-4 text-red-500 flex-shrink-0" />
+                <span>Export as PDF</span>
+              </button>
+              <button
+                onClick={() => {
+                  onExportExcel?.();
+                  setShowExportMenu(false);
+                }}
+                className="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-3 transition-colors cursor-pointer"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-green-500 flex-shrink-0" />
+                <span>Export as Excel</span>
+              </button>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Footer Summary */}
-      <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-800">
-        <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
-          <span>Periode Aktif</span>
-          <span className="font-medium text-gray-900 dark:text-gray-100">
-            {formattedStartDate && formattedEndDate ? `${formattedStartDate} – ${formattedEndDate}` : 'Belum dipilih'}
-          </span>
         </div>
       </div>
     </div>
