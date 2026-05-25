@@ -388,13 +388,13 @@ export default function DashboardPage() {
           </div>
 
           {/* Month tabs pill */}
-          <div className="inline-flex items-center gap-0.5 bg-[#EEF0F2] dark:bg-gray-800 rounded-xl p-1 shadow-sm">
+          <div className="inline-flex items-center gap-1.5">
             <button
               onClick={() => setSelectedMonth(null)}
-              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+              className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
                 selectedMonth === null
-                  ? 'bg-white dark:bg-gray-700 text-primary-500 dark:text-primary-400 font-bold shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 font-normal hover:text-gray-700 dark:hover:text-gray-200'
+                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold'
+                  : 'bg-[#EEF0F2] dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-normal hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
             >
               {t.dashboard.yearly}
@@ -403,10 +403,10 @@ export default function DashboardPage() {
               <button
                 key={i}
                 onClick={() => setSelectedMonth(i)}
-                className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
                   selectedMonth === i
-                    ? 'bg-white dark:bg-gray-700 text-primary-500 dark:text-primary-400 font-bold shadow-sm'
-                    : 'text-gray-500 dark:text-gray-400 font-normal hover:text-gray-700 dark:hover:text-gray-200'
+                    ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold'
+                    : 'bg-[#EEF0F2] dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-normal hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
               >
                 {label}
