@@ -29,6 +29,7 @@ export function Tabs<T extends string = string>({
   className,
 }: TabsProps<T>) {
   const visibleTabs = tabs.filter((t) => !t.hidden);
+  const layoutId = React.useId();
 
   const wrapperCls = scrollable
     ? 'overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide'
@@ -64,8 +65,6 @@ export function Tabs<T extends string = string>({
       </div>
     );
   }
-
-  const layoutId = React.useId();
 
   return (
     <div className={`${wrapperCls} ${className ?? ''}`}>
