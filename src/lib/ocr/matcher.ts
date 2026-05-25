@@ -86,11 +86,9 @@ export function matchAccountByKeywords(
   const normalized = normalizeKeywords(keywords);
   if (normalized.length === 0) return undefined;
   let best: { account: Account; score: number } | null = null;
-  const scores: Array<{ name: string; score: number }> = [];
   for (const acc of accounts) {
     const s = scoreAccount(acc, normalized);
     if (s <= 0) continue;
-    scores.push({ name: acc.account_name, score: s });
     if (
       !best ||
       s > best.score ||
@@ -99,8 +97,6 @@ export function matchAccountByKeywords(
       best = { account: acc, score: s };
     }
   }
-  console.log('[OCR Matcher] Keywords:', normalized.map((k) => `${k.keyword}(${k.weight})`));
-  console.log('[OCR Matcher] Scores:', scores.sort((a, b) => b.score - a.score).slice(0, 5));
   return best?.account;
 }
 

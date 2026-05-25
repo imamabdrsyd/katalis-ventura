@@ -7,7 +7,7 @@
     "dev:turbo": "NEXT_TELEMETRY_DISABLED=1 next dev --turbopack --disable-source-maps",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint app src tests --ext .js,.jsx,.ts,.tsx",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

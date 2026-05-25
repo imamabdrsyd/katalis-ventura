@@ -12,6 +12,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import type { TooltipItem } from 'chart.js';
 import type { BudgetVsActualRow } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 
@@ -108,8 +109,7 @@ export function BudgetVsActualChart({ rows }: BudgetVsActualChartProps) {
       },
       tooltip: {
         callbacks: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          label: (ctx: any) =>
+          label: (ctx: TooltipItem<'bar'>) =>
             `${ctx.dataset.label || ''}: ${formatCurrency(ctx.raw as number)}`,
         },
       },

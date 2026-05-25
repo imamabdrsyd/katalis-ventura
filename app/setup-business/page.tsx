@@ -107,7 +107,7 @@ export default function SetupBusinessPage() {
           </div>
           <h1 className="text-2xl font-bold text-gray-800">Setup Your Business</h1>
           <p className="text-gray-500 text-sm mt-2">
-            Let's get your business registered in the system
+            Let&apos;s get your business registered in the system
           </p>
         </div>
 

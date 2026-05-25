@@ -43,7 +43,7 @@ export function DeleteConfirmModal({
           Anda akan menghapus transaksi:
         </p>
         <p className="text-gray-800 dark:text-gray-100 font-medium mb-6 bg-gray-50 dark:bg-gray-700 px-4 py-2 rounded-lg">
-          "{transactionDescription}"
+          &quot;{transactionDescription}&quot;
         </p>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
           Tindakan ini tidak dapat dibatalkan.

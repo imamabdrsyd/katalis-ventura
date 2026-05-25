@@ -11,6 +11,7 @@ import {
   OcrQuotaExceededError,
   scanReceipt,
 } from '@/lib/ocr';
+import { downloadOcrSource, OcrDownloadError } from '@/lib/ocr/download';
 import { withRouteTiming } from '@/lib/api/server/timing';
 
 const bodySchema = z.object({
@@ -23,15 +24,14 @@ const bodySchema = z.object({
     }),
 });
 
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10MB
-
 /**
  * POST /api/ocr/scan
- * Body: { business_id: uuid, image_url: https URL (Cloudinary) }
+ * Body: { business_id: uuid, image_url: allowlisted HTTPS URL }
  * Response: { data: OcrResult }
  *
  * Auth: user harus member dari business_id (manager atau investor).
- * Image: di-fetch server-side, SHA-256 hash, call scanReceipt() (cache → Vision → fallback OCR.space).
+ * Image: di-fetch dari allowlisted storage, SHA-256 hash, call scanReceipt()
+ * (cache → Vision → fallback OCR.space).
  */
 export async function POST(req: NextRequest) {
   return withRouteTiming(req, '/api/ocr/scan', async () => {
@@ -64,27 +64,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Download gambar
     let imageBuffer: Buffer;
     let mimeType = 'image/jpeg';
     try {
-      const res = await fetch(image_url);
-      if (!res.ok) {
-        return NextResponse.json(
-          { error: `Gagal mengunduh gambar (HTTP ${res.status})` },
-          { status: 400 }
-        );
-      }
-      mimeType = res.headers.get('content-type') ?? mimeType;
-      const arrayBuf = await res.arrayBuffer();
-      if (arrayBuf.byteLength > MAX_IMAGE_BYTES) {
-        return NextResponse.json(
-          { error: 'Ukuran gambar melebihi 10MB' },
-          { status: 413 }
-        );
-      }
-      imageBuffer = Buffer.from(arrayBuf);
+      const downloaded = await downloadOcrSource(image_url, business_id);
+      imageBuffer = downloaded.buffer;
+      mimeType = downloaded.mimeType;
     } catch (err) {
+      if (err instanceof OcrDownloadError) {
+        return NextResponse.json({ error: err.message }, { status: err.status });
+      }
       console.error('[ocr/scan] download error:', err);
       return NextResponse.json(
         { error: 'Gagal mengunduh gambar' },

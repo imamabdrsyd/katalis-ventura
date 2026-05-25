@@ -54,22 +54,14 @@ export function OmnichannelWidget({ business, index, businesses = [], onSelectBu
 
   const today = new Date().toISOString().split('T')[0];
 
-  if (!business) {
-    return (
-      <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 p-6 text-center">
-        <p className="text-sm text-gray-400">Pilih bisnis untuk melihat info kontak.</p>
-      </div>
-    );
-  }
-
-  const isJasa = (business.business_type ?? 'jasa') === 'jasa';
-  const hasWhatsApp = !!business.whatsapp_number?.trim();
-  const dateMode = business.widget_date_mode ?? 'double';
-  const labels = business.widget_labels ?? {};
+  const isJasa = (business?.business_type ?? 'jasa') === 'jasa';
+  const hasWhatsApp = !!business?.whatsapp_number?.trim();
+  const dateMode = business?.widget_date_mode ?? 'double';
+  const labels = business?.widget_labels ?? {};
 
   // Hitung pricing breakdown sesuai mode
   const pricing: PricingBreakdown = useMemo(() => {
-    if (!business.show_pricing) {
+    if (!business?.show_pricing) {
       return { lines: [], total: 0, unit: null, has_price: false };
     }
     if (dateMode === 'single') {
@@ -77,6 +69,14 @@ export function OmnichannelWidget({ business, index, businesses = [], onSelectBu
     }
     return computeRangePricing(business, checkin, checkout);
   }, [business, dateMode, date, checkin, checkout]);
+
+  if (!business) {
+    return (
+      <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 p-6 text-center">
+        <p className="text-sm text-gray-400">Pilih bisnis untuk melihat info kontak.</p>
+      </div>
+    );
+  }
 
   const dateLabel = labels.date_label || 'Tanggal Kunjungan';
   const checkinLabel = labels.checkin_label || 'Check-in';

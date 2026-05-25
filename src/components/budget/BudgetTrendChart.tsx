@@ -14,6 +14,7 @@ import {
   Legend,
   Filler,
 } from 'chart.js';
+import type { TooltipItem } from 'chart.js';
 import type { ProjectedMonth } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 
@@ -125,8 +126,7 @@ export function BudgetTrendChart({ projections, projectionMonths, onProjectionMo
       },
       tooltip: {
         callbacks: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          label: (ctx: any) => {
+          label: (ctx: TooltipItem<'line'>) => {
             if (ctx.raw === null) return '';
             return `${ctx.dataset.label || ''}: ${formatCurrency(ctx.raw as number)}`;
           },
