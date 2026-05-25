@@ -393,7 +393,7 @@ export default function DashboardPage() {
               onClick={() => setSelectedMonth(null)}
               className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
                 selectedMonth === null
-                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold'
+                  ? 'bg-white dark:bg-gray-700 text-primary-500 dark:text-primary-400 font-bold shadow-sm'
                   : 'bg-[#EEF0F2] dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-normal hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
             >
@@ -405,7 +405,7 @@ export default function DashboardPage() {
                 onClick={() => setSelectedMonth(i)}
                 className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
                   selectedMonth === i
-                    ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold'
+                    ? 'bg-white dark:bg-gray-700 text-primary-500 dark:text-primary-400 font-bold shadow-sm'
                     : 'bg-[#EEF0F2] dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-normal hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
               >
