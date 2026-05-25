@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useId } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
@@ -82,6 +82,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { t } = useLanguage();
   const shouldReduceMotion = useReducedMotion();
+  const monthPillId = useId();
 
   // --- Global year + month filter ---
   const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
@@ -390,25 +391,39 @@ export default function DashboardPage() {
           <div className="inline-flex items-center gap-1.5 min-w-max">
             <button
               onClick={() => setSelectedMonth(null)}
-              className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+              className={`relative px-3 py-1.5 text-xs rounded-lg border transition-colors ${
                 selectedMonth === null
-                  ? 'bg-indigo-500 border-indigo-500 text-white font-semibold'
+                  ? 'border-indigo-500 text-white font-semibold'
                   : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 font-normal hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
-              {t.dashboard.yearly}
+              {selectedMonth === null && (
+                <motion.span
+                  layoutId={monthPillId}
+                  className="absolute inset-0 bg-indigo-500 rounded-[7px]"
+                  transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 32 }}
+                />
+              )}
+              <span className="relative">{t.dashboard.yearly}</span>
             </button>
             {MONTH_LABELS.map((label, i) => (
               <button
                 key={i}
                 onClick={() => setSelectedMonth(i)}
-                className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                className={`relative px-3 py-1.5 text-xs rounded-lg border transition-colors ${
                   selectedMonth === i
-                    ? 'bg-indigo-500 border-indigo-500 text-white font-semibold'
+                    ? 'border-indigo-500 text-white font-semibold'
                     : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 font-normal hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
-                {label}
+                {selectedMonth === i && (
+                  <motion.span
+                    layoutId={monthPillId}
+                    className="absolute inset-0 bg-indigo-500 rounded-[7px]"
+                    transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 32 }}
+                  />
+                )}
+                <span className="relative">{label}</span>
               </button>
             ))}
           </div>
