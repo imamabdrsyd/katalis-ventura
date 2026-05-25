@@ -357,7 +357,7 @@ export default function DashboardPage() {
       {/* Global Year + Month Filter */}
       <div className="flex items-center gap-3 mb-6">
         {/* Year nav pill — fixed, tidak ikut scroll */}
-        <div className="flex-shrink-0 inline-flex items-center gap-0.5 bg-[#EEF0F2] dark:bg-gray-800 rounded-xl p-1 shadow-sm">
+        <div className="flex-shrink-0 inline-flex items-center gap-0.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-1">
           <button
             onClick={() => {
               userPickedYearRef.current = true;
@@ -390,10 +390,10 @@ export default function DashboardPage() {
           <div className="inline-flex items-center gap-1.5 min-w-max">
             <button
               onClick={() => setSelectedMonth(null)}
-              className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
+              className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
                 selectedMonth === null
-                  ? 'bg-white dark:bg-gray-700 text-primary-500 dark:text-primary-400 font-bold shadow-sm'
-                  : 'bg-[#EEF0F2] dark:bg-gray-800 text-gray-400 dark:text-gray-500 font-normal hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300'
+                  ? 'bg-indigo-500 border-indigo-500 text-white font-semibold'
+                  : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 font-normal hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
               {t.dashboard.yearly}
@@ -402,10 +402,10 @@ export default function DashboardPage() {
               <button
                 key={i}
                 onClick={() => setSelectedMonth(i)}
-                className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
+                className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
                   selectedMonth === i
-                    ? 'bg-white dark:bg-gray-700 text-primary-500 dark:text-primary-400 font-bold shadow-sm'
-                    : 'bg-[#EEF0F2] dark:bg-gray-800 text-gray-400 dark:text-gray-500 font-normal hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300'
+                    ? 'bg-indigo-500 border-indigo-500 text-white font-semibold'
+                    : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 font-normal hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
                 {label}
