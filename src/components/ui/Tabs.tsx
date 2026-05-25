@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { motion } from 'framer-motion';
 
 export interface TabItem<T extends string = string> {
   value: T;
@@ -41,21 +42,30 @@ export function Tabs<T extends string = string>({
             <button
               key={tab.value}
               onClick={() => onChange(tab.value)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
+              className={`relative flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
                 value === tab.value
                   ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
                   : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
             >
-              {tab.icon}
-              {tab.label}
-              {tab.badge}
+              {value === tab.value && (
+                <motion.span
+                  layoutId={`${layoutId}-underline`}
+                  className="absolute inset-0 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg"
+                  transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+                />
+              )}
+              {tab.icon && <span className="relative">{tab.icon}</span>}
+              <span className="relative">{tab.label}</span>
+              {tab.badge && <span className="relative">{tab.badge}</span>}
             </button>
           ))}
         </div>
       </div>
     );
   }
+
+  const layoutId = React.useId();
 
   return (
     <div className={`${wrapperCls} ${className ?? ''}`}>
@@ -64,15 +74,22 @@ export function Tabs<T extends string = string>({
           <button
             key={tab.value}
             onClick={() => onChange(tab.value)}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+            className={`relative flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
               value === tab.value
-                ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm'
+                ? 'text-gray-800 dark:text-gray-100'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >
-            {tab.icon && <span className="flex-shrink-0 w-4 h-4 flex items-center">{tab.icon}</span>}
-            {tab.label}
-            {tab.badge}
+            {value === tab.value && (
+              <motion.span
+                layoutId={layoutId}
+                className="absolute inset-0 bg-white dark:bg-gray-700 rounded-lg shadow-sm"
+                transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+              />
+            )}
+            {tab.icon && <span className="relative flex-shrink-0 w-4 h-4 flex items-center">{tab.icon}</span>}
+            <span className="relative">{tab.label}</span>
+            {tab.badge && <span className="relative">{tab.badge}</span>}
           </button>
         ))}
       </div>

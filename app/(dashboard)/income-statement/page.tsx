@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { TrendingUp, TrendingDown, Info, DollarSign, ChevronRight, Building2, Settings2 } from 'lucide-react';
+import { motion, useInView, useReducedMotion } from 'framer-motion';
 import { useIncomeStatement } from '@/hooks/useIncomeStatement';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
@@ -48,6 +49,7 @@ function AccountBreakdownSection({
   amountColor?: 'green' | 'red' | 'default';
 }) {
   const [expandedAccount, setExpandedAccount] = useState<string | null>(null);
+  const shouldReduceMotion = useReducedMotion();
 
   if (items.length === 0) return null;
 
@@ -58,11 +60,24 @@ function AccountBreakdownSection({
       : 'text-gray-800 dark:text-gray-100';
 
   return (
-    <div className="divide-y divide-gray-100 dark:divide-gray-700/60">
+    <motion.div
+      className="divide-y divide-gray-100 dark:divide-gray-700/60"
+      initial="hidden"
+      animate="visible"
+      variants={shouldReduceMotion ? {} : {
+        visible: { transition: { staggerChildren: 0.04 } },
+      }}
+    >
       {items.map((item) => {
         const isExpanded = expandedAccount === item.accountId;
         return (
-          <div key={item.accountId}>
+          <motion.div
+            key={item.accountId}
+            variants={shouldReduceMotion ? {} : {
+              hidden: { opacity: 0, y: 6 },
+              visible: { opacity: 1, y: 0, transition: { duration: 0.25 } },
+            }}
+          >
             <button
               onClick={() => setExpandedAccount(isExpanded ? null : item.accountId)}
               className="w-full flex items-center justify-between px-2 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 rounded-md transition-colors group cursor-pointer"
@@ -93,10 +108,10 @@ function AccountBreakdownSection({
                 ))}
               </div>
             )}
-          </div>
+          </motion.div>
         );
       })}
-    </div>
+    </motion.div>
   );
 }
 
@@ -150,13 +165,22 @@ function Section({
   accent?: 'green' | 'red' | 'neutral';
   children: React.ReactNode;
 }) {
+  const ref = useRef<HTMLElement>(null);
+  const isInView = useInView(ref, { once: true, margin: '-40px' });
+  const shouldReduceMotion = useReducedMotion();
+
   const accentClass =
     accent === 'green' ? 'text-emerald-600 dark:text-emerald-400' :
     accent === 'red' ? 'text-red-500 dark:text-red-400' :
     'text-gray-500 dark:text-gray-400';
 
   return (
-    <section>
+    <motion.section
+      ref={ref}
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
+      animate={shouldReduceMotion ? {} : (isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 })}
+      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+    >
       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-200 dark:border-gray-700/60">
         <span className={`w-1 h-3.5 rounded-full ${
           accent === 'green' ? 'bg-emerald-500 dark:bg-emerald-400' :
@@ -168,7 +192,7 @@ function Section({
         </h3>
       </div>
       {children}
-    </section>
+    </motion.section>
   );
 }
 
