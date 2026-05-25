@@ -43,22 +43,15 @@ export function Tabs<T extends string = string>({
             <button
               key={tab.value}
               onClick={() => onChange(tab.value)}
-              className={`relative flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
                 value === tab.value
                   ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
                   : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
             >
-              {value === tab.value && (
-                <motion.span
-                  layoutId={`${layoutId}-underline`}
-                  className="absolute inset-0 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg"
-                  transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-                />
-              )}
-              {tab.icon && <span className="relative">{tab.icon}</span>}
-              <span className="relative">{tab.label}</span>
-              {tab.badge && <span className="relative">{tab.badge}</span>}
+              {tab.icon}
+              {tab.label}
+              {tab.badge}
             </button>
           ))}
         </div>
