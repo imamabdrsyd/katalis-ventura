@@ -11,6 +11,7 @@ import type { AccountLineItem } from '@/lib/calculations';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import { IncomeStatementConfigModal } from '@/components/reports/IncomeStatementConfigModal';
 import { PeriodFilterCard } from '@/components/reports/PeriodFilterCard';
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 
 function TransactionRow({ tx, onClick }: { tx: Transaction; onClick: (tx: Transaction) => void }) {
   return (
@@ -465,9 +466,11 @@ function WaterfallRow({
   return (
     <div className={`flex justify-between items-center ${bold ? 'pt-1.5 mt-0.5 border-t border-gray-100 dark:border-gray-700/40' : ''}`}>
       <span className={labelClass}>{label}</span>
-      <span className={`tabular-nums ${bold ? 'font-semibold' : 'font-medium'} ${colorClass}`}>
-        {color === 'red' && value !== 0 ? `(${formatCurrency(value)})` : formatCurrency(value)}
-      </span>
+      <AnimatedNumber
+        value={value}
+        formatter={(v) => color === 'red' && v !== 0 ? `(${formatCurrency(v)})` : formatCurrency(v)}
+        className={`tabular-nums ${bold ? 'font-semibold' : 'font-medium'} ${colorClass}`}
+      />
     </div>
   );
 }
@@ -598,13 +601,15 @@ function IncomeStatementPageInner() {
             {/* Hero: Net Income */}
             <div className="space-y-1">
               <p className="text-[11px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">Net Income</p>
-              <p className={`text-2xl font-bold tabular-nums ${
-                summary.netProfit === 0 ? 'text-gray-500 dark:text-gray-400' :
-                summary.netProfit > 0 ? 'text-emerald-600 dark:text-emerald-400' :
-                'text-red-500 dark:text-red-400'
-              }`}>
-                {formatCurrency(summary.netProfit)}
-              </p>
+              <AnimatedNumber
+                value={summary.netProfit}
+                formatter={formatCurrency}
+                className={`text-2xl font-bold tabular-nums ${
+                  summary.netProfit === 0 ? 'text-gray-500 dark:text-gray-400' :
+                  summary.netProfit > 0 ? 'text-emerald-600 dark:text-emerald-400' :
+                  'text-red-500 dark:text-red-400'
+                }`}
+              />
               <p className={`text-xs tabular-nums ${
                 summary.netProfit > 0 ? 'text-emerald-600 dark:text-emerald-400' :
                 summary.netProfit < 0 ? 'text-red-500 dark:text-red-400' :
