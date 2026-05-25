@@ -163,7 +163,7 @@ export function PeriodFilterCard({
               className={`flex items-stretch rounded-lg ${
                 selectedMonthValue && period === 'custom'
                   ? 'bg-indigo-100 dark:bg-indigo-900/40'
-                  : 'bg-gray-100 dark:bg-gray-800'
+                  : 'bg-gray-100 dark:bg-gray-700'
               }`}
             >
               <button
@@ -173,7 +173,7 @@ export function PeriodFilterCard({
                 className={`pl-2 pr-1 flex items-center justify-center cursor-pointer transition-colors rounded-l-lg ${
                   selectedMonthValue && period === 'custom'
                     ? 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200/60 dark:hover:bg-indigo-800/40'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -206,7 +206,7 @@ export function PeriodFilterCard({
                 className={`pr-2 pl-1 flex items-center justify-center cursor-pointer transition-colors rounded-r-lg ${
                   selectedMonthValue && period === 'custom'
                     ? 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200/60 dark:hover:bg-indigo-800/40'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
                 <ChevronRight className="w-4 h-4" />
@@ -221,7 +221,7 @@ export function PeriodFilterCard({
                 className={`appearance-none pl-4 pr-9 py-2 rounded-lg text-sm font-medium transition-all duration-200 outline-none cursor-pointer ${
                   selectedQuarterValue
                     ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
                 aria-label="Pilih kuartal laporan"
               >
@@ -247,7 +247,7 @@ export function PeriodFilterCard({
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
                 period === 'year'
                   ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
               Tahun Ini
@@ -269,7 +269,7 @@ export function PeriodFilterCard({
                 onStartDateChange(e.target.value);
                 onPeriodChange('custom');
               }}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors"
             />
           </div>
           <div>
@@ -283,7 +283,7 @@ export function PeriodFilterCard({
                 onEndDateChange(e.target.value);
                 onPeriodChange('custom');
               }}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-colors"
             />
           </div>
         </div>
@@ -299,7 +299,7 @@ export function PeriodFilterCard({
               }
             }}
             disabled={isExporting}
-            className="w-full px-4 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-100 font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className={`w-4 h-4 ${isExporting ? 'animate-bounce' : ''}`} />
             {isExporting ? 'Mengunduh...' : 'Export'}
