@@ -356,45 +356,44 @@ export default function DashboardPage() {
     <div className="p-8">
       {/* Global Year + Month Filter */}
       <div className="flex items-center gap-3 mb-6">
-        <div className="flex-1 min-w-0 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        <div className="flex items-center gap-2 min-w-max">
-          {/* Year nav pill */}
-          <div className="inline-flex items-center gap-0.5 bg-[#EEF0F2] dark:bg-gray-800 rounded-xl p-1 shadow-sm">
-            <button
-              onClick={() => {
-                userPickedYearRef.current = true;
-                setSelectedYear((y) => y - 1);
-              }}
-              disabled={selectedYear <= minYear}
-              aria-label="Previous year"
-              className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="px-2 text-sm font-bold text-gray-800 dark:text-gray-100 min-w-[3rem] text-center tabular-nums">
-              {selectedYear}
-            </span>
-            <button
-              onClick={() => {
-                userPickedYearRef.current = true;
-                setSelectedYear((y) => y + 1);
-              }}
-              disabled={selectedYear >= maxYear}
-              aria-label="Next year"
-              className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+        {/* Year nav pill — fixed, tidak ikut scroll */}
+        <div className="flex-shrink-0 inline-flex items-center gap-0.5 bg-[#EEF0F2] dark:bg-gray-800 rounded-xl p-1 shadow-sm">
+          <button
+            onClick={() => {
+              userPickedYearRef.current = true;
+              setSelectedYear((y) => y - 1);
+            }}
+            disabled={selectedYear <= minYear}
+            aria-label="Previous year"
+            className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="px-2 text-sm font-bold text-gray-800 dark:text-gray-100 min-w-[3rem] text-center tabular-nums">
+            {selectedYear}
+          </span>
+          <button
+            onClick={() => {
+              userPickedYearRef.current = true;
+              setSelectedYear((y) => y + 1);
+            }}
+            disabled={selectedYear >= maxYear}
+            aria-label="Next year"
+            className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
 
-          {/* Month tabs pill */}
-          <div className="inline-flex items-center gap-1.5">
+        {/* Month tabs — scrollable */}
+        <div className="flex-1 min-w-0 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="inline-flex items-center gap-1.5 min-w-max">
             <button
               onClick={() => setSelectedMonth(null)}
               className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
                 selectedMonth === null
                   ? 'bg-white dark:bg-gray-700 text-primary-500 dark:text-primary-400 font-bold shadow-sm'
-                  : 'bg-[#EEF0F2] dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-normal hover:bg-gray-200 dark:hover:bg-gray-700'
+                  : 'bg-[#EEF0F2] dark:bg-gray-800 text-gray-400 dark:text-gray-500 font-normal hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300'
               }`}
             >
               {t.dashboard.yearly}
@@ -406,14 +405,13 @@ export default function DashboardPage() {
                 className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
                   selectedMonth === i
                     ? 'bg-white dark:bg-gray-700 text-primary-500 dark:text-primary-400 font-bold shadow-sm'
-                    : 'bg-[#EEF0F2] dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-normal hover:bg-gray-200 dark:hover:bg-gray-700'
+                    : 'bg-[#EEF0F2] dark:bg-gray-800 text-gray-400 dark:text-gray-500 font-normal hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300'
                 }`}
               >
                 {label}
               </button>
             ))}
           </div>
-        </div>
         </div>
         <FxMiniWidget className="hidden xl:flex flex-shrink-0" />
       </div>
