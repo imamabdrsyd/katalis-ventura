@@ -37,15 +37,26 @@ interface ExpenseBreakdownChartProps {
   loading?: boolean;
   selectedYear: number;
   selectedMonth?: number | null;
+  periodLabel?: string;
 }
 
-export default function ExpenseBreakdownChart({ transactions, loading = false, selectedYear, selectedMonth = null }: ExpenseBreakdownChartProps) {
+export default function ExpenseBreakdownChart({
+  transactions,
+  loading = false,
+  selectedYear,
+  selectedMonth = null,
+  periodLabel,
+}: ExpenseBreakdownChartProps) {
   const router = useRouter();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
   const isDark = mounted && resolvedTheme === 'dark';
+  const activePeriodLabel = periodLabel
+    ?? (selectedMonth === null
+      ? `${selectedYear}`
+      : new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth, 1)));
 
   const allExpenseData = useMemo(() => {
     const expenseMap = new Map<string, number>();
@@ -155,16 +166,21 @@ export default function ExpenseBreakdownChart({ transactions, loading = false, s
     <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 flex flex-col h-full">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Expense Breakdown</h3>
-        {hasMore && (
-          <button
-            type="button"
-            onClick={() => router.push('/income-statement')}
-            aria-label="Lihat semua expense di Income Statement"
-            className="p-1.5 rounded-lg text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors cursor-pointer"
-          >
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <span className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-2.5 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
+            {activePeriodLabel}
+          </span>
+          {hasMore && (
+            <button
+              type="button"
+              onClick={() => router.push('/income-statement')}
+              aria-label="Lihat semua expense di Income Statement"
+              className="p-1.5 rounded-lg text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors cursor-pointer"
+            >
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {allExpenseData.length === 0 ? (

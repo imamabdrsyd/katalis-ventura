@@ -262,6 +262,7 @@ export default function MonitoringChart({ transactions, loading = false, selecte
         grid: {
           display: true,
           color: isDark ? '#374151' : '#f3f4f6',
+          lineWidth: 1.5,
         },
         ticks: {
           color: isDark ? '#9ca3af' : '#9ca3af',
@@ -279,6 +280,7 @@ export default function MonitoringChart({ transactions, loading = false, selecte
         grid: {
           display: true,
           color: isDark ? '#374151' : '#f3f4f6',
+          lineWidth: 1.5,
         },
         ticks: {
           color: isDark ? '#9ca3af' : '#9ca3af',

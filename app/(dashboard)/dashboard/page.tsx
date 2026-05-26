@@ -92,6 +92,9 @@ export default function DashboardPage() {
   const dashboardAnimationKey = `${selectedYear}-${selectedMonth ?? 'year'}-${transactionsLoading ? 'loading' : 'ready'}`;
 
   const MONTH_LABELS = t.dashboard.months;
+  const expenseBreakdownPeriodLabel = selectedMonth === null
+    ? `${t.dashboard.yearly} ${selectedYear}`
+    : `${MONTH_LABELS[selectedMonth]} ${selectedYear}`;
 
   const availableYears = useMemo(() => {
     const years = new Set<number>();
@@ -388,19 +391,19 @@ export default function DashboardPage() {
 
         {/* Month tabs — scrollable */}
         <div className="flex-1 min-w-0 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          <div className="inline-flex items-center gap-1.5 min-w-max">
+          <div className="inline-flex items-center min-w-max rounded-full bg-gray-100 dark:bg-gray-700 p-1">
             <button
               onClick={() => setSelectedMonth(null)}
-              className={`relative px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+              className={`relative px-4 py-1.5 text-sm rounded-full transition-colors ${
                 selectedMonth === null
-                  ? 'border-indigo-500 text-white font-semibold'
-                  : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 font-normal hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-300'
+                  ? 'text-primary-500 dark:text-primary-400 font-bold'
+                  : 'text-gray-500 dark:text-gray-400 font-normal hover:text-gray-700 dark:hover:text-gray-200'
               }`}
             >
               {selectedMonth === null && (
                 <motion.span
                   layoutId={monthPillId}
-                  className="absolute inset-0 bg-indigo-500 rounded-[7px]"
+                  className="absolute inset-0 bg-white dark:bg-gray-600 rounded-full shadow-sm"
                   transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 32 }}
                 />
               )}
@@ -410,16 +413,16 @@ export default function DashboardPage() {
               <button
                 key={i}
                 onClick={() => setSelectedMonth(i)}
-                className={`relative px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                className={`relative px-4 py-1.5 text-sm rounded-full transition-colors ${
                   selectedMonth === i
-                    ? 'border-indigo-500 text-white font-semibold'
-                    : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 font-normal hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-300'
+                    ? 'text-primary-500 dark:text-primary-400 font-bold'
+                    : 'text-gray-500 dark:text-gray-400 font-normal hover:text-gray-700 dark:hover:text-gray-200'
                 }`}
               >
                 {selectedMonth === i && (
                   <motion.span
                     layoutId={monthPillId}
-                    className="absolute inset-0 bg-indigo-500 rounded-[7px]"
+                    className="absolute inset-0 bg-white dark:bg-gray-600 rounded-full shadow-sm"
                     transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 32 }}
                   />
                 )}
@@ -652,7 +655,13 @@ export default function DashboardPage() {
           <MonitoringChart transactions={transactions} loading={transactionsLoading} selectedYear={selectedYear} />
         </motion.div>
         <motion.div className="lg:col-span-1 flex flex-col" variants={shouldReduceMotion ? undefined : DASHBOARD_ITEM_VARIANTS}>
-          <ExpenseBreakdownChart transactions={transactions} loading={transactionsLoading} selectedYear={selectedYear} selectedMonth={selectedMonth} />
+          <ExpenseBreakdownChart
+            transactions={transactions}
+            loading={transactionsLoading}
+            selectedYear={selectedYear}
+            selectedMonth={selectedMonth}
+            periodLabel={expenseBreakdownPeriodLabel}
+          />
         </motion.div>
       </motion.div>
 
