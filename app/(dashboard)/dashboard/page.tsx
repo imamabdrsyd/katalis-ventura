@@ -59,11 +59,13 @@ function formatRelativeTime(createdAt: string, txDate: string): string {
   const diffMin = Math.floor(diffSec / 60);
   const diffHour = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHour / 24);
+  const diffWeek = Math.floor(diffDay / 7);
 
   if (diffSec < 60) return `${diffSec}s ago`;
   if (diffMin < 60) return `${diffMin}m ago`;
   if (diffHour < 24) return `${diffHour}h ago`;
-  if (diffDay <= 3) return `${diffDay}d ago`;
+  if (diffDay < 7) return `${diffDay}d ago`;
+  if (diffWeek === 1) return `${diffWeek}w ago`;
   return formatDateShort(txDate);
 }
 
@@ -92,7 +94,7 @@ export default function DashboardPage() {
   const dashboardAnimationKey = `${selectedYear}-${selectedMonth ?? 'year'}-${transactionsLoading ? 'loading' : 'ready'}`;
 
   const MONTH_LABELS = t.dashboard.months;
-  const expenseBreakdownPeriodLabel = selectedMonth === null
+  const selectedPeriodLabel = selectedMonth === null
     ? `${t.dashboard.yearly} ${selectedYear}`
     : `${MONTH_LABELS[selectedMonth]} ${selectedYear}`;
 
@@ -662,7 +664,7 @@ export default function DashboardPage() {
             loading={transactionsLoading}
             selectedYear={selectedYear}
             selectedMonth={selectedMonth}
-            periodLabel={expenseBreakdownPeriodLabel}
+            periodLabel={selectedPeriodLabel}
           />
         </motion.div>
       </motion.div>
@@ -790,7 +792,12 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Financial Summary */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">{t.dashboard.financialSummary}</h2>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.financialSummary}</h2>
+              <span className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-2.5 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                {selectedPeriodLabel}
+              </span>
+            </div>
 
             {/* Cap Table — kepemilikan dinamis dari akun is_stock */}
             <CapTableWidget transactions={transactions} loading={transactionsLoading} />
@@ -889,43 +896,56 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {recentTransactions.map((transaction) => (
-                  <tr
-                    key={transaction.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setDetailTransaction(transaction)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        setDetailTransaction(transaction);
-                      }
-                    }}
-                    className="cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800"
-                    title="Lihat detail transaksi"
-                  >
-                    <td className="py-3 pr-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                      {formatRelativeTime(transaction.created_at, transaction.date)}
-                    </td>
-                    <td className="py-3 pr-4 text-sm text-gray-800 dark:text-gray-200 font-medium truncate max-w-[200px]">
-                      {transaction.description || transaction.name}
-                    </td>
-                    <td className="py-3 pr-4">
-                      <CategoryBadge category={transaction.category} size="xs" />
-                    </td>
-                    <td className={`py-3 text-sm font-semibold text-right whitespace-nowrap ${
-                      transaction.amount === 0
-                        ? 'text-gray-500 dark:text-gray-400'
-                        : transaction.category === 'EARN'
-                          ? 'text-emerald-500 dark:text-emerald-400'
-                          : (transaction.category === 'VAR' || transaction.category === 'OPEX')
-                            ? 'text-red-500 dark:text-red-400'
-                            : 'text-gray-800 dark:text-gray-200'
-                    }`}>
-                      {transaction.category === 'EARN' ? '+' : ''}{formatCurrency(transaction.amount)}
-                    </td>
-                  </tr>
-                ))}
+                {recentTransactions.map((transaction) => {
+                  const descriptionText = transaction.description || transaction.name;
+                  const contactName = transaction.contact?.name || transaction.name;
+                  const showContact = Boolean(contactName && contactName !== descriptionText);
+
+                  return (
+                    <tr
+                      key={transaction.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setDetailTransaction(transaction)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          setDetailTransaction(transaction);
+                        }
+                      }}
+                      className="cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800"
+                      title="Lihat detail transaksi"
+                    >
+                      <td className="py-3 pr-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        {formatRelativeTime(transaction.created_at, transaction.date)}
+                      </td>
+                      <td className="py-3 pr-4 max-w-[220px]">
+                        <div className="truncate text-sm font-medium text-gray-800 dark:text-gray-200">
+                          {descriptionText}
+                        </div>
+                        {showContact && (
+                          <div className="mt-0.5 truncate text-xs text-gray-400 dark:text-gray-500">
+                            {contactName}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3 pr-4">
+                        <CategoryBadge category={transaction.category} size="xs" />
+                      </td>
+                      <td className={`py-3 text-sm font-semibold text-right whitespace-nowrap ${
+                        transaction.amount === 0
+                          ? 'text-gray-500 dark:text-gray-400'
+                          : transaction.category === 'EARN'
+                            ? 'text-emerald-500 dark:text-emerald-400'
+                            : (transaction.category === 'VAR' || transaction.category === 'OPEX')
+                              ? 'text-red-500 dark:text-red-400'
+                              : 'text-gray-800 dark:text-gray-200'
+                      }`}>
+                        {transaction.category === 'EARN' ? '+' : ''}{formatCurrency(transaction.amount)}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
