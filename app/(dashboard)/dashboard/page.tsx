@@ -875,7 +875,7 @@ export default function DashboardPage() {
 
           {/* Recent Transactions */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700">
             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.recentTransactions}</h2>
             <button
               onClick={() => router.push('/transactions')}
@@ -887,14 +887,6 @@ export default function DashboardPage() {
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead>
-                <tr className="text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                  <th className="pb-3 pr-4">{t.common.date}</th>
-                  <th className="pb-3 pr-4">{t.common.description}</th>
-                  <th className="pb-3 pr-4">{t.common.category}</th>
-                  <th className="pb-3 text-right">{t.common.amount}</th>
-                </tr>
-              </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {recentTransactions.map((transaction) => {
                   const descriptionText = transaction.description || transaction.name;
