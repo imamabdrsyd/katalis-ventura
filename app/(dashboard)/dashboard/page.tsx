@@ -390,45 +390,47 @@ export default function DashboardPage() {
         </div>
 
         {/* Month tabs — scrollable */}
-        <div className="flex-1 min-w-0 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          <div className="inline-flex items-center min-w-max rounded-full bg-gray-100 dark:bg-gray-700 p-1">
-            <button
-              onClick={() => setSelectedMonth(null)}
-              className={`relative px-4 py-1.5 text-sm rounded-full transition-colors ${
-                selectedMonth === null
-                  ? 'text-primary-500 dark:text-primary-400 font-bold'
-                  : 'text-gray-500 dark:text-gray-400 font-normal hover:text-gray-700 dark:hover:text-gray-200'
-              }`}
-            >
-              {selectedMonth === null && (
-                <motion.span
-                  layoutId={monthPillId}
-                  className="absolute inset-0 bg-white dark:bg-gray-600 rounded-full shadow-sm"
-                  transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 32 }}
-                />
-              )}
-              <span className="relative">{t.dashboard.yearly}</span>
-            </button>
-            {MONTH_LABELS.map((label, i) => (
+        <div className="flex-1 min-w-0 rounded-full border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 p-1 overflow-hidden">
+          <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="inline-flex items-center min-w-max">
               <button
-                key={i}
-                onClick={() => setSelectedMonth(i)}
+                onClick={() => setSelectedMonth(null)}
                 className={`relative px-4 py-1.5 text-sm rounded-full transition-colors ${
-                  selectedMonth === i
+                  selectedMonth === null
                     ? 'text-primary-500 dark:text-primary-400 font-bold'
                     : 'text-gray-500 dark:text-gray-400 font-normal hover:text-gray-700 dark:hover:text-gray-200'
                 }`}
               >
-                {selectedMonth === i && (
+                {selectedMonth === null && (
                   <motion.span
                     layoutId={monthPillId}
                     className="absolute inset-0 bg-white dark:bg-gray-600 rounded-full shadow-sm"
                     transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 32 }}
                   />
                 )}
-                <span className="relative">{label}</span>
+                <span className="relative">{t.dashboard.yearly}</span>
               </button>
-            ))}
+              {MONTH_LABELS.map((label, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSelectedMonth(i)}
+                  className={`relative px-4 py-1.5 text-sm rounded-full transition-colors ${
+                    selectedMonth === i
+                      ? 'text-primary-500 dark:text-primary-400 font-bold'
+                      : 'text-gray-500 dark:text-gray-400 font-normal hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+                >
+                  {selectedMonth === i && (
+                    <motion.span
+                      layoutId={monthPillId}
+                      className="absolute inset-0 bg-white dark:bg-gray-600 rounded-full shadow-sm"
+                      transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 32 }}
+                    />
+                  )}
+                  <span className="relative">{label}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <FxMiniWidget className="hidden xl:flex flex-shrink-0" />
