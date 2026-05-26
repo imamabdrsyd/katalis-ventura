@@ -14,6 +14,11 @@ import { IncomeStatementConfigModal } from '@/components/reports/IncomeStatement
 import { PeriodFilterCard } from '@/components/reports/PeriodFilterCard';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 
+function formatTransactionCount(count: number, locale: string): string {
+  if (locale === 'id') return `${count} transaksi`;
+  return `${count} ${count === 1 ? 'transaction' : 'transactions'}`;
+}
+
 function TransactionRow({ tx, onClick }: { tx: Transaction; onClick: (tx: Transaction) => void }) {
   return (
     <div onClick={() => onClick(tx)} className="flex items-start gap-3 py-2 px-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer">
@@ -43,10 +48,12 @@ function AccountBreakdownSection({
   items,
   onTransactionClick,
   amountColor = 'default',
+  locale,
 }: {
   items: AccountLineItem[];
   onTransactionClick: (tx: Transaction) => void;
   amountColor?: 'green' | 'red' | 'default';
+  locale: string;
 }) {
   const [expandedAccount, setExpandedAccount] = useState<string | null>(null);
   const shouldReduceMotion = useReducedMotion();
@@ -93,7 +100,7 @@ function AccountBreakdownSection({
                   {item.accountName}
                 </span>
                 <span className="text-[11px] text-gray-400 dark:text-gray-500 flex-shrink-0">
-                  · {item.transactions.length} tx
+                  · {formatTransactionCount(item.transactions.length, locale)}
                 </span>
               </div>
               <span className={`text-sm font-medium tabular-nums flex-shrink-0 ml-3 ${amountClass}`}>
@@ -530,7 +537,7 @@ function IncomeStatementPageInner() {
     handleExportExcel,
   } = useIncomeStatement();
 
-  const { t } = useLanguage();
+  const { locale, t } = useLanguage();
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showConfigModal, setShowConfigModal] = useState(false);
 
@@ -693,13 +700,13 @@ function IncomeStatementPageInner() {
             <div className="space-y-8">
               {/* REVENUE */}
               <Section title="Revenue" accent="green">
-                <AccountBreakdownSection items={lineItems.revenue} onTransactionClick={setSelectedTransaction} amountColor="green" />
+                <AccountBreakdownSection items={lineItems.revenue} onTransactionClick={setSelectedTransaction} amountColor="green" locale={locale} />
                 <SubtotalRow label="Total Revenue" value={summary.totalEarn} color="green" />
               </Section>
 
               {/* COST OF REVENUE */}
               <Section title="Cost of Revenue" accent="red">
-                <AccountBreakdownSection items={lineItems.cogs} onTransactionClick={setSelectedTransaction} amountColor="red" />
+                <AccountBreakdownSection items={lineItems.cogs} onTransactionClick={setSelectedTransaction} amountColor="red" locale={locale} />
                 <SubtotalRow label="Total Cost of Revenue" value={summary.totalVar} color="red" negative />
               </Section>
 
@@ -720,7 +727,7 @@ function IncomeStatementPageInner() {
 
               {/* OPERATING EXPENSES */}
               <Section title="Operating Expenses" accent="red">
-                <AccountBreakdownSection items={lineItems.opex} onTransactionClick={setSelectedTransaction} amountColor="red" />
+                <AccountBreakdownSection items={lineItems.opex} onTransactionClick={setSelectedTransaction} amountColor="red" locale={locale} />
                 <SubtotalRow label="Total Operating Expenses" value={summary.totalOpex} color="red" negative />
               </Section>
 
@@ -772,7 +779,7 @@ function IncomeStatementPageInner() {
               {/* FINANCING COSTS — render only if has items */}
               {lineItems.interest.length > 0 && (
                 <Section title="Financing Costs" accent="red">
-                  <AccountBreakdownSection items={lineItems.interest} onTransactionClick={setSelectedTransaction} amountColor="red" />
+                  <AccountBreakdownSection items={lineItems.interest} onTransactionClick={setSelectedTransaction} amountColor="red" locale={locale} />
                   <SubtotalRow label="Total Financing Costs" value={summary.totalInterest} color="red" negative />
                 </Section>
               )}
@@ -795,7 +802,7 @@ function IncomeStatementPageInner() {
               {/* TAX — render only if has items */}
               {lineItems.tax.length > 0 && (
                 <Section title="Tax Expense" accent="red">
-                  <AccountBreakdownSection items={lineItems.tax} onTransactionClick={setSelectedTransaction} amountColor="red" />
+                  <AccountBreakdownSection items={lineItems.tax} onTransactionClick={setSelectedTransaction} amountColor="red" locale={locale} />
                   <SubtotalRow label="Total Tax" value={summary.totalTax} color="red" negative />
                 </Section>
               )}
