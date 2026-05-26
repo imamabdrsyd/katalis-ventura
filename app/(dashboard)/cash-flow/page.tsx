@@ -18,7 +18,7 @@ function formatTransactionCount(count: number, locale: string): string {
 function TransactionRow({ tx, onClick }: { tx: CashFlowTransaction; onClick: (tx: CashFlowTransaction) => void }) {
   const isIn = tx.amount >= 0;
   return (
-    <div onClick={() => onClick(tx)} className="flex items-start gap-3 py-2.5 px-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg transition-colors cursor-pointer">
+    <div onClick={() => onClick(tx)} className="flex items-start gap-3 py-2.5 px-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer">
       <div className="mt-0.5 flex-shrink-0">
         {isIn ? (
           <ArrowUpCircle className="w-4 h-4 text-green-500" />
@@ -109,7 +109,7 @@ function ActivitySection({ title, subtitle, total, totalLabel, transactions, tra
       </button>
 
       {open && (
-        <div className="ml-6 my-1 border-l-2 border-gray-100 dark:border-gray-700 max-h-[400px] overflow-y-auto">
+        <div className="ml-6 my-1 border-l-2 border-gray-100 dark:border-gray-700 max-h-[400px] overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700/60">
           {sorted.length === 0 ? (
             <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">Tidak ada transaksi</p>
           ) : (
@@ -292,21 +292,21 @@ function CashFlowPageInner() {
 
             <div className="space-y-8">
               {/* Opening Balance */}
-              <div className="relative group rounded-xl border border-blue-200 dark:border-blue-800/60 bg-blue-50/60 dark:bg-blue-950/20 px-5 py-4 cursor-default">
+              <div className="relative group rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/40 px-5 py-4 cursor-default">
                 <div className="flex justify-between items-center gap-4">
                   <div className="flex items-baseline gap-2">
-                    <Wallet className="w-4 h-4 text-blue-500 dark:text-blue-400 flex-shrink-0 mb-0.5" />
+                    <Wallet className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0 mb-0.5" />
                     <div>
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300 flex items-center gap-1">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-200 flex items-center gap-1">
                         Opening Balance
-                        <Info className="w-3.5 h-3.5 text-blue-400 dark:text-blue-500" />
+                        <Info className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
                       </h3>
-                      <p className="text-xs text-blue-500 dark:text-blue-400 mt-0.5">Saldo kas awal periode</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Saldo kas awal periode</p>
                     </div>
                   </div>
                   <Link
                     href={openingBalanceLink}
-                    className="text-2xl font-bold tabular-nums text-blue-600 dark:text-blue-400 hover:underline underline-offset-2 flex items-center gap-1.5 flex-shrink-0"
+                    className="text-2xl font-bold tabular-nums text-gray-800 dark:text-gray-100 hover:underline underline-offset-2 flex items-center gap-1.5 flex-shrink-0"
                   >
                     {formatCurrency(cashFlow.openingBalance)}
                     <ExternalLink className="w-3.5 h-3.5 opacity-50" />
@@ -399,18 +399,18 @@ function CashFlowPageInner() {
               </div>
 
               {/* Closing Balance */}
-              <div className="rounded-xl border border-blue-200 dark:border-blue-800/60 bg-blue-50/60 dark:bg-blue-950/20 px-5 py-4">
+              <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/40 px-5 py-4">
                 <div className="flex justify-between items-center gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <Wallet className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
+                      <Wallet className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-200">
                         Closing Balance
                       </h3>
                     </div>
-                    <p className="text-xs text-blue-500 dark:text-blue-400">Opening Balance + Net Cash Flow</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Opening Balance + Net Cash Flow</p>
                   </div>
-                  <span className="text-2xl font-bold tabular-nums text-blue-600 dark:text-blue-400 flex-shrink-0">
+                  <span className="text-2xl font-bold tabular-nums text-gray-800 dark:text-gray-100 flex-shrink-0">
                     {formatCurrency(cashFlow.closingBalance)}
                   </span>
                 </div>

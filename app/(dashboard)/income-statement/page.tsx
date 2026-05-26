@@ -21,7 +21,7 @@ function formatTransactionCount(count: number, locale: string): string {
 
 function TransactionRow({ tx, onClick }: { tx: Transaction; onClick: (tx: Transaction) => void }) {
   return (
-    <div onClick={() => onClick(tx)} className="flex items-start gap-3 py-2 px-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer">
+    <div onClick={() => onClick(tx)} className="flex items-start gap-3 py-2.5 px-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer">
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-start gap-2">
           <div className="min-w-0">
@@ -109,7 +109,7 @@ function AccountBreakdownSection({
             </button>
 
             {isExpanded && (
-              <div className="ml-6 my-1 border-l-2 border-gray-100 dark:border-gray-700 max-h-[280px] overflow-y-auto">
+              <div className="ml-6 my-1 border-l-2 border-gray-100 dark:border-gray-700 max-h-[280px] overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700/60">
                 {item.transactions.map(tx => (
                   <TransactionRow key={tx.id} tx={tx} onClick={onTransactionClick} />
                 ))}
