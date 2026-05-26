@@ -2,13 +2,18 @@
 
 import { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { Calendar, TrendingUp, TrendingDown, Download, Wallet, FileText, FileSpreadsheet, ChevronDown, ChevronRight, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Info, ExternalLink, Building2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, ChevronRight, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Info, ExternalLink, Building2 } from 'lucide-react';
 import { useCashFlow } from '@/hooks/useCashFlow';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
-import type { Period } from '@/hooks/useReportData';
 import type { CashFlowTransaction, Transaction } from '@/types';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
+import { PeriodFilterCard } from '@/components/reports/PeriodFilterCard';
+
+function formatTransactionCount(count: number, locale: string): string {
+  if (locale === 'id') return `${count} transaksi`;
+  return `${count} ${count === 1 ? 'transaction' : 'transactions'}`;
+}
 
 function TransactionRow({ tx, onClick }: { tx: CashFlowTransaction; onClick: (tx: CashFlowTransaction) => void }) {
   const isIn = tx.amount >= 0;
@@ -65,9 +70,10 @@ interface ActivitySectionProps {
   transactions: CashFlowTransaction[];
   transactionLink?: string;
   onTransactionClick: (tx: CashFlowTransaction) => void;
+  transactionCountLabel: string;
 }
 
-function ActivitySection({ title, subtitle, total, totalLabel, transactions, transactionLink, onTransactionClick }: ActivitySectionProps) {
+function ActivitySection({ title, subtitle, total, totalLabel, transactions, transactionLink, onTransactionClick, transactionCountLabel }: ActivitySectionProps) {
   const [open, setOpen] = useState(false);
   const sorted = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -95,7 +101,7 @@ function ActivitySection({ title, subtitle, total, totalLabel, transactions, tra
         <div className="flex items-center gap-2.5 min-w-0">
           <ChevronRight className={`w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-90' : ''}`} />
           <span className="text-sm text-gray-700 dark:text-gray-200">{subtitle}</span>
-          <span className="text-[11px] text-gray-400 dark:text-gray-500">· {transactions.length} tx</span>
+          <span className="text-[11px] text-gray-400 dark:text-gray-500">· {transactionCountLabel}</span>
         </div>
         <span className={`text-sm font-medium tabular-nums flex-shrink-0 ml-3 ${totalColor}`}>
           {formatCurrency(total)}
@@ -141,19 +147,15 @@ function CashFlowPageInner() {
     period,
     startDate,
     endDate,
-    showExportMenu,
-    exportButtonRef,
-    setPeriod,
     setStartDate,
     setEndDate,
-    setShowExportMenu,
     handlePeriodChange,
     cashFlow,
     handleExportPDF,
     handleExportExcel,
   } = useCashFlow();
 
-  const { t } = useLanguage();
+  const { locale, t } = useLanguage();
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   const handleTransactionClick = (tx: CashFlowTransaction) => {
@@ -225,90 +227,17 @@ function CashFlowPageInner() {
         {/* LEFT COLUMN — Filters + Summary */}
         <div className="w-full lg:w-80 xl:w-96 flex-shrink-0 space-y-6">
           {/* Filters */}
-          <div className="card-static">
-            <div className="space-y-4">
-              {/* Period Selector */}
-              <div>
-                <label className="label">Periode</label>
-                <div className="flex flex-wrap gap-2">
-                  {(['month', 'quarter', 'year', 'custom'] as Period[]).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => handlePeriodChange(p)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                        period === p
-                          ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {p === 'month' ? 'Bulan Ini' : p === 'quarter' ? 'Kuartal' : p === 'year' ? 'Tahun Ini' : 'Custom'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Date Range */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label flex items-center gap-1.5 text-xs">
-                    <Calendar className="w-3.5 h-3.5" />
-                    Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => {
-                      setStartDate(e.target.value);
-                      setPeriod('custom');
-                    }}
-                    className="input text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="label text-xs">End Date</label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => {
-                      setEndDate(e.target.value);
-                      setPeriod('custom');
-                    }}
-                    className="input text-sm"
-                  />
-                </div>
-              </div>
-
-              {/* Export Button */}
-              <div className="relative" ref={exportButtonRef}>
-                <button
-                  onClick={() => setShowExportMenu(!showExportMenu)}
-                  className="btn-secondary flex items-center gap-2 w-full justify-center"
-                >
-                  <Download className="w-4 h-4" />
-                  Export
-                </button>
-
-                {showExportMenu && (
-                  <div className="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-10">
-                    <button
-                      onClick={handleExportPDF}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3"
-                    >
-                      <FileText className="w-4 h-4 text-red-500" />
-                      Export as PDF
-                    </button>
-                    <button
-                      onClick={handleExportExcel}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3"
-                    >
-                      <FileSpreadsheet className="w-4 h-4 text-green-500" />
-                      Export as Excel
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          <PeriodFilterCard
+            period={period}
+            startDate={startDate}
+            endDate={endDate}
+            onPeriodChange={handlePeriodChange}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            onExportPDF={handleExportPDF}
+            onExportExcel={handleExportExcel}
+            months={t.dashboard.months}
+          />
 
           {/* Summary */}
           <div className="card-static space-y-4">
@@ -330,7 +259,7 @@ function CashFlowPageInner() {
                 <div key={item.label} className="flex justify-between items-center pl-2">
                   <div>
                     <span className="text-gray-600 dark:text-gray-400">+ {item.label}:</span>
-                    <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-1">({item.count} tx)</span>
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-1">({formatTransactionCount(item.count, locale)})</span>
                   </div>
                   <span className={`font-medium ${item.value >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                     {formatCurrency(item.value)}
@@ -418,6 +347,7 @@ function CashFlowPageInner() {
                 transactions={cashFlow.operatingTransactions}
                 transactionLink={`/transactions?start=${startDate}&end=${endDate}&category=EARN`}
                 onTransactionClick={handleTransactionClick}
+                transactionCountLabel={formatTransactionCount(cashFlow.operatingTransactions.length, locale)}
               />
 
               <ActivitySection
@@ -428,6 +358,7 @@ function CashFlowPageInner() {
                 transactions={cashFlow.investingTransactions}
                 transactionLink={`/transactions?start=${startDate}&end=${endDate}&category=CAPEX`}
                 onTransactionClick={handleTransactionClick}
+                transactionCountLabel={formatTransactionCount(cashFlow.investingTransactions.length, locale)}
               />
 
               <ActivitySection
@@ -438,6 +369,7 @@ function CashFlowPageInner() {
                 transactions={cashFlow.financingTransactions}
                 transactionLink={`/transactions?start=${startDate}&end=${endDate}&category=FIN`}
                 onTransactionClick={handleTransactionClick}
+                transactionCountLabel={formatTransactionCount(cashFlow.financingTransactions.length, locale)}
               />
 
               {/* NET CASH FLOW — Hero */}
