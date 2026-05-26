@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 23 Mei 2026 (multi-currency support + akun 4200 FX Gain / 5400 FX Loss + RPC `settle_transaction` dengan realisasi FX gain/loss — migr 079; trigger `set_created_by` di transactions — migr 080; atomic multi-line create/update RPC — migr 082; `calculateCapTable` untuk dashboard & balance sheet; EBITDA di income statement; ROI mode `operations_start_date` — migr 076)
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 27 Mei 2026 (dashboard P&L KPI card kini apply depresiasi via `applyDepreciationToSummary` — sebelumnya hanya halaman Income Statement, menyebabkan angka berbeda untuk bulan dengan beban depresiasi; multi-currency support + akun 4200 FX Gain / 5400 FX Loss + RPC `settle_transaction` dengan realisasi FX gain/loss — migr 079; trigger `set_created_by` di transactions — migr 080; atomic multi-line create/update RPC — migr 082; `calculateCapTable` untuk dashboard & balance sheet; EBITDA di income statement; ROI mode `operations_start_date` — migr 076)
 
 ---
 
@@ -526,6 +526,8 @@ netProfit      = totalEarn - totalOpex - totalVar - totalTax - totalInterest - t
   - Legacy: Semua FIN (backward compatibility)
 
 CAPEX tidak masuk net profit karena bukan expense (beli aset). CAPEX hanya muncul di Cash Flow Statement (investing activities).
+
+**Depresiasi di Dashboard P&L card:** `app/(dashboard)/dashboard/page.tsx` menghitung depresiasi periode (via `calculateDepreciationSummary()` + `applyDepreciationToSummary()`) berdasarkan rentang year/month filter yang aktif, sehingga KPI "PROFIT/LOSS" menampilkan Net Income yang konsisten dengan halaman Income Statement. Periode mengikuti filter: Yearly = 1 Jan – 31 Des, Monthly = 1 – akhir bulan terpilih.
 
 ### 5.4 Monthly Grouping
 

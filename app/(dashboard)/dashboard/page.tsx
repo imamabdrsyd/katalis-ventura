@@ -7,7 +7,8 @@ import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import { ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target, Wallet, ClipboardList, HandCoins, ArrowUpRight, ArrowDownLeft, ArrowRight } from 'lucide-react';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useLanguage } from '@/context/LanguageContext';
-import { calculateFinancialSummary, calculateCategoryCounts, calculateIncomeStatementMetrics } from '@/lib/calculations';
+import { calculateFinancialSummary, calculateCategoryCounts, calculateIncomeStatementMetrics, applyDepreciationToSummary, buildFixedAssetCostMap } from '@/lib/calculations';
+import { calculateDepreciationSummary } from '@/lib/accounting/depreciation';
 import { formatCurrency, formatPercentage, formatDateShort } from '@/lib/utils';
 import { CategoryBadge } from '@/components/ui/CategoryBadge';
 import { Sparkline } from '@/components/ui/Sparkline';
@@ -75,6 +76,7 @@ export default function DashboardPage() {
     businessLoading,
     canManageTransactions,
     transactions,
+    accounts,
     transactionsLoading,
     balanceSheet,
     summary: allTimeSummary,
@@ -131,7 +133,31 @@ export default function DashboardPage() {
     [yearTransactions, selectedMonth]
   );
 
-  const summary = useMemo(() => calculateFinancialSummary(filteredTransactions), [filteredTransactions]);
+  // Periode start/end untuk depresiasi: cocokkan dengan filter year/month aktif.
+  // Yearly → 1 Jan s/d 31 Des tahun terpilih. Monthly → 1 s/d akhir bulan terpilih.
+  const periodRange = useMemo(() => {
+    if (selectedMonth === null) {
+      return { start: new Date(selectedYear, 0, 1), end: new Date(selectedYear, 11, 31) };
+    }
+    return {
+      start: new Date(selectedYear, selectedMonth, 1),
+      end: new Date(selectedYear, selectedMonth + 1, 0),
+    };
+  }, [selectedYear, selectedMonth]);
+
+  const summary = useMemo(() => {
+    const baseSummary = calculateFinancialSummary(filteredTransactions);
+    if (!accounts.length) return baseSummary;
+    // Cost map dari SEMUA transaksi (cumulative) — konsisten dgn useIncomeStatement.
+    const fixedAssetCosts = buildFixedAssetCostMap(transactions);
+    const depSummary = calculateDepreciationSummary(
+      accounts,
+      (accountId) => fixedAssetCosts.get(accountId) ?? 0,
+      periodRange.end,
+      periodRange.start
+    );
+    return applyDepreciationToSummary(baseSummary, depSummary.periodDepreciation);
+  }, [filteredTransactions, accounts, transactions, periodRange]);
   const categoryCounts = useMemo(() => calculateCategoryCounts(filteredTransactions), [filteredTransactions]);
 
   // --- Monthly series untuk sparkline KPI cards (basis: tahun terpilih) ---

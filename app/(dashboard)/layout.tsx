@@ -59,6 +59,7 @@ const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
   property_management: <Building2 className="w-4 h-4" />,
   real_estate: <Building2 className="w-4 h-4" />,
 };
+import { motion, AnimatePresence } from 'framer-motion';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
@@ -1117,6 +1118,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { userRole } = useBusinessContext();
+  const pathname = usePathname();
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
@@ -1195,7 +1197,17 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
 
       {/* Main Content - with margins for sidebar and header */}
       <main className={`ml-0 pt-16 min-h-screen overflow-auto transition-[margin] duration-300 ease-in-out ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-56'}`}>
-        {children}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* Global Floating Quick Add Button with shared state */}

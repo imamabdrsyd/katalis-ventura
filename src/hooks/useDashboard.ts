@@ -6,6 +6,7 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import { isManagerRole } from '@/lib/roles';
 import { calculateFinancialSummary, calculateBalanceSheet, calculateInvestedCapital } from '@/lib/calculations';
 import * as transactionsApi from '@/lib/api/transactions';
+import * as accountsApi from '@/lib/api/accounts';
 import { generateDueRecurringTransactions } from '@/lib/api/recurring';
 import {
   getFinancialCache,
@@ -23,6 +24,14 @@ export function useDashboard() {
   const { data: allTransactions = [], isLoading: transactionsLoading } = useQuery({
     queryKey: ['transactions', businessId],
     queryFn: () => transactionsApi.getTransactions(businessId!),
+    enabled: !!businessId,
+  });
+
+  // Accounts dibutuhkan untuk menghitung depresiasi pada KPI P&L card per periode,
+  // agar konsisten dengan Net Income di halaman Income Statement.
+  const { data: accounts = [] } = useQuery({
+    queryKey: ['accounts', businessId, false],
+    queryFn: () => accountsApi.getAccounts(businessId!, false),
     enabled: !!businessId,
   });
 
@@ -124,6 +133,7 @@ export function useDashboard() {
     canManageTransactions,
     user,
     transactions,
+    accounts,
     transactionsLoading,
     summary: effectiveSummary,
     balanceSheet: effectiveBalanceSheet,
