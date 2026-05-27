@@ -59,6 +59,7 @@ const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
   property_management: <Building2 className="w-4 h-4" />,
   real_estate: <Building2 className="w-4 h-4" />,
 };
+import { motion, useReducedMotion } from 'framer-motion';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
@@ -1118,6 +1119,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { userRole } = useBusinessContext();
   const pathname = usePathname();
+  const prefersReducedMotion = useReducedMotion();
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
@@ -1196,7 +1198,19 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
 
       {/* Main Content - with margins for sidebar and header */}
       <main className={`ml-0 pt-16 min-h-screen overflow-auto transition-[margin] duration-300 ease-in-out ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-56'}`}>
-        {children}
+        {/*
+          Page transition: enter-only animation, NO AnimatePresence, NO exit prop.
+          Key={pathname} memaksa re-mount tiap navigasi — animasi enter selalu fresh dari opacity:0 → 1.
+          Tanpa AnimatePresence/exit, mustahil stuck di opacity 0 saat back-navigation cepat (bug commit b3db480).
+        */}
+        <motion.div
+          key={pathname}
+          initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+        >
+          {children}
+        </motion.div>
       </main>
 
       {/* Global Floating Quick Add Button with shared state */}
