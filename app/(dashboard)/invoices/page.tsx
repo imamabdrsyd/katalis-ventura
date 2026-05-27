@@ -181,6 +181,7 @@ function InvoicesPageInner() {
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         title={t.invoices.createInvoice}
+        size="3xl"
       >
         <InvoiceForm
           onSubmit={handleCreateInvoice}
@@ -199,6 +200,7 @@ function InvoicesPageInner() {
         isOpen={!!editInvoice}
         onClose={() => setEditInvoice(null)}
         title={t.invoices.editInvoice}
+        size="3xl"
       >
         {editInvoice && (
           <InvoiceForm

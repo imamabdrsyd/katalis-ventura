@@ -166,9 +166,9 @@ export async function exportInvoiceToPDF(params: {
   doc.setTextColor(...BLACK);
   doc.text(business.business_name, MARGIN_LEFT, cursorY);
 
-  // "INVOICE" title (right, bold, large) — the ONLY indigo element
+  // "INVOICE" title (right, bold, large)
   doc.setFontSize(24);
-  doc.setTextColor(...INDIGO);
+  doc.setTextColor(...BLACK);
   doc.text('INVOICE', CONTENT_RIGHT, cursorY, { align: 'right' });
 
   cursorY += 7;
