@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 27 Mei 2026 (dashboard P&L KPI card kini apply depresiasi via `applyDepreciationToSummary` — sebelumnya hanya halaman Income Statement, menyebabkan angka berbeda untuk bulan dengan beban depresiasi; multi-currency support + akun 4200 FX Gain / 5400 FX Loss + RPC `settle_transaction` dengan realisasi FX gain/loss — migr 079; trigger `set_created_by` di transactions — migr 080; atomic multi-line create/update RPC — migr 082; `calculateCapTable` untuk dashboard & balance sheet; EBITDA di income statement; ROI mode `operations_start_date` — migr 076)
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 27 Mei 2026 (fix depresiasi: `reportDate` kini di-cap ke `today` — filter "Tahun Ini" tidak lagi menghitung bulan masa depan; dashboard P&L KPI card kini apply depresiasi via `applyDepreciationToSummary` — sebelumnya hanya halaman Income Statement, menyebabkan angka berbeda untuk bulan dengan beban depresiasi; multi-currency support + akun 4200 FX Gain / 5400 FX Loss + RPC `settle_transaction` dengan realisasi FX gain/loss — migr 079; trigger `set_created_by` di transactions — migr 080; atomic multi-line create/update RPC — migr 082; `calculateCapTable` untuk dashboard & balance sheet; EBITDA di income statement; ROI mode `operations_start_date` — migr 076)
 
 ---
 
@@ -1422,10 +1422,13 @@ Kolom tambahan di tabel `accounts` (hanya relevan untuk ASSET + `default_categor
 
 ```
 monthlyDepreciation = (cost - residualValue) / usefulLifeMonths
-monthsElapsed = bulan dari acquisitionDate sampai reportDate (capped di usefulLifeMonths)
+effectiveReportDate = min(reportDate, today)   ← capped ke hari ini, tidak maju ke masa depan
+monthsElapsed = bulan dari acquisitionDate sampai effectiveReportDate (capped di usefulLifeMonths)
 accumulatedDepreciation = monthlyDepreciation × monthsElapsed
 bookValue = cost - accumulatedDepreciation (min = residualValue)
 ```
+
+**Penting**: `reportDate` di-cap ke hari ini (`today`) sehingga depresiasi bulan-bulan yang belum terjadi **tidak dihitung**. Jika filter periode = "Tahun Ini" (end date = 31 Des), hanya bulan Jan–Mei yang masuk (misalnya saat ini = Mei 2026).
 
 **Cost** dihitung dari total transaksi CAPEX yang mendebit akun tersebut (net debit balance).
 

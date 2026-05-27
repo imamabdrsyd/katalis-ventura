@@ -696,7 +696,10 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* AR Tracker (Monitor Piutang) */}
-      {transactions.length > 0 && (
+      {transactionsLoading && (
+        <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse mb-6" />
+      )}
+      {!transactionsLoading && transactions.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -814,7 +817,13 @@ export default function DashboardPage() {
       )}
 
       {/* Dual Panel: Financial Summary + Recent Transactions */}
-      {transactions.length > 0 && (
+      {transactionsLoading && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="h-80 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse" />
+          <div className="h-80 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse" />
+        </div>
+      )}
+      {!transactionsLoading && transactions.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Financial Summary */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">

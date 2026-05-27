@@ -48,8 +48,12 @@ export function calculateStraightLineDepreciation(
   const depreciableAmount = Math.max(0, cost - residualValue);
   const monthlyDepreciation = depreciableAmount / usefulLifeMonths;
 
+  // Cap to today — don't accrue depreciation for months that haven't occurred yet
+  const today = new Date();
+  const effectiveReportDate = reportDate > today ? today : reportDate;
+
   // Calculate months elapsed from acquisition to report date
-  const monthsElapsed = getMonthsElapsed(acquisitionDate, reportDate);
+  const monthsElapsed = getMonthsElapsed(acquisitionDate, effectiveReportDate);
 
   // Cap at useful life
   const effectiveMonths = Math.min(Math.max(0, monthsElapsed), usefulLifeMonths);
@@ -101,8 +105,11 @@ export function calculateDepreciationSummary(
       // A month is counted if the asset was acquired before or during that month
       // and the month falls within [startDate, endDate].
       // We iterate from the first calendar month of startDate to the last of reportDate.
+      // Cap periodEnd to current month — don't accrue future months.
+      const today = new Date();
+      const cappedReportDate = reportDate > today ? today : reportDate;
       const periodStart = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-      const periodEnd = new Date(reportDate.getFullYear(), reportDate.getMonth(), 1);
+      const periodEnd = new Date(cappedReportDate.getFullYear(), cappedReportDate.getMonth(), 1);
       let periodMonths = 0;
       const cursor = new Date(periodStart);
       while (cursor <= periodEnd) {
