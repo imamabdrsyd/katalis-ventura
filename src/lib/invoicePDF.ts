@@ -318,7 +318,8 @@ export async function exportInvoiceToPDF(params: {
   const totalsX = 130;
   const totalsValueX = CONTENT_RIGHT;
 
-  // Payment details (left side, optional)
+  // Payment details (left side, optional) — track bottom edge for gap calc
+  let paymentBottomY = cursorY;
   if (paymentDetails) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
@@ -341,6 +342,7 @@ export async function exportInvoiceToPDF(params: {
       MARGIN_LEFT,
       paymentStartY + 9
     );
+    paymentBottomY = paymentStartY + 9;
   }
 
   // Subtotal (right side)
@@ -378,8 +380,10 @@ export async function exportInvoiceToPDF(params: {
   doc.text(formatCurrency(invoice.total_amount), totalsValueX, cursorY, {
     align: 'right',
   });
-
   cursorY += 8;
+
+  // Accent line must clear both the totals column AND the payment details column
+  cursorY = Math.max(cursorY, paymentBottomY + 8);
 
   // ─────────────────── BOTTOM ACCENT LINE ───────────────────
 
