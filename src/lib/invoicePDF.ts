@@ -297,10 +297,10 @@ export async function exportInvoiceToPDF(params: {
       cellPadding: 4,
     },
     columnStyles: {
-      0: { cellWidth: 70 },
-      1: { cellWidth: 25, halign: 'center' },
-      2: { cellWidth: 45, halign: 'right' },
-      3: { cellWidth: 45, halign: 'right' },
+      0: { cellWidth: 'auto' },
+      1: { cellWidth: 20, halign: 'center' },
+      2: { cellWidth: 42, halign: 'right' },
+      3: { cellWidth: 42, halign: 'right' },
     },
     margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
   });
@@ -414,18 +414,18 @@ export async function exportInvoiceToPDF(params: {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(...GRAY_TEXT);
-    doc.text('Issued by:', sigNameX, cursorY - 4, { align: 'center' });
+    doc.text('Issued by:', sigNameX, cursorY, { align: 'center' });
 
-    // Signature line
+    // Signature line — lebih jauh ke bawah untuk ruang tanda tangan
     doc.setDrawColor(...BLACK);
     doc.setLineWidth(0.3);
-    doc.line(sigLineX, cursorY + 6, sigLineEndX, cursorY + 6);
+    doc.line(sigLineX, cursorY + 14, sigLineEndX, cursorY + 14);
 
-    // Issuer name below line
+    // Issuer name below line — beri jarak cukup dari garis
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.setTextColor(...BLACK);
-    doc.text(issuerName, sigNameX, cursorY + 11, { align: 'center' });
+    doc.text(issuerName, sigNameX, cursorY + 20, { align: 'center' });
   }
 
   // ─────────────────── BOTTOM-CENTER AXION LOGO (every page) ───────────────────
