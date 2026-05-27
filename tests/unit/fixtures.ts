@@ -14,6 +14,8 @@ interface AccountInput {
   type: AccountType;
   default_category?: TransactionCategory;
   is_cash_equivalent?: boolean;
+  is_trade_receivable?: boolean;
+  is_operating_payable?: boolean;
   is_stock?: boolean;
   is_dividend?: boolean;
   income_statement_section?: 'cost_of_revenue' | 'operating_expense' | null;
@@ -39,6 +41,8 @@ export function makeAccount(input: AccountInput): Account {
     is_dividend: input.is_dividend ?? false,
     is_dividend_payable: false,
     is_cash_equivalent: input.is_cash_equivalent ?? false,
+    is_trade_receivable: input.is_trade_receivable ?? false,
+    is_operating_payable: input.is_operating_payable ?? false,
     sort_order: 0,
     default_category: input.default_category,
     income_statement_section: input.income_statement_section ?? null,

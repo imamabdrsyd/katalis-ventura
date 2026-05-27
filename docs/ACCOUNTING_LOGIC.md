@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 27 Mei 2026 (fix depresiasi: `reportDate` kini di-cap ke `today` — filter "Tahun Ini" tidak lagi menghitung bulan masa depan; dashboard P&L KPI card kini apply depresiasi via `applyDepreciationToSummary` — sebelumnya hanya halaman Income Statement, menyebabkan angka berbeda untuk bulan dengan beban depresiasi; multi-currency support + akun 4200 FX Gain / 5400 FX Loss + RPC `settle_transaction` dengan realisasi FX gain/loss — migr 079; trigger `set_created_by` di transactions — migr 080; atomic multi-line create/update RPC — migr 082; `calculateCapTable` untuk dashboard & balance sheet; EBITDA di income statement; ROI mode `operations_start_date` — migr 076)
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 27 Mei 2026 (fitur baru: **Invoice dari Transaksi Piutang** — migr 086 + Section 24 baru — reverse flow Transaction→Invoice dengan 3 entry point (TransactionDetailModal, bulk action TransactionList, picker di /invoices); tabel junction `invoice_transactions` dengan UNIQUE(transaction_id); badge "INV" di TransactionList; audit fix: flag `is_trade_receivable` & `is_operating_payable` di tabel `accounts` — migr 085 — menggantikan keyword heuristic di `classifyCashFlow()`; helper terpusat di `src/lib/accounting/classification.ts` dengan strategi flag-first + heuristic fallback; toggle eksplisit di AccountForm untuk akun dengan nama non-standar — Issue #22; fix depresiasi: `reportDate` di-cap ke `today`; dashboard P&L KPI card apply depresiasi via `applyDepreciationToSummary`; multi-currency support — migr 079; trigger `set_created_by` — migr 080; atomic multi-line create/update RPC — migr 082; `calculateCapTable` untuk dashboard & balance sheet; EBITDA di income statement; ROI mode `operations_start_date` — migr 076)
 
 ---
 
@@ -842,23 +842,38 @@ Bank transfer (kedua sisi cash) → net zero, diabaikan
 
 **Sub-classification per IAS 7 / PSAK 2:**
 
+Sentralisasi di `src/lib/accounting/classification.ts`. Strategi: **flag-first
+dengan heuristic fallback** (sejak migration 085).
+
 Counter ASSET dianggap **trade receivable** (→ Operating) jika:
-- `default_category === 'EARN'`, ATAU
-- `account_name` mengandung "piutang usaha" atau "receivable"
+1. `accounts.is_trade_receivable === TRUE` (DB flag — di-backfill saat migration 085, atau di-set user lewat toggle di AccountForm), ATAU
+2. (Fallback heuristic) `default_category === 'EARN'`, ATAU `account_name`
+   mengandung salah satu: "piutang usaha", "piutang dagang", "piutang pelanggan",
+   "trade receivable", "account(s) receivable"
+   — tapi BUKAN talangan/advance.
 
 Counter ASSET dianggap **advance/talangan** (→ Financing) jika:
-- `default_category === 'FIN'`, ATAU
-- `account_name` mengandung "talangan" atau "advance"
+- TIDAK trade receivable (per aturan di atas), DAN
+- `account_name` mengandung "talangan"/"advance", ATAU `default_category === 'FIN'`
 
 Semua ASSET lainnya (fixed asset, inventory, dll) → **Investing**.
 
 Counter LIABILITY dianggap **operating payable** (→ Operating) jika:
-- `default_category` = `OPEX`, `VAR`, atau `TAX`, ATAU
-- `account_name` mengandung "hutang usaha", "utang usaha", "payable", atau "accrued"
+1. `accounts.is_operating_payable === TRUE` (DB flag — di-backfill saat migration 085, atau di-set user lewat toggle di AccountForm), ATAU
+2. (Fallback heuristic) `default_category` ∈ `{'OPEX','VAR','TAX'}`, ATAU
+   `account_name` mengandung "hutang usaha", "utang usaha", "hutang dagang",
+   "trade payable", "account(s) payable", atau "accrued"
+   — tapi BUKAN pinjaman bank (`default_category='FIN'` + nama
+   "pinjaman"/"loan"/"kredit bank"/"hutang bank").
 
 Semua LIABILITY lainnya (pinjaman bank, hutang jangka panjang) → **Financing**.
 
 Counter EQUITY → selalu **Financing** (tidak ada sub-classification).
+
+> **Catatan flag-first**: Untuk bisnis yang memakai nama akun non-standar
+> (mis. "Tagihan Pelanggan", "Outstanding Bills"), heuristic fallback tidak
+> akan match. User wajib mengaktifkan toggle "Akun Piutang Usaha" /
+> "Akun Hutang Operasional" di AccountForm agar klasifikasi Cash Flow benar.
 
 **B. Legacy Transactions** — Category-based fallback:
 ```
@@ -1628,6 +1643,8 @@ Tabel ini memetakan setiap kategori transaksi — **termasuk sub-tipe** — ke d
 | **FIN** | **Pelunasan Talangan** (Cr ASSET, `default_category='FIN'`) | ASSET (Kas/Bank) | ASSET (Talangan) | **TIDAK MASUK** | +Cash, -Piutang Talangan | **Financing (+)** |
 | **FIN** | Reklasifikasi hutang | LIABILITY | LIABILITY | **TIDAK MASUK** | Net zero (pindah antar liability) | **Tidak masuk** (non-cash) |
 
+> **Catatan deteksi trade receivable / operating payable** (untuk klasifikasi Cash Flow): Sejak migration 085, klasifikasi dipakai dari flag eksplisit `accounts.is_trade_receivable` (ASSET) dan `accounts.is_operating_payable` (LIABILITY), dengan fallback ke heuristic nama akun + `default_category`. Detail di [Section 8](#8-cash-flow-logic). Helper terpusat di [`src/lib/accounting/classification.ts`](../src/lib/accounting/classification.ts).
+
 ### 18.2 Kategori dengan Split (Sub-tipe)
 
 Tiga kategori memiliki perilaku berbeda tergantung **tipe akun** yang di-debit/credit:
@@ -1809,6 +1826,7 @@ Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
 | #19 | Docs: Retained Earnings formula tidak include depreciation | RESOLVED | Code sudah benar, docs diupdate: `retainedEarnings = revenue - expenses - accumulatedDepreciation` |
 | #20 | VAR-Inventory double-count di dashboard charts (Monitoring, ExpenseBreakdown, KPI sparkline, avgMonthlyExpense) | RESOLVED | Lihat detail di bawah |
 | #21 | Label UI `is_stock` ambigu (stock = inventory atau saham?) + DB tidak proteksi flag salah lokasi | RESOLVED | Lihat detail di bawah |
+| #22 | Trade Receivable/Payable detection via keyword heuristic (fragile) | RESOLVED | Migration 085 — flag `is_trade_receivable` & `is_operating_payable` di tabel `accounts`. Helper `src/lib/accounting/classification.ts` flag-first dengan heuristic fallback. Toggle eksplisit di AccountForm. |
 
 ### Issue #20 — VAR-Inventory double-count: dashboard-wide
 
@@ -2382,6 +2400,124 @@ dari raw transactions → write-through cache baru.
 
 Semua tabel mengikuti pola RLS existing (`get_my_business_ids()`, role check
 `business_manager`/`both`/`superadmin`).
+
+---
+
+## 24. Invoice dari Transaksi Piutang (Reverse Flow)
+
+### 24.1 Konsep & Filosofi
+
+Berbeda dengan accounting platform standar (Xero, QuickBooks) yang alurnya
+**Invoice → Piutang** (invoice memicu jurnal otomatis), Katalis Ventura
+memakai **pipeline tunggal lewat add-transaction** untuk semua entry. Fitur
+"Buat Invoice dari Transaksi" adalah reverse flow:
+
+```
+Transaksi piutang (Dr Piutang Usaha / Cr Pendapatan)
+    └── User pilih 1+ transaksi
+          └── Generate Invoice yang merangkum mereka
+                └── Invoice = dokumen penagihan formal (PDF, kirim ke customer)
+```
+
+**Filosofi**: User awam non-accountant familiar dengan satu pintu masuk
+(Add Transaction). Invoice menjadi *view* formal di atas transaksi yang
+sudah ada — bukan source of truth-nya.
+
+### 24.2 Schema (Migration 086)
+
+```sql
+CREATE TABLE invoice_transactions (
+  id UUID PRIMARY KEY,
+  invoice_id UUID NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+  transaction_id UUID NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
+  linked_amount NUMERIC NOT NULL DEFAULT 0,  -- snapshot saat link dibuat
+  created_at TIMESTAMPTZ,
+  created_by UUID,
+  UNIQUE(transaction_id)  -- 1 transaksi → max 1 invoice
+);
+```
+
+Constraint `UNIQUE(transaction_id)` mencegah double-billing. Kolom lama
+`invoices.transaction_id` di tabel `invoices` dipertahankan untuk data
+legacy tapi tidak dipakai di fitur ini.
+
+### 24.3 Helper Layer (`src/lib/accounting/guidance/invoiceFromTransaction.ts`)
+
+```typescript
+// Aturan invoiceable:
+isInvoiceable(transaction, linkedIds) →
+  !isSettlementEntry(t) AND
+  !isSettled(t) AND
+  isTradeReceivableTransaction(t) AND  // pakai flag is_trade_receivable (Migr 085)
+  !linkedIds.has(t.id) AND
+  getOutstandingAmount(t) > 0
+
+// Multi-customer guard:
+validateSameCustomer(transactions) → { ok, error?, customers? }
+  Group by contact_id (priority) atau name.toLowerCase().trim()
+  Return error jika >1 distinct customer
+
+// Prefill builder:
+buildInvoicePrefill({ transactions, settings, today }) → InvoiceFormData
+  customer_name: dari transaksi pertama (caller harus sudah validateSameCustomer)
+  invoice_date: today
+  due_date: today + defaultDueDays (default 7)
+  line_items: 1 baris per transaksi
+    item_name: description || name || `Tagihan ${date}`
+    quantity: 1
+    unit_price: getOutstandingAmount(t)  // sisa piutang, bukan original
+```
+
+### 24.4 Three Entry Points
+
+| Entry Point | Lokasi | Cocok Untuk |
+|-------------|--------|-------------|
+| **A. Tombol kontekstual** | TransactionDetailModal | Single transaksi — user buka detail piutang lalu klik "Buat Invoice dari Transaksi Ini" |
+| **B. Bulk action** | TransactionList (multi-select) | Beberapa transaksi piutang dari customer yang sama digabung jadi 1 invoice |
+| **C. Picker modal** | Halaman /invoices | User mulai dari halaman invoice → tombol "Buat dari Transaksi" → modal picker dengan filter customer/search |
+
+Ketiganya menuju ke modal yang sama (`CreateInvoiceFromTransactionsModal`)
+yang membuka `InvoiceForm` dengan `prefillData` untuk review/edit
+sebelum final create.
+
+### 24.5 Flow End-to-End
+
+```
+1. User klik entry point (A/B/C)
+2. Hook useInvoiceFromTransactions:
+   - canInvoiceTransactions(selection) → null | error message
+   - Kalau error → toast.error, stop
+3. CreateInvoiceFromTransactionsModal opens dengan prefillData
+4. User review/edit fields → submit
+5. createInvoiceFromTransactions API:
+   a. INSERT into invoices (payment_status='unpaid', meta.generated_from_transactions=true)
+   b. INSERT line items
+   c. INSERT junction rows (with rollback on error)
+6. Refresh linkedTransactionIds → badge "INV" muncul di TransactionList
+```
+
+### 24.6 Status Invoice
+
+Invoice yang dibuat dari transaksi langsung status `'unpaid'` (bukan
+`'draft'`) karena transaksi sumber sudah merepresentasikan piutang yang
+sah. User bisa mark-as-paid via flow standar di halaman /invoices.
+
+### 24.7 Multi-Customer Block
+
+Sistem **menolak** invoice yang mencampur transaksi dari customer berbeda.
+Detected via:
+1. `contact_id` (priority — kalau di-set semua transaksi harus sama)
+2. `name.trim().toLowerCase()` (fallback untuk transaksi tanpa contact)
+
+Picker modal di /invoices punya extra safety: customer filter **otomatis
+dikunci** setelah transaksi pertama dipilih.
+
+### 24.8 Partial Settlement Handling
+
+Transaksi piutang yang sudah dilunasi sebagian (partial settled) tetap
+bisa di-invoice — line item pakai `getOutstandingAmount()` (sisa piutang),
+bukan amount asli. Snapshot ini disimpan di `invoice_transactions.linked_amount`
+agar invoice stabil meskipun outstanding berubah lagi setelahnya.
 
 ---
 

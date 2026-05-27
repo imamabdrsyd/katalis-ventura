@@ -137,7 +137,7 @@ export function useInvoices() {
   // Download PDF
   const handleDownloadPDF = useCallback(async (invoice: Invoice) => {
     const { exportInvoiceToPDF } = await import('@/lib/invoicePDF');
-    exportInvoiceToPDF({
+    await exportInvoiceToPDF({
       invoice,
       business: {
         business_name: activeBusiness?.business_name || '',

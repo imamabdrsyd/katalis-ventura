@@ -17,6 +17,8 @@ interface TransactionListProps {
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
   onSelectAll?: () => void;
+  /** IDs of transactions already linked to an invoice — for the INV badge. */
+  invoicedTransactionIds?: Set<string>;
   highlightAfter?: string | null;
   highlightIds?: Set<string>;
   categoryFilter?: '' | TransactionCategory | 'SETTLE';
@@ -144,6 +146,7 @@ export function TransactionList({
   onDelete,
   selectMode,
   selectedIds,
+  invoicedTransactionIds,
   onToggleSelect,
   onSelectAll,
   highlightAfter,
@@ -571,6 +574,14 @@ export function TransactionList({
                   {transaction.status === 'draft' && (
                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">
                       DRAFT
+                    </span>
+                  )}
+                  {invoicedTransactionIds?.has(transaction.id) && (
+                    <span
+                      className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300"
+                      title="Sudah dibuatkan invoice"
+                    >
+                      INV
                     </span>
                   )}
                 </div>

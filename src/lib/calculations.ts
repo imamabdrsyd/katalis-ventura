@@ -16,6 +16,11 @@ import type {
   ProjectedMonth,
 } from '@/types';
 import { calculateDepreciationSummary } from '@/lib/accounting/depreciation';
+import {
+  isTradeReceivableAccount,
+  isOperatingPayableAccount,
+  isAdvanceReceivableAccount,
+} from '@/lib/accounting/classification';
 
 // Helpers
 
@@ -1203,45 +1208,24 @@ function isCashAccount(
 function classifyCashFlow(
   counterAccount: Account
 ): 'operating' | 'investing' | 'financing' {
-  const accountType = counterAccount.account_type;
-  const name = (counterAccount.account_name || '').toLowerCase();
-  const defaultCategory = counterAccount.default_category;
-
-  switch (accountType) {
+  switch (counterAccount.account_type) {
     case 'REVENUE':
     case 'EXPENSE':
       return 'operating';
 
     case 'ASSET': {
-      // Trade receivables are operating (IAS 7.14 — cash received from customers)
-      const isTradeReceivable =
-        defaultCategory === 'EARN' ||
-        name.includes('piutang usaha') ||
-        name.includes('receivable');
-      if (isTradeReceivable) return 'operating';
-
-      // Advances/talangan are financing (cash paid on behalf of others, to be reimbursed)
-      const isAdvanceReceivable =
-        defaultCategory === 'FIN' ||
-        name.includes('talangan') ||
-        name.includes('advance');
-      if (isAdvanceReceivable) return 'financing';
-
+      // Trade receivables (piutang usaha) → operating (IAS 7.14 — cash from customers)
+      if (isTradeReceivableAccount(counterAccount)) return 'operating';
+      // Advances/talangan/loan receivable → financing (reimbursable cash outflow)
+      if (isAdvanceReceivableAccount(counterAccount)) return 'financing';
       // Other non-cash assets (fixed assets, inventory, etc.) → investing
       return 'investing';
     }
 
     case 'LIABILITY': {
-      // Trade/operating payables are operating (IAS 7.14 — cash paid to suppliers)
-      const isOperatingPayable =
-        defaultCategory === 'OPEX' ||
-        defaultCategory === 'VAR' ||
-        defaultCategory === 'TAX' ||
-        name.includes('hutang usaha') ||
-        name.includes('utang usaha') ||
-        name.includes('payable') ||
-        name.includes('accrued');
-      return isOperatingPayable ? 'operating' : 'financing';
+      // Trade/operating payables → operating (IAS 7.14 — cash to suppliers)
+      // Otherwise (bank loans, long-term debt) → financing
+      return isOperatingPayableAccount(counterAccount) ? 'operating' : 'financing';
     }
 
     case 'EQUITY':

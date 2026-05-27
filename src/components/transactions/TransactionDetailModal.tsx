@@ -15,6 +15,7 @@ import { getRecordAuditHistory, getFieldChanges, formatFieldName, formatAuditVal
 import {
   detectMatchingPrincipleWarning,
   isReceivableTransaction,
+  isTradeReceivableTransaction,
   isSettled,
   isPartiallySettled,
   getOutstandingAmount,
@@ -24,8 +25,10 @@ import {
   getDividendOutstanding,
   getDividendPartialSettlementIds,
 } from '@/lib/accounting/guidance';
+import { useInvoiceFromTransactions } from '@/hooks/useInvoiceFromTransactions';
+import { CreateInvoiceFromTransactionsModal } from '@/components/invoices/CreateInvoiceFromTransactionsModal';
 import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
-import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, RotateCcw, ZoomIn, ZoomOut, Receipt } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { updateTransaction } from '@/lib/api/transactions';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
@@ -104,6 +107,9 @@ export function TransactionDetailModal({
   hasNext = false,
 }: TransactionDetailModalProps) {
   const { t } = useLanguage();
+  const { linkedTransactionIds, canInvoiceTransactions, canManage: canManageInvoices } =
+    useInvoiceFromTransactions();
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
   const ACCOUNT_TYPE_LABEL: Record<string, string> = {
     ASSET: t.generalLedger.asset,
@@ -959,6 +965,7 @@ export function TransactionDetailModal({
 
               {/* Action buttons — only when not fully settled */}
               {!settled && !showSettleConfirm && !showPartialInput && (
+                <>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowSettleConfirm(true)}
@@ -977,6 +984,33 @@ export function TransactionDetailModal({
                     </button>
                   )}
                 </div>
+                {/* Buat Invoice — secondary action, only for trade receivable that isn't already invoiced */}
+                {canManageInvoices &&
+                  isTradeReceivableTransaction(transaction) &&
+                  !linkedTransactionIds.has(transaction.id) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const err = canInvoiceTransactions([transaction]);
+                        if (err) return; // toast already shown
+                        setShowInvoiceModal(true);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
+                    >
+                      <Receipt className="w-4 h-4" />
+                      Buat Invoice dari Transaksi Ini
+                    </button>
+                  )}
+                {/* Invoiced badge — replaces the button if this txn is already linked */}
+                {canManageInvoices &&
+                  isTradeReceivableTransaction(transaction) &&
+                  linkedTransactionIds.has(transaction.id) && (
+                    <div className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
+                      <Receipt className="w-3.5 h-3.5" />
+                      Transaksi ini sudah dijadikan invoice
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Full settle confirm */}
@@ -1641,6 +1675,15 @@ export function TransactionDetailModal({
         </div>
       </div>,
       document.body
+    )}
+
+    {/* Create Invoice from this single transaction */}
+    {transaction && showInvoiceModal && (
+      <CreateInvoiceFromTransactionsModal
+        isOpen={showInvoiceModal}
+        onClose={() => setShowInvoiceModal(false)}
+        transactions={[transaction]}
+      />
     )}
     </>
   );

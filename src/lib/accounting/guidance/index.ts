@@ -30,3 +30,9 @@ export {
   buildDividendPartialSettlementPrefill,
 } from './dividendSettlement';
 export type { DividendSettlementPrefill } from './dividendSettlement';
+export {
+  isInvoiceable,
+  validateSameCustomer,
+  buildInvoicePrefill,
+  computeSubtotal,
+} from './invoiceFromTransaction';

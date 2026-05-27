@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useReportData } from './useReportData';
 import { isTradeReceivableTransaction, isSettled, isSettlementEntry, getOutstandingAmount } from '@/lib/accounting/guidance/receivableSettlement';
 import { isPayableTransaction, isPayableSettled, isPayableSettlementEntry } from '@/lib/accounting/guidance/payableSettlement';
+import { isTradeReceivableAccount } from '@/lib/accounting/classification';
 import type { Transaction, ArApSummary, AgingRow, RepaymentRow, RepaymentSummary } from '@/types';
 
 /**
@@ -149,11 +150,7 @@ function buildRepaymentSummary(transactions: Transaction[]): RepaymentSummary {
 
     // AR collection: Cr receivable ASSET / Dr Kas-Bank
     if (t.credit_account?.account_type === 'ASSET') {
-      const acct = t.credit_account;
-      if (acct.default_category === 'FIN') continue;
-      if (/talangan|advance/i.test(acct.account_name)) continue;
-      const isReceivable = acct.default_category === 'EARN' || /piutang usaha|receivable/i.test(acct.account_name);
-      if (!isReceivable) continue;
+      if (!isTradeReceivableAccount(t.credit_account)) continue;
 
       const amount = Number(t.amount);
       rows.push({

@@ -1,15 +1,17 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { FileText, Settings, Plus, Trash2 } from 'lucide-react';
+import { FileText, Settings, Plus, Trash2, Receipt } from 'lucide-react';
 import { useInvoices } from '@/hooks/useInvoices';
 import { InvoiceForm } from '@/components/invoices/InvoiceForm';
 import { InvoiceList } from '@/components/invoices/InvoiceList';
 import { InvoiceSettingsModal } from '@/components/invoices/InvoiceSettingsModal';
+import { TransactionPickerModal } from '@/components/invoices/TransactionPickerModal';
+import { CreateInvoiceFromTransactionsModal } from '@/components/invoices/CreateInvoiceFromTransactionsModal';
 import { Modal } from '@/components/ui/Modal';
 import { useLanguage } from '@/context/LanguageContext';
-import type { InvoicePaymentStatus } from '@/types';
+import type { InvoicePaymentStatus, Transaction } from '@/types';
 
 const STATUS_TAB_VALUES: ('' | InvoicePaymentStatus)[] = ['', 'draft', 'unpaid', 'paid', 'overdue'];
 
@@ -40,6 +42,11 @@ function InvoicesPageInner() {
     handleSaveSettings,
     fetchInvoices,
   } = useInvoices();
+
+  // "Buat dari Transaksi" picker → preview/edit flow
+  const [showPickerModal, setShowPickerModal] = useState(false);
+  const [pickerSelection, setPickerSelection] = useState<Transaction[]>([]);
+  const [showInvoiceFromTxnsModal, setShowInvoiceFromTxnsModal] = useState(false);
 
   // Auto-open create modal when navigated from Journal Entry (?create=true)
   useEffect(() => {
@@ -92,6 +99,14 @@ function InvoicesPageInner() {
               aria-label={t.invoices.settings}
             >
               <Settings className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => setShowPickerModal(true)}
+              className="btn-secondary flex items-center gap-2"
+              title="Pilih transaksi piutang untuk dijadikan invoice"
+            >
+              <Receipt className="h-4 w-4" />
+              Buat dari Transaksi
             </button>
             <button
               onClick={() => setShowAddModal(true)}
@@ -242,6 +257,30 @@ function InvoicesPageInner() {
         settings={invoiceSettings}
         onSave={handleSaveSettings}
         loading={saving}
+      />
+
+      {/* "Buat dari Transaksi" — picker, then create-from-txn modal */}
+      <TransactionPickerModal
+        isOpen={showPickerModal}
+        onClose={() => setShowPickerModal(false)}
+        onProceed={(transactions) => {
+          setPickerSelection(transactions);
+          setShowPickerModal(false);
+          setShowInvoiceFromTxnsModal(true);
+        }}
+      />
+      <CreateInvoiceFromTransactionsModal
+        isOpen={showInvoiceFromTxnsModal}
+        onClose={() => {
+          setShowInvoiceFromTxnsModal(false);
+          setPickerSelection([]);
+        }}
+        transactions={pickerSelection}
+        onSuccess={() => {
+          setShowInvoiceFromTxnsModal(false);
+          setPickerSelection([]);
+          fetchInvoices();
+        }}
       />
     </div>
   );

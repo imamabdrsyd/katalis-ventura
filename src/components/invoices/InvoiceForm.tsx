@@ -10,6 +10,12 @@ interface InvoiceFormProps {
   onCancel: () => void;
   loading?: boolean;
   invoice?: Invoice | null;
+  /**
+   * Pre-fill the form (e.g. from "Create Invoice from Transactions" flow).
+   * Takes precedence over `invoice` for initial values. Ignored when `invoice`
+   * (edit mode) is set.
+   */
+  prefillData?: InvoiceFormData | null;
   defaultInvoiceNumber?: string;
   defaultDueDays?: number;
   defaultTaxRate?: number;
@@ -47,6 +53,7 @@ export function InvoiceForm({
   onCancel,
   loading = false,
   invoice,
+  prefillData,
   defaultInvoiceNumber = '',
   defaultDueDays = 7,
   defaultTaxRate = 11,
@@ -55,31 +62,34 @@ export function InvoiceForm({
 }: InvoiceFormProps) {
   const today = new Date().toISOString().split('T')[0];
 
+  // prefillData is ignored in edit mode (invoice is set) — edit always loads existing
+  const initPrefill = invoice ? null : prefillData;
+
   const [invoiceNumber, setInvoiceNumber] = useState(
-    invoice?.invoice_number || defaultInvoiceNumber
+    invoice?.invoice_number || initPrefill?.invoice_number || defaultInvoiceNumber
   );
   const [invoiceDate, setInvoiceDate] = useState(
-    invoice?.invoice_date || today
+    invoice?.invoice_date || initPrefill?.invoice_date || today
   );
   const [dueDate, setDueDate] = useState(
-    invoice?.due_date || addDays(today, defaultDueDays)
+    invoice?.due_date || initPrefill?.due_date || addDays(today, defaultDueDays)
   );
   const [customerName, setCustomerName] = useState(
-    invoice?.customer_name || ''
+    invoice?.customer_name || initPrefill?.customer_name || ''
   );
   const [customerPhone, setCustomerPhone] = useState(
-    invoice?.customer_phone || ''
+    invoice?.customer_phone || initPrefill?.customer_phone || ''
   );
   const [customerIdLabel, setCustomerIdLabel] = useState(
-    invoice?.customer_id_label || ''
+    invoice?.customer_id_label || initPrefill?.customer_id_label || ''
   );
   const [description, setDescription] = useState(
-    invoice?.description || ''
+    invoice?.description || initPrefill?.description || ''
   );
 
   const defaultLabel = getItemLabel(businessCategory);
   const [itemLabel, setItemLabel] = useState(
-    invoice?.item_label || defaultLabel
+    invoice?.item_label || initPrefill?.item_label || defaultLabel
   );
 
   const [lineItems, setLineItems] = useState<
@@ -89,16 +99,23 @@ export function InvoiceForm({
       item_name: li.item_name,
       quantity: li.quantity,
       unit_price: li.unit_price,
-    })) || [{ item_name: '', quantity: 1, unit_price: 0 }]
+    })) ||
+      (initPrefill?.line_items && initPrefill.line_items.length > 0
+        ? initPrefill.line_items.map((li) => ({
+            item_name: li.item_name,
+            quantity: li.quantity,
+            unit_price: li.unit_price,
+          }))
+        : [{ item_name: '', quantity: 1, unit_price: 0 }])
   );
 
   const [taxType, setTaxType] = useState<InvoiceTaxType>(
-    invoice?.tax_type || defaultTaxType
+    invoice?.tax_type || initPrefill?.tax_type || defaultTaxType
   );
   const [taxRate, setTaxRate] = useState(
-    invoice?.tax_rate ?? defaultTaxRate
+    invoice?.tax_rate ?? initPrefill?.tax_rate ?? defaultTaxRate
   );
-  const [notes, setNotes] = useState(invoice?.notes || '');
+  const [notes, setNotes] = useState(invoice?.notes || initPrefill?.notes || '');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 

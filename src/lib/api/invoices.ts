@@ -1,5 +1,11 @@
 import { createClient } from '@/lib/supabase';
-import type { Invoice, InvoiceFormData, InvoicePaymentStatus, InvoiceSettings } from '@/types';
+import type {
+  Invoice,
+  InvoiceFormData,
+  InvoicePaymentStatus,
+  InvoiceSettings,
+  InvoiceTransactionLink,
+} from '@/types';
 
 // Roman numeral months for invoice number formatting
 const ROMAN_MONTHS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
@@ -283,4 +289,157 @@ export async function updateInvoiceSettings(
     .eq('id', businessId);
 
   if (error) throw new Error(error.message);
+}
+
+// ─────────────────── Invoice ↔ Transaction Junction (Migration 086) ───────────────────
+
+/**
+ * Fetch all transaction IDs that are already linked to an invoice for this business.
+ * Used by UI to render "Invoiced" badges and to filter invoiceable transactions.
+ */
+export async function getLinkedTransactionIds(businessId: string): Promise<Set<string>> {
+  const supabase = createClient();
+
+  // Subquery: invoices belonging to this business (RLS already scopes to user's businesses)
+  const { data, error } = await supabase
+    .from('invoice_transactions')
+    .select('transaction_id, invoice:invoices!inner(business_id, deleted_at)')
+    .eq('invoice.business_id', businessId)
+    .is('invoice.deleted_at', null);
+
+  if (error) throw new Error(error.message);
+  return new Set((data ?? []).map((row) => row.transaction_id));
+}
+
+/**
+ * Fetch transaction links for a specific invoice (used in invoice detail view).
+ */
+export async function getInvoiceTransactionLinks(
+  invoiceId: string
+): Promise<InvoiceTransactionLink[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('invoice_transactions')
+    .select('*')
+    .eq('invoice_id', invoiceId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as InvoiceTransactionLink[];
+}
+
+interface CreateInvoiceFromTransactionsInput {
+  businessId: string;
+  userId: string;
+  transactionIds: string[];
+  /** Invoice form data prefilled & potentially edited by user. */
+  invoiceData: InvoiceFormData;
+  /** Snapshot of outstanding amounts per transaction at link-time. */
+  linkedAmounts: Record<string, number>;
+}
+
+/**
+ * Create an invoice from N transactions atomically.
+ *
+ * Flow:
+ *   1. Create invoice (status=unpaid since linked transactions are outstanding)
+ *   2. Insert invoice_line_items
+ *   3. Insert invoice_transactions junction rows
+ *
+ * If any step fails, callers should consider cleanup. We don't run inside a
+ * single DB transaction here because supabase-js client doesn't support it
+ * natively — for now, partial-failure is rare and recoverable by manual delete.
+ *
+ * Returns the created invoice with line_items + linked_transactions hydrated.
+ */
+export async function createInvoiceFromTransactions(
+  input: CreateInvoiceFromTransactionsInput
+): Promise<Invoice> {
+  const supabase = createClient();
+  const { businessId, userId, transactionIds, invoiceData, linkedAmounts } = input;
+
+  if (transactionIds.length === 0) {
+    throw new Error('Pilih minimal 1 transaksi untuk dijadikan invoice.');
+  }
+
+  const { subtotal, taxAmount, totalAmount } = calculateInvoiceTotals(invoiceData);
+
+  // 1. Insert invoice — status 'unpaid' karena dibuat dari transaksi piutang outstanding
+  const { data: invoice, error: invoiceError } = await supabase
+    .from('invoices')
+    .insert({
+      business_id: businessId,
+      invoice_number: invoiceData.invoice_number,
+      invoice_date: invoiceData.invoice_date,
+      due_date: invoiceData.due_date || null,
+      customer_name: invoiceData.customer_name,
+      customer_phone: invoiceData.customer_phone || null,
+      customer_id_label: invoiceData.customer_id_label || null,
+      description: invoiceData.description || null,
+      item_label: invoiceData.item_label || null,
+      subtotal,
+      tax_type: invoiceData.tax_type,
+      tax_rate: invoiceData.tax_rate,
+      tax_amount: taxAmount,
+      total_amount: totalAmount,
+      payment_status: 'unpaid' as InvoicePaymentStatus,
+      notes: invoiceData.notes || null,
+      created_by: userId,
+      meta: { generated_from_transactions: true, transaction_count: transactionIds.length },
+    })
+    .select()
+    .single();
+
+  if (invoiceError) throw new Error(invoiceError.message);
+
+  // 2. Insert line items
+  if (invoiceData.line_items.length > 0) {
+    const lineItems = invoiceData.line_items.map((item, index) => ({
+      invoice_id: invoice.id,
+      item_name: item.item_name,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      amount: calculateLineItemAmount(item.quantity, item.unit_price),
+      sort_order: index,
+    }));
+
+    const { error: lineItemsError } = await supabase
+      .from('invoice_line_items')
+      .insert(lineItems);
+
+    if (lineItemsError) {
+      // Rollback: delete the invoice we just created
+      await supabase.from('invoices').delete().eq('id', invoice.id);
+      throw new Error(lineItemsError.message);
+    }
+  }
+
+  // 3. Insert junction rows
+  const junctionRows = transactionIds.map((txnId) => ({
+    invoice_id: invoice.id,
+    transaction_id: txnId,
+    linked_amount: linkedAmounts[txnId] ?? 0,
+    created_by: userId,
+  }));
+
+  const { error: junctionError } = await supabase
+    .from('invoice_transactions')
+    .insert(junctionRows);
+
+  if (junctionError) {
+    // Rollback: delete invoice (CASCADE removes line items)
+    await supabase.from('invoices').delete().eq('id', invoice.id);
+    // Special handling: unique constraint violation = transaksi sudah di-invoice
+    if (junctionError.code === '23505') {
+      throw new Error('Salah satu transaksi sudah pernah dijadikan invoice. Refresh halaman dan coba lagi.');
+    }
+    throw new Error(junctionError.message);
+  }
+
+  // 4. Return hydrated invoice
+  const created = await getInvoice(invoice.id);
+  if (!created) throw new Error('Gagal mengambil invoice yang baru dibuat');
+
+  const links = await getInvoiceTransactionLinks(invoice.id);
+  return { ...created, linked_transactions: links };
 }

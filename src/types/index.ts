@@ -86,6 +86,8 @@ export interface Account {
   is_dividend: boolean;          // EQUITY: tandai akun Dividen / Prive / Drawing
   is_dividend_payable: boolean;  // LIABILITY: tandai akun Hutang Dividen
   is_cash_equivalent: boolean;   // ASSET: tandai akun sebagai Kas/Setara Kas (Cash Flow basis)
+  is_trade_receivable: boolean;  // ASSET: tandai akun sebagai Piutang Usaha (Cash Flow: Operating)
+  is_operating_payable: boolean; // LIABILITY: tandai akun sebagai Hutang Operasional (Cash Flow: Operating)
   currency_code?: string;        // Currency tracked by this account, defaults to IDR
   sort_order: number;
   description?: string;
@@ -600,6 +602,8 @@ export interface Invoice {
   deleted_by: string | null;
   line_items?: InvoiceLineItem[];
   contact?: Contact;
+  /** Transactions linked to this invoice (Migration 086). Hydrated by getInvoiceWithLinks(). */
+  linked_transactions?: InvoiceTransactionLink[];
 }
 
 export interface InvoiceLineItem {
@@ -612,6 +616,21 @@ export interface InvoiceLineItem {
   sort_order: number;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Junction row linking an invoice to a transaction (Migration 086).
+ * Many-to-many: 1 invoice can aggregate N transactions, 1 transaction
+ * can only belong to 1 invoice (UNIQUE constraint on transaction_id).
+ */
+export interface InvoiceTransactionLink {
+  id: string;
+  invoice_id: string;
+  transaction_id: string;
+  /** Snapshot outstanding amount saat link dibuat (Rp). */
+  linked_amount: number;
+  created_at: string;
+  created_by: string | null;
 }
 
 export interface InvoiceFormData {

@@ -19,6 +19,8 @@ export interface AccountFormData {
   is_dividend?: boolean;          // EQUITY: tandai akun Dividen / Prive
   is_dividend_payable?: boolean;  // LIABILITY: tandai akun Hutang Dividen
   is_cash_equivalent?: boolean;   // ASSET: tandai akun sebagai Kas / Setara Kas
+  is_trade_receivable?: boolean;  // ASSET: tandai akun sebagai Piutang Usaha
+  is_operating_payable?: boolean; // LIABILITY: tandai akun sebagai Hutang Operasional
   // Depreciation fields (PSAK 16) — only for ASSET + CAPEX
   useful_life_months?: number;
   residual_value?: number;
@@ -68,6 +70,8 @@ export function AccountForm({
     is_dividend: account?.is_dividend ?? false,
     is_dividend_payable: account?.is_dividend_payable ?? false,
     is_cash_equivalent: account?.is_cash_equivalent ?? false,
+    is_trade_receivable: account?.is_trade_receivable ?? false,
+    is_operating_payable: account?.is_operating_payable ?? false,
     useful_life_months: account?.useful_life_months,
     residual_value: account?.residual_value,
     acquisition_date: account?.acquisition_date,
@@ -668,6 +672,50 @@ export function AccountForm({
         </div>
       )}
 
+      {/* Piutang Usaha designation — hanya untuk ASSET accounts (selain kas) */}
+      {formData.account_type === 'ASSET' && !formData.is_cash_equivalent && (
+        <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700/50">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                Akun Piutang Usaha (Trade Receivable)
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Tandai akun ini sebagai piutang usaha (mis. &ldquo;Tagihan Pelanggan&rdquo;, &ldquo;Outstanding Bills&rdquo;). Pelunasan akun ini akan masuk Cash Flow sebagai aktivitas <strong>Operasional</strong>, bukan Investing. Khusus piutang dari penjualan — jangan tandai untuk talangan/pinjaman.
+              </p>
+              {isSystemAccount && (
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  Status untuk akun sistem dikelola otomatis dan tidak dapat diubah.
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={formData.is_trade_receivable}
+              onClick={() =>
+                setFormData(prev => ({ ...prev, is_trade_receivable: !prev.is_trade_receivable }))
+              }
+              disabled={loading || isSystemAccount}
+              aria-disabled={isSystemAccount}
+              title={isSystemAccount ? 'Akun sistem — status piutang dikelola otomatis' : undefined}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+                formData.is_trade_receivable
+                  ? 'bg-indigo-600 dark:bg-indigo-500'
+                  : 'bg-gray-200 dark:bg-gray-600'
+              } ${isSystemAccount ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} disabled:opacity-60`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                  formData.is_trade_receivable ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Dividen / Prive designation — hanya untuk EQUITY accounts */}
       {formData.account_type === 'EQUITY' && !formData.is_retained_earnings && !formData.is_stock && (
         <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700/50">
@@ -747,6 +795,50 @@ export function AccountForm({
               Jika bisnis sudah memiliki akun Hutang Dividen lain, penanda tersebut akan dipindah ke akun ini.
             </p>
           )}
+        </div>
+      )}
+
+      {/* Hutang Operasional designation — hanya untuk LIABILITY accounts (selain dividen) */}
+      {formData.account_type === 'LIABILITY' && !formData.is_dividend_payable && (
+        <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700/50">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                Akun Hutang Operasional (Trade Payable / Accrued)
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Tandai akun ini sebagai hutang operasional (mis. &ldquo;Hutang Supplier&rdquo;, &ldquo;Accrued Expenses&rdquo;). Pelunasan akun ini akan masuk Cash Flow sebagai aktivitas <strong>Operasional</strong>, bukan Financing. Khusus hutang dari operasional — jangan tandai untuk pinjaman bank/kredit.
+              </p>
+              {isSystemAccount && (
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  Status untuk akun sistem dikelola otomatis dan tidak dapat diubah.
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={formData.is_operating_payable}
+              onClick={() =>
+                setFormData(prev => ({ ...prev, is_operating_payable: !prev.is_operating_payable }))
+              }
+              disabled={loading || isSystemAccount}
+              aria-disabled={isSystemAccount}
+              title={isSystemAccount ? 'Akun sistem — status hutang operasional dikelola otomatis' : undefined}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+                formData.is_operating_payable
+                  ? 'bg-indigo-600 dark:bg-indigo-500'
+                  : 'bg-gray-200 dark:bg-gray-600'
+              } ${isSystemAccount ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} disabled:opacity-60`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                  formData.is_operating_payable ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
         </div>
       )}
 

@@ -93,4 +93,39 @@ describe('classifyCashFlow', () => {
       expect(classifyCashFlow(acc)).toBe('financing');
     });
   });
+
+  // Regression: audit finding — custom account names with explicit flag override
+  describe('flag-based classification (Migration 085)', () => {
+    it('ASSET with is_trade_receivable=true → operating (even with unconventional name)', () => {
+      const acc = makeAccount({
+        code: '1390',
+        name: 'Tagihan Pelanggan',
+        type: 'ASSET',
+        is_trade_receivable: true,
+      });
+      expect(classifyCashFlow(acc)).toBe('operating');
+    });
+
+    it('LIABILITY with is_operating_payable=true → operating (even with unconventional name)', () => {
+      const acc = makeAccount({
+        code: '2290',
+        name: 'Outstanding Bills',
+        type: 'LIABILITY',
+        is_operating_payable: true,
+      });
+      expect(classifyCashFlow(acc)).toBe('operating');
+    });
+
+    it('ASSET without flag and without heuristic match → investing (audit edge case unresolved)', () => {
+      // Before flag is set by user, "Tagihan Pelanggan" still misclassifies.
+      // This confirms the toggle is the escape hatch.
+      const acc = makeAccount({ code: '1391', name: 'Tagihan Pelanggan', type: 'ASSET' });
+      expect(classifyCashFlow(acc)).toBe('investing');
+    });
+
+    it('LIABILITY without flag and without heuristic match → financing (audit edge case unresolved)', () => {
+      const acc = makeAccount({ code: '2291', name: 'Outstanding Bills', type: 'LIABILITY' });
+      expect(classifyCashFlow(acc)).toBe('financing');
+    });
+  });
 });

@@ -3,17 +3,57 @@ import autoTable from 'jspdf-autotable';
 import type { Invoice } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 
-// Indigo accent color RGB
+// Neutral palette — only the "INVOICE" title uses INDIGO
 const INDIGO: [number, number, number] = [99, 102, 241];
 const WHITE: [number, number, number] = [255, 255, 255];
 const GRAY_TEXT: [number, number, number] = [107, 114, 128];
+const GRAY_LINE: [number, number, number] = [156, 163, 175];
+const NEUTRAL_HEADER: [number, number, number] = [55, 65, 81];
 const BLACK: [number, number, number] = [17, 24, 39];
 
 // Page dimensions (A4)
 const PAGE_WIDTH = 210;
+const PAGE_HEIGHT = 297;
 const MARGIN_LEFT = 20;
 const MARGIN_RIGHT = 20;
 const CONTENT_RIGHT = PAGE_WIDTH - MARGIN_RIGHT;
+const CONTENT_CENTER = PAGE_WIDTH / 2;
+
+/**
+ * Fetch an image URL and convert it into a data URL usable by jsPDF.
+ * Returns null on any failure (network, CORS, decode), so the export
+ * still succeeds without the image.
+ */
+async function loadImageAsDataURL(
+  url: string
+): Promise<{ dataUrl: string; format: 'PNG' | 'JPEG'; width: number; height: number } | null> {
+  try {
+    const res = await fetch(url, { mode: 'cors' });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+
+    const dims = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      img.onerror = () => reject(new Error('image decode failed'));
+      img.src = dataUrl;
+    });
+
+    const format: 'PNG' | 'JPEG' =
+      blob.type === 'image/jpeg' || blob.type === 'image/jpg' ? 'JPEG' : 'PNG';
+
+    return { dataUrl, format, width: dims.width, height: dims.height };
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Resolve the column header label for line items table.
@@ -56,8 +96,8 @@ function formatDateDDMMYYYY(dateStr: string): string {
  * Draw a horizontal accent line across the content area.
  */
 function drawAccentLine(doc: jsPDF, y: number): void {
-  doc.setDrawColor(...INDIGO);
-  doc.setLineWidth(0.8);
+  doc.setDrawColor(...GRAY_LINE);
+  doc.setLineWidth(0.6);
   doc.line(MARGIN_LEFT, y, CONTENT_RIGHT, y);
 }
 
@@ -67,7 +107,7 @@ function drawAccentLine(doc: jsPDF, y: number): void {
  * Uses jsPDF + jspdf-autotable following the same patterns as the
  * existing financial report exports in `src/lib/export.ts`.
  */
-export function exportInvoiceToPDF(params: {
+export async function exportInvoiceToPDF(params: {
   invoice: Invoice;
   business: {
     business_name: string;
@@ -82,13 +122,29 @@ export function exportInvoiceToPDF(params: {
     contact_number: string;
   } | null;
   issuerName?: string;
-}): void {
+}): Promise<void> {
   const { invoice, business, paymentDetails, issuerName } = params;
   const doc = new jsPDF();
+
+  // Pre-load images in parallel so the rest of the export is sync
+  const [businessLogo, axionLogo] = await Promise.all([
+    business.logo_url ? loadImageAsDataURL(business.logo_url) : Promise.resolve(null),
+    loadImageAsDataURL('/images/favicon.png'),
+  ]);
 
   let cursorY = 20;
 
   // ─────────────────── HEADER ───────────────────
+
+  // Business logo (left, above business name) — optional
+  if (businessLogo) {
+    const logoMaxSize = 16; // mm
+    const aspect = businessLogo.width / businessLogo.height;
+    const logoW = aspect >= 1 ? logoMaxSize : logoMaxSize * aspect;
+    const logoH = aspect >= 1 ? logoMaxSize / aspect : logoMaxSize;
+    doc.addImage(businessLogo.dataUrl, businessLogo.format, MARGIN_LEFT, cursorY - 4, logoW, logoH);
+    cursorY += logoH + 2;
+  }
 
   // Business name (left, bold, large)
   doc.setFont('helvetica', 'bold');
@@ -96,7 +152,7 @@ export function exportInvoiceToPDF(params: {
   doc.setTextColor(...BLACK);
   doc.text(business.business_name, MARGIN_LEFT, cursorY);
 
-  // "INVOICE" title (right, bold, large)
+  // "INVOICE" title (right, bold, large) — the ONLY indigo element
   doc.setFontSize(24);
   doc.setTextColor(...INDIGO);
   doc.text('INVOICE', CONTENT_RIGHT, cursorY, { align: 'right' });
@@ -215,7 +271,7 @@ export function exportInvoiceToPDF(params: {
     body: tableBody,
     theme: 'grid',
     headStyles: {
-      fillColor: INDIGO,
+      fillColor: NEUTRAL_HEADER,
       textColor: WHITE,
       fontSize: 10,
       fontStyle: 'bold',
@@ -324,10 +380,10 @@ export function exportInvoiceToPDF(params: {
     cursorY = 30;
   }
 
-  // "Thank you for your business!" (left, indigo, bold)
+  // "Thank you for your business!" (left, neutral, bold)
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
-  doc.setTextColor(...INDIGO);
+  doc.setTextColor(...BLACK);
   doc.text('Thank you for', MARGIN_LEFT, cursorY);
   doc.text('your business!', MARGIN_LEFT, cursorY + 5);
 
@@ -352,6 +408,23 @@ export function exportInvoiceToPDF(params: {
     doc.setFontSize(10);
     doc.setTextColor(...BLACK);
     doc.text(issuerName, sigNameX, cursorY + 11, { align: 'center' });
+  }
+
+  // ─────────────────── BOTTOM-CENTER AXION LOGO (every page) ───────────────────
+
+  if (axionLogo) {
+    const logoSize = 8; // mm — small, like the collapsed-sidebar mark
+    const aspect = axionLogo.width / axionLogo.height;
+    const logoW = aspect >= 1 ? logoSize : logoSize * aspect;
+    const logoH = aspect >= 1 ? logoSize / aspect : logoSize;
+    const logoX = CONTENT_CENTER - logoW / 2;
+    const logoY = PAGE_HEIGHT - 14;
+
+    const totalPages = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.addImage(axionLogo.dataUrl, axionLogo.format, logoX, logoY, logoW, logoH);
+    }
   }
 
   // ─────────────────── SAVE ───────────────────

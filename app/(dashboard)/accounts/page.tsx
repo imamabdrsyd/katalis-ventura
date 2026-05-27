@@ -132,6 +132,8 @@ export default function AccountsPage() {
         is_dividend: data.is_dividend ?? false,
         is_dividend_payable: false,
         is_cash_equivalent: data.account_type === 'ASSET' && (data.is_cash_equivalent ?? false),
+        is_trade_receivable: data.account_type === 'ASSET' && (data.is_trade_receivable ?? false),
+        is_operating_payable: data.account_type === 'LIABILITY' && (data.is_operating_payable ?? false),
         sort_order: data.sort_order,
         description: data.description,
         default_category: data.default_category,
@@ -178,6 +180,12 @@ export default function AccountsPage() {
         is_cash_equivalent: editAccount.is_system
           ? editAccount.is_cash_equivalent
           : data.account_type === 'ASSET' && (data.is_cash_equivalent ?? false),
+        is_trade_receivable: editAccount.is_system
+          ? editAccount.is_trade_receivable
+          : data.account_type === 'ASSET' && (data.is_trade_receivable ?? false),
+        is_operating_payable: editAccount.is_system
+          ? editAccount.is_operating_payable
+          : data.account_type === 'LIABILITY' && (data.is_operating_payable ?? false),
         useful_life_months: isDepreciable ? (data.useful_life_months ?? null) : null,
         residual_value: isDepreciable ? (data.residual_value ?? null) : null,
         acquisition_date: isDepreciable ? (data.acquisition_date || null) : null,

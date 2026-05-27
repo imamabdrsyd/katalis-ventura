@@ -5,36 +5,26 @@
 
 import type { Transaction, TransactionCategory, Account } from '@/types';
 import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
+import {
+  isTradeReceivableAccount,
+  isAnyReceivableAccount,
+} from '@/lib/accounting/classification';
 
 /**
- * Returns true if the transaction represents a receivable (piutang):
- * - is double-entry
- * - debit account is ASSET type
- * - debit account has default_category === 'EARN'/'FIN' OR name contains "piutang"/"receivable"/"talangan"/"advance"
- * - includes piutang usaha (trade receivable) AND piutang talangan (advance receivable)
+ * Returns true if the transaction represents ANY receivable (piutang),
+ * including both trade receivables (piutang usaha) and advances/talangan.
+ *
+ * Used by the settlement flow — any kind of receivable can be settled.
  */
 export function isReceivableTransaction(transaction: Transaction): boolean {
-  // Single double-entry path
   if (transaction.is_double_entry) {
-    if (!transaction.debit_account) return false;
-    if (transaction.debit_account.account_type !== 'ASSET') return false;
-
-    const name = transaction.debit_account.account_name.toLowerCase();
-    if (transaction.debit_account.default_category === 'EARN') return true;
-    if (transaction.debit_account.default_category === 'FIN') return /piutang|receivable|talangan|advance/i.test(name);
-    return /piutang|receivable|talangan|advance/i.test(name);
+    return isAnyReceivableAccount(transaction.debit_account);
   }
 
-  // Multi-line path
   if (transaction.is_multi_line && transaction.journal_lines) {
-    return transaction.journal_lines.some((line) => {
-      if (line.debit_amount <= 0 || !line.account) return false;
-      if (line.account.account_type !== 'ASSET') return false;
-      const name = line.account.account_name.toLowerCase();
-      if (line.account.default_category === 'EARN') return true;
-      if (line.account.default_category === 'FIN') return /piutang|receivable|talangan|advance/i.test(name);
-      return /piutang|receivable|talangan|advance/i.test(name);
-    });
+    return transaction.journal_lines.some(
+      (line) => line.debit_amount > 0 && isAnyReceivableAccount(line.account)
+    );
   }
 
   return false;
@@ -42,28 +32,18 @@ export function isReceivableTransaction(transaction: Transaction): boolean {
 
 /**
  * Returns true if the transaction represents a TRADE receivable only (piutang usaha):
- * - Excludes talangan/advance (default_category FIN)
- * - Used for AR/AP aging report — talangan dipisah dari trade receivable
+ * - Excludes talangan/advance/loan receivable
+ * - Used for AR aging report and invoice generation
  */
 export function isTradeReceivableTransaction(transaction: Transaction): boolean {
   if (transaction.is_double_entry) {
-    if (!transaction.debit_account) return false;
-    if (transaction.debit_account.account_type !== 'ASSET') return false;
-    if (transaction.debit_account.default_category === 'FIN') return false;
-    if (/talangan|advance/i.test(transaction.debit_account.account_name)) return false;
-    if (transaction.debit_account.default_category === 'EARN') return true;
-    return /piutang usaha|receivable/i.test(transaction.debit_account.account_name);
+    return isTradeReceivableAccount(transaction.debit_account);
   }
 
   if (transaction.is_multi_line && transaction.journal_lines) {
-    return transaction.journal_lines.some((line) => {
-      if (line.debit_amount <= 0 || !line.account) return false;
-      if (line.account.account_type !== 'ASSET') return false;
-      if (line.account.default_category === 'FIN') return false;
-      if (/talangan|advance/i.test(line.account.account_name)) return false;
-      if (line.account.default_category === 'EARN') return true;
-      return /piutang usaha|receivable/i.test(line.account.account_name);
-    });
+    return transaction.journal_lines.some(
+      (line) => line.debit_amount > 0 && isTradeReceivableAccount(line.account)
+    );
   }
 
   return false;

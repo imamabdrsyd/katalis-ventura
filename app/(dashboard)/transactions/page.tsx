@@ -11,11 +11,13 @@ import { TransactionList } from '@/components/transactions/TransactionList';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import { DeleteConfirmModal } from '@/components/transactions/DeleteConfirmModal';
 import TransactionImportModal from '@/components/transactions/TransactionImportModal';
+import { CreateInvoiceFromTransactionsModal } from '@/components/invoices/CreateInvoiceFromTransactionsModal';
+import { useInvoiceFromTransactions } from '@/hooks/useInvoiceFromTransactions';
 import type { TransactionCategory } from '@/types';
 import { QuickTransactionForm } from '@/components/transactions/QuickTransactionForm';
 import { RecurringList } from '@/components/transactions/RecurringList';
 import { useRecurringTransactions } from '@/hooks/useRecurringTransactions';
-import { Upload, TrendingUp, TrendingDown, Plus, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2, Calculator, RefreshCw, Printer, Loader2, Contact as ContactIcon } from 'lucide-react';
+import { Upload, TrendingUp, TrendingDown, Plus, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2, Calculator, RefreshCw, Printer, Loader2, Contact as ContactIcon, Receipt } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
@@ -208,6 +210,26 @@ function TransactionsPageInner() {
   }, [selectedIds, allTransactions]);
 
   const [showSelectedSummary, setShowSelectedSummary] = useState(false);
+
+  // Invoice-from-transactions bulk action
+  const invoiceFromTxns = useInvoiceFromTransactions();
+  const [showBulkInvoiceModal, setShowBulkInvoiceModal] = useState(false);
+  const bulkInvoiceTransactions = useMemo(
+    () => allTransactions.filter((t) => selectedIds.has(t.id)),
+    [allTransactions, selectedIds]
+  );
+  const bulkInvoiceEligible = useMemo(() => {
+    if (bulkInvoiceTransactions.length === 0) return false;
+    return bulkInvoiceTransactions.every((t) =>
+      invoiceFromTxns.filterInvoiceable([t]).length === 1
+    );
+  }, [bulkInvoiceTransactions, invoiceFromTxns]);
+
+  const handleBulkCreateInvoice = useCallback(() => {
+    const err = invoiceFromTxns.canInvoiceTransactions(bulkInvoiceTransactions);
+    if (err) return; // toast already shown
+    setShowBulkInvoiceModal(true);
+  }, [invoiceFromTxns, bulkInvoiceTransactions]);
 
   // PDF export config for selected transactions
   const [showPdfConfigModal, setShowPdfConfigModal] = useState(false);
@@ -561,6 +583,17 @@ function TransactionsPageInner() {
                     <Trash2 className="w-3.5 h-3.5" />
                     {t.common.delete} ({selectedIds.size})
                   </button>
+                  {bulkInvoiceEligible && (
+                    <button
+                      onClick={handleBulkCreateInvoice}
+                      disabled={saving || invoiceFromTxns.saving}
+                      className="btn-secondary flex items-center gap-1.5 border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+                      title="Buat invoice dari transaksi piutang terpilih"
+                    >
+                      <Receipt className="w-3.5 h-3.5" />
+                      Buat Invoice
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowSelectedSummary(!showSelectedSummary)}
                     className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 ${showSelectedSummary ? 'bg-indigo-500 text-white' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}
@@ -610,6 +643,7 @@ function TransactionsPageInner() {
             onDelete={canManageTransactions && !selectMode ? setDeleteTransaction : undefined}
             selectMode={selectMode}
             selectedIds={selectedIds}
+            invoicedTransactionIds={invoiceFromTxns.linkedTransactionIds}
             onToggleSelect={handleToggleSelect}
             onSelectAll={handleSelectAll}
             highlightAfter={highlightAfter}
@@ -937,6 +971,17 @@ function TransactionsPageInner() {
           </div>
         </div>
       </Modal>
+
+      {/* Bulk: Create Invoice from selected transactions */}
+      <CreateInvoiceFromTransactionsModal
+        isOpen={showBulkInvoiceModal}
+        onClose={() => setShowBulkInvoiceModal(false)}
+        transactions={bulkInvoiceTransactions}
+        onSuccess={() => {
+          setShowBulkInvoiceModal(false);
+          handleExitSelectMode();
+        }}
+      />
 
     </div>
   );
