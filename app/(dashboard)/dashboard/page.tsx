@@ -30,7 +30,9 @@ const CapTableWidget = dynamic(() => import('@/components/dashboard/CapTableWidg
 });
 
 const DASHBOARD_ITEM_VARIANTS: Variants = {
-  hidden: { opacity: 0, y: 14, scale: 0.985 },
+  // hidden state pakai opacity 1 supaya konten tidak pernah invisible —
+  // mencegah kondisi blank kalau framer animation tidak ter-trigger pada re-mount.
+  hidden: { opacity: 1, y: 0, scale: 1 },
   visible: {
     opacity: 1,
     y: 0,
@@ -467,8 +469,8 @@ export default function DashboardPage() {
       {/* Stats Cards */}
       <motion.div
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
-        initial={shouldReduceMotion ? false : 'hidden'}
-        animate={shouldReduceMotion ? undefined : 'visible'}
+        initial={false}
+        animate="visible"
         variants={shouldReduceMotion ? undefined : DASHBOARD_STAGGER_VARIANTS}
       >
         {/* Revenue */}
@@ -677,8 +679,8 @@ export default function DashboardPage() {
       {/* Monitoring Chart + Expense Breakdown */}
       <motion.div
         className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6"
-        initial={shouldReduceMotion ? false : 'hidden'}
-        animate={shouldReduceMotion ? undefined : 'visible'}
+        initial={false}
+        animate="visible"
         variants={shouldReduceMotion ? undefined : DASHBOARD_STAGGER_VARIANTS}
       >
         <motion.div className="lg:col-span-2 flex flex-col" variants={shouldReduceMotion ? undefined : DASHBOARD_ITEM_VARIANTS}>
