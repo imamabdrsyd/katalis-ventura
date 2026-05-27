@@ -20,36 +20,50 @@ const CONTENT_RIGHT = PAGE_WIDTH - MARGIN_RIGHT;
 const CONTENT_CENTER = PAGE_WIDTH / 2;
 
 /**
- * Fetch an image URL and convert it into a data URL usable by jsPDF.
- * Returns null on any failure (network, CORS, decode), so the export
- * still succeeds without the image.
+ * Fetch an image URL, resize it to fit within maxSize×maxSize px, and
+ * compress to JPEG (quality 0.75) via Canvas. This keeps embedded images
+ * small so the PDF stays under ~500 KB regardless of original image size.
+ * Returns null on any failure so the export still succeeds without the image.
  */
 async function loadImageAsDataURL(
-  url: string
-): Promise<{ dataUrl: string; format: 'PNG' | 'JPEG'; width: number; height: number } | null> {
+  url: string,
+  maxSize = 300
+): Promise<{ dataUrl: string; format: 'JPEG'; width: number; height: number } | null> {
   try {
     const res = await fetch(url, { mode: 'cors' });
     if (!res.ok) return null;
     const blob = await res.blob();
 
-    const dataUrl = await new Promise<string>((resolve, reject) => {
+    const originalDataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
       reader.onerror = () => reject(reader.error);
       reader.readAsDataURL(blob);
     });
 
-    const dims = await new Promise<{ width: number; height: number }>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-      img.onerror = () => reject(new Error('image decode failed'));
-      img.src = dataUrl;
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('image decode failed'));
+      el.src = originalDataUrl;
     });
 
-    const format: 'PNG' | 'JPEG' =
-      blob.type === 'image/jpeg' || blob.type === 'image/jpg' ? 'JPEG' : 'PNG';
+    // Scale down to maxSize while preserving aspect ratio
+    const scale = Math.min(1, maxSize / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.round(img.naturalWidth * scale);
+    const h = Math.round(img.naturalHeight * scale);
 
-    return { dataUrl, format, width: dims.width, height: dims.height };
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d')!;
+    // White background so transparent PNGs don't go black in JPEG
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+    return { dataUrl, format: 'JPEG', width: w, height: h };
   } catch {
     return null;
   }
@@ -128,8 +142,8 @@ export async function exportInvoiceToPDF(params: {
 
   // Pre-load images in parallel so the rest of the export is sync
   const [businessLogo, axionLogo] = await Promise.all([
-    business.logo_url ? loadImageAsDataURL(business.logo_url) : Promise.resolve(null),
-    loadImageAsDataURL('/images/favicon.png'),
+    business.logo_url ? loadImageAsDataURL(business.logo_url, 300) : Promise.resolve(null),
+    loadImageAsDataURL('/images/favicon.png', 64),
   ]);
 
   let cursorY = 20;
