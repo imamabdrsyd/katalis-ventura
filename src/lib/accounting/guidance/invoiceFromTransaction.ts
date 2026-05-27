@@ -105,8 +105,11 @@ interface BuildInvoicePrefillParams {
  *   - due_date: today + defaultDueDays (default 7)
  *   - line_items: 1 baris per transaksi
  *       - item_name: description || name || `Tagihan ${date}`
- *       - quantity: 1
- *       - unit_price: outstanding_amount (sisa piutang, bukan original)
+ *       - quantity & unit_price:
+ *           * Bila transaksi punya meta.unit_breakdown DAN belum partial-settled
+ *             (outstanding === amount), pakai qty × price_per_unit dari breakdown.
+ *           * Bila partial-settled, fallback ke qty=1, unit_price=outstanding
+ *             (tidak boleh tagih ulang porsi yang sudah dibayar).
  *   - tax_type: defaultTaxType ?? 'none'
  *   - description: kosong (user bisa edit)
  *
@@ -132,11 +135,33 @@ export function buildInvoicePrefill(params: BuildInvoicePrefillParams): InvoiceF
   const customerName = first?.contact?.name || first?.name || '';
   const customerPhone = first?.contact?.phone ?? '';
 
-  const line_items = transactions.map((t) => ({
-    item_name: t.description?.trim() || t.name?.trim() || `Tagihan ${t.date}`,
-    quantity: 1,
-    unit_price: getOutstandingAmount(t),
-  }));
+  const line_items = transactions.map((t) => {
+    const itemName = t.description?.trim() || t.name?.trim() || `Tagihan ${t.date}`;
+    const outstanding = getOutstandingAmount(t);
+    const breakdown = t.meta?.unit_breakdown;
+
+    // Pakai unit breakdown HANYA bila transaksi belum partial-settled.
+    // Kalau partial-settled, qty × price akan menagih ulang porsi yang sudah dibayar.
+    const isFullyOutstanding = outstanding === t.amount;
+    if (
+      breakdown &&
+      isFullyOutstanding &&
+      breakdown.quantity > 0 &&
+      breakdown.price_per_unit > 0
+    ) {
+      return {
+        item_name: itemName,
+        quantity: breakdown.quantity,
+        unit_price: breakdown.price_per_unit,
+      };
+    }
+
+    return {
+      item_name: itemName,
+      quantity: 1,
+      unit_price: outstanding,
+    };
+  });
 
   return {
     invoice_number: '', // diisi caller (route handler)
