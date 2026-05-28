@@ -247,7 +247,7 @@ export function InviteCodeManager({
             <button
               onClick={handleGenerateCode}
               disabled={generating}
-              className="btn-primary w-full"
+              className="btn-primary-glow w-full"
             >
               {generating ? 'Generating...' : 'Generate Kode'}
             </button>
