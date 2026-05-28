@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase';
-import { normalizeRole } from '@/lib/roles';
 
 export type JoinRequestStatus = 'pending' | 'approved' | 'rejected';
 
@@ -113,9 +112,19 @@ export async function getPendingRequestsCount(businessIds: string[]): Promise<nu
   return count || 0;
 }
 
+// CRIT-02 fix: role hasil approve harus ditentukan oleh approver, bukan
+// dibaca dari profiles.default_role requester. 'superadmin' tidak boleh
+// di-grant lewat jalur join request — promosi superadmin harus eksplisit
+// via member management.
+//
+// Helper ini diperlakukan sebagai deprecated wrapper untuk klien yang masih
+// memanggil supabase langsung; flow utama harus melalui
+// POST /api/business-join-requests/[id]/approve karena membutuhkan
+// SECURITY DEFINER untuk insert ke user_business_roles dari sisi approver.
 export async function approveJoinRequest(
   requestId: string,
-  reviewerId: string
+  reviewerId: string,
+  role: 'investor' | 'business_manager' = 'investor'
 ): Promise<void> {
   const supabase = createClient();
 
@@ -133,17 +142,6 @@ export async function approveJoinRequest(
     .eq('id', requestId);
 
   if (updateErr) throw updateErr;
-
-  const { data: requesterProfile } = await supabase
-    .from('profiles')
-    .select('default_role')
-    .eq('id', req.requester_id)
-    .maybeSingle();
-
-  const defaultRole = normalizeRole(requesterProfile?.default_role);
-  const role = defaultRole === 'business_manager' || defaultRole === 'superadmin'
-    ? defaultRole
-    : 'investor';
 
   const { error: roleErr } = await supabase
     .from('user_business_roles')

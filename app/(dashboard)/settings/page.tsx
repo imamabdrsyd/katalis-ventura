@@ -215,14 +215,15 @@ export default function SettingsPage() {
 
       if (updateError) throw updateError;
 
-      // Update profiles table (keep default_role as-is for superadmin)
+      // Update profiles table — default_role TIDAK ikut dikirim dari klien.
+      // Field role itu privileged dan hanya boleh diubah oleh superadmin asli;
+      // trigger prevent_profile_role_escalation di DB juga sudah menjaga.
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
           id: user.id,
           full_name: fullName,
           avatar_url: avatarUrl,
-          default_role: isSuperadmin ? 'superadmin' : userRole,
         });
 
       if (profileError) throw profileError;
