@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { TrendingUp, TrendingDown, Info, DollarSign, ChevronRight, Building2, Settings2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Info, DollarSign, ChevronRight, Building2, SlidersHorizontal } from 'lucide-react';
 import { motion, useInView, useReducedMotion } from 'framer-motion';
 import { useIncomeStatement } from '@/hooks/useIncomeStatement';
 import { useLanguage } from '@/context/LanguageContext';
@@ -693,7 +693,7 @@ function IncomeStatementPageInner() {
                 title="Konfigurasi klasifikasi expense"
                 aria-label="Configure income statement"
               >
-                <Settings2 className="w-4.5 h-4.5" />
+                <SlidersHorizontal className="w-4.5 h-4.5" />
               </button>
             </div>
 
