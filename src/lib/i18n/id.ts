@@ -462,7 +462,7 @@ export const id: Translations = {
   invoices: {
     title: 'Invoicing',
     settings: 'Pengaturan',
-    createInvoice: 'Buat Invoice',
+    createInvoice: 'Buat Faktur',
     createFromTransaction: 'Buat dari Transaksi',
     editInvoice: 'Edit Invoice',
     deleteInvoice: 'Hapus Invoice',
