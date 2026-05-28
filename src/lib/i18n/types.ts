@@ -481,6 +481,7 @@ export interface Translations {
     title: string;
     settings: string;
     createInvoice: string;
+    createFromTransaction: string;
     editInvoice: string;
     deleteInvoice: string;
     deleteConfirm: string;

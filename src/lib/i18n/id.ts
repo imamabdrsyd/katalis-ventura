@@ -463,6 +463,7 @@ export const id: Translations = {
     title: 'Invoicing',
     settings: 'Pengaturan',
     createInvoice: 'Buat Invoice',
+    createFromTransaction: 'Buat dari Transaksi',
     editInvoice: 'Edit Invoice',
     deleteInvoice: 'Hapus Invoice',
     deleteConfirm: 'Yakin ingin menghapus invoice {number}?',

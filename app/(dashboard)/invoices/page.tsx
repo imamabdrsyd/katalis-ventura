@@ -98,7 +98,7 @@ function InvoicesPageInner() {
               title="Pilih transaksi piutang untuk dijadikan invoice"
             >
               <Receipt className="h-4 w-4" />
-              Buat dari Transaksi
+              {t.invoices.createFromTransaction}
             </button>
             <button
               onClick={() => setShowAddModal(true)}
