@@ -23,9 +23,11 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) return validationError(parsed.error);
 
     const supabase = await createServerClient();
+    // CRIT-03: RPC sekarang single-arg. user_id selalu auth.uid() di dalam
+    // function (SECURITY DEFINER) — tidak bisa di-spoof dari klien.
+    void user;
     const { data, error } = await supabase.rpc('use_invite_code', {
       p_code: parsed.data.code.toUpperCase(),
-      p_user_id: user.id,
     });
 
     if (error) {
