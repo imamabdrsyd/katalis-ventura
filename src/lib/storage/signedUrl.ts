@@ -1,3 +1,7 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+
 // Helper untuk mengakses file legacy di bucket Supabase Storage
 // transaction-attachments yang kini bersifat private (lihat CRIT-04 fix di
 // migration 091). File modern menggunakan Cloudinary sehingga URL-nya tidak
@@ -48,4 +52,48 @@ export async function resolveAttachmentUrl(
   const path = extractLegacyAttachmentPath(rawUrl);
   if (!path) return rawUrl;
   return fetchSignedAttachmentUrl(path, ttlSeconds);
+}
+
+/**
+ * React hook: kembalikan URL siap-pakai untuk render `<img src>` / `<a href>`.
+ *
+ * - URL non-Supabase-Storage dikembalikan apa adanya.
+ * - URL legacy Supabase Storage di-resolve jadi signed URL via API
+ *   /api/transactions/attachments/sign (TTL pendek). Sebelum signed URL
+ *   tersedia, hook mengembalikan string kosong supaya browser tidak
+ *   memuat URL public yang sudah 403.
+ *
+ * Hook ini di-cache cukup ringan via state — jika rawUrl tidak berubah,
+ * resolve hanya terjadi sekali. Komponen pemanggil tetap perlu memikirkan
+ * refresh saat TTL habis (umumnya 30 menit cukup untuk satu sesi).
+ */
+export function useSignedAttachmentUrl(rawUrl: string | null | undefined): string {
+  const [resolved, setResolved] = useState<string>(() =>
+    rawUrl && !isLegacyAttachmentUrl(rawUrl) ? rawUrl : ''
+  );
+
+  useEffect(() => {
+    if (!rawUrl) {
+      setResolved('');
+      return;
+    }
+    if (!isLegacyAttachmentUrl(rawUrl)) {
+      setResolved(rawUrl);
+      return;
+    }
+    let cancelled = false;
+    setResolved('');
+    resolveAttachmentUrl(rawUrl)
+      .then((u) => {
+        if (!cancelled) setResolved(u);
+      })
+      .catch(() => {
+        if (!cancelled) setResolved('');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [rawUrl]);
+
+  return resolved;
 }

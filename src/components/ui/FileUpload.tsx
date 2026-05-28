@@ -11,6 +11,7 @@ import {
   isImageType,
   MAX_FILES,
 } from '@/lib/storage/attachments';
+import { useSignedAttachmentUrl } from '@/lib/storage/signedUrl';
 
 interface FileUploadProps {
   businessId: string;
@@ -85,36 +86,14 @@ export function FileUpload({ businessId, value, onChange, disabled = false }: Fi
       {/* Daftar file yang sudah diupload */}
       {value.length > 0 && (
         <div className="space-y-1.5">
-          {value.map((att) => {
-            const isImg = isImageType(att.mime_type);
-            return (
-              <div key={att.path} className="flex items-center gap-3 p-2.5 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg">
-                {isImg ? (
-                  <a href={att.url} target="_blank" rel="noopener noreferrer"
-                    className="flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 hover:opacity-80 transition-opacity">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={att.url} alt={att.filename} className="w-full h-full object-cover" />
-                  </a>
-                ) : (
-                  <a href={att.url} target="_blank" rel="noopener noreferrer"
-                    className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-50 dark:bg-red-900/30 flex items-center justify-center hover:opacity-80 transition-opacity">
-                    <FileText className="w-5 h-5 text-red-500 dark:text-red-400" />
-                  </a>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{att.filename}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(att.size)}</p>
-                </div>
-                {!disabled && (
-                  <button type="button" onClick={() => handleRemove(att)}
-                    className="flex-shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-900/20 transition-colors"
-                    title="Remove attachment">
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            );
-          })}
+          {value.map((att) => (
+            <AttachmentRow
+              key={att.path}
+              attachment={att}
+              disabled={disabled}
+              onRemove={handleRemove}
+            />
+          ))}
         </div>
       )}
 
@@ -173,6 +152,68 @@ export function FileUpload({ businessId, value, onChange, disabled = false }: Fi
       )}
 
       {error && <p className="text-xs text-red-500 dark:text-red-400 mt-1">{error}</p>}
+    </div>
+  );
+}
+
+/**
+ * Subkomponen baris attachment. Pakai useSignedAttachmentUrl supaya URL
+ * legacy bucket Supabase Storage (yang kini private) di-resolve ke signed
+ * URL — kalau URL sudah Cloudinary atau external, di-return apa adanya.
+ */
+function AttachmentRow({
+  attachment,
+  disabled,
+  onRemove,
+}: {
+  attachment: TransactionAttachment;
+  disabled?: boolean;
+  onRemove: (att: TransactionAttachment) => void;
+}) {
+  const url = useSignedAttachmentUrl(attachment.url);
+  const isImg = isImageType(attachment.mime_type);
+  const ready = !!url;
+
+  return (
+    <div className="flex items-center gap-3 p-2.5 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg">
+      {isImg ? (
+        <a
+          href={ready ? url : undefined}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-disabled={!ready}
+          className={`flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 transition-opacity ${ready ? 'hover:opacity-80' : 'pointer-events-none opacity-60'}`}
+        >
+          {ready ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={url} alt={attachment.filename} className="w-full h-full object-cover" />
+          ) : null}
+        </a>
+      ) : (
+        <a
+          href={ready ? url : undefined}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-disabled={!ready}
+          className={`flex-shrink-0 w-10 h-10 rounded-lg bg-red-50 dark:bg-red-900/30 flex items-center justify-center transition-opacity ${ready ? 'hover:opacity-80' : 'pointer-events-none opacity-60'}`}
+        >
+          <FileText className="w-5 h-5 text-red-500 dark:text-red-400" />
+        </a>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{attachment.filename}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(attachment.size)}</p>
+      </div>
+      {!disabled && (
+        <button
+          type="button"
+          onClick={() => onRemove(attachment)}
+          className="flex-shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-900/20 transition-colors"
+          title="Remove attachment"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      )}
     </div>
   );
 }

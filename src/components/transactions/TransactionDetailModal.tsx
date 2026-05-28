@@ -33,6 +33,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { updateTransaction } from '@/lib/api/transactions';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { formatFileSize, isImageType } from '@/lib/storage/attachments';
+import { useSignedAttachmentUrl } from '@/lib/storage/signedUrl';
 
 interface TransactionDetailModalProps {
   transaction: Transaction | null;
@@ -796,51 +797,13 @@ export function TransactionDetailModal({
                 {t.transactionDetail.attachment}
               </h4>
               <div className="space-y-2">
-                {atts.map((att) =>
-                  isImageType(att.mime_type) ? (
-                    <button
-                      key={att.path}
-                      type="button"
-                      onClick={() => openImagePreview(att)}
-                      className="block w-full text-left group"
-                      aria-label={`Lihat ${att.filename}`}
-                    >
-                      <div className="relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-                        <img
-                          src={att.url}
-                          alt={att.filename}
-                          className="w-full max-h-64 object-contain bg-gray-50 dark:bg-gray-800 group-hover:opacity-90 transition-opacity"
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
-                          <ZoomIn className="w-6 h-6 text-white drop-shadow-lg" />
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        <span className="truncate">{att.filename}</span>
-                        <span>{formatFileSize(att.size)}</span>
-                      </div>
-                    </button>
-                  ) : (
-                    <a
-                      key={att.path}
-                      href={att.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
-                    >
-                      <FileText className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                          {att.filename}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatFileSize(att.size)}
-                        </p>
-                      </div>
-                      <Download className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors flex-shrink-0" />
-                    </a>
-                  )
-                )}
+                {atts.map((att) => (
+                  <AttachmentPreviewItem
+                    key={att.path}
+                    attachment={att}
+                    onOpenImage={openImagePreview}
+                  />
+                ))}
               </div>
             </div>
           );
@@ -1629,8 +1592,8 @@ export function TransactionDetailModal({
             >
               <ZoomIn className="w-5 h-5" />
             </button>
-            <a
-              href={previewAttachment.url}
+            <SignedAttachmentAnchor
+              rawUrl={previewAttachment.url}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
@@ -1639,7 +1602,7 @@ export function TransactionDetailModal({
               aria-label="Buka di tab baru"
             >
               <ExternalLink className="w-5 h-5" />
-            </a>
+            </SignedAttachmentAnchor>
             <button
               type="button"
               onClick={(e) => {
@@ -1660,8 +1623,8 @@ export function TransactionDetailModal({
           onClick={(e) => e.stopPropagation()}
         >
           <div className="min-h-full flex items-center justify-center">
-            <img
-              src={previewAttachment.url}
+            <SignedAttachmentImage
+              rawUrl={previewAttachment.url}
               alt={previewAttachment.filename}
               className="max-w-full max-h-full rounded-lg shadow-2xl select-none"
               style={{
@@ -1687,4 +1650,105 @@ export function TransactionDetailModal({
     )}
     </>
   );
+}
+
+/**
+ * Render satu baris attachment di daftar detail transaksi. Pakai signed URL
+ * untuk file legacy bucket Supabase Storage (private setelah CRIT-04 fix).
+ */
+function AttachmentPreviewItem({
+  attachment,
+  onOpenImage,
+}: {
+  attachment: TransactionAttachment;
+  onOpenImage: (att: TransactionAttachment) => void;
+}) {
+  const url = useSignedAttachmentUrl(attachment.url);
+  const ready = !!url;
+  const isImg = isImageType(attachment.mime_type);
+
+  if (isImg) {
+    return (
+      <button
+        type="button"
+        onClick={() => ready && onOpenImage(attachment)}
+        disabled={!ready}
+        className="block w-full text-left group disabled:opacity-60 disabled:cursor-not-allowed"
+        aria-label={`Lihat ${attachment.filename}`}
+      >
+        <div className="relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+          {ready ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={url}
+              alt={attachment.filename}
+              className="w-full max-h-64 object-contain group-hover:opacity-90 transition-opacity"
+            />
+          ) : (
+            <div className="w-full h-32" />
+          )}
+          {ready && (
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+              <ZoomIn className="w-6 h-6 text-white drop-shadow-lg" />
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 dark:text-gray-400">
+          <span className="truncate">{attachment.filename}</span>
+          <span>{formatFileSize(attachment.size)}</span>
+        </div>
+      </button>
+    );
+  }
+
+  return (
+    <a
+      href={ready ? url : undefined}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-disabled={!ready}
+      className={`flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors group ${ready ? 'hover:bg-gray-100 dark:hover:bg-gray-800' : 'pointer-events-none opacity-60'}`}
+    >
+      <FileText className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+          {attachment.filename}
+        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          {formatFileSize(attachment.size)}
+        </p>
+      </div>
+      <Download className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors flex-shrink-0" />
+    </a>
+  );
+}
+
+/**
+ * Anchor pembungkus yang otomatis pakai signed URL untuk href.
+ */
+function SignedAttachmentAnchor({
+  rawUrl,
+  children,
+  ...rest
+}: { rawUrl: string } & React.AnchorHTMLAttributes<HTMLAnchorElement>) {
+  const url = useSignedAttachmentUrl(rawUrl);
+  return (
+    <a {...rest} href={url || undefined} aria-disabled={!url}>
+      {children}
+    </a>
+  );
+}
+
+/**
+ * Image pembungkus yang pakai signed URL untuk src.
+ */
+function SignedAttachmentImage({
+  rawUrl,
+  alt,
+  ...rest
+}: { rawUrl: string; alt: string } & React.ImgHTMLAttributes<HTMLImageElement>) {
+  const url = useSignedAttachmentUrl(rawUrl);
+  if (!url) return null;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img {...rest} src={url} alt={alt} />;
 }
