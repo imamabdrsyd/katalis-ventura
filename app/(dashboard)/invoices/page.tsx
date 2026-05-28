@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { FileText, Settings, Plus, Trash2, Receipt } from 'lucide-react';
+import { FileText, SlidersVertical, Plus, Trash2, Receipt } from 'lucide-react';
 import { useInvoices } from '@/hooks/useInvoices';
 import { InvoiceForm } from '@/components/invoices/InvoiceForm';
 import { InvoiceList } from '@/components/invoices/InvoiceList';
@@ -93,14 +93,6 @@ function InvoicesPageInner() {
         {canManageInvoices && (
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setShowSettingsModal(true)}
-              className="btn-icon"
-              title={t.invoices.settings}
-              aria-label={t.invoices.settings}
-            >
-              <Settings className="h-5 w-5" />
-            </button>
-            <button
               onClick={() => setShowPickerModal(true)}
               className="btn-ghost flex items-center gap-2"
               title="Pilih transaksi piutang untuk dijadikan invoice"
@@ -110,10 +102,18 @@ function InvoicesPageInner() {
             </button>
             <button
               onClick={() => setShowAddModal(true)}
-              className="btn-primary flex items-center gap-2"
+              className="btn-primary-glow flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
               {t.invoices.createInvoice}
+            </button>
+            <button
+              onClick={() => setShowSettingsModal(true)}
+              className="btn-icon"
+              title={t.invoices.settings}
+              aria-label={t.invoices.settings}
+            >
+              <SlidersVertical className="h-5 w-5" />
             </button>
           </div>
         )}
