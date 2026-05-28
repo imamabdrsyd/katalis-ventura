@@ -102,7 +102,7 @@ function InvoicesPageInner() {
             </button>
             <button
               onClick={() => setShowPickerModal(true)}
-              className="btn-secondary flex items-center gap-2"
+              className="btn-ghost flex items-center gap-2"
               title="Pilih transaksi piutang untuk dijadikan invoice"
             >
               <Receipt className="h-4 w-4" />

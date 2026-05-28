@@ -578,7 +578,7 @@ export function TransactionList({
                   )}
                   {invoicedTransactionIds?.has(transaction.id) && (
                     <span
-                      className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300"
+                      className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
                       title="Sudah dibuatkan invoice"
                     >
                       INV
