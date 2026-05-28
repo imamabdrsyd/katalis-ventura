@@ -470,7 +470,7 @@ export function InvoiceForm({
         <button
           type="submit"
           disabled={loading}
-          className="btn-primary flex-1"
+          className="btn-primary-glow flex-1"
         >
           {loading ? 'Menyimpan...' : invoice ? 'Update Invoice' : 'Simpan Invoice'}
         </button>

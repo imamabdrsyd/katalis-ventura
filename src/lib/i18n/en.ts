@@ -463,7 +463,7 @@ export const en: Translations = {
     title: 'Invoicing',
     settings: 'Settings',
     createInvoice: 'Create Invoice',
-    createFromTransaction: 'From Transactions',
+    createFromTransaction: 'Existing Transactions',
     editInvoice: 'Edit Invoice',
     deleteInvoice: 'Delete Invoice',
     deleteConfirm: 'Are you sure you want to delete invoice {number}?',

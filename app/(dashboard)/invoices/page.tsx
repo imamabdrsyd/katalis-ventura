@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { FileText, SlidersVertical, Plus, Trash2, Receipt } from 'lucide-react';
+import { FileText, SlidersVertical, Plus, Trash2 } from 'lucide-react';
 import { useInvoices } from '@/hooks/useInvoices';
 import { InvoiceForm } from '@/components/invoices/InvoiceForm';
 import { InvoiceList } from '@/components/invoices/InvoiceList';
@@ -94,10 +94,9 @@ function InvoicesPageInner() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowPickerModal(true)}
-              className="btn-ghost flex items-center gap-2"
+              className="btn-ghost"
               title="Pilih transaksi piutang untuk dijadikan invoice"
             >
-              <Receipt className="h-4 w-4" />
               {t.invoices.createFromTransaction}
             </button>
             <button
