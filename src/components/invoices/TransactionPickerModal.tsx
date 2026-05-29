@@ -294,7 +294,11 @@ export function TransactionPickerModal({
             )}
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="btn-secondary">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium transition-colors"
+            >
               Batal
             </button>
             <button
