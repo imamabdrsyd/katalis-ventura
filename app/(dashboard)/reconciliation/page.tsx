@@ -94,9 +94,9 @@ function ReconciliationPageInner() {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setImportOpen(true)}
-            className="px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 border border-indigo-300 dark:border-indigo-700 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/20 flex items-center gap-1.5"
+            className="btn-ghost flex items-center gap-1.5"
           >
-            <Upload className="w-3.5 h-3.5" />
+            <Upload className="w-4 h-4" />
             {t.reconciliation.importMutasi}
           </button>
           <Calendar className="w-4 h-4 text-gray-400" />
