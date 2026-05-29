@@ -171,9 +171,13 @@ function ReconciliationPageInner() {
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
           <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-1">{t.reconciliation.bankBalance}</p>
           <input
-            type="number"
-            value={bankBalance}
-            onChange={(e) => setBankBalance(e.target.value)}
+            type="text"
+            inputMode="numeric"
+            value={bankBalance ? Number(bankBalance.replace(/\./g, '')).toLocaleString('id-ID') : ''}
+            onChange={(e) => {
+              const raw = e.target.value.replace(/\./g, '').replace(/[^0-9]/g, '');
+              setBankBalance(raw);
+            }}
             placeholder={t.reconciliation.enterBankBalancePlaceholder}
             className="w-full text-xl font-bold bg-transparent border-none outline-none text-gray-900 dark:text-gray-100 placeholder:text-gray-300 dark:placeholder:text-gray-600"
           />
