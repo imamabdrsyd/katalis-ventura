@@ -93,15 +93,26 @@ export function useInvoiceFromTransactions() {
    * (and toast'd the error already).
    */
   const buildPrefill = useCallback(
-    (transactions: Transaction[]): {
+    async (transactions: Transaction[]): Promise<{
       prefill: InvoiceFormData;
       transactionIds: string[];
       linkedAmounts: Record<string, number>;
-    } | null => {
+    } | null> => {
       const err = canInvoiceTransactions(transactions);
       if (err) {
         toast.error(err);
         return null;
+      }
+
+      // Fetch next invoice number upfront so the form shows it immediately
+      let nextNumber = '';
+      if (businessId) {
+        try {
+          const prefix = invoiceSettings?.prefix || 'INV';
+          nextNumber = await invoicesApi.getNextInvoiceNumber(businessId, prefix);
+        } catch {
+          // Non-fatal — user can fill manually
+        }
       }
 
       const prefill = buildInvoicePrefill({
@@ -110,6 +121,7 @@ export function useInvoiceFromTransactions() {
         defaultTaxRate: invoiceSettings?.default_tax_rate ?? 0,
         defaultTaxType: invoiceSettings?.default_tax_type ?? 'none',
       });
+      prefill.invoice_number = nextNumber;
 
       const linkedAmounts: Record<string, number> = {};
       for (const t of transactions) {
@@ -118,7 +130,7 @@ export function useInvoiceFromTransactions() {
 
       return { prefill, transactionIds: transactions.map((t) => t.id), linkedAmounts };
     },
-    [canInvoiceTransactions, invoiceSettings]
+    [canInvoiceTransactions, invoiceSettings, businessId]
   );
 
   /**

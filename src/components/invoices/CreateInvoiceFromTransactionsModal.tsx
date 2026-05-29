@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { InvoiceForm } from './InvoiceForm';
 import { useInvoiceFromTransactions } from '@/hooks/useInvoiceFromTransactions';
@@ -37,12 +37,20 @@ export function CreateInvoiceFromTransactionsModal({
   const { buildPrefill, createFromTransactions, saving, invoiceSettings } =
     useInvoiceFromTransactions();
 
-  // Build prefill on the fly. If validation fails, this returns null and the
-  // hook's toast.error fires — modal will render empty body (caller should
-  // have validated before opening, but this is the safety net).
-  const prefillResult = useMemo(() => {
-    if (!isOpen || transactions.length === 0) return null;
-    return buildPrefill(transactions);
+  type PrefillResult = Awaited<ReturnType<typeof buildPrefill>>;
+  const [prefillResult, setPrefillResult] = useState<PrefillResult>(null);
+
+  // Build prefill async when modal opens so invoice_number is pre-fetched
+  useEffect(() => {
+    if (!isOpen || transactions.length === 0) {
+      setPrefillResult(null);
+      return;
+    }
+    let cancelled = false;
+    buildPrefill(transactions).then((result) => {
+      if (!cancelled) setPrefillResult(result);
+    });
+    return () => { cancelled = true; };
   }, [isOpen, transactions, buildPrefill]);
 
   const handleSubmit = async (data: InvoiceFormData) => {
