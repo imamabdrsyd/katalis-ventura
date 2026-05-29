@@ -247,24 +247,32 @@ export async function getNextInvoiceNumber(
   const month = now.getMonth(); // 0-indexed
   const romanMonth = ROMAN_MONTHS[month];
 
-  // Count invoices for this business in the current month/year
-  const startOfMonth = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-  const endOfMonth = month === 11
-    ? `${year + 1}-01-01`
-    : `${year}-${String(month + 2).padStart(2, '0')}-01`;
+  // Fetch all active invoice numbers for this business that match the
+  // current month/year pattern so we can find the highest sequence used.
+  // Using pattern match instead of date range so nomor yang di-edit
+  // tanggalnya tetap terhitung.
+  const pattern = `${prefix}-___/${romanMonth}/${year}`;
 
-  const { count, error } = await supabase
+  const { data, error } = await supabase
     .from('invoices')
-    .select('id', { count: 'exact', head: true })
+    .select('invoice_number')
     .eq('business_id', businessId)
-    .gte('invoice_date', startOfMonth)
-    .lt('invoice_date', endOfMonth);
+    .is('deleted_at', null)
+    .like('invoice_number', pattern);
 
   if (error) throw new Error(error.message);
 
-  const seq = (count ?? 0) + 1;
-  const paddedSeq = String(seq).padStart(3, '0');
+  // Parse sequence numbers and find the max
+  let maxSeq = 0;
+  for (const row of data ?? []) {
+    const match = row.invoice_number.match(/^[^-]+-(\d+)\//);
+    if (match) {
+      const seq = parseInt(match[1], 10);
+      if (seq > maxSeq) maxSeq = seq;
+    }
+  }
 
+  const paddedSeq = String(maxSeq + 1).padStart(3, '0');
   return `${prefix}-${paddedSeq}/${romanMonth}/${year}`;
 }
 
