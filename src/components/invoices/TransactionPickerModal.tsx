@@ -201,7 +201,7 @@ export function TransactionPickerModal({
 
         {/* Lock notice */}
         {selectedTransactions.length > 0 && (
-          <div className="flex items-start gap-2 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-900/40 rounded-lg text-xs text-indigo-700 dark:text-indigo-300">
+          <div className="flex items-start gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg text-xs text-gray-600 dark:text-gray-400">
             <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
             <span>
               1 invoice = 1 customer. Filter dikunci untuk mencegah mencampur customer berbeda.
@@ -234,13 +234,13 @@ export function TransactionPickerModal({
                     onClick={() => toggleSelect(t.id)}
                     className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
                       checked
-                        ? 'bg-indigo-50 dark:bg-indigo-900/20'
+                        ? 'bg-emerald-50 dark:bg-emerald-900/20'
                         : 'hover:bg-gray-100 dark:hover:bg-gray-700/60'
                     }`}
                   >
                     <div className="flex-shrink-0">
                       {checked ? (
-                        <CheckSquare className="w-5 h-5 text-indigo-500" />
+                        <CheckSquare className="w-5 h-5 text-emerald-500" />
                       ) : (
                         <Square className="w-5 h-5 text-gray-400" />
                       )}
