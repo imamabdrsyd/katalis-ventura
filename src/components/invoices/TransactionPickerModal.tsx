@@ -211,7 +211,7 @@ export function TransactionPickerModal({
         )}
 
         {/* Transaction list */}
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden max-h-[420px] overflow-y-auto">
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden max-h-[420px] overflow-y-auto bg-gray-50 dark:bg-gray-800/50">
           {loading || loadingLinks ? (
             <div className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
               Memuat transaksi...
@@ -223,7 +223,7 @@ export function TransactionPickerModal({
                 : 'Tidak ada transaksi yang cocok dengan filter.'}
             </div>
           ) : (
-            <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
               {filtered.map((t) => {
                 const checked = selectedIds.has(t.id);
                 const outstanding = getOutstandingAmount(t);
@@ -232,8 +232,10 @@ export function TransactionPickerModal({
                   <li
                     key={t.id}
                     onClick={() => toggleSelect(t.id)}
-                    className={`flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
-                      checked ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''
+                    className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
+                      checked
+                        ? 'bg-indigo-50 dark:bg-indigo-900/20'
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-700/60'
                     }`}
                   >
                     <div className="flex-shrink-0">
