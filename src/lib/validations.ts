@@ -349,9 +349,12 @@ export const updateBusinessSchema = z.object({
 // Invite Code Schemas
 // ============================================
 
+// HIGH-01 fix: role 'superadmin' & legacy 'both' tidak boleh di-issue lewat
+// invite code. Superadmin di-grant manual lewat member management agar
+// jalur promosi auditable dan tidak bisa di-share via link.
 export const createInviteCodeSchema = z.object({
   business_id: z.string().regex(UUID_REGEX, 'Invalid business ID format'),
-  role: z.enum(['business_manager', 'investor', 'both', 'superadmin']),
+  role: z.enum(['business_manager', 'investor']),
   expires_at: z.string().datetime().optional().nullable(),
   max_uses: z.number().int().positive().optional().nullable(),
 });

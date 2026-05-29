@@ -8,8 +8,11 @@ interface RouteParams {
   params: Promise<{ businessId: string }>;
 }
 
+// HIGH-01 fix: lihat catatan di src/lib/validations.ts. Role superadmin/both
+// tidak boleh diberikan lewat invite code — harus eksplisit lewat member
+// management.
 const createInviteCodeSchema = z.object({
-  role: z.enum(['business_manager', 'investor', 'both', 'superadmin']),
+  role: z.enum(['business_manager', 'investor']),
   expires_at: z.string().optional().nullable(),
   max_uses: z.number().int().positive().optional(),
 });
