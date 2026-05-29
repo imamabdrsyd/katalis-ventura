@@ -548,6 +548,31 @@ export interface Translations {
     allReconciled: string;
     cancelReconciliation: string;
     loadingData: string;
+    importMutasi: string;
+    importMutasiTitle: string;
+    importMutasiDesc: string;
+    importMutasiBankAccount: string;
+    importMutasiBank: string;
+    importMutasiFile: string;
+    importMutasiDropFile: string;
+    importMutasiParseButton: string;
+    importMutasiParsing: string;
+    importMutasiPreviewTitle: string;
+    importMutasiPreviewRows: string;
+    importMutasiSummary: string;
+    importMutasiOpeningBalance: string;
+    importMutasiClosingBalance: string;
+    importMutasiTotalCredit: string;
+    importMutasiTotalDebit: string;
+    importMutasiWarnings: string;
+    importMutasiBackButton: string;
+    importMutasiCommitButton: string;
+    importMutasiCommitting: string;
+    importMutasiCommitSuccess: string;
+    importMutasiInsertedRows: string;
+    importMutasiSkippedDuplicates: string;
+    importMutasiErrorNoAccount: string;
+    importMutasiErrorNoFile: string;
   };
 
   // Closing Entry

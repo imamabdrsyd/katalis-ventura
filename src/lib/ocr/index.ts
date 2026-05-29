@@ -8,7 +8,6 @@ import {
   OCR_LIMITS,
   OcrProviderError,
   OcrQuotaExceededError,
-  type OcrParsed,
   type OcrProvider,
   type OcrResult,
 } from './types';
@@ -16,6 +15,23 @@ import {
 export { OCR_LIMITS, OcrProviderError, OcrQuotaExceededError } from './types';
 export type { OcrParsed, OcrProvider, OcrResult } from './types';
 export { getMonthlyUsage } from './usage';
+
+/**
+ * Hasil OCR mentah (sebelum parser domain-spesifik).
+ * Dipakai oleh use case selain receipt (mis. bank statement) yang punya parser sendiri.
+ */
+export type RawOcrResult = {
+  provider: OcrProvider;
+  raw_text: string;
+  cached: boolean;
+};
+
+/**
+ * Opsi untuk runOcr — pilih provider preference.
+ * - 'auto' (default): Vision dulu, fallback OCR.space (cocok untuk image struk)
+ * - 'ocr_space_only': skip Vision, langsung OCR.space (cocok untuk PDF multi-page)
+ */
+export type OcrProviderPreference = 'auto' | 'ocr_space_only';
 
 /**
  * Hitung SHA-256 hash dari file buffer (hex string).
@@ -46,13 +62,13 @@ async function lookupCache(fileHash: string): Promise<{ provider: OcrProvider; r
 }
 
 /**
- * Simpan hasil OCR ke cache. Idempotent (on conflict do nothing).
+ * Simpan raw OCR ke cache. Caller (scanBankStatement / scanReceipt) re-parse
+ * dari raw_text saat hit cache supaya improvement parser langsung kepakai.
  */
-async function saveCache(
+async function saveCacheRaw(
   fileHash: string,
   provider: OcrProvider,
-  rawText: string,
-  parsed: OcrParsed
+  rawText: string
 ): Promise<void> {
   const supabase = createAdminClient();
   await supabase
@@ -62,56 +78,65 @@ async function saveCache(
         file_hash: fileHash,
         provider,
         raw_text: rawText,
-        parsed_data: parsed,
       },
       { onConflict: 'file_hash', ignoreDuplicates: true }
     );
 }
 
 /**
- * Orchestrator utama: cache → Google Vision → fallback OCR.space.
+ * Helper provider-agnostic: cache → Vision (kalau auto) → OCR.space.
+ * Return raw text mentah TANPA parser domain-spesifik.
+ *
+ * Dipakai oleh:
+ * - scanReceipt() — wrap dengan parseReceipt()
+ * - scanBankStatement() — wrap dengan parseBankStatement()
  *
  * Flow:
- * 1. Cek cache by file hash → return kalau hit
- * 2. Kalau Google Vision usage < 950 → pakai Vision
- *    - Kalau Vision error (selain quota), fallback ke OCR.space
- * 3. Kalau Vision penuh → pakai OCR.space
+ * 1. Cek cache by file hash → return kalau hit (re-parse di caller pakai parser terbaru)
+ * 2. Kalau preference 'auto' & Vision quota tersedia → coba Vision
+ *    - Kalau Vision error, fallback ke OCR.space
+ * 3. Kalau 'ocr_space_only' atau Vision penuh → langsung OCR.space
  * 4. Kalau OCR.space juga penuh → throw OcrQuotaExceededError
- * 5. Parse hasil + simpan cache + increment usage
+ * 5. Simpan raw_text ke cache + increment usage
+ *
+ * Catatan: untuk PDF multi-page wajib pakai 'ocr_space_only' karena Vision
+ * sync endpoint hanya support image.
  */
-export async function scanReceipt(
+export async function runOcr(
   fileBuffer: Buffer,
-  fileHash?: string,
-  mimeType = 'image/jpeg'
-): Promise<OcrResult> {
-  const hash = fileHash ?? hashFile(fileBuffer);
+  options: {
+    fileHash?: string;
+    mimeType?: string;
+    preference?: OcrProviderPreference;
+  } = {}
+): Promise<RawOcrResult> {
+  const mimeType = options.mimeType ?? 'image/jpeg';
+  const preference = options.preference ?? 'auto';
+  const hash = options.fileHash ?? hashFile(fileBuffer);
 
-  // 1. Cache lookup — kalau hit, re-parse pakai parser terbaru (jangan pakai parsed_data lama)
   const cached = await lookupCache(hash);
   if (cached) {
     return {
       provider: cached.provider,
       raw_text: cached.raw_text,
-      parsed: parseReceipt(cached.raw_text),
       cached: true,
     };
   }
-
-  // 2. Decide provider berdasarkan usage
-  const visionUsage = await getMonthlyUsage('google_vision');
-  const useVision = visionUsage < OCR_LIMITS.google_vision;
 
   let rawText: string | null = null;
   let usedProvider: OcrProvider | null = null;
   let lastError: unknown = null;
 
-  if (useVision) {
-    try {
-      rawText = await googleVisionOcr(fileBuffer);
-      usedProvider = 'google_vision';
-    } catch (err) {
-      lastError = err;
-      console.warn('[ocr] Vision failed, falling back to ocr.space:', err);
+  if (preference === 'auto') {
+    const visionUsage = await getMonthlyUsage('google_vision');
+    if (visionUsage < OCR_LIMITS.google_vision) {
+      try {
+        rawText = await googleVisionOcr(fileBuffer);
+        usedProvider = 'google_vision';
+      } catch (err) {
+        lastError = err;
+        console.warn('[ocr] Vision failed, falling back to ocr.space:', err);
+      }
     }
   }
 
@@ -126,7 +151,6 @@ export async function scanReceipt(
       usedProvider = 'ocr_space';
     } catch (err) {
       console.error('[ocr] OCR.space failed:', err);
-      // Kedua provider gagal — laporkan sebagai dual failure agar user tahu apa adanya
       if (lastError) {
         throw new OcrProviderError(
           'ocr_space',
@@ -144,18 +168,32 @@ export async function scanReceipt(
     );
   }
 
-  const parsed = parseReceipt(rawText);
-
-  // Save cache + increment usage in parallel (best-effort, no rollback on failure)
   await Promise.all([
-    saveCache(hash, usedProvider, rawText, parsed),
+    saveCacheRaw(hash, usedProvider, rawText),
     incrementUsage(usedProvider),
   ]);
 
   return {
     provider: usedProvider,
     raw_text: rawText,
-    parsed,
     cached: false,
+  };
+}
+
+/**
+ * Orchestrator untuk SCAN STRUK BELANJA.
+ * Pakai runOcr (auto provider) + parseReceipt.
+ */
+export async function scanReceipt(
+  fileBuffer: Buffer,
+  fileHash?: string,
+  mimeType = 'image/jpeg'
+): Promise<OcrResult> {
+  const result = await runOcr(fileBuffer, { fileHash, mimeType, preference: 'auto' });
+  return {
+    provider: result.provider,
+    raw_text: result.raw_text,
+    parsed: parseReceipt(result.raw_text),
+    cached: result.cached,
   };
 }

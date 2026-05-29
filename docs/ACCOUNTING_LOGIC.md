@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 27 Mei 2026 (fitur baru: **Invoice dari Transaksi Piutang** — migr 086 + Section 24 baru — reverse flow Transaction→Invoice dengan 3 entry point (TransactionDetailModal, bulk action TransactionList, picker di /invoices); tabel junction `invoice_transactions` dengan UNIQUE(transaction_id); badge "INV" di TransactionList; audit fix: flag `is_trade_receivable` & `is_operating_payable` di tabel `accounts` — migr 085 — menggantikan keyword heuristic di `classifyCashFlow()`; helper terpusat di `src/lib/accounting/classification.ts` dengan strategi flag-first + heuristic fallback; toggle eksplisit di AccountForm untuk akun dengan nama non-standar — Issue #22; fix depresiasi: `reportDate` di-cap ke `today`; dashboard P&L KPI card apply depresiasi via `applyDepreciationToSummary`; multi-currency support — migr 079; trigger `set_created_by` — migr 080; atomic multi-line create/update RPC — migr 082; `calculateCapTable` untuk dashboard & balance sheet; EBITDA di income statement; ROI mode `operations_start_date` — migr 076)
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 29 Mei 2026 (fitur baru: **Bank Statement Import & OCR** — migr 092 + Section 25 baru — upload mutasi PDF/image dari BCA (parser custom) atau generic fallback, reuse pipeline OCR `runOcr()` dengan preference 'auto' (Vision+OCR.space) vs 'ocr_space_only' (PDF multi-page), 2 tabel baru `bank_statement_imports` + `bank_transactions` dengan dedup hash UNIQUE(account_id, dedup_hash), 2 API routes `/api/bank-statements/{parse,commit}`, modal 3-step di `/reconciliation`, fase berikutnya: auto-match engine + side-by-side UI; sebelumnya: **Invoice dari Transaksi Piutang** — migr 086 + Section 24 — reverse flow Transaction→Invoice dengan 3 entry point; audit fix flag `is_trade_receivable` & `is_operating_payable` — migr 085; depresiasi fix; multi-currency — migr 079; trigger `set_created_by` — migr 080; atomic multi-line create/update RPC — migr 082)
 
 ---
 
@@ -2518,6 +2518,104 @@ Transaksi piutang yang sudah dilunasi sebagian (partial settled) tetap
 bisa di-invoice — line item pakai `getOutstandingAmount()` (sisa piutang),
 bukan amount asli. Snapshot ini disimpan di `invoice_transactions.linked_amount`
 agar invoice stabil meskipun outstanding berubah lagi setelahnya.
+
+---
+
+## 25. Bank Statement Import & OCR (Migration 092)
+
+Fitur upload mutasi bank (PDF / image) untuk mempercepat rekonsiliasi.
+Mengubah `/reconciliation` dari murni "centang manual berdasar saldo akhir"
+menjadi punya sumber data bank yang bisa di-cocokkan ke ledger.
+
+### 25.1 Skema
+
+**`bank_statement_imports`** — satu baris per file mutasi yang di-upload.
+- `business_id`, `account_id` (CoA kas/bank, mis. 1200 BCA)
+- `source` ('csv'|'xlsx'|'pdf_ocr'|'image_ocr'|'manual')
+- `bank_code` ('BCA'|'MANDIRI'|'BRI'|'BNI'|'GENERIC')
+- `period_start`, `period_end`
+- `opening_balance`, `closing_balance`, `total_credit`, `total_debit` —
+  diambil dari summary file untuk validasi rekonsiliasi
+- `raw_file_hash` — SHA-256, link ke `ocr_scan_cache` agar parse ulang gratis
+- `raw_text` — snapshot teks OCR (untuk debugging / re-parse)
+- `status` ('parsed'|'reviewed'|'committed'|'failed'|'discarded')
+
+**`bank_transactions`** — baris mutasi (hasil parse).
+- `posted_at`, `value_date`, `description`, `amount` (+ masuk / − keluar)
+- `running_balance`, `reference_code`, `counterparty_name`
+- `raw_row` JSONB — baris asli untuk debugging
+- `match_status` ('unmatched'|'auto_matched'|'manual_matched'|'ignored'|'created_new')
+- `matched_transaction_id` → `transactions.id`
+- `dedup_hash` — SHA-256 dari `posted_at + amount + description + counterparty + ref_code`
+- UNIQUE(`account_id`, `dedup_hash`) — re-upload file sama tidak duplikat
+
+### 25.2 OCR Pipeline (Reuse dari Receipt Scanner)
+
+Modul `src/lib/ocr/` di-refactor agar bisa dipakai dua use case:
+- **Struk** (single receipt) — `scanReceipt()` + `parseReceipt()`
+- **Bank statement** (tabel multi-baris) — `scanBankStatement()` + `parseBankStatement()`
+
+Helper baru `runOcr(buffer, { mimeType, preference })`:
+- `preference: 'auto'` → Vision dulu, fallback OCR.space (cocok untuk image struk)
+- `preference: 'ocr_space_only'` → langsung OCR.space (wajib untuk PDF multi-page;
+  Vision sync endpoint hanya support image)
+
+Cache `ocr_scan_cache` shared antara dua use case — kalau user upload PDF
+yang sama 2x, OCR call hanya 1x.
+
+### 25.3 Parser per-Bank
+
+`src/lib/bankStatements/parsers/`:
+- `bca.ts` — state machine yang kumpulkan blok multi-line per transaksi:
+  - Detect type: `TRSF E-BANKING DB/CR`, `BI-FAST DB/CR`, `KR OTOMATIS`,
+    `BIAYA ADM`, dll
+  - Extract: posted_at + value_date ("TANGGAL :DD/MM"), reference code
+    (FTSCY / BIF / LLG-bank), amount, saldo, counterparty (heuristic
+    UPPERCASE multi-token tanpa blacklist)
+  - Direction: suffix DB → debit (amount negatif), CR atau default → kredit
+  - Parse footer summary (SALDO AWAL/AKHIR, MUTASI CR/DB)
+- `generic.ts` — heuristic minimal untuk bank yang belum punya parser khusus
+
+`parseBankStatement(rawText, bankCode)` di `index.ts` route ke parser yang tepat.
+
+### 25.4 Validation Layer
+
+Setelah parse, `validateStatement()` cek:
+- `sum(credit) ≈ total_credit` (toleransi Rp 1)
+- `sum(debit) ≈ total_debit`
+- `opening_balance + sum(credit) − sum(debit) ≈ closing_balance`
+
+Hasilnya `parsed.validation.warnings[]` ditampilkan di preview modal sebelum
+user commit. Tidak hard-block — user tetap bisa commit meski ada warning
+(beberapa edge case bank statement format tidak selalu match).
+
+### 25.5 API Routes
+
+- `POST /api/bank-statements/parse` — multipart upload, return parsed result
+  TANPA simpan ke DB. Auth: butuh role `business_manager`/`both`/`superadmin`.
+- `POST /api/bank-statements/commit` — terima parsed result yang sudah di-review,
+  insert ke `bank_statement_imports` + `bank_transactions`. Upsert dengan
+  `onConflict: 'account_id,dedup_hash'` + `ignoreDuplicates: true` — dedup
+  natural lewat constraint, return jumlah inserted vs skipped.
+
+### 25.6 UI
+
+`/reconciliation` dapat tombol "Import Mutasi" di header. Buka modal 3-step:
+1. **Form**: pilih akun kas/bank, pilih bank, upload file (PDF/image, max 10 MB)
+2. **Preview**: 4 summary cards + warnings + tabel rows dengan amount color-coded
+3. **Success**: ringkasan inserted/skipped, fire event `bank-statement-imported`
+
+### 25.7 Belum Selesai (Future Phase)
+
+- **Auto-match engine** — cocokkan `bank_transactions` ke `transactions`
+  yang sudah ada (amount + date window + fuzzy description). Set
+  `match_status = 'auto_matched'` saat confidence ≥ 0.9.
+- **Side-by-side UI** — bank lines (kiri) vs book lines (kanan), drag-to-match.
+- **Create-from-bank** — generate `transactions` baru dari bank line yang
+  belum ada di book (auto-fill amount, date, description, akun lawan).
+- **Parser Mandiri / BRI / BNI** — saat ini masih fallback ke generic.
+- **CSV/XLSX import** — saat ini hanya PDF/image. Bisa reuse `excelParser.ts`.
+- **API agregator** (Brick / Ayoconnect) — fase 3, butuh kontrak B2B.
 
 ---
 

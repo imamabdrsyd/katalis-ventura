@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useState } from 'react';
 import {
   CheckCircle2,
   Circle,
@@ -9,12 +9,14 @@ import {
   Check,
   Undo2,
   AlertTriangle,
+  Upload,
 } from 'lucide-react';
 import { useReconciliation } from '@/hooks/useReconciliation';
 import { formatCurrency } from '@/lib/utils';
 import { useLanguage } from '@/context/LanguageContext';
 import type { Transaction } from '@/types';
 import { CATEGORY_TEXT_CLASSES } from '@/lib/categoryColors';
+import { BankStatementImportModal } from '@/components/reconciliation/BankStatementImportModal';
 
 const CATEGORY_COLORS = CATEGORY_TEXT_CLASSES;
 
@@ -30,6 +32,7 @@ function getCashDirection(t: Transaction): 'in' | 'out' {
 
 function ReconciliationPageInner() {
   const { t } = useLanguage();
+  const [importOpen, setImportOpen] = useState(false);
   const {
     activeBusiness,
     loading,
@@ -88,7 +91,14 @@ function ReconciliationPageInner() {
             {t.reconciliation.subtitle.replace('{name}', activeBusiness.business_name)}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setImportOpen(true)}
+            className="px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 border border-indigo-300 dark:border-indigo-700 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/20 flex items-center gap-1.5"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            {t.reconciliation.importMutasi}
+          </button>
           <Calendar className="w-4 h-4 text-gray-400" />
           <input
             type="date"
@@ -247,6 +257,20 @@ function ReconciliationPageInner() {
           )}
         </div>
       </div>
+
+      {activeBusiness && (
+        <BankStatementImportModal
+          businessId={activeBusiness.id}
+          isOpen={importOpen}
+          onClose={() => setImportOpen(false)}
+          onSuccess={() => {
+            // Refresh data setelah import sukses. useReconciliation belum punya
+            // bank_transactions integration, jadi cukup trigger reload page-level
+            // via window event (akan dipakai oleh Fase B matching).
+            window.dispatchEvent(new Event('bank-statement-imported'));
+          }}
+        />
+      )}
     </div>
   );
 }
