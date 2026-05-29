@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 29 Mei 2026 (fitur baru: **Bank Statement Import & OCR** — migr 092 + Section 25 baru — upload mutasi PDF/image dari BCA (parser custom) atau generic fallback, reuse pipeline OCR `runOcr()` dengan preference 'auto' (Vision+OCR.space) vs 'ocr_space_only' (PDF multi-page), 2 tabel baru `bank_statement_imports` + `bank_transactions` dengan dedup hash UNIQUE(account_id, dedup_hash), 2 API routes `/api/bank-statements/{parse,commit}`, modal 3-step di `/reconciliation`, fase berikutnya: auto-match engine + side-by-side UI; sebelumnya: **Invoice dari Transaksi Piutang** — migr 086 + Section 24 — reverse flow Transaction→Invoice dengan 3 entry point; audit fix flag `is_trade_receivable` & `is_operating_payable` — migr 085; depresiasi fix; multi-currency — migr 079; trigger `set_created_by` — migr 080; atomic multi-line create/update RPC — migr 082)
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 29 Mei 2026 (fitur baru: **Bank Statement Import — Phase B** — Section 25 dilengkapi dengan CSV/XLSX parser (Indonesian + English number/date format detection, dua format kolom: Debit+Kredit terpisah atau Mutasi+Type), side-by-side matching UI di `/reconciliation` dengan mode toggle Saldo vs Cocokkan Mutasi, hook `useBankTransactions`, API `/api/bank-transactions` + `/match` + `/unmatch` (auto un-reconcile transaksi ledger kalau tidak ada bank line lain ter-link); sebelumnya: **Bank Statement Import & OCR** — migr 092 + Section 25 — upload mutasi PDF/image BCA, pipeline OCR `runOcr()`, dedup hash UNIQUE(account_id, dedup_hash), 2 tabel `bank_statement_imports` + `bank_transactions`; **Invoice dari Transaksi Piutang** — migr 086 + Section 24; audit fix flag `is_trade_receivable` & `is_operating_payable` — migr 085; depresiasi fix; multi-currency — migr 079)
 
 ---
 
@@ -2605,16 +2605,65 @@ user commit. Tidak hard-block — user tetap bisa commit meski ada warning
 2. **Preview**: 4 summary cards + warnings + tabel rows dengan amount color-coded
 3. **Success**: ringkasan inserted/skipped, fire event `bank-statement-imported`
 
-### 25.7 Belum Selesai (Future Phase)
+### 25.7 CSV/XLSX Import
 
-- **Auto-match engine** — cocokkan `bank_transactions` ke `transactions`
-  yang sudah ada (amount + date window + fuzzy description). Set
-  `match_status = 'auto_matched'` saat confidence ≥ 0.9.
-- **Side-by-side UI** — bank lines (kiri) vs book lines (kanan), drag-to-match.
+Selain PDF/image OCR, file CSV dan XLSX juga bisa di-upload langsung tanpa OCR:
+- `parseCsvExcelStatement(buffer)` di `src/lib/bankStatements/parsers/csvExcel.ts`
+- Pakai library `xlsx` server-side (sama yang dipakai import transaksi)
+- Auto-detect kolom: Tanggal/Date, Keterangan/Description, Debit, Kredit,
+  Saldo/Balance, Reference, Counterparty (case-insensitive, banyak variasi
+  Indonesia + English)
+- Support 2 format kolom amount: **(a)** dua kolom Debit+Kredit terpisah,
+  **(b)** satu kolom Mutasi/Amount + kolom Type ('DB'|'CR') atau suffix di value
+- Number parsing handle format Indonesia ("1.234.567,89") vs English ("1,234,567.89")
+- Date parsing handle Excel serial number, ISO, DD/MM/YYYY
+
+Orchestrator `scanBankStatement()` route otomatis berdasar MIME + extension:
+- `.pdf` → OCR.space → parseBankStatement(text, bankCode)
+- `.jpg/.png` → Vision/OCR.space → parseBankStatement(text, bankCode)
+- `.csv/.xlsx/.xls` → parseCsvExcelStatement(buffer) langsung
+
+### 25.8 Side-by-Side Matching (Phase B)
+
+Halaman `/reconciliation` punya mode toggle di header:
+- **Saldo** (default) — view existing centang manual berdasar saldo akhir
+- **Cocokkan Mutasi** — side-by-side bank vs ledger
+
+Komponen `SideBySideMatcher.tsx`:
+- Kolom kiri: `bank_transactions` (unmatched + matched section terpisah)
+- Kolom kanan: `transactions` yang `is_reconciled = false` (cash/bank only)
+- Interaksi:
+  1. User klik bank line → highlighted (indigo)
+  2. Sistem auto-highlight ledger tx yang `|amount| ≈ |bank.amount|` (toleransi
+     Rp 1) dengan background amber
+  3. User klik salah satu ledger tx → button "Cocokkan" enabled
+  4. Klik "Cocokkan" → POST match endpoint
+- Bank line yang sudah matched ditampilkan dengan `LinkIcon` + tombol unmatch
+
+Hook `useBankTransactions({ businessId, accountId, from, to })`:
+- Fetch dari `/api/bank-transactions`
+- Listen event `bank-statement-imported` untuk auto-refresh setelah import
+- Expose `match(bankId, txId)` dan `unmatch(bankId)`
+
+### 25.9 API Match/Unmatch
+
+- `GET /api/bank-transactions?business_id=&account_id=&match_status=&from=&to=&limit=`
+  → list bank lines.
+- `POST /api/bank-transactions/[id]/match` body `{ transaction_id }`
+  → set `match_status='manual_matched'`, `matched_transaction_id`, `match_confidence=1.0`.
+  Juga set `transactions.is_reconciled=true` kalau belum.
+- `POST /api/bank-transactions/[id]/unmatch`
+  → reset bank line + cek apakah ledger tx masih ter-link ke bank line lain.
+  Kalau tidak → un-reconcile transaksi ledger.
+
+### 25.10 Belum Selesai (Future Phase)
+
+- **Auto-match engine** — saat user commit import, jalan auto-pair berdasarkan
+  amount exact + date window ± 3 hari + fuzzy description/counterparty. Set
+  `match_status='auto_matched'` saat confidence ≥ 0.9.
 - **Create-from-bank** — generate `transactions` baru dari bank line yang
-  belum ada di book (auto-fill amount, date, description, akun lawan).
-- **Parser Mandiri / BRI / BNI** — saat ini masih fallback ke generic.
-- **CSV/XLSX import** — saat ini hanya PDF/image. Bisa reuse `excelParser.ts`.
+  belum ada di book (open `TransactionForm` pre-filled).
+- **Parser Mandiri / BRI / BNI** — saat ini fallback ke generic.
 - **API agregator** (Brick / Ayoconnect) — fase 3, butuh kontrak B2B.
 
 ---

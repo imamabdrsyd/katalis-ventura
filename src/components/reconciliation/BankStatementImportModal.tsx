@@ -302,7 +302,7 @@ function FormStep({
           </span>
           <input
             type="file"
-            accept=".pdf,image/*"
+            accept=".pdf,image/*,.csv,.xlsx,.xls"
             className="hidden"
             onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
           />

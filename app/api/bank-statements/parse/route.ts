@@ -84,17 +84,20 @@ export async function POST(req: NextRequest) {
     const mimeType = file.type || 'application/octet-stream';
     const fileHash = hashFile(buffer);
 
+    const fileName = (file as File).name ?? undefined;
+
     try {
       const result = await scanBankStatement(buffer, {
         bankCode: bank_code,
         mimeType,
+        fileName,
         fileHash,
       });
 
       return NextResponse.json({
         data: {
           file_hash: fileHash,
-          file_name: (file as File).name ?? null,
+          file_name: fileName ?? null,
           source: result.source,
           cached: result.cached,
           raw_text: result.raw_text,

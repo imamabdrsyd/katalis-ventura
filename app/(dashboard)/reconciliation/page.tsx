@@ -10,6 +10,8 @@ import {
   Undo2,
   AlertTriangle,
   Upload,
+  Scale,
+  Link as LinkIcon,
 } from 'lucide-react';
 import { useReconciliation } from '@/hooks/useReconciliation';
 import { formatCurrency } from '@/lib/utils';
@@ -17,6 +19,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import type { Transaction } from '@/types';
 import { CATEGORY_TEXT_CLASSES } from '@/lib/categoryColors';
 import { BankStatementImportModal } from '@/components/reconciliation/BankStatementImportModal';
+import { SideBySideMatcher } from '@/components/reconciliation/SideBySideMatcher';
 
 const CATEGORY_COLORS = CATEGORY_TEXT_CLASSES;
 
@@ -33,6 +36,7 @@ function getCashDirection(t: Transaction): 'in' | 'out' {
 function ReconciliationPageInner() {
   const { t } = useLanguage();
   const [importOpen, setImportOpen] = useState(false);
+  const [mode, setMode] = useState<'balance' | 'match'>('balance');
   const {
     activeBusiness,
     loading,
@@ -92,6 +96,31 @@ function ReconciliationPageInner() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Mode toggle */}
+          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+            <button
+              onClick={() => setMode('balance')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                mode === 'balance'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              <Scale className="w-3.5 h-3.5" />
+              {t.reconciliation.modeBalance}
+            </button>
+            <button
+              onClick={() => setMode('match')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                mode === 'match'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              <LinkIcon className="w-3.5 h-3.5" />
+              {t.reconciliation.modeMatch}
+            </button>
+          </div>
           <button
             onClick={() => setImportOpen(true)}
             className="btn-ghost flex items-center gap-1.5"
@@ -116,6 +145,17 @@ function ReconciliationPageInner() {
         </div>
       </div>
 
+      {mode === 'match' && (
+        <SideBySideMatcher
+          businessId={activeBusiness.id}
+          dateFrom={dateRange.start}
+          dateTo={dateRange.end}
+          unreconciledLedgerTx={unreconciledTransactions}
+        />
+      )}
+
+      {mode === 'balance' && (
+      <>
       {/* Balance Comparison Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {/* Book Balance */}
@@ -257,6 +297,8 @@ function ReconciliationPageInner() {
           )}
         </div>
       </div>
+      </>
+      )}
 
       {activeBusiness && (
         <BankStatementImportModal

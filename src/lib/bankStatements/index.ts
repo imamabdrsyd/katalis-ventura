@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import { hashFile, runOcr } from '@/lib/ocr';
 import { parseBcaStatement } from './parsers/bca';
 import { parseGenericStatement } from './parsers/generic';
+import { parseCsvExcelStatement } from './parsers/csvExcel';
 import type {
   BankCode,
   BankStatementParsed,
@@ -39,29 +40,74 @@ export function parseBankStatement(rawText: string, bankCode: BankCode): BankSta
 }
 
 /**
+ * Detect kategori file dari MIME type + nama file.
+ */
+function detectFileKind(mimeType: string, fileName?: string): 'pdf' | 'image' | 'csv' | 'xlsx' {
+  const mt = mimeType.toLowerCase();
+  const fn = (fileName ?? '').toLowerCase();
+  if (mt.includes('pdf') || fn.endsWith('.pdf')) return 'pdf';
+  if (mt.includes('csv') || fn.endsWith('.csv')) return 'csv';
+  if (
+    mt.includes('spreadsheetml') ||
+    mt.includes('ms-excel') ||
+    fn.endsWith('.xlsx') ||
+    fn.endsWith('.xls')
+  ) {
+    return 'xlsx';
+  }
+  return 'image';
+}
+
+/**
  * Orchestrator utama untuk import file mutasi bank.
- * Routing:
- *   - PDF (application/pdf): runOcr dengan 'ocr_space_only' (Vision tidak support PDF sync)
- *   - Image (jpg/png): runOcr dengan 'auto' (Vision dulu, fallback OCR.space)
- *
- * Lalu pakai parseBankStatement untuk extract rows.
+ * Routing per kategori file:
+ *   - PDF: runOcr 'ocr_space_only' → parser per-bank
+ *   - Image: runOcr 'auto' → parser per-bank
+ *   - CSV / XLSX: parseCsvExcelStatement (server-side, tanpa OCR)
  */
 export async function scanBankStatement(
   fileBuffer: Buffer,
   options: {
     bankCode: BankCode;
     mimeType: string;
+    fileName?: string;
     fileHash?: string;
   }
 ): Promise<BankStatementScanResult> {
   const hash = options.fileHash ?? hashFile(fileBuffer);
-  const isPdf = options.mimeType.toLowerCase().includes('pdf');
-  const source: StatementSource = isPdf ? 'pdf_ocr' : 'image_ocr';
+  const kind = detectFileKind(options.mimeType, options.fileName);
 
+  // CSV/XLSX → langsung parse tanpa OCR
+  if (kind === 'csv' || kind === 'xlsx') {
+    const source: StatementSource = kind === 'csv' ? 'csv' : 'xlsx';
+    const parsed = parseCsvExcelStatement(fileBuffer);
+
+    // Set bank_code dari user pilihan (bukan dari parser yang default ke GENERIC)
+    parsed.bank_code = options.bankCode;
+
+    if (parsed.rows.length === 0) {
+      throw new BankStatementParseError(
+        `Tidak ada baris transaksi terdeteksi dari file ${kind.toUpperCase()}. ${
+          parsed.validation?.warnings.join(' ') ?? ''
+        }`,
+        options.bankCode
+      );
+    }
+
+    return {
+      source,
+      raw_text: '', // CSV/XLSX tidak punya raw_text — bisa di-derive ulang dari raw_row JSON
+      parsed,
+      cached: false,
+    };
+  }
+
+  // PDF / Image → OCR pipeline
+  const source: StatementSource = kind === 'pdf' ? 'pdf_ocr' : 'image_ocr';
   const ocr = await runOcr(fileBuffer, {
     fileHash: hash,
     mimeType: options.mimeType,
-    preference: isPdf ? 'ocr_space_only' : 'auto',
+    preference: kind === 'pdf' ? 'ocr_space_only' : 'auto',
   });
 
   const parsed = parseBankStatement(ocr.raw_text, options.bankCode);

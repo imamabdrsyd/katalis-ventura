@@ -573,6 +573,20 @@ export interface Translations {
     importMutasiSkippedDuplicates: string;
     importMutasiErrorNoAccount: string;
     importMutasiErrorNoFile: string;
+    modeMatch: string;
+    modeBalance: string;
+    sideBySideBankLines: string;
+    sideBySideLedgerLines: string;
+    sideBySideEmpty: string;
+    sideBySideEmptyHint: string;
+    sideBySidePickBank: string;
+    sideBySidePickedBank: string;
+    sideBySidePickLedger: string;
+    sideBySideReadyMatch: string;
+    sideBySideMatchButton: string;
+    sideBySideMatchedSection: string;
+    sideBySideUnmatchedCount: string;
+    sideBySideUnreconciledCount: string;
   };
 
   // Closing Entry
