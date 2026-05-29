@@ -203,6 +203,12 @@ export async function updateInvoice(
 // Soft delete invoice
 export async function deleteInvoice(invoiceId: string, userId: string): Promise<void> {
   const supabase = createClient();
+
+  // Delete junction rows first so UNIQUE(transaction_id) is freed up,
+  // allowing the same transactions to be invoiced again after deletion.
+  // (Soft delete does not trigger ON DELETE CASCADE.)
+  await supabase.from('invoice_transactions').delete().eq('invoice_id', invoiceId);
+
   const { error } = await supabase
     .from('invoices')
     .update({
