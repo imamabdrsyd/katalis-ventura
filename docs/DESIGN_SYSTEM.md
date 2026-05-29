@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 13 Mei 2026
+> Terakhir diupdate: 30 Mei 2026
 
 ---
 
@@ -63,12 +63,14 @@ Gunakan `<CategoryBadge category={...} />` atau import langsung dari `categoryCo
 
 | Kategori | Color | Text class |
 |----------|-------|------------|
-| EARN | emerald | `text-emerald-600 dark:text-emerald-400` |
-| OPEX | red | `text-red-600 dark:text-red-400` |
-| VAR | pink | `text-pink-600 dark:text-pink-400` |
-| CAPEX | blue | `text-blue-600 dark:text-blue-400` |
-| TAX | yellow | `text-yellow-600 dark:text-yellow-400` |
-| FIN | indigo | `text-indigo-600 dark:text-indigo-400` |
+| EARN | emerald | `text-emerald-700 dark:text-emerald-400` |
+| OPEX | red | `text-red-700 dark:text-red-400` |
+| VAR | pink | `text-pink-700 dark:text-pink-400` |
+| CAPEX | blue | `text-blue-700 dark:text-blue-400` |
+| TAX | yellow | `text-yellow-700 dark:text-yellow-400` |
+| FIN | indigo | `text-indigo-700 dark:text-indigo-400` |
+
+> **Light mode pakai shade `-700`, bukan `-600`.** Badge tinted (`bg-{color}-50` + teks `-{color}-700`) menjamin kontras ≥4.5:1 (WCAG AA). Dengan `-600`, EARN/OPEX/VAR/TAX gagal threshold di atas `bg-*-50`. Dark mode tetap `-400`.
 
 > `globals.css` punya `.badge-*` classes — **jangan dipakai**, isinya outdated dan tidak sinkron. Selalu pakai `categoryColors.ts`.
 
