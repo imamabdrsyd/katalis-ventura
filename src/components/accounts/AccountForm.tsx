@@ -541,7 +541,7 @@ export function AccountForm({
       )}
 
       {/* Share / Owner Capital designation — hanya untuk EQUITY accounts */}
-      {formData.account_type === 'EQUITY' && !formData.is_retained_earnings && !formData.is_dividend && (
+      {formData.account_type === 'EQUITY' && !formData.is_dividend && (
         <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700/50">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
@@ -560,7 +560,6 @@ export function AccountForm({
                 setFormData(prev => ({
                   ...prev,
                   is_stock: !prev.is_stock,
-                  is_retained_earnings: false,
                   is_dividend: false,
                 }))
               }
@@ -578,53 +577,6 @@ export function AccountForm({
               />
             </button>
           </div>
-        </div>
-      )}
-
-      {/* Retained Earnings designation — hanya untuk EQUITY accounts */}
-      {formData.account_type === 'EQUITY' && (
-        <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700/50">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                Akun Laba Ditahan (Retained Earnings)
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Tandai akun ini sebagai tujuan transfer laba/rugi saat Tutup Buku. Hanya satu akun per bisnis.
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={formData.is_retained_earnings}
-              onClick={() =>
-                setFormData(prev => ({
-                  ...prev,
-                  is_retained_earnings: !prev.is_retained_earnings,
-                  is_stock: false,
-                  is_dividend: false,
-                }))
-              }
-              disabled={loading}
-              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                formData.is_retained_earnings
-                  ? 'bg-indigo-600 dark:bg-indigo-500'
-                  : 'bg-gray-200 dark:bg-gray-600'
-              } disabled:opacity-50`}
-            >
-              <span
-                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
-                  formData.is_retained_earnings ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-          {formData.is_retained_earnings && (
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-              Jika bisnis sudah memiliki akun Laba Ditahan lain, penanda tersebut akan dipindah ke akun ini.
-            </p>
-          )}
         </div>
       )}
 
@@ -717,7 +669,7 @@ export function AccountForm({
       )}
 
       {/* Dividen / Prive designation — hanya untuk EQUITY accounts */}
-      {formData.account_type === 'EQUITY' && !formData.is_retained_earnings && !formData.is_stock && (
+      {formData.account_type === 'EQUITY' && !formData.is_stock && (
         <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700/50">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
