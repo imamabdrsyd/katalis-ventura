@@ -753,6 +753,8 @@ export interface TransactionTemplate {
   debit_account_id: string | null;
   credit_account_id: string | null;
   is_double_entry: boolean;
+  /** Multi-line journal template. NULL untuk template single-line. */
+  journal_lines: JournalLineInput[] | null;
   created_by: string | null;
   created_at: string;
 }

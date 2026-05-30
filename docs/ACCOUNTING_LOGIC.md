@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 29 Mei 2026 (fitur baru: **Bank Statement Import — Phase B** — Section 25 dilengkapi dengan CSV/XLSX parser (Indonesian + English number/date format detection, dua format kolom: Debit+Kredit terpisah atau Mutasi+Type), side-by-side matching UI di `/reconciliation` dengan mode toggle Saldo vs Cocokkan Mutasi, hook `useBankTransactions`, API `/api/bank-transactions` + `/match` + `/unmatch` (auto un-reconcile transaksi ledger kalau tidak ada bank line lain ter-link); sebelumnya: **Bank Statement Import & OCR** — migr 092 + Section 25 — upload mutasi PDF/image BCA, pipeline OCR `runOcr()`, dedup hash UNIQUE(account_id, dedup_hash), 2 tabel `bank_statement_imports` + `bank_transactions`; **Invoice dari Transaksi Piutang** — migr 086 + Section 24; audit fix flag `is_trade_receivable` & `is_operating_payable` — migr 085; depresiasi fix; multi-currency — migr 079)
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 30 Mei 2026 (fitur baru: **Template Jurnal Multi-Baris** — migr 093 kolom `journal_lines` JSONB di `transaction_templates`; "Simpan sebagai Template" & "Gunakan Template" kini tersedia di mode multi-baris Journal Entry; memuat template multi-baris mengganti semua baris (tetap editable); Section 12 diperbarui; sebelumnya: **Bank Statement Import — Phase B** — Section 25 dilengkapi dengan CSV/XLSX parser (Indonesian + English number/date format detection, dua format kolom: Debit+Kredit terpisah atau Mutasi+Type), side-by-side matching UI di `/reconciliation` dengan mode toggle Saldo vs Cocokkan Mutasi, hook `useBankTransactions`, API `/api/bank-transactions` + `/match` + `/unmatch` (auto un-reconcile transaksi ledger kalau tidak ada bank line lain ter-link); sebelumnya: **Bank Statement Import & OCR** — migr 092 + Section 25 — upload mutasi PDF/image BCA, pipeline OCR `runOcr()`, dedup hash UNIQUE(account_id, dedup_hash), 2 tabel `bank_statement_imports` + `bank_transactions`; **Invoice dari Transaksi Piutang** — migr 086 + Section 24; audit fix flag `is_trade_receivable` & `is_operating_payable` — migr 085; depresiasi fix; multi-currency — migr 079)
 
 ---
 
@@ -1125,6 +1125,26 @@ pakai CoA custom (mis. 1101 Kas Besar, 1210 BCA) bisa tandai akun via toggle
 - Inactive accounts
 - Semua akun kas/setara kas (flag `is_cash_equivalent` ATAU kode legacy 1100/1200) — mereka jadi counter-account otomatis
 - Akun piutang/receivable/talangan/advance — termasuk ASSET dengan `default_category === 'EARN'` (trade receivable). Akun-akun ini memerlukan kontrol debit/kredit manual, sehingga hanya bisa digunakan via **Full Double-Entry** atau **Multi-line Journal**.
+
+### 12.4 Template Transaksi (`transaction_templates`)
+
+Template menyimpan pola transaksi yang sering dipakai agar bisa dimuat ulang. Tabel `transaction_templates`, API `src/lib/api/transactionTemplates.ts`, type `TransactionTemplate`.
+
+**Dua jenis template:**
+
+| Jenis | Kolom yang dipakai | Dibuat dari |
+|-------|--------------------|-------------|
+| Single-line | `debit_account_id` + `credit_account_id` + `default_amount` | Quick/single-line form (Journal Entry & `/transactions`) |
+| Multi-baris | `journal_lines` JSONB `[{ account_id, debit_amount, credit_amount, description, sort_order }]` (migr 093) | Mode multi-baris di Journal Entry |
+
+**Perilaku saat memuat (`applyTemplate` di `app/(dashboard)/transactions/journal-entry/page.tsx`):**
+- Jika `journal_lines` ada (≥2 baris) → form otomatis masuk mode multi-baris dan **mengganti seluruh baris** dengan isi template. Baris tetap bisa di-edit / dihapus / ditambah sebelum disimpan (template = titik awal, bukan kunci).
+- Jika tidak → perilaku single-line lama (set debit/kredit + jumlah default).
+
+**Catatan UI:**
+- "Simpan sebagai Template" & "Gunakan Template" tersedia di kedua mode (single-line & multi-baris) di Journal Entry. Saat menyimpan dari multi-baris, field single-line (`debit_account_id`/`credit_account_id`/`default_amount`) di-set NULL.
+- Item template multi-baris di dropdown menampilkan badge "N baris".
+- Form single-line di `/transactions` (`TransactionForm`) **menyaring** template multi-baris dari daftar karena tidak punya UI multi-baris.
 
 ---
 

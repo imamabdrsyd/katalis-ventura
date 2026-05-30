@@ -242,10 +242,11 @@ export function TransactionForm({
   }, [businessId]);
 
   // Fetch templates (only when creating new transaction)
+  // Form ini single-line saja — sembunyikan template multi-baris (dipakai di Journal Entry)
   useEffect(() => {
     if (!businessId || transaction) return;
     getTransactionTemplates(businessId)
-      .then(setTemplates)
+      .then((tmpls) => setTemplates(tmpls.filter((t) => !(t.journal_lines && t.journal_lines.length >= 2))))
       .catch(() => {/* silent */});
   }, [businessId, transaction]);
 
@@ -611,6 +612,7 @@ export function TransactionForm({
         debit_account_id: formData.debit_account_id ?? null,
         credit_account_id: formData.credit_account_id ?? null,
         is_double_entry: isDoubleEntry,
+        journal_lines: null,
       });
       setTemplates(prev => [saved, ...prev]);
       setTemplateName('');
