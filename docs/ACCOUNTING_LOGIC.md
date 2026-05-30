@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 30 Mei 2026 (fitur baru: **Template Jurnal Multi-Baris** — migr 093 kolom `journal_lines` JSONB di `transaction_templates`; "Simpan sebagai Template" & "Gunakan Template" kini tersedia di mode multi-baris Journal Entry; memuat template multi-baris mengganti semua baris (tetap editable); Section 12 diperbarui; sebelumnya: **Bank Statement Import — Phase B** — Section 25 dilengkapi dengan CSV/XLSX parser (Indonesian + English number/date format detection, dua format kolom: Debit+Kredit terpisah atau Mutasi+Type), side-by-side matching UI di `/reconciliation` dengan mode toggle Saldo vs Cocokkan Mutasi, hook `useBankTransactions`, API `/api/bank-transactions` + `/match` + `/unmatch` (auto un-reconcile transaksi ledger kalau tidak ada bank line lain ter-link); sebelumnya: **Bank Statement Import & OCR** — migr 092 + Section 25 — upload mutasi PDF/image BCA, pipeline OCR `runOcr()`, dedup hash UNIQUE(account_id, dedup_hash), 2 tabel `bank_statement_imports` + `bank_transactions`; **Invoice dari Transaksi Piutang** — migr 086 + Section 24; audit fix flag `is_trade_receivable` & `is_operating_payable` — migr 085; depresiasi fix; multi-currency — migr 079)
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 31 Mei 2026 (**Retained Earnings = auto-calculate; jurnal penutup manual DIHAPUS** — halaman `/closing-entry`, lib `closingEntry.ts`, dan link nav dihapus karena bertabrakan dengan model auto-calculate dan merusak presentasi ekuitas neraca; `calculateBalanceSheet` kini mem-filter `meta.entry_type.id === 'closing_entry'` sebagai pengaman data historis; Period Lock tetap sebagai soft-close; Section 6.4 & Issue #23 diperbarui; sebelumnya: **Template Jurnal Multi-Baris** — migr 093 kolom `journal_lines` JSONB di `transaction_templates`; "Simpan sebagai Template" & "Gunakan Template" kini tersedia di mode multi-baris Journal Entry; memuat template multi-baris mengganti semua baris (tetap editable); Section 12 diperbarui; sebelumnya: **Bank Statement Import — Phase B** — Section 25 dilengkapi dengan CSV/XLSX parser (Indonesian + English number/date format detection, dua format kolom: Debit+Kredit terpisah atau Mutasi+Type), side-by-side matching UI di `/reconciliation` dengan mode toggle Saldo vs Cocokkan Mutasi, hook `useBankTransactions`, API `/api/bank-transactions` + `/match` + `/unmatch` (auto un-reconcile transaksi ledger kalau tidak ada bank line lain ter-link); sebelumnya: **Bank Statement Import & OCR** — migr 092 + Section 25 — upload mutasi PDF/image BCA, pipeline OCR `runOcr()`, dedup hash UNIQUE(account_id, dedup_hash), 2 tabel `bank_statement_imports` + `bank_transactions`; **Invoice dari Transaksi Piutang** — migr 086 + Section 24; audit fix flag `is_trade_receivable` & `is_operating_payable` — migr 085; depresiasi fix; multi-currency — migr 079)
 
 ---
 
@@ -305,8 +305,8 @@ Sistem memvalidasi ini di `useBalanceSheet.ts` dengan tolerance `< 0.01`.
 Semua kombinasi di luar 14 valid combinations akan ditolak oleh `TransactionValidator`. Contoh yang tidak valid:
 - `EXPENSE → REVENUE` (tidak ada artinya secara akuntansi)
 - `EXPENSE → EQUITY` (tidak ada artinya)
-- `REVENUE → EQUITY` (closing entry — belum didukung)
-- `EQUITY → EXPENSE` (closing entry — belum didukung)
+- `REVENUE → EQUITY` (closing entry — tidak didukung; retained earnings auto-calculate, lihat Section 6.4)
+- `EQUITY → EXPENSE` (closing entry — tidak didukung; retained earnings auto-calculate, lihat Section 6.4)
 
 ---
 
@@ -681,7 +681,7 @@ Multi-line aware: iterasi `journal_lines` jika `is_multi_line=true`, fallback ke
 - **Balance Sheet** (`/balance-sheet`): breakdown per pemilik dengan kolom % di section Ekuitas.
 - **Dashboard** (`CapTableWidget`): widget di samping AR Tracker, layout 2/3 + 1/3.
 
-### 6.4 Retained Earnings
+### 6.4 Retained Earnings (Auto-Calculate / Soft Close)
 
 ```
 retainedEarnings = totalRevenue - totalExpenses - accumulatedDepreciation
@@ -691,6 +691,24 @@ totalEquity = netEquityMovements + retainedEarnings
 > Depreciation dihitung on-the-fly (Section 16), bukan dari jurnal.
 > Harus dikurangkan dari retained earnings agar sisi Equity turun seimbang
 > dengan sisi Assets yang sudah menggunakan nilai buku (cost - depreciation).
+
+**Model retained earnings = AUTO-CALCULATE, bukan jurnal penutup manual.**
+Mengikuti pola QuickBooks/Xero/Wave: sistem menurunkan retained earnings
+langsung dari akumulasi (revenue − expense), TIDAK membaca saldo akun "Laba
+Ditahan" di CoA. Konsekuensinya:
+
+- Akun Laba Ditahan (`is_retained_earnings` / kode 3200) **tidak diperlukan**
+  agar neraca benar. Flag tersebut kini vestigial.
+- **Closing entry / jurnal penutup manual DIHAPUS** (per 31 Mei 2026). Halaman
+  `/closing-entry` dan `src/lib/accounting/closingEntry.ts` dihapus karena
+  bertabrakan dengan model auto-calculate (lihat Section 19).
+- `calculateBalanceSheet` **mem-filter** transaksi ber-`meta.entry_type.id ===
+  'closing_entry'` di awal fungsi. Ini pengaman agar data closing entry historis
+  (yang terlanjur dibuat sebelum fitur dihapus) tidak men-nol-kan revenue/expense
+  dan salah-mengklasifikasi laba ke pos Modal/Prive.
+- "Close period" yang valid = **Period Lock** (`businesses.closed_until_date`),
+  yaitu soft-close: mengunci transaksi lama dari edit/hapus TANPA memindahkan
+  saldo apa pun.
 
 ### 6.5 Balance Check
 
@@ -1847,6 +1865,35 @@ Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
 | #20 | VAR-Inventory double-count di dashboard charts (Monitoring, ExpenseBreakdown, KPI sparkline, avgMonthlyExpense) | RESOLVED | Lihat detail di bawah |
 | #21 | Label UI `is_stock` ambigu (stock = inventory atau saham?) + DB tidak proteksi flag salah lokasi | RESOLVED | Lihat detail di bawah |
 | #22 | Trade Receivable/Payable detection via keyword heuristic (fragile) | RESOLVED | Migration 085 — flag `is_trade_receivable` & `is_operating_payable` di tabel `accounts`. Helper `src/lib/accounting/classification.ts` flag-first dengan heuristic fallback. Toggle eksplisit di AccountForm. |
+| #23 | Closing entry manual merusak presentasi ekuitas Balance Sheet | RESOLVED | Lihat detail di bawah |
+
+### Issue #23 — Closing entry manual merusak Balance Sheet (jurnal penutup dihapus)
+
+**Gejala**: Sebelum klik "Tutup Buku", neraca menampilkan Laba Ditahan (mis. Rp20jt
+hasil revenue − expense) dengan benar. Setelah menjalankan jurnal penutup di halaman
+`/closing-entry`, baris Laba Ditahan jadi **0**, dan laba Rp20jt-nya nyasar: Modal
+disetor membengkak sebesar pendapatan bruto dan muncul "Dividen" palsu sebesar total
+beban. Total ekuitas tetap balance, tapi breakdown-nya ngaco secara akuntansi.
+
+**Root cause**: ada **dua mekanisme retained earnings yang bertabrakan**:
+- *Implisit/auto-calculate* — `calculateBalanceSheet` menurunkan RE dari `revenue −
+  expense` dan TIDAK pernah membaca saldo akun Laba Ditahan.
+- *Eksplisit/ledger* — jurnal penutup (`closingEntry.ts`) memindahkan saldo
+  Revenue/Expense ke akun EQUITY ber-flag `is_retained_earnings`.
+
+`calculateBalanceSheet` mengklasifikasi murni by `account_type`: credit EQUITY →
+Modal, debit EQUITY → Prive. Jurnal penutup (Dr Revenue/Cr RE dan Dr RE/Cr Expense)
+karena itu men-nol-kan revenue/expense (RE implisit → 0) sekaligus menumpuk laba ke
+pos Modal & Prive. Income Statement (digerakkan `category`, closing entry ber-kategori
+FIN) tidak ikut ter-nol → IS dan Neraca jadi tidak konsisten.
+
+**Resolusi** (31 Mei 2026): pilih **satu** model = auto-calculate (pola
+QuickBooks/Xero/Wave), pensiunkan jurnal penutup manual.
+- Hapus halaman `/closing-entry` + link nav + `src/lib/accounting/closingEntry.ts`.
+- `calculateBalanceSheet` mem-filter transaksi `meta.entry_type.id === 'closing_entry'`
+  di awal fungsi → data closing entry historis menjadi harmless, neraca kembali benar.
+- Period Lock (`closed_until_date`) tetap dipertahankan sebagai "soft close" yang valid.
+- Akun Laba Ditahan di CoA + flag `is_retained_earnings` kini vestigial (lihat Section 6.4).
 
 ### Issue #20 — VAR-Inventory double-count: dashboard-wide
 
