@@ -11,7 +11,7 @@ import { isManagerRole } from '@/lib/roles';
 import { AccountForm, type AccountFormData } from '@/components/accounts/AccountForm';
 import { AccountDeleteModal } from '@/components/accounts/AccountDeleteModal';
 import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
-import { Plus, Search, ChevronDown, ChevronRight, Lock, CheckCircle2, BookOpen as BookOpenIcon, MoreVertical, BookMarked, Building2, BadgeDollarSign } from 'lucide-react';
+import { Plus, Search, ChevronDown, ChevronRight, Lock, CheckCircle2, BookOpen as BookOpenIcon, MoreVertical, Building2, BadgeDollarSign } from 'lucide-react';
 
 const TYPE_STRIP_CLASSES: Record<AccountType, string> = {
   ASSET: 'bg-blue-500 dark:bg-blue-400',
@@ -142,9 +142,6 @@ export default function AccountsPage() {
         acquisition_date: isDepreciable ? data.acquisition_date : undefined,
       });
 
-      if (data.is_retained_earnings) {
-        await accountsApi.setRetainedEarningsAccount(businessId, newAccount.id);
-      }
       if (data.is_dividend_payable) {
         await accountsApi.setDividendPayableAccount(businessId, newAccount.id);
       }
@@ -190,12 +187,6 @@ export default function AccountsPage() {
         residual_value: isDepreciable ? (data.residual_value ?? null) : null,
         acquisition_date: isDepreciable ? (data.acquisition_date || null) : null,
       } as any);
-
-      if (data.is_retained_earnings) {
-        await accountsApi.setRetainedEarningsAccount(businessId, editAccount.id);
-      } else if (editAccount.is_retained_earnings) {
-        await accountsApi.updateAccount(editAccount.id, { is_retained_earnings: false });
-      }
 
       if (data.is_dividend_payable) {
         await accountsApi.setDividendPayableAccount(businessId, editAccount.id);
@@ -578,12 +569,6 @@ function SubAccountRow({
           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded bg-indigo-50 dark:bg-indigo-900/30 text-gray-500 dark:text-gray-400">
             <BadgeDollarSign className="w-3 h-3 text-gray-400 dark:text-gray-500" />
             Share
-          </span>
-        )}
-        {account.is_retained_earnings && (
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded bg-indigo-50 dark:bg-indigo-900/30 text-gray-500 dark:text-gray-400">
-            <BookMarked className="w-3 h-3 text-gray-400 dark:text-gray-500" />
-            Laba Ditahan
           </span>
         )}
         {account.account_type === 'ASSET' && account.default_category === 'CAPEX' && (

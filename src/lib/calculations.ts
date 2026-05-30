@@ -871,11 +871,19 @@ export function calculateBalanceSheet(
   reportDate?: Date
 ): BalanceSheetData {
 
+  // Retained earnings di-AUTO-CALCULATE dari (revenue − expense), bukan dari saldo
+  // akun Laba Ditahan. Karena itu jurnal penutup (closing entry) lama HARUS diabaikan:
+  // memprosesnya akan men-nol-kan revenue/expense dan salah-mengklasifikasi laba ke
+  // pos Modal/Prive. Filter ini juga jadi pengaman bila ada data closing entry historis.
+  const sourceTransactions = transactions.filter(
+    (t) => t.meta?.entry_type?.id !== 'closing_entry'
+  );
+
   // Single-pass partition: O(n) bukan 2x O(n)
   const multiLineTransactions: Transaction[] = [];
   const doubleEntryTransactions: Transaction[] = [];
   const legacyTransactions: Transaction[] = [];
-  for (const t of transactions) {
+  for (const t of sourceTransactions) {
     if (t.is_multi_line) multiLineTransactions.push(t);
     else if (t.is_double_entry) doubleEntryTransactions.push(t);
     else legacyTransactions.push(t);

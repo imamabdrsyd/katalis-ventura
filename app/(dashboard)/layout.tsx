@@ -229,8 +229,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
         { href: '/transactions', label: t.nav.transactions, icon: CreditCard },
         { href: '/transactions/journal-entry', label: t.nav.journalEntry, icon: Plus },
         { href: '/invoices', label: t.nav.invoice, icon: FileText },
-        { href: '/reconciliation', label: t.nav.bankReconciliation, icon: ClipboardCheck },
-        { href: '/closing-entry', label: t.nav.closingEntry, icon: Calculator }
+        { href: '/reconciliation', label: t.nav.bankReconciliation, icon: ClipboardCheck }
       );
     }
 
@@ -933,7 +932,7 @@ function Sidebar({
         <div className="px-2 pt-3 pb-1 space-y-0.5">
           {/* Transactions (manager only) */}
           {canManage && (() => {
-            const isTransactionsActive = pathname === '/transactions' || pathname.startsWith('/transactions/') || pathname === '/invoices' || pathname === '/reconciliation' || pathname === '/closing-entry';
+            const isTransactionsActive = pathname === '/transactions' || pathname.startsWith('/transactions/') || pathname === '/invoices' || pathname === '/reconciliation';
             return (
               <div className="relative group">
                 <div

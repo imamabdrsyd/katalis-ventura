@@ -52,7 +52,6 @@ import {
   Repeat,
   FileText,
   ScanSearch,
-  BookCheck,
   HandCoins,
   Receipt,
   ChevronDown,
@@ -820,11 +819,29 @@ export default function JournalEntryPage() {
   const applyTemplate = (tmpl: TransactionTemplate) => {
     setCategory(tmpl.category);
     if (tmpl.description) setDescription(tmpl.description);
-    if (tmpl.debit_account_id) setDebitAccountId(tmpl.debit_account_id);
-    if (tmpl.credit_account_id) setCreditAccountId(tmpl.credit_account_id);
-    if (tmpl.default_amount) {
-      setAmount(tmpl.default_amount);
-      setDisplayAmount(tmpl.default_amount.toLocaleString('id-ID'));
+
+    if (tmpl.journal_lines && tmpl.journal_lines.length >= 2) {
+      // Multi-line template: masuk mode multi-baris & ganti semua baris dengan isi template
+      const lines: MultiLineLine[] = tmpl.journal_lines.map((l, i) => ({
+        account_id: l.account_id,
+        debit_amount: l.debit_amount,
+        credit_amount: l.credit_amount,
+        description: l.description ?? '',
+        sort_order: i,
+      }));
+      setMlLines(lines);
+      setMlDisplayDebit(lines.map((l) => mlFormatNumber(l.debit_amount)));
+      setMlDisplayCredit(lines.map((l) => mlFormatNumber(l.credit_amount)));
+      setIsMultiLineMode(true);
+      setShowCancelConfirm(false);
+    } else {
+      // Single-line template (perilaku lama)
+      if (tmpl.debit_account_id) setDebitAccountId(tmpl.debit_account_id);
+      if (tmpl.credit_account_id) setCreditAccountId(tmpl.credit_account_id);
+      if (tmpl.default_amount) {
+        setAmount(tmpl.default_amount);
+        setDisplayAmount(tmpl.default_amount.toLocaleString('id-ID'));
+      }
     }
     setTemplateDropdownOpen(false);
   };
@@ -833,14 +850,25 @@ export default function JournalEntryPage() {
     if (!businessId || !templateName.trim()) return;
     setSavingTemplate(true);
     try {
+      const templateJournalLines: JournalLineInput[] | null = isMultiLineMode
+        ? mlLines.map((l, i) => ({
+            account_id: l.account_id,
+            debit_amount: l.debit_amount,
+            credit_amount: l.credit_amount,
+            description: l.description || undefined,
+            sort_order: i,
+          }))
+        : null;
+
       const saved = await createTransactionTemplate(businessId, {
         name: templateName.trim(),
         category,
         description: description || null,
-        default_amount: amount > 0 ? amount : null,
-        debit_account_id: debitAccountId || null,
-        credit_account_id: creditAccountId || null,
+        default_amount: isMultiLineMode ? null : amount > 0 ? amount : null,
+        debit_account_id: isMultiLineMode ? null : debitAccountId || null,
+        credit_account_id: isMultiLineMode ? null : creditAccountId || null,
         is_double_entry: true,
+        journal_lines: templateJournalLines,
       });
       setTemplates((prev) => [saved, ...prev]);
       setTemplateName('');
@@ -1079,16 +1107,6 @@ export default function JournalEntryPage() {
               <ScanSearch className="w-4 h-4" />
               Rekonsiliasi Bank
             </button>
-            <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 mx-0.5" />
-            <button
-              type="button"
-              onClick={() => router.push('/closing-entry')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-              title="Tutup Buku"
-            >
-              <BookCheck className="w-4 h-4" />
-              Tutup Buku
-            </button>
           </nav>
         </div>
 
@@ -1216,8 +1234,8 @@ export default function JournalEntryPage() {
               </div>
             )}
 
-            {/* Template selector — only when templates exist & not editing */}
-            {!isMultiLineMode && templates.length > 0 && (
+            {/* Template selector — tersedia di mode single-line & multi-baris */}
+            {templates.length > 0 && (
               <div className="relative">
                 <button
                   type="button"
@@ -1240,7 +1258,14 @@ export default function JournalEntryPage() {
                         className="flex items-center justify-between px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer group"
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{tmpl.name}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{tmpl.name}</p>
+                            {tmpl.journal_lines && tmpl.journal_lines.length >= 2 && (
+                              <span className="flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300">
+                                {tmpl.journal_lines.length} baris
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-gray-400 dark:text-gray-500">
                             {CATEGORY_LABELS[tmpl.category]}
                             {tmpl.default_amount ? ` · Rp ${tmpl.default_amount.toLocaleString('id-ID')}` : ''}
@@ -1670,19 +1695,18 @@ export default function JournalEntryPage() {
               </div>
             )}
 
-            {/* Save as Template — single-line only */}
-            {!isMultiLineMode && (
-              <div>
-                {!saveTemplateMode ? (
-                  <button
-                    type="button"
-                    onClick={() => setSaveTemplateMode(true)}
-                    className="flex items-center gap-1.5 text-xs text-indigo-500 dark:text-indigo-400 hover:underline"
-                  >
-                    <BookTemplate className="w-3.5 h-3.5" />
-                    Simpan sebagai Template
-                  </button>
-                ) : (
+            {/* Save as Template — tersedia di mode single-line & multi-baris */}
+            <div>
+              {!saveTemplateMode ? (
+                <button
+                  type="button"
+                  onClick={() => setSaveTemplateMode(true)}
+                  className="flex items-center gap-1.5 text-xs text-indigo-500 dark:text-indigo-400 hover:underline"
+                >
+                  <BookTemplate className="w-3.5 h-3.5" />
+                  Simpan sebagai Template
+                </button>
+              ) : (
                   <div className="flex items-center gap-2 p-2.5 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-700">
                     <BookTemplate className="w-4 h-4 text-indigo-500 dark:text-indigo-400 flex-shrink-0" />
                     <input
@@ -1719,8 +1743,7 @@ export default function JournalEntryPage() {
                     </button>
                   </div>
                 )}
-              </div>
-            )}
+            </div>
 
             {/* Recurring toggle — single-line only */}
             {!isMultiLineMode && (
