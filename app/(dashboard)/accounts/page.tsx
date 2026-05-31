@@ -131,6 +131,9 @@ export default function AccountsPage() {
         is_stock: data.account_type === 'EQUITY' && (data.is_stock ?? false),
         is_dividend: data.is_dividend ?? false,
         is_dividend_payable: false,
+        profit_share_pct: data.account_type === 'EQUITY' && data.is_stock ? (data.profit_share_pct ?? null) : null,
+        owner_stock_account_id: data.account_type === 'EQUITY' && data.is_dividend ? (data.owner_stock_account_id ?? null) : null,
+        contact_id: data.account_type === 'EQUITY' && data.is_stock ? (data.contact_id ?? null) : null,
         is_cash_equivalent: data.account_type === 'ASSET' && (data.is_cash_equivalent ?? false),
         is_trade_receivable: data.account_type === 'ASSET' && (data.is_trade_receivable ?? false),
         is_operating_payable: data.account_type === 'LIABILITY' && (data.is_operating_payable ?? false),
@@ -174,6 +177,9 @@ export default function AccountsPage() {
           : data.default_category,
         is_stock: data.account_type === 'EQUITY' && (data.is_stock ?? false),
         is_dividend: data.account_type === 'EQUITY' && (data.is_dividend ?? false),
+        profit_share_pct: data.account_type === 'EQUITY' && data.is_stock ? (data.profit_share_pct ?? null) : null,
+        owner_stock_account_id: data.account_type === 'EQUITY' && data.is_dividend ? (data.owner_stock_account_id ?? null) : null,
+        contact_id: data.account_type === 'EQUITY' && data.is_stock ? (data.contact_id ?? null) : null,
         is_cash_equivalent: editAccount.is_system
           ? editAccount.is_cash_equivalent
           : data.account_type === 'ASSET' && (data.is_cash_equivalent ?? false),

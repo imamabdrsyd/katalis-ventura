@@ -82,6 +82,8 @@ interface TransactionFormProps {
    * dari preview modal. Form akan apply tiap kali nilai prop ini berubah ke non-null.
    */
   pendingOcrApply?: OcrResult | null;
+  /** Edit mode only: dipanggil saat user klik "Tambah Baris" untuk upgrade ke multi-line journal. */
+  onConvertToMultiLine?: () => void;
 }
 
 const ALL_CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
@@ -152,6 +154,7 @@ export function TransactionForm({
   mode = 'full', // Default to full mode for backward compatibility
   onOcrResult,
   pendingOcrApply,
+  onConvertToMultiLine,
 }: TransactionFormProps) {
   const params = useParams();
   const businessId = businessIdProp || (params?.businessId as string);
@@ -1281,6 +1284,19 @@ export function TransactionForm({
             </div>
           )}
         </div>
+      )}
+
+      {/* Upgrade ke multi-line — hanya di edit mode double-entry */}
+      {transaction && onConvertToMultiLine && isDoubleEntry && (
+        <button
+          type="button"
+          onClick={onConvertToMultiLine}
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-dashed border-primary-400 dark:border-primary-600 text-primary-600 dark:text-primary-400 text-sm font-medium hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+        >
+          <span className="text-base leading-none">+</span>
+          Tambah Baris (upgrade ke multi-line journal)
+        </button>
       )}
 
       <div className="flex gap-3 pt-2">

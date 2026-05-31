@@ -148,6 +148,42 @@ function TransactionsPageInner() {
   // bukan TransactionForm. Di-reset ke null saat modal ditutup.
   const [multiLineOcrPrefill, setMultiLineOcrPrefill] = useState<MultiLineFormData | null>(null);
 
+  // Konversi transaksi double-entry → multi-line: populate dua journal_lines dari
+  // debit_account / credit_account yang sudah ada, lalu switch modal ke MultiLineJournalForm.
+  const handleConvertToMultiLine = useCallback(() => {
+    if (!editTransaction || editTransaction.is_multi_line) return;
+    const debit = editTransaction.debit_account;
+    const credit = editTransaction.credit_account;
+    const amt = editTransaction.amount ?? 0;
+    setEditTransaction({
+      ...editTransaction,
+      is_multi_line: true,
+      is_double_entry: true,
+      journal_lines: [
+        {
+          id: 'convert-debit',
+          transaction_id: editTransaction.id,
+          account_id: editTransaction.debit_account_id ?? '',
+          debit_amount: amt,
+          credit_amount: 0,
+          sort_order: 0,
+          created_at: editTransaction.created_at,
+          account: debit ?? undefined,
+        },
+        {
+          id: 'convert-credit',
+          transaction_id: editTransaction.id,
+          account_id: editTransaction.credit_account_id ?? '',
+          debit_amount: 0,
+          credit_amount: amt,
+          sort_order: 1,
+          created_at: editTransaction.created_at,
+          account: credit ?? undefined,
+        },
+      ],
+    });
+  }, [editTransaction, setEditTransaction]);
+
   // OCR preview state — hasil scan struk yang sedang ditampilkan di panel preview
   // di samping modal transaksi. Null = panel tidak muncul.
   const [ocrPreviewResult, setOcrPreviewResult] = useState<OcrResult | null>(null);
@@ -831,7 +867,7 @@ function TransactionsPageInner() {
         isOpen={!!editTransaction}
         onClose={() => setEditTransaction(null)}
         title={t.transactions.editTransaction}
-        size={editTransaction?.is_multi_line ? '3xl' : 'md'}
+        size={editTransaction?.is_multi_line ? '3xl' : editTransaction?.is_double_entry ? 'lg' : 'md'}
       >
         {editTransaction?.is_multi_line ? (
           <MultiLineJournalForm
@@ -863,6 +899,7 @@ function TransactionsPageInner() {
             onCancel={() => setEditTransaction(null)}
             loading={saving}
             businessId={businessId || undefined}
+            onConvertToMultiLine={editTransaction?.is_double_entry ? handleConvertToMultiLine : undefined}
           />
         )}
       </Modal>

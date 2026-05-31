@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef, useId, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import type { Account } from '@/types';
 import { filterAccountsByMode, type FilterMode } from '@/lib/utils/transactionHelpers';
 import { buildAccountTree, type AccountTreeNode } from '@/lib/api/accounts';
@@ -34,6 +35,76 @@ export function AccountDropdown({
 }: AccountDropdownProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const instanceId = useId();
+
+  // Portal container — dibuat setelah mount agar berada setelah modal di DOM,
+  // sehingga dropdown bisa "keluar" dari overflow modal/tabel.
+  const portalRef = useRef<HTMLDivElement | null>(null);
+  const [portalReady, setPortalReady] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 0 });
+
+  useEffect(() => {
+    const el = document.createElement('div');
+    el.setAttribute('data-account-dropdown-portal', '');
+    document.body.appendChild(el);
+    portalRef.current = el;
+    setPortalReady(true);
+    return () => el.remove();
+  }, []);
+
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setMenuPosition({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+  }, []);
+
+  // Reposisi saat scroll/resize selama dropdown terbuka (fixed positioning tidak ikut scroll).
+  useEffect(() => {
+    if (!isOpen) return;
+    updatePosition();
+    const onScroll = () => updatePosition();
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [isOpen, updatePosition]);
+
+  // Tutup saat klik di luar (cek trigger DAN menu portal), DAN saat instance lain terbuka.
+  useEffect(() => {
+    const handleMouseDown = (e: MouseEvent) => {
+      if (!isOpen) return;
+      const target = e.target as Node;
+      const inTrigger = triggerRef.current?.contains(target);
+      const inMenu = menuRef.current?.contains(target);
+      if (!inTrigger && !inMenu) {
+        setIsOpen(false);
+        setSearchTerm('');
+      }
+    };
+    const handleOtherOpen = (e: Event) => {
+      if ((e as CustomEvent).detail !== instanceId) {
+        setIsOpen(false);
+        setSearchTerm('');
+      }
+    };
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('account-dropdown-open', handleOtherOpen);
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('account-dropdown-open', handleOtherOpen);
+    };
+  }, [isOpen, instanceId]);
+
+  const openDropdown = () => {
+    updatePosition();
+    setIsOpen(true);
+    setSearchTerm('');
+    document.dispatchEvent(new CustomEvent('account-dropdown-open', { detail: instanceId }));
+  };
 
   // Apply filtering based on mode
   const filteredAccounts = useMemo(() => {
@@ -124,25 +195,27 @@ export function AccountDropdown({
       </label>
 
       {/* Selected value or placeholder */}
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`input w-full text-left flex justify-between items-center ${error ? 'border-red-500 dark:border-red-400' : ''}`}
-      >
-        <span className={selectedAccount ? '' : 'text-gray-400 dark:text-gray-500'}>
-          {selectedAccount
-            ? `${selectedAccount.account_code} - ${selectedAccount.account_name}`
-            : placeholder}
-        </span>
-        <svg
-          className={`w-5 h-5 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+      <div ref={triggerRef}>
+        <button
+          type="button"
+          onClick={() => isOpen ? setIsOpen(false) : openDropdown()}
+          className={`input w-full text-left flex justify-between items-center ${error ? 'border-red-500 dark:border-red-400' : ''}`}
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
+          <span className={selectedAccount ? '' : 'text-gray-400 dark:text-gray-500'}>
+            {selectedAccount
+              ? `${selectedAccount.account_code} - ${selectedAccount.account_name}`
+              : placeholder}
+          </span>
+          <svg
+            className={`w-5 h-5 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      </div>
 
       {/* Suggestion hint */}
       {!selectedAccount && suggestedAccount && (
@@ -154,9 +227,18 @@ export function AccountDropdown({
       {/* Error message */}
       {error && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{error}</p>}
 
-      {/* Dropdown menu */}
-      {isOpen && (
-        <div className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-96 overflow-hidden">
+      {/* Dropdown menu — di-render via portal supaya keluar dari overflow modal/tabel */}
+      {isOpen && portalReady && portalRef.current && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl max-h-96 overflow-hidden"
+          style={{
+            zIndex: 100000,
+            top: menuPosition.top,
+            left: menuPosition.left,
+            width: menuPosition.width,
+          }}
+        >
           {/* Search input */}
           <div className="p-2 border-b border-gray-200 dark:border-gray-700">
             <input
@@ -165,6 +247,7 @@ export function AccountDropdown({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              autoFocus
               onClick={(e) => e.stopPropagation()}
             />
           </div>
@@ -262,18 +345,8 @@ export function AccountDropdown({
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {/* Overlay to close dropdown when clicking outside */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => {
-            setIsOpen(false);
-            setSearchTerm('');
-          }}
-        />
+        </div>,
+        portalRef.current
       )}
     </div>
   );

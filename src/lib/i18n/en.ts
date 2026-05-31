@@ -67,6 +67,7 @@ export const en: Translations = {
     profitLoss: 'Profit & Loss',
     balanceSheet: 'Balance Sheet',
     cashFlow: 'Cash Flow',
+    changesInEquity: 'Changes in Equity',
     analytics: 'ANALYTICS',
     scenarioModeling: 'Scenario Modeling',
     budgetForecast: 'Budget & Forecast',

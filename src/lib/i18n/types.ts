@@ -69,6 +69,7 @@ export interface Translations {
     profitLoss: string;
     balanceSheet: string;
     cashFlow: string;
+    changesInEquity: string;
     analytics: string;
     scenarioModeling: string;
     budgetForecast: string;

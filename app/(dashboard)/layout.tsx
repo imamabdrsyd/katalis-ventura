@@ -47,6 +47,7 @@ import {
   FileText,
   RefreshCw,
   Upload,
+  GitBranch,
 } from 'lucide-react';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -107,6 +108,7 @@ function useNavData() {
         { href: '/income-statement', label: t.nav.profitLoss, icon: DollarSign },
         { href: '/balance-sheet', label: t.nav.balanceSheet, icon: Scale },
         { href: '/cash-flow', label: t.nav.cashFlow, icon: ArrowLeftRight },
+        { href: '/statement-of-changes-in-equity', label: t.nav.changesInEquity, icon: GitBranch },
       ],
     },
     {

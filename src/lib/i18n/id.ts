@@ -67,6 +67,7 @@ export const id: Translations = {
     profitLoss: 'Laba Rugi',
     balanceSheet: 'Neraca',
     cashFlow: 'Arus Kas',
+    changesInEquity: 'Perubahan Ekuitas',
     analytics: 'ANALITIK',
     scenarioModeling: 'Pemodelan Skenario',
     budgetForecast: 'Anggaran & Proyeksi',

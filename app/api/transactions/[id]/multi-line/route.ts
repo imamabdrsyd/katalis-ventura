@@ -36,7 +36,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       .maybeSingle();
 
     if (fetchErr || !existing) return notFound('Transaksi tidak ditemukan');
-    if (!existing.is_multi_line) return badRequest('Transaksi ini bukan jurnal multi-line');
+    // Transaksi double-entry boleh dipromosikan ke multi-line ASALKAN journal_lines
+    // disertakan (konversi via tombol "Tambah Baris" di edit form). Tolak hanya kalau
+    // bukan multi-line DAN tidak ada journal_lines untuk konversi.
+    if (!existing.is_multi_line && !parsed.data.journal_lines) {
+      return badRequest('Transaksi ini bukan jurnal multi-line');
+    }
 
     if (!(await canManageBusiness(supabase, user.id, existing.business_id))) {
       return forbidden('Hanya manager bisnis yang dapat mengubah transaksi');

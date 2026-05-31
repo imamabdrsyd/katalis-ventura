@@ -18,6 +18,9 @@ interface AccountInput {
   is_operating_payable?: boolean;
   is_stock?: boolean;
   is_dividend?: boolean;
+  profit_share_pct?: number | null;
+  owner_stock_account_id?: string | null;
+  contact_id?: string | null;
   income_statement_section?: 'cost_of_revenue' | 'operating_expense' | null;
   useful_life_months?: number;
   residual_value?: number;
@@ -40,6 +43,9 @@ export function makeAccount(input: AccountInput): Account {
     is_stock: input.is_stock ?? false,
     is_dividend: input.is_dividend ?? false,
     is_dividend_payable: false,
+    profit_share_pct: input.profit_share_pct ?? null,
+    owner_stock_account_id: input.owner_stock_account_id ?? null,
+    contact_id: input.contact_id ?? null,
     is_cash_equivalent: input.is_cash_equivalent ?? false,
     is_trade_receivable: input.is_trade_receivable ?? false,
     is_operating_payable: input.is_operating_payable ?? false,

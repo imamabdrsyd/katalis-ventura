@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import type { FinancialSummary, BalanceSheetData, CashFlowData, Transaction } from '@/types';
+import type { FinancialSummary, BalanceSheetData, CashFlowData, Transaction, SCEData } from '@/types';
 import { formatCurrency } from './utils';
 import { calculateIncomeStatementMetrics } from './calculations';
 import type { IncomeStatementLineItems } from './calculations';
@@ -1006,4 +1006,211 @@ export function exportBalanceSheetToExcel(
 
   // Save file
   XLSX.writeFile(wb, `Balance-Sheet-${businessName}-${asOfDate}.xlsx`);
+}
+
+// ==================== STATEMENT OF CHANGES IN EQUITY ====================
+
+const ownerLabel = (o: { contactName: string | null; ownerName: string }) =>
+  o.contactName ?? o.ownerName;
+
+// Export Statement of Changes in Equity to PDF
+export async function exportSCEToPDF(
+  businessName: string,
+  period: string,
+  data: SCEData
+) {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  // ── Header ──
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('LAPORAN PERUBAHAN EKUITAS', pageWidth / 2, 18, { align: 'center' });
+
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(99, 102, 241);
+  doc.text(businessName, pageWidth / 2, 26, { align: 'center' });
+  doc.setTextColor(0, 0, 0);
+
+  doc.setFontSize(9);
+  doc.setTextColor(100, 100, 100);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Periode: ${period}`, pageWidth / 2, 33, { align: 'center' });
+  doc.setTextColor(0, 0, 0);
+
+  // ── Tabel 1: Perubahan Ekuitas (Saldo Awal → Mutasi → Saldo Akhir) ──
+  const sceHead = [['Komponen', 'Saldo Awal', 'Penambahan', 'Pengurangan', 'Saldo Akhir']];
+  const sceBody: (string | number)[][] = [];
+
+  // Modal per pemilik
+  for (const o of data.owners) {
+    sceBody.push([
+      `Modal — ${ownerLabel(o)}`,
+      formatCurrency(o.capitalOpening),
+      formatCurrency(o.capitalAdditions),
+      o.capitalWithdrawals ? `(${formatCurrency(o.capitalWithdrawals)})` : '-',
+      formatCurrency(o.capitalClosing),
+    ]);
+  }
+
+  // Laba ditahan
+  sceBody.push([
+    'Laba Ditahan',
+    formatCurrency(data.retainedOpening),
+    data.netIncome >= 0 ? formatCurrency(data.netIncome) : '-',
+    data.netIncome < 0
+      ? `(${formatCurrency(Math.abs(data.netIncome))})`
+      : data.dividendsDeclared
+        ? `(${formatCurrency(data.dividendsDeclared)})`
+        : '-',
+    formatCurrency(data.retainedClosing),
+  ]);
+
+  // Total
+  sceBody.push([
+    'TOTAL EKUITAS',
+    formatCurrency(data.totalEquityOpening),
+    '',
+    '',
+    formatCurrency(data.totalEquityClosing),
+  ]);
+
+  autoTable(doc, {
+    startY: 40,
+    head: sceHead,
+    body: sceBody,
+    theme: 'striped',
+    headStyles: { fillColor: [99, 102, 241], textColor: [255, 255, 255], fontSize: 8.5 },
+    styles: { fontSize: 8, cellPadding: 2.5 },
+    columnStyles: {
+      0: { cellWidth: 56 },
+      1: { halign: 'right' },
+      2: { halign: 'right' },
+      3: { halign: 'right' },
+      4: { halign: 'right' },
+    },
+    didParseCell: (d) => {
+      if (d.section === 'body' && d.row.index === sceBody.length - 1) {
+        d.cell.styles.fontStyle = 'bold';
+        d.cell.styles.fillColor = [240, 240, 245];
+      }
+    },
+  });
+
+  // ── Tabel 2: Rekonsiliasi Dividen (Hak vs Aktual) ──
+  const afterFirst = (doc as any).lastAutoTable?.finalY ?? 80;
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Rekonsiliasi Dividen — Hak vs Aktual', 14, afterFirst + 12);
+
+  const recHead = [['Pemilik', 'Hak (%)', 'Hak Dividen', 'Dividen Aktual', 'Selisih']];
+  const recBody: (string | number)[][] = data.dividendReconciliation.map((r) => {
+    const owner = data.owners.find((o) => o.stockAccountId === r.stockAccountId);
+    return [
+      owner ? ownerLabel(owner) : r.ownerName,
+      owner ? `${owner.profitSharePct.toFixed(2)}%` : '-',
+      formatCurrency(r.entitled),
+      formatCurrency(r.actual),
+      r.variance >= 0
+        ? formatCurrency(r.variance)
+        : `(${formatCurrency(Math.abs(r.variance))})`,
+    ];
+  });
+
+  autoTable(doc, {
+    startY: afterFirst + 16,
+    head: recHead,
+    body: recBody,
+    theme: 'striped',
+    headStyles: { fillColor: [99, 102, 241], textColor: [255, 255, 255], fontSize: 8.5 },
+    styles: { fontSize: 8, cellPadding: 2.5 },
+    columnStyles: {
+      1: { halign: 'right' },
+      2: { halign: 'right' },
+      3: { halign: 'right' },
+      4: { halign: 'right' },
+    },
+  });
+
+  // ── Footer with AXION logo ──
+  const faviconBase64 = await loadImageAsBase64('/images/favicon.png');
+  const pageCount = (doc as any).internal.getNumberOfPages();
+  const footerY = 284;
+  const logoSize = 5;
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.text(
+      `Dicetak oleh AXION pada ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+      14,
+      footerY + 1
+    );
+    doc.text(`Halaman ${i} dari ${pageCount}`, pageWidth - 14, footerY + 1, { align: 'right' });
+    if (faviconBase64) {
+      doc.addImage(faviconBase64, 'PNG', (pageWidth - logoSize) / 2, footerY - 3, logoSize, logoSize);
+    }
+  }
+  doc.setTextColor(0, 0, 0);
+
+  doc.save(`Laporan-Perubahan-Ekuitas-${businessName}-${period}.pdf`);
+}
+
+// Export Statement of Changes in Equity to Excel
+export function exportSCEToExcel(
+  businessName: string,
+  period: string,
+  data: SCEData
+) {
+  const rows: (string | number)[][] = [
+    ['STATEMENT OF CHANGES IN EQUITY'],
+    [businessName],
+    [`Periode: ${period}`],
+    [],
+    ['Komponen', 'Saldo Awal', 'Penambahan', 'Pengurangan', 'Saldo Akhir'],
+  ];
+
+  for (const o of data.owners) {
+    rows.push([
+      `Modal — ${ownerLabel(o)}`,
+      o.capitalOpening,
+      o.capitalAdditions,
+      -o.capitalWithdrawals,
+      o.capitalClosing,
+    ]);
+  }
+  rows.push([
+    'Laba Ditahan',
+    data.retainedOpening,
+    data.netIncome >= 0 ? data.netIncome : 0,
+    data.netIncome < 0 ? data.netIncome : -data.dividendsDeclared,
+    data.retainedClosing,
+  ]);
+  rows.push(['TOTAL EKUITAS', data.totalEquityOpening, '', '', data.totalEquityClosing]);
+
+  rows.push([]);
+  rows.push([]);
+  rows.push(['Rekonsiliasi Dividen — Hak vs Aktual']);
+  rows.push(['Pemilik', 'Hak (%)', 'Hak Dividen', 'Dividen Aktual', 'Selisih']);
+  for (const r of data.dividendReconciliation) {
+    const owner = data.owners.find((o) => o.stockAccountId === r.stockAccountId);
+    rows.push([
+      owner ? ownerLabel(owner) : r.ownerName,
+      owner ? owner.profitSharePct : 0,
+      r.entitled,
+      r.actual,
+      r.variance,
+    ]);
+  }
+
+  rows.push([]);
+  rows.push([data.isReconciled ? '✓ Cocok dengan Neraca' : '⚠ Tidak cocok dengan Neraca']);
+  rows.push([`Generated on ${new Date().toLocaleDateString('id-ID')}`]);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 32 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Perubahan Ekuitas');
+  XLSX.writeFile(wb, `Laporan-Perubahan-Ekuitas-${businessName}-${period}.xlsx`);
 }

@@ -1,7 +1,8 @@
 'use client';
 
 import { Suspense } from 'react';
-import { Scale, Download, FileText, FileSpreadsheet, CheckCircle, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
+import { Scale, Download, FileText, FileSpreadsheet, CheckCircle, AlertCircle, ArrowUpRight } from 'lucide-react';
 import { useBalanceSheet } from '@/hooks/useBalanceSheet';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
@@ -235,7 +236,14 @@ function BalanceSheetPageInner() {
 
             {/* Equity */}
             <div className="flex flex-col flex-1">
-              <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">{t.balanceSheetPage.equity}</h3>
+              <Link
+                href="/statement-of-changes-in-equity"
+                className="group inline-flex items-center gap-1.5 mb-3 w-fit font-semibold text-gray-800 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                title="Lihat Laporan Perubahan Ekuitas"
+              >
+                {t.balanceSheetPage.equity}
+                <ArrowUpRight className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 group-hover:text-primary-500 dark:group-hover:text-primary-400 transition-colors" />
+              </Link>
               <div className="space-y-2">
                 <div className="flex justify-between py-2 pl-4">
                   <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.paidInCapital}</span>

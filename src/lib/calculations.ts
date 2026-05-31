@@ -14,6 +14,9 @@ import type {
   BudgetVsActualRow,
   BudgetSummaryKPI,
   ProjectedMonth,
+  SCEData,
+  SCEOwnerColumn,
+  SCEDividendReconRow,
 } from '@/types';
 import { calculateDepreciationSummary } from '@/lib/accounting/depreciation';
 import {
@@ -436,6 +439,236 @@ export function calculateCapTable(transactions: Transaction[]): CapTable {
     .sort((a, b) => b.contributed - a.contributed);
 
   return { entries, totalContributed };
+}
+
+/**
+ * Per-stock-account capital movement (credit = additions, debit = withdrawals)
+ * over a given transaction set. Hanya akun is_stock yang dihitung.
+ */
+function accumulateStockMovements(
+  transactions: Transaction[]
+): Map<string, { credit: number; debit: number }> {
+  const movements = new Map<string, { credit: number; debit: number }>();
+
+  const add = (acc: Account | null | undefined, credit: number, debit: number) => {
+    if (!isStockAccount(acc) || !acc) return;
+    const existing = movements.get(acc.id) ?? { credit: 0, debit: 0 };
+    existing.credit += credit;
+    existing.debit += debit;
+    movements.set(acc.id, existing);
+  };
+
+  for (const t of transactions) {
+    if (t.deleted_at) continue;
+    if (t.is_multi_line && t.journal_lines && t.journal_lines.length > 0) {
+      for (const line of t.journal_lines) {
+        add(line.account, Number(line.credit_amount || 0), Number(line.debit_amount || 0));
+      }
+      continue;
+    }
+    const amount = Number(t.amount);
+    add(t.credit_account, amount, 0);
+    add(t.debit_account, 0, amount);
+  }
+
+  return movements;
+}
+
+/**
+ * Per-owner actual dividend dalam periode: jumlah DEBIT ke akun is_dividend,
+ * dikelompokkan berdasarkan owner_stock_account_id akun dividen tersebut.
+ * Akun dividen tanpa owner_stock_account_id dikumpulkan ke key 'unassigned'.
+ */
+function accumulateDividendsByOwner(transactions: Transaction[]): Map<string, number> {
+  const byOwner = new Map<string, number>();
+
+  const add = (acc: Account | null | undefined, debit: number) => {
+    if (!acc || acc.account_type !== 'EQUITY' || acc.is_dividend !== true) return;
+    if (debit <= 0) return;
+    const ownerKey = acc.owner_stock_account_id ?? 'unassigned';
+    byOwner.set(ownerKey, (byOwner.get(ownerKey) ?? 0) + debit);
+  };
+
+  for (const t of transactions) {
+    if (t.deleted_at) continue;
+    if (t.is_multi_line && t.journal_lines && t.journal_lines.length > 0) {
+      for (const line of t.journal_lines) {
+        add(line.account, Number(line.debit_amount || 0));
+      }
+      continue;
+    }
+    add(t.debit_account, Number(t.amount));
+  }
+
+  return byOwner;
+}
+
+/**
+ * Statement of Changes in Equity (SCE) — laporan perubahan ekuitas periodik (PSAK/IFRS).
+ *
+ * Pola periode (seperti Income Statement): saldo awal dihitung kumulatif s/d sehari
+ * sebelum startDate, mutasi diambil dari transaksi dalam [startDate, endDate].
+ *
+ * Reuse: calculateBalanceSheet (opening/closing equity & retained earnings),
+ * calculateCapTable (saldo modal per pemilik), accumulateStockMovements / accumulateDividendsByOwner.
+ *
+ * Profit-sharing: hak laba per pemilik dari accounts.profit_share_pct (eksplisit).
+ * Bila NULL untuk semua/sebagian, fallback ke % modal disetor (cap table).
+ * entitled dividend = profitSharePct × netIncome periode.
+ * actual dividend = debit akun is_dividend yang owner_stock_account_id menunjuk akun stock tsb.
+ */
+export function calculateStatementOfChangesInEquity(
+  transactions: Transaction[],
+  startDate: string,
+  endDate: string,
+  capital: number = 0,
+  accounts?: Account[],
+): SCEData {
+  // Dates not yet initialised (empty string on first render before useEffect fires).
+  if (!startDate || !endDate) {
+    return {
+      periodStart: startDate,
+      periodEnd: endDate,
+      owners: [],
+      retainedOpening: 0,
+      netIncome: 0,
+      dividendsDeclared: 0,
+      retainedClosing: 0,
+      dividendReconciliation: [],
+      totalEquityOpening: 0,
+      totalEquityClosing: 0,
+      isReconciled: true,
+    };
+  }
+
+  // Saldo awal = posisi kumulatif s/d sehari sebelum periode mulai.
+  const dayBeforeStart = new Date(startDate);
+  dayBeforeStart.setDate(dayBeforeStart.getDate() - 1);
+  const openingDateStr = dayBeforeStart.toISOString().split('T')[0];
+
+  const openingTxns = filterTransactionsUpToDate(transactions, openingDateStr);
+  const closingTxns = filterTransactionsUpToDate(transactions, endDate);
+  const periodTxns = filterTransactionsByDateRange(transactions, startDate, endDate);
+
+  // Balance sheet opening/closing untuk retained earnings & total equity (tie-out).
+  const openingBS = calculateBalanceSheet(openingTxns, capital, accounts, dayBeforeStart);
+  const closingBS = calculateBalanceSheet(closingTxns, capital, accounts, new Date(endDate));
+
+  const retainedOpening = openingBS.equity.retainedEarnings;
+  const retainedClosing = closingBS.equity.retainedEarnings;
+  // Net income periode = selisih retained earnings (RE auto-calculate dari revenue-expense).
+  const netIncome = retainedClosing - retainedOpening;
+
+  // Saldo modal per pemilik: cap table di titik awal & akhir (net credit per akun stock).
+  const openingCap = calculateCapTable(openingTxns);
+  const periodMovements = accumulateStockMovements(periodTxns);
+
+  // Lookup profit_share_pct & contact dari accounts.
+  const accountById = new Map<string, Account>();
+  if (accounts) for (const a of accounts) accountById.set(a.id, a);
+
+  // Gabungkan semua stock account: yang punya saldo awal, mutasi periode,
+  // ATAU terdaftar sebagai akun is_stock di CoA (mis. pemilik dgn hak laba tapi
+  // belum/tidak ada mutasi modal di periode ini — tetap harus muncul di rekonsiliasi).
+  const stockAccountIds = new Set<string>();
+  for (const e of openingCap.entries) stockAccountIds.add(e.accountId);
+  for (const id of periodMovements.keys()) stockAccountIds.add(id);
+  if (accounts) {
+    for (const a of accounts) {
+      if (a.account_type === 'EQUITY' && a.is_stock === true) stockAccountIds.add(a.id);
+    }
+  }
+
+  const openingByAccount = new Map<string, number>();
+  for (const e of openingCap.entries) openingByAccount.set(e.accountId, e.contributed);
+
+  // Bangun kolom per pemilik.
+  const ownersRaw = Array.from(stockAccountIds).map((id) => {
+    const acc = accountById.get(id);
+    const capitalOpening = openingByAccount.get(id) ?? 0;
+    const mv = periodMovements.get(id) ?? { credit: 0, debit: 0 };
+    const capitalClosing = capitalOpening + mv.credit - mv.debit;
+    return {
+      stockAccountId: id,
+      ownerName: acc?.account_name ?? 'Tidak diketahui',
+      contactId: acc?.contact_id ?? null,
+      contactName: acc?.contact?.name ?? null,
+      capitalOpening,
+      capitalAdditions: mv.credit,
+      capitalWithdrawals: mv.debit,
+      capitalClosing,
+      explicitPct: acc?.profit_share_pct ?? null,
+    };
+  });
+
+  // Hak laba: pakai profit_share_pct eksplisit bila ada untuk akun ini; else fallback % modal.
+  const totalClosingCapital = ownersRaw.reduce((s, o) => s + o.capitalClosing, 0);
+  const owners: SCEOwnerColumn[] = ownersRaw.map((o) => {
+    const isExplicit = o.explicitPct != null;
+    // % modal disetor (cap table) — proporsi saldo modal terhadap total modal.
+    const capitalSharePct = totalClosingCapital > 0
+      ? (o.capitalClosing / totalClosingCapital) * 100
+      : 0;
+    // Hak laba: pakai profit_share_pct eksplisit bila ada; else fallback ke % modal.
+    const profitSharePct = isExplicit ? Number(o.explicitPct) : capitalSharePct;
+    return {
+      stockAccountId: o.stockAccountId,
+      ownerName: o.ownerName,
+      contactId: o.contactId,
+      contactName: o.contactName,
+      capitalOpening: o.capitalOpening,
+      capitalAdditions: o.capitalAdditions,
+      capitalWithdrawals: o.capitalWithdrawals,
+      capitalClosing: o.capitalClosing,
+      capitalSharePct,
+      profitSharePct,
+      profitShareIsExplicit: isExplicit,
+    };
+  }).sort((a, b) => b.capitalClosing - a.capitalClosing);
+
+  // Dividen periode (mengurangi RE) — total debit ke akun is_dividend.
+  const dividendsByOwner = accumulateDividendsByOwner(periodTxns);
+  let dividendsDeclared = 0;
+  for (const v of dividendsByOwner.values()) dividendsDeclared += v;
+
+  // Rekonsiliasi: hak (entitled) vs aktual per pemilik.
+  const dividendReconciliation: SCEDividendReconRow[] = owners.map((o) => {
+    const entitled = (o.profitSharePct / 100) * netIncome;
+    const actual = dividendsByOwner.get(o.stockAccountId) ?? 0;
+    return {
+      stockAccountId: o.stockAccountId,
+      ownerName: o.ownerName,
+      entitled,
+      actual,
+      variance: entitled - actual,
+    };
+  });
+
+  const totalEquityOpening = openingBS.equity.totalEquity;
+  const totalEquityClosing = closingBS.equity.totalEquity;
+
+  // Tie-out: saldo akhir SCE = modal (sudah net stock debit) + laba ditahan
+  // − dividen kumulatif (debit ke akun is_dividend non-stock, yang TIDAK ikut di
+  // totalClosingCapital tapi mengurangi equity di neraca). Harus == equity neraca closing.
+  const cumulativeDividendDrawings = Array.from(
+    accumulateDividendsByOwner(closingTxns).values()
+  ).reduce((s, v) => s + v, 0);
+  const sceClosingEquity = totalClosingCapital + retainedClosing - cumulativeDividendDrawings;
+  const isReconciled = Math.abs(sceClosingEquity - totalEquityClosing) < 1;
+
+  return {
+    periodStart: startDate,
+    periodEnd: endDate,
+    owners,
+    retainedOpening,
+    netIncome,
+    dividendsDeclared,
+    retainedClosing,
+    dividendReconciliation,
+    totalEquityOpening,
+    totalEquityClosing,
+    isReconciled,
+  };
 }
 
 /**

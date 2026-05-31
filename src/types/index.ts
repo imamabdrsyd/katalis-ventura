@@ -85,6 +85,9 @@ export interface Account {
   is_stock: boolean;             // EQUITY: tandai akun modal disetor pemilik/investor
   is_dividend: boolean;          // EQUITY: tandai akun Dividen / Prive / Drawing
   is_dividend_payable: boolean;  // LIABILITY: tandai akun Hutang Dividen
+  profit_share_pct?: number | null;        // EQUITY is_stock: hak atas laba (%). NULL = ikut % modal disetor
+  owner_stock_account_id?: string | null;  // EQUITY is_dividend: akun stock pemiliknya (rekonsiliasi dividen)
+  contact_id?: string | null;              // EQUITY is_stock: link pemilik ke business_contacts
   is_cash_equivalent: boolean;   // ASSET: tandai akun sebagai Kas/Setara Kas (Cash Flow basis)
   is_trade_receivable: boolean;  // ASSET: tandai akun sebagai Piutang Usaha (Cash Flow: Operating)
   is_operating_payable: boolean; // LIABILITY: tandai akun sebagai Hutang Operasional (Cash Flow: Operating)
@@ -101,6 +104,7 @@ export interface Account {
   created_at: string;
   updated_at: string;
   updated_by?: string;
+  contact?: Contact;             // Hydrated: kontak pemilik (untuk akun is_stock dgn contact_id)
 }
 
 export interface CategoryAccountSuggestion {
@@ -376,6 +380,46 @@ export interface BalanceSheetData {
     retainedEarnings: number;
     totalEquity: number;
   };
+}
+
+// ==================== STATEMENT OF CHANGES IN EQUITY (SCE) ====================
+
+/** Kolom modal per pemilik (akun is_stock) dalam SCE: saldo awal → mutasi → saldo akhir. */
+export interface SCEOwnerColumn {
+  stockAccountId: string;
+  ownerName: string;            // account_name akun stock
+  contactId: string | null;     // accounts.contact_id (link ke business_contacts)
+  contactName: string | null;   // nama kontak ter-hidrasi (fallback ke ownerName bila null)
+  capitalOpening: number;
+  capitalAdditions: number;     // credit ke akun stock dalam periode
+  capitalWithdrawals: number;   // debit ke akun stock dalam periode (rare)
+  capitalClosing: number;
+  capitalSharePct: number;      // % modal disetor (cap table) = capitalClosing / total modal
+  profitSharePct: number;       // dari profit_share_pct, fallback ke % modal (cap table)
+  profitShareIsExplicit: boolean; // true bila dari profit_share_pct, false bila fallback % modal
+}
+
+/** Rekonsiliasi hak dividen (entitled) vs dividen aktual yang sudah dibukukan, per pemilik. */
+export interface SCEDividendReconRow {
+  stockAccountId: string;
+  ownerName: string;
+  entitled: number;             // profitSharePct × netIncome
+  actual: number;               // sum debit akun is_dividend yang owner_stock_account_id = stockAccountId, dalam periode
+  variance: number;             // entitled - actual (positif = belum dibagikan penuh)
+}
+
+export interface SCEData {
+  periodStart: string;
+  periodEnd: string;
+  owners: SCEOwnerColumn[];
+  retainedOpening: number;
+  netIncome: number;            // laba periode (revenue - expense periode berjalan)
+  dividendsDeclared: number;    // total dividen periode (mengurangi RE)
+  retainedClosing: number;
+  dividendReconciliation: SCEDividendReconRow[];
+  totalEquityOpening: number;
+  totalEquityClosing: number;
+  isReconciled: boolean;        // SCE closing == BS equity (dalam toleransi)
 }
 
 export interface CashFlowTransaction {

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Account, AccountType, NormalBalance, TransactionCategory } from '@/types';
+import type { Account, AccountType, NormalBalance, TransactionCategory, Contact } from '@/types';
 import { AlertCircle, Check } from 'lucide-react';
 import * as accountsApi from '@/lib/api/accounts';
+import * as contactsApi from '@/lib/api/contacts';
 
 export interface AccountFormData {
   account_code: string;
@@ -18,6 +19,9 @@ export interface AccountFormData {
   is_stock?: boolean;             // EQUITY: tandai akun modal disetor pemilik/investor
   is_dividend?: boolean;          // EQUITY: tandai akun Dividen / Prive
   is_dividend_payable?: boolean;  // LIABILITY: tandai akun Hutang Dividen
+  profit_share_pct?: number | null;        // EQUITY is_stock: hak atas laba (%)
+  owner_stock_account_id?: string | null;  // EQUITY is_dividend: akun stock pemiliknya
+  contact_id?: string | null;              // EQUITY is_stock: link ke kontak pemilik
   is_cash_equivalent?: boolean;   // ASSET: tandai akun sebagai Kas / Setara Kas
   is_trade_receivable?: boolean;  // ASSET: tandai akun sebagai Piutang Usaha
   is_operating_payable?: boolean; // LIABILITY: tandai akun sebagai Hutang Operasional
@@ -69,6 +73,9 @@ export function AccountForm({
     is_stock: account?.is_stock ?? false,
     is_dividend: account?.is_dividend ?? false,
     is_dividend_payable: account?.is_dividend_payable ?? false,
+    profit_share_pct: account?.profit_share_pct ?? null,
+    owner_stock_account_id: account?.owner_stock_account_id ?? null,
+    contact_id: account?.contact_id ?? null,
     is_cash_equivalent: account?.is_cash_equivalent ?? false,
     is_trade_receivable: account?.is_trade_receivable ?? false,
     is_operating_payable: account?.is_operating_payable ?? false,
@@ -85,6 +92,20 @@ export function AccountForm({
   const [suggestedCode, setSuggestedCode] = useState('');
   const [codeManuallyEdited, setCodeManuallyEdited] = useState(false);
   const [codeValidation, setCodeValidation] = useState<{ valid: boolean; message: string } | null>(null);
+
+  // Kontak (untuk link akun is_stock ke pemilik) & daftar akun stock (untuk mapping owner akun dividen)
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [stockAccounts, setStockAccounts] = useState<Account[]>([]);
+  useEffect(() => {
+    if (formData.account_type !== 'EQUITY') return;
+    contactsApi.getContacts(businessId).then(setContacts).catch(() => {});
+    accountsApi
+      .getAccounts(businessId, false)
+      .then((accs) =>
+        setStockAccounts(accs.filter((a) => a.is_stock && a.id !== account?.id))
+      )
+      .catch(() => {});
+  }, [businessId, formData.account_type, account?.id]);
 
   // Get the selected parent for display and validation
   const selectedParent = parentAccounts.find(p => p.id === formData.parent_account_id);
@@ -577,6 +598,65 @@ export function AccountForm({
               />
             </button>
           </div>
+
+          {/* Hak atas laba & link kontak — muncul saat is_stock aktif */}
+          {formData.is_stock && (
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Hak atas Laba (%)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step="0.01"
+                  inputMode="decimal"
+                  value={formData.profit_share_pct ?? ''}
+                  onChange={(e) =>
+                    setFormData(prev => ({
+                      ...prev,
+                      profit_share_pct: e.target.value === '' ? null : Number(e.target.value),
+                    }))
+                  }
+                  disabled={loading}
+                  placeholder="Kosongkan = ikut % modal disetor"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Porsi pembagian laba pemilik ini, lepas dari besarnya modal. Mis. 50 untuk bagi rata 50:50. Kosong = pakai % modal disetor (cap table).
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Tautkan ke Kontak Pemilik
+                </label>
+                <select
+                  value={formData.contact_id ?? ''}
+                  onChange={(e) =>
+                    setFormData(prev => ({ ...prev, contact_id: e.target.value || null }))
+                  }
+                  disabled={loading}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">— Tidak ditautkan —</option>
+                  {[...contacts]
+                    .sort((a, b) => {
+                      const rank = (t: string) => (t === 'investor' ? 0 : t === 'partner' ? 1 : 2);
+                      return rank(a.type) - rank(b.type) || a.name.localeCompare(b.name);
+                    })
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} · {c.type}
+                      </option>
+                    ))}
+                </select>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Integrasi data: hubungkan akun modal ini ke kontak (investor/partner) agar nama & info pemilik tersinkron di laporan.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -705,6 +785,39 @@ export function AccountForm({
               />
             </button>
           </div>
+
+          {/* Pemilik akun dividen — muncul saat is_dividend aktif */}
+          {formData.is_dividend && (
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Dividen / Prive untuk Pemilik
+              </label>
+              <select
+                value={formData.owner_stock_account_id ?? ''}
+                onChange={(e) =>
+                  setFormData(prev => ({ ...prev, owner_stock_account_id: e.target.value || null }))
+                }
+                disabled={loading}
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">— Belum dipetakan —</option>
+                {stockAccounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.account_code} · {a.account_name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Pilih akun modal pemilik (is_stock) yang menerima dividen ini. Dipakai untuk merekonsiliasi hak dividen vs dividen aktual di laporan Perubahan Ekuitas.
+              </p>
+              {stockAccounts.length === 0 && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  Belum ada akun modal pemilik (is_stock). Tandai akun modal dulu agar bisa dipetakan.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 

@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 31 Mei 2026 (**Retained Earnings = auto-calculate; jurnal penutup manual DIHAPUS** — halaman `/closing-entry`, lib `closingEntry.ts`, dan link nav dihapus karena bertabrakan dengan model auto-calculate dan merusak presentasi ekuitas neraca; `calculateBalanceSheet` kini mem-filter `meta.entry_type.id === 'closing_entry'` sebagai pengaman data historis; Period Lock tetap sebagai soft-close; Section 6.4 & Issue #23 diperbarui; sebelumnya: **Template Jurnal Multi-Baris** — migr 093 kolom `journal_lines` JSONB di `transaction_templates`; "Simpan sebagai Template" & "Gunakan Template" kini tersedia di mode multi-baris Journal Entry; memuat template multi-baris mengganti semua baris (tetap editable); Section 12 diperbarui; sebelumnya: **Bank Statement Import — Phase B** — Section 25 dilengkapi dengan CSV/XLSX parser (Indonesian + English number/date format detection, dua format kolom: Debit+Kredit terpisah atau Mutasi+Type), side-by-side matching UI di `/reconciliation` dengan mode toggle Saldo vs Cocokkan Mutasi, hook `useBankTransactions`, API `/api/bank-transactions` + `/match` + `/unmatch` (auto un-reconcile transaksi ledger kalau tidak ada bank line lain ter-link); sebelumnya: **Bank Statement Import & OCR** — migr 092 + Section 25 — upload mutasi PDF/image BCA, pipeline OCR `runOcr()`, dedup hash UNIQUE(account_id, dedup_hash), 2 tabel `bank_statement_imports` + `bank_transactions`; **Invoice dari Transaksi Piutang** — migr 086 + Section 24; audit fix flag `is_trade_receivable` & `is_operating_payable` — migr 085; depresiasi fix; multi-currency — migr 079)
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 31 Mei 2026 (**Promosi double-entry → multi-line** — migr 095: `update_multi_line_transaction` kini mengizinkan upgrade transaksi double-entry sederhana menjadi multi-line via tombol "Tambah Baris" di Edit Transaction (set is_multi_line=TRUE + kosongkan debit/credit_account_id); Section 3.2 diperbarui; **AccountDropdown** kini render via portal (createPortal) agar tidak terpotong overflow modal; sebelumnya: **Statement of Changes in Equity (SCE) + Profit-Sharing & Rekonsiliasi Dividen** — migr 094 tambah kolom `profit_share_pct`, `owner_stock_account_id`, `contact_id` di `accounts`; fungsi `calculateStatementOfChangesInEquity`, hook + halaman `/statement-of-changes-in-equity`, export PDF/Excel; header "Equity (Capital)" di Neraca kini clickable ke SCE; Section 23 baru + Section 6.3 diperbarui; menjawab temuan audit MEDIUM "Tidak Ada SOCE"; sebelumnya: **Retained Earnings = auto-calculate; jurnal penutup manual DIHAPUS** — halaman `/closing-entry`, lib `closingEntry.ts`, dan link nav dihapus karena bertabrakan dengan model auto-calculate dan merusak presentasi ekuitas neraca; `calculateBalanceSheet` kini mem-filter `meta.entry_type.id === 'closing_entry'` sebagai pengaman data historis; Period Lock tetap sebagai soft-close; Section 6.4 & Issue #23 diperbarui; sebelumnya: **Template Jurnal Multi-Baris** — migr 093 kolom `journal_lines` JSONB di `transaction_templates`; "Simpan sebagai Template" & "Gunakan Template" kini tersedia di mode multi-baris Journal Entry; memuat template multi-baris mengganti semua baris (tetap editable); Section 12 diperbarui; sebelumnya: **Bank Statement Import — Phase B** — Section 25 dilengkapi dengan CSV/XLSX parser (Indonesian + English number/date format detection, dua format kolom: Debit+Kredit terpisah atau Mutasi+Type), side-by-side matching UI di `/reconciliation` dengan mode toggle Saldo vs Cocokkan Mutasi, hook `useBankTransactions`, API `/api/bank-transactions` + `/match` + `/unmatch` (auto un-reconcile transaksi ledger kalau tidak ada bank line lain ter-link); sebelumnya: **Bank Statement Import & OCR** — migr 092 + Section 25 — upload mutasi PDF/image BCA, pipeline OCR `runOcr()`, dedup hash UNIQUE(account_id, dedup_hash), 2 tabel `bank_statement_imports` + `bank_transactions`; **Invoice dari Transaksi Piutang** — migr 086 + Section 24; audit fix flag `is_trade_receivable` & `is_operating_payable` — migr 085; depresiasi fix; multi-currency — migr 079)
 
 ---
 
@@ -29,6 +29,7 @@
 20. [Data Flow Diagrams](#20-data-flow-diagrams)
 21. [Business Members & Access Control](#21-business-members--access-control)
 22. [AR/AP Aging & Repayment History](#22-arap-aging--repayment-history)
+23. [Statement of Changes in Equity (SCE) & Rekonsiliasi Dividen](#23-statement-of-changes-in-equity-sce--rekonsiliasi-dividen)
 
 ---
 
@@ -289,6 +290,8 @@ Selain simple 2-line (1 debit + 1 credit), sistem mendukung **compound/multi-lin
 - Saat disimpan dalam mode multi-line, data dikirim via `createMultiLineTransaction()` (`is_multi_line: true`). Mode single-line tetap menggunakan `createTransaction()` (`is_double_entry: true`).
 
 **Atomic create/update (sejak migrasi 082):** Header transaksi dan baris `journal_lines` sekarang disimpan dalam satu RPC server-side (`create_multi_line_transaction(p_header JSONB, p_lines JSONB)` dan `update_multi_line_transaction(...)`). Sebelumnya API route melakukan INSERT header + INSERT lines sebagai dua request terpisah — jika request kedua gagal, transaksi tertinggal tanpa lines. Route handler `/api/transactions` dan `/api/transactions/[id]/multi-line` sekarang memanggil RPC ini sehingga seluruh mutasi bersifat all-or-nothing. RPC juga memvalidasi: total debit ≈ total kredit (tolerance 0.01), minimal 2 baris, semua akun milik business yang sama, dan tepat satu sisi non-zero per baris.
+
+**Promosi double-entry → multi-line (sejak migrasi 095):** Transaksi double-entry sederhana yang sudah tersimpan dapat **di-upgrade** menjadi multi-line lewat tombol "Tambah Baris" di Edit Transaction. Di frontend (`transactions/page.tsx > handleConvertToMultiLine`), dua akun debit/kredit existing di-konversi otomatis menjadi 2 baris awal `journal_lines`, lalu modal beralih ke `MultiLineJournalForm`. Saat disimpan, `update_multi_line_transaction` mendeteksi `is_multi_line=false` + `p_lines` disediakan sebagai **promosi**: meng-set `is_multi_line=TRUE`, `is_double_entry=TRUE`, dan **mengosongkan** `debit_account_id`/`credit_account_id` (NULL) agar memenuhi constraint `transactions_account_rules` (multi-line wajib NULL pada kedua kolom akun single-line). Konversi bersifat satu arah (tidak ada downgrade kembali ke single-line).
 
 ### 3.3 Prinsip Accounting Equation
 
@@ -678,8 +681,11 @@ percentage = net_kontribusi / totalContributed × 100
 Multi-line aware: iterasi `journal_lines` jika `is_multi_line=true`, fallback ke `debit_account`/`credit_account` untuk simple double-entry. Akun ber-flag `is_dividend=true` **sengaja tidak dihitung** — itu distribusi laba, bukan modal disetor.
 
 **Konsumen:**
-- **Balance Sheet** (`/balance-sheet`): breakdown per pemilik dengan kolom % di section Ekuitas.
+- **Balance Sheet** (`/balance-sheet`): breakdown per pemilik dengan kolom % di section Ekuitas. Header "Equity (Capital)" clickable → drill-down ke `/statement-of-changes-in-equity`.
 - **Dashboard** (`CapTableWidget`): widget di samping AR Tracker, layout 2/3 + 1/3.
+- **Statement of Changes in Equity** (`/statement-of-changes-in-equity`): saldo modal per pemilik + rekonsiliasi dividen (Section 23).
+
+> **Catatan: % modal ≠ hak atas laba.** Cap table di atas adalah **% modal disetur**. Sejak migr 094, akun `is_stock` punya kolom `profit_share_pct` (hak atas laba, lepas dari modal) dan `contact_id` (link ke `business_contacts`). Akun `is_dividend` punya `owner_stock_account_id` (menunjuk akun stock pemiliknya). Dipakai SCE — lihat Section 23.
 
 ### 6.4 Retained Earnings (Auto-Calculate / Soft Close)
 
@@ -2732,6 +2738,78 @@ Hook `useBankTransactions({ businessId, accountId, from, to })`:
   belum ada di book (open `TransactionForm` pre-filled).
 - **Parser Mandiri / BRI / BNI** — saat ini fallback ke generic.
 - **API agregator** (Brick / Ayoconnect) — fase 3, butuh kontrak B2B.
+
+---
+
+## 23. Statement of Changes in Equity (SCE) & Rekonsiliasi Dividen
+
+> Laporan ke-4 (PSAK/IFRS 4-statement model). Fungsi: `calculateStatementOfChangesInEquity()` di `src/lib/calculations.ts`; hook `useStatementOfChangesInEquity.ts`; halaman `/statement-of-changes-in-equity`; export `exportSCEToPDF/Excel`.
+
+### 23.1 Tujuan & Data Model
+
+SCE melaporkan perubahan ekuitas selama periode, **per komponen**: Modal tiap pemilik, Laba Ditahan, dan distribusi Dividen. Kolom: **Saldo Awal | Penambahan | Pengurangan | Saldo Akhir**.
+
+Migrasi **094** menambah 3 kolom di `accounts`:
+
+| Kolom | Berlaku untuk | Fungsi |
+|-------|---------------|--------|
+| `profit_share_pct` | `is_stock` | Hak atas laba (%) pemilik, **lepas dari % modal**. NULL = fallback ke % modal (cap table). |
+| `owner_stock_account_id` | `is_dividend` | FK ke akun stock pemiliknya — untuk rekonsiliasi dividen per pemilik. |
+| `contact_id` | `is_stock` | FK ke `business_contacts` — integrasi data nama/HP/email pemilik. |
+
+> **Kenapa terpisah dari cap table?** Banyak bisnis keluarga/partnership menyetorkan modal tidak proporsional dengan kesepakatan bagi hasil. Contoh **Hillside Studio**: Papah modal 98.26%, Imam 1.74%, tapi hak laba **50:50**. `profit_share_pct` merekam kesepakatan ini; cap table tetap merekam realitas modal.
+
+### 23.2 Logika Periode (basis seperti Income Statement)
+
+```
+openingDate = startDate - 1 hari
+openingTxns = transaksi s/d openingDate (cumulative)
+closingTxns = transaksi s/d endDate (cumulative)
+periodTxns  = transaksi dalam [startDate, endDate]
+
+retainedOpening = calculateBalanceSheet(openingTxns).equity.retainedEarnings
+retainedClosing = calculateBalanceSheet(closingTxns).equity.retainedEarnings
+netIncome       = retainedClosing - retainedOpening   // RE auto-calculate, dividen TIDAK menyentuh RE
+```
+
+**Per pemilik (akun is_stock):**
+```
+capitalOpening   = net kontribusi (calculateCapTable di openingTxns)
+capitalAdditions = sum credit ke akun stock dalam periode
+capitalWithdrawals = sum debit ke akun stock dalam periode (rare)
+capitalClosing   = capitalOpening + additions - withdrawals
+capitalSharePct  = capitalClosing / totalClosingCapital × 100   // % modal disetor (cap table)
+profitSharePct   = profit_share_pct (eksplisit) ATAU fallback capitalSharePct  // hak laba
+```
+
+> **Dua persentase yang berbeda — penting jangan tertukar:**
+> - Tabel **Rincian Perubahan Ekuitas** menampilkan badge **`capitalSharePct`** (% modal disetor). Kolom ini murni akuntansi: berapa modal yang disetor/ditarik tiap pemilik. Sesuai PSAK/IFRS, kolom mutasi ekuitas memakai komposisi modal, bukan hak laba.
+> - Tabel **Rekonsiliasi Dividen** menampilkan **`profitSharePct`** (hak laba). Inilah dasar perhitungan `entitled = profitSharePct × netIncome`.
+> - Contoh Hillside: badge Rincian = "Modal 98.26%" (Papah) / "Modal 1.74%" (Imam); badge/kolom Rekonsiliasi = "Hak 50%" untuk keduanya.
+Daftar pemilik = gabungan akun stock yang punya saldo/mutasi **plus** semua akun `is_stock` di CoA (pemilik dengan hak laba tetap muncul walau belum ada mutasi).
+
+### 23.3 Rekonsiliasi Dividen (Hak vs Aktual)
+
+```
+profitSharePct = profit_share_pct (eksplisit) ATAU fallback (capitalClosing / totalCapital × 100)
+entitled = profitSharePct / 100 × netIncome              // hak dividen
+actual   = sum debit akun is_dividend yang owner_stock_account_id = akun stock ini, dalam periode
+variance = entitled - actual                              // + = belum dibagikan penuh; - (merah) = over-distribusi
+```
+
+`accumulateDividendsByOwner()` mengelompokkan debit akun `is_dividend` per `owner_stock_account_id` (akun tanpa mapping → key `'unassigned'`).
+
+### 23.4 Tie-out ke Neraca
+
+```
+cumulativeDividendDrawings = sum debit akun is_dividend (non-stock) s/d endDate
+sceClosingEquity = totalClosingCapital + retainedClosing - cumulativeDividendDrawings
+isReconciled = |sceClosingEquity - balanceSheet.equity.totalEquity| < 1
+```
+
+> Dividen mendebit akun EQUITY ber-`is_dividend` (bukan `is_stock`), sehingga **tidak** ikut `totalClosingCapital` (yang hanya menjumlah akun stock via cap table) tapi **mengurangi** equity di neraca. Karena itu dikurangkan eksplisit di tie-out.
+
+**Nuansa akuntansi penting:** dividen/prive **tidak** masuk Income Statement dan **tidak** menyentuh Retained Earnings di model auto-calculate ini — ia langsung mengurangi equity di neraca. `netIncome` periode murni = revenue − expense, tidak terpengaruh besarnya dividen.
 
 ---
 
