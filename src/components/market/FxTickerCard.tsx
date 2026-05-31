@@ -28,9 +28,7 @@ export function FxTickerCard({ data, status, size = 'sm' }: FxTickerCardProps) {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 flex items-center gap-4">
-      <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 flex-shrink-0">
-        <TrendingUp className="w-6 h-6" />
-      </div>
+      <TrendingUp className="w-6 h-6 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
       <div className="flex-1 min-w-0">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
           {data.base} → {data.target}

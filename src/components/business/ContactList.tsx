@@ -812,17 +812,17 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
             </div>
           )}
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex items-center gap-4 pt-2">
             <button
               onClick={() => setShowForm(false)}
-              className="btn-secondary flex-1"
+              className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium transition-colors disabled:opacity-50"
               disabled={saving}
             >
               Batal
             </button>
             <button
               onClick={handleSave}
-              className="btn-primary flex-1 flex items-center justify-center gap-2"
+              className="btn-primary-glow flex-1 flex items-center justify-center gap-2"
               disabled={saving}
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}

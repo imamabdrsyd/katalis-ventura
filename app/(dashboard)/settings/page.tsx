@@ -6,7 +6,15 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { createClient } from '@/lib/supabase';
 import { LOCALE_LABELS, LOCALE_FLAGS, type Locale } from '@/lib/i18n';
-import { Camera, User, Mail, Briefcase, Save, Globe, Send, CheckCircle2, XCircle, Copy, RefreshCw, FileEdit, CheckCheck } from 'lucide-react';
+import { Camera, User, Mail, Briefcase, Save, Globe, CheckCircle2, XCircle, Copy, RefreshCw, FileEdit, CheckCheck, LayoutList, ClipboardCheck, HandCoins, FileText, Landmark, LineChart, GitBranch } from 'lucide-react';
+
+function TelegramIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+    </svg>
+  );
+}
 import Image from 'next/image';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import { isManagerRole } from '@/lib/roles';
@@ -50,6 +58,42 @@ export default function SettingsPage() {
   const [telegramActionLoading, setTelegramActionLoading] = useState(false);
   const [telegramCopied, setTelegramCopied] = useState(false);
   const [telegramCountdown, setTelegramCountdown] = useState(0);
+
+  const TOGGLEABLE_NAV_ITEMS = [
+    { href: '/trial-balance', label: 'Trial Balance', icon: ClipboardCheck },
+    { href: '/ar-ap', label: 'AR & AP', icon: HandCoins },
+    { href: '/invoices', label: 'Invoicing', icon: FileText },
+    { href: '/reconciliation', label: 'Bank Reconciliation', icon: Landmark },
+    { href: '/market', label: 'Market Tracker', icon: LineChart },
+    { href: '/statement-of-changes-in-equity', label: 'Changes in Equity', icon: GitBranch },
+  ];
+
+  const DEFAULT_HIDDEN = TOGGLEABLE_NAV_ITEMS.map(i => i.href);
+  const [hiddenNavItems, setHiddenNavItems] = useState<string[]>(DEFAULT_HIDDEN);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('profiles')
+      .select('hidden_nav_items')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) setHiddenNavItems(data.hidden_nav_items ?? DEFAULT_HIDDEN);
+      });
+  }, [user?.id]);
+
+  const toggleNavItem = async (href: string) => {
+    if (!user) return;
+    const next = hiddenNavItems.includes(href)
+      ? hiddenNavItems.filter(h => h !== href)
+      : [...hiddenNavItems, href];
+    setHiddenNavItems(next);
+    await supabase
+      .from('profiles')
+      .update({ hidden_nav_items: next })
+      .eq('id', user.id);
+  };
 
   useEffect(() => {
     if (user) {
@@ -416,7 +460,7 @@ export default function SettingsPage() {
               </button>
               <button
                 onClick={handleSaveProfile}
-                className="btn-primary flex-1 flex items-center justify-center gap-2"
+                className="btn-primary-glow flex-1 flex items-center justify-center gap-2"
                 disabled={saving || uploading}
               >
                 <Save className="w-4 h-4" />
@@ -439,7 +483,7 @@ export default function SettingsPage() {
             <div className="card">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center">
-                  <Send className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+                  <TelegramIcon className="w-5 h-5 text-sky-500" />
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Telegram Bot</h2>
@@ -516,9 +560,9 @@ export default function SettingsPage() {
                           href={`https://t.me/${telegramBotUsername}?start=${telegramToken}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-5 py-2.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium rounded-xl transition-colors"
+                          className="flex items-center gap-2 px-5 py-2.5 text-white text-sm font-semibold rounded-xl transition-all duration-150 bg-gradient-to-b from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 active:from-sky-600 active:to-sky-700 shadow-sm shadow-sky-500/20 hover:shadow-md hover:shadow-sky-500/30"
                         >
-                          <Send className="w-4 h-4" />
+                          <TelegramIcon className="w-4 h-4" />
                           Buka di Telegram
                         </a>
                         <button onClick={handleCopyTelegramLink} className="btn-ghost flex items-center gap-2">
@@ -543,12 +587,12 @@ export default function SettingsPage() {
                       <button
                         onClick={handleGenerateTelegramToken}
                         disabled={telegramActionLoading}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
+                        className="flex items-center gap-2 px-5 py-2.5 text-white text-sm font-semibold rounded-xl transition-all duration-150 bg-gradient-to-b from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 active:from-sky-600 active:to-sky-700 shadow-sm shadow-sky-500/20 hover:shadow-md hover:shadow-sky-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
                       >
                         {telegramActionLoading ? (
                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         ) : (
-                          <Send className="w-4 h-4" />
+                          <TelegramIcon className="w-4 h-4" />
                         )}
                         Hubungkan Telegram
                       </button>
@@ -562,7 +606,7 @@ export default function SettingsPage() {
             <div className="card">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                  <Send className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                  <TelegramIcon className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Telegram Bot</h2>
@@ -576,6 +620,44 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
+          {/* Sidebar Menu Visibility */}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Tampilan Sidebar</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Pilih menu mana yang tampil di sidebar</p>
+          </div>
+          <div className="card">
+            <div className="flex items-center gap-3 mb-5">
+              <LayoutList className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+              <div>
+                <h3 className="font-semibold text-gray-800 dark:text-gray-100">Menu Sidebar</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Menu yang disembunyikan tetap bisa diakses lewat URL</p>
+              </div>
+            </div>
+            <div className="divide-y divide-gray-100 dark:divide-gray-700/60">
+              {TOGGLEABLE_NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+                const isVisible = !hiddenNavItems.includes(href);
+                return (
+                  <div
+                    key={href}
+                    className="flex items-center justify-between py-3 px-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors first:pt-1 last:pb-1"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon className={`w-4 h-4 ${isVisible ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`} />
+                      <span className={`text-sm font-medium ${isVisible ? 'text-gray-800 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'}`}>{label}</span>
+                    </div>
+                    <button
+                      onClick={() => toggleNavItem(href)}
+                      className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isVisible ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                      role="switch"
+                      aria-checked={isVisible}
+                    >
+                      <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isVisible ? 'translate-x-4' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
       </div>

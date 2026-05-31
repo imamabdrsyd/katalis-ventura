@@ -48,6 +48,7 @@ import {
   RefreshCw,
   Upload,
   GitBranch,
+  Landmark,
 } from 'lucide-react';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -99,6 +100,8 @@ function useNavData() {
         { href: '/general-ledger', label: t.nav.generalLedger, icon: BookOpenCheck },
         { href: '/trial-balance', label: t.nav.trialBalance, icon: ClipboardCheck },
         { href: '/ar-ap', label: t.nav.arAp, icon: HandCoins },
+        { href: '/invoices', label: t.nav.invoice, icon: FileText },
+        { href: '/reconciliation', label: t.nav.bankReconciliation, icon: Landmark },
       ],
     },
     {
@@ -832,12 +835,14 @@ function Sidebar({
   isCollapsed,
   onToggleCollapse,
   userRole,
+  userId,
 }: {
   isOpen: boolean;
   onClose: () => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   userRole: string | null;
+  userId: string | null;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -845,6 +850,8 @@ function Sidebar({
   const canManage = isManagerRole(userRole);
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const SIDEBAR_DEFAULT_HIDDEN = ['/trial-balance', '/ar-ap', '/invoices', '/reconciliation', '/market', '/statement-of-changes-in-equity'];
+  const [hiddenNavItems, setHiddenNavItems] = useState<string[]>(SIDEBAR_DEFAULT_HIDDEN);
 
   useEffect(() => {
     try {
@@ -852,6 +859,19 @@ function Sidebar({
       if (saved) setExpandedSections(JSON.parse(saved));
     } catch { /* ignore */ }
   }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    const supabase = createClient();
+    supabase
+      .from('profiles')
+      .select('hidden_nav_items')
+      .eq('id', userId)
+      .single()
+      .then(({ data }) => {
+        if (data) setHiddenNavItems(data.hidden_nav_items ?? SIDEBAR_DEFAULT_HIDDEN);
+      });
+  }, [userId]);
 
   const isSectionExpanded = (label: string) => expandedSections[label] ?? true;
 
@@ -1058,7 +1078,7 @@ function Sidebar({
                           <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400 border-b border-gray-700 dark:border-gray-600">
                             {section.label}
                           </div>
-                          {section.items.map((item) => (
+                          {section.items.filter(item => !hiddenNavItems.includes(item.href)).map((item) => (
                             <Link
                               key={item.href}
                               href={item.href}
@@ -1079,7 +1099,7 @@ function Sidebar({
                   );
                 })()}
                 <div className={`space-y-0.5 transition-all duration-200 ease-in-out ${!isCollapsed && !expanded ? 'max-h-0 overflow-hidden' : isCollapsed ? 'hidden' : 'max-h-96'}`}>
-                  {section.items.map((item) => {
+                  {section.items.filter(item => !hiddenNavItems.includes(item.href)).map((item) => {
                     const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
                     return (
                       <Link
@@ -1118,7 +1138,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { userRole } = useBusinessContext();
+  const { userRole, user } = useBusinessContext();
   const pathname = usePathname();
   const prefersReducedMotion = useReducedMotion();
   const touchStartX = useRef<number | null>(null);
@@ -1188,6 +1208,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
         isCollapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
         userRole={userRole}
+        userId={user?.id ?? null}
       />
 
       {/* Fixed Header */}

@@ -54,9 +54,7 @@ export function FxMiniWidget({ className = '' }: FxMiniWidgetProps) {
     <div
       className={`flex items-center gap-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 shadow-sm ${className}`}
     >
-      <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-900/40 flex items-center justify-center flex-shrink-0">
-        <ArrowRightLeft className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-      </div>
+      <ArrowRightLeft className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
       <div>
         <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider leading-none mb-0.5">
           {state.fx.base} / {state.fx.target}

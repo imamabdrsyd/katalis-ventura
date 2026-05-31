@@ -5,13 +5,13 @@ import {
   CheckCircle2,
   Circle,
   Calendar,
-  ArrowLeftRight,
   Check,
   Undo2,
   AlertTriangle,
   Upload,
   Scale,
   Link as LinkIcon,
+  Landmark,
 } from 'lucide-react';
 import { useReconciliation } from '@/hooks/useReconciliation';
 import { formatCurrency } from '@/lib/utils';
@@ -103,9 +103,7 @@ function ReconciliationPageInner() {
           {/* Title + subtitle */}
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
-              <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-500/10 text-primary-500 dark:text-primary-400">
-                <ArrowLeftRight className="w-5 h-5" />
-              </span>
+              <Landmark className="w-7 h-7 text-primary-500 dark:text-primary-400" />
               {t.reconciliation.title}
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5">
@@ -201,7 +199,7 @@ function ReconciliationPageInner() {
               'text-amber-500 dark:text-amber-400'
             }>
               {!bankBalance ? (
-                <ArrowLeftRight className="w-4 h-4" />
+                <Landmark className="w-4 h-4" />
               ) : isBalanced ? (
                 <CheckCircle2 className="w-4 h-4" />
               ) : (
@@ -347,7 +345,7 @@ function ReconciliationPageInner() {
           {displayedTransactions.length === 0 ? (
             <div className="text-center py-16 px-4">
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-700/50 text-gray-400 mb-4">
-                {showReconciled ? <ArrowLeftRight className="w-7 h-7" /> : <CheckCircle2 className="w-7 h-7" />}
+                {showReconciled ? <Landmark className="w-7 h-7" /> : <CheckCircle2 className="w-7 h-7" />}
               </div>
               <p className="font-semibold text-gray-700 dark:text-gray-200">
                 {showReconciled ? t.reconciliation.noReconciled : t.reconciliation.allReconciled}
