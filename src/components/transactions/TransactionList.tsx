@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Lock, Contact as ContactIcon } from 'lucide-react';
+import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Lock, Contact as ContactIcon, Search, X } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import type { Transaction, TransactionCategory, Contact } from '@/types';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
@@ -25,6 +25,8 @@ interface TransactionListProps {
   onCategoryFilterChange?: (category: '' | TransactionCategory | 'SETTLE') => void;
   contactFilter?: string;
   onContactFilterChange?: (contact: string) => void;
+  descriptionSearch?: string;
+  onDescriptionSearchChange?: (keyword: string) => void;
   dateRange?: { start: string; end: string };
   onDateRangeChange?: (range: { start: string; end: string }) => void;
   onEnterSelectMode?: () => void;
@@ -155,6 +157,8 @@ export function TransactionList({
   onCategoryFilterChange,
   contactFilter,
   onContactFilterChange,
+  descriptionSearch = '',
+  onDescriptionSearchChange,
   dateRange,
   onDateRangeChange,
   onEnterSelectMode,
@@ -168,6 +172,7 @@ export function TransactionList({
   const showActions = (onEdit || onDelete || onEnterSelectMode) && !selectMode;
   const allSelected = selectMode && transactions.length > 0 && transactions.every((t) => selectedIds?.has(t.id));
   const tableColumnCount = 7 + (selectMode ? 1 : 0) + (showActions ? 1 : 0);
+  const activeDescriptionSearch = descriptionSearch.trim();
 
   // Category filter dropdown state
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
@@ -182,6 +187,14 @@ export function TransactionList({
   const [mounted, setMounted] = useState(false);
   const contactDropdownRef = useRef<HTMLDivElement>(null);
   const contactMenuRef = useRef<HTMLDivElement>(null);
+
+  // Description keyword search dropdown state
+  const [showDescriptionSearch, setShowDescriptionSearch] = useState(false);
+  const [descriptionDraft, setDescriptionDraft] = useState(descriptionSearch);
+  const [descriptionDropdownStyle, setDescriptionDropdownStyle] = useState<CSSProperties>({});
+  const descriptionSearchRef = useRef<HTMLDivElement>(null);
+  const descriptionMenuRef = useRef<HTMLFormElement>(null);
+  const descriptionInputRef = useRef<HTMLInputElement>(null);
 
   // Date filter dropdown state
   const [showDateDropdown, setShowDateDropdown] = useState(false);
@@ -233,6 +246,27 @@ export function TransactionList({
     });
   }, []);
 
+  const updateDescriptionDropdownPosition = useCallback(() => {
+    if (!descriptionSearchRef.current) return;
+    const rect = descriptionSearchRef.current.getBoundingClientRect();
+    const availableWidth = Math.max(220, window.innerWidth - 16);
+    const width = Math.min(280, availableWidth);
+    const left = Math.min(Math.max(rect.left, 8), window.innerWidth - width - 8);
+    const spaceBelow = window.innerHeight - rect.bottom - 16;
+    const spaceAbove = rect.top - 16;
+    const openUp = spaceBelow < 160 && spaceAbove > spaceBelow;
+    const maxHeight = Math.max(150, Math.min(240, openUp ? spaceAbove : spaceBelow));
+
+    setDescriptionDropdownStyle({
+      position: 'fixed',
+      top: openUp ? Math.max(8, rect.top - maxHeight - 4) : rect.bottom + 4,
+      left,
+      width,
+      maxHeight,
+      zIndex: 9999,
+    });
+  }, []);
+
   const toggleCategoryDropdown = () => {
     setShowCategoryDropdown((open) => {
       const next = !open;
@@ -247,6 +281,28 @@ export function TransactionList({
       if (next) requestAnimationFrame(updateContactDropdownPosition);
       return next;
     });
+  };
+
+  const toggleDescriptionSearch = () => {
+    setShowDescriptionSearch((open) => {
+      const next = !open;
+      if (next) {
+        setDescriptionDraft(descriptionSearch);
+        requestAnimationFrame(updateDescriptionDropdownPosition);
+      }
+      return next;
+    });
+  };
+
+  const applyDescriptionSearch = () => {
+    onDescriptionSearchChange?.(descriptionDraft.trim());
+    setShowDescriptionSearch(false);
+  };
+
+  const resetDescriptionSearch = () => {
+    setDescriptionDraft('');
+    onDescriptionSearchChange?.('');
+    setShowDescriptionSearch(false);
   };
 
   useEffect(() => {
@@ -271,6 +327,22 @@ export function TransactionList({
     };
   }, [showContactDropdown, updateContactDropdownPosition]);
 
+  useEffect(() => {
+    if (!showDescriptionSearch) {
+      setDescriptionDraft(descriptionSearch);
+      return;
+    }
+
+    updateDescriptionDropdownPosition();
+    requestAnimationFrame(() => descriptionInputRef.current?.focus());
+    window.addEventListener('scroll', updateDescriptionDropdownPosition, true);
+    window.addEventListener('resize', updateDescriptionDropdownPosition);
+    return () => {
+      window.removeEventListener('scroll', updateDescriptionDropdownPosition, true);
+      window.removeEventListener('resize', updateDescriptionDropdownPosition);
+    };
+  }, [showDescriptionSearch, descriptionSearch, updateDescriptionDropdownPosition]);
+
   // Close dropdowns on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -285,6 +357,12 @@ export function TransactionList({
         contactMenuRef.current && !contactMenuRef.current.contains(e.target as Node)
       ) {
         setShowContactDropdown(false);
+      }
+      if (
+        descriptionSearchRef.current && !descriptionSearchRef.current.contains(e.target as Node) &&
+        descriptionMenuRef.current && !descriptionMenuRef.current.contains(e.target as Node)
+      ) {
+        setShowDescriptionSearch(false);
       }
       if (dateDropdownRef.current && !dateDropdownRef.current.contains(e.target as Node)) {
         setShowDateDropdown(false);
@@ -441,7 +519,74 @@ export function TransactionList({
                 )}
               </div>
             </th>
-            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t.transactions.tableDescription}</th>
+            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+              <div className="relative" ref={descriptionSearchRef}>
+                <button
+                  type="button"
+                  onClick={toggleDescriptionSearch}
+                  className={`flex min-w-0 items-center gap-1 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${activeDescriptionSearch ? 'text-indigo-500 dark:text-indigo-400 font-medium' : ''}`}
+                  title={activeDescriptionSearch ? `${t.transactions.tableDescription}: ${activeDescriptionSearch}` : `${t.common.search} ${t.transactions.tableDescription}`}
+                >
+                  <span className="truncate max-w-[128px]">
+                    {activeDescriptionSearch || t.transactions.tableDescription}
+                  </span>
+                  <Search className="w-3.5 h-3.5 flex-shrink-0" />
+                </button>
+                {mounted && showDescriptionSearch && createPortal(
+                  <form
+                    ref={descriptionMenuRef}
+                    style={descriptionDropdownStyle}
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      applyDescriptionSearch();
+                    }}
+                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 overflow-hidden"
+                  >
+                    <label className="block text-xs font-medium normal-case text-gray-500 dark:text-gray-400 mb-2">
+                      {t.common.search} {t.transactions.tableDescription.toLowerCase()}
+                    </label>
+                    <div className="relative">
+                      <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+                      <input
+                        ref={descriptionInputRef}
+                        type="text"
+                        value={descriptionDraft}
+                        onChange={(e) => setDescriptionDraft(e.target.value)}
+                        placeholder={`${t.common.search} ${t.transactions.tableDescription.toLowerCase()}...`}
+                        className="w-full rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 py-2 pl-8 pr-8 text-sm normal-case text-gray-700 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                      />
+                      {descriptionDraft && (
+                        <button
+                          type="button"
+                          onClick={() => setDescriptionDraft('')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600 dark:hover:bg-gray-600 dark:hover:text-gray-200"
+                          title={t.common.reset}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={resetDescriptionSearch}
+                        disabled={!activeDescriptionSearch && !descriptionDraft.trim()}
+                        className="px-2.5 py-1.5 text-xs font-medium normal-case text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {t.common.reset}
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-3 py-1.5 text-xs font-medium normal-case text-white bg-indigo-500 hover:bg-indigo-600 rounded-md transition-colors"
+                      >
+                        {t.common.search}
+                      </button>
+                    </div>
+                  </form>,
+                  document.body
+                )}
+              </div>
+            </th>
 
             {/* Tanggal header with date filter dropdown */}
             <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">

@@ -52,6 +52,8 @@ function TransactionsPageInner() {
     setCategoryFilter,
     contactFilter,
     setContactFilter,
+    descriptionSearch,
+    setDescriptionSearch,
     dateRange,
     setDateRange,
     showFilterDropdown,
@@ -264,6 +266,7 @@ function TransactionsPageInner() {
   const hasActiveTransactionFilters = statusFilter !== 'all'
     || Boolean(categoryFilter)
     || Boolean(contactFilter)
+    || Boolean(descriptionSearch)
     || Boolean(dateRange.start)
     || Boolean(dateRange.end)
     || activeTagFilters.length > 0;
@@ -273,10 +276,11 @@ function TransactionsPageInner() {
     setStatusFilter('all');
     setCategoryFilter('');
     setContactFilter('');
+    setDescriptionSearch('');
     setDateRange({ start: '', end: '' });
     setActiveTagFilters([]);
     setCurrentPage(1);
-  }, [setCategoryFilter, setContactFilter, setCurrentPage, setDateRange, setStatusFilter]);
+  }, [setCategoryFilter, setContactFilter, setCurrentPage, setDateRange, setDescriptionSearch, setStatusFilter]);
 
   // Highlight recently imported transactions
   const [highlightAfter, setHighlightAfter] = useState<string | null>(null);
@@ -652,6 +656,8 @@ function TransactionsPageInner() {
             onCategoryFilterChange={setCategoryFilter}
             contactFilter={contactFilter}
             onContactFilterChange={setContactFilter}
+            descriptionSearch={descriptionSearch}
+            onDescriptionSearchChange={setDescriptionSearch}
             dateRange={dateRange}
             onDateRangeChange={setDateRange}
             onEnterSelectMode={canManageTransactions ? () => setSelectMode(true) : undefined}
