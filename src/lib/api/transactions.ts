@@ -204,6 +204,7 @@ export interface TransactionFilters {
   startDate?: string;
   endDate?: string;
   contact?: string;
+  description?: string;
 }
 
 export async function getTransactionsPaginated(
@@ -237,6 +238,9 @@ export async function getTransactionsPaginated(
   }
   if (filters?.contact) {
     query = query.eq('name', filters.contact);
+  }
+  if (filters?.description) {
+    query = query.ilike('description', `%${filters.description}%`);
   }
   if (filters?.startDate) {
     query = query.gte('date', filters.startDate);
