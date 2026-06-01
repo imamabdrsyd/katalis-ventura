@@ -249,7 +249,6 @@ export default function BusinessesPage() {
 
       {/* Tabs */}
       <Tabs<TabType>
-        variant="underline"
         className="mb-6"
         value={activeTab}
         onChange={setActiveTab}

@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 30 Mei 2026
+> Terakhir diupdate: 01 Juni 2026
 
 ---
 
@@ -229,35 +229,40 @@ Preferensikan utility class sebelum menulis classes Tailwind panjang. Yang terse
 
 ### 3.2 Tab Navigation (Multi-item)
 
-**Pakai untuk:** navigasi antar view dalam halaman yang sama, jumlah tab 3+ (Overview/Input/Variance/Projection, Members/Contacts/Invites).
+**Pakai untuk:** navigasi antar view dalam halaman yang sama (Overview/Input/Variance, Balance/Match Statement, Active/Archived).
 
-**Referensi kanonik:** [roi-forecast/page.tsx:170-192](../app/(dashboard)/roi-forecast/page.tsx#L170-L192), [businesses/[id]/members/page.tsx:220](../app/(dashboard)/businesses/%5Bid%5D/members/page.tsx#L220)
+**Selalu pakai komponen `<Tabs>`** — jangan tulis inline. Komponen sudah terekstraksi di [`src/components/ui/Tabs.tsx`](../src/components/ui/Tabs.tsx).
 
-**Anatomi:**
 ```tsx
-<div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 w-fit">
-  <button
-    onClick={() => setTab('overview')}
-    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-      tab === 'overview'
-        ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-sm'
-        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-    }`}
-  >
-    Overview
-  </button>
-</div>
+import { Tabs } from '@/components/ui/Tabs';
+
+<Tabs
+  value={activeTab}
+  onChange={setActiveTab}
+  tabs={[
+    { value: 'overview', label: 'Overview', icon: <LayoutIcon className="w-4 h-4" /> },
+    { value: 'input',    label: 'Input' },
+  ]}
+/>
 ```
 
-**Spec:**
-- Container: `rounded-xl` + `bg-gray-100 dark:bg-gray-800` + `p-1`
-- Child: `rounded-lg` + `px-4 py-2` + `font-medium`
-- Active: `bg-white dark:bg-gray-700` + `text-gray-800 dark:text-gray-100` + `shadow-sm` (NO color accent — tab lebih netral dari toggle)
-- Overflow: wrap dengan `overflow-x-auto scrollbar-hide` di mobile
+Props: `tabs` (dengan `icon?`, `badge?`, `hidden?`), `value`, `onChange`, `scrollable?`, `className?`.
 
-**Kapan pilih Tab vs Toggle?**
-- **≤3 opsi, setara, switch cepat** → Segmented Toggle (pill)
-- **3+ opsi, navigasi view/section** → Tab (rounded-xl)
+**Spec (variant `pill` — satu-satunya canonical variant):**
+- Container: `bg-[#EEF0F2] dark:bg-gray-800` + `rounded-xl` + `p-1`
+- Child: `rounded-lg` + `px-4 py-1.5` + `text-sm font-medium`
+- Active indicator: `motion.span` dengan `layoutId` — **spring sliding** (`stiffness: 400, damping: 35`), `bg-white dark:bg-gray-700 shadow-sm`
+- Active text: `text-gray-800 dark:text-gray-100`
+- Inactive text: `text-gray-500 dark:text-gray-400` + hover `text-gray-700 dark:text-gray-300`
+- Overflow mobile: tambahkan `scrollable` prop → wraps dengan `overflow-x-auto scrollbar-hide`
+
+**Kapan pilih Tab vs SegmentedToggle?**
+- **2 opsi binary, switch sangat cepat** → `<SegmentedToggle>` (pill full-rounded)
+- **2+ opsi, navigasi view/section** → `<Tabs>` (rounded-xl container)
+
+**Jangan:**
+- ❌ Tulis inline — selalu pakai `<Tabs>`
+- ❌ Pakai `variant="underline"` — sudah tidak digunakan, `pill` adalah satu-satunya canonical variant
 
 ### 3.3 Button
 
@@ -434,7 +439,7 @@ Struktur standar:
 Status ekstraksi ke `src/components/ui/`:
 
 - [x] `<SegmentedToggle>` — pattern Section 3.1 → [src/components/ui/SegmentedToggle.tsx](../src/components/ui/SegmentedToggle.tsx). **Wajib** digunakan untuk semua binary/ternary toggle — jangan tulis inline lagi.
-- [ ] `<Tabs>` — ekstraksi pattern Section 3.2
+- [x] `<Tabs>` — [`src/components/ui/Tabs.tsx`](../src/components/ui/Tabs.tsx). **Wajib** digunakan untuk semua tab navigation — jangan tulis inline. Canonical variant: `pill` (spring sliding). `variant="underline"` deprecated.
 - [ ] `<Button>` — wrapper dengan variant prop (primary/secondary/danger/ghost + size)
 - [ ] `<Badge>` — wrapper dengan variant prop (category/status/custom color)
 - [ ] `<EmptyState>` — wrapper pattern Section 4.2
