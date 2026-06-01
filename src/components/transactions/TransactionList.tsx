@@ -6,7 +6,6 @@ import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight,
 import { useLanguage } from '@/context/LanguageContext';
 import type { Transaction, TransactionCategory, Contact } from '@/types';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
-import { CategoryBadge } from '@/components/ui/CategoryBadge';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -39,6 +38,16 @@ interface TransactionListProps {
 }
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
+
+const CATEGORY_DOT: Record<string, string> = {
+  EARN: 'bg-emerald-500',
+  OPEX: 'bg-red-500',
+  VAR: 'bg-pink-500',
+  CAPEX: 'bg-blue-500',
+  TAX: 'bg-yellow-500',
+  FIN: 'bg-indigo-500',
+  SETTLE: 'bg-gray-400 dark:bg-gray-500',
+};
 
 const BADGE_CLASSES: Record<TransactionCategory, string> = {
   EARN: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
@@ -162,6 +171,15 @@ export function TransactionList({
   onResetFilters,
 }: TransactionListProps) {
   const { t } = useLanguage();
+  const CATEGORY_I18N_LABELS: Record<string, string> = {
+    EARN: t.dashboard.earnings,
+    OPEX: t.dashboard.opex,
+    VAR: t.dashboard.variable,
+    CAPEX: t.dashboard.capex,
+    TAX: t.dashboard.taxes,
+    FIN: t.dashboard.financing,
+    SETTLE: t.arAp.settlementBadge,
+  };
   const showActions = (onEdit || onDelete || onEnterSelectMode) && !selectMode;
   const allSelected = selectMode && transactions.length > 0 && transactions.every((t) => selectedIds?.has(t.id));
   const tableColumnCount = 7 + (selectMode ? 1 : 0) + (showActions ? 1 : 0);
@@ -423,21 +441,16 @@ export function TransactionList({
                     >
                       {t.common.all}
                     </button>
-                    {CATEGORIES.map((cat) => (
+                    {([...CATEGORIES, 'SETTLE'] as (TransactionCategory | 'SETTLE')[]).map((cat) => (
                       <button
                         key={cat}
                         onClick={() => { onCategoryFilterChange?.(cat); setShowCategoryDropdown(false); }}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 ${categoryFilter === cat ? 'font-medium text-gray-900 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300'}`}
                       >
-                        <CategoryBadge category={cat} showLabel size="sm" />
+                        <span className={`w-1 h-3.5 rounded-full flex-shrink-0 ${CATEGORY_DOT[cat as TransactionCategory] ?? 'bg-gray-400 dark:bg-gray-500'}`} />
+                        {CATEGORY_I18N_LABELS[cat]}
                       </button>
                     ))}
-                    <button
-                      onClick={() => { onCategoryFilterChange?.('SETTLE'); setShowCategoryDropdown(false); }}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    >
-                      <CategoryBadge category="SETTLE" showLabel size="sm" />
-                    </button>
                   </div>,
                   document.body
                 )}
