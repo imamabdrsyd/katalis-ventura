@@ -699,7 +699,7 @@ export default function DashboardPage() {
 
       {/* AR Tracker (Monitor Piutang) */}
       {transactions.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6 transition-all duration-200 hover:shadow-md hover:border-gray-200 dark:hover:border-gray-600 hover:-translate-y-1">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.arTrackerTitle}</h2>
@@ -819,7 +819,7 @@ export default function DashboardPage() {
       {transactions.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Financial Summary */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-all duration-200 hover:shadow-md hover:border-gray-200 dark:hover:border-gray-600 hover:-translate-y-1">
             <div className="flex items-center justify-between gap-3 mb-4">
               <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.financialSummary}</h2>
               <span className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-2.5 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
@@ -902,7 +902,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Recent Transactions */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-all duration-200 hover:shadow-md hover:border-gray-200 dark:hover:border-gray-600 hover:-translate-y-1">
           <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700">
             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.recentTransactions}</h2>
             <button

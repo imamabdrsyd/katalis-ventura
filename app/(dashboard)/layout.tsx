@@ -11,7 +11,7 @@ import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
 import { createClient } from '@/lib/supabase';
 import * as businessesApi from '@/lib/api/businesses';
 import {
-  LayoutDashboard,
+  PieChart,
   CreditCard,
   Building2,
   DollarSign,
@@ -223,7 +223,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
 
   const searchablePages = useMemo(() => {
     const pages: NavItem[] = [
-      { href: '/dashboard', label: t.nav.dashboard, icon: LayoutDashboard },
+      { href: '/dashboard', label: t.nav.dashboard, icon: PieChart},
       { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
       ...navSections.flatMap((s) => s.items),
       { href: '/settings', label: t.nav.settings, icon: Settings },
@@ -999,7 +999,7 @@ function Sidebar({
 
           {/* Dashboard & Manage Business — independent */}
           {[
-            { href: '/dashboard', label: t.nav.dashboard, icon: LayoutDashboard },
+            { href: '/dashboard', label: t.nav.dashboard, icon: PieChart},
             { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
           ].map((item) => {
             const Icon = item.icon;
