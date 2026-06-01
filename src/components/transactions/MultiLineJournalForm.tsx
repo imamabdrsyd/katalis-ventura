@@ -432,7 +432,7 @@ export function MultiLineJournalForm({
         </button>
         <button
           type="submit"
-          className="btn-primary flex-1"
+          className="btn-primary-glow flex-1"
           disabled={loading || !isBalanced || totalDebit === 0}
         >
           {loading ? 'Menyimpan...' : (submitLabel ?? 'Simpan Jurnal')}

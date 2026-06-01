@@ -632,8 +632,9 @@ export function calculateStatementOfChangesInEquity(
   for (const v of dividendsByOwner.values()) dividendsDeclared += v;
 
   // Rekonsiliasi: hak (entitled) vs aktual per pemilik.
+  // Round entitled ke bilangan bulat untuk menghindari floating-point noise (Rp 1 phantom diff).
   const dividendReconciliation: SCEDividendReconRow[] = owners.map((o) => {
-    const entitled = (o.profitSharePct / 100) * netIncome;
+    const entitled = Math.round((o.profitSharePct / 100) * netIncome);
     const actual = dividendsByOwner.get(o.stockAccountId) ?? 0;
     return {
       stockAccountId: o.stockAccountId,
