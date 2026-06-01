@@ -405,6 +405,7 @@ export interface SCEDividendReconRow {
   ownerName: string;
   entitled: number;             // profitSharePct × netIncome
   actual: number;               // sum debit akun is_dividend yang owner_stock_account_id = stockAccountId, dalam periode
+  declaredOutstanding: number;  // porsi actual yang masih menjadi Hutang Dividen
   variance: number;             // entitled - actual (positif = belum dibagikan penuh)
 }
 

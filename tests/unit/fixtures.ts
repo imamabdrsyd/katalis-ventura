@@ -18,6 +18,7 @@ interface AccountInput {
   is_operating_payable?: boolean;
   is_stock?: boolean;
   is_dividend?: boolean;
+  is_dividend_payable?: boolean;
   profit_share_pct?: number | null;
   owner_stock_account_id?: string | null;
   contact_id?: string | null;
@@ -42,7 +43,7 @@ export function makeAccount(input: AccountInput): Account {
     is_retained_earnings: false,
     is_stock: input.is_stock ?? false,
     is_dividend: input.is_dividend ?? false,
-    is_dividend_payable: false,
+    is_dividend_payable: input.is_dividend_payable ?? false,
     profit_share_pct: input.profit_share_pct ?? null,
     owner_stock_account_id: input.owner_stock_account_id ?? null,
     contact_id: input.contact_id ?? null,
@@ -87,6 +88,7 @@ interface TxnInput {
   category: TransactionCategory;
   debit?: Account;
   credit?: Account;
+  meta?: Transaction['meta'];
 }
 
 export function legacyTxn(input: TxnInput): Transaction {
@@ -135,6 +137,7 @@ export function doubleEntryTxn(input: TxnInput): Transaction {
     debit_account: input.debit,
     credit_account: input.credit,
     notes: input.notes,
+    meta: input.meta,
   };
 }
 

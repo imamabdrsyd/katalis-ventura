@@ -474,30 +474,93 @@ function accumulateStockMovements(
   return movements;
 }
 
+interface DividendOwnerAmounts {
+  actual: number;
+  declaredOutstanding: number;
+}
+
+function isDividendAccount(acc: Account | null | undefined): acc is Account {
+  return !!acc && acc.account_type === 'EQUITY' && acc.is_dividend === true;
+}
+
+function isDividendPayableAccount(acc: Account | null | undefined): acc is Account {
+  return !!acc && acc.account_type === 'LIABILITY' && acc.is_dividend_payable === true;
+}
+
+function getDividendDeclarationOutstanding(
+  transaction: Transaction,
+  declaredAmount: number,
+  settlementPaidByOriginalId: Map<string, number>
+): number {
+  if (declaredAmount <= 0) return 0;
+  const paidInScope = settlementPaidByOriginalId.get(transaction.id) ?? 0;
+  return Math.max(0, declaredAmount - paidInScope);
+}
+
 /**
  * Per-owner actual dividend dalam periode: jumlah DEBIT ke akun is_dividend,
  * dikelompokkan berdasarkan owner_stock_account_id akun dividen tersebut.
+ * Bila kredit lawannya Hutang Dividen, porsi yang belum disettle dicatat sebagai
+ * declaredOutstanding agar UI bisa membedakan "declared" vs "settled".
  * Akun dividen tanpa owner_stock_account_id dikumpulkan ke key 'unassigned'.
  */
-function accumulateDividendsByOwner(transactions: Transaction[]): Map<string, number> {
-  const byOwner = new Map<string, number>();
+function accumulateDividendsByOwner(transactions: Transaction[]): Map<string, DividendOwnerAmounts> {
+  const byOwner = new Map<string, DividendOwnerAmounts>();
+  const settlementPaidByOriginalId = new Map<string, number>();
 
-  const add = (acc: Account | null | undefined, debit: number) => {
-    if (!acc || acc.account_type !== 'EQUITY' || acc.is_dividend !== true) return;
+  for (const t of transactions) {
+    if (t.deleted_at) continue;
+    const originalId = t.meta?.settlement_of_transaction_id;
+    if (!originalId) continue;
+    settlementPaidByOriginalId.set(
+      originalId,
+      (settlementPaidByOriginalId.get(originalId) ?? 0) +
+        Number(t.meta?.settlement_amount ?? t.amount ?? 0)
+    );
+  }
+
+  const add = (acc: Account | null | undefined, debit: number, declaredOutstanding: number) => {
+    if (!isDividendAccount(acc)) return;
     if (debit <= 0) return;
     const ownerKey = acc.owner_stock_account_id ?? 'unassigned';
-    byOwner.set(ownerKey, (byOwner.get(ownerKey) ?? 0) + debit);
+    const existing = byOwner.get(ownerKey) ?? { actual: 0, declaredOutstanding: 0 };
+    existing.actual += debit;
+    existing.declaredOutstanding += declaredOutstanding;
+    byOwner.set(ownerKey, existing);
   };
 
   for (const t of transactions) {
     if (t.deleted_at) continue;
     if (t.is_multi_line && t.journal_lines && t.journal_lines.length > 0) {
-      for (const line of t.journal_lines) {
-        add(line.account, Number(line.debit_amount || 0));
+      const dividendDebitLines = t.journal_lines.filter((line) =>
+        isDividendAccount(line.account) && Number(line.debit_amount || 0) > 0
+      );
+      const totalDividendDebit = dividendDebitLines.reduce(
+        (sum, line) => sum + Number(line.debit_amount || 0),
+        0
+      );
+      const hasDividendPayableCredit = t.journal_lines.some((line) =>
+        isDividendPayableAccount(line.account) && Number(line.credit_amount || 0) > 0
+      );
+      const totalOutstanding = hasDividendPayableCredit
+        ? getDividendDeclarationOutstanding(t, totalDividendDebit, settlementPaidByOriginalId)
+        : 0;
+
+      for (const line of dividendDebitLines) {
+        const debit = Number(line.debit_amount || 0);
+        const declaredOutstanding = totalDividendDebit > 0
+          ? totalOutstanding * (debit / totalDividendDebit)
+          : 0;
+        add(line.account, debit, declaredOutstanding);
       }
       continue;
     }
-    add(t.debit_account, Number(t.amount));
+
+    const amount = Number(t.amount);
+    const declaredOutstanding = isDividendPayableAccount(t.credit_account)
+      ? getDividendDeclarationOutstanding(t, amount, settlementPaidByOriginalId)
+      : 0;
+    add(t.debit_account, amount, declaredOutstanding);
   }
 
   return byOwner;
@@ -629,18 +692,20 @@ export function calculateStatementOfChangesInEquity(
   // Dividen periode (mengurangi RE) — total debit ke akun is_dividend.
   const dividendsByOwner = accumulateDividendsByOwner(periodTxns);
   let dividendsDeclared = 0;
-  for (const v of dividendsByOwner.values()) dividendsDeclared += v;
+  for (const v of dividendsByOwner.values()) dividendsDeclared += v.actual;
 
   // Rekonsiliasi: hak (entitled) vs aktual per pemilik.
   // Round entitled ke bilangan bulat untuk menghindari floating-point noise (Rp 1 phantom diff).
   const dividendReconciliation: SCEDividendReconRow[] = owners.map((o) => {
     const entitled = Math.round((o.profitSharePct / 100) * netIncome);
-    const actual = dividendsByOwner.get(o.stockAccountId) ?? 0;
+    const dividendAmounts = dividendsByOwner.get(o.stockAccountId);
+    const actual = dividendAmounts?.actual ?? 0;
     return {
       stockAccountId: o.stockAccountId,
       ownerName: o.ownerName,
       entitled,
       actual,
+      declaredOutstanding: dividendAmounts?.declaredOutstanding ?? 0,
       variance: entitled - actual,
     };
   });
@@ -653,7 +718,7 @@ export function calculateStatementOfChangesInEquity(
   // totalClosingCapital tapi mengurangi equity di neraca). Harus == equity neraca closing.
   const cumulativeDividendDrawings = Array.from(
     accumulateDividendsByOwner(closingTxns).values()
-  ).reduce((s, v) => s + v, 0);
+  ).reduce((s, v) => s + v.actual, 0);
   const sceClosingEquity = totalClosingCapital + retainedClosing - cumulativeDividendDrawings;
   const isReconciled = Math.abs(sceClosingEquity - totalEquityClosing) < 1;
 

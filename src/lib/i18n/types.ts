@@ -23,6 +23,7 @@ export interface Translations {
     next: string;
     reset: string;
     export: string;
+    exporting: string;
     exportPDF: string;
     exportExcel: string;
     retry: string;
@@ -357,6 +358,39 @@ export interface Translations {
     balanced: string;
     notBalanced: string;
     asOf: string;
+  };
+
+  // Statement of Changes in Equity
+  changesInEquityPage: {
+    title: string;
+    reportTitle: string;
+    noActiveBusiness: string;
+    selectBusinessFirst: string;
+    statusTieOut: string;
+    reconciledWithBalanceSheet: string;
+    notReconciledWithBalanceSheet: string;
+    endingEquityBalance: string;
+    detailsTitle: string;
+    component: string;
+    openingBalance: string;
+    additions: string;
+    deductions: string;
+    closingBalance: string;
+    capitalBadgeLabel: string;
+    capitalShareTitle: string;
+    retainedEarnings: string;
+    totalEquity: string;
+    dividendReconciliation: string;
+    dividendReconciliationDesc: string;
+    owner: string;
+    entitlementPct: string;
+    dividendEntitlement: string;
+    actual: string;
+    difference: string;
+    noOwnerCapitalAccounts: string;
+    varianceNote: string;
+    settledBadge: string;
+    declaredBadge: string;
   };
 
   // Cash Flow
@@ -701,6 +735,10 @@ export interface Translations {
     startDate: string;
     endDate: string;
     period: string;
+    previousMonth: string;
+    nextMonth: string;
+    selectReportMonth: string;
+    selectReportQuarter: string;
   };
 
   // Transaction Detail Modal

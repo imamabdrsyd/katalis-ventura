@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, Download, FileText, FileSpreadsheet } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 import type { Period } from '@/hooks/useReportData';
 
 interface PeriodFilterCardProps {
@@ -31,6 +32,7 @@ export function PeriodFilterCard({
   isExporting = false,
   months,
 }: PeriodFilterCardProps) {
+  const { t } = useLanguage();
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -155,7 +157,7 @@ export function PeriodFilterCard({
         {/* Period Label + Buttons + Month Dropdown — all in one row, wraps */}
         <div>
           <label className="block text-sm font-semibold text-gray-800 dark:text-gray-100 mb-3">
-            Periode
+            {t.period.period}
           </label>
           <div className="flex flex-wrap items-center gap-2">
             {/* Month picker — prev | dropdown | next (chevron down dihilangkan, klik teks bulan untuk buka dropdown) */}
@@ -169,7 +171,7 @@ export function PeriodFilterCard({
               <button
                 type="button"
                 onClick={() => handleMonthShift(-1)}
-                aria-label="Bulan sebelumnya"
+                aria-label={t.period.previousMonth}
                 className={`pl-2 pr-1 flex items-center justify-center cursor-pointer transition-colors rounded-l-lg ${
                   selectedMonthValue && period === 'custom'
                     ? 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200/60 dark:hover:bg-indigo-800/40'
@@ -187,7 +189,7 @@ export function PeriodFilterCard({
                     ? 'text-indigo-600 dark:text-indigo-400'
                     : 'text-gray-700 dark:text-gray-300'
                 }`}
-                aria-label="Pilih bulan laporan"
+                aria-label={t.period.selectReportMonth}
               >
                 {months.map((monthName, index) => {
                   const month = String(index + 1).padStart(2, '0');
@@ -202,7 +204,7 @@ export function PeriodFilterCard({
               <button
                 type="button"
                 onClick={() => handleMonthShift(1)}
-                aria-label="Bulan berikutnya"
+                aria-label={t.period.nextMonth}
                 className={`pr-2 pl-1 flex items-center justify-center cursor-pointer transition-colors rounded-r-lg ${
                   selectedMonthValue && period === 'custom'
                     ? 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200/60 dark:hover:bg-indigo-800/40'
@@ -223,7 +225,7 @@ export function PeriodFilterCard({
                     ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400'
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
-                aria-label="Pilih kuartal laporan"
+                aria-label={t.period.selectReportQuarter}
               >
                 {[1, 2, 3, 4].map((q) => (
                   <option key={q} value={`${monthDropdownYear}-Q${q}`}>
@@ -250,7 +252,7 @@ export function PeriodFilterCard({
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
-              Tahun Ini
+              {t.period.thisYear}
             </button>
           </div>
         </div>
@@ -260,7 +262,7 @@ export function PeriodFilterCard({
           <div>
             <label className="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
               <Calendar className="w-3.5 h-3.5" />
-              Start Date
+              {t.period.startDate}
             </label>
             <input
               type="date"
@@ -274,7 +276,7 @@ export function PeriodFilterCard({
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
-              End Date
+              {t.period.endDate}
             </label>
             <input
               type="date"
@@ -302,7 +304,7 @@ export function PeriodFilterCard({
             className="w-full px-4 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className={`w-4 h-4 ${isExporting ? 'animate-bounce' : ''}`} />
-            {isExporting ? 'Mengunduh...' : 'Export'}
+            {isExporting ? t.common.exporting : t.common.export}
           </button>
 
           {showExportMenu && hasMultipleExports && (
@@ -315,7 +317,7 @@ export function PeriodFilterCard({
                 className="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-3 transition-colors cursor-pointer"
               >
                 <FileText className="w-4 h-4 text-red-500 flex-shrink-0" />
-                <span>Export as PDF</span>
+                <span>{t.common.exportPDF}</span>
               </button>
               <button
                 onClick={() => {
@@ -325,7 +327,7 @@ export function PeriodFilterCard({
                 className="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-3 transition-colors cursor-pointer"
               >
                 <FileSpreadsheet className="w-4 h-4 text-green-500 flex-shrink-0" />
-                <span>Export as Excel</span>
+                <span>{t.common.exportExcel}</span>
               </button>
             </div>
           )}

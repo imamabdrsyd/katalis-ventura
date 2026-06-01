@@ -10,8 +10,9 @@ const PAPAH = makeAccount({ code: '3100', name: 'Papah', type: 'EQUITY', is_stoc
 const IMAM = makeAccount({ code: '3200', name: 'Imam', type: 'EQUITY', is_stock: true, profit_share_pct: 50 });
 const DIV_PAPAH = makeAccount({ code: '3300', name: 'Dividen Papah', type: 'EQUITY', is_dividend: true, owner_stock_account_id: PAPAH.id });
 const DIV_IMAM = makeAccount({ code: '3400', name: 'Dividen Imam', type: 'EQUITY', is_dividend: true, owner_stock_account_id: IMAM.id });
+const DIVIDEND_PAYABLE = makeAccount({ code: '2300', name: 'Hutang Dividen', type: 'LIABILITY', is_dividend_payable: true });
 
-const ACCOUNTS = [ACC.kas, ACC.bank, ACC.revenue, ACC.opexExpense, PAPAH, IMAM, DIV_PAPAH, DIV_IMAM];
+const ACCOUNTS = [ACC.kas, ACC.bank, ACC.revenue, ACC.opexExpense, DIVIDEND_PAYABLE, PAPAH, IMAM, DIV_PAPAH, DIV_IMAM];
 
 const Y = '2026';
 const periodStart = `${Y}-01-01`;
@@ -96,6 +97,55 @@ describe('calculateStatementOfChangesInEquity', () => {
     expect(imam.entitled).toBe(10_000_000);
     expect(imam.actual).toBe(0);
     expect(imam.variance).toBe(10_000_000);
+  });
+
+  it('tracks declared dividends that are still payable separately from settled cash dividends', () => {
+    const txns = [
+      doubleEntryTxn({ category: 'EARN', amount: 20_000_000, debit: ACC.kas, credit: ACC.revenue, date: '2026-05-01' }),
+      // Papah: declared to Hutang Dividen and still outstanding.
+      doubleEntryTxn({ category: 'FIN', amount: 10_000_000, debit: DIV_PAPAH, credit: DIVIDEND_PAYABLE, date: '2026-06-01' }),
+      // Imam: direct cashout, no payable outstanding.
+      doubleEntryTxn({ category: 'FIN', amount: 10_000_000, debit: DIV_IMAM, credit: ACC.kas, date: '2026-06-01' }),
+    ];
+    const sce = calculateStatementOfChangesInEquity(txns, periodStart, periodEnd, 0, ACCOUNTS);
+
+    const papah = sce.dividendReconciliation.find((r) => r.stockAccountId === PAPAH.id)!;
+    expect(papah.entitled).toBe(10_000_000);
+    expect(papah.actual).toBe(10_000_000);
+    expect(papah.variance).toBe(0);
+    expect(papah.declaredOutstanding).toBe(10_000_000);
+
+    const imam = sce.dividendReconciliation.find((r) => r.stockAccountId === IMAM.id)!;
+    expect(imam.entitled).toBe(10_000_000);
+    expect(imam.actual).toBe(10_000_000);
+    expect(imam.variance).toBe(0);
+    expect(imam.declaredOutstanding).toBe(0);
+  });
+
+  it('treats fully settled dividend declarations as no longer outstanding', () => {
+    const txns = [
+      doubleEntryTxn({ category: 'EARN', amount: 20_000_000, debit: ACC.kas, credit: ACC.revenue, date: '2026-05-01' }),
+      doubleEntryTxn({
+        category: 'FIN',
+        amount: 10_000_000,
+        debit: DIV_PAPAH,
+        credit: DIVIDEND_PAYABLE,
+        date: '2026-06-01',
+        meta: { settled_by_transaction_id: 'txn-settlement' },
+      }),
+      doubleEntryTxn({
+        category: 'FIN',
+        amount: 10_000_000,
+        debit: DIVIDEND_PAYABLE,
+        credit: ACC.kas,
+        date: '2026-06-15',
+        meta: { settlement_of_transaction_id: 'txn-2' },
+      }),
+    ];
+    const sce = calculateStatementOfChangesInEquity(txns, periodStart, periodEnd, 0, ACCOUNTS);
+
+    const papah = sce.dividendReconciliation.find((r) => r.stockAccountId === PAPAH.id)!;
+    expect(papah.declaredOutstanding).toBe(0);
   });
 
   it('falls back to capital % when profit_share_pct is null', () => {
