@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 31 Mei 2026 (**Promosi double-entry → multi-line** — migr 095: `update_multi_line_transaction` kini mengizinkan upgrade transaksi double-entry sederhana menjadi multi-line via tombol "Tambah Baris" di Edit Transaction (set is_multi_line=TRUE + kosongkan debit/credit_account_id); Section 3.2 diperbarui; **AccountDropdown** kini render via portal (createPortal) agar tidak terpotong overflow modal; sebelumnya: **Statement of Changes in Equity (SCE) + Profit-Sharing & Rekonsiliasi Dividen** — migr 094 tambah kolom `profit_share_pct`, `owner_stock_account_id`, `contact_id` di `accounts`; fungsi `calculateStatementOfChangesInEquity`, hook + halaman `/statement-of-changes-in-equity`, export PDF/Excel; header "Equity (Capital)" di Neraca kini clickable ke SCE; Section 23 baru + Section 6.3 diperbarui; menjawab temuan audit MEDIUM "Tidak Ada SOCE"; sebelumnya: **Retained Earnings = auto-calculate; jurnal penutup manual DIHAPUS** — halaman `/closing-entry`, lib `closingEntry.ts`, dan link nav dihapus karena bertabrakan dengan model auto-calculate dan merusak presentasi ekuitas neraca; `calculateBalanceSheet` kini mem-filter `meta.entry_type.id === 'closing_entry'` sebagai pengaman data historis; Period Lock tetap sebagai soft-close; Section 6.4 & Issue #23 diperbarui; sebelumnya: **Template Jurnal Multi-Baris** — migr 093 kolom `journal_lines` JSONB di `transaction_templates`; "Simpan sebagai Template" & "Gunakan Template" kini tersedia di mode multi-baris Journal Entry; memuat template multi-baris mengganti semua baris (tetap editable); Section 12 diperbarui; sebelumnya: **Bank Statement Import — Phase B** — Section 25 dilengkapi dengan CSV/XLSX parser (Indonesian + English number/date format detection, dua format kolom: Debit+Kredit terpisah atau Mutasi+Type), side-by-side matching UI di `/reconciliation` dengan mode toggle Saldo vs Cocokkan Mutasi, hook `useBankTransactions`, API `/api/bank-transactions` + `/match` + `/unmatch` (auto un-reconcile transaksi ledger kalau tidak ada bank line lain ter-link); sebelumnya: **Bank Statement Import & OCR** — migr 092 + Section 25 — upload mutasi PDF/image BCA, pipeline OCR `runOcr()`, dedup hash UNIQUE(account_id, dedup_hash), 2 tabel `bank_statement_imports` + `bank_transactions`; **Invoice dari Transaksi Piutang** — migr 086 + Section 24; audit fix flag `is_trade_receivable` & `is_operating_payable` — migr 085; depresiasi fix; multi-currency — migr 079)
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 01 Juni 2026 (**Fix capital double-count di Neraca (Issue #24)** — legacy branch `calculateBalanceSheet` hanya menyuntik `capital_investment` bila ekuitas belum dibukukan dari double-entry/multi-line (`capitalAlreadyBooked`), mencegah aset & ekuitas overstated sebesar modal awal saat data legacy bercampur dengan transaksi "Modal Investasi Awal" otomatis; Section 6.1B + Issue #24 ditambahkan; sebelumnya: **Promosi double-entry → multi-line** — migr 095: `update_multi_line_transaction` kini mengizinkan upgrade transaksi double-entry sederhana menjadi multi-line via tombol "Tambah Baris" di Edit Transaction (set is_multi_line=TRUE + kosongkan debit/credit_account_id); Section 3.2 diperbarui; **AccountDropdown** kini render via portal (createPortal) agar tidak terpotong overflow modal; sebelumnya: **Statement of Changes in Equity (SCE) + Profit-Sharing & Rekonsiliasi Dividen** — migr 094 tambah kolom `profit_share_pct`, `owner_stock_account_id`, `contact_id` di `accounts`; fungsi `calculateStatementOfChangesInEquity`, hook + halaman `/statement-of-changes-in-equity`, export PDF/Excel; header "Equity (Capital)" di Neraca kini clickable ke SCE; Section 23 baru + Section 6.3 diperbarui; menjawab temuan audit MEDIUM "Tidak Ada SOCE"; sebelumnya: **Retained Earnings = auto-calculate; jurnal penutup manual DIHAPUS** — halaman `/closing-entry`, lib `closingEntry.ts`, dan link nav dihapus karena bertabrakan dengan model auto-calculate dan merusak presentasi ekuitas neraca; `calculateBalanceSheet` kini mem-filter `meta.entry_type.id === 'closing_entry'` sebagai pengaman data historis; Period Lock tetap sebagai soft-close; Section 6.4 & Issue #23 diperbarui; sebelumnya: **Template Jurnal Multi-Baris** — migr 093 kolom `journal_lines` JSONB di `transaction_templates`; "Simpan sebagai Template" & "Gunakan Template" kini tersedia di mode multi-baris Journal Entry; memuat template multi-baris mengganti semua baris (tetap editable); Section 12 diperbarui; sebelumnya: **Bank Statement Import — Phase B** — Section 25 dilengkapi dengan CSV/XLSX parser (Indonesian + English number/date format detection, dua format kolom: Debit+Kredit terpisah atau Mutasi+Type), side-by-side matching UI di `/reconciliation` dengan mode toggle Saldo vs Cocokkan Mutasi, hook `useBankTransactions`, API `/api/bank-transactions` + `/match` + `/unmatch` (auto un-reconcile transaksi ledger kalau tidak ada bank line lain ter-link); sebelumnya: **Bank Statement Import & OCR** — migr 092 + Section 25 — upload mutasi PDF/image BCA, pipeline OCR `runOcr()`, dedup hash UNIQUE(account_id, dedup_hash), 2 tabel `bank_statement_imports` + `bank_transactions`; **Invoice dari Transaksi Piutang** — migr 086 + Section 24; audit fix flag `is_trade_receivable` & `is_operating_payable` — migr 085; depresiasi fix; multi-currency — migr 079)
 
 ---
 
@@ -636,17 +636,23 @@ Legacy FIN diklasifikasi per-transaksi menggunakan `classifyLegacyFin()` keyword
 | tidak dikenali | `unknown` | totalLiabilities += amount (konservatif) |
 
 ```
+// capital hanya disuntik bila belum dibukukan sebagai jurnal ekuitas
+capitalAlreadyBooked = (totalEquityCredit > 0 || totalEquityDebit > 0)
+legacyCapital = capitalAlreadyBooked ? 0 : capital
+
 netFinCash = equityIn + liabilityIn - cashOut
 operatingCash = EARN - OPEX - VAR - TAX
-closingCash = capital + operatingCash - CAPEX + netFinCash
+closingCash = legacyCapital + operatingCash - CAPEX + netFinCash
 
 totalCash          = closingCash
 totalFixedAssets    = CAPEX
 totalAssets         = closingCash + CAPEX
 totalLiabilities    = legacyFinLiability (hanya pinjaman masuk)
-totalEquityCredit  += capital + legacyFinEquityIn
+totalEquityCredit  += legacyCapital + legacyFinEquityIn
 totalEquityDebit   += legacyFinEquityOut (prive/cicilan)
 ```
+
+> **Single capital injection (Issue #24).** `capital_investment` boleh masuk neraca **sekali saja**. Sejak bisnis baru otomatis membukukan transaksi "Modal Investasi Awal" (Dr Kas / Cr Ekuitas) saat dibuat, modal sudah terhitung di jalur double-entry. Bila legacy branch ikut menyuntik `capital` lagi, aset & ekuitas overstated sebesar modal awal (dan neraca tetap _balance_ sehingga sulit terdeteksi). Karena itu legacy branch hanya menyuntik `capital` ketika belum ada pergerakan ekuitas dari double-entry/multi-line (`capitalAlreadyBooked === false`) — konsisten dengan fallback di Section 6.3.
 
 ### 6.2 Asset Classification (Double-Entry)
 
@@ -1872,6 +1878,28 @@ Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
 | #21 | Label UI `is_stock` ambigu (stock = inventory atau saham?) + DB tidak proteksi flag salah lokasi | RESOLVED | Lihat detail di bawah |
 | #22 | Trade Receivable/Payable detection via keyword heuristic (fragile) | RESOLVED | Migration 085 — flag `is_trade_receivable` & `is_operating_payable` di tabel `accounts`. Helper `src/lib/accounting/classification.ts` flag-first dengan heuristic fallback. Toggle eksplisit di AccountForm. |
 | #23 | Closing entry manual merusak presentasi ekuitas Balance Sheet | RESOLVED | Lihat detail di bawah |
+| #24 | `capital_investment` double-count di Neraca saat data legacy bercampur dgn transaksi modal otomatis | RESOLVED | Legacy branch hanya menyuntik `capital` bila ekuitas belum dibukukan dari double-entry/multi-line. Lihat detail di bawah |
+
+### Issue #24 — Capital double-count (legacy branch + auto "Modal Investasi Awal")
+
+**Gejala**: Bisnis yang dibuat dengan `capital_investment > 0` otomatis dibuatkan transaksi
+double-entry "Modal Investasi Awal" (Dr Kas / Cr Ekuitas) di `POST /api/businesses`. Jika
+bisnis tersebut **juga** punya transaksi legacy (`is_double_entry=false AND is_multi_line=false`),
+maka legacy branch di `calculateBalanceSheet` ikut menyuntik `capital` (dari `capital_investment`)
+ke kas & ekuitas — padahal modal yang sama sudah dihitung di jalur double-entry. Akibatnya
+**aset dan ekuitas overstated sebesar modal awal**. Karena double-count simetris di kedua sisi,
+neraca tetap _balance_ (`|aset − (liab+ekuitas)| < 0.01`) sehingga tidak tertangkap balance check.
+
+**Tingkat keparahan aktual**: latent. DB saat ini zero-legacy (semua transaksi double-entry /
+multi-line), jadi legacy branch adalah dead code dari sisi data dan **tidak ada bisnis yang
+terdampak**. Namun jalur tetap bisa terpicu di masa depan karena form `mode='full'` masih dapat
+membuat transaksi legacy (tanpa pilih akun) dan `createTransactionSchema` masih `is_double_entry.default(false)`.
+
+**Fix**: Legacy branch menghitung `capitalAlreadyBooked = totalEquityCredit > 0 || totalEquityDebit > 0`
+(dievaluasi **setelah** loop double-entry + multi-line), lalu hanya menyuntik
+`legacyCapital = capitalAlreadyBooked ? 0 : capital`. Ini menghilangkan double-count (Scenario:
+ada auto-transaksi modal) **tanpa** menimbulkan under-count (Scenario: ada legacy txn tapi modal
+belum pernah dibukukan sebagai jurnal). Aturan ini konsisten dengan fallback Section 6.3.
 
 ### Issue #23 — Closing entry manual merusak Balance Sheet (jurnal penutup dihapus)
 

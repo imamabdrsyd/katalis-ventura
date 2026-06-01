@@ -1298,9 +1298,19 @@ export function calculateBalanceSheet(
       }
     }
 
+    // Capital dari business settings (capital_investment) hanya boleh disuntik
+    // SEKALI. Kalau modal sudah dibukukan sebagai jurnal (mis. transaksi
+    // "Modal Investasi Awal" Dr Kas / Cr Ekuitas yang dibuat otomatis saat
+    // bisnis dibuat), jangan tambahkan lagi di sini — kalau tidak, aset &
+    // ekuitas akan overstated sebesar modal awal (double-count). Aturan ini
+    // konsisten dengan fallback di bawah yang juga menahan injeksi capital
+    // ketika ekuitas sudah terekam dari double-entry/multi-line.
+    const capitalAlreadyBooked = totalEquityCredit > 0 || totalEquityDebit > 0;
+    const legacyCapital = capitalAlreadyBooked ? 0 : capital;
+
     const netFinCash = legacyFinEquityIn + legacyFinLiability - legacyFinCashOut;
     const operatingCash = summary.totalEarn - summary.totalOpex - summary.totalVar - summary.totalTax;
-    const closingCash = capital + operatingCash - summary.totalCapex + netFinCash;
+    const closingCash = legacyCapital + operatingCash - summary.totalCapex + netFinCash;
 
     totalCash += closingCash;
     totalFixedAssets += summary.totalCapex;
@@ -1309,8 +1319,8 @@ export function calculateBalanceSheet(
     totalRevenue += summary.totalEarn;
     totalExpenses += summary.totalOpex + summary.totalVar + summary.totalTax;
 
-    // Legacy equity: capital + detected equity injections - withdrawals
-    totalEquityCredit += capital + legacyFinEquityIn;
+    // Legacy equity: capital (bila belum dibukukan) + injeksi terdeteksi - penarikan
+    totalEquityCredit += legacyCapital + legacyFinEquityIn;
     totalEquityDebit += legacyFinEquityOut;
   }
 
