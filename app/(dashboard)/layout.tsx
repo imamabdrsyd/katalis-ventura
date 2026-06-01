@@ -892,7 +892,7 @@ function Sidebar({
       )}
 
       <aside
-        className={`fixed top-0 left-0 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col z-50 transform transition-all duration-300 ease-in-out ${isCollapsed ? 'overflow-visible' : 'overflow-hidden'}
+        className={`fixed top-0 left-0 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-[inset_-4px_0_12px_rgba(0,0,0,0.04)] dark:shadow-[inset_-4px_0_12px_rgba(0,0,0,0.2)] flex flex-col z-50 transform transition-all duration-300 ease-in-out ${isCollapsed ? 'overflow-visible' : 'overflow-hidden'}
           ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
           ${isCollapsed ? 'w-16' : 'w-56'}`}
       >

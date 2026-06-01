@@ -420,7 +420,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Month tabs — scrollable */}
-        <div className="flex-1 min-w-0 rounded-full border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 p-1 overflow-hidden">
+        <div className="flex-1 min-w-0 rounded-full border border-gray-200 dark:border-transparent bg-[#EEF0F2] dark:bg-gray-800 p-1 overflow-hidden">
           <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <div className="inline-flex items-center min-w-max">
               <button
@@ -434,7 +434,7 @@ export default function DashboardPage() {
                 {selectedMonth === null && (
                   <motion.span
                     layoutId={monthPillId}
-                    className="absolute inset-0 bg-white dark:bg-gray-600 rounded-full shadow-sm"
+                    className="absolute inset-0 bg-white dark:bg-gray-700 rounded-full shadow-sm"
                     transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 32 }}
                   />
                 )}
@@ -453,7 +453,7 @@ export default function DashboardPage() {
                   {selectedMonth === i && (
                     <motion.span
                       layoutId={monthPillId}
-                      className="absolute inset-0 bg-white dark:bg-gray-600 rounded-full shadow-sm"
+                      className="absolute inset-0 bg-white dark:bg-gray-700 rounded-full shadow-sm"
                       transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 32 }}
                     />
                   )}
