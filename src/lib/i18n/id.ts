@@ -336,6 +336,8 @@ export const id: Translations = {
     liabilities: 'Liabilitas (Utang)',
     loans: 'Pinjaman',
     totalLiabilities: 'Total Liabilitas',
+    debtRatio: 'Rasio Utang',
+    debtRatioFormula: 'Total Liabilitas / Total Aset',
     equity: 'Ekuitas (Modal)',
     paidInCapital: 'Modal Disetor',
     dividends: 'Prive / Dividen',

@@ -50,6 +50,43 @@ function BalanceSheetPageInner() {
     locale === 'id' ? 'id-ID' : 'en-US',
     { day: 'numeric', month: 'long', year: 'numeric' }
   );
+  // DAR = Total Liabilities / Total Assets
+  const dar = balanceSheet.assets.totalAssets > 0
+    ? balanceSheet.liabilities.totalLiabilities / balanceSheet.assets.totalAssets
+    : null;
+  const darLabel = dar === null
+    ? '-'
+    : new Intl.NumberFormat(locale === 'id' ? 'id-ID' : 'en-US', {
+      style: 'percent',
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }).format(dar);
+  const darTone = dar === null
+    ? 'text-gray-400 dark:text-gray-500'
+    : dar <= 0.4
+      ? 'text-emerald-600 dark:text-emerald-400'
+      : dar <= 0.7
+        ? 'text-amber-600 dark:text-amber-400'
+        : 'text-red-600 dark:text-red-400';
+
+  // DER = Total Liabilities / Total Equity
+  const der = balanceSheet.equity.totalEquity > 0
+    ? balanceSheet.liabilities.totalLiabilities / balanceSheet.equity.totalEquity
+    : null;
+  const derLabel = der === null
+    ? '-'
+    : new Intl.NumberFormat(locale === 'id' ? 'id-ID' : 'en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(der) + 'x';
+  const derTone = der === null
+    ? 'text-gray-400 dark:text-gray-500'
+    : der <= 1
+      ? 'text-emerald-600 dark:text-emerald-400'
+      : der <= 2
+        ? 'text-amber-600 dark:text-amber-400'
+        : 'text-red-600 dark:text-red-400';
+
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -123,10 +160,19 @@ function BalanceSheetPageInner() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* ASSETS */}
         <div className="card-static flex flex-col">
-          <div className="border-b-2 border-gray-300 dark:border-gray-600 pb-3 mb-6">
+          <div className="border-b-2 border-gray-300 dark:border-gray-600 pb-3 mb-6 flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">
               {t.balanceSheetPage.assets}
             </h2>
+            <div className="relative group flex items-center gap-1.5 cursor-default">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">DAR</span>
+              <span className={`text-[11px] font-semibold tabular-nums ${darTone}`}>{darLabel}</span>
+              <div className="absolute right-0 bottom-full mb-2 hidden group-hover:flex flex-col whitespace-nowrap bg-gray-800 dark:bg-gray-700 text-white text-xs rounded-md px-3 py-2 shadow-lg z-10 gap-0.5 pointer-events-none">
+                <span className="font-semibold">Debt to Asset Ratio</span>
+                <span className="text-gray-300">Total Liabilities / Total Assets</span>
+                <div className="absolute right-3 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-gray-800 dark:border-t-gray-700" />
+              </div>
+            </div>
           </div>
 
           <div className="flex flex-col flex-1 space-y-6">
@@ -210,10 +256,19 @@ function BalanceSheetPageInner() {
 
         {/* LIABILITIES & EQUITY */}
         <div className="card-static flex flex-col">
-          <div className="border-b-2 border-gray-300 dark:border-gray-600 pb-3 mb-6">
+          <div className="border-b-2 border-gray-300 dark:border-gray-600 pb-3 mb-6 flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 uppercase text-sm">
               {t.balanceSheetPage.liabilitiesAndEquity}
             </h2>
+            <div className="relative group flex items-center gap-1.5 cursor-default">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">DER</span>
+              <span className={`text-[11px] font-semibold tabular-nums ${derTone}`}>{derLabel}</span>
+              <div className="absolute right-0 bottom-full mb-2 hidden group-hover:flex flex-col whitespace-nowrap bg-gray-800 dark:bg-gray-700 text-white text-xs rounded-md px-3 py-2 shadow-lg z-10 gap-0.5 pointer-events-none">
+                <span className="font-semibold">Debt to Equity Ratio</span>
+                <span className="text-gray-300">Total Liabilities / Total Equity</span>
+                <div className="absolute right-3 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-gray-800 dark:border-t-gray-700" />
+              </div>
+            </div>
           </div>
 
           <div className="flex flex-col flex-1 space-y-6">

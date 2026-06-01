@@ -349,6 +349,8 @@ export interface Translations {
     liabilities: string;
     loans: string;
     totalLiabilities: string;
+    debtRatio: string;
+    debtRatioFormula: string;
     equity: string;
     paidInCapital: string;
     dividends: string;

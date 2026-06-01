@@ -336,6 +336,8 @@ export const en: Translations = {
     liabilities: 'Liabilities (Debt)',
     loans: 'Loans',
     totalLiabilities: 'Total Liabilities',
+    debtRatio: 'Debt Ratio',
+    debtRatioFormula: 'Total Liabilities / Total Assets',
     equity: 'Equity (Capital)',
     paidInCapital: 'Paid-in Capital',
     dividends: 'Dividends / Owner Withdrawals',
