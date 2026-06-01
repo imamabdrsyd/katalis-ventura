@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Lock, Contact as ContactIcon, Search, X } from 'lucide-react';
+import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Lock, Contact as ContactIcon, TextSearch, Search, X } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import type { Transaction, TransactionCategory, Contact } from '@/types';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
@@ -294,11 +294,6 @@ export function TransactionList({
     });
   };
 
-  const applyDescriptionSearch = () => {
-    onDescriptionSearchChange?.(descriptionDraft.trim());
-    setShowDescriptionSearch(false);
-  };
-
   const resetDescriptionSearch = () => {
     setDescriptionDraft('');
     onDescriptionSearchChange?.('');
@@ -530,7 +525,7 @@ export function TransactionList({
                   <span className="truncate max-w-[128px]">
                     {activeDescriptionSearch || t.transactions.tableDescription}
                   </span>
-                  <Search className="w-3.5 h-3.5 flex-shrink-0" />
+                  <TextSearch className="w-3.5 h-3.5 flex-shrink-0" />
                 </button>
                 {mounted && showDescriptionSearch && createPortal(
                   <form
@@ -538,7 +533,7 @@ export function TransactionList({
                     style={descriptionDropdownStyle}
                     onSubmit={(e) => {
                       e.preventDefault();
-                      applyDescriptionSearch();
+                      setShowDescriptionSearch(false);
                     }}
                     className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 overflow-hidden"
                   >
@@ -551,7 +546,10 @@ export function TransactionList({
                         ref={descriptionInputRef}
                         type="text"
                         value={descriptionDraft}
-                        onChange={(e) => setDescriptionDraft(e.target.value)}
+                        onChange={(e) => {
+                        setDescriptionDraft(e.target.value);
+                        onDescriptionSearchChange?.(e.target.value.trim());
+                      }}
                         placeholder={`${t.common.search} ${t.transactions.tableDescription.toLowerCase()}...`}
                         className="w-full rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 py-2 pl-8 pr-8 text-sm normal-case text-gray-700 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-400"
                       />
@@ -566,22 +564,17 @@ export function TransactionList({
                         </button>
                       )}
                     </div>
-                    <div className="mt-3 flex items-center justify-between gap-2">
-                      <button
-                        type="button"
-                        onClick={resetDescriptionSearch}
-                        disabled={!activeDescriptionSearch && !descriptionDraft.trim()}
-                        className="px-2.5 py-1.5 text-xs font-medium normal-case text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        {t.common.reset}
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-3 py-1.5 text-xs font-medium normal-case text-white bg-indigo-500 hover:bg-indigo-600 rounded-md transition-colors"
-                      >
-                        {t.common.search}
-                      </button>
-                    </div>
+                    {(activeDescriptionSearch || descriptionDraft.trim()) && (
+                      <div className="mt-2 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={resetDescriptionSearch}
+                          className="px-2.5 py-1.5 text-xs font-medium normal-case text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400"
+                        >
+                          {t.common.reset}
+                        </button>
+                      </div>
+                    )}
                   </form>,
                   document.body
                 )}

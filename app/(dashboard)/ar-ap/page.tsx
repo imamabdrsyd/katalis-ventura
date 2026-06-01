@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from 'react';
 import { Users, Calendar, AlertTriangle, TrendingUp, TrendingDown, ArrowRightLeft } from 'lucide-react';
+import { Tabs } from '@/components/ui/Tabs';
 import { useArApAging } from '@/hooks/useArApAging';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
@@ -305,21 +306,11 @@ function ArApPageInner() {
         {/* Period Filter */}
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-gray-400" />
-          <div className="flex bg-[#EEF0F2] dark:bg-gray-800 rounded-lg p-0.5">
-            {(['month', 'quarter', 'year', 'custom'] as Period[]).map((p) => (
-              <button
-                key={p}
-                onClick={() => handlePeriodChange(p)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  period === p
-                    ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                }`}
-              >
-                {PERIOD_LABELS[p]}
-              </button>
-            ))}
-          </div>
+          <Tabs<Period>
+            value={period}
+            onChange={handlePeriodChange}
+            tabs={(['month', 'quarter', 'year', 'custom'] as Period[]).map((p) => ({ value: p, label: PERIOD_LABELS[p] }))}
+          />
           {period === 'custom' && (
             <div className="flex items-center gap-1.5 ml-2">
               <input

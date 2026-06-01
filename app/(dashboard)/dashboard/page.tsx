@@ -391,7 +391,7 @@ export default function DashboardPage() {
       {/* Global Year + Month Filter */}
       <div className="flex items-center gap-3 mb-6">
         {/* Year nav pill — fixed, tidak ikut scroll */}
-        <div className="flex-shrink-0 inline-flex items-center gap-0.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-1">
+        <div className="flex-shrink-0 inline-flex items-center gap-0.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-1">
           <button
             onClick={() => {
               userPickedYearRef.current = true;
