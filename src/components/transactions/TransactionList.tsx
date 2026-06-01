@@ -6,6 +6,7 @@ import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight,
 import { useLanguage } from '@/context/LanguageContext';
 import type { Transaction, TransactionCategory, Contact } from '@/types';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
+import { CategoryBadge } from '@/components/ui/CategoryBadge';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -48,14 +49,6 @@ const BADGE_CLASSES: Record<TransactionCategory, string> = {
   FIN: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
 };
 
-const CATEGORY_DOT: Record<TransactionCategory, string> = {
-  EARN: 'bg-emerald-500',
-  OPEX: 'bg-red-500',
-  VAR: 'bg-pink-500',
-  CAPEX: 'bg-blue-500',
-  TAX: 'bg-yellow-500',
-  FIN: 'bg-indigo-500',
-};
 
 const SETTLE_BADGE_CLASS = 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400';
 
@@ -434,22 +427,16 @@ export function TransactionList({
                       <button
                         key={cat}
                         onClick={() => { onCategoryFilterChange?.(cat); setShowCategoryDropdown(false); }}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 ${categoryFilter === cat ? 'font-semibold' : 'text-gray-700 dark:text-gray-300'}`}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
-                        <span className={`inline-block w-2.5 h-2.5 rounded-full flex-shrink-0 ${CATEGORY_DOT[cat]}`}></span>
-                        <span className={categoryFilter === cat ? BADGE_CLASSES[cat].split(' ').filter(c => c.startsWith('text-')).join(' ') : ''}>
-                          {cat}
-                        </span>
+                        <CategoryBadge category={cat} showLabel size="sm" />
                       </button>
                     ))}
                     <button
                       onClick={() => { onCategoryFilterChange?.('SETTLE'); setShowCategoryDropdown(false); }}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 ${categoryFilter === 'SETTLE' ? 'font-semibold' : 'text-gray-700 dark:text-gray-300'}`}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
-                      <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0 bg-gray-400"></span>
-                      <span className={categoryFilter === 'SETTLE' ? 'text-gray-600 dark:text-gray-300' : ''}>
-                        SETTLE
-                      </span>
+                      <CategoryBadge category="SETTLE" showLabel size="sm" />
                     </button>
                   </div>,
                   document.body
