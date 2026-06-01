@@ -1,6 +1,7 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useId } from 'react';
+import { motion } from 'framer-motion';
 import { Users, Calendar, AlertTriangle, TrendingUp, TrendingDown, ArrowRightLeft } from 'lucide-react';
 import { Tabs } from '@/components/ui/Tabs';
 import { useArApAging } from '@/hooks/useArApAging';
@@ -269,6 +270,7 @@ function ArApPageInner() {
   };
 
   const [activeTab, setActiveTab] = useState<'ar' | 'ap' | 'repayment'>('ar');
+  const tabLayoutId = useId();
 
   if (loading) {
     return (
@@ -340,9 +342,9 @@ function ArApPageInner() {
           <div className="flex">
             <button
               onClick={() => setActiveTab('ar')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`relative px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'ar'
-                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                  ? 'border-transparent text-indigo-600 dark:text-indigo-400'
                   : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
@@ -352,12 +354,19 @@ function ArApPageInner() {
                   {arSummary.rows.length}
                 </span>
               )}
+              {activeTab === 'ar' && (
+                <motion.span
+                  layoutId={tabLayoutId}
+                  className="absolute bottom-[-1px] left-0 right-0 h-0.5 bg-indigo-500 dark:bg-indigo-400"
+                  transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+                />
+              )}
             </button>
             <button
               onClick={() => setActiveTab('ap')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`relative px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'ap'
-                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                  ? 'border-transparent text-indigo-600 dark:text-indigo-400'
                   : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
@@ -367,12 +376,19 @@ function ArApPageInner() {
                   {apSummary.rows.length}
                 </span>
               )}
+              {activeTab === 'ap' && (
+                <motion.span
+                  layoutId={tabLayoutId}
+                  className="absolute bottom-[-1px] left-0 right-0 h-0.5 bg-indigo-500 dark:bg-indigo-400"
+                  transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+                />
+              )}
             </button>
             <button
               onClick={() => setActiveTab('repayment')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`relative px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'repayment'
-                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                  ? 'border-transparent text-indigo-600 dark:text-indigo-400'
                   : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
@@ -381,6 +397,13 @@ function ArApPageInner() {
                 <span className="ml-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs px-2 py-0.5 rounded-full">
                   {repaymentSummary.rows.length}
                 </span>
+              )}
+              {activeTab === 'repayment' && (
+                <motion.span
+                  layoutId={tabLayoutId}
+                  className="absolute bottom-[-1px] left-0 right-0 h-0.5 bg-indigo-500 dark:bg-indigo-400"
+                  transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+                />
               )}
             </button>
           </div>
