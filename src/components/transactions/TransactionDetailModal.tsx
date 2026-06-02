@@ -28,7 +28,7 @@ import {
 import { useInvoiceFromTransactions } from '@/hooks/useInvoiceFromTransactions';
 import { CreateInvoiceFromTransactionsModal } from '@/components/invoices/CreateInvoiceFromTransactionsModal';
 import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
-import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, RotateCcw, ZoomIn, ZoomOut, Receipt } from 'lucide-react';
+import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, RotateCcw, ZoomIn, ZoomOut, Receipt, CirclePlus, ChevronRight } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { updateTransaction } from '@/lib/api/transactions';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
@@ -929,41 +929,42 @@ export function TransactionDetailModal({
               {/* Action buttons — only when not fully settled */}
               {!settled && !showSettleConfirm && !showPartialInput && (
                 <>
-                <div className="flex gap-2">
+                {/* 3 aksi dalam 1 baris: Settle (glow) · Partial (ghost) · Invoice (icon-label) */}
+                <div className="flex items-stretch gap-2">
                   <button
                     onClick={() => setShowSettleConfirm(true)}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-emerald-500 text-emerald-600 dark:text-emerald-400 dark:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-sm font-semibold rounded-lg transition-colors"
+                    className="flex-[3] flex items-center justify-between gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl border border-gray-300 dark:border-gray-600 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
                   >
-                    <Banknote className="w-4 h-4" />
-                    {t.transactionDetail.settleFull}
+                    {t.transactionDetail.settleShort}
+                    <ChevronRight className="w-4 h-4 shrink-0" />
                   </button>
                   {onPartialSettleReceivable && (
                     <button
                       onClick={() => setShowPartialInput(true)}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-400 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                      className="btn-ghost flex-[2] flex items-center justify-between gap-1.5"
                     >
-                      <ChevronDown className="w-4 h-4" />
-                      {t.transactionDetail.settlePartial}
+                      {t.transactionDetail.settlePartialShort}
+                      <ChevronRight className="w-4 h-4 shrink-0" />
                     </button>
                   )}
+                  {/* Invoice — icon-label, hanya untuk trade receivable yang belum dijadikan invoice */}
+                  {canManageInvoices &&
+                    isTradeReceivableTransaction(transaction) &&
+                    !linkedTransactionIds.has(transaction.id) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const err = canInvoiceTransactions([transaction]);
+                          if (err) return; // toast already shown
+                          setShowInvoiceModal(true);
+                        }}
+                        className="shrink-0 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+                      >
+                        <CirclePlus className="w-4 h-4" />
+                        {t.transactionDetail.invoiceShort}
+                      </button>
+                    )}
                 </div>
-                {/* Buat Invoice — secondary action, only for trade receivable that isn't already invoiced */}
-                {canManageInvoices &&
-                  isTradeReceivableTransaction(transaction) &&
-                  !linkedTransactionIds.has(transaction.id) && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const err = canInvoiceTransactions([transaction]);
-                        if (err) return; // toast already shown
-                        setShowInvoiceModal(true);
-                      }}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
-                    >
-                      <Receipt className="w-4 h-4" />
-                      Buat Invoice dari Transaksi Ini
-                    </button>
-                  )}
                 {/* Invoiced badge — replaces the button if this txn is already linked */}
                 {canManageInvoices &&
                   isTradeReceivableTransaction(transaction) &&
@@ -998,7 +999,7 @@ export function TransactionDetailModal({
                     <button
                       onClick={() => { setShowSettleConfirm(false); onSettleReceivable(transaction); }}
                       disabled={settleLoading}
-                      className="flex-1 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                      className="btn-emerald-glow flex-1"
                     >
                       {settleLoading ? t.transactionDetail.processing : t.transactionDetail.yesSettle}
                     </button>
@@ -1028,7 +1029,7 @@ export function TransactionDetailModal({
                       setPartialDisplayAmount(fmt);
                       setPartialError('');
                     }}
-                    colorVariant="green"
+                    colorVariant="default"
                   />
                   {partialError && (
                     <p className="text-xs text-red-500 dark:text-red-400">{partialError}</p>
@@ -1058,7 +1059,7 @@ export function TransactionDetailModal({
                         }
                       }}
                       disabled={partialLoading}
-                      className="btn-primary flex-1"
+                      className="btn-primary-glow flex-1"
                     >
                       {partialLoading ? t.transactionDetail.processing : t.transactionDetail.recordPayment}
                     </button>
@@ -1213,7 +1214,7 @@ export function TransactionDetailModal({
                     <button
                       onClick={() => { setShowSettleConfirm(false); onSettleDividend(transaction); }}
                       disabled={settleLoading}
-                      className="flex-1 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                      className="btn-emerald-glow flex-1"
                     >
                       {settleLoading ? 'Memproses...' : 'Ya, Bayar'}
                     </button>
@@ -1243,7 +1244,7 @@ export function TransactionDetailModal({
                       setPartialDisplayAmount(fmt);
                       setPartialError('');
                     }}
-                    colorVariant="green"
+                    colorVariant="default"
                   />
                   {partialError && (
                     <p className="text-xs text-red-500 dark:text-red-400">{partialError}</p>
@@ -1273,7 +1274,7 @@ export function TransactionDetailModal({
                         }
                       }}
                       disabled={partialLoading}
-                      className="btn-primary flex-1"
+                      className="btn-primary-glow flex-1"
                     >
                       {partialLoading ? 'Memproses...' : 'Catat Pembayaran'}
                     </button>

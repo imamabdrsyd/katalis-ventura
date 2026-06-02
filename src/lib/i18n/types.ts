@@ -790,6 +790,9 @@ export interface Translations {
     totalPaid: string;
     settleFull: string;
     settlePartial: string;
+    settleShort: string;
+    settlePartialShort: string;
+    invoiceShort: string;
     confirmFullSettlement: string;
     processing: string;
     yesSettle: string;

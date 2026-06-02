@@ -48,6 +48,17 @@
            disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:shadow-none;
   }
 
+  /* Glow variant emerald — untuk CTA konfirmasi settlement piutang (konteks hijau) */
+  .btn-emerald-glow {
+    @apply px-4 py-2 text-sm font-semibold text-white rounded-xl
+           bg-gradient-to-b from-emerald-500 to-emerald-600
+           hover:from-emerald-600 hover:to-emerald-700
+           active:from-emerald-700 active:to-emerald-800
+           shadow-sm shadow-emerald-500/20 hover:shadow-md hover:shadow-emerald-500/30
+           transition-all duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:shadow-none;
+  }
+
   .btn-secondary {
     @apply px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
   }
