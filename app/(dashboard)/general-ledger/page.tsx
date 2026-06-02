@@ -364,7 +364,7 @@ function GeneralLedgerPageInner() {
                         {formatCurrency(ledger.totalCredits)}
                       </p>
                     </div>
-                    <div className="text-center px-3 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg border-l-2 border-l-indigo-500">
+                    <div className="text-center px-3 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg border-l-4 border-l-indigo-500">
                       <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t.generalLedger.closingBalance}</p>
                       <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
                         {ledger.closingBalance < 0 ? '(' : ''}
