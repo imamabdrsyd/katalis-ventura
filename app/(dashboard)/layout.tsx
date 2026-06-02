@@ -37,8 +37,8 @@ import {
   FlaskConical,
   Plus,
   UserPlus,
-  BarChart3,
   Calculator,
+  ChartNoAxesCombined,
   LineChart,
   Target,
   Calendar,
@@ -106,7 +106,7 @@ function useNavData() {
     },
     {
       label: t.nav.financialReports,
-      icon: BarChart3,
+      icon: Scale,
       items: [
         { href: '/income-statement', label: t.nav.profitLoss, icon: DollarSign },
         { href: '/balance-sheet', label: t.nav.balanceSheet, icon: Scale },
@@ -116,7 +116,7 @@ function useNavData() {
     },
     {
       label: t.nav.analytics,
-      icon: LineChart,
+      icon: ChartNoAxesCombined,
       items: [
         { href: '/scenario-modeling', label: t.nav.scenarioModeling, icon: FlaskConical },
         { href: '/roi-forecast', label: t.nav.budgetForecast, icon: Target },
@@ -951,7 +951,7 @@ function Sidebar({
         {/* Scrollable nav area */}
         <div className={`flex-1 min-h-0 ${isCollapsed ? 'overflow-visible' : 'overflow-y-auto'}`}>
         {/* Independent nav items: Transactions + Dashboard + Manage Business */}
-        <div className="px-2 pt-3 pb-1 space-y-0.5">
+        <div className="px-2 pt-3 pb-3 space-y-0.5">
           {/* Transactions (manager only) */}
           {canManage && (() => {
             const isTransactionsActive = pathname === '/transactions' || pathname.startsWith('/transactions/') || pathname === '/invoices' || pathname === '/reconciliation';

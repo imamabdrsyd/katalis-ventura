@@ -100,9 +100,6 @@ function BalanceSheetPageInner() {
         {/* Controls: date picker + export */}
         <div className="flex items-center gap-3 flex-shrink-0">
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">
-              Per tanggal:
-            </label>
             <input
               type="date"
               value={asOfDate}
@@ -178,7 +175,10 @@ function BalanceSheetPageInner() {
           <div className="flex flex-col flex-1 space-y-6">
             {/* Current Assets */}
             <div>
-              <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">{t.balanceSheetPage.currentAssets}</h3>
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200 dark:border-gray-700/60">
+                <span className="w-1 h-3.5 rounded-full bg-blue-500 dark:bg-blue-400" />
+                <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-blue-600 dark:text-blue-400">{t.balanceSheetPage.currentAssets}</h3>
+              </div>
               <div className="flex justify-between py-2 pl-4">
                 <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.cashAndBank}</span>
                 <span className="font-semibold text-gray-900 dark:text-gray-100">
@@ -209,8 +209,8 @@ function BalanceSheetPageInner() {
                   </span>
                 </div>
               )}
-              <div className="flex justify-between py-2 pl-4 border-t border-gray-200 dark:border-gray-700 font-semibold">
-                <span className="text-gray-800 dark:text-gray-200">{t.balanceSheetPage.totalCurrentAssets}</span>
+              <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-2">
+                <span className="text-gray-800 dark:text-gray-100">{t.balanceSheetPage.totalCurrentAssets}</span>
                 <span className="text-gray-900 dark:text-gray-100">
                   {formatCurrency(balanceSheet.assets.totalCurrentAssets)}
                 </span>
@@ -219,7 +219,10 @@ function BalanceSheetPageInner() {
 
             {/* Fixed Assets */}
             <div className="flex flex-col flex-1">
-              <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">{t.balanceSheetPage.fixedAssets}</h3>
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200 dark:border-gray-700/60">
+                <span className="w-1 h-3.5 rounded-full bg-blue-500 dark:bg-blue-400" />
+                <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-blue-600 dark:text-blue-400">{t.balanceSheetPage.fixedAssets}</h3>
+              </div>
               <div className="flex justify-between py-2 pl-4">
                 <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.acquisitionValue}</span>
                 <span className="font-semibold text-gray-900 dark:text-gray-100">
@@ -234,8 +237,8 @@ function BalanceSheetPageInner() {
                   </span>
                 </div>
               )}
-              <div className="flex justify-between py-2 pl-4 border-t border-gray-200 dark:border-gray-700 font-semibold">
-                <span className="text-gray-800 dark:text-gray-200">
+              <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-2">
+                <span className="text-gray-800 dark:text-gray-100">
                   {balanceSheet.assets.accumulatedDepreciation > 0 ? t.balanceSheetPage.netFixedAssets : t.balanceSheetPage.fixedAssets}
                 </span>
                 <span className="text-gray-900 dark:text-gray-100">
@@ -274,7 +277,10 @@ function BalanceSheetPageInner() {
           <div className="flex flex-col flex-1 space-y-6">
             {/* Liabilities */}
             <div>
-              <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">{t.balanceSheetPage.liabilities}</h3>
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200 dark:border-gray-700/60">
+                <span className="w-1 h-3.5 rounded-full bg-amber-500 dark:bg-amber-400" />
+                <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-amber-600 dark:text-amber-400">{t.balanceSheetPage.liabilities}</h3>
+              </div>
               <div className="flex justify-between py-2 pl-4">
                 <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.loans}</span>
                 <span className="font-semibold text-gray-900 dark:text-gray-100">
@@ -291,14 +297,17 @@ function BalanceSheetPageInner() {
 
             {/* Equity */}
             <div className="flex flex-col flex-1">
-              <Link
-                href="/statement-of-changes-in-equity"
-                className="group inline-flex items-center gap-1.5 mb-3 w-fit font-semibold text-gray-800 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-                title="Lihat Laporan Perubahan Ekuitas"
-              >
-                {t.balanceSheetPage.equity}
-                <ArrowUpRight className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 group-hover:text-primary-500 dark:group-hover:text-primary-400 transition-colors" />
-              </Link>
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200 dark:border-gray-700/60">
+                <span className="w-1 h-3.5 rounded-full bg-purple-500 dark:bg-purple-400" />
+                <Link
+                  href="/statement-of-changes-in-equity"
+                  className="group inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors"
+                  title="Lihat Laporan Perubahan Ekuitas"
+                >
+                  {t.balanceSheetPage.equity}
+                  <ArrowUpRight className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity" />
+                </Link>
+              </div>
               <div className="space-y-2">
                 <div className="flex justify-between py-2 pl-4">
                   <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.paidInCapital}</span>
@@ -325,14 +334,6 @@ function BalanceSheetPageInner() {
                         </div>
                       </div>
                     ))}
-                  </div>
-                )}
-                {balanceSheet.equity.drawings > 0 && (
-                  <div className="flex justify-between py-2 pl-4">
-                    <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.dividends}</span>
-                    <span className="font-semibold text-red-500 dark:text-red-400">
-                      ({formatCurrency(balanceSheet.equity.drawings)})
-                    </span>
                   </div>
                 )}
                 <div className="flex justify-between py-2 pl-4">
