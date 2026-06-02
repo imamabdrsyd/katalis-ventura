@@ -13,18 +13,21 @@ import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
  * - OR is multi-line: any credit journal line hits a LIABILITY account with matching name
  */
 export function isPayableTransaction(transaction: Transaction): boolean {
-  // Single double-entry path
-  if (transaction.is_double_entry) {
-    if (!transaction.credit_account) return false;
-    if (transaction.credit_account.account_type !== 'LIABILITY') return false;
-    return /hutang|utang|payable/i.test(transaction.credit_account.account_name);
-  }
-
+  // Multi-line dicek lebih dulu: transaksi multi-line punya is_double_entry = TRUE
+  // (lihat update_multi_line_transaction RPC) tapi credit_account-nya NULL karena
+  // akun ada di journal_lines. Cek struktur multi-line dulu agar tidak salah jalur.
   // Multi-line path — any credit line to a LIABILITY account counts as payable
   if (transaction.is_multi_line && transaction.journal_lines) {
     return transaction.journal_lines.some(
       (line) => line.credit_amount > 0 && line.account?.account_type === 'LIABILITY'
     );
+  }
+
+  // Single double-entry path
+  if (transaction.is_double_entry) {
+    if (!transaction.credit_account) return false;
+    if (transaction.credit_account.account_type !== 'LIABILITY') return false;
+    return /hutang|utang|payable/i.test(transaction.credit_account.account_name);
   }
 
   return false;

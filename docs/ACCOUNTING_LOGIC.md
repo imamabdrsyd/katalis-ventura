@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 01 Juni 2026 (**Fix capital double-count di Neraca (Issue #24)** — legacy branch `calculateBalanceSheet` hanya menyuntik `capital_investment` bila ekuitas belum dibukukan dari double-entry/multi-line (`capitalAlreadyBooked`), mencegah aset & ekuitas overstated sebesar modal awal saat data legacy bercampur dengan transaksi "Modal Investasi Awal" otomatis; Section 6.1B + Issue #24 ditambahkan; sebelumnya: **Promosi double-entry → multi-line** — migr 095: `update_multi_line_transaction` kini mengizinkan upgrade transaksi double-entry sederhana menjadi multi-line via tombol "Tambah Baris" di Edit Transaction (set is_multi_line=TRUE + kosongkan debit/credit_account_id); Section 3.2 diperbarui; **AccountDropdown** kini render via portal (createPortal) agar tidak terpotong overflow modal; sebelumnya: **Statement of Changes in Equity (SCE) + Profit-Sharing & Rekonsiliasi Dividen** — migr 094 tambah kolom `profit_share_pct`, `owner_stock_account_id`, `contact_id` di `accounts`; fungsi `calculateStatementOfChangesInEquity`, hook + halaman `/statement-of-changes-in-equity`, export PDF/Excel; header "Equity (Capital)" di Neraca kini clickable ke SCE; Section 23 baru + Section 6.3 diperbarui; menjawab temuan audit MEDIUM "Tidak Ada SOCE"; sebelumnya: **Retained Earnings = auto-calculate; jurnal penutup manual DIHAPUS** — halaman `/closing-entry`, lib `closingEntry.ts`, dan link nav dihapus karena bertabrakan dengan model auto-calculate dan merusak presentasi ekuitas neraca; `calculateBalanceSheet` kini mem-filter `meta.entry_type.id === 'closing_entry'` sebagai pengaman data historis; Period Lock tetap sebagai soft-close; Section 6.4 & Issue #23 diperbarui; sebelumnya: **Template Jurnal Multi-Baris** — migr 093 kolom `journal_lines` JSONB di `transaction_templates`; "Simpan sebagai Template" & "Gunakan Template" kini tersedia di mode multi-baris Journal Entry; memuat template multi-baris mengganti semua baris (tetap editable); Section 12 diperbarui; sebelumnya: **Bank Statement Import — Phase B** — Section 25 dilengkapi dengan CSV/XLSX parser (Indonesian + English number/date format detection, dua format kolom: Debit+Kredit terpisah atau Mutasi+Type), side-by-side matching UI di `/reconciliation` dengan mode toggle Saldo vs Cocokkan Mutasi, hook `useBankTransactions`, API `/api/bank-transactions` + `/match` + `/unmatch` (auto un-reconcile transaksi ledger kalau tidak ada bank line lain ter-link); sebelumnya: **Bank Statement Import & OCR** — migr 092 + Section 25 — upload mutasi PDF/image BCA, pipeline OCR `runOcr()`, dedup hash UNIQUE(account_id, dedup_hash), 2 tabel `bank_statement_imports` + `bank_transactions`; **Invoice dari Transaksi Piutang** — migr 086 + Section 24; audit fix flag `is_trade_receivable` & `is_operating_payable` — migr 085; depresiasi fix; multi-currency — migr 079)
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 02 Juni 2026 (**Fix outstanding piutang multi-line ambil gross bukan net (Issue #26)** — `getOutstandingAmount` kini hitung net debit baris akun receivable via helper baru `getReceivableLineAmount`, bukan header `amount` (gross); settlement OTA tidak lagi overstate kas & overclear piutang; Section 14.2b + Issue #26 ditambahkan; koreksi data historis Hillside Studio (4 settlement gross→net + 1 transaksi pajak Cr Piutang→Cr Bank); **Fix tombol pelunasan hilang setelah edit transaksi multi-line (Issue #25)** — detector `isReceivableTransaction`/`isTradeReceivableTransaction`/`isPayableTransaction` mengecek cabang `is_double_entry` lebih dulu, padahal transaksi multi-line punya `is_double_entry=TRUE` + `debit_account`/`credit_account` NULL (akun ada di `journal_lines`); urutan cabang dibalik → cek `is_multi_line` dulu; Section 14.2 + Issue #25 ditambahkan; regression test `tests/unit/settlementDetection.test.ts`; sebelumnya: **Fix capital double-count di Neraca (Issue #24)** — legacy branch `calculateBalanceSheet` hanya menyuntik `capital_investment` bila ekuitas belum dibukukan dari double-entry/multi-line (`capitalAlreadyBooked`), mencegah aset & ekuitas overstated sebesar modal awal saat data legacy bercampur dengan transaksi "Modal Investasi Awal" otomatis; Section 6.1B + Issue #24 ditambahkan; sebelumnya: **Promosi double-entry → multi-line** — migr 095: `update_multi_line_transaction` kini mengizinkan upgrade transaksi double-entry sederhana menjadi multi-line via tombol "Tambah Baris" di Edit Transaction (set is_multi_line=TRUE + kosongkan debit/credit_account_id); Section 3.2 diperbarui; **AccountDropdown** kini render via portal (createPortal) agar tidak terpotong overflow modal; sebelumnya: **Statement of Changes in Equity (SCE) + Profit-Sharing & Rekonsiliasi Dividen** — migr 094 tambah kolom `profit_share_pct`, `owner_stock_account_id`, `contact_id` di `accounts`; fungsi `calculateStatementOfChangesInEquity`, hook + halaman `/statement-of-changes-in-equity`, export PDF/Excel; header "Equity (Capital)" di Neraca kini clickable ke SCE; Section 23 baru + Section 6.3 diperbarui; menjawab temuan audit MEDIUM "Tidak Ada SOCE"; sebelumnya: **Retained Earnings = auto-calculate; jurnal penutup manual DIHAPUS** — halaman `/closing-entry`, lib `closingEntry.ts`, dan link nav dihapus karena bertabrakan dengan model auto-calculate dan merusak presentasi ekuitas neraca; `calculateBalanceSheet` kini mem-filter `meta.entry_type.id === 'closing_entry'` sebagai pengaman data historis; Period Lock tetap sebagai soft-close; Section 6.4 & Issue #23 diperbarui; sebelumnya: **Template Jurnal Multi-Baris** — migr 093 kolom `journal_lines` JSONB di `transaction_templates`; "Simpan sebagai Template" & "Gunakan Template" kini tersedia di mode multi-baris Journal Entry; memuat template multi-baris mengganti semua baris (tetap editable); Section 12 diperbarui; sebelumnya: **Bank Statement Import — Phase B** — Section 25 dilengkapi dengan CSV/XLSX parser (Indonesian + English number/date format detection, dua format kolom: Debit+Kredit terpisah atau Mutasi+Type), side-by-side matching UI di `/reconciliation` dengan mode toggle Saldo vs Cocokkan Mutasi, hook `useBankTransactions`, API `/api/bank-transactions` + `/match` + `/unmatch` (auto un-reconcile transaksi ledger kalau tidak ada bank line lain ter-link); sebelumnya: **Bank Statement Import & OCR** — migr 092 + Section 25 — upload mutasi PDF/image BCA, pipeline OCR `runOcr()`, dedup hash UNIQUE(account_id, dedup_hash), 2 tabel `bank_statement_imports` + `bank_transactions`; **Invoice dari Transaksi Piutang** — migr 086 + Section 24; audit fix flag `is_trade_receivable` & `is_operating_payable` — migr 085; depresiasi fix; multi-currency — migr 079)
 
 ---
 
@@ -1249,21 +1249,57 @@ Ketika transaksi EARN mencatat piutang (Dr Piutang / Cr Pendapatan), piutang ter
 
 ### 14.2 Deteksi Piutang
 
-`isReceivableTransaction(transaction)`:
+`isReceivableTransaction(transaction)` — **cek struktur multi-line DULU, baru double-entry single-line**:
 ```
-Trade receivable (piutang usaha) terdeteksi jika:
-  1. is_double_entry = true
-  2. debit_account.account_type === 'ASSET'
-  3. debit_account.default_category !== 'FIN' (bukan talangan)
-  4. account_name TIDAK mengandung "talangan" atau "advance"
-  5. debit_account.default_category === 'EARN'
-     ATAU account_name mengandung "piutang usaha" atau "receivable"
+1. Jika is_multi_line && journal_lines ada:
+     return ada baris dengan debit_amount > 0 yang akunnya = receivable
 
-Piutang Talangan (advance/FIN) → return FALSE
-  - default_category === 'FIN' atau nama mengandung "talangan"/"advance"
-  - Talangan bukan piutang usaha, tidak butuh banner pelunasan
-  - Kategori transaksi: FIN (bukan EARN)
+2. Else jika is_double_entry:
+     return isAnyReceivableAccount(debit_account)
+
+3. Else → FALSE
 ```
+
+> **Urutan cabang penting (Issue #25).** Transaksi multi-line punya `is_double_entry = TRUE`
+> setelah diedit (RPC `update_multi_line_transaction` mem-promote-nya, lihat §3.2), **tapi**
+> `debit_account`/`credit_account`-nya NULL karena akun tersimpan di `journal_lines`. Jika cabang
+> `is_double_entry` dicek lebih dulu, detector membaca akun NULL → return FALSE → tombol pelunasan
+> hilang setelah edit. Karena itu cabang `is_multi_line` **harus** dicek lebih dulu. Pola yang sama
+> berlaku untuk `isTradeReceivableTransaction` dan `isPayableTransaction`.
+
+Trade vs talangan (untuk `isTradeReceivableTransaction`, dipakai AR aging & invoice):
+```
+Trade receivable (piutang usaha) jika akun ASSET dan:
+  - is_trade_receivable === true (flag-first), ATAU
+  - default_category === 'EARN', ATAU nama mengandung "piutang usaha"/"receivable"
+  - DAN nama TIDAK mengandung "talangan"/"advance"
+
+Piutang Talangan (advance/FIN) → bukan trade receivable
+  - default_category === 'FIN' atau nama mengandung "talangan"/"advance"
+  - Kategori transaksi settlement: FIN (bukan EARN)
+  - Tetap bisa dilunasi via isReceivableTransaction (ANY receivable)
+```
+
+### 14.2b Outstanding Amount (net, bukan gross)
+
+`getOutstandingAmount(transaction)`:
+```
+1. Jika sudah lunas (settled_by_transaction_id) → 0
+2. Jika ada meta.remaining_amount (partial) → remaining_amount
+3. Else → getReceivableLineAmount(transaction)
+```
+
+`getReceivableLineAmount(transaction)` — **net piutang, bukan header amount**:
+```
+- Multi-line: Σ (debit_amount − credit_amount) pada baris akun receivable saja
+              (fallback ke transaction.amount kalau tak ada baris receivable)
+- Single double-entry: transaction.amount (baris piutang = seluruh amount)
+```
+
+> **Kenapa net, bukan header amount (Issue #26).** Pada penjualan OTA multi-line, `transaction.amount`
+> = total debit = **gross revenue** (mis. 1.200.000), sedangkan yang menjadi piutang & akan masuk kas
+> hanyalah **baris akun piutang** (net diterima, mis. 969.563) — baris beban komisi/biaya/pajak sudah
+> memotong gross di muka. Settlement harus melunasi net, bukan gross.
 
 ### 14.3 Settlement Entry
 
@@ -1879,6 +1915,63 @@ Dr EQUITY / Cr Kas  → Financing (-)  — prive keluar
 | #22 | Trade Receivable/Payable detection via keyword heuristic (fragile) | RESOLVED | Migration 085 — flag `is_trade_receivable` & `is_operating_payable` di tabel `accounts`. Helper `src/lib/accounting/classification.ts` flag-first dengan heuristic fallback. Toggle eksplisit di AccountForm. |
 | #23 | Closing entry manual merusak presentasi ekuitas Balance Sheet | RESOLVED | Lihat detail di bawah |
 | #24 | `capital_investment` double-count di Neraca saat data legacy bercampur dgn transaksi modal otomatis | RESOLVED | Legacy branch hanya menyuntik `capital` bila ekuitas belum dibukukan dari double-entry/multi-line. Lihat detail di bawah |
+| #25 | Tombol pelunasan (settlement) hilang setelah transaksi piutang/hutang multi-line diedit | RESOLVED | Detector `is*Transaction` mengecek cabang `is_double_entry` lebih dulu, padahal multi-line punya `is_double_entry=TRUE` + akun NULL. Urutan dibalik: cek `is_multi_line` dulu. Lihat detail di bawah |
+| #26 | Outstanding/settlement amount piutang multi-line memakai header `amount` (gross), bukan baris piutang (net) | RESOLVED | `getOutstandingAmount` kini hitung net debit baris akun receivable via `getReceivableLineAmount`. Lihat detail di bawah |
+
+### Issue #26 — Outstanding piutang multi-line salah ambil gross (header amount), bukan net (baris piutang)
+
+**Gejala**: Pada penjualan via OTA (Booking.com) yang dicatat multi-line — Dr Piutang (net diterima)
++ Dr beban komisi/biaya/pajak / Cr Pendapatan (gross) — tombol pelunasan **mem-prefill amount =
+gross** (mis. 1.200.000) padahal piutang riil & kas yang akan masuk hanya **net** (mis. 969.563).
+Akibatnya settlement meng-overstate kas masuk di Bank dan meng-overclear Piutang Usaha (saldo
+piutang bisa jadi negatif/understated). Income statement tidak terpengaruh (revenue & beban sudah
+diakui penuh di transaksi asli; settlement hanya Dr Bank / Cr Piutang), tapi **Neraca & Cash Flow**
+salah.
+
+**Akar masalah**: `getOutstandingAmount()` me-return `transaction.amount`. Untuk transaksi
+multi-line, `amount` = total debit header (= gross revenue), **bukan** nilai baris akun piutang.
+
+**Fix**: Tambah `getReceivableLineAmount(transaction)` yang, untuk multi-line, menjumlahkan net
+`debit_amount - credit_amount` pada baris-baris akun receivable saja (fallback ke header amount bila
+tak ada baris receivable terdeteksi). `getOutstandingAmount()` memakai helper ini. Single double-entry
+tidak berubah (baris piutang = seluruh amount). Semua konsumen (settlement prefill, AR aging, invoice
+picker, detail modal) ikut benar karena lewat `getOutstandingAmount()`. File:
+`src/lib/accounting/guidance/receivableSettlement.ts`. Test: `tests/unit/settlementDetection.test.ts`.
+
+> **Koreksi data historis (Hillside Studio)**: 4 settlement OTA yang sudah terlanjur tercatat gross
+> dikoreksi ke net (Salsa/Lina 443.000→366.361, Nicholas 520.000→430.040, Marsha 1.200.000→969.563).
+> Transaksi pajak gabungan 3 order April (26.758) yang sebelumnya salah Cr ke Piutang Usaha diperbaiki
+> menjadi Cr Bank (pajak dipotong di muka oleh Booking dari transfer). Hasil rekonsiliasi: saldo
+> Piutang Usaha = 732.722 (sisa 1 order belum lunas), net Bank April = 1.136.004 ≈ mutasi bank riil
+> 1.136.005 (selisih Rp1 pembulatan).
+
+### Issue #25 — Tombol pelunasan hilang setelah edit transaksi multi-line
+
+**Gejala**: Transaksi piutang usaha multi-line (mis. penjualan via OTA: Dr Piutang + beberapa
+baris beban / Cr Pendapatan) menampilkan tombol **Pelunasan** saat baru dibuat, tetapi tombol
+tersebut **hilang setelah transaksi diedit**.
+
+**Akar masalah**: Inkonsistensi flag antar RPC pada `is_double_entry`:
+- `create_multi_line_transaction` (migr 082) menyimpan multi-line dengan `is_double_entry = FALSE`.
+- `update_multi_line_transaction` (migr 095) mem-promote/menulis ulang dengan `is_double_entry = TRUE`
+  (dan `debit_account_id`/`credit_account_id` = NULL, karena akun ada di `journal_lines`).
+
+Detector `isReceivableTransaction` / `isTradeReceivableTransaction` / `isPayableTransaction`
+mengecek cabang `if (is_double_entry)` **lebih dulu**. Untuk multi-line pasca-edit, cabang ini
+menang dan membaca `debit_account`/`credit_account` yang NULL → return `false` → bagian settlement
+di `TransactionDetailModal` tidak dirender (`isReceivableTransaction(transaction) && onSettleReceivable`).
+
+**Fix**: Balik urutan cabang di ketiga detector — cek `is_multi_line && journal_lines` **lebih dulu**,
+baru fallback ke `is_double_entry` single-line. `is_multi_line` adalah diskriminator struktural yang
+benar (selalu TRUE untuk jurnal multi-baris, terlepas dari nilai `is_double_entry`). Tidak ada
+perubahan RPC/DB sehingga blast radius minimal. File:
+`src/lib/accounting/guidance/receivableSettlement.ts`, `payableSettlement.ts`.
+Regression test: `tests/unit/settlementDetection.test.ts`.
+
+> **Catatan**: `isDividendDeclaration` (dividendSettlement.ts) hanya punya cabang single-line dan
+> dividend declaration tidak dibuat sebagai multi-line, jadi tidak terdampak. Inkonsistensi flag
+> `is_double_entry` antara create/update RPC dibiarkan apa adanya karena seluruh konsumen lain
+> sudah memakai guard `&& !is_multi_line` (lihat `calculations.ts`, `useArApAging.ts`).
 
 ### Issue #24 — Capital double-count (legacy branch + auto "Modal Investasi Awal")
 

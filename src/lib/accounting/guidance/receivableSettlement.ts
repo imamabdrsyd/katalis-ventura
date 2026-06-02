@@ -17,14 +17,17 @@ import {
  * Used by the settlement flow — any kind of receivable can be settled.
  */
 export function isReceivableTransaction(transaction: Transaction): boolean {
-  if (transaction.is_double_entry) {
-    return isAnyReceivableAccount(transaction.debit_account);
-  }
-
+  // Multi-line dicek lebih dulu: transaksi multi-line punya is_double_entry = TRUE
+  // (lihat update_multi_line_transaction RPC), tapi debit_account-nya NULL karena
+  // akun ada di journal_lines. Cek struktur multi-line dulu agar tidak salah jalur.
   if (transaction.is_multi_line && transaction.journal_lines) {
     return transaction.journal_lines.some(
       (line) => line.debit_amount > 0 && isAnyReceivableAccount(line.account)
     );
+  }
+
+  if (transaction.is_double_entry) {
+    return isAnyReceivableAccount(transaction.debit_account);
   }
 
   return false;
@@ -36,14 +39,15 @@ export function isReceivableTransaction(transaction: Transaction): boolean {
  * - Used for AR aging report and invoice generation
  */
 export function isTradeReceivableTransaction(transaction: Transaction): boolean {
-  if (transaction.is_double_entry) {
-    return isTradeReceivableAccount(transaction.debit_account);
-  }
-
+  // Multi-line dicek lebih dulu (lihat catatan di isReceivableTransaction).
   if (transaction.is_multi_line && transaction.journal_lines) {
     return transaction.journal_lines.some(
       (line) => line.debit_amount > 0 && isTradeReceivableAccount(line.account)
     );
+  }
+
+  if (transaction.is_double_entry) {
+    return isTradeReceivableAccount(transaction.debit_account);
   }
 
   return false;
@@ -68,17 +72,40 @@ export function isPartiallySettled(transaction: Transaction): boolean {
 }
 
 /**
+ * Returns the receivable (piutang) amount yang sebenarnya tercatat pada transaksi —
+ * yaitu net debit pada akun receivable saja, BUKAN total header `amount`.
+ *
+ * Penting untuk multi-line: pada transaksi seperti penjualan OTA, `transaction.amount`
+ * = total debit (gross revenue, mis. 1.200.000), tapi yang menjadi piutang & yang akan
+ * masuk ke kas hanyalah baris akun piutang (net diterima, mis. 969.563). Baris beban
+ * (komisi/biaya/pajak) sudah memotong gross di muka. Memakai header `amount` membuat
+ * settlement meng-overstate kas masuk & meng-overclear piutang (lihat Issue #26).
+ *
+ * Single double-entry: baris piutang = seluruh `transaction.amount`, jadi sama saja.
+ */
+export function getReceivableLineAmount(transaction: Transaction): number {
+  if (transaction.is_multi_line && transaction.journal_lines) {
+    const net = transaction.journal_lines
+      .filter((l) => isAnyReceivableAccount(l.account))
+      .reduce((sum, l) => sum + (l.debit_amount - l.credit_amount), 0);
+    // Fallback ke header amount kalau (tak terduga) tidak ada baris receivable terdeteksi.
+    return net > 0 ? net : transaction.amount;
+  }
+  return transaction.amount;
+}
+
+/**
  * Returns the outstanding (remaining) amount on a receivable.
  * If fully settled → 0.
- * If partially settled → remaining_amount from meta (or falls back to original amount).
- * Otherwise → original amount.
+ * If partially settled → remaining_amount from meta (or falls back to receivable line amount).
+ * Otherwise → receivable line amount (net, bukan gross header amount).
  */
 export function getOutstandingAmount(transaction: Transaction): number {
   if (isSettled(transaction)) return 0;
   if (transaction.meta?.remaining_amount !== undefined) {
     return Math.max(0, transaction.meta.remaining_amount);
   }
-  return transaction.amount;
+  return getReceivableLineAmount(transaction);
 }
 
 /**
