@@ -37,18 +37,18 @@ describe('calculateBalanceSheet', () => {
       ], 0);
       expect(bs.assets.cash).toBe(100_000_000);
       expect(bs.equity.capital).toBe(100_000_000);
-      expect(bs.equity.drawings).toBe(0);
+      expect(bs.equity.retainedEarnings).toBe(0);
       expectBalanced(bs);
     });
 
-    it('owner withdrawal: Dr Prive / Cr Kas — reduces equity & cash', () => {
+    it('owner withdrawal: Dr Prive / Cr Kas — reduces retained earnings & cash', () => {
       const bs = calculateBalanceSheet([
         doubleEntryTxn({ category: 'FIN', amount: 100_000_000, debit: ACC.kas, credit: ACC.equity }),
         doubleEntryTxn({ category: 'FIN', amount: 5_000_000, debit: ACC.prive, credit: ACC.kas }),
       ], 0);
       expect(bs.assets.cash).toBe(95_000_000);
       expect(bs.equity.capital).toBe(100_000_000);
-      expect(bs.equity.drawings).toBe(5_000_000);
+      expect(bs.equity.retainedEarnings).toBe(-5_000_000); // drawings folded into retained earnings
       expect(bs.equity.totalEquity).toBe(95_000_000); // 100M - 5M (no profit)
       expectBalanced(bs);
     });

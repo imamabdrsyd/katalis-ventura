@@ -619,8 +619,12 @@ export function calculateStatementOfChangesInEquity(
 
   const retainedOpening = openingBS.equity.retainedEarnings;
   const retainedClosing = closingBS.equity.retainedEarnings;
-  // Net income periode = selisih retained earnings (RE auto-calculate dari revenue-expense).
-  const netIncome = retainedClosing - retainedOpening;
+  // Net income periode = selisih RE + drawings periode (RE sudah net dividen, harus
+  // ditambah balik untuk isolasi laba operasi saja).
+  const periodDividends = Array.from(
+    accumulateDividendsByOwner(periodTxns).values()
+  ).reduce((s, v) => s + v.actual, 0);
+  const netIncome = (retainedClosing - retainedOpening) + periodDividends;
 
   // Saldo modal per pemilik: cap table di titik awal & akhir (net credit per akun stock).
   const openingCap = calculateCapTable(openingTxns);
@@ -713,13 +717,9 @@ export function calculateStatementOfChangesInEquity(
   const totalEquityOpening = openingBS.equity.totalEquity;
   const totalEquityClosing = closingBS.equity.totalEquity;
 
-  // Tie-out: saldo akhir SCE = modal (sudah net stock debit) + laba ditahan
-  // − dividen kumulatif (debit ke akun is_dividend non-stock, yang TIDAK ikut di
-  // totalClosingCapital tapi mengurangi equity di neraca). Harus == equity neraca closing.
-  const cumulativeDividendDrawings = Array.from(
-    accumulateDividendsByOwner(closingTxns).values()
-  ).reduce((s, v) => s + v.actual, 0);
-  const sceClosingEquity = totalClosingCapital + retainedClosing - cumulativeDividendDrawings;
+  // Tie-out: saldo akhir SCE = modal + laba ditahan (sudah net dividen, karena BS
+  // retainedEarnings = netIncome - drawings). Harus == equity neraca closing.
+  const sceClosingEquity = totalClosingCapital + retainedClosing;
   const isReconciled = Math.abs(sceClosingEquity - totalEquityClosing) < 1;
 
   return {
@@ -1433,12 +1433,12 @@ export function calculateBalanceSheet(
     accumulatedDepreciation = depSummary.totalAccumulatedDepreciation;
   }
 
-  // Calculate retained earnings (revenue - expenses - depreciation)
-  // Depreciation reduces retained earnings like any other expense
-  const retainedEarnings = totalRevenue - totalExpenses - accumulatedDepreciation;
+  // Retained earnings = net income - owner withdrawals/dividends (PSAK/IFRS)
+  const netIncome = totalRevenue - totalExpenses - accumulatedDepreciation;
+  const retainedEarnings = netIncome - totalEquityDebit;
 
-  // Net equity from movements: capital injections minus withdrawals
-  const netEquityMovements = totalEquityCredit - totalEquityDebit;
+  // Net equity from movements: capital injections only (withdrawals folded into retained earnings)
+  const netEquityMovements = totalEquityCredit;
 
   const totalCurrentAssets = totalCash + totalInventory + totalReceivables + totalOtherCurrentAssets;
 

@@ -804,9 +804,6 @@ export async function exportBalanceSheetToPDF(
 
   section('EKUITAS');
   item('Modal Disetor', data.equity.capital);
-  if (data.equity.drawings > 0) {
-    item('Prive / Dividen', data.equity.drawings);
-  }
   item('Laba Ditahan', data.equity.retainedEarnings);
   subtotal('TOTAL EKUITAS', data.equity.totalEquity);
   blank();
@@ -978,7 +975,6 @@ export function exportBalanceSheetToExcel(
     [],
     ['Equity', ''],
     ['Modal Disetor', data.equity.capital],
-    ...(data.equity.drawings > 0 ? [['Prive / Dividen', -data.equity.drawings]] : []),
     ['Retained Earnings', data.equity.retainedEarnings],
     ['Total Equity', data.equity.totalEquity],
     [],

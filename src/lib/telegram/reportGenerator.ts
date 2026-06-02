@@ -198,7 +198,6 @@ export async function generateBalanceSheetPDF(
     ['', ''],
     ['EKUITAS', ''],
     ['  Modal Disetor', formatCurrency(bs.equity.capital)],
-    ['  Prive', `(${formatCurrency(bs.equity.drawings)})`],
     ['  Laba Ditahan', formatCurrency(bs.equity.retainedEarnings)],
     ['TOTAL EKUITAS', formatCurrency(bs.equity.totalEquity)],
     ['', ''],

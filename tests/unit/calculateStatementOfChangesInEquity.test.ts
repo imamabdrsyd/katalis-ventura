@@ -72,8 +72,8 @@ describe('calculateStatementOfChangesInEquity', () => {
     expect(sce.retainedOpening).toBe(0);
     expect(sce.netIncome).toBe(12_000_000);
     expect(sce.dividendsDeclared).toBe(6_000_000);
-    // RE tidak terpengaruh dividen (dividen debit akun equity, bukan RE) → closing = opening + netIncome
-    expect(sce.retainedClosing).toBe(12_000_000);
+    // RE closing = netIncome - dividends kumulatif (PSAK: dividen mengurangi RE)
+    expect(sce.retainedClosing).toBe(6_000_000);
   });
 
   it('entitled dividend = profit_share_pct × netIncome (50:50)', () => {
