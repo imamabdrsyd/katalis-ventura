@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useId } from 'react';
+import { motion } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
 import { BookOpenCheck, AlertCircle, FileText, X, ChevronDown, ChevronRight, Calendar } from 'lucide-react';
 import { useGeneralLedger, type AccountTypeFilter } from '@/hooks/useGeneralLedger';
@@ -74,6 +75,7 @@ function GeneralLedgerPageInner() {
 
   // "All Time" = custom period with no date bounds
   const isAllTime = period === 'custom' && !startDate && !endDate;
+  const periodLayoutId = useId();
 
   const handleAllTime = () => {
     setPeriod('custom');
@@ -158,25 +160,39 @@ function GeneralLedgerPageInner() {
             <div className="flex bg-[#EEF0F2] dark:bg-gray-800 rounded-lg p-0.5">
               <button
                 onClick={handleAllTime}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                className={`relative px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   isAllTime
-                    ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                    ? 'text-indigo-600 dark:text-indigo-400'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
-                {t.generalLedger.allTime}
+                {isAllTime && (
+                  <motion.span
+                    layoutId={periodLayoutId}
+                    className="absolute inset-0 bg-white dark:bg-gray-700 rounded-md shadow-sm"
+                    transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+                  />
+                )}
+                <span className="relative">{t.generalLedger.allTime}</span>
               </button>
               {(['month', 'quarter', 'year'] as Period[]).map((p) => (
                 <button
                   key={p}
                   onClick={() => handlePeriodChange(p)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  className={`relative px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                     period === p && !isAllTime
-                      ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                      ? 'text-indigo-600 dark:text-indigo-400'
                       : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                   }`}
                 >
-                  {PERIOD_LABELS[p]}
+                  {period === p && !isAllTime && (
+                    <motion.span
+                      layoutId={periodLayoutId}
+                      className="absolute inset-0 bg-white dark:bg-gray-700 rounded-md shadow-sm"
+                      transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+                    />
+                  )}
+                  <span className="relative">{PERIOD_LABELS[p]}</span>
                 </button>
               ))}
               <button
@@ -188,13 +204,20 @@ function GeneralLedgerPageInner() {
                   setStartDate(fmt(firstDay));
                   setEndDate(fmt(today));
                 }}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                className={`relative px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   period === 'custom' && !isAllTime
-                    ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                    ? 'text-indigo-600 dark:text-indigo-400'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
-                {PERIOD_LABELS.custom}
+                {period === 'custom' && !isAllTime && (
+                  <motion.span
+                    layoutId={periodLayoutId}
+                    className="absolute inset-0 bg-white dark:bg-gray-700 rounded-md shadow-sm"
+                    transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+                  />
+                )}
+                <span className="relative">{PERIOD_LABELS.custom}</span>
               </button>
             </div>
           )}
