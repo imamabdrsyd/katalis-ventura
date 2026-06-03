@@ -1,4 +1,4 @@
-export type OcrProvider = 'google_vision' | 'ocr_space';
+export type OcrProvider = 'gemini' | 'google_vision' | 'ocr_space';
 
 /**
  * Satu baris item belanja yang terdeteksi dari body struk.
@@ -70,6 +70,9 @@ export class OcrProviderError extends Error {
 }
 
 export const OCR_LIMITS = {
+  // Gemini free tier ~1500 req/hari. Pakai cap bulanan konservatif (~1400/hari × 30)
+  // sebagai guard; rate limit harian/concurrent ditangani oleh Gemini sendiri.
+  gemini: 40_000,
   google_vision: 950,   // Google Vision free tier 1000/month, buffer 5%
   ocr_space: 24_000,    // OCR.space free tier 25000/month, buffer 4%
 } as const;
