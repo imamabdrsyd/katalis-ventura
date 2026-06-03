@@ -1,4 +1,5 @@
 import { ParsedTransaction, TransactionCategory } from './types';
+import type { OcrProvider } from '@/lib/ocr/types';
 
 export function formatRupiah(amount: number): string {
   return 'Rp ' + amount.toLocaleString('id-ID');
@@ -26,7 +27,7 @@ type OcrDraft = {
   date?: string;     // ISO YYYY-MM-DD
   total?: number;
   vendor?: string;
-  provider: 'google_vision' | 'ocr_space';
+  provider: OcrProvider;
 };
 
 /**
@@ -41,7 +42,12 @@ export function formatOcrDraft(draft: OcrDraft): string {
     ? formatRupiah(draft.total)
     : '_tidak terbaca_';
   const vendorDisplay = draft.vendor ?? '_tidak terbaca_';
-  const providerLabel = draft.provider === 'google_vision' ? 'Google Vision' : 'OCR.space';
+  const providerLabel =
+    draft.provider === 'gemini'
+      ? 'Gemini'
+      : draft.provider === 'google_vision'
+        ? 'Google Vision'
+        : 'OCR.space';
 
   return `📸 *Draft Transaksi dari Struk*
 

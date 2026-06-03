@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import { createAdminClient } from '@/lib/supabase-server';
+import { geminiOcr, parseGeminiJson } from './geminiOcr';
 import { googleVisionOcr } from './googleVision';
 import { ocrSpaceOcr } from './ocrSpace';
 import { parseReceipt } from './parser';
@@ -182,14 +183,57 @@ export async function runOcr(
 
 /**
  * Orchestrator untuk SCAN STRUK BELANJA.
- * Pakai runOcr (auto provider) + parseReceipt.
+ *
+ * Strategi provider:
+ * 1. Gemini (multimodal): kirim gambar → JSON terstruktur langsung. Paling akurat
+ *    untuk struk Indonesia, gratis. Hasilnya di-cache (raw_text = JSON Gemini).
+ * 2. Fallback ke Vision/OCR.space (raw text) + parseReceipt (regex) kalau:
+ *    - Gemini quota bulan ini habis, ATAU
+ *    - Gemini error / API key tidak di-set.
+ *
+ * Cache: raw_text untuk provider Gemini berisi JSON, untuk provider lain berisi
+ * teks mentah OCR. parser dipilih berdasarkan provider saat cache hit.
  */
 export async function scanReceipt(
   fileBuffer: Buffer,
   fileHash?: string,
   mimeType = 'image/jpeg'
 ): Promise<OcrResult> {
-  const result = await runOcr(fileBuffer, { fileHash, mimeType, preference: 'auto' });
+  const hash = fileHash ?? hashFile(fileBuffer);
+
+  // Cache hit: re-parse dari raw_text pakai parser sesuai provider.
+  const cached = await lookupCache(hash);
+  if (cached) {
+    return {
+      provider: cached.provider,
+      raw_text: cached.raw_text,
+      parsed:
+        cached.provider === 'gemini'
+          ? parseGeminiJson(cached.raw_text)
+          : parseReceipt(cached.raw_text),
+      cached: true,
+    };
+  }
+
+  // Primary: Gemini multimodal (image → JSON), kalau quota & API key tersedia.
+  if (process.env.GEMINI_API_KEY) {
+    const geminiUsage = await getMonthlyUsage('gemini');
+    if (geminiUsage < OCR_LIMITS.gemini) {
+      try {
+        const { raw_text, parsed } = await geminiOcr(fileBuffer, mimeType);
+        await Promise.all([
+          saveCacheRaw(hash, 'gemini', raw_text),
+          incrementUsage('gemini'),
+        ]);
+        return { provider: 'gemini', raw_text, parsed, cached: false };
+      } catch (err) {
+        console.warn('[ocr] Gemini failed, falling back to Vision/OCR.space:', err);
+      }
+    }
+  }
+
+  // Fallback: Vision/OCR.space (raw text) + regex parser.
+  const result = await runOcr(fileBuffer, { fileHash: hash, mimeType, preference: 'auto' });
   return {
     provider: result.provider,
     raw_text: result.raw_text,

@@ -40,6 +40,7 @@ import {
   ParsedTransaction,
 } from './types';
 import { scanReceipt, OcrQuotaExceededError } from '@/lib/ocr';
+import type { OcrProvider } from '@/lib/ocr/types';
 
 export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void> {
   // Branch 1: callback dari inline keyboard (klik tombol)
@@ -414,7 +415,7 @@ type PendingOcrDraft = {
   date?: string;
   total?: number;
   vendor?: string;
-  provider: 'google_vision' | 'ocr_space';
+  provider: OcrProvider;
   raw_text: string;
 };
 
@@ -460,7 +461,7 @@ async function handlePhotoMessage(message: TelegramMessage): Promise<void> {
 
   // OCR scan
   let parsed;
-  let provider: 'google_vision' | 'ocr_space';
+  let provider: OcrProvider;
   let rawText: string;
   try {
     const result = await scanReceipt(buffer);
