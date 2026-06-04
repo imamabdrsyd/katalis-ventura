@@ -3,8 +3,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Zap } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
+import { AIChatPanel } from '@/components/ai/AIChatPanel';
 import { QuickTransactionForm } from './QuickTransactionForm';
 import { MultiLineJournalForm } from './MultiLineJournalForm';
 import type { MultiLineFormData } from './MultiLineJournalForm';
@@ -32,8 +33,10 @@ export function FloatingQuickAdd({
   onOpenChange?: (open: boolean) => void;
 } = {}) {
   const router = useRouter();
-  const { user, activeBusinessId: businessId, userRole } = useBusinessContext();
+  const { user, activeBusinessId: businessId, activeBusiness, userRole } = useBusinessContext();
   const canManage = isManagerRole(userRole);
+
+  const [aiChatOpen, setAiChatOpen] = useState(false);
 
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -159,14 +162,24 @@ export function FloatingQuickAdd({
 
   return (
     <>
-      {/* FAB Button */}
+      {/* AI Chat Panel */}
+      {businessId && (
+        <AIChatPanel
+          isOpen={aiChatOpen}
+          onClose={() => setAiChatOpen(false)}
+          businessId={businessId}
+          businessName={activeBusiness?.business_name ?? ''}
+        />
+      )}
+
+      {/* FAB Button — AI Chat */}
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={() => setAiChatOpen(prev => !prev)}
         className="fixed bottom-6 right-6 z-30 w-14 h-14 bg-primary-500 hover:bg-primary-600 active:bg-primary-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
-        title="Add Transaction"
-        aria-label="Add Transaction"
+        title="AXION AI"
+        aria-label="Buka AI Chat"
       >
-        <Zap className="w-6 h-6 group-hover:scale-110 transition-transform" />
+        <MessageCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
       </button>
 
       {/* Quick Add Modal */}
