@@ -98,6 +98,12 @@ export default function DashboardPage() {
   const dashboardAnimationKey = `${selectedYear}-${selectedMonth ?? 'year'}-${transactionsLoading ? 'loading' : 'ready'}`;
 
   const MONTH_LABELS = t.dashboard.months;
+
+  // Bulan kalender saat ini — ditandai bold meski bukan bulan terpilih.
+  // Hanya berlaku saat tahun terpilih == tahun berjalan.
+  const now = new Date();
+  const currentMonthIndex = selectedYear === now.getFullYear() ? now.getMonth() : -1;
+
   const selectedPeriodLabel = selectedMonth === null
     ? `${t.dashboard.yearly} ${selectedYear}`
     : `${MONTH_LABELS[selectedMonth]} ${selectedYear}`;
@@ -447,7 +453,9 @@ export default function DashboardPage() {
                   className={`relative px-4 py-1.5 text-sm rounded-full transition-colors ${
                     selectedMonth === i
                       ? 'text-primary-500 dark:text-primary-400 font-bold'
-                      : 'text-gray-500 dark:text-gray-400 font-normal hover:text-gray-700 dark:hover:text-gray-200'
+                      : i === currentMonthIndex
+                        ? 'text-gray-700 dark:text-gray-200 font-bold hover:text-gray-900 dark:hover:text-white'
+                        : 'text-gray-500 dark:text-gray-400 font-normal hover:text-gray-700 dark:hover:text-gray-200'
                   }`}
                 >
                   {selectedMonth === i && (
