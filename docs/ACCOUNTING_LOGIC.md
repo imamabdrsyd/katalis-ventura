@@ -1,7 +1,7 @@
 # Accounting Logic Documentation
 
 > **Live Documentation** - Dokumen ini menjelaskan seluruh logic akuntansi di Katalis Ventura.
-> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 04 Juni 2026 (**OCR Struk → Gemini multimodal** — `scanReceipt()` kini pakai Gemini `gemini-2.5-flash` sebagai provider utama: gambar struk → JSON `OcrParsed` terstruktur langsung (vendor/total/date/category/line_items/charges) tanpa regex; Vision/OCR.space + `parseReceipt()` tetap sebagai fallback bila quota habis/error/API key kosong; `geminiOcr.ts` + `parseGeminiJson()` baru, enrich keyword via fungsi rule-based `parser.ts` agar matcher CoA tetap jalan; `OcrProvider` tambah `'gemini'`; cache `ocr_scan_cache` re-parse per-provider; Section 25.2 diperbarui; sebelumnya: **Fix outstanding piutang multi-line ambil gross bukan net (Issue #26)** — `getOutstandingAmount` kini hitung net debit baris akun receivable via helper baru `getReceivableLineAmount`, bukan header `amount` (gross); settlement OTA tidak lagi overstate kas & overclear piutang; Section 14.2b + Issue #26 ditambahkan; koreksi data historis Hillside Studio (4 settlement gross→net + 1 transaksi pajak Cr Piutang→Cr Bank); **Fix tombol pelunasan hilang setelah edit transaksi multi-line (Issue #25)** — detector `isReceivableTransaction`/`isTradeReceivableTransaction`/`isPayableTransaction` mengecek cabang `is_double_entry` lebih dulu, padahal transaksi multi-line punya `is_double_entry=TRUE` + `debit_account`/`credit_account` NULL (akun ada di `journal_lines`); urutan cabang dibalik → cek `is_multi_line` dulu; Section 14.2 + Issue #25 ditambahkan; regression test `tests/unit/settlementDetection.test.ts`; sebelumnya: **Fix capital double-count di Neraca (Issue #24)** — legacy branch `calculateBalanceSheet` hanya menyuntik `capital_investment` bila ekuitas belum dibukukan dari double-entry/multi-line (`capitalAlreadyBooked`), mencegah aset & ekuitas overstated sebesar modal awal saat data legacy bercampur dengan transaksi "Modal Investasi Awal" otomatis; Section 6.1B + Issue #24 ditambahkan; sebelumnya: **Promosi double-entry → multi-line** — migr 095: `update_multi_line_transaction` kini mengizinkan upgrade transaksi double-entry sederhana menjadi multi-line via tombol "Tambah Baris" di Edit Transaction (set is_multi_line=TRUE + kosongkan debit/credit_account_id); Section 3.2 diperbarui; **AccountDropdown** kini render via portal (createPortal) agar tidak terpotong overflow modal; sebelumnya: **Statement of Changes in Equity (SCE) + Profit-Sharing & Rekonsiliasi Dividen** — migr 094 tambah kolom `profit_share_pct`, `owner_stock_account_id`, `contact_id` di `accounts`; fungsi `calculateStatementOfChangesInEquity`, hook + halaman `/statement-of-changes-in-equity`, export PDF/Excel; header "Equity (Capital)" di Neraca kini clickable ke SCE; Section 23 baru + Section 6.3 diperbarui; menjawab temuan audit MEDIUM "Tidak Ada SOCE"; sebelumnya: **Retained Earnings = auto-calculate; jurnal penutup manual DIHAPUS** — halaman `/closing-entry`, lib `closingEntry.ts`, dan link nav dihapus karena bertabrakan dengan model auto-calculate dan merusak presentasi ekuitas neraca; `calculateBalanceSheet` kini mem-filter `meta.entry_type.id === 'closing_entry'` sebagai pengaman data historis; Period Lock tetap sebagai soft-close; Section 6.4 & Issue #23 diperbarui; sebelumnya: **Template Jurnal Multi-Baris** — migr 093 kolom `journal_lines` JSONB di `transaction_templates`; "Simpan sebagai Template" & "Gunakan Template" kini tersedia di mode multi-baris Journal Entry; memuat template multi-baris mengganti semua baris (tetap editable); Section 12 diperbarui; sebelumnya: **Bank Statement Import — Phase B** — Section 25 dilengkapi dengan CSV/XLSX parser (Indonesian + English number/date format detection, dua format kolom: Debit+Kredit terpisah atau Mutasi+Type), side-by-side matching UI di `/reconciliation` dengan mode toggle Saldo vs Cocokkan Mutasi, hook `useBankTransactions`, API `/api/bank-transactions` + `/match` + `/unmatch` (auto un-reconcile transaksi ledger kalau tidak ada bank line lain ter-link); sebelumnya: **Bank Statement Import & OCR** — migr 092 + Section 25 — upload mutasi PDF/image BCA, pipeline OCR `runOcr()`, dedup hash UNIQUE(account_id, dedup_hash), 2 tabel `bank_statement_imports` + `bank_transactions`; **Invoice dari Transaksi Piutang** — migr 086 + Section 24; audit fix flag `is_trade_receivable` & `is_operating_payable` — migr 085; depresiasi fix; multi-currency — migr 079)
+> Terakhir diaudit: 27 Maret 2026 | Terakhir diupdate: 04 Juni 2026 (**AXION Agent (AI Assistant)** — Section 26 baru: chatbot keuangan read-only via FAB kanan-bawah (gantikan FAB Quick Entry), `POST /api/ai/chat` streaming Gemini 2.5 Flash Lite, `buildFinancialContext()` di `src/lib/ai/financialContext.ts` inject ringkasan P&L per-bulan + neraca (transaksi mentah TIDAK dikirim ke AI); `computeSummary()` mereplikasi pipeline useIncomeStatement (calculateFinancialSummary → applyDepreciationToSummary) supaya netProfit ikut kurangi depresiasi & match Income Statement; 8 unit test regression di `aiFinancialContext.test.ts`; Telegram belum tersambung tapi context builder sudah reusable; sebelumnya: **OCR Struk → Gemini multimodal** — `scanReceipt()` kini pakai Gemini `gemini-2.5-flash` sebagai provider utama: gambar struk → JSON `OcrParsed` terstruktur langsung (vendor/total/date/category/line_items/charges) tanpa regex; Vision/OCR.space + `parseReceipt()` tetap sebagai fallback bila quota habis/error/API key kosong; `geminiOcr.ts` + `parseGeminiJson()` baru, enrich keyword via fungsi rule-based `parser.ts` agar matcher CoA tetap jalan; `OcrProvider` tambah `'gemini'`; cache `ocr_scan_cache` re-parse per-provider; Section 25.2 diperbarui; sebelumnya: **Fix outstanding piutang multi-line ambil gross bukan net (Issue #26)** — `getOutstandingAmount` kini hitung net debit baris akun receivable via helper baru `getReceivableLineAmount`, bukan header `amount` (gross); settlement OTA tidak lagi overstate kas & overclear piutang; Section 14.2b + Issue #26 ditambahkan; koreksi data historis Hillside Studio (4 settlement gross→net + 1 transaksi pajak Cr Piutang→Cr Bank); **Fix tombol pelunasan hilang setelah edit transaksi multi-line (Issue #25)** — detector `isReceivableTransaction`/`isTradeReceivableTransaction`/`isPayableTransaction` mengecek cabang `is_double_entry` lebih dulu, padahal transaksi multi-line punya `is_double_entry=TRUE` + `debit_account`/`credit_account` NULL (akun ada di `journal_lines`); urutan cabang dibalik → cek `is_multi_line` dulu; Section 14.2 + Issue #25 ditambahkan; regression test `tests/unit/settlementDetection.test.ts`; sebelumnya: **Fix capital double-count di Neraca (Issue #24)** — legacy branch `calculateBalanceSheet` hanya menyuntik `capital_investment` bila ekuitas belum dibukukan dari double-entry/multi-line (`capitalAlreadyBooked`), mencegah aset & ekuitas overstated sebesar modal awal saat data legacy bercampur dengan transaksi "Modal Investasi Awal" otomatis; Section 6.1B + Issue #24 ditambahkan; sebelumnya: **Promosi double-entry → multi-line** — migr 095: `update_multi_line_transaction` kini mengizinkan upgrade transaksi double-entry sederhana menjadi multi-line via tombol "Tambah Baris" di Edit Transaction (set is_multi_line=TRUE + kosongkan debit/credit_account_id); Section 3.2 diperbarui; **AccountDropdown** kini render via portal (createPortal) agar tidak terpotong overflow modal; sebelumnya: **Statement of Changes in Equity (SCE) + Profit-Sharing & Rekonsiliasi Dividen** — migr 094 tambah kolom `profit_share_pct`, `owner_stock_account_id`, `contact_id` di `accounts`; fungsi `calculateStatementOfChangesInEquity`, hook + halaman `/statement-of-changes-in-equity`, export PDF/Excel; header "Equity (Capital)" di Neraca kini clickable ke SCE; Section 23 baru + Section 6.3 diperbarui; menjawab temuan audit MEDIUM "Tidak Ada SOCE"; sebelumnya: **Retained Earnings = auto-calculate; jurnal penutup manual DIHAPUS** — halaman `/closing-entry`, lib `closingEntry.ts`, dan link nav dihapus karena bertabrakan dengan model auto-calculate dan merusak presentasi ekuitas neraca; `calculateBalanceSheet` kini mem-filter `meta.entry_type.id === 'closing_entry'` sebagai pengaman data historis; Period Lock tetap sebagai soft-close; Section 6.4 & Issue #23 diperbarui; sebelumnya: **Template Jurnal Multi-Baris** — migr 093 kolom `journal_lines` JSONB di `transaction_templates`; "Simpan sebagai Template" & "Gunakan Template" kini tersedia di mode multi-baris Journal Entry; memuat template multi-baris mengganti semua baris (tetap editable); Section 12 diperbarui; sebelumnya: **Bank Statement Import — Phase B** — Section 25 dilengkapi dengan CSV/XLSX parser (Indonesian + English number/date format detection, dua format kolom: Debit+Kredit terpisah atau Mutasi+Type), side-by-side matching UI di `/reconciliation` dengan mode toggle Saldo vs Cocokkan Mutasi, hook `useBankTransactions`, API `/api/bank-transactions` + `/match` + `/unmatch` (auto un-reconcile transaksi ledger kalau tidak ada bank line lain ter-link); sebelumnya: **Bank Statement Import & OCR** — migr 092 + Section 25 — upload mutasi PDF/image BCA, pipeline OCR `runOcr()`, dedup hash UNIQUE(account_id, dedup_hash), 2 tabel `bank_statement_imports` + `bank_transactions`; **Invoice dari Transaksi Piutang** — migr 086 + Section 24; audit fix flag `is_trade_receivable` & `is_operating_payable` — migr 085; depresiasi fix; multi-currency — migr 079)
 
 ---
 
@@ -2947,6 +2947,84 @@ isReconciled = |sceClosingEquity - balanceSheet.equity.totalEquity| < 1
 > Dividen mendebit akun EQUITY ber-`is_dividend` (bukan `is_stock`), sehingga **tidak** ikut `totalClosingCapital` (yang hanya menjumlah akun stock via cap table) tapi **mengurangi** equity di neraca. Karena itu dikurangkan eksplisit di tie-out.
 
 **Nuansa akuntansi penting:** dividen/prive **tidak** masuk Income Statement dan **tidak** menyentuh Retained Earnings di model auto-calculate ini — ia langsung mengurangi equity di neraca. `netIncome` periode murni = revenue − expense, tidak terpengaruh besarnya dividen.
+
+---
+
+## 26. AXION Agent (AI Assistant Keuangan)
+
+> Branding UI: **AXION Agent**. FAB bulat kanan-bawah (icon Bot) di seluruh
+> halaman dashboard, menggantikan FAB Quick Entry lama (Quick Entry pindah ke
+> tombol header). Saat ini **read-only/analitik** (Opsi A); aksi tulis
+> (buat/ubah transaksi via chat) direncanakan sebagai Opsi B.
+
+### 26.1 Arsitektur
+
+```
+User (chat panel)
+  → POST /api/ai/chat (streaming SSE)
+  → buildFinancialContext() inject konteks keuangan ringkas
+  → Gemini 2.5 Flash Lite (streamGenerateContent)
+  → stream balik ke AIChatPanel
+```
+
+| Komponen | File |
+|----------|------|
+| API route (streaming) | `app/api/ai/chat/route.ts` |
+| Context builder (testable) | `src/lib/ai/financialContext.ts` |
+| Chat panel UI | `src/components/ai/AIChatPanel.tsx` |
+| FAB launcher | `src/components/ai/AIChatFAB.tsx` + dipakai via `FloatingQuickAdd.tsx` |
+| Unit test | `tests/unit/aiFinancialContext.test.ts` |
+
+**Model**: `gemini-2.5-flash-lite` (free tier RPD 500). Env: `GEMINI_API_KEY`
+(shared dengan OCR Gemini — lihat Section 25.2).
+
+### 26.2 Konteks Keuangan yang Diinject
+
+`buildFinancialContext(businessName, sector, transactions, accounts, today)`
+menghasilkan blok teks ringkas (~1-2KB, di-guard < 4KB di test) berisi:
+
+1. **Laba rugi per bulan (6 bulan terakhir)** — tiap bulan dihitung via
+   `computeSummary()`
+2. **Ringkasan all-time** — Revenue, HPP, Laba Kotor, OpEx, Depresiasi, Pajak,
+   Bunga, Laba Bersih, margin
+3. **Neraca all-time** — Total Aset/Liabilitas/Ekuitas, Kas & Bank
+4. **5 transaksi terbesar** (3 bulan terakhir)
+
+**Privasi/token**: transaksi mentah TIDAK dikirim ke Gemini — hanya hasil
+agregat. Fetch DB di server, kalkulasi di server, kirim ringkasan saja.
+
+### 26.3 Konsistensi dengan Income Statement (KRITIS)
+
+`computeSummary()` **WAJIB** mereplikasi PERSIS pipeline `useIncomeStatement`:
+
+```
+calculateFinancialSummary(txns)
+  → calculateDepreciationSummary(accounts, costMap, end, start)
+  → applyDepreciationToSummary(base, periodDepreciation)
+```
+
+**Kenapa kritis**: `calculateFinancialSummary` sendiri set `totalDepreciation = 0`
+dan `netProfit`-nya BELUM dikurangi depresiasi (lihat Section 7 & 16). Halaman
+laporan menambah langkah `applyDepreciationToSummary`; AI Agent HARUS melakukan
+hal yang sama, kalau tidak `netProfit` overstated sebesar depresiasi periode.
+
+Query transaksi di route handler memakai JOIN penuh
+(`debit_account`, `credit_account`, `journal_lines.account`) + filter
+`status IS NULL OR status = 'posted'` — identik dengan `getTransactions` +
+`useReportData`, supaya klasifikasi double-entry & angka match laporan.
+
+> **Audit trail**: bug awal AI Agent (Juni 2026) — net profit tidak kurangi
+> depresiasi (selisih persis = depresiasi periode). Diperbaiki + ditambah
+> regression test di `aiFinancialContext.test.ts`. Lihat juga Issue terkait
+> di Section 19.
+
+### 26.4 Telegram (Belum Tersambung)
+
+Bot Telegram (Section terpisah, `src/lib/telegram/`) saat ini **belum** memakai
+AXION Agent — webhook hanya route ke command atau parser transaksi. Karena
+`buildFinancialContext` sudah diekstrak ke lib, menyambungkannya tinggal
+menambah jalur baru di `handleTelegramUpdate` + panggil Gemini non-streaming
+(`generateContent`, karena Telegram tidak mendukung SSE).
 
 ---
 
