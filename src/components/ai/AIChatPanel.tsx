@@ -3,10 +3,26 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check } from 'lucide-react';
+import { X, Send, Bot, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check, Paperclip, FileSpreadsheet } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import { parseExcelFile, validateFile } from '@/lib/import/excelParser';
+import { validateRowsSmart } from '@/lib/import/excelValidator';
+import { smartResolveTransaction } from '@/lib/import/smartResolver';
+import { getAccounts } from '@/lib/api/accounts';
+import { createTransactionsBulk, type TransactionInsert } from '@/lib/api/transactions';
+import { createClient } from '@/lib/supabase';
 
 type ChatMode = 'ask' | 'record';
+
+export interface ImportPreview {
+  fileName: string;
+  totalRows: number;
+  validCount: number;
+  errorCount: number;
+  // Transaksi siap-insert (sudah di-resolve akun) — disimpan untuk eksekusi saat konfirmasi
+  ready: TransactionInsert[];
+  lowConfidenceCount: number;
+}
 
 const CATEGORY_LABEL: Record<string, string> = {
   EARN: 'Pendapatan', OPEX: 'Beban Operasional', VAR: 'HPP / Variabel',
@@ -33,6 +49,10 @@ interface Message {
   // Preview transaksi (mode record) — kalau ada, render sebagai card konfirmasi
   draft?: TransactionDraft;
   draftStatus?: 'pending' | 'saving' | 'saved' | 'cancelled';
+  // Preview import file (mode record + attach file)
+  importPreview?: ImportPreview;
+  importStatus?: 'pending' | 'importing' | 'done' | 'cancelled';
+  importResult?: { inserted: number; failed: number };
 }
 
 interface AIChatPanelProps {
@@ -56,6 +76,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
   const [mode, setMode] = useState<ChatMode>('ask');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -266,6 +287,145 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
     else sendMessage(text);
   }, [mode, recordTransaction, sendMessage]);
 
+  // Attach file XLS/CSV → parse client-side → resolve akun → preview import.
+  // Parsing & resolve pakai engine import yang sama dgn halaman /transactions
+  // (parseExcelFile + validateRowsSmart + smartResolveTransaction). Tidak butuh
+  // AI untuk jalan; AI hanya enhancement opsional (belum dipakai di sini).
+  const handleFile = useCallback(async (file: File) => {
+    if (loading) return;
+
+    const fileErr = validateFile(file);
+    setMessages(prev => [...prev, { role: 'user', content: `📎 ${file.name}` }]);
+    if (fileErr) {
+      setMessages(prev => [...prev, { role: 'assistant', content: `⚠️ ${fileErr}` }]);
+      return;
+    }
+
+    setLoading(true);
+    setMessages(prev => [...prev, { role: 'assistant', content: '', streaming: true }]);
+
+    try {
+      const accounts = await getAccounts(businessId);
+      const accByCode = new Map(accounts.map(a => [a.account_code, a]));
+      const rows = await parseExcelFile(file);
+      const validation = validateRowsSmart(rows);
+
+      const today = new Date().toISOString().split('T')[0];
+      let lowConfidenceCount = 0;
+      const ready: TransactionInsert[] = [];
+
+      for (const vr of validation.validRows) {
+        const r = vr.data;
+        const categoryHint = String(r.category || '').trim() || undefined;
+        const resolved = smartResolveTransaction(r.description || r.name, accounts, categoryHint);
+        if (resolved.confidence === 'low') lowConfidenceCount++;
+
+        const debit = accByCode.get(resolved.debit_account_code);
+        const credit = accByCode.get(resolved.credit_account_code);
+        if (!debit || !credit || debit.id === credit.id) continue; // skip kalau akun tak resolve
+
+        const amountNum = typeof r.amount === 'number' ? r.amount : parseFloat(String(r.amount).replace(/[^\d.-]/g, ''));
+        if (!Number.isFinite(amountNum) || amountNum <= 0) continue;
+
+        ready.push({
+          business_id: businessId,
+          date: r.date || today,
+          category: resolved.category,
+          name: resolved.name || r.name || r.description,
+          description: r.description || '',
+          amount: amountNum,
+          account: '',
+          created_by: '', // diisi server dari session
+          debit_account_id: debit.id,
+          credit_account_id: credit.id,
+          is_double_entry: true,
+          status: 'posted',
+        });
+      }
+
+      const preview: ImportPreview = {
+        fileName: file.name,
+        totalRows: validation.totalRows,
+        validCount: validation.validCount,
+        errorCount: validation.errorCount,
+        ready,
+        lowConfidenceCount,
+      };
+
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: 'assistant',
+          content: ready.length > 0
+            ? `Aku menemukan ${ready.length} transaksi siap-impor dari file. Cek ringkasannya:`
+            : 'Tidak ada baris yang bisa diimpor dari file ini. Pastikan ada kolom tanggal, deskripsi, dan jumlah.',
+          importPreview: ready.length > 0 ? preview : undefined,
+          importStatus: ready.length > 0 ? 'pending' : undefined,
+        };
+        return updated;
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Gagal membaca file';
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { role: 'assistant', content: `⚠️ ${msg}` };
+        return updated;
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, businessId]);
+
+  const runImport = useCallback(async (msgIndex: number) => {
+    const msg = messages[msgIndex];
+    if (!msg?.importPreview || msg.importStatus !== 'pending') return;
+    const preview = msg.importPreview;
+
+    // Isi created_by dari user session sekarang
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ Sesi habis, silakan login ulang.' }]);
+      return;
+    }
+    const toInsert = preview.ready.map(t => ({ ...t, created_by: user.id }));
+
+    setMessages(prev => {
+      const updated = [...prev];
+      updated[msgIndex] = { ...updated[msgIndex], importStatus: 'importing' };
+      return updated;
+    });
+
+    try {
+      const result = await createTransactionsBulk(toInsert);
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[msgIndex] = {
+          ...updated[msgIndex],
+          importStatus: 'done',
+          importResult: { inserted: result.inserted, failed: result.failed },
+        };
+        return updated;
+      });
+      window.dispatchEvent(new Event('transaction-saved'));
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Gagal impor';
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[msgIndex] = { ...updated[msgIndex], importStatus: 'pending' };
+        return [...updated, { role: 'assistant', content: `⚠️ ${errMsg}` }];
+      });
+    }
+  }, [messages]);
+
+  const cancelImport = useCallback((msgIndex: number) => {
+    setMessages(prev => {
+      const updated = [...prev];
+      updated[msgIndex] = { ...updated[msgIndex], importStatus: 'cancelled' };
+      return updated;
+    });
+  }, []);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -348,6 +508,8 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                     message={msg}
                     onSaveDraft={() => saveDraft(i)}
                     onCancelDraft={() => cancelDraft(i)}
+                    onRunImport={() => runImport(i)}
+                    onCancelImport={() => cancelImport(i)}
                   />
                 ))
               )}
@@ -380,12 +542,36 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                 </button>
               </div>
               <div className="flex items-end gap-2">
+                {/* Tombol attach file (hanya mode Catat) */}
+                {mode === 'record' && (
+                  <>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".xlsx,.xls,.csv"
+                      className="hidden"
+                      onChange={e => {
+                        const f = e.target.files?.[0];
+                        e.target.value = '';
+                        if (f) handleFile(f);
+                      }}
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={loading}
+                      title="Impor file Excel/CSV"
+                      className="shrink-0 w-9 h-9 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-primary-500 dark:hover:text-primary-400 hover:border-primary-300 dark:hover:border-primary-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all"
+                    >
+                      <Paperclip className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
                 <textarea
                   ref={inputRef}
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={mode === 'record' ? 'Mis. "bayar listrik 500rb"...' : 'Tanya soal keuangan bisnismu...'}
+                  placeholder={mode === 'record' ? 'Ketik transaksi atau lampirkan file...' : 'Tanya soal keuangan bisnismu...'}
                   rows={1}
                   disabled={loading}
                   className="flex-1 resize-none rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-[13px] px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-400 dark:focus:border-primary-500 transition-all max-h-32 disabled:opacity-50"
@@ -409,7 +595,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                 </button>
               </div>
               <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1.5 text-center">
-                {mode === 'record' ? 'Ketik transaksi, AXION bantu catat' : 'Enter kirim · Shift+Enter baris baru'}
+                {mode === 'record' ? 'Ketik transaksi atau lampirkan Excel/CSV' : 'Enter kirim · Shift+Enter baris baru'}
               </p>
             </div>
           </motion.div>
@@ -472,10 +658,14 @@ function ChatBubble({
   message,
   onSaveDraft,
   onCancelDraft,
+  onRunImport,
+  onCancelImport,
 }: {
   message: Message;
   onSaveDraft: () => void;
   onCancelDraft: () => void;
+  onRunImport: () => void;
+  onCancelImport: () => void;
 }) {
   const isUser = message.role === 'user';
   return (
@@ -507,6 +697,15 @@ function ChatBubble({
                 status={message.draftStatus ?? 'pending'}
                 onSave={onSaveDraft}
                 onCancel={onCancelDraft}
+              />
+            )}
+            {message.importPreview && (
+              <ImportPreviewCard
+                preview={message.importPreview}
+                status={message.importStatus ?? 'pending'}
+                result={message.importResult}
+                onImport={onRunImport}
+                onCancel={onCancelImport}
               />
             )}
           </>
@@ -574,6 +773,82 @@ function DraftCard({
       {status === 'saved' && (
         <div className="flex items-center justify-center gap-1.5 py-2 text-[12px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50/60 dark:bg-emerald-900/15 border-t border-emerald-100 dark:border-emerald-900/30">
           <Check className="w-3.5 h-3.5" /> Tersimpan
+        </div>
+      )}
+      {status === 'cancelled' && (
+        <div className="flex items-center justify-center py-2 text-[12px] text-gray-400 dark:text-gray-500 border-t border-gray-100 dark:border-gray-700">
+          Dibatalkan
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ImportPreviewCard({
+  preview,
+  status,
+  result,
+  onImport,
+  onCancel,
+}: {
+  preview: ImportPreview;
+  status: 'pending' | 'importing' | 'done' | 'cancelled';
+  result?: { inserted: number; failed: number };
+  onImport: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="mt-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
+      <div className="px-3 py-2.5">
+        <div className="flex items-center gap-2 mb-2">
+          <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span className="font-semibold text-gray-900 dark:text-gray-50 text-[12px] truncate">{preview.fileName}</span>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-lg bg-emerald-50/70 dark:bg-emerald-900/15 py-1.5">
+            <div className="text-[15px] font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{preview.ready.length}</div>
+            <div className="text-[9px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Siap</div>
+          </div>
+          <div className="rounded-lg bg-gray-50 dark:bg-gray-800 py-1.5">
+            <div className="text-[15px] font-bold text-gray-700 dark:text-gray-300 tabular-nums">{preview.totalRows}</div>
+            <div className="text-[9px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Total</div>
+          </div>
+          <div className="rounded-lg bg-amber-50/70 dark:bg-amber-900/15 py-1.5">
+            <div className="text-[15px] font-bold text-amber-600 dark:text-amber-400 tabular-nums">{preview.errorCount}</div>
+            <div className="text-[9px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Error</div>
+          </div>
+        </div>
+        {preview.lowConfidenceCount > 0 && status === 'pending' && (
+          <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-2 leading-snug">
+            {preview.lowConfidenceCount} baris kategori/akun ditebak otomatis — cek setelah impor.
+          </p>
+        )}
+      </div>
+      {status === 'pending' && (
+        <div className="flex border-t border-gray-100 dark:border-gray-700">
+          <button
+            onClick={onImport}
+            className="flex-1 inline-flex items-center justify-center gap-1 py-2 text-[12px] font-semibold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+          >
+            <Check className="w-3.5 h-3.5" /> Impor {preview.ready.length} transaksi
+          </button>
+          <div className="w-px bg-gray-100 dark:bg-gray-700" />
+          <button
+            onClick={onCancel}
+            className="inline-flex items-center justify-center gap-1 px-4 py-2 text-[12px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+      {status === 'importing' && (
+        <div className="flex items-center justify-center gap-1.5 py-2 text-[12px] text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Mengimpor...
+        </div>
+      )}
+      {status === 'done' && result && (
+        <div className="flex items-center justify-center gap-1.5 py-2 text-[12px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50/60 dark:bg-emerald-900/15 border-t border-emerald-100 dark:border-emerald-900/30">
+          <Check className="w-3.5 h-3.5" /> {result.inserted} tersimpan{result.failed > 0 ? `, ${result.failed} gagal` : ''}
         </div>
       )}
       {status === 'cancelled' && (
