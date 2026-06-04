@@ -7,6 +7,7 @@ import {
   calculateBalanceSheet,
   filterTransactionsByDateRange,
 } from '@/lib/calculations';
+import type { Transaction } from '@/types';
 
 const bodySchema = z.object({
   business_id: z.string().uuid(),
@@ -49,79 +50,86 @@ function formatIDR(amount: number): string {
   return 'Rp ' + new Intl.NumberFormat('id-ID').format(Math.round(amount));
 }
 
+const MONTH_NAMES_ID = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
+
+/**
+ * Income statement proper untuk satu rentang tanggal — pakai engine yang SAMA
+ * dengan halaman laporan (calculateFinancialSummary baca debit/credit account_type
+ * + journal_lines), bukan jumlah `amount` mentah per kategori.
+ */
+function monthlyIncomeStatement(transactions: Transaction[], month: string): string {
+  const start = `${month}-01`;
+  const [y, m] = month.split('-').map(Number);
+  const end = new Date(y, m, 0).toISOString().split('T')[0]; // last day of month
+  const inMonth = filterTransactionsByDateRange(transactions, start, end);
+  if (inMonth.length === 0) return '';
+
+  const summary = calculateFinancialSummary(inMonth);
+  const metrics = calculateIncomeStatementMetrics(summary);
+  const label = `${MONTH_NAMES_ID[m - 1]} ${y}`;
+
+  return `  ${label}: Revenue ${formatIDR(summary.totalEarn)} | HPP ${formatIDR(summary.totalVar)} | Laba Kotor ${formatIDR(summary.grossProfit)} | OpEx ${formatIDR(summary.totalOpex)} | Depresiasi ${formatIDR(summary.totalDepreciation)} | Pajak ${formatIDR(summary.totalTax)} | Bunga ${formatIDR(summary.totalInterest)} | Laba Bersih ${formatIDR(summary.netProfit)} (margin ${metrics.netMargin.toFixed(1)}%)`;
+}
+
 function buildFinancialContext(
   businessName: string,
   businessSector: string,
-  transactions: Array<{
-    id: string;
-    date: string;
-    name: string;
-    description: string;
-    amount: number;
-    category: string;
-  }>,
+  transactions: Transaction[],
   today: Date
 ): string {
   if (transactions.length === 0) {
     return `BISNIS: ${businessName} (${businessSector})\nBelum ada data transaksi.`;
   }
 
-  // 3 bulan terakhir
-  const threeMonthsAgo = new Date(today);
-  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-  const startDate = threeMonthsAgo.toISOString().split('T')[0];
   const endDate = today.toISOString().split('T')[0];
+  const allSummary = calculateFinancialSummary(transactions);
+  const allMetrics = calculateIncomeStatementMetrics(allSummary);
+  const balanceSheet = calculateBalanceSheet(transactions, allSummary.totalFin);
 
-  const recent = filterTransactionsByDateRange(transactions as never, startDate, endDate);
-  const allSummary = calculateFinancialSummary(transactions as never);
-  const recentSummary = calculateFinancialSummary(recent as never);
-  const recentMetrics = calculateIncomeStatementMetrics(recentSummary);
-  const balanceSheet = calculateBalanceSheet(transactions as never, allSummary.totalFin);
-  const grossProfit = recentSummary.totalEarn - recentSummary.totalVar;
-  const netProfit = recentSummary.netProfit;
-
-  // Group recent transactions by month
-  const byMonth: Record<string, { earn: number; opex: number; var: number; tax: number; fin: number; capex: number }> = {};
-  for (const tx of recent) {
-    const month = tx.date.slice(0, 7);
-    if (!byMonth[month]) byMonth[month] = { earn: 0, opex: 0, var: 0, tax: 0, fin: 0, capex: 0 };
-    const cat = tx.category.toLowerCase() as keyof typeof byMonth[string];
-    if (cat in byMonth[month]) byMonth[month][cat] += tx.amount;
+  // P&L proper per-bulan untuk 6 bulan terakhir (termasuk bulan berjalan).
+  // Tiap bulan dihitung pakai calculateFinancialSummary — konsisten dgn Income Statement.
+  const monthKeys: string[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    monthKeys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
   }
-
-  const monthRows = Object.entries(byMonth)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([month, d]) => {
-      const profit = d.earn - d.opex - d.var - d.tax;
-      return `  ${month}: Revenue ${formatIDR(d.earn)}, Beban ${formatIDR(d.opex + d.var + d.tax)}, Profit ${formatIDR(profit)}`;
-    })
+  const monthRows = monthKeys
+    .map((mk) => monthlyIncomeStatement(transactions, mk))
+    .filter(Boolean)
     .join('\n');
 
-  // Top 5 recent transactions
+  // Top 5 transaksi terbesar 3 bulan terakhir (untuk konteks "apa yang besar")
+  const threeMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 3, 1)
+    .toISOString().split('T')[0];
+  const recent = filterTransactionsByDateRange(transactions, threeMonthsAgo, endDate);
   const topTx = [...recent]
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5)
-    .map(tx => `  - ${tx.date} | ${tx.name} | ${tx.category} | ${formatIDR(tx.amount)}`)
+    .map((tx) => `  - ${tx.date} | ${tx.name} | ${tx.category} | ${formatIDR(tx.amount)}`)
     .join('\n');
 
   return `=== KONTEKS KEUANGAN BISNIS ===
 Bisnis: ${businessName}
 Sektor: ${businessSector}
 Tanggal hari ini: ${endDate}
-Total transaksi (all-time): ${transactions.length}
+Total transaksi posted (all-time): ${transactions.length}
 
---- RINGKASAN 3 BULAN TERAKHIR (${startDate} s/d ${endDate}) ---
-Revenue: ${formatIDR(recentSummary.totalEarn)}
-HPP/Variabel: ${formatIDR(recentSummary.totalVar)}
-Beban Operasional: ${formatIDR(recentSummary.totalOpex)}
-Pajak: ${formatIDR(recentSummary.totalTax)}
-Laba Kotor: ${formatIDR(grossProfit)}
-Laba Bersih: ${formatIDR(netProfit)}
-Gross Margin: ${recentMetrics.grossMargin.toFixed(1)}%
-Net Margin: ${recentMetrics.netMargin.toFixed(1)}%
+--- LABA RUGI PER BULAN (6 bulan terakhir, akurat sesuai halaman Income Statement) ---
+${monthRows || '  (belum ada data di rentang ini)'}
 
---- TREN BULANAN ---
-${monthRows || '  (belum ada data)'}
+--- RINGKASAN ALL-TIME ---
+Revenue: ${formatIDR(allSummary.totalEarn)}
+HPP/Variabel: ${formatIDR(allSummary.totalVar)}
+Laba Kotor: ${formatIDR(allSummary.grossProfit)}
+Beban Operasional: ${formatIDR(allSummary.totalOpex)}
+Depresiasi: ${formatIDR(allSummary.totalDepreciation)}
+Pajak: ${formatIDR(allSummary.totalTax)}
+Bunga: ${formatIDR(allSummary.totalInterest)}
+Laba Bersih: ${formatIDR(allSummary.netProfit)}
+Gross Margin: ${allMetrics.grossMargin.toFixed(1)}% | Net Margin: ${allMetrics.netMargin.toFixed(1)}%
 
 --- NERACA (all-time) ---
 Total Aset: ${formatIDR(balanceSheet.assets.totalAssets)}
@@ -131,6 +139,10 @@ Kas & Bank: ${formatIDR(balanceSheet.assets.cash)}
 
 --- 5 TRANSAKSI TERBESAR (3 bulan terakhir) ---
 ${topTx || '  (belum ada data)'}
+
+CATATAN: Semua angka laba rugi per bulan SUDAH dihitung dengan engine double-entry
+yang sama persis dengan halaman Income Statement. Gunakan angka per-bulan di atas
+untuk pertanyaan spesifik bulan tertentu — JANGAN mengira-ngira atau membagi rata.
 === END KONTEKS ===`;
 }
 
@@ -167,20 +179,28 @@ export async function POST(req: NextRequest) {
     .eq('id', business_id)
     .single();
 
-  // Fetch semua transaksi posted (termasuk null status = transaksi lama dianggap posted)
-  // Konsisten dengan filter di useReportData: !t.status || t.status === 'posted'
+  // Fetch transaksi dengan relasi account + journal_lines — WAJIB karena
+  // calculateFinancialSummary mengklasifikasi via account_type (debit/credit/journal line),
+  // bukan dari field `category` mentah. Tanpa join ini angka P&L salah total.
+  // Filter posted (null status = transaksi lama dianggap posted, konsisten useReportData).
   const { data: transactions } = await supabase
-    .from('active_transactions')
-    .select('id, date, name, description, amount, category, debit_account_id, credit_account_id, is_double_entry, meta, account, notes, status')
+    .from('transactions')
+    .select(`
+      *,
+      debit_account:accounts!transactions_debit_account_id_fkey(*),
+      credit_account:accounts!transactions_credit_account_id_fkey(*),
+      journal_lines(*, account:accounts(*))
+    `)
     .eq('business_id', business_id)
+    .is('deleted_at', null)
     .or('status.is.null,status.eq.posted')
     .order('date', { ascending: false })
-    .limit(2000);
+    .limit(3000);
 
   const financialContext = buildFinancialContext(
     business?.business_name ?? 'Bisnis',
     business?.business_sector ?? '',
-    (transactions ?? []) as never,
+    (transactions ?? []) as unknown as Transaction[],
     new Date()
   );
 
