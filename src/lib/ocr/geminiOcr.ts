@@ -6,7 +6,7 @@ import {
   extractLineItemKeywords,
 } from './parser';
 
-const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent';
+const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
 
 type GeminiResponse = {
   candidates?: Array<{
