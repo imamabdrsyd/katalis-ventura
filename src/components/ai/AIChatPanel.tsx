@@ -3,12 +3,36 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, User, Loader2, RotateCcw } from 'lucide-react';
+import { X, Send, Bot, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check } from 'lucide-react';
+import { formatCurrency } from '@/lib/utils';
+
+type ChatMode = 'ask' | 'record';
+
+const CATEGORY_LABEL: Record<string, string> = {
+  EARN: 'Pendapatan', OPEX: 'Beban Operasional', VAR: 'HPP / Variabel',
+  CAPEX: 'Belanja Modal', TAX: 'Pajak', FIN: 'Pembiayaan',
+};
+
+export interface TransactionDraft {
+  name: string;
+  amount: number;
+  date: string;
+  category: string;
+  description: string;
+  debit_account_id: string;
+  credit_account_id: string;
+  debit_account_code: string;
+  credit_account_code: string;
+  confidence: 'high' | 'medium' | 'low';
+}
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   streaming?: boolean;
+  // Preview transaksi (mode record) — kalau ada, render sebagai card konfirmasi
+  draft?: TransactionDraft;
+  draftStatus?: 'pending' | 'saving' | 'saved' | 'cancelled';
 }
 
 interface AIChatPanelProps {
@@ -29,6 +53,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<ChatMode>('ask');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -136,10 +161,115 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
     }
   }, [messages, loading, businessId]);
 
+  // Mode "record": parse teks → tampilkan preview draft transaksi (belum disimpan)
+  const recordTransaction = useCallback(async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed || loading) return;
+
+    setMessages(prev => [...prev, { role: 'user', content: trimmed }]);
+    setInput('');
+    setLoading(true);
+    setMessages(prev => [...prev, { role: 'assistant', content: '', streaming: true }]);
+
+    try {
+      const res = await fetch('/api/ai/parse-transaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business_id: businessId, text: trimmed }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Gagal memproses transaksi');
+
+      const draft = json.data as TransactionDraft;
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: 'assistant',
+          content: 'Cek dulu detail transaksinya, lalu simpan kalau sudah benar:',
+          draft,
+          draftStatus: 'pending',
+        };
+        return updated;
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan';
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { role: 'assistant', content: `⚠️ ${msg}` };
+        return updated;
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, businessId]);
+
+  // Simpan draft transaksi ke API (setelah user konfirmasi di preview card)
+  const saveDraft = useCallback(async (msgIndex: number) => {
+    const msg = messages[msgIndex];
+    if (!msg?.draft || msg.draftStatus === 'saving' || msg.draftStatus === 'saved') return;
+    const draft = msg.draft;
+
+    setMessages(prev => {
+      const updated = [...prev];
+      updated[msgIndex] = { ...updated[msgIndex], draftStatus: 'saving' };
+      return updated;
+    });
+
+    try {
+      const res = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          business_id: businessId,
+          date: draft.date,
+          category: draft.category,
+          name: draft.name,
+          description: draft.description,
+          amount: draft.amount,
+          debit_account_id: draft.debit_account_id,
+          credit_account_id: draft.credit_account_id,
+          is_double_entry: true,
+          status: 'posted',
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Gagal menyimpan transaksi');
+
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[msgIndex] = { ...updated[msgIndex], draftStatus: 'saved' };
+        return updated;
+      });
+      // Beri tahu halaman lain (transactions, dashboard) untuk refresh
+      window.dispatchEvent(new Event('transaction-saved'));
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Gagal menyimpan';
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[msgIndex] = { ...updated[msgIndex], draftStatus: 'pending' };
+        return [...updated, { role: 'assistant', content: `⚠️ ${errMsg}` }];
+      });
+    }
+  }, [messages, businessId]);
+
+  const cancelDraft = useCallback((msgIndex: number) => {
+    setMessages(prev => {
+      const updated = [...prev];
+      updated[msgIndex] = { ...updated[msgIndex], draftStatus: 'cancelled' };
+      return updated;
+    });
+  }, []);
+
+  // Router: kirim sesuai mode aktif
+  const handleSend = useCallback((text: string) => {
+    if (mode === 'record') recordTransaction(text);
+    else sendMessage(text);
+  }, [mode, recordTransaction, sendMessage]);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage(input);
+      handleSend(input);
     }
   };
 
@@ -210,10 +340,15 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4 min-h-0">
               {messages.length === 0 ? (
-                <EmptyState onSuggest={sendMessage} />
+                <EmptyState mode={mode} onSuggest={handleSend} />
               ) : (
                 messages.map((msg, i) => (
-                  <ChatBubble key={i} message={msg} />
+                  <ChatBubble
+                    key={i}
+                    message={msg}
+                    onSaveDraft={() => saveDraft(i)}
+                    onCancelDraft={() => cancelDraft(i)}
+                  />
                 ))
               )}
               <div ref={messagesEndRef} />
@@ -221,13 +356,36 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
 
             {/* Input */}
             <div className="px-3 py-3 border-t border-gray-100 dark:border-gray-800 shrink-0">
+              {/* Mode toggle: Tanya (analitik) vs Catat (input transaksi) */}
+              <div className="flex items-center gap-1 mb-2 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-full w-fit">
+                <button
+                  onClick={() => setMode('ask')}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
+                    mode === 'ask'
+                      ? 'bg-white dark:bg-gray-600 text-primary-500 dark:text-primary-400 shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}
+                >
+                  <MessageSquare className="w-3 h-3" /> Tanya
+                </button>
+                <button
+                  onClick={() => setMode('record')}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
+                    mode === 'record'
+                      ? 'bg-white dark:bg-gray-600 text-primary-500 dark:text-primary-400 shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}
+                >
+                  <PlusCircle className="w-3 h-3" /> Catat
+                </button>
+              </div>
               <div className="flex items-end gap-2">
                 <textarea
                   ref={inputRef}
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Tanya soal keuangan bisnismu..."
+                  placeholder={mode === 'record' ? 'Mis. "bayar listrik 500rb"...' : 'Tanya soal keuangan bisnismu...'}
                   rows={1}
                   disabled={loading}
                   className="flex-1 resize-none rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-[13px] px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-400 dark:focus:border-primary-500 transition-all max-h-32 disabled:opacity-50"
@@ -239,7 +397,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                   }}
                 />
                 <button
-                  onClick={() => sendMessage(input)}
+                  onClick={() => handleSend(input)}
                   disabled={!input.trim() || loading}
                   className="shrink-0 w-9 h-9 rounded-xl bg-primary-500 hover:bg-primary-600 active:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed text-white flex items-center justify-center transition-all"
                 >
@@ -251,7 +409,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                 </button>
               </div>
               <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1.5 text-center">
-                Enter kirim · Shift+Enter baris baru
+                {mode === 'record' ? 'Ketik transaksi, AXION bantu catat' : 'Enter kirim · Shift+Enter baris baru'}
               </p>
             </div>
           </motion.div>
@@ -261,7 +419,8 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
   );
 }
 
-function EmptyState({ onSuggest }: { onSuggest: (q: string) => void }) {
+function EmptyState({ mode, onSuggest }: { mode: ChatMode; onSuggest: (q: string) => void }) {
+  const isRecord = mode === 'record';
   return (
     <div className="flex flex-col items-center justify-center h-full gap-4 py-4">
       <div className="w-14 h-14 rounded-2xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
@@ -270,28 +429,54 @@ function EmptyState({ onSuggest }: { onSuggest: (q: string) => void }) {
       <div className="text-center">
         <p className="text-[13px] font-semibold text-gray-800 dark:text-gray-100">Hi! I&apos;m AXION Agent</p>
         <p className="text-[12px] text-gray-500 dark:text-gray-400 mt-1">
-          Tanya apa saja tentang keuangan bisnismu
+          {isRecord ? 'Ketik transaksi, aku bantu catat ke pembukuan' : 'Tanya apa saja tentang keuangan bisnismu'}
         </p>
       </div>
-      <div className="w-full space-y-1.5">
-        <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 text-center mb-2">
-          Coba tanya ini
-        </p>
-        {SUGGESTED_QUESTIONS.map((q) => (
-          <button
-            key={q}
-            onClick={() => onSuggest(q)}
-            className="w-full text-left px-3 py-2 rounded-xl text-[12px] text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400 border border-gray-100 dark:border-gray-700 hover:border-primary-200 dark:hover:border-primary-800 transition-all"
-          >
-            {q}
-          </button>
-        ))}
-      </div>
+      {!isRecord && (
+        <div className="w-full space-y-1.5">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 text-center mb-2">
+            Coba tanya ini
+          </p>
+          {SUGGESTED_QUESTIONS.map((q) => (
+            <button
+              key={q}
+              onClick={() => onSuggest(q)}
+              className="w-full text-left px-3 py-2 rounded-xl text-[12px] text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400 border border-gray-100 dark:border-gray-700 hover:border-primary-200 dark:hover:border-primary-800 transition-all"
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
+      {isRecord && (
+        <div className="w-full space-y-1.5">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 text-center mb-2">
+            Contoh
+          </p>
+          {['bayar listrik 500rb', 'jual kopi ke Budi 2.5jt', 'beli bahan baku 750.000'].map((q) => (
+            <button
+              key={q}
+              onClick={() => onSuggest(q)}
+              className="w-full text-left px-3 py-2 rounded-xl text-[12px] text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400 border border-gray-100 dark:border-gray-700 hover:border-primary-200 dark:hover:border-primary-800 transition-all"
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function ChatBubble({ message }: { message: Message }) {
+function ChatBubble({
+  message,
+  onSaveDraft,
+  onCancelDraft,
+}: {
+  message: Message;
+  onSaveDraft: () => void;
+  onCancelDraft: () => void;
+}) {
   const isUser = message.role === 'user';
   return (
     <div className={`flex gap-2.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -302,7 +487,7 @@ function ChatBubble({ message }: { message: Message }) {
       }`}>
         {isUser ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
       </div>
-      <div className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
+      <div className={`max-w-[82%] min-w-0 rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
         isUser
           ? 'bg-primary-500 text-white rounded-tr-sm'
           : 'bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-tl-sm border border-gray-100 dark:border-gray-700'
@@ -314,9 +499,88 @@ function ChatBubble({ message }: { message: Message }) {
             <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
           </span>
         ) : (
-          <MarkdownText text={message.content} isUser={isUser} />
+          <>
+            <MarkdownText text={message.content} isUser={isUser} />
+            {message.draft && (
+              <DraftCard
+                draft={message.draft}
+                status={message.draftStatus ?? 'pending'}
+                onSave={onSaveDraft}
+                onCancel={onCancelDraft}
+              />
+            )}
+          </>
         )}
       </div>
+    </div>
+  );
+}
+
+function DraftCard({
+  draft,
+  status,
+  onSave,
+  onCancel,
+}: {
+  draft: TransactionDraft;
+  status: 'pending' | 'saving' | 'saved' | 'cancelled';
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="mt-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
+      <div className="px-3 py-2.5 space-y-1.5">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="font-semibold text-gray-900 dark:text-gray-50 text-[13px] truncate">{draft.name}</span>
+          <span className="font-bold text-gray-900 dark:text-gray-50 text-[13px] tabular-nums shrink-0">
+            {formatCurrency(draft.amount, 'IDR')}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-medium">
+            {CATEGORY_LABEL[draft.category] ?? draft.category}
+          </span>
+          <span className="text-gray-400 dark:text-gray-500">{draft.date}</span>
+          {draft.confidence === 'low' && (
+            <span className="text-amber-600 dark:text-amber-400">· perlu dicek</span>
+          )}
+        </div>
+        <div className="text-[10px] text-gray-400 dark:text-gray-500 tabular-nums">
+          Dr {draft.debit_account_code} · Cr {draft.credit_account_code}
+        </div>
+      </div>
+      {status === 'pending' && (
+        <div className="flex border-t border-gray-100 dark:border-gray-700">
+          <button
+            onClick={onSave}
+            className="flex-1 inline-flex items-center justify-center gap-1 py-2 text-[12px] font-semibold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+          >
+            <Check className="w-3.5 h-3.5" /> Simpan
+          </button>
+          <div className="w-px bg-gray-100 dark:bg-gray-700" />
+          <button
+            onClick={onCancel}
+            className="flex-1 inline-flex items-center justify-center gap-1 py-2 text-[12px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            <X className="w-3.5 h-3.5" /> Batal
+          </button>
+        </div>
+      )}
+      {status === 'saving' && (
+        <div className="flex items-center justify-center gap-1.5 py-2 text-[12px] text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Menyimpan...
+        </div>
+      )}
+      {status === 'saved' && (
+        <div className="flex items-center justify-center gap-1.5 py-2 text-[12px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50/60 dark:bg-emerald-900/15 border-t border-emerald-100 dark:border-emerald-900/30">
+          <Check className="w-3.5 h-3.5" /> Tersimpan
+        </div>
+      )}
+      {status === 'cancelled' && (
+        <div className="flex items-center justify-center py-2 text-[12px] text-gray-400 dark:text-gray-500 border-t border-gray-100 dark:border-gray-700">
+          Dibatalkan
+        </div>
+      )}
     </div>
   );
 }
