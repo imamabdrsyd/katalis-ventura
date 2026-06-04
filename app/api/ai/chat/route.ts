@@ -5,9 +5,12 @@ import {
   calculateFinancialSummary,
   calculateIncomeStatementMetrics,
   calculateBalanceSheet,
+  applyDepreciationToSummary,
+  buildFixedAssetCostMap,
   filterTransactionsByDateRange,
 } from '@/lib/calculations';
-import type { Transaction } from '@/types';
+import { calculateDepreciationSummary } from '@/lib/accounting/depreciation';
+import type { Transaction, Account, FinancialSummary } from '@/types';
 
 const bodySchema = z.object({
   business_id: z.string().uuid(),
@@ -56,18 +59,49 @@ const MONTH_NAMES_ID = [
 ];
 
 /**
- * Income statement proper untuk satu rentang tanggal — pakai engine yang SAMA
- * dengan halaman laporan (calculateFinancialSummary baca debit/credit account_type
- * + journal_lines), bukan jumlah `amount` mentah per kategori.
+ * Hitung FinancialSummary lengkap dengan depresiasi periode — replikasi PERSIS
+ * langkah useIncomeStatement: calculateFinancialSummary → calculateDepreciationSummary
+ * (pakai fixed asset cost map kumulatif dari SEMUA transaksi) → applyDepreciationToSummary.
+ *
+ * Tanpa langkah ini, netProfit tidak mengurangi depresiasi → tidak match halaman laporan.
  */
-function monthlyIncomeStatement(transactions: Transaction[], month: string): string {
+function computeSummary(
+  rangeTransactions: Transaction[],
+  allTransactions: Transaction[],
+  accounts: Account[],
+  startDate: string,
+  endDate: string
+): FinancialSummary {
+  const base = calculateFinancialSummary(rangeTransactions);
+  if (accounts.length === 0) return base;
+
+  // Cost map kumulatif dari SEMUA transaksi (cost aset bersifat akumulatif)
+  const fixedAssetCosts = buildFixedAssetCostMap(allTransactions);
+  const depSummary = calculateDepreciationSummary(
+    accounts,
+    (accountId) => fixedAssetCosts.get(accountId) ?? 0,
+    new Date(endDate),
+    new Date(startDate)
+  );
+  return applyDepreciationToSummary(base, depSummary.periodDepreciation);
+}
+
+/**
+ * Income statement proper untuk satu bulan — pakai engine yang SAMA dengan
+ * halaman laporan (double-entry + depresiasi periode), bukan SUM(amount) mentah.
+ */
+function monthlyIncomeStatement(
+  allTransactions: Transaction[],
+  accounts: Account[],
+  month: string
+): string {
   const start = `${month}-01`;
   const [y, m] = month.split('-').map(Number);
   const end = new Date(y, m, 0).toISOString().split('T')[0]; // last day of month
-  const inMonth = filterTransactionsByDateRange(transactions, start, end);
+  const inMonth = filterTransactionsByDateRange(allTransactions, start, end);
   if (inMonth.length === 0) return '';
 
-  const summary = calculateFinancialSummary(inMonth);
+  const summary = computeSummary(inMonth, allTransactions, accounts, start, end);
   const metrics = calculateIncomeStatementMetrics(summary);
   const label = `${MONTH_NAMES_ID[m - 1]} ${y}`;
 
@@ -78,6 +112,7 @@ function buildFinancialContext(
   businessName: string,
   businessSector: string,
   transactions: Transaction[],
+  accounts: Account[],
   today: Date
 ): string {
   if (transactions.length === 0) {
@@ -85,19 +120,23 @@ function buildFinancialContext(
   }
 
   const endDate = today.toISOString().split('T')[0];
-  const allSummary = calculateFinancialSummary(transactions);
+  // All-time summary: depresiasi dihitung dari awal data sampai hari ini.
+  const firstDate = transactions
+    .map((t) => t.date)
+    .reduce((min, d) => (d < min ? d : min), endDate);
+  const allSummary = computeSummary(transactions, transactions, accounts, firstDate, endDate);
   const allMetrics = calculateIncomeStatementMetrics(allSummary);
   const balanceSheet = calculateBalanceSheet(transactions, allSummary.totalFin);
 
   // P&L proper per-bulan untuk 6 bulan terakhir (termasuk bulan berjalan).
-  // Tiap bulan dihitung pakai calculateFinancialSummary — konsisten dgn Income Statement.
+  // Tiap bulan pakai engine + depresiasi yang sama dgn halaman Income Statement.
   const monthKeys: string[] = [];
   for (let i = 5; i >= 0; i--) {
     const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
     monthKeys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
   }
   const monthRows = monthKeys
-    .map((mk) => monthlyIncomeStatement(transactions, mk))
+    .map((mk) => monthlyIncomeStatement(transactions, accounts, mk))
     .filter(Boolean)
     .join('\n');
 
@@ -172,35 +211,42 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  // Fetch business info
-  const { data: business } = await supabase
-    .from('businesses')
-    .select('business_name, business_sector')
-    .eq('id', business_id)
-    .single();
-
-  // Fetch transaksi dengan relasi account + journal_lines — WAJIB karena
-  // calculateFinancialSummary mengklasifikasi via account_type (debit/credit/journal line),
-  // bukan dari field `category` mentah. Tanpa join ini angka P&L salah total.
-  // Filter posted (null status = transaksi lama dianggap posted, konsisten useReportData).
-  const { data: transactions } = await supabase
-    .from('transactions')
-    .select(`
-      *,
-      debit_account:accounts!transactions_debit_account_id_fkey(*),
-      credit_account:accounts!transactions_credit_account_id_fkey(*),
-      journal_lines(*, account:accounts(*))
-    `)
-    .eq('business_id', business_id)
-    .is('deleted_at', null)
-    .or('status.is.null,status.eq.posted')
-    .order('date', { ascending: false })
-    .limit(3000);
+  // Fetch business info + accounts + transaksi paralel
+  const [{ data: business }, { data: accounts }, { data: transactions }] = await Promise.all([
+    supabase
+      .from('businesses')
+      .select('business_name, business_sector')
+      .eq('id', business_id)
+      .single(),
+    // Accounts dibutuhkan untuk hitung depresiasi periode (sama spt halaman laporan)
+    supabase
+      .from('accounts')
+      .select('*')
+      .eq('business_id', business_id),
+    // Transaksi dgn relasi account + journal_lines — WAJIB karena
+    // calculateFinancialSummary mengklasifikasi via account_type (debit/credit/journal line),
+    // bukan dari field `category` mentah. Tanpa join ini angka P&L salah total.
+    // Filter posted (null status = transaksi lama dianggap posted, konsisten useReportData).
+    supabase
+      .from('transactions')
+      .select(`
+        *,
+        debit_account:accounts!transactions_debit_account_id_fkey(*),
+        credit_account:accounts!transactions_credit_account_id_fkey(*),
+        journal_lines(*, account:accounts(*))
+      `)
+      .eq('business_id', business_id)
+      .is('deleted_at', null)
+      .or('status.is.null,status.eq.posted')
+      .order('date', { ascending: false })
+      .limit(3000),
+  ]);
 
   const financialContext = buildFinancialContext(
     business?.business_name ?? 'Bisnis',
     business?.business_sector ?? '',
     (transactions ?? []) as unknown as Transaction[],
+    (accounts ?? []) as unknown as Account[],
     new Date()
   );
 
