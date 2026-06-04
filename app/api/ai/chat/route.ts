@@ -167,12 +167,13 @@ export async function POST(req: NextRequest) {
     .eq('id', business_id)
     .single();
 
-  // Fetch semua transaksi (untuk balance sheet all-time) dan filter 3 bulan di TS
+  // Fetch semua transaksi posted (termasuk null status = transaksi lama dianggap posted)
+  // Konsisten dengan filter di useReportData: !t.status || t.status === 'posted'
   const { data: transactions } = await supabase
     .from('active_transactions')
-    .select('id, date, name, description, amount, category, debit_account_id, credit_account_id, is_double_entry, meta, account, notes')
+    .select('id, date, name, description, amount, category, debit_account_id, credit_account_id, is_double_entry, meta, account, notes, status')
     .eq('business_id', business_id)
-    .eq('status', 'posted')
+    .or('status.is.null,status.eq.posted')
     .order('date', { ascending: false })
     .limit(2000);
 
