@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createServerClient, getAuthenticatedUser, getBusinessRoleForUser } from '@/lib/supabase-server';
 import { isManagerRole } from '@/lib/roles';
+import { IMPORT_ASSIST_PROMPT } from '@/lib/ai/prompts';
 
 const bodySchema = z.object({
   business_id: z.string().uuid(),
@@ -19,20 +20,6 @@ const bodySchema = z.object({
 type Suggestion = { index: number; category: 'EARN' | 'OPEX' | 'VAR' | 'CAPEX' | 'TAX' | 'FIN' };
 
 const VALID = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
-
-const ASSIST_PROMPT = `Kamu klasifikator kategori transaksi untuk akuntansi UKM Indonesia.
-Untuk tiap baris (punya "index" dan "description"), tentukan kategori paling tepat.
-Return JSON array SAJA: [{"index":number,"category":"EARN/OPEX/VAR/CAPEX/TAX/FIN"}]
-
-Definisi kategori:
-- EARN: pendapatan/penjualan/uang masuk dari operasi
-- OPEX: beban operasional (listrik, gaji, sewa, internet, transport, konsumsi)
-- VAR: HPP / bahan baku / persediaan / biaya variabel produksi
-- CAPEX: beli aset tetap (mesin, peralatan, kendaraan, properti)
-- TAX: pajak (PPN, PPh, pajak daerah)
-- FIN: pinjaman, modal, cicilan, bunga, prive/penarikan pemilik
-
-Wajib return SEMUA index yang diberikan. Tanpa teks lain, tanpa markdown.`;
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -79,7 +66,7 @@ export async function POST(req: NextRequest) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          system_instruction: { parts: [{ text: ASSIST_PROMPT }] },
+          system_instruction: { parts: [{ text: IMPORT_ASSIST_PROMPT }] },
           contents: [{ parts: [{ text: JSON.stringify(payload) }] }],
           generationConfig: { temperature: 0, responseMimeType: 'application/json' },
         }),

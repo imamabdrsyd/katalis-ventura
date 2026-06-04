@@ -4,6 +4,7 @@ import { createServerClient, getAuthenticatedUser, getBusinessRoleForUser } from
 import { isManagerRole } from '@/lib/roles';
 import { smartResolveTransaction } from '@/lib/import/smartResolver';
 import { parseTransactionMessage } from '@/lib/telegram/parser';
+import { PARSE_SYSTEM_PROMPT } from '@/lib/ai/prompts';
 import type { Account, TransactionCategory } from '@/types';
 
 const bodySchema = z.object({
@@ -23,44 +24,6 @@ type ParsedDraft = {
   credit_account_code: string;
   confidence: 'high' | 'medium' | 'low';
 };
-
-const PARSE_PROMPT = `Kamu adalah parser transaksi keuangan untuk aplikasi akuntansi UKM Indonesia.
-Ekstrak SATU transaksi dari kalimat user. Return JSON SAJA, tanpa teks lain.
-
-Schema:
-{
-  "name": "deskripsi singkat transaksi (nama vendor/keperluan, mis. 'Bayar listrik', 'Jual kopi ke Budi')",
-  "amount": number (nominal dalam Rupiah, angka bulat tanpa titik/koma),
-  "date": "YYYY-MM-DD atau null kalau tidak disebut",
-  "category_hint": "EARN/OPEX/VAR/CAPEX/TAX/FIN — tebakan kategori, atau null"
-}
-
-Aturan amount (PENTING, format Indonesia):
-- "500rb", "500k", "500ribu" → 500000
-- "1.5jt", "1,5jt", "1.5juta" → 1500000
-- "2jt" → 2000000
-- "150.000" (titik = ribuan) → 150000
-- "150000" → 150000
-
-Aturan kategori (hint saja, boleh null kalau ragu):
-- EARN: terima uang/penjualan/pendapatan ("jual", "terima", "dapat bayaran")
-- OPEX: beban operasional ("bayar listrik/gaji/sewa/wifi/internet")
-- VAR: beli bahan baku/stok/persediaan
-- CAPEX: beli aset tetap (mesin, peralatan, kendaraan)
-- TAX: bayar pajak
-- FIN: pinjaman/modal/cicilan/prive
-
-Aturan tanggal:
-- "kemarin", "hari ini", "tadi" → null (sistem isi default hari ini)
-- "tanggal 5", "5 mei" → konversi ke ISO tahun berjalan
-- Kalau tidak disebut → null
-
-Contoh:
-Input: "bayar listrik 500rb"
-Output: {"name":"Bayar listrik","amount":500000,"date":null,"category_hint":"OPEX"}
-
-Input: "jual kopi ke pak budi 2.5jt"
-Output: {"name":"Jual kopi ke Pak Budi","amount":2500000,"date":null,"category_hint":"EARN"}`;
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -115,7 +78,7 @@ export async function POST(req: NextRequest) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            system_instruction: { parts: [{ text: PARSE_PROMPT }] },
+            system_instruction: { parts: [{ text: PARSE_SYSTEM_PROMPT }] },
             contents: [{ parts: [{ text }] }],
             generationConfig: { temperature: 0, responseMimeType: 'application/json' },
           }),
