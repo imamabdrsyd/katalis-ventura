@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Bot, User, Loader2, RotateCcw } from 'lucide-react';
 
@@ -175,12 +176,16 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
           >
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 shrink-0">
-              <div className="w-9 h-9 rounded-xl bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center shrink-0">
-                <Bot className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-              </div>
+              <Image src="/images/favicon.png" alt="AXION Agent" width={36} height={36} className="object-contain shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-50 leading-tight">AXION Agent</p>
+                <div className="flex items-center gap-1.5">
+                <span className="relative flex w-1.5 h-1.5 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-60" />
+                  <span className="relative inline-flex rounded-full w-1.5 h-1.5 bg-emerald-400" />
+                </span>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{businessName}</p>
+              </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {messages.length > 0 && (
@@ -263,7 +268,7 @@ function EmptyState({ onSuggest }: { onSuggest: (q: string) => void }) {
         <Bot className="w-7 h-7 text-primary-500 dark:text-primary-400" />
       </div>
       <div className="text-center">
-        <p className="text-[13px] font-semibold text-gray-800 dark:text-gray-100">Halo! Saya AXION AI</p>
+        <p className="text-[13px] font-semibold text-gray-800 dark:text-gray-100">Hi! I&apos;m AXION Agent</p>
         <p className="text-[12px] text-gray-500 dark:text-gray-400 mt-1">
           Tanya apa saja tentang keuangan bisnismu
         </p>

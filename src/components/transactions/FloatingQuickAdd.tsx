@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { MessageCircle } from 'lucide-react';
+import { Bot } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { AIChatPanel } from '@/components/ai/AIChatPanel';
 import { QuickTransactionForm } from './QuickTransactionForm';
@@ -179,7 +179,7 @@ export function FloatingQuickAdd({
         title="AXION AI"
         aria-label="Buka AI Chat"
       >
-        <MessageCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
+        <Bot className="w-6 h-6 group-hover:scale-110 transition-transform" />
       </button>
 
       {/* Quick Add Modal */}

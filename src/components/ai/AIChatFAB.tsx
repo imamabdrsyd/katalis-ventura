@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X } from 'lucide-react';
+import { Bot, X } from 'lucide-react';
 import { AIChatPanel } from './AIChatPanel';
 
 interface AIChatFABProps {
@@ -49,7 +49,7 @@ export function AIChatFAB({ businessId, businessName }: AIChatFABProps) {
               exit={{ rotate: -90, opacity: 0 }}
               transition={{ duration: 0.15 }}
             >
-              <MessageCircle className="w-6 h-6" />
+              <Bot className="w-6 h-6" />
             </motion.span>
           )}
         </AnimatePresence>
