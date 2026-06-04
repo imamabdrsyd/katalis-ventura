@@ -59,7 +59,7 @@ export function DeleteConfirmModal({
           </button>
           <button
             onClick={onConfirm}
-            className="btn-danger flex-1"
+            className="btn-danger-glow flex-1"
             disabled={loading}
           >
             {loading ? 'Menghapus...' : 'Ya, Hapus'}
