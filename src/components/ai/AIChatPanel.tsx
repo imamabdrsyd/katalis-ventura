@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, User, Loader2, RotateCcw } from 'lucide-react';
+import { X, Send, Bot, User, Loader2, RotateCcw, Sparkles } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -176,8 +176,8 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
           >
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 shrink-0">
-              <div className="w-8 h-8 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center shrink-0 overflow-hidden">
-                <Image src="/images/favicon.png" alt="AXION AI" width={28} height={28} className="object-contain" />
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
+                <Image src="/images/favicon.png" alt="AXION AI" width={36} height={36} className="object-contain" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-50 leading-tight">AXION AI</p>
@@ -260,8 +260,8 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
 function EmptyState({ onSuggest }: { onSuggest: (q: string) => void }) {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-4 py-4">
-      <div className="w-14 h-14 rounded-2xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center overflow-hidden">
-        <Image src="/images/favicon.png" alt="AXION AI" width={48} height={48} className="object-contain" />
+      <div className="w-14 h-14 rounded-2xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
+        <Bot className="w-7 h-7 text-primary-500 dark:text-primary-400" />
       </div>
       <div className="text-center">
         <p className="text-[13px] font-semibold text-gray-800 dark:text-gray-100">Halo! Saya AXION AI</p>
