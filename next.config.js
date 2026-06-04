@@ -6,6 +6,7 @@ const ContentSecurityPolicy = `
   font-src 'self' https://fonts.gstatic.com;
   img-src 'self' data: blob: https:;
   connect-src 'self' https://*.supabase.co https://api.cloudinary.com wss://*.supabase.co;
+  frame-src 'self' https://*.supabase.co https://res.cloudinary.com;
   frame-ancestors 'self';
 `.replace(/\n/g, ' ');
 

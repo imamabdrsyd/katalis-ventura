@@ -28,7 +28,7 @@ import {
 import { useInvoiceFromTransactions } from '@/hooks/useInvoiceFromTransactions';
 import { CreateInvoiceFromTransactionsModal } from '@/components/invoices/CreateInvoiceFromTransactionsModal';
 import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
-import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, RotateCcw, ZoomIn, ZoomOut, Receipt, CirclePlus, ChevronRight } from 'lucide-react';
+import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, RotateCcw, ZoomIn, ZoomOut, Receipt, CirclePlus, ChevronRight, Maximize2 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { updateTransaction } from '@/lib/api/transactions';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
@@ -80,6 +80,17 @@ function isInventoryTransaction(transaction: Transaction): boolean {
     debitName.includes('inventory') ||
     debitName.includes('persediaan')
   );
+}
+
+function isPdfAttachment(attachment: TransactionAttachment): boolean {
+  const mimeType = attachment.mime_type?.toLowerCase() ?? '';
+  const filename = attachment.filename?.toLowerCase() ?? '';
+  return mimeType.includes('pdf') || filename.endsWith('.pdf');
+}
+
+function withPdfViewerParams(url: string): string {
+  if (url.includes('#')) return url;
+  return `${url}#toolbar=1&navpanes=0&view=FitH`;
 }
 
 
@@ -370,12 +381,12 @@ export function TransactionDetailModal({
   const isDraft = transaction.status === 'draft';
   const showActions = onEdit || onDelete || (onPost && isDraft);
 
-  const openImagePreview = (attachment: TransactionAttachment) => {
+  const openAttachmentPreview = (attachment: TransactionAttachment) => {
     setPreviewAttachment(attachment);
     setPreviewScale(1);
   };
 
-  const closeImagePreview = () => {
+  const closeAttachmentPreview = () => {
     setPreviewAttachment(null);
     setPreviewScale(1);
   };
@@ -801,7 +812,7 @@ export function TransactionDetailModal({
                   <AttachmentPreviewItem
                     key={att.path}
                     attachment={att}
-                    onOpenImage={openImagePreview}
+                    onOpenPreview={openAttachmentPreview}
                   />
                 ))}
               </div>
@@ -1543,7 +1554,7 @@ export function TransactionDetailModal({
     {previewAttachment && typeof document !== 'undefined' && createPortal(
       <div
         className="fixed inset-0 z-[70] bg-black/85 backdrop-blur-sm flex flex-col"
-        onClick={closeImagePreview}
+        onClick={closeAttachmentPreview}
         role="dialog"
         aria-modal="true"
         aria-label={`Preview ${previewAttachment.filename}`}
@@ -1557,42 +1568,46 @@ export function TransactionDetailModal({
             <p className="text-xs text-white/60">{formatFileSize(previewAttachment.size)}</p>
           </div>
           <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setPreviewScale((scale) => Math.max(0.5, Number((scale - 0.25).toFixed(2))));
-              }}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
-              title="Perkecil"
-              aria-label="Perkecil"
-            >
-              <ZoomOut className="w-5 h-5" />
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setPreviewScale(1);
-              }}
-              className="hidden sm:inline-flex h-10 px-3 items-center justify-center gap-1.5 rounded-lg text-xs font-semibold text-white/80 hover:bg-white/10 hover:text-white transition-colors"
-              title="Reset zoom"
-            >
-              <RotateCcw className="w-4 h-4" />
-              {Math.round(previewScale * 100)}%
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setPreviewScale((scale) => Math.min(3, Number((scale + 0.25).toFixed(2))));
-              }}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
-              title="Perbesar"
-              aria-label="Perbesar"
-            >
-              <ZoomIn className="w-5 h-5" />
-            </button>
+            {!isPdfAttachment(previewAttachment) && (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewScale((scale) => Math.max(0.5, Number((scale - 0.25).toFixed(2))));
+                  }}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+                  title="Perkecil"
+                  aria-label="Perkecil"
+                >
+                  <ZoomOut className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewScale(1);
+                  }}
+                  className="hidden sm:inline-flex h-10 px-3 items-center justify-center gap-1.5 rounded-lg text-xs font-semibold text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+                  title="Reset zoom"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  {Math.round(previewScale * 100)}%
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewScale((scale) => Math.min(3, Number((scale + 0.25).toFixed(2))));
+                  }}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+                  title="Perbesar"
+                  aria-label="Perbesar"
+                >
+                  <ZoomIn className="w-5 h-5" />
+                </button>
+              </>
+            )}
             <SignedAttachmentAnchor
               rawUrl={previewAttachment.url}
               target="_blank"
@@ -1608,7 +1623,7 @@ export function TransactionDetailModal({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                closeImagePreview();
+                closeAttachmentPreview();
               }}
               className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
               title="Tutup"
@@ -1620,22 +1635,32 @@ export function TransactionDetailModal({
         </div>
 
         <div
-          className="flex-1 min-h-0 overflow-auto px-4 pb-4"
+          className={`flex-1 min-h-0 px-4 pb-4 ${isPdfAttachment(previewAttachment) ? '' : 'overflow-auto'}`}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="min-h-full flex items-center justify-center">
-            <SignedAttachmentImage
-              rawUrl={previewAttachment.url}
-              alt={previewAttachment.filename}
-              className="max-w-full max-h-full rounded-lg shadow-2xl select-none"
-              style={{
-                transform: `scale(${previewScale})`,
-                transformOrigin: 'center',
-                transition: 'transform 120ms ease-out',
-              }}
-              draggable={false}
-            />
-          </div>
+          {isPdfAttachment(previewAttachment) ? (
+            <div className="h-full min-h-[60vh] overflow-hidden rounded-lg bg-white shadow-2xl">
+              <SignedAttachmentPdf
+                rawUrl={previewAttachment.url}
+                title={`Preview ${previewAttachment.filename}`}
+                className="h-full w-full"
+              />
+            </div>
+          ) : (
+            <div className="min-h-full flex items-center justify-center">
+              <SignedAttachmentImage
+                rawUrl={previewAttachment.url}
+                alt={previewAttachment.filename}
+                className="max-w-full max-h-full rounded-lg shadow-2xl select-none"
+                style={{
+                  transform: `scale(${previewScale})`,
+                  transformOrigin: 'center',
+                  transition: 'transform 120ms ease-out',
+                }}
+                draggable={false}
+              />
+            </div>
+          )}
         </div>
       </div>,
       document.body
@@ -1659,20 +1684,21 @@ export function TransactionDetailModal({
  */
 function AttachmentPreviewItem({
   attachment,
-  onOpenImage,
+  onOpenPreview,
 }: {
   attachment: TransactionAttachment;
-  onOpenImage: (att: TransactionAttachment) => void;
+  onOpenPreview: (att: TransactionAttachment) => void;
 }) {
   const url = useSignedAttachmentUrl(attachment.url);
   const ready = !!url;
   const isImg = isImageType(attachment.mime_type);
+  const isPdf = isPdfAttachment(attachment);
 
   if (isImg) {
     return (
       <button
         type="button"
-        onClick={() => ready && onOpenImage(attachment)}
+        onClick={() => ready && onOpenPreview(attachment)}
         disabled={!ready}
         className="block w-full text-left group disabled:opacity-60 disabled:cursor-not-allowed"
         aria-label={`Lihat ${attachment.filename}`}
@@ -1702,6 +1728,66 @@ function AttachmentPreviewItem({
     );
   }
 
+  if (isPdf) {
+    return (
+      <div className={`overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 ${ready ? '' : 'opacity-60'}`}>
+        <div className="relative h-80 sm:h-96 bg-gray-100 dark:bg-gray-900">
+          {ready ? (
+            <PdfViewerFrame
+              url={url}
+              title={`Preview ${attachment.filename}`}
+              className="h-full w-full"
+            />
+          ) : (
+            <div className="h-full w-full" />
+          )}
+          <button
+            type="button"
+            onClick={() => ready && onOpenPreview(attachment)}
+            disabled={!ready}
+            className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-gray-600 shadow-sm ring-1 ring-gray-200 hover:bg-white hover:text-indigo-600 disabled:cursor-not-allowed dark:bg-gray-800/90 dark:text-gray-300 dark:ring-gray-700 dark:hover:bg-gray-700 dark:hover:text-indigo-300 transition-colors"
+            title="Perbesar preview"
+            aria-label={`Perbesar preview ${attachment.filename}`}
+          >
+            <Maximize2 className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="flex items-center gap-3 border-t border-gray-200 p-3 dark:border-gray-700">
+          <FileText className="h-5 w-5 flex-shrink-0 text-gray-400 dark:text-gray-500" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-gray-800 dark:text-gray-200">
+              {attachment.filename}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {formatFileSize(attachment.size)}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => ready && onOpenPreview(attachment)}
+            disabled={!ready}
+            className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-indigo-500 disabled:cursor-not-allowed dark:hover:bg-gray-700 dark:hover:text-indigo-400 transition-colors"
+            title="Perbesar preview"
+            aria-label={`Perbesar preview ${attachment.filename}`}
+          >
+            <Maximize2 className="h-4 w-4" />
+          </button>
+          <a
+            href={ready ? url : undefined}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-disabled={!ready}
+            className={`inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-indigo-500 dark:hover:bg-gray-700 dark:hover:text-indigo-400 transition-colors ${ready ? '' : 'pointer-events-none'}`}
+            title="Buka di tab baru"
+            aria-label={`Buka ${attachment.filename} di tab baru`}
+          >
+            <ExternalLink className="h-4 w-4" />
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <a
       href={ready ? url : undefined}
@@ -1722,6 +1808,34 @@ function AttachmentPreviewItem({
       <Download className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors flex-shrink-0" />
     </a>
   );
+}
+
+function PdfViewerFrame({
+  url,
+  title,
+  ...rest
+}: { url: string; title: string } & React.IframeHTMLAttributes<HTMLIFrameElement>) {
+  return (
+    <iframe
+      {...rest}
+      src={withPdfViewerParams(url)}
+      title={title}
+      loading="lazy"
+    />
+  );
+}
+
+/**
+ * PDF iframe pembungkus yang pakai signed URL untuk src.
+ */
+function SignedAttachmentPdf({
+  rawUrl,
+  title,
+  ...rest
+}: { rawUrl: string; title: string } & React.IframeHTMLAttributes<HTMLIFrameElement>) {
+  const url = useSignedAttachmentUrl(rawUrl);
+  if (!url) return null;
+  return <PdfViewerFrame {...rest} url={url} title={title} />;
 }
 
 /**
