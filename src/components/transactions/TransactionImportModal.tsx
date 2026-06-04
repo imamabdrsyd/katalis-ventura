@@ -110,6 +110,65 @@ export default function TransactionImportModal({
 
   if (!shouldRender) return null;
 
+  /**
+   * AI assist pass: ambil baris dengan confidence 'low' (rule-based gagal yakin),
+   * kirim deskripsinya ke Gemini untuk klasifikasi kategori, lalu re-resolve akun
+   * dengan kategori hasil AI. Enhancement opsional — kalau AI tidak tersedia
+   * (quota/error/no key), endpoint return suggestions kosong & hasil rule-based dipakai.
+   */
+  const aiAssistLowConfidence = async (
+    rows: SmartResolvedRow[],
+    accountList: Account[]
+  ): Promise<SmartResolvedRow[]> => {
+    const lowRows = rows
+      .map((r, i) => ({ r, i }))
+      .filter(({ r }) => r._smart.confidence === 'low')
+      .slice(0, 50); // cap hemat token
+
+    if (lowRows.length === 0) return rows;
+
+    try {
+      const res = await fetch('/api/ai/smart-import-assist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          business_id: businessId,
+          rows: lowRows.map(({ r, i }) => ({
+            index: i,
+            description: r.description || r.name,
+            category_hint: String(r.category || '').trim() || undefined,
+          })),
+        }),
+      });
+      if (!res.ok) return rows;
+      const json = await res.json();
+      const suggestions: Array<{ index: number; category: TransactionCategory }> = json.suggestions ?? [];
+      if (suggestions.length === 0) return rows;
+
+      const updated = [...rows];
+      for (const sug of suggestions) {
+        const target = updated[sug.index];
+        if (!target) continue;
+        // Re-resolve akun pakai kategori dari AI sebagai hint kuat
+        const reResolved = smartResolveTransaction(target.description || target.name, accountList, sug.category);
+        updated[sug.index] = {
+          ...target,
+          category: sug.category,
+          debit_account: reResolved.debit_account_code,
+          credit_account: reResolved.credit_account_code,
+          _smart: {
+            ...target._smart,
+            confidence: 'medium', // AI-assisted → naik dari low ke medium
+            resolve_source: 'ai_assist',
+          },
+        };
+      }
+      return updated;
+    } catch {
+      return rows; // fallback diam-diam ke rule-based
+    }
+  };
+
   const handleFileSelect = async (selectedFile: File) => {
     setFile(null);
     setParsedData([]);
@@ -188,7 +247,7 @@ export default function TransactionImportModal({
             message: 'Auto-detecting categories & accounts...',
           });
 
-          // Auto-resolve each valid row
+          // Auto-resolve each valid row (rule-based dulu)
           const resolved: SmartResolvedRow[] = validation.validRows.map((row) => {
             // Pass the raw category column value as a hint (e.g. "Bahan / Kemasan")
             const categoryHint = String(row.data.category || '').trim() || undefined;
@@ -208,7 +267,10 @@ export default function TransactionImportModal({
             };
           });
 
-          setSmartRows(resolved);
+          // AI assist pass: minta Gemini klasifikasi ulang baris low-confidence.
+          // Enhancement opsional — kalau quota habis/error, hasil rule-based tetap dipakai.
+          const enhanced = await aiAssistLowConfidence(resolved, accounts);
+          setSmartRows(enhanced);
         }
 
         setProgress({
@@ -691,7 +753,7 @@ export default function TransactionImportModal({
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {importMode === 'smart'
-                      ? 'Upload file Excel apapun — sistem otomatis mendeteksi kolom dan mengisi kategori, akun, serta breakdown unit'
+                      ? 'Upload file Excel apapun — AXION AI otomatis mendeteksi kolom dan mengisi kategori, akun, serta breakdown unit'
                       : 'Download template Excel dengan semua kolom untuk import manual'}
                   </p>
                 </div>
@@ -942,11 +1004,21 @@ export default function TransactionImportModal({
                             </td>
                             {/* Confidence */}
                             <td className="px-3 py-2 text-center">
-                              <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${CONFIDENCE_STYLES[row._smart.confidence]}`}
-                                title={row._smart.resolve_source}
-                              >
-                                {row._smart.user_edited ? 'Edited' : CONFIDENCE_LABELS[row._smart.confidence]}
+                              <span className="inline-flex items-center gap-1">
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${CONFIDENCE_STYLES[row._smart.confidence]}`}
+                                  title={row._smart.resolve_source}
+                                >
+                                  {row._smart.user_edited ? 'Edited' : CONFIDENCE_LABELS[row._smart.confidence]}
+                                </span>
+                                {row._smart.resolve_source === 'ai_assist' && !row._smart.user_edited && (
+                                  <span
+                                    className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400"
+                                    title="Kategori dibantu AXION AI"
+                                  >
+                                    <Sparkles className="w-2.5 h-2.5" /> AI
+                                  </span>
+                                )}
                               </span>
                             </td>
                           </tr>
