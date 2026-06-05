@@ -501,7 +501,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.97 }}
             transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-            className="fixed bottom-20 right-4 z-50 w-[calc(100vw-2rem)] max-w-[400px] flex flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl shadow-black/10 dark:shadow-black/40"
+            className="fixed bottom-20 right-4 z-50 w-[calc(100vw-2rem)] max-w-[400px] flex flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-[0_8px_40px_-8px_rgba(0,0,0,0.22),0_2px_12px_-2px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_-8px_rgba(0,0,0,0.7),0_2px_12px_-2px_rgba(0,0,0,0.5)]"
             style={{ height: 'min(560px, calc(100dvh - 120px))' }}
           >
             {/* Header */}
@@ -623,31 +623,8 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                   </span>
                 )}
               </div>
-              <div className="flex items-end gap-2">
-                {/* Tombol attach file (hanya mode Catat) */}
-                {mode === 'record' && (
-                  <>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".xlsx,.xls,.csv"
-                      className="hidden"
-                      onChange={e => {
-                        const f = e.target.files?.[0];
-                        e.target.value = '';
-                        if (f) handleFile(f);
-                      }}
-                    />
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={loading}
-                      title="Impor file Excel/CSV"
-                      className="shrink-0 w-9 h-9 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-primary-500 dark:hover:text-primary-400 hover:border-primary-300 dark:hover:border-primary-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all"
-                    >
-                      <Paperclip className="w-4 h-4" />
-                    </button>
-                  </>
-                )}
+              {/* Instagram-style pill input */}
+              <div className="flex items-center gap-0.5 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 pl-4 pr-1.5 py-1.5 focus-within:border-primary-400 dark:focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20 transition-all">
                 <textarea
                   ref={inputRef}
                   value={input}
@@ -656,25 +633,49 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                   placeholder={mode === 'record' ? 'Ketik transaksi atau lampirkan file...' : 'Tanya soal keuangan bisnismu...'}
                   rows={1}
                   disabled={loading}
-                  className="flex-1 resize-none rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-[13px] px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-400 dark:focus:border-primary-500 transition-all max-h-32 disabled:opacity-50"
-                  style={{ lineHeight: '1.5' }}
+                  className="flex-1 resize-none bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-[13px] leading-[1.5] focus:outline-none max-h-32 disabled:opacity-50 self-center"
                   onInput={e => {
                     const el = e.currentTarget;
                     el.style.height = 'auto';
                     el.style.height = Math.min(el.scrollHeight, 128) + 'px';
                   }}
                 />
-                <button
-                  onClick={() => handleSend(input)}
-                  disabled={!input.trim() || loading}
-                  className="shrink-0 w-9 h-9 rounded-xl bg-primary-500 hover:bg-primary-600 active:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed text-white flex items-center justify-center transition-all"
-                >
-                  {loading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4" />
+                <div className="flex items-center gap-0.5 shrink-0 ml-1">
+                  {mode === 'record' && (
+                    <>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".xlsx,.xls,.csv"
+                        className="hidden"
+                        onChange={e => {
+                          const f = e.target.files?.[0];
+                          e.target.value = '';
+                          if (f) handleFile(f);
+                        }}
+                      />
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={loading}
+                        title="Impor file Excel/CSV"
+                        className="w-8 h-8 rounded-full text-gray-400 dark:text-gray-500 hover:text-primary-500 dark:hover:text-primary-400 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all"
+                      >
+                        <Paperclip className="w-4 h-4" />
+                      </button>
+                    </>
                   )}
-                </button>
+                  <button
+                    onClick={() => handleSend(input)}
+                    disabled={!input.trim() || loading}
+                    className="w-8 h-8 rounded-full bg-primary-500 hover:bg-primary-600 active:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed text-white flex items-center justify-center transition-all"
+                  >
+                    {loading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
               </div>
               <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1.5 text-center">
                 {mode === 'record' ? 'Ketik transaksi atau lampirkan Excel/CSV' : 'Enter kirim · Shift+Enter baris baru'}

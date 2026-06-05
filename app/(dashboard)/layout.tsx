@@ -713,7 +713,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
         {canManage && activeBusiness && (
           <button
             onClick={onQuickAddClick}
-            className="hidden md:flex btn-outline items-center gap-2"
+            className="hidden md:flex btn-outline items-center gap-2 text-gray-500 dark:text-gray-400 border-[1.5px] border-primary-300 dark:border-primary-800 hover:border-primary-500 dark:hover:border-primary-400 hover:text-primary-500 dark:hover:text-primary-400 hover:shadow-md hover:shadow-primary-500/20 dark:hover:shadow-primary-500/15"
           >
             <Zap className="h-4 w-4 text-primary-500 dark:text-primary-400" />
             {t.nav.quickEntry}

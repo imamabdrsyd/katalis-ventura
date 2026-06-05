@@ -27,7 +27,11 @@ export function AIChatFAB({ businessId, businessName }: AIChatFABProps) {
         onClick={() => setIsOpen(prev => !prev)}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        className="fixed bottom-5 right-4 z-50 w-14 h-14 rounded-full bg-primary-500 hover:bg-primary-600 text-white shadow-lg shadow-primary-500/30 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+        className="fixed bottom-5 right-4 z-50 w-14 h-14 rounded-full text-white flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+        style={{
+          background: 'radial-gradient(circle at 30% 25%, #a5b4fc 0%, #6366f1 45%, #3730a3 100%)',
+          boxShadow: '0 6px 28px 0 rgba(99,102,241,0.65), 0 2px 6px 0 rgba(67,56,202,0.4), inset 0 2px 4px rgba(255,255,255,0.32), inset 0 -2px 4px rgba(0,0,0,0.18)',
+        }}
         aria-label={isOpen ? 'Tutup AI Chat' : 'Buka AI Chat'}
       >
         <AnimatePresence mode="wait" initial={false}>
