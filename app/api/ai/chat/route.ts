@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { createServerClient, getAuthenticatedUser, getBusinessRoleForUser } from '@/lib/supabase-server';
 import { buildFinancialContext } from '@/lib/ai/financialContext';
 import { CHAT_SYSTEM_PROMPT } from '@/lib/ai/prompts';
+import { needsReasoning } from '@/lib/ai/intent';
 import { streamText, PROVIDER_LABELS, MODEL_LABELS } from '@/lib/ai/provider';
 import type { Transaction, Account } from '@/types';
 
@@ -89,7 +90,16 @@ export async function POST(req: NextRequest) {
     aiMessages[0].content = `${financialContext}\n\n${aiMessages[0].content}`;
   }
 
-  const result = await streamText(SYSTEM_PROMPT, aiMessages, { temperature: 0.7, maxTokens: 1024 });
+  // Audit/proyeksi/analisis mendalam → prioritaskan reasoning model (DeepSeek R1).
+  // Pertanyaan analitik biasa tetap Gemini dulu (cepat, hemat kuota).
+  const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')?.content ?? '';
+  const preferReasoning = needsReasoning(lastUserMsg);
+
+  const result = await streamText(SYSTEM_PROMPT, aiMessages, {
+    temperature: 0.7,
+    maxTokens: preferReasoning ? 2048 : 1024, // R1 butuh ruang utk thinking tokens
+    preferReasoning,
+  });
 
   if (!result) {
     return NextResponse.json({ error: 'AI tidak tersedia saat ini. Coba lagi nanti.' }, { status: 503 });

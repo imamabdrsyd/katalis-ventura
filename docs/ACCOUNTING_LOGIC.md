@@ -2993,6 +2993,12 @@ Mode "Tanya" (chat analitik) pakai dua Groq model berbeda peran:
 - **GROQ_PARSE_MODEL** = `llama-3.3-70b-versatile` (`generateText`) — cepat untuk parse
   transaksi & smart import, tidak butuh chain-of-thought.
 
+**Prioritas R1 selektif (`preferReasoning`)**: `needsReasoning()` (`src/lib/ai/intent.ts`,
+keyword-based, ringan) mendeteksi pertanyaan audit/proyeksi/analisis-mendalam dari pesan
+user terakhir. Kalau true → `streamText` mencoba **Groq R1 dulu** baru Gemini fallback
+(+ maxTokens 2048 utk ruang thinking). Pertanyaan analitik biasa → Gemini dulu (default).
+Unit test: `tests/unit/aiIntent.test.ts`.
+
 **Thinking tokens ditampilkan, bukan dibuang.** `StreamChunk` punya `kind:'thinking'|'answer'`:
 - Groq R1: teks dalam `<think>...</think>` di-tag `thinking`, sisanya `answer`
   (state machine `buildGroqStream` tahan partial tag spt `<thi` supaya tidak bocor).

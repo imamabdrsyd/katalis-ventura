@@ -274,33 +274,36 @@ export async function generateText(
 
 /**
  * Stream teks SSE — untuk chat analitik.
- * Coba tiap model Gemini, fallback ke Groq.
- * Format SSE output dinormalisasi: `data: {"text":"..."}\n\n` untuk keduanya.
+ * Format SSE output dinormalisasi: `data: {"text":"...","kind":"..."}\n\n` untuk keduanya.
+ *
+ * `preferReasoning: true` → Groq DeepSeek R1 dicoba DULU (analisis/audit/proyeksi
+ * yang butuh nalar lebih dalam), Gemini jadi fallback. Default false = Gemini dulu
+ * (cepat & murah kuotanya, cukup untuk pertanyaan analitik biasa).
  */
 export async function streamText(
   systemPrompt: string,
   messages: AIMessage[],
-  opts: { temperature?: number; maxTokens?: number } = {}
+  opts: { temperature?: number; maxTokens?: number; preferReasoning?: boolean } = {}
 ): Promise<StreamResult | null> {
-  for (const model of GEMINI_MODELS) {
-    const geminiRes = await geminiStream(model, systemPrompt, messages, opts);
-    if (geminiRes) {
-      return {
-        stream: buildGeminiStream(geminiRes),
-        provider: 'gemini',
-        model,
-      };
+  const tryGemini = async (): Promise<StreamResult | null> => {
+    for (const model of GEMINI_MODELS) {
+      const res = await geminiStream(model, systemPrompt, messages, opts);
+      if (res) return { stream: buildGeminiStream(res), provider: 'gemini', model };
     }
-  }
+    return null;
+  };
 
-  // Fallback: Groq (chat model — DeepSeek R1 untuk analitik lebih dalam)
-  const groqRes = await groqStream(systemPrompt, messages, opts);
-  if (groqRes) {
-    return {
-      stream: buildGroqStream(groqRes),
-      provider: 'groq',
-      model: GROQ_CHAT_MODEL,
-    };
+  const tryGroq = async (): Promise<StreamResult | null> => {
+    const res = await groqStream(systemPrompt, messages, opts);
+    if (res) return { stream: buildGroqStream(res), provider: 'groq', model: GROQ_CHAT_MODEL };
+    return null;
+  };
+
+  // Audit/proyeksi → R1 dulu; selainnya → Gemini dulu
+  const chain = opts.preferReasoning ? [tryGroq, tryGemini] : [tryGemini, tryGroq];
+  for (const attempt of chain) {
+    const result = await attempt();
+    if (result) return result;
   }
 
   return null;
