@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase-server';
-import { sendMessage } from './api';
+import { sendMessage, sendChatAction } from './api';
 import {
   formatBalanceSummary,
   formatBusinessList,
@@ -7,6 +7,10 @@ import {
   BalanceSummary,
 } from './formatter';
 import { TelegramUser } from './types';
+import { buildFinancialContext } from '@/lib/ai/financialContext';
+import { generateText } from '@/lib/ai/provider';
+import { CHAT_SYSTEM_PROMPT } from '@/lib/ai/prompts';
+import type { Transaction, Account } from '@/types';
 
 export async function handleStartCommand(
   chatId: number,
@@ -253,6 +257,97 @@ export async function handleBisnisCommand(chatId: number): Promise<void> {
 
 export async function handleHelpCommand(chatId: number): Promise<void> {
   await sendMessage(chatId, formatHelp(), { parse_mode: 'Markdown' });
+}
+
+/**
+ * /tanya <pertanyaan> — mode analitik AXION Agent di Telegram.
+ * Reuse buildFinancialContext + provider chain (Gemini→Groq) yang sama dgn chat web,
+ * tapi non-streaming (Telegram tidak support SSE).
+ */
+export async function handleTanyaCommand(chatId: number, question: string): Promise<void> {
+  const admin = createAdminClient();
+
+  const trimmed = question.trim();
+  if (!trimmed) {
+    await sendMessage(
+      chatId,
+      'Mau tanya apa? Contoh:\n`/tanya kenapa bulan ini rugi?`\n`/tanya kategori beban terbesar apa?`',
+      { parse_mode: 'Markdown' }
+    );
+    return;
+  }
+
+  const { data: conn } = await admin
+    .from('telegram_connections')
+    .select('default_business_id')
+    .eq('telegram_chat_id', chatId)
+    .single();
+
+  if (!conn) {
+    await sendMessage(chatId, 'Akun belum terhubung. Ketik /start untuk instruksi.');
+    return;
+  }
+  if (!conn.default_business_id) {
+    await sendMessage(chatId, 'Belum ada bisnis aktif. Ketik /bisnis untuk memilih bisnis.');
+    return;
+  }
+
+  await sendChatAction(chatId, 'typing');
+
+  // Fetch business + accounts + transaksi (join relasi, sama dgn /api/ai/chat)
+  const [{ data: business }, { data: accounts }, { data: transactions }] = await Promise.all([
+    admin.from('businesses').select('business_name, business_sector').eq('id', conn.default_business_id).single(),
+    admin.from('accounts').select('*').eq('business_id', conn.default_business_id),
+    admin
+      .from('transactions')
+      .select(`
+        *,
+        debit_account:accounts!transactions_debit_account_id_fkey(*),
+        credit_account:accounts!transactions_credit_account_id_fkey(*),
+        journal_lines(*, account:accounts(*))
+      `)
+      .eq('business_id', conn.default_business_id)
+      .is('deleted_at', null)
+      .or('status.is.null,status.eq.posted')
+      .order('date', { ascending: false })
+      .limit(3000),
+  ]);
+
+  const financialContext = buildFinancialContext(
+    business?.business_name ?? 'Bisnis',
+    business?.business_sector ?? '',
+    (transactions ?? []) as unknown as Transaction[],
+    (accounts ?? []) as unknown as Account[],
+    new Date()
+  );
+
+  const aiResult = await generateText(
+    CHAT_SYSTEM_PROMPT,
+    [{ role: 'user', content: `${financialContext}\n\n${trimmed}` }],
+    { temperature: 0.7, maxTokens: 800 }
+  );
+
+  if (!aiResult) {
+    await sendMessage(chatId, '❌ AXION Agent sedang tidak tersedia. Coba lagi nanti.');
+    return;
+  }
+
+  // AI output pakai markdown web (**bold**), Telegram legacy Markdown pakai *bold*.
+  // Konversi + kirim tanpa parse_mode kalau ragu (lebih aman dari error parsing).
+  await sendMessage(chatId, toTelegramMarkdown(aiResult.text));
+}
+
+/**
+ * Konversi markdown web → Telegram legacy Markdown.
+ * - `**bold**` → `*bold*`
+ * - bullet `- ` / `* ` → `• `
+ * Dikirim TANPA parse_mode untuk hindari error "can't parse entities" pada
+ * karakter spesial yang tidak ter-escape (Telegram legacy Markdown ketat).
+ */
+function toTelegramMarkdown(text: string): string {
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, '$1')      // strip bold markers (aman, tanpa parse_mode)
+    .replace(/^[\s]*[-*]\s+/gm, '• ');       // bullet jadi •
 }
 
 export async function handleSettingCommand(chatId: number): Promise<void> {

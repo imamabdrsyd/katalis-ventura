@@ -15,8 +15,9 @@ import {
   handleBisnisCommand,
   handleHelpCommand,
   handleSettingCommand,
+  handleTanyaCommand,
 } from './commands';
-import { parseTransactionMessage } from './parser';
+import { extractTransactionFromText } from '@/lib/ai/parseTransaction';
 import { parseDateFromText, isListTransactionIntent } from './dateParser';
 import { parsePeriodFromText, detectReportType, ReportType } from './periodParser';
 import { smartResolveTransaction } from '@/lib/import/smartResolver';
@@ -73,6 +74,8 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
       case '/link':  await handleLinkWithToken(chatId, args[0] ?? '', from); break;
       case '/saldo': await handleSaldoCommand(chatId); break;
       case '/bisnis':await handleBisnisCommand(chatId); break;
+      case '/tanya':
+      case '/ask':   await handleTanyaCommand(chatId, args.join(' ')); break;
       case '/help':    await handleHelpCommand(chatId); break;
       case '/setting':
       case '/settings': await handleSettingCommand(chatId); break;
@@ -209,8 +212,10 @@ async function handleTransactionMessage(chatId: number, text: string): Promise<v
     return;
   }
 
-  const parsed = parseTransactionMessage(text);
-  if (!parsed) {
+  // Ekstrak via AI provider chain (Gemini→Groq) + fallback regex.
+  // Sama dgn parser di chat panel web (reuse extractTransactionFromText).
+  const extractResult = await extractTransactionFromText(text);
+  if (!extractResult) {
     await sendMessage(
       chatId,
       `Tidak bisa membaca transaksi. Pastikan format:\n_deskripsi jumlah_\n\nContoh: \`jual kopi 150000\`\n\nKetik /help untuk panduan.`,
@@ -218,6 +223,27 @@ async function handleTransactionMessage(chatId: number, text: string): Promise<v
     );
     return;
   }
+
+  // Adaptasi ke ParsedTransaction. Kategori akhir di-resolve via smartResolveTransaction
+  // (lebih akurat dari category_hint mentah), konsisten dgn alur web.
+  const { extracted } = extractResult;
+  const { data: accountsForCat } = await admin
+    .from('accounts')
+    .select('*')
+    .eq('business_id', conn.default_business_id)
+    .eq('is_active', true);
+  const resolvedCat = smartResolveTransaction(
+    extracted.name,
+    (accountsForCat ?? []) as never,
+    extracted.category_hint ?? undefined
+  );
+  const parsed: ParsedTransaction = {
+    name: extracted.name,
+    amount: extracted.amount,
+    category: resolvedCat.category,
+    confidence: resolvedCat.confidence,
+    raw: text,
+  };
 
   const today = new Date().toLocaleDateString('id-ID', {
     day: '2-digit',

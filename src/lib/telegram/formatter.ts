@@ -209,6 +209,12 @@ Cukup ketik deskripsi + jumlah, contoh:
 Kirim foto struk/nota, bot otomatis baca tanggal, total, dan vendor.
 Kamu tinggal klik tombol *Simpan* atau *Batal*.
 
+*🤖 Tanya AXION Agent:*
+Tanya soal keuangan bisnismu, contoh:
+  \`/tanya kenapa bulan ini rugi?\`
+  \`/tanya kategori beban terbesar apa?\`
+  \`/tanya tren revenue 3 bulan terakhir\`
+
 *Lihat Transaksi:*
   \`lihat transaksi hari ini\`
   \`lihat transaksi kemarin\`
@@ -227,6 +233,7 @@ Kamu tinggal klik tombol *Simpan* atau *Batal*.
 Saat konfirmasi, balas \`OPEX\` atau \`VAR\` untuk mengubah kategori.
 
 *Perintah:*
+/tanya — Tanya AXION Agent soal keuangan
 /saldo — Lihat ringkasan keuangan
 /bisnis — Lihat & ganti bisnis aktif
 /setting — Lihat pengaturan bot saat ini

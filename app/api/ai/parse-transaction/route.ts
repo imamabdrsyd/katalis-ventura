@@ -3,9 +3,7 @@ import { z } from 'zod';
 import { createServerClient, getAuthenticatedUser, getBusinessRoleForUser } from '@/lib/supabase-server';
 import { isManagerRole } from '@/lib/roles';
 import { smartResolveTransaction } from '@/lib/import/smartResolver';
-import { parseTransactionMessage } from '@/lib/telegram/parser';
-import { PARSE_SYSTEM_PROMPT } from '@/lib/ai/prompts';
-import { generateText } from '@/lib/ai/provider';
+import { extractTransactionFromText } from '@/lib/ai/parseTransaction';
 import type { Account, TransactionCategory } from '@/types';
 
 const bodySchema = z.object({
@@ -63,45 +61,17 @@ export async function POST(req: NextRequest) {
     .eq('is_active', true);
   const accounts = (accountsData ?? []) as unknown as Account[];
 
-  // 1. Extract name + amount + date + category_hint.
-  // Primary: AI provider chain (Gemini → Groq fallback).
-  // Fallback akhir: parser regex — AI = enhancement, bukan dependency.
-  let extracted: { name: string; amount: number; date: string | null; category_hint: string | null } | null = null;
-  let source: 'ai' | 'rule_based' = 'rule_based';
-  let aiProvider: string | null = null;
-
-  const aiResult = await generateText(PARSE_SYSTEM_PROMPT, [{ role: 'user', content: text }], { temperature: 0 });
-  if (aiResult) {
-    try {
-      const clean = aiResult.text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
-      const g = JSON.parse(clean) as { name?: string; amount?: number; date?: string | null; category_hint?: string | null };
-      const gName = (g.name ?? '').trim();
-      const gAmount = Number(g.amount ?? 0);
-      if (gName && Number.isFinite(gAmount) && gAmount > 0) {
-        extracted = { name: gName, amount: gAmount, date: g.date ?? null, category_hint: g.category_hint ?? null };
-        source = 'ai';
-        aiProvider = aiResult.provider;
-      }
-    } catch {
-      console.warn('[ai/parse-transaction] AI JSON parse failed, fallback rule-based');
-    }
-  }
-
-  // Fallback rule-based kalau AI tidak menghasilkan
-  if (!extracted) {
-    const rb = parseTransactionMessage(text);
-    if (rb) {
-      extracted = { name: rb.name, amount: rb.amount, date: null, category_hint: rb.category };
-    }
-  }
-
-  if (!extracted) {
+  // 1. Extract name + amount + date + category_hint via shared helper
+  //    (AI provider chain → fallback regex). Sama dgn yg dipakai Telegram bot.
+  const extractResult = await extractTransactionFromText(text);
+  if (!extractResult) {
     return NextResponse.json(
       { error: 'Tidak bisa mendeteksi nama atau nominal. Coba mis. "bayar listrik 500rb"' },
       { status: 422 }
     );
   }
 
+  const { extracted, source, provider: aiProvider } = extractResult;
   const { name, amount } = extracted;
 
   // 2. Resolve kategori + akun debit/kredit pakai engine rule-based yang sudah ada
