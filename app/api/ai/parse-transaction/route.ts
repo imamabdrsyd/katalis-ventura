@@ -5,6 +5,7 @@ import { isManagerRole } from '@/lib/roles';
 import { smartResolveTransaction } from '@/lib/import/smartResolver';
 import { parseTransactionMessage } from '@/lib/telegram/parser';
 import { PARSE_SYSTEM_PROMPT } from '@/lib/ai/prompts';
+import { generateText } from '@/lib/ai/provider';
 import type { Account, TransactionCategory } from '@/types';
 
 const bodySchema = z.object({
@@ -63,48 +64,30 @@ export async function POST(req: NextRequest) {
   const accounts = (accountsData ?? []) as unknown as Account[];
 
   // 1. Extract name + amount + date + category_hint.
-  //    Primary: Gemini (lebih pintar untuk natural language).
-  //    Fallback: parser regex (parseTransactionMessage) — dipakai kalau Gemini
-  //    quota habis / error / API key kosong. AI = enhancement, bukan dependency.
+  // Primary: AI provider chain (Gemini → Groq fallback).
+  // Fallback akhir: parser regex — AI = enhancement, bukan dependency.
   let extracted: { name: string; amount: number; date: string | null; category_hint: string | null } | null = null;
-  let source: 'gemini' | 'rule_based' = 'rule_based';
+  let source: 'ai' | 'rule_based' = 'rule_based';
+  let aiProvider: string | null = null;
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (apiKey) {
+  const aiResult = await generateText(PARSE_SYSTEM_PROMPT, [{ role: 'user', content: text }], { temperature: 0 });
+  if (aiResult) {
     try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: PARSE_SYSTEM_PROMPT }] },
-            contents: [{ parts: [{ text }] }],
-            generationConfig: { temperature: 0, responseMimeType: 'application/json' },
-          }),
-        }
-      );
-      if (res.ok) {
-        const json = await res.json();
-        const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-        const clean = rawText.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
-        const g = JSON.parse(clean) as { name?: string; amount?: number; date?: string | null; category_hint?: string | null };
-        const gName = (g.name ?? '').trim();
-        const gAmount = Number(g.amount ?? 0);
-        if (gName && Number.isFinite(gAmount) && gAmount > 0) {
-          extracted = { name: gName, amount: gAmount, date: g.date ?? null, category_hint: g.category_hint ?? null };
-          source = 'gemini';
-        }
-      } else {
-        // 429 quota / 5xx → fallback diam-diam ke rule-based
-        console.warn('[ai/parse-transaction] Gemini unavailable, fallback rule-based:', res.status);
+      const clean = aiResult.text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
+      const g = JSON.parse(clean) as { name?: string; amount?: number; date?: string | null; category_hint?: string | null };
+      const gName = (g.name ?? '').trim();
+      const gAmount = Number(g.amount ?? 0);
+      if (gName && Number.isFinite(gAmount) && gAmount > 0) {
+        extracted = { name: gName, amount: gAmount, date: g.date ?? null, category_hint: g.category_hint ?? null };
+        source = 'ai';
+        aiProvider = aiResult.provider;
       }
-    } catch (err) {
-      console.warn('[ai/parse-transaction] Gemini error, fallback rule-based:', err);
+    } catch {
+      console.warn('[ai/parse-transaction] AI JSON parse failed, fallback rule-based');
     }
   }
 
-  // Fallback rule-based kalau Gemini tidak menghasilkan
+  // Fallback rule-based kalau AI tidak menghasilkan
   if (!extracted) {
     const rb = parseTransactionMessage(text);
     if (rb) {
@@ -140,5 +123,5 @@ export async function POST(req: NextRequest) {
     confidence: resolved.confidence,
   };
 
-  return NextResponse.json({ data: draft, source });
+  return NextResponse.json({ data: draft, source, provider: aiProvider });
 }

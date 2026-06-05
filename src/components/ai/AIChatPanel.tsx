@@ -74,6 +74,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<ChatMode>('ask');
+  const [activeModel, setActiveModel] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -119,6 +120,10 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
         const err = await res.json().catch(() => ({ error: 'Gagal menghubungi AI' }));
         throw new Error(err.error ?? 'Gagal menghubungi AI');
       }
+
+      // Baca provider/model dari header untuk ditampilkan di UI
+      const model = res.headers.get('X-AI-Model');
+      if (model) setActiveModel(model);
 
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
@@ -438,6 +443,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
     setMessages([]);
     setInput('');
     setLoading(false);
+    setActiveModel(null);
   };
 
   return (
@@ -469,13 +475,18 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
               <Image src="/images/favicon.png" alt="AXION Agent" width={36} height={36} className="object-contain shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-50 leading-tight">AXION Agent</p>
-                <div className="flex items-center gap-1.5">
-                <span className="relative flex w-1.5 h-1.5 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-60" />
-                  <span className="relative inline-flex rounded-full w-1.5 h-1.5 bg-emerald-400" />
-                </span>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{businessName}</p>
-              </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="relative flex w-1.5 h-1.5 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-60" />
+                    <span className="relative inline-flex rounded-full w-1.5 h-1.5 bg-emerald-400" />
+                  </span>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{businessName}</p>
+                  {activeModel && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium shrink-0">
+                      {activeModel}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {messages.length > 0 && (

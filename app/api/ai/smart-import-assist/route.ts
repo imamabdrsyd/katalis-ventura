@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { createServerClient, getAuthenticatedUser, getBusinessRoleForUser } from '@/lib/supabase-server';
 import { isManagerRole } from '@/lib/roles';
 import { IMPORT_ASSIST_PROMPT } from '@/lib/ai/prompts';
+import { generateText } from '@/lib/ai/provider';
 
 const bodySchema = z.object({
   business_id: z.string().uuid(),
@@ -47,47 +48,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  // AI = enhancement: kalau tidak tersedia, kembalikan kosong (caller tetap pakai
-  // hasil rule-based). Bukan error — supaya import tetap jalan tanpa AI.
-  if (!apiKey) {
-    return NextResponse.json({ suggestions: [] as Suggestion[], source: 'none' });
-  }
-
   const payload = rows.map((r) => ({
     index: r.index,
     description: r.category_hint ? `${r.description} [hint: ${r.category_hint}]` : r.description,
   }));
 
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: IMPORT_ASSIST_PROMPT }] },
-          contents: [{ parts: [{ text: JSON.stringify(payload) }] }],
-          generationConfig: { temperature: 0, responseMimeType: 'application/json' },
-        }),
-      }
-    );
-    if (!res.ok) {
-      console.warn('[ai/smart-import-assist] Gemini unavailable:', res.status);
-      return NextResponse.json({ suggestions: [] as Suggestion[], source: 'none' });
-    }
-    const json = await res.json();
-    const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-    const clean = rawText.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
-    const arr = JSON.parse(clean) as Array<{ index?: number; category?: string }>;
+  // AI = enhancement: kalau semua provider gagal, return kosong (import tetap jalan rule-based)
+  const aiResult = await generateText(
+    IMPORT_ASSIST_PROMPT,
+    [{ role: 'user', content: JSON.stringify(payload) }],
+    { temperature: 0 }
+  );
+  if (!aiResult) {
+    return NextResponse.json({ suggestions: [] as Suggestion[], source: 'none' });
+  }
 
+  try {
+    const clean = aiResult.text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
+    const arr = JSON.parse(clean) as Array<{ index?: number; category?: string }>;
     const suggestions: Suggestion[] = arr
       .filter((s) => typeof s.index === 'number' && typeof s.category === 'string' && VALID.includes(s.category))
       .map((s) => ({ index: s.index!, category: s.category as Suggestion['category'] }));
 
-    return NextResponse.json({ suggestions, source: 'gemini' });
+    return NextResponse.json({ suggestions, source: aiResult.provider });
   } catch (err) {
-    console.warn('[ai/smart-import-assist] error, fallback empty:', err);
+    console.warn('[ai/smart-import-assist] JSON parse error:', err);
     return NextResponse.json({ suggestions: [] as Suggestion[], source: 'none' });
   }
 }

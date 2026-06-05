@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { createServerClient, getAuthenticatedUser, getBusinessRoleForUser } from '@/lib/supabase-server';
 import { buildFinancialContext } from '@/lib/ai/financialContext';
 import { CHAT_SYSTEM_PROMPT } from '@/lib/ai/prompts';
+import { streamText, PROVIDER_LABELS, MODEL_LABELS } from '@/lib/ai/provider';
 import type { Transaction, Account } from '@/types';
 
 const bodySchema = z.object({
@@ -82,92 +83,49 @@ export async function POST(req: NextRequest) {
     new Date()
   );
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: 'AI tidak tersedia saat ini' }, { status: 503 });
+  // Inject konteks keuangan ke pesan pertama user
+  const aiMessages = messages.map(m => ({ role: m.role, content: m.content })) as import('@/lib/ai/provider').AIMessage[];
+  if (aiMessages[0]?.role === 'user') {
+    aiMessages[0].content = `${financialContext}\n\n${aiMessages[0].content}`;
   }
 
-  // Build Gemini contents (multi-turn)
-  const contents = messages.map(m => ({
-    role: m.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: m.content }],
-  }));
+  const result = await streamText(SYSTEM_PROMPT, aiMessages, { temperature: 0.7, maxTokens: 1024 });
 
-  // Inject konteks keuangan ke pesan user pertama
-  if (contents[0]?.role === 'user') {
-    contents[0].parts[0].text = `${financialContext}\n\n${contents[0].parts[0].text}`;
+  if (!result) {
+    return NextResponse.json({ error: 'AI tidak tersedia saat ini. Coba lagi nanti.' }, { status: 503 });
   }
 
-  const geminiRes = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:streamGenerateContent?alt=sse&key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1024,
-        },
-      }),
-    }
-  );
+  // Kirim provider/model info di header supaya client bisa tampilkan di UI
+  const providerLabel = PROVIDER_LABELS[result.provider];
+  const modelLabel = MODEL_LABELS[result.model] ?? result.model;
 
-  if (!geminiRes.ok) {
-    const errText = await geminiRes.text();
-    console.error('[ai/chat] Gemini error:', geminiRes.status, errText.slice(0, 200));
-    return NextResponse.json({ error: 'AI gagal merespons. Coba lagi.' }, { status: 502 });
-  }
-
-  // Stream SSE dari Gemini → stream ke client
   const encoder = new TextEncoder();
-  const stream = new ReadableStream({
+  const sseStream = new ReadableStream({
     async start(controller) {
-      const reader = geminiRes.body?.getReader();
-      if (!reader) { controller.close(); return; }
-
-      const decoder = new TextDecoder();
-      let buffer = '';
-
+      const reader = result.stream.getReader();
       try {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() ?? '';
-
-          for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-            const data = line.slice(6).trim();
-            if (data === '[DONE]') continue;
-            try {
-              const json = JSON.parse(data);
-              const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-              if (text) {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
-              }
-            } catch {
-              // skip malformed chunk
-            }
+          if (value.text) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: value.text })}\n\n`));
           }
         }
       } finally {
         reader.releaseLock();
       }
-
       controller.enqueue(encoder.encode('data: [DONE]\n\n'));
       controller.close();
     },
   });
 
-  return new NextResponse(stream, {
+  return new NextResponse(sseStream, {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
+      'X-AI-Provider': providerLabel,
+      'X-AI-Model': modelLabel,
     },
   });
 }
