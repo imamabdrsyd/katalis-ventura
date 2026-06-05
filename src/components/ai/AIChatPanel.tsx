@@ -91,7 +91,11 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
   const [activeModel, setActiveModel] = useState<string | null>(null);
   // Konteks transaksi yang nominalnya belum disebut — diisi saat API balas
   // 'needs_amount', dipakai untuk menggabungkan nominal dari pesan berikutnya.
-  const [pendingTx, setPendingTx] = useState<{ name: string; category_hint: string | null } | null>(null);
+  const [pendingTx, setPendingTx] = useState<{
+    name: string;
+    category_hint: string | null;
+    date: string | null;
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -223,6 +227,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
     // teks yang dikirim ke parser = "<deskripsi> <nominal>".
     const textToParse = pendingTx ? `${pendingTx.name} ${trimmed}` : trimmed;
     const carryHint = pendingTx?.category_hint ?? null;
+    const carryDate = pendingTx?.date ?? null;
     setPendingTx(null);
 
     setMessages(prev => [...prev, { role: 'user', content: trimmed }]);
@@ -234,14 +239,23 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
       const res = await fetch('/api/ai/parse-transaction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ business_id: businessId, text: textToParse, category_hint: carryHint }),
+        body: JSON.stringify({
+          business_id: businessId,
+          text: textToParse,
+          category_hint: carryHint,
+          pending_date: carryDate,
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? 'Gagal memproses transaksi');
 
       // AI mengenali transaksi tapi nominal belum disebut → tanya balik
       if (json.status === 'needs_amount') {
-        setPendingTx({ name: json.pending?.name ?? trimmed, category_hint: json.pending?.category_hint ?? null });
+        setPendingTx({
+          name: json.pending?.name ?? trimmed,
+          category_hint: json.pending?.category_hint ?? null,
+          date: json.pending?.date ?? carryDate,
+        });
         setMessages(prev => {
           const updated = [...prev];
           updated[updated.length - 1] = {

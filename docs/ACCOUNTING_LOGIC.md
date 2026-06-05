@@ -3065,7 +3065,8 @@ Query transaksi di route handler memakai JOIN penuh
 - Gemini extract `name + amount + date + category_hint` (no streaming, hemat token,
   konteks keuangan TIDAK diinject — cukup teks user).
 - `smartResolveTransaction()` resolve kategori + akun debit/kredit dari nama.
-- Fallback: `parseTransactionMessage` (regex Telegram) kalau Gemini gagal.
+- Fallback: `parseTransactionMessage` untuk input lengkap dan
+  `parseIncompleteTransactionMessage` untuk deskripsi yang hanya kurang nominal.
 - **Interaktif (needs_amount)**: kalau user menyebut transaksi tapi LUPA nominal
   (mis. "bayar listrik"), `extractTransactionFromText()` return `status:'needs_amount'`
   (nama + category_hint, amount=0) — bukan error. Endpoint balas `{status:'needs_amount',
@@ -3124,13 +3125,16 @@ Tujuan: chat tidak buntu saat user mengetik transaksi tanpa nominal. Flow lintas
    `name` + `category_hint` walau nominal tak disebut, JANGAN mengarang.
 2. Helper return tiga keadaan: `'complete'` (nama+nominal valid), `'needs_amount'`
    (nama ada, amount=0), atau `null` (nama pun tak terbaca → tetap error generik).
-3. Caller (web `pendingTx` / Telegram `pending_transaction`) menyimpan nama+hint, lalu
-   menggabungkan jawaban nominal berikutnya tanpa parse ulang deskripsi.
+3. Caller (web `pendingTx` / Telegram `pending_transaction`) menyimpan nama+hint; web
+   juga membawa tanggal yang sudah terdeteksi. Jawaban nominal berikutnya digabung tanpa
+   meminta user mengetik ulang deskripsi.
 4. `category_hint` dibawa ke `smartResolveTransaction` di turn kedua supaya klasifikasi
    yang sudah dikenali di turn pertama tidak hilang.
 
-Catatan: regex fallback (`parseTransactionMessage`) hanya cocok bila nominal terdeteksi,
-jadi `needs_amount` selalu berasal dari path AI (Gemini/Groq).
+Catatan: regex fallback lengkap (`parseTransactionMessage`) hanya cocok bila nominal
+terdeteksi. Untuk deskripsi transaksi yang jelas tanpa nominal, fallback
+`parseIncompleteTransactionMessage` tetap dapat menghasilkan `needs_amount` saat seluruh
+provider AI tidak tersedia.
 
 ---
 

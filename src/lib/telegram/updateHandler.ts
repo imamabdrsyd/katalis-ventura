@@ -18,6 +18,7 @@ import {
   handleTanyaCommand,
 } from './commands';
 import { extractTransactionFromText } from '@/lib/ai/parseTransaction';
+import { isTransactionCancellation } from './parser';
 import { parseDateFromText, isListTransactionIntent } from './dateParser';
 import { parsePeriodFromText, detectReportType, ReportType } from './periodParser';
 import { smartResolveTransaction } from '@/lib/import/smartResolver';
@@ -105,6 +106,7 @@ async function handleTransactionMessage(chatId: number, text: string): Promise<v
   // Handle pemilihan bisnis
   const pending = conn.pending_transaction as (ParsedTransaction & { _type?: string; businesses?: { id: string; business_name: string }[] }) | null;
   const pendingValid = conn.pending_expires_at && new Date(conn.pending_expires_at) > new Date();
+  const lower = text.toLowerCase().trim();
 
   if (pendingValid && pending?._type === 'bisnis_selection') {
     const idx = parseInt(text.trim()) - 1;
@@ -127,10 +129,21 @@ async function handleTransactionMessage(chatId: number, text: string): Promise<v
     }
   }
 
+  if (
+    pendingValid &&
+    pending?._type === 'needs_amount' &&
+    isTransactionCancellation(lower)
+  ) {
+    await admin
+      .from('telegram_connections')
+      .update({ pending_transaction: null, pending_expires_at: null })
+      .eq('telegram_chat_id', chatId);
+    await sendMessage(chatId, '❌ Transaksi dibatalkan.');
+    return;
+  }
+
   // Handle konfirmasi transaksi pending
   if (pendingValid && pending && !pending._type) {
-    const lower = text.toLowerCase().trim();
-
     // Koreksi kategori OPEX <-> VAR
     const CATEGORY_CORRECTIONS: Record<string, 'OPEX' | 'VAR'> = {
       'opex': 'OPEX', 'operasional': 'OPEX', 'beban operasional': 'OPEX',
@@ -165,7 +178,7 @@ async function handleTransactionMessage(chatId: number, text: string): Promise<v
         .eq('telegram_chat_id', chatId);
       return;
     }
-    if (['tidak', 'n', 'no', 'batal', 'cancel'].includes(lower)) {
+    if (isTransactionCancellation(lower)) {
       await admin
         .from('telegram_connections')
         .update({ pending_transaction: null, pending_expires_at: null })

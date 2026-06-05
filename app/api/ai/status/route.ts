@@ -28,7 +28,8 @@ export async function GET() {
     model = GEMINI_MODELS[0];
   } else if (process.env.GROQ_API_KEY) {
     provider = 'groq';
-    model = 'llama-3.3-70b-versatile';
+    // Chat analitik pakai DeepSeek R1; parser pakai Llama — badge standby reflect chat model
+    model = 'deepseek-r1-distill-llama-70b';
   }
 
   return NextResponse.json({

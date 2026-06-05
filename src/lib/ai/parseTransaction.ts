@@ -1,6 +1,6 @@
 import { generateText } from './provider';
 import { PARSE_SYSTEM_PROMPT } from './prompts';
-import { parseTransactionMessage } from '@/lib/telegram/parser';
+import { parseIncompleteTransactionMessage, parseTransactionMessage } from '@/lib/telegram/parser';
 
 export interface ExtractedTransaction {
   name: string;
@@ -18,6 +18,15 @@ export interface ExtractResult {
   source: 'ai' | 'rule_based';
   /** Provider AI yang dipakai (gemini/groq), null kalau rule-based */
   provider: string | null;
+}
+
+export function resolveTransactionDate(
+  extractedDate: string | null,
+  carriedDate: string | null | undefined,
+  fallbackDate: string
+): string {
+  const date = extractedDate ?? carriedDate;
+  return date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : fallbackDate;
 }
 
 /**
@@ -76,6 +85,16 @@ export async function extractTransactionFromText(text: string): Promise<ExtractR
     return {
       status: 'complete',
       extracted: { name: rb.name, amount: rb.amount, date: null, category_hint: rb.category },
+      source: 'rule_based',
+      provider: null,
+    };
+  }
+
+  const partial = parseIncompleteTransactionMessage(text);
+  if (partial) {
+    return {
+      status: 'needs_amount',
+      extracted: { name: partial.name, amount: 0, date: null, category_hint: partial.category },
       source: 'rule_based',
       provider: null,
     };

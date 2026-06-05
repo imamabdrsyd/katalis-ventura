@@ -68,6 +68,26 @@ function inferCategory(text: string): { category: TransactionCategory; confidenc
   return { category: 'OPEX', confidence: 'low' };
 }
 
+export function isTransactionCancellation(text: string): boolean {
+  return ['tidak', 'n', 'no', 'batal', 'cancel'].includes(text.toLowerCase().trim());
+}
+
+export function parseIncompleteTransactionMessage(text: string): ParsedTransaction | null {
+  const name = text.trim();
+  if (!name || parseTransactionMessage(name)) return null;
+
+  const inferred = inferCategory(name);
+  if (inferred.confidence === 'low') return null;
+
+  return {
+    name,
+    amount: 0,
+    category: inferred.category,
+    confidence: inferred.confidence,
+    raw: text,
+  };
+}
+
 export function parseTransactionMessage(text: string): ParsedTransaction | null {
   const tokens = text.trim().split(/\s+/);
   if (tokens.length < 2) return null;

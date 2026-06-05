@@ -5,8 +5,14 @@
  *
  * Kenapa chain ini:
  * - Gemini: kualitas terbaik, JSON native, tapi free tier RPD sangat ketat (~20-500/hari)
- * - Groq: OpenAI-compatible, gratis dengan rate limit lebih longgar (llama-3.3-70b),
- *   slightly lebih lemah untuk bahasa Indonesia tapi cukup untuk AXION use case
+ * - Groq: OpenAI-compatible, gratis dengan rate limit lebih longgar
+ *
+ * Dua Groq model dengan peran berbeda:
+ * - GROQ_CHAT_MODEL  = deepseek-r1-distill-llama-70b — untuk chat analitik (mode Tanya).
+ *   Model reasoning: lebih teliti untuk analisis keuangan, audit laporan, proyeksi.
+ *   Thinking tokens (<think>...</think>) difilter sebelum dikirim ke user.
+ * - GROQ_PARSE_MODEL = llama-3.3-70b-versatile — untuk parse transaksi & smart import.
+ *   Cepat, hemat token, tidak butuh chain-of-thought untuk klasifikasi singkat.
  *
  * Kuota Gemini free tier dihitung per model. Kalau satu model kena rate limit,
  * request otomatis lanjut ke model Gemini berikutnya sebelum fallback ke Groq.
@@ -48,6 +54,7 @@ export const MODEL_LABELS: Record<string, string> = {
   'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite',
   'llama-3.3-70b-versatile': 'Llama 3.3 70B',
   'llama-3.1-8b-instant': 'Llama 3.1 8B',
+  'deepseek-r1-distill-llama-70b': 'DeepSeek R1 70B',
 };
 
 export const GEMINI_MODELS = [
@@ -152,7 +159,10 @@ async function geminiStream(
 
 // ─── Groq helpers (OpenAI-compatible) ────────────────────────────────────────
 
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+// Parse transaksi & smart import: cepat, tidak butuh reasoning
+const GROQ_PARSE_MODEL = 'llama-3.3-70b-versatile';
+// Chat analitik: reasoning lebih dalam untuk analisis keuangan
+const GROQ_CHAT_MODEL = 'deepseek-r1-distill-llama-70b';
 
 async function groqGenerate(
   systemPrompt: string,
@@ -175,7 +185,7 @@ async function groqGenerate(
         Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: GROQ_MODEL,
+        model: GROQ_PARSE_MODEL,
         messages: oaiMessages,
         temperature: opts.temperature ?? 0,
         max_tokens: opts.maxTokens ?? 1024,
@@ -215,7 +225,7 @@ async function groqStream(
         Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: GROQ_MODEL,
+        model: GROQ_CHAT_MODEL,
         messages: oaiMessages,
         temperature: opts.temperature ?? 0.7,
         max_tokens: opts.maxTokens ?? 1024,
@@ -251,10 +261,10 @@ export async function generateText(
     }
   }
 
-  // Fallback: Groq
+  // Fallback: Groq (parse model — cepat, tidak perlu reasoning)
   const groqText = await groqGenerate(systemPrompt, messages, opts);
   if (groqText !== null) {
-    return { text: groqText, provider: 'groq', model: GROQ_MODEL };
+    return { text: groqText, provider: 'groq', model: GROQ_PARSE_MODEL };
   }
 
   return null;
@@ -281,13 +291,13 @@ export async function streamText(
     }
   }
 
-  // Fallback: Groq
+  // Fallback: Groq (chat model — DeepSeek R1 untuk analitik lebih dalam)
   const groqRes = await groqStream(systemPrompt, messages, opts);
   if (groqRes) {
     return {
       stream: buildGroqStream(groqRes),
       provider: 'groq',
-      model: GROQ_MODEL,
+      model: GROQ_CHAT_MODEL,
     };
   }
 
@@ -336,6 +346,10 @@ function buildGeminiStream(res: Response): ReadableStream<StreamChunk> {
 /**
  * Konversi Groq OpenAI SSE response → ReadableStream<StreamChunk>.
  * Groq format: `data: {"choices":[{"delta":{"content":"..."}}]}`
+ *
+ * Filter <think>...</think> dari DeepSeek R1: thinking tokens ditulis sebelum
+ * jawaban asli — user tidak perlu lihat proses berpikir internalnya.
+ * State machine sederhana: track apakah kita sedang di dalam blok <think>.
  */
 function buildGroqStream(res: Response): ReadableStream<StreamChunk> {
   return new ReadableStream({
@@ -344,6 +358,9 @@ function buildGroqStream(res: Response): ReadableStream<StreamChunk> {
       if (!reader) { controller.close(); return; }
       const decoder = new TextDecoder();
       let buffer = '';
+      // Buffer untuk akumulasi teks mentah sebelum filter <think>
+      let rawAccum = '';
+      let inThink = false;
       try {
         while (true) {
           const { done, value } = await reader.read();
@@ -357,8 +374,36 @@ function buildGroqStream(res: Response): ReadableStream<StreamChunk> {
             if (data === '[DONE]') continue;
             try {
               const json = JSON.parse(data);
-              const text = json.choices?.[0]?.delta?.content;
-              if (text) controller.enqueue({ text });
+              const chunk: string = json.choices?.[0]?.delta?.content ?? '';
+              if (!chunk) continue;
+              rawAccum += chunk;
+              // Proses rawAccum: buang semua <think>…</think> blocks
+              let out = '';
+              let remaining = rawAccum;
+              while (remaining.length > 0) {
+                if (inThink) {
+                  const closeIdx = remaining.indexOf('</think>');
+                  if (closeIdx === -1) {
+                    // Masih di dalam think block, tunggu token berikutnya
+                    remaining = '';
+                  } else {
+                    inThink = false;
+                    remaining = remaining.slice(closeIdx + '</think>'.length);
+                  }
+                } else {
+                  const openIdx = remaining.indexOf('<think>');
+                  if (openIdx === -1) {
+                    out += remaining;
+                    remaining = '';
+                  } else {
+                    out += remaining.slice(0, openIdx);
+                    inThink = true;
+                    remaining = remaining.slice(openIdx + '<think>'.length);
+                  }
+                }
+              }
+              rawAccum = inThink ? rawAccum.slice(rawAccum.lastIndexOf('<think>')) : '';
+              if (out) controller.enqueue({ text: out });
             } catch { /* skip malformed */ }
           }
         }

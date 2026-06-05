@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { createServerClient, getAuthenticatedUser, getBusinessRoleForUser } from '@/lib/supabase-server';
 import { isManagerRole } from '@/lib/roles';
 import { smartResolveTransaction } from '@/lib/import/smartResolver';
-import { extractTransactionFromText } from '@/lib/ai/parseTransaction';
+import { extractTransactionFromText, resolveTransactionDate } from '@/lib/ai/parseTransaction';
 import type { Account, TransactionCategory } from '@/types';
 
 const bodySchema = z.object({
@@ -11,6 +11,7 @@ const bodySchema = z.object({
   text: z.string().min(2).max(500),
   // Hint kategori yang dibawa dari turn sebelumnya (saat user melengkapi nominal).
   category_hint: z.string().nullish(),
+  pending_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
 });
 
 type ParsedDraft = {
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request', details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { business_id, text, category_hint: carriedHint } = parsed.data;
+  const { business_id, text, category_hint: carriedHint, pending_date: carriedDate } = parsed.data;
 
   const supabase = await createServerClient();
   const role = await getBusinessRoleForUser(supabase, user.id, business_id);
@@ -98,7 +99,7 @@ export async function POST(req: NextRequest) {
   );
 
   const today = new Date().toISOString().split('T')[0];
-  const date = extracted.date && /^\d{4}-\d{2}-\d{2}$/.test(extracted.date) ? extracted.date : today;
+  const date = resolveTransactionDate(extracted.date, carriedDate, today);
 
   const draft: ParsedDraft = {
     name: resolved.name || name,
