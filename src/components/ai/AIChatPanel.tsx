@@ -83,8 +83,15 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 150);
+      // Cek provider standby supaya badge model tampil dari awal
+      if (!activeModel) {
+        fetch('/api/ai/status')
+          .then(r => r.ok ? r.json() : null)
+          .then(d => { if (d?.model) setActiveModel(d.model); })
+          .catch(() => {});
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, activeModel]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -443,7 +450,11 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
     setMessages([]);
     setInput('');
     setLoading(false);
-    setActiveModel(null);
+    // Refresh badge ke provider standby (jangan kosongkan)
+    fetch('/api/ai/status')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setActiveModel(d?.model ?? null))
+      .catch(() => setActiveModel(null));
   };
 
   return (
