@@ -108,7 +108,9 @@ export async function POST(req: NextRequest) {
           const { done, value } = await reader.read();
           if (done) break;
           if (value.text) {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: value.text })}\n\n`));
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ text: value.text, kind: value.kind })}\n\n`)
+            );
           }
         }
       } finally {

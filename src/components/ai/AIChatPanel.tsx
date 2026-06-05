@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useId } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check, Paperclip, FileSpreadsheet } from 'lucide-react';
+import { X, Send, Bot, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check, Paperclip, FileSpreadsheet, Brain, ChevronRight } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { parseExcelFile, validateFile } from '@/lib/import/excelParser';
 import { validateRowsSmart } from '@/lib/import/excelValidator';
@@ -55,6 +55,8 @@ export interface TransactionDraft {
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  // Reasoning model (DeepSeek R1 / Gemini thinking) — ditampilkan di accordion collapsible
+  thinking?: string;
   streaming?: boolean;
   // Preview transaksi (mode record) — kalau ada, render sebagai card konfirmasi
   draft?: TransactionDraft;
@@ -156,6 +158,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let accumulated = '';
+      let thinking = '';
       let buffer = '';
 
       while (true) {
@@ -173,12 +176,13 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
           try {
             const json = JSON.parse(data);
             if (json.text) {
-              accumulated += json.text;
+              if (json.kind === 'thinking') thinking += json.text;
+              else accumulated += json.text;
               setMessages(prev => {
                 const updated = [...prev];
                 const last = updated[updated.length - 1];
                 if (last?.streaming) {
-                  updated[updated.length - 1] = { ...last, content: accumulated };
+                  updated[updated.length - 1] = { ...last, content: accumulated, thinking: thinking || undefined };
                 }
                 return updated;
               });
@@ -194,7 +198,11 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
         const updated = [...prev];
         const last = updated[updated.length - 1];
         if (last?.streaming) {
-          updated[updated.length - 1] = { role: 'assistant', content: accumulated || '_(tidak ada respons)_' };
+          updated[updated.length - 1] = {
+            role: 'assistant',
+            content: accumulated || '_(tidak ada respons)_',
+            thinking: thinking || undefined,
+          };
         }
         return updated;
       });
@@ -818,7 +826,7 @@ function ChatBubble({
           ? 'bg-[#474443] dark:bg-gray-100 text-white dark:text-gray-900 rounded-tr-sm'
           : 'bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-tl-sm border border-gray-100 dark:border-gray-700'
       }`}>
-        {message.streaming && !message.content ? (
+        {message.streaming && !message.content && !message.thinking ? (
           <span className="inline-flex gap-1 items-center h-4">
             <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
             <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -826,7 +834,13 @@ function ChatBubble({
           </span>
         ) : (
           <>
-            <MarkdownText text={message.content} isUser={isUser} />
+            {message.thinking && (
+              <ThinkingAccordion
+                text={message.thinking}
+                streaming={!!message.streaming && !message.content}
+              />
+            )}
+            {message.content && <MarkdownText text={message.content} isUser={isUser} />}
             {message.draft && (
               <DraftCard
                 draft={message.draft}
@@ -847,6 +861,56 @@ function ChatBubble({
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function ThinkingAccordion({ text, streaming }: { text: string; streaming: boolean }) {
+  // Default tertutup. Saat streaming thinking, auto-buka biar user lihat live;
+  // begitu jawaban mulai mengalir (streaming=false), user bisa tutup manual.
+  const [open, setOpen] = useState(false);
+  const wasStreaming = useRef(false);
+
+  useEffect(() => {
+    if (streaming && !wasStreaming.current) setOpen(true);   // mulai thinking → buka
+    if (!streaming && wasStreaming.current) setOpen(false);  // thinking selesai → tutup
+    wasStreaming.current = streaming;
+  }, [streaming]);
+
+  return (
+    <div className="mb-2 rounded-xl border border-gray-200/70 dark:border-gray-700/70 bg-gray-50/60 dark:bg-gray-800/40 overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100/60 dark:hover:bg-gray-700/40 transition-colors"
+      >
+        <Brain className={`w-3 h-3 shrink-0 ${streaming ? 'text-primary-500 dark:text-primary-400' : ''}`} />
+        <span className="flex-1 text-left">
+          {streaming ? 'Sedang menganalisis…' : 'Proses berpikir'}
+        </span>
+        {streaming && (
+          <span className="inline-flex gap-0.5">
+            <span className="w-1 h-1 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+            <span className="w-1 h-1 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+            <span className="w-1 h-1 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          </span>
+        )}
+        <ChevronRight className={`w-3 h-3 shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="px-2.5 pb-2 pt-0.5 text-[11.5px] leading-relaxed text-gray-500 dark:text-gray-400 whitespace-pre-wrap border-t border-gray-200/60 dark:border-gray-700/60 max-h-52 overflow-y-auto">
+              {text}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

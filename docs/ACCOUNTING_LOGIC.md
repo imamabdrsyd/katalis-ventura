@@ -2985,6 +2985,23 @@ User (chat panel)
 | FAB launcher | `src/components/ai/AIChatFAB.tsx` + dipakai via `FloatingQuickAdd.tsx` |
 | Unit test | `tests/unit/aiFinancialContext.test.ts` |
 
+### 26.1c Reasoning model + thinking UI
+
+Mode "Tanya" (chat analitik) pakai dua Groq model berbeda peran:
+- **GROQ_CHAT_MODEL** = `deepseek-r1-distill-llama-70b` (streaming/chat) — reasoning lebih
+  dalam untuk analisis keuangan, audit, proyeksi.
+- **GROQ_PARSE_MODEL** = `llama-3.3-70b-versatile` (`generateText`) — cepat untuk parse
+  transaksi & smart import, tidak butuh chain-of-thought.
+
+**Thinking tokens ditampilkan, bukan dibuang.** `StreamChunk` punya `kind:'thinking'|'answer'`:
+- Groq R1: teks dalam `<think>...</think>` di-tag `thinking`, sisanya `answer`
+  (state machine `buildGroqStream` tahan partial tag spt `<thi` supaya tidak bocor).
+- Gemini: part dgn `thought:true` → `thinking`, sisanya `answer`.
+- Chat route teruskan `{text, kind}` per SSE chunk.
+- UI (`ThinkingAccordion` di AIChatPanel): reasoning tampil di accordion collapsible —
+  auto-buka saat sedang berpikir ("Sedang menganalisis…"), auto-tutup begitu jawaban
+  final mulai mengalir. User bisa expand/collapse manual.
+
 ### 26.1b Provider Chain (multi-provider fallback)
 
 `src/lib/ai/provider.ts` menyediakan 2 fungsi yang menyembunyikan perbedaan API

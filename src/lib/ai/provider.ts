@@ -33,6 +33,8 @@ export interface GenerateResult {
 
 export interface StreamChunk {
   text: string;
+  /** 'thinking' = proses berpikir model (reasoning), 'answer' = jawaban final */
+  kind: 'thinking' | 'answer';
 }
 
 export interface StreamResult {
@@ -308,7 +310,9 @@ export async function streamText(
 
 /**
  * Konversi Gemini SSE response → ReadableStream<StreamChunk>.
- * Gemini format: `data: {"candidates":[{"content":{"parts":[{"text":"..."}]}}]}`
+ * Gemini format: `data: {"candidates":[{"content":{"parts":[{"text":"...","thought":bool}]}}]}`
+ *
+ * Parts dgn `thought:true` di-emit sebagai kind 'thinking' (reasoning), sisanya 'answer'.
  */
 function buildGeminiStream(res: Response): ReadableStream<StreamChunk> {
   return new ReadableStream({
@@ -330,8 +334,12 @@ function buildGeminiStream(res: Response): ReadableStream<StreamChunk> {
             if (data === '[DONE]') continue;
             try {
               const json = JSON.parse(data);
-              const text = extractGeminiText(json.candidates?.[0]?.content?.parts);
-              if (text) controller.enqueue({ text });
+              const parts: Array<{ text?: string; thought?: boolean }> =
+                json.candidates?.[0]?.content?.parts ?? [];
+              for (const part of parts) {
+                if (!part.text) continue;
+                controller.enqueue({ text: part.text, kind: part.thought ? 'thinking' : 'answer' });
+              }
             } catch { /* skip malformed */ }
           }
         }
@@ -347,9 +355,10 @@ function buildGeminiStream(res: Response): ReadableStream<StreamChunk> {
  * Konversi Groq OpenAI SSE response → ReadableStream<StreamChunk>.
  * Groq format: `data: {"choices":[{"delta":{"content":"..."}}]}`
  *
- * Filter <think>...</think> dari DeepSeek R1: thinking tokens ditulis sebelum
- * jawaban asli — user tidak perlu lihat proses berpikir internalnya.
- * State machine sederhana: track apakah kita sedang di dalam blok <think>.
+ * DeepSeek R1 menulis reasoning di dalam <think>...</think> sebelum jawaban asli.
+ * Teks di dalam <think> di-emit sebagai kind 'thinking', sisanya 'answer'.
+ * State machine: track apakah kita sedang di dalam blok <think>, dan tahan
+ * partial tag (mis. "<thi") sampai tag lengkap supaya tidak bocor ke output.
  */
 function buildGroqStream(res: Response): ReadableStream<StreamChunk> {
   return new ReadableStream({
@@ -358,9 +367,17 @@ function buildGroqStream(res: Response): ReadableStream<StreamChunk> {
       if (!reader) { controller.close(); return; }
       const decoder = new TextDecoder();
       let buffer = '';
-      // Buffer untuk akumulasi teks mentah sebelum filter <think>
-      let rawAccum = '';
+      let pending = ''; // teks yang belum diproses (bisa ada partial tag di ujung)
       let inThink = false;
+
+      // Apakah `s` mungkin awalan dari tag yang sedang dicari? (tahan kalau iya)
+      const couldBeTagPrefix = (s: string, tag: string) => {
+        for (let i = 1; i < tag.length; i++) {
+          if (s.endsWith(tag.slice(0, i))) return true;
+        }
+        return false;
+      };
+
       try {
         while (true) {
           const { done, value } = await reader.read();
@@ -376,37 +393,39 @@ function buildGroqStream(res: Response): ReadableStream<StreamChunk> {
               const json = JSON.parse(data);
               const chunk: string = json.choices?.[0]?.delta?.content ?? '';
               if (!chunk) continue;
-              rawAccum += chunk;
-              // Proses rawAccum: buang semua <think>…</think> blocks
-              let out = '';
-              let remaining = rawAccum;
-              while (remaining.length > 0) {
-                if (inThink) {
-                  const closeIdx = remaining.indexOf('</think>');
-                  if (closeIdx === -1) {
-                    // Masih di dalam think block, tunggu token berikutnya
-                    remaining = '';
-                  } else {
-                    inThink = false;
-                    remaining = remaining.slice(closeIdx + '</think>'.length);
-                  }
-                } else {
-                  const openIdx = remaining.indexOf('<think>');
-                  if (openIdx === -1) {
-                    out += remaining;
-                    remaining = '';
-                  } else {
-                    out += remaining.slice(0, openIdx);
-                    inThink = true;
-                    remaining = remaining.slice(openIdx + '<think>'.length);
-                  }
+              pending += chunk;
+
+              // Drain pending sejauh tag berikutnya bisa dipastikan.
+              while (pending.length > 0) {
+                const tag = inThink ? '</think>' : '<think>';
+                const idx = pending.indexOf(tag);
+                if (idx !== -1) {
+                  const before = pending.slice(0, idx);
+                  if (before) controller.enqueue({ text: before, kind: inThink ? 'thinking' : 'answer' });
+                  pending = pending.slice(idx + tag.length);
+                  inThink = !inThink;
+                  continue;
                 }
+                // Tag belum lengkap — emit yang aman, tahan kemungkinan partial tag di ujung
+                if (couldBeTagPrefix(pending, tag)) {
+                  // cari titik aman terakhir: emit semua kecuali ekor yang bisa jadi prefix
+                  let safeLen = pending.length;
+                  for (let i = 1; i < tag.length; i++) {
+                    if (pending.endsWith(tag.slice(0, i))) { safeLen = pending.length - i; break; }
+                  }
+                  const safe = pending.slice(0, safeLen);
+                  if (safe) controller.enqueue({ text: safe, kind: inThink ? 'thinking' : 'answer' });
+                  pending = pending.slice(safeLen);
+                  break;
+                }
+                controller.enqueue({ text: pending, kind: inThink ? 'thinking' : 'answer' });
+                pending = '';
               }
-              rawAccum = inThink ? rawAccum.slice(rawAccum.lastIndexOf('<think>')) : '';
-              if (out) controller.enqueue({ text: out });
             } catch { /* skip malformed */ }
           }
         }
+        // Flush sisa
+        if (pending) controller.enqueue({ text: pending, kind: inThink ? 'thinking' : 'answer' });
       } finally {
         reader.releaseLock();
         controller.close();
