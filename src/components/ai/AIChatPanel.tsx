@@ -299,10 +299,10 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
   const handleFile = useCallback(async (file: File) => {
     if (loading) return;
 
-    const fileErr = validateFile(file);
+    const fileCheck = validateFile(file);
     setMessages(prev => [...prev, { role: 'user', content: `📎 ${file.name}` }]);
-    if (fileErr) {
-      setMessages(prev => [...prev, { role: 'assistant', content: `⚠️ ${fileErr}` }]);
+    if (!fileCheck.valid) {
+      setMessages(prev => [...prev, { role: 'assistant', content: `⚠️ ${fileCheck.error ?? 'File tidak valid'}` }]);
       return;
     }
 
