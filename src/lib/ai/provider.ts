@@ -58,6 +58,7 @@ export const MODEL_LABELS: Record<string, string> = {
   'llama-3.3-70b-versatile': 'Llama 3.3 70B',
   'llama-3.1-8b-instant': 'Llama 3.1 8B',
   'deepseek-r1-distill-llama-70b': 'DeepSeek R1 70B',
+  'qwen-qwq-32b': 'Qwen QwQ 32B',
 };
 
 export const GEMINI_MODELS = [
@@ -167,7 +168,7 @@ async function geminiStream(
 // Parse transaksi & smart import: cepat, tidak butuh reasoning
 const GROQ_PARSE_MODEL = 'llama-3.3-70b-versatile';
 // Chat analitik: reasoning lebih dalam untuk analisis keuangan
-const GROQ_CHAT_MODEL = 'deepseek-r1-distill-llama-70b';
+const GROQ_CHAT_MODEL = 'qwen-qwq-32b';
 
 async function groqGenerate(
   systemPrompt: string,

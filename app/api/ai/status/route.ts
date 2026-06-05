@@ -28,8 +28,8 @@ export async function GET() {
     model = GEMINI_MODELS[0];
   } else if (process.env.GROQ_API_KEY) {
     provider = 'groq';
-    // Chat analitik pakai DeepSeek R1; parser pakai Llama — badge standby reflect chat model
-    model = 'deepseek-r1-distill-llama-70b';
+    // Chat analitik pakai Qwen QwQ; parser pakai Llama — badge standby reflect chat model
+    model = 'qwen-qwq-32b';
   }
 
   return NextResponse.json({
