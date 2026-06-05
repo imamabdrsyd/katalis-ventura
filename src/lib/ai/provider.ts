@@ -54,6 +54,7 @@ export const MODEL_LABELS: Record<string, string> = {
   'gemini-3.1-flash-lite': 'Gemini 3.1 Flash Lite',
   'gemini-2.5-flash': 'Gemini 2.5 Flash',
   'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite',
+  'gemini-2.5-pro': 'Gemini 2.5 Pro',
   'llama-3.3-70b-versatile': 'Llama 3.3 70B',
   'llama-3.1-8b-instant': 'Llama 3.1 8B',
   'deepseek-r1-distill-llama-70b': 'DeepSeek R1 70B',
@@ -144,6 +145,8 @@ async function geminiStream(
           generationConfig: {
             temperature: opts.temperature ?? 0.7,
             maxOutputTokens: opts.maxTokens ?? 1024,
+            // Thinking tokens: hanya model 2.5 yang mendukung
+            ...(model.startsWith('gemini-2.5') ? { thinkingConfig: { includeThoughts: true } } : {}),
           },
         }),
       }
