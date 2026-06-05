@@ -90,10 +90,13 @@ Ekstrak SATU transaksi dari kalimat user. Return JSON SAJA, tanpa teks lain, tan
 Schema:
 {
   "name": "deskripsi singkat (nama vendor/keperluan, mis. 'Bayar listrik', 'Jual kopi ke Budi')",
-  "amount": number (nominal Rupiah, bilangan bulat tanpa titik/koma),
+  "amount": number (nominal Rupiah, bilangan bulat tanpa titik/koma) ATAU null kalau nominal TIDAK disebut,
   "date": "YYYY-MM-DD atau null kalau tidak disebut",
   "category_hint": "EARN/OPEX/VAR/CAPEX/TAX/FIN atau null"
 }
+
+PENTING: kalau user menyebut transaksinya tapi LUPA nominal (mis. "bayar listrik", "jual kopi ke Budi"),
+tetap return "name" + "category_hint" dengan "amount": null. JANGAN mengarang nominal.
 
 Format amount (Indonesia):
 - "500rb"/"500k"/"500ribu" → 500000
@@ -110,7 +113,8 @@ Contoh:
 "jual kopi ke pak budi 2.5jt" → {"name":"Jual kopi ke Pak Budi","amount":2500000,"date":null,"category_hint":"EARN"}
 "beli bahan baku kemasan 750.000" → {"name":"Beli bahan baku kemasan","amount":750000,"date":null,"category_hint":"VAR"}
 "beli mesin kopi 8jt" → {"name":"Beli mesin kopi","amount":8000000,"date":null,"category_hint":"CAPEX"}
-"bayar cicilan bank 1.2jt" → {"name":"Bayar cicilan bank","amount":1200000,"date":null,"category_hint":"FIN"}`;
+"bayar cicilan bank 1.2jt" → {"name":"Bayar cicilan bank","amount":1200000,"date":null,"category_hint":"FIN"}
+"bayar listrik" → {"name":"Bayar listrik","amount":null,"date":null,"category_hint":"OPEX"}`;
 
 /**
  * System prompt untuk SMART IMPORT ASSIST (klasifikasi batch baris).

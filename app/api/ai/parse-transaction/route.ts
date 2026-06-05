@@ -9,6 +9,8 @@ import type { Account, TransactionCategory } from '@/types';
 const bodySchema = z.object({
   business_id: z.string().uuid(),
   text: z.string().min(2).max(500),
+  // Hint kategori yang dibawa dari turn sebelumnya (saat user melengkapi nominal).
+  category_hint: z.string().nullish(),
 });
 
 type ParsedDraft = {
@@ -42,7 +44,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request', details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { business_id, text } = parsed.data;
+  const { business_id, text, category_hint: carriedHint } = parsed.data;
 
   const supabase = await createServerClient();
   const role = await getBusinessRoleForUser(supabase, user.id, business_id);
@@ -66,7 +68,7 @@ export async function POST(req: NextRequest) {
   const extractResult = await extractTransactionFromText(text);
   if (!extractResult) {
     return NextResponse.json(
-      { error: 'Tidak bisa mendeteksi nama atau nominal. Coba mis. "bayar listrik 500rb"' },
+      { error: 'Tidak bisa mendeteksi transaksi. Coba mis. "bayar listrik 500rb"' },
       { status: 422 }
     );
   }
@@ -74,8 +76,26 @@ export async function POST(req: NextRequest) {
   const { extracted, source, provider: aiProvider } = extractResult;
   const { name, amount } = extracted;
 
-  // 2. Resolve kategori + akun debit/kredit pakai engine rule-based yang sudah ada
-  const resolved = smartResolveTransaction(name, accounts, extracted.category_hint ?? undefined);
+  // Nama transaksi jelas tapi nominal belum disebut → balik tanya ke user.
+  // Frontend menyimpan konteks (name + category_hint) lalu menggabungkan nominal
+  // dari jawaban berikutnya tanpa parse ulang.
+  if (extractResult.status === 'needs_amount') {
+    return NextResponse.json({
+      status: 'needs_amount',
+      pending: { name, category_hint: extracted.category_hint, date: extracted.date },
+      message: `Oke, **${name}**. Berapa nominalnya?`,
+      source,
+      provider: aiProvider,
+    });
+  }
+
+  // 2. Resolve kategori + akun debit/kredit pakai engine rule-based yang sudah ada.
+  //    Hint dari turn ini diprioritaskan, lalu hint yang dibawa dari turn "needs_amount".
+  const resolved = smartResolveTransaction(
+    name,
+    accounts,
+    extracted.category_hint ?? carriedHint ?? undefined
+  );
 
   const today = new Date().toISOString().split('T')[0];
   const date = extracted.date && /^\d{4}-\d{2}-\d{2}$/.test(extracted.date) ? extracted.date : today;

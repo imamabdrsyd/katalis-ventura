@@ -212,13 +212,44 @@ async function handleTransactionMessage(chatId: number, text: string): Promise<v
     return;
   }
 
+  // Kalau ada konteks "nominal belum disebut" dari pesan sebelumnya, gabungkan
+  // jawaban user sekarang dgn deskripsi yang sudah dikenali (mirip flow web).
+  let textForParse = text;
+  let carriedHint: string | undefined;
+  if (pendingValid && pending?._type === 'needs_amount') {
+    textForParse = `${pending.name} ${text}`;
+    carriedHint = pending.category ?? undefined;
+  }
+
   // Ekstrak via AI provider chain (Gemini→Groq) + fallback regex.
   // Sama dgn parser di chat panel web (reuse extractTransactionFromText).
-  const extractResult = await extractTransactionFromText(text);
+  const extractResult = await extractTransactionFromText(textForParse);
   if (!extractResult) {
     await sendMessage(
       chatId,
       `Tidak bisa membaca transaksi. Pastikan format:\n_deskripsi jumlah_\n\nContoh: \`jual kopi 150000\`\n\nKetik /help untuk panduan.`,
+      { parse_mode: 'Markdown' }
+    );
+    return;
+  }
+
+  // AI kenal transaksinya tapi user lupa nominal → simpan konteks & tanya balik.
+  if (extractResult.status === 'needs_amount') {
+    const needsAmount = {
+      _type: 'needs_amount',
+      name: extractResult.extracted.name,
+      category: extractResult.extracted.category_hint ?? carriedHint ?? null,
+    };
+    await admin
+      .from('telegram_connections')
+      .update({
+        pending_transaction: needsAmount as unknown as ParsedTransaction,
+        pending_expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+      })
+      .eq('telegram_chat_id', chatId);
+    await sendMessage(
+      chatId,
+      `Oke, *${extractResult.extracted.name}*. Berapa nominalnya?`,
       { parse_mode: 'Markdown' }
     );
     return;
@@ -235,7 +266,7 @@ async function handleTransactionMessage(chatId: number, text: string): Promise<v
   const resolvedCat = smartResolveTransaction(
     extracted.name,
     (accountsForCat ?? []) as never,
-    extracted.category_hint ?? undefined
+    extracted.category_hint ?? carriedHint ?? undefined
   );
   const parsed: ParsedTransaction = {
     name: extracted.name,

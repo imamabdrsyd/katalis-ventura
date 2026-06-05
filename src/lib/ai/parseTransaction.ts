@@ -10,6 +10,9 @@ export interface ExtractedTransaction {
 }
 
 export interface ExtractResult {
+  /** 'complete' = nama + nominal lengkap; 'needs_amount' = ada nama tapi nominal belum disebut */
+  status: 'complete' | 'needs_amount';
+  /** Untuk 'needs_amount', amount = 0 (placeholder) — minta user lengkapi */
   extracted: ExtractedTransaction;
   /** 'ai' = dari provider AI; 'rule_based' = fallback regex */
   source: 'ai' | 'rule_based';
@@ -27,7 +30,11 @@ export interface ExtractResult {
  * - POST /api/ai/parse-transaction (chat panel web)
  * - Telegram bot handleTransactionMessage
  *
- * Return null kalau bahkan regex tidak bisa mendeteksi nama+nominal.
+ * Return:
+ * - status 'complete'      → nama + nominal valid, siap jadi draft.
+ * - status 'needs_amount'  → user menyebut transaksi tapi LUPA nominal; caller
+ *                            bisa balik tanya "berapa?" lalu gabung jawabannya.
+ * - null                   → bahkan nama transaksi pun tak terdeteksi.
  */
 export async function extractTransactionFromText(text: string): Promise<ExtractResult | null> {
   // 1. Coba AI provider chain
@@ -36,13 +43,24 @@ export async function extractTransactionFromText(text: string): Promise<ExtractR
     try {
       const clean = aiResult.text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
       const g = JSON.parse(clean) as {
-        name?: string; amount?: number; date?: string | null; category_hint?: string | null;
+        name?: string; amount?: number | null; date?: string | null; category_hint?: string | null;
       };
       const name = (g.name ?? '').trim();
       const amount = Number(g.amount ?? 0);
-      if (name && Number.isFinite(amount) && amount > 0) {
+      const hasAmount = g.amount != null && Number.isFinite(amount) && amount > 0;
+      if (name && hasAmount) {
         return {
+          status: 'complete',
           extracted: { name, amount, date: g.date ?? null, category_hint: g.category_hint ?? null },
+          source: 'ai',
+          provider: aiResult.provider,
+        };
+      }
+      // Nama jelas tapi nominal belum disebut → minta user lengkapi
+      if (name) {
+        return {
+          status: 'needs_amount',
+          extracted: { name, amount: 0, date: g.date ?? null, category_hint: g.category_hint ?? null },
           source: 'ai',
           provider: aiResult.provider,
         };
@@ -52,10 +70,11 @@ export async function extractTransactionFromText(text: string): Promise<ExtractR
     }
   }
 
-  // 2. Fallback regex
+  // 2. Fallback regex (rule-based hanya cocok kalau nominal terdeteksi)
   const rb = parseTransactionMessage(text);
   if (rb) {
     return {
+      status: 'complete',
       extracted: { name: rb.name, amount: rb.amount, date: null, category_hint: rb.category },
       source: 'rule_based',
       provider: null,

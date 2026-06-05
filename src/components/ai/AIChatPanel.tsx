@@ -89,6 +89,9 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
   const [mode, setMode] = useState<ChatMode>('ask');
   const [modeDirection, setModeDirection] = useState(1);
   const [activeModel, setActiveModel] = useState<string | null>(null);
+  // Konteks transaksi yang nominalnya belum disebut — diisi saat API balas
+  // 'needs_amount', dipakai untuk menggabungkan nominal dari pesan berikutnya.
+  const [pendingTx, setPendingTx] = useState<{ name: string; category_hint: string | null } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -208,10 +211,19 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
     }
   }, [messages, loading, businessId]);
 
-  // Mode "record": parse teks → tampilkan preview draft transaksi (belum disimpan)
+  // Mode "record": parse teks → tampilkan preview draft transaksi (belum disimpan).
+  // Kalau sebelumnya AI minta nominal (pendingTx), gabungkan jawaban user dgn
+  // deskripsi yang sudah dikenali supaya tidak perlu mengetik ulang.
   const recordTransaction = useCallback(async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
+
+    // Gabungkan dengan konteks transaksi yang nominalnya belum lengkap.
+    // Pesan yang ditampilkan tetap apa yang user ketik (mis. "500rb"), tapi
+    // teks yang dikirim ke parser = "<deskripsi> <nominal>".
+    const textToParse = pendingTx ? `${pendingTx.name} ${trimmed}` : trimmed;
+    const carryHint = pendingTx?.category_hint ?? null;
+    setPendingTx(null);
 
     setMessages(prev => [...prev, { role: 'user', content: trimmed }]);
     setInput('');
@@ -222,10 +234,24 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
       const res = await fetch('/api/ai/parse-transaction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ business_id: businessId, text: trimmed }),
+        body: JSON.stringify({ business_id: businessId, text: textToParse, category_hint: carryHint }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? 'Gagal memproses transaksi');
+
+      // AI mengenali transaksi tapi nominal belum disebut → tanya balik
+      if (json.status === 'needs_amount') {
+        setPendingTx({ name: json.pending?.name ?? trimmed, category_hint: json.pending?.category_hint ?? null });
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            role: 'assistant',
+            content: json.message ?? 'Berapa nominalnya?',
+          };
+          return updated;
+        });
+        return;
+      }
 
       const draft = json.data as TransactionDraft;
       setMessages(prev => {
@@ -248,7 +274,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
     } finally {
       setLoading(false);
     }
-  }, [loading, businessId]);
+  }, [loading, businessId, pendingTx]);
 
   // Simpan draft transaksi ke API (setelah user konfirmasi di preview card)
   const saveDraft = useCallback(async (msgIndex: number) => {
@@ -463,6 +489,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
     if (nextMode === mode) return;
     setModeDirection(nextMode === 'record' ? 1 : -1);
     setMode(nextMode);
+    setPendingTx(null); // konteks "berapa nominalnya?" tidak relevan lintas-mode
   };
 
   const handleReset = () => {
@@ -470,6 +497,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
     setMessages([]);
     setInput('');
     setLoading(false);
+    setPendingTx(null);
     // Refresh badge ke provider standby (jangan kosongkan)
     fetch('/api/ai/status')
       .then(r => r.ok ? r.json() : null)
@@ -615,7 +643,13 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={mode === 'record' ? 'Ketik transaksi atau lampirkan file...' : 'Tanya soal keuangan bisnismu...'}
+                  placeholder={
+                    mode === 'record'
+                      ? pendingTx
+                        ? `Berapa nominal "${pendingTx.name}"?`
+                        : 'Ketik transaksi atau lampirkan file...'
+                      : 'Tanya soal keuangan bisnismu...'
+                  }
                   rows={1}
                   disabled={loading}
                   className="flex-1 resize-none bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-[13px] leading-[1.5] focus:outline-none max-h-32 disabled:opacity-50 self-center"
