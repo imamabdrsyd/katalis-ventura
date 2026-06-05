@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Contact, Phone, Mail, Plus, Search, Pencil, Trash2, User, Building, Users2, Handshake, UserCog, TrendingUp, ArrowDownLeft, ArrowUpRight, Loader2, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
@@ -118,6 +118,11 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
   // Transaction detail modal
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
 
+  // Keyboard navigation
+  const [focusedIndex, setFocusedIndex] = useState<number>(-1);
+  const listRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+
   const loadContactTransactions = useCallback(async (contactName: string) => {
     setLoadingTransactions(true);
     try {
@@ -188,6 +193,29 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
     const matchType = filterType === 'all' || c.type === filterType;
     return matchSearch && matchType;
   });
+
+  // Sync focusedIndex ke posisi selectedContact di filteredContacts
+  useEffect(() => {
+    if (!selectedContact) return;
+    const idx = filteredContacts.findIndex(c => c.id === selectedContact.id);
+    setFocusedIndex(idx);
+  }, [selectedContact?.id, search, filterType]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const navigateList = useCallback((direction: 'up' | 'down') => {
+    if (filteredContacts.length === 0) return;
+    setFocusedIndex(prev => {
+      const next = direction === 'down'
+        ? Math.min(prev + 1, filteredContacts.length - 1)
+        : Math.max(prev - 1, 0);
+      const contact = filteredContacts[next];
+      if (contact) handleSelectContact(contact);
+      // Scroll item into view
+      setTimeout(() => {
+        itemRefs.current[next]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }, 0);
+      return next;
+    });
+  }, [filteredContacts]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectContact = async (contact: ContactType) => {
     if (selectedContact?.id === contact.id) return;
@@ -372,10 +400,9 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Escape' && search) {
-                  e.preventDefault();
-                  setSearch('');
-                }
+                if (e.key === 'ArrowDown') { e.preventDefault(); navigateList('down'); }
+                else if (e.key === 'ArrowUp') { e.preventDefault(); navigateList('up'); }
+                else if (e.key === 'Escape' && search) { e.preventDefault(); setSearch(''); }
               }}
               placeholder="Cari nama, telepon, email..."
               className="input-search pl-9 pr-10 w-full"
@@ -449,14 +476,23 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
           </div>
         ) : (
           /* Contact list */
-          <div className="overflow-y-auto max-h-[calc(100vh-280px)] space-y-2 pr-1">
-            {filteredContacts.map((contact) => {
+          <div
+            ref={listRef}
+            className="overflow-y-auto max-h-[calc(100vh-280px)] space-y-2 pr-1 outline-none"
+            tabIndex={-1}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown') { e.preventDefault(); navigateList('down'); }
+              else if (e.key === 'ArrowUp') { e.preventDefault(); navigateList('up'); }
+            }}
+          >
+            {filteredContacts.map((contact, idx) => {
               const typeConfig = CONTACT_TYPE_CONFIG[contact.type];
               const showTypeLabel = contact.type !== 'other';
               const isSelected = selectedContact?.id === contact.id;
               return (
                 <div
                   key={contact.id}
+                  ref={el => { itemRefs.current[idx] = el; }}
                   className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
                     isSelected
                       ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-300 dark:border-indigo-700 ring-1 ring-indigo-200 dark:ring-indigo-800'

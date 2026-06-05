@@ -537,9 +537,6 @@ export function TransactionList({
                     }}
                     className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 overflow-hidden"
                   >
-                    <label className="block text-xs font-medium normal-case text-gray-500 dark:text-gray-400 mb-2">
-                      {t.common.search} {t.transactions.tableDescription.toLowerCase()}
-                    </label>
                     <div className="relative">
                       <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                       <input

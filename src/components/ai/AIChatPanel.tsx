@@ -19,16 +19,13 @@ type ChatMode = 'ask' | 'record';
 
 const MODE_PAGE_VARIANTS = {
   enter: (direction: number) => ({
-    x: direction > 0 ? '35%' : '-35%',
-    opacity: 0,
+    x: direction > 0 ? '100%' : '-100%',
   }),
   center: {
     x: 0,
-    opacity: 1,
   },
   exit: (direction: number) => ({
-    x: direction > 0 ? '-35%' : '35%',
-    opacity: 0,
+    x: direction > 0 ? '-100%' : '100%',
   }),
 };
 
@@ -490,6 +487,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.24, ease: 'easeOut' }}
             className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px] sm:hidden"
             onClick={onClose}
           />
@@ -497,12 +495,12 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
           {/* Panel */}
           <motion.div
             key="panel"
-            initial={{ opacity: 0, y: 16, scale: 0.97 }}
+            initial={{ opacity: 0, y: 12, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 16, scale: 0.97 }}
-            transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="fixed bottom-20 right-4 z-50 w-[calc(100vw-2rem)] max-w-[400px] flex flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-[0_8px_40px_-8px_rgba(0,0,0,0.22),0_2px_12px_-2px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_-8px_rgba(0,0,0,0.7),0_2px_12px_-2px_rgba(0,0,0,0.5)]"
-            style={{ height: 'min(560px, calc(100dvh - 120px))' }}
+            style={{ height: 'min(560px, calc(100dvh - 120px))', transformOrigin: 'bottom right' }}
           >
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 shrink-0">
@@ -542,20 +540,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
             {/* Messages */}
             <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 space-y-4 min-h-0">
               {messages.length === 0 ? (
-                <AnimatePresence initial={false} custom={modeDirection} mode="popLayout">
-                  <motion.div
-                    key={mode}
-                    custom={modeDirection}
-                    variants={MODE_PAGE_VARIANTS}
-                    initial="enter"
-                    animate="center"
-                    exit="exit"
-                    transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-                    className="h-full"
-                  >
-                    <EmptyState mode={mode} onSuggest={handleSend} />
-                  </motion.div>
-                </AnimatePresence>
+                <EmptyState mode={mode} direction={modeDirection} onSuggest={handleSend} />
               ) : (
                 messages.map((msg, i) => (
                   <ChatBubble
@@ -688,49 +673,55 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
   );
 }
 
-function EmptyState({ mode, onSuggest }: { mode: ChatMode; onSuggest: (q: string) => void }) {
+function EmptyState({
+  mode,
+  direction,
+  onSuggest,
+}: {
+  mode: ChatMode;
+  direction: number;
+  onSuggest: (q: string) => void;
+}) {
   const isRecord = mode === 'record';
   return (
     <div className="flex flex-col items-center justify-center h-full gap-4 py-4">
       <Image src="/images/agent.png" alt="AXION Agent" width={48} height={48} className="object-contain" />
-      <div className="text-center">
-        <p className="text-[13px] font-semibold text-gray-800 dark:text-gray-100">Hi! I&apos;m AXION Agent</p>
-        <p className="text-[12px] text-gray-500 dark:text-gray-400 mt-1">
-          {isRecord ? 'Ketik transaksi, aku bantu catat ke pembukuan' : 'Tanya apa saja tentang keuangan bisnismu'}
-        </p>
+      <p className="text-[13px] font-semibold text-gray-800 dark:text-gray-100">Hi! I&apos;m AXION Agent</p>
+      <div className="relative h-[224px] w-full overflow-hidden">
+        <AnimatePresence initial={false} custom={direction} mode="popLayout">
+          <motion.div
+            key={mode}
+            custom={direction}
+            variants={MODE_PAGE_VARIANTS}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+            className="absolute inset-0 w-full"
+          >
+            <p className="text-center text-[12px] text-gray-500 dark:text-gray-400 mb-4">
+              {isRecord ? 'Ketik transaksi, aku bantu catat ke pembukuan' : 'Tanya apa saja tentang keuangan bisnismu'}
+            </p>
+            <div className="w-full space-y-1.5">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 text-center mb-2">
+                {isRecord ? 'Contoh' : 'Coba tanya ini'}
+              </p>
+              {(isRecord
+                ? ['bayar listrik 500rb', 'jual kopi ke Budi 2.5jt', 'beli bahan baku 750.000']
+                : SUGGESTED_QUESTIONS
+              ).map((q) => (
+                <button
+                  key={q}
+                  onClick={() => onSuggest(q)}
+                  className="w-full text-left px-3 py-2 rounded-xl text-[12px] text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400 border border-gray-100 dark:border-gray-700 hover:border-primary-200 dark:hover:border-primary-800 transition-all"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        </AnimatePresence>
       </div>
-      {!isRecord && (
-        <div className="w-full space-y-1.5">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 text-center mb-2">
-            Coba tanya ini
-          </p>
-          {SUGGESTED_QUESTIONS.map((q) => (
-            <button
-              key={q}
-              onClick={() => onSuggest(q)}
-              className="w-full text-left px-3 py-2 rounded-xl text-[12px] text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400 border border-gray-100 dark:border-gray-700 hover:border-primary-200 dark:hover:border-primary-800 transition-all"
-            >
-              {q}
-            </button>
-          ))}
-        </div>
-      )}
-      {isRecord && (
-        <div className="w-full space-y-1.5">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 text-center mb-2">
-            Contoh
-          </p>
-          {['bayar listrik 500rb', 'jual kopi ke Budi 2.5jt', 'beli bahan baku 750.000'].map((q) => (
-            <button
-              key={q}
-              onClick={() => onSuggest(q)}
-              className="w-full text-left px-3 py-2 rounded-xl text-[12px] text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400 border border-gray-100 dark:border-gray-700 hover:border-primary-200 dark:hover:border-primary-800 transition-all"
-            >
-              {q}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -776,7 +767,7 @@ function ChatBubble({
       </div>
       <div className={`max-w-[82%] min-w-0 rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
         isUser
-          ? 'bg-primary-500 text-white rounded-tr-sm'
+          ? 'bg-[#474443] dark:bg-gray-100 text-white dark:text-gray-900 rounded-tr-sm'
           : 'bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-tl-sm border border-gray-100 dark:border-gray-700'
       }`}>
         {message.streaming && !message.content ? (
@@ -970,13 +961,13 @@ function MarkdownText({ text, isUser }: { text: string; isUser: boolean }) {
         const content = isBullet ? line.replace(/^[\-\*•]\s/, '') : line;
         const parts = content.split(/(\*\*[^*]+\*\*)/g).map((part, j) => {
           if (part.startsWith('**') && part.endsWith('**')) {
-            return <strong key={j} className={isUser ? 'text-white' : 'text-gray-900 dark:text-gray-50'}>{part.slice(2, -2)}</strong>;
+            return <strong key={j} className={isUser ? 'text-white dark:text-gray-900' : 'text-gray-900 dark:text-gray-50'}>{part.slice(2, -2)}</strong>;
           }
           return part;
         });
         return (
           <div key={i} className={isBullet ? 'flex gap-1.5' : ''}>
-            {isBullet && <span className={`mt-1.5 w-1 h-1 rounded-full shrink-0 ${isUser ? 'bg-white/70' : 'bg-gray-400 dark:bg-gray-500'}`} />}
+            {isBullet && <span className={`mt-1.5 w-1 h-1 rounded-full shrink-0 ${isUser ? 'bg-white/70 dark:bg-gray-900/70' : 'bg-gray-400 dark:bg-gray-500'}`} />}
             <span>{parts}</span>
           </div>
         );
