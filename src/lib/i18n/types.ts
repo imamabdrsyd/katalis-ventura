@@ -721,6 +721,12 @@ export interface Translations {
     joinedAt: string;
   };
 
+  // AI Chat
+  aiChat: {
+    ask: string;
+    entry: string;
+  };
+
   // Reports
   reports: {
     title: string;

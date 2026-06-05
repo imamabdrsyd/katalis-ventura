@@ -696,6 +696,11 @@ export const id: Translations = {
     joinedAt: 'Bergabung {date}',
   },
 
+  aiChat: {
+    ask: 'Tanya',
+    entry: 'Catat',
+  },
+
   reports: {
     title: 'Laporan',
     underConstruction: 'Dalam Pengembangan',

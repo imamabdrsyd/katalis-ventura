@@ -696,6 +696,11 @@ export const en: Translations = {
     joinedAt: 'Joined {date}',
   },
 
+  aiChat: {
+    ask: 'Ask',
+    entry: 'Entry',
+  },
+
   reports: {
     title: 'Reports',
     underConstruction: 'Under Construction',

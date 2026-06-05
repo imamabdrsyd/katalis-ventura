@@ -754,7 +754,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
               {labelRole && (
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                   labelRole === 'superadmin'
-                    ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/20'
+                    ? 'bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 ring-1 ring-inset ring-gray-500/20'
                     : labelRole === 'investor'
                     ? 'bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 ring-1 ring-sky-500/20'
                     : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 ring-1 ring-indigo-500/20'

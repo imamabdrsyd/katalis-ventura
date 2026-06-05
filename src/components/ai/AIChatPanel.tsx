@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useId } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Bot, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check, Paperclip, FileSpreadsheet } from 'lucide-react';
@@ -11,8 +11,26 @@ import { smartResolveTransaction } from '@/lib/import/smartResolver';
 import { getAccounts } from '@/lib/api/accounts';
 import { createTransactionsBulk, type TransactionInsert } from '@/lib/api/transactions';
 import { createClient } from '@/lib/supabase';
+import { useLanguage } from '@/context/LanguageContext';
+import { useBusinessContext } from '@/context/BusinessContext';
+import { CATEGORY_BADGE_CLASSES, CATEGORY_LABELS } from '@/lib/categoryColors';
 
 type ChatMode = 'ask' | 'record';
+
+const MODE_PAGE_VARIANTS = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? '35%' : '-35%',
+    opacity: 0,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+  },
+  exit: (direction: number) => ({
+    x: direction > 0 ? '-35%' : '35%',
+    opacity: 0,
+  }),
+};
 
 export interface ImportPreview {
   fileName: string;
@@ -23,11 +41,6 @@ export interface ImportPreview {
   ready: TransactionInsert[];
   lowConfidenceCount: number;
 }
-
-const CATEGORY_LABEL: Record<string, string> = {
-  EARN: 'Pendapatan', OPEX: 'Beban Operasional', VAR: 'HPP / Variabel',
-  CAPEX: 'Belanja Modal', TAX: 'Pajak', FIN: 'Pembiayaan',
-};
 
 export interface TransactionDraft {
   name: string;
@@ -70,10 +83,14 @@ const SUGGESTED_QUESTIONS = [
 ];
 
 export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AIChatPanelProps) {
+  const { t } = useLanguage();
+  const { user } = useBusinessContext();
+  const modeToggleLayoutId = useId();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<ChatMode>('ask');
+  const [modeDirection, setModeDirection] = useState(1);
   const [activeModel, setActiveModel] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -445,6 +462,12 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
     }
   };
 
+  const changeMode = (nextMode: ChatMode) => {
+    if (nextMode === mode) return;
+    setModeDirection(nextMode === 'record' ? 1 : -1);
+    setMode(nextMode);
+  };
+
   const handleReset = () => {
     abortRef.current?.abort();
     setMessages([]);
@@ -478,12 +501,14 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.97 }}
             transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-            className="fixed bottom-20 right-4 z-50 w-[calc(100vw-2rem)] max-w-[400px] flex flex-col rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl shadow-black/10 dark:shadow-black/40"
+            className="fixed bottom-20 right-4 z-50 w-[calc(100vw-2rem)] max-w-[400px] flex flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl shadow-black/10 dark:shadow-black/40"
             style={{ height: 'min(560px, calc(100dvh - 120px))' }}
           >
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 shrink-0">
-              <Image src="/images/favicon.png" alt="AXION Agent" width={36} height={36} className="object-contain shrink-0" />
+              <div className="w-9 h-9 rounded-xl bg-primary-50 dark:bg-primary-900/30 text-primary-500 dark:text-primary-400 flex items-center justify-center shrink-0">
+                <Bot className="w-5 h-5" />
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-50 leading-tight">AXION Agent</p>
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -492,11 +517,6 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                     <span className="relative inline-flex rounded-full w-1.5 h-1.5 bg-emerald-400" />
                   </span>
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{businessName}</p>
-                  {activeModel && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium shrink-0">
-                      {activeModel}
-                    </span>
-                  )}
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
@@ -520,14 +540,29 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4 min-h-0">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 space-y-4 min-h-0">
               {messages.length === 0 ? (
-                <EmptyState mode={mode} onSuggest={handleSend} />
+                <AnimatePresence initial={false} custom={modeDirection} mode="popLayout">
+                  <motion.div
+                    key={mode}
+                    custom={modeDirection}
+                    variants={MODE_PAGE_VARIANTS}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+                    className="h-full"
+                  >
+                    <EmptyState mode={mode} onSuggest={handleSend} />
+                  </motion.div>
+                </AnimatePresence>
               ) : (
                 messages.map((msg, i) => (
                   <ChatBubble
                     key={i}
                     message={msg}
+                    userAvatarUrl={user?.user_metadata?.avatar_url}
+                    userName={user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
                     onSaveDraft={() => saveDraft(i)}
                     onCancelDraft={() => cancelDraft(i)}
                     onRunImport={() => runImport(i)}
@@ -541,27 +576,52 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
             {/* Input */}
             <div className="px-3 py-3 border-t border-gray-100 dark:border-gray-800 shrink-0">
               {/* Mode toggle: Tanya (analitik) vs Catat (input transaksi) */}
-              <div className="flex items-center gap-1 mb-2 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-full w-fit">
-                <button
-                  onClick={() => setMode('ask')}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
-                    mode === 'ask'
-                      ? 'bg-white dark:bg-gray-600 text-primary-500 dark:text-primary-400 shadow-sm'
-                      : 'text-gray-500 dark:text-gray-400'
-                  }`}
-                >
-                  <MessageSquare className="w-3 h-3" /> Tanya
-                </button>
-                <button
-                  onClick={() => setMode('record')}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
-                    mode === 'record'
-                      ? 'bg-white dark:bg-gray-600 text-primary-500 dark:text-primary-400 shadow-sm'
-                      : 'text-gray-500 dark:text-gray-400'
-                  }`}
-                >
-                  <PlusCircle className="w-3 h-3" /> Catat
-                </button>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-1 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-full shrink-0">
+                  <button
+                    onClick={() => changeMode('ask')}
+                    className={`relative inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${
+                      mode === 'ask'
+                        ? 'text-primary-500 dark:text-primary-400'
+                        : 'text-gray-500 dark:text-gray-400'
+                    }`}
+                  >
+                    {mode === 'ask' && (
+                      <motion.span
+                        layoutId={modeToggleLayoutId}
+                        className="absolute inset-0 rounded-full bg-white dark:bg-gray-600 shadow-sm"
+                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                      />
+                    )}
+                    <span className="relative z-10 inline-flex items-center gap-1">
+                      <MessageSquare className="w-3 h-3" /> {t.aiChat.ask}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => changeMode('record')}
+                    className={`relative inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${
+                      mode === 'record'
+                        ? 'text-primary-500 dark:text-primary-400'
+                        : 'text-gray-500 dark:text-gray-400'
+                    }`}
+                  >
+                    {mode === 'record' && (
+                      <motion.span
+                        layoutId={modeToggleLayoutId}
+                        className="absolute inset-0 rounded-full bg-white dark:bg-gray-600 shadow-sm"
+                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                      />
+                    )}
+                    <span className="relative z-10 inline-flex items-center gap-1">
+                      <PlusCircle className="w-3 h-3" /> {t.aiChat.entry}
+                    </span>
+                  </button>
+                </div>
+                {activeModel && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium truncate">
+                    {activeModel}
+                  </span>
+                )}
               </div>
               <div className="flex items-end gap-2">
                 {/* Tombol attach file (hanya mode Catat) */}
@@ -631,9 +691,7 @@ function EmptyState({ mode, onSuggest }: { mode: ChatMode; onSuggest: (q: string
   const isRecord = mode === 'record';
   return (
     <div className="flex flex-col items-center justify-center h-full gap-4 py-4">
-      <div className="w-14 h-14 rounded-2xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
-        <Bot className="w-7 h-7 text-primary-500 dark:text-primary-400" />
-      </div>
+      <Image src="/images/agent.png" alt="AXION Agent" width={48} height={48} className="object-contain" />
       <div className="text-center">
         <p className="text-[13px] font-semibold text-gray-800 dark:text-gray-100">Hi! I&apos;m AXION Agent</p>
         <p className="text-[12px] text-gray-500 dark:text-gray-400 mt-1">
@@ -678,12 +736,16 @@ function EmptyState({ mode, onSuggest }: { mode: ChatMode; onSuggest: (q: string
 
 function ChatBubble({
   message,
+  userAvatarUrl,
+  userName,
   onSaveDraft,
   onCancelDraft,
   onRunImport,
   onCancelImport,
 }: {
   message: Message;
+  userAvatarUrl?: string;
+  userName: string;
   onSaveDraft: () => void;
   onCancelDraft: () => void;
   onRunImport: () => void;
@@ -697,7 +759,19 @@ function ChatBubble({
           ? 'bg-primary-500 text-white'
           : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
       }`}>
-        {isUser ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
+        {isUser && userAvatarUrl ? (
+          <Image
+            src={userAvatarUrl}
+            alt={userName}
+            width={28}
+            height={28}
+            className="w-full h-full rounded-full object-cover"
+          />
+        ) : isUser ? (
+          <User className="w-3.5 h-3.5" />
+        ) : (
+          <Image src="/images/agent.png" alt="AXION Agent" width={16} height={16} className="object-contain" />
+        )}
       </div>
       <div className={`max-w-[82%] min-w-0 rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
         isUser
@@ -758,8 +832,10 @@ function DraftCard({
           </span>
         </div>
         <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-medium">
-            {CATEGORY_LABEL[draft.category] ?? draft.category}
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md font-medium ${
+            CATEGORY_BADGE_CLASSES[draft.category] ?? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+          }`}>
+            {CATEGORY_LABELS[draft.category] ?? draft.category}
           </span>
           <span className="text-gray-400 dark:text-gray-500">{draft.date}</span>
           {draft.confidence === 'low' && (
