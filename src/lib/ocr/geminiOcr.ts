@@ -5,13 +5,12 @@ import {
   extractFallbackKeywords,
   extractLineItemKeywords,
 } from './parser';
-
-const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
+import { GEMINI_MODELS } from '@/lib/ai/provider';
 
 type GeminiResponse = {
   candidates?: Array<{
     content?: {
-      parts?: Array<{ text?: string }>;
+      parts?: Array<{ text?: string; thought?: boolean }>;
     };
     finishReason?: string;
   }>;
@@ -78,60 +77,67 @@ export async function geminiOcr(imageBuffer: Buffer, mimeType = 'image/jpeg'): P
 
   const base64 = imageBuffer.toString('base64');
 
-  const res = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      system_instruction: {
-        parts: [{ text: SYSTEM_PROMPT }],
-      },
-      contents: [
-        {
-          parts: [
+  for (const model of GEMINI_MODELS) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: {
+            parts: [{ text: SYSTEM_PROMPT }],
+          },
+          contents: [
             {
-              inline_data: {
-                mime_type: mimeType,
-                data: base64,
-              },
-            },
-            {
-              text: 'Parse struk ini dan return JSON sesuai schema.',
+              parts: [
+                {
+                  inline_data: {
+                    mime_type: mimeType,
+                    data: base64,
+                  },
+                },
+                {
+                  text: 'Parse struk ini dan return JSON sesuai schema.',
+                },
+              ],
             },
           ],
-        },
-      ],
-      generationConfig: {
-        temperature: 0.1,
-        responseMimeType: 'application/json',
-      },
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new OcrProviderError(
-      'gemini',
-      `HTTP ${res.status}: ${text.slice(0, 300)}`,
-      res.status
+          generationConfig: {
+            temperature: 0.1,
+            responseMimeType: 'application/json',
+          },
+        }),
+      }
     );
+
+    if (!res.ok) {
+      const text = await res.text();
+      console.warn(`[ocr/gemini] ${model} failed: HTTP ${res.status}: ${text.slice(0, 300)}`);
+      continue;
+    }
+
+    const json = (await res.json()) as GeminiResponse;
+
+    if (json.error) {
+      console.warn(`[ocr/gemini] ${model} failed: ${json.error.code} ${json.error.message}`);
+      continue;
+    }
+
+    const rawText = json.candidates?.[0]?.content?.parts
+      ?.filter(part => !part.thought && part.text)
+      .map(part => part.text)
+      .join('') ?? '';
+    if (rawText) {
+      return { raw_text: rawText, parsed: parseGeminiJson(rawText) };
+    }
+
+    console.warn(`[ocr/gemini] ${model} tidak menghasilkan output`);
   }
 
-  const json = (await res.json()) as GeminiResponse;
-
-  if (json.error) {
-    throw new OcrProviderError(
-      'gemini',
-      json.error.message,
-      json.error.code
-    );
-  }
-
-  const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-  if (!rawText) {
-    throw new OcrProviderError('gemini', 'Gemini tidak menghasilkan output');
-  }
-
-  return { raw_text: rawText, parsed: parseGeminiJson(rawText) };
+  throw new OcrProviderError(
+    'gemini',
+    'Semua model Gemini tidak tersedia atau telah mencapai rate limit'
+  );
 }
 
 /**

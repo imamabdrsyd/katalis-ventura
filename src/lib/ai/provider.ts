@@ -1,14 +1,15 @@
 /**
  * Provider abstraction untuk AXION Agent.
  *
- * Chain: Gemini (primary) → Groq (fallback) → null (rule-based fallback di caller)
+ * Chain: beberapa model Gemini → Groq → null (rule-based fallback di caller)
  *
  * Kenapa chain ini:
  * - Gemini: kualitas terbaik, JSON native, tapi free tier RPD sangat ketat (~20-500/hari)
  * - Groq: OpenAI-compatible, gratis dengan rate limit lebih longgar (llama-3.3-70b),
  *   slightly lebih lemah untuk bahasa Indonesia tapi cukup untuk AXION use case
  *
- * Cara tambah provider baru: tambah entry ke AI_PROVIDERS, urutan = prioritas.
+ * Kuota Gemini free tier dihitung per model. Kalau satu model kena rate limit,
+ * request otomatis lanjut ke model Gemini berikutnya sebelum fallback ke Groq.
  */
 
 export type AIProvider = 'gemini' | 'groq';
@@ -41,14 +42,32 @@ export const PROVIDER_LABELS: Record<AIProvider, string> = {
 };
 
 export const MODEL_LABELS: Record<string, string> = {
+  'gemini-3.5-flash': 'Gemini 3.5 Flash',
+  'gemini-3.1-flash-lite': 'Gemini 3.1 Flash Lite',
+  'gemini-2.5-flash': 'Gemini 2.5 Flash',
   'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite',
   'llama-3.3-70b-versatile': 'Llama 3.3 70B',
   'llama-3.1-8b-instant': 'Llama 3.1 8B',
 };
 
+export const GEMINI_MODELS = [
+  'gemini-3.5-flash',
+  'gemini-3.1-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+] as const;
+
 // ─── Gemini helpers ──────────────────────────────────────────────────────────
 
+function extractGeminiText(parts?: Array<{ text?: string; thought?: boolean }>): string {
+  return parts
+    ?.filter(part => !part.thought && part.text)
+    .map(part => part.text)
+    .join('') ?? '';
+}
+
 async function geminiGenerate(
+  model: string,
   systemPrompt: string,
   messages: AIMessage[],
   opts: { temperature?: number; maxTokens?: number } = {}
@@ -63,7 +82,7 @@ async function geminiGenerate(
 
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -79,18 +98,19 @@ async function geminiGenerate(
       }
     );
     if (!res.ok) {
-      console.warn('[ai/provider] Gemini generate failed:', res.status);
+      console.warn(`[ai/provider] ${model} generate failed:`, res.status);
       return null;
     }
     const json = await res.json();
-    return json.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
+    return extractGeminiText(json.candidates?.[0]?.content?.parts) || null;
   } catch (err) {
-    console.warn('[ai/provider] Gemini generate error:', err);
+    console.warn(`[ai/provider] ${model} generate error:`, err);
     return null;
   }
 }
 
 async function geminiStream(
+  model: string,
   systemPrompt: string,
   messages: AIMessage[],
   opts: { temperature?: number; maxTokens?: number } = {}
@@ -105,7 +125,7 @@ async function geminiStream(
 
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:streamGenerateContent?alt=sse&key=${key}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${key}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -120,12 +140,12 @@ async function geminiStream(
       }
     );
     if (!res.ok) {
-      console.warn('[ai/provider] Gemini stream failed:', res.status);
+      console.warn(`[ai/provider] ${model} stream failed:`, res.status);
       return null;
     }
     return res;
   } catch (err) {
-    console.warn('[ai/provider] Gemini stream error:', err);
+    console.warn(`[ai/provider] ${model} stream error:`, err);
     return null;
   }
 }
@@ -217,17 +237,18 @@ async function groqStream(
 
 /**
  * Generate teks (non-streaming) — untuk parser transaksi & smart import assist.
- * Coba Gemini dulu, fallback ke Groq, return null kalau keduanya gagal.
+ * Coba tiap model Gemini, fallback ke Groq, return null kalau semuanya gagal.
  */
 export async function generateText(
   systemPrompt: string,
   messages: AIMessage[],
   opts: { temperature?: number; maxTokens?: number } = {}
 ): Promise<GenerateResult | null> {
-  // Primary: Gemini
-  const geminiText = await geminiGenerate(systemPrompt, messages, opts);
-  if (geminiText !== null) {
-    return { text: geminiText, provider: 'gemini', model: 'gemini-2.5-flash-lite' };
+  for (const model of GEMINI_MODELS) {
+    const geminiText = await geminiGenerate(model, systemPrompt, messages, opts);
+    if (geminiText !== null) {
+      return { text: geminiText, provider: 'gemini', model };
+    }
   }
 
   // Fallback: Groq
@@ -241,7 +262,7 @@ export async function generateText(
 
 /**
  * Stream teks SSE — untuk chat analitik.
- * Coba Gemini dulu, fallback ke Groq.
+ * Coba tiap model Gemini, fallback ke Groq.
  * Format SSE output dinormalisasi: `data: {"text":"..."}\n\n` untuk keduanya.
  */
 export async function streamText(
@@ -249,14 +270,15 @@ export async function streamText(
   messages: AIMessage[],
   opts: { temperature?: number; maxTokens?: number } = {}
 ): Promise<StreamResult | null> {
-  // Primary: Gemini
-  const geminiRes = await geminiStream(systemPrompt, messages, opts);
-  if (geminiRes) {
-    return {
-      stream: buildGeminiStream(geminiRes),
-      provider: 'gemini',
-      model: 'gemini-2.5-flash-lite',
-    };
+  for (const model of GEMINI_MODELS) {
+    const geminiRes = await geminiStream(model, systemPrompt, messages, opts);
+    if (geminiRes) {
+      return {
+        stream: buildGeminiStream(geminiRes),
+        provider: 'gemini',
+        model,
+      };
+    }
   }
 
   // Fallback: Groq
@@ -298,7 +320,7 @@ function buildGeminiStream(res: Response): ReadableStream<StreamChunk> {
             if (data === '[DONE]') continue;
             try {
               const json = JSON.parse(data);
-              const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+              const text = extractGeminiText(json.candidates?.[0]?.content?.parts);
               if (text) controller.enqueue({ text });
             } catch { /* skip malformed */ }
           }

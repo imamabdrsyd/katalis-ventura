@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
-import { PROVIDER_LABELS, MODEL_LABELS } from '@/lib/ai/provider';
+import { PROVIDER_LABELS, MODEL_LABELS, GEMINI_MODELS } from '@/lib/ai/provider';
 
 /**
  * GET /api/ai/status — cek provider AI mana yang akan dipakai (standby).
@@ -9,9 +9,10 @@ import { PROVIDER_LABELS, MODEL_LABELS } from '@/lib/ai/provider';
  * memanggil model. Dipakai AIChatPanel untuk menampilkan badge model dari awal
  * sebelum user kirim pesan pertama.
  *
- * Catatan: ini cuma "kemungkinan besar" — provider final ditentukan saat request
- * (Gemini bisa saja kena quota 429 lalu fallback Groq). Header X-AI-Model di
- * response chat tetap jadi sumber kebenaran provider yang BENAR-BENAR dipakai.
+ * Catatan: ini cuma "kemungkinan besar" — model final ditentukan saat request
+ * (model utama bisa kena quota 429 lalu fallback ke model Gemini lain/Groq).
+ * Header X-AI-Model di response chat tetap jadi sumber kebenaran model yang
+ * BENAR-BENAR dipakai.
  */
 export async function GET() {
   const user = await getAuthenticatedUser();
@@ -24,7 +25,7 @@ export async function GET() {
 
   if (process.env.GEMINI_API_KEY) {
     provider = 'gemini';
-    model = 'gemini-2.5-flash-lite';
+    model = GEMINI_MODELS[0];
   } else if (process.env.GROQ_API_KEY) {
     provider = 'groq';
     model = 'llama-3.3-70b-versatile';
