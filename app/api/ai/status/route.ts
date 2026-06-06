@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
-import { PROVIDER_LABELS, MODEL_LABELS, GEMINI_MODELS } from '@/lib/ai/provider';
+import { PROVIDER_LABELS, MODEL_LABELS, GEMINI_MODELS, isClaudeAvailable } from '@/lib/ai/provider';
 
 /**
  * GET /api/ai/status — cek provider AI mana yang akan dipakai (standby).
@@ -36,5 +36,7 @@ export async function GET() {
     available: provider !== null,
     provider: provider ? PROVIDER_LABELS[provider] : null,
     model: model ? (MODEL_LABELS[model] ?? model) : null,
+    // Apakah Claude (Vertex AI) tersedia sbg opsi manual di selector
+    claudeAvailable: isClaudeAvailable(),
   });
 }

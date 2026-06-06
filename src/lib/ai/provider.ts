@@ -1,24 +1,19 @@
 /**
  * Provider abstraction untuk AXION Agent.
  *
- * Chain: beberapa model Gemini → Groq → null (rule-based fallback di caller)
+ * Chain default (AXION Auto): Gemini → Groq
+ * Provider opsional: Claude via Vertex AI (pilihan user di UI)
  *
- * Kenapa chain ini:
- * - Gemini: kualitas terbaik, JSON native, tapi free tier RPD sangat ketat (~20-500/hari)
+ * - Gemini: kualitas terbaik, JSON native, tapi free tier RPD sangat ketat
  * - Groq: OpenAI-compatible, gratis dengan rate limit lebih longgar
+ * - Claude (Vertex AI): Claude Sonnet 4.6 untuk chat, Haiku 4.5 untuk parse
  *
  * Dua Groq model dengan peran berbeda:
- * - GROQ_CHAT_MODEL  = qwen-qwq-32b — untuk chat analitik (mode Tanya).
- *   Model reasoning: lebih teliti untuk analisis keuangan, audit laporan, proyeksi.
- *   Thinking tokens (<think>...</think>) ditampilkan di ThinkingAccordion UI.
- * - GROQ_PARSE_MODEL = llama-3.3-70b-versatile — untuk parse transaksi & smart import.
- *   Cepat, hemat token, tidak butuh chain-of-thought untuk klasifikasi singkat.
- *
- * Kuota Gemini free tier dihitung per model. Kalau satu model kena rate limit,
- * request otomatis lanjut ke model Gemini berikutnya sebelum fallback ke Groq.
+ * - GROQ_CHAT_MODEL  = qwen-qwq-32b — chat analitik, reasoning mendalam
+ * - GROQ_PARSE_MODEL = llama-3.3-70b-versatile — parse transaksi, cepat
  */
 
-export type AIProvider = 'gemini' | 'groq';
+export type AIProvider = 'gemini' | 'groq' | 'claude';
 
 export interface AIMessage {
   role: 'user' | 'assistant';
@@ -47,6 +42,7 @@ export interface StreamResult {
 export const PROVIDER_LABELS: Record<AIProvider, string> = {
   gemini: 'Gemini',
   groq: 'Groq',
+  claude: 'Claude',
 };
 
 export const MODEL_LABELS: Record<string, string> = {
@@ -59,6 +55,8 @@ export const MODEL_LABELS: Record<string, string> = {
   'llama-3.1-8b-instant': 'Llama 3.1 8B',
   'deepseek-r1-distill-llama-70b': 'DeepSeek R1 70B',
   'qwen-qwq-32b': 'Qwen QwQ 32B',
+  'claude-sonnet-4-6': 'Claude Sonnet 4.6',
+  'claude-haiku-4-5@20251001': 'Claude Haiku 4.5',
 };
 
 export const GEMINI_MODELS = [
@@ -260,6 +258,248 @@ async function groqStream(
     console.warn('[ai/provider] Groq stream error:', err);
     return null;
   }
+}
+
+// ─── Claude via Vertex AI ────────────────────────────────────────────────────
+//
+// Auth: service account JSON disimpan di env GOOGLE_APPLICATION_CREDENTIALS_JSON.
+// Token di-cache sampai expiry supaya tidak exchange setiap request.
+
+const CLAUDE_CHAT_MODEL = 'claude-sonnet-4-6';
+const CLAUDE_PARSE_MODEL = 'claude-haiku-4-5@20251001';
+const VERTEX_REGION = 'global';
+
+let _vertexToken: { token: string; expiresAt: number } | null = null;
+
+async function getVertexToken(): Promise<string | null> {
+  // Return cached token kalau masih valid (buffer 60 detik)
+  if (_vertexToken && Date.now() < _vertexToken.expiresAt - 60_000) {
+    return _vertexToken.token;
+  }
+
+  const credJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+  if (!credJson) return null;
+
+  try {
+    const creds = JSON.parse(credJson) as {
+      client_email: string;
+      private_key: string;
+    };
+
+    // JWT untuk Google OAuth2 token exchange
+    const now = Math.floor(Date.now() / 1000);
+    const header = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+    const payload = btoa(JSON.stringify({
+      iss: creds.client_email,
+      scope: 'https://www.googleapis.com/auth/cloud-platform',
+      aud: 'https://oauth2.googleapis.com/token',
+      iat: now,
+      exp: now + 3600,
+    }));
+
+    // Sign JWT dengan private key RSA (Web Crypto API)
+    const pemBody = creds.private_key
+      .replace(/-----BEGIN PRIVATE KEY-----/, '')
+      .replace(/-----END PRIVATE KEY-----/, '')
+      .replace(/\s/g, '');
+    const keyBytes = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0));
+    const cryptoKey = await crypto.subtle.importKey(
+      'pkcs8', keyBytes,
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      false, ['sign']
+    );
+    const sigInput = new TextEncoder().encode(`${header}.${payload}`);
+    const sigBytes = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', cryptoKey, sigInput);
+    const sig = btoa(String.fromCharCode(...new Uint8Array(sigBytes)))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    const jwt = `${header}.${payload}.${sig}`;
+
+    // Exchange JWT → access token
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
+    });
+    if (!tokenRes.ok) {
+      console.warn('[ai/provider] Vertex token exchange failed:', tokenRes.status);
+      return null;
+    }
+    const tokenJson = await tokenRes.json() as { access_token: string; expires_in: number };
+    _vertexToken = {
+      token: tokenJson.access_token,
+      expiresAt: Date.now() + tokenJson.expires_in * 1000,
+    };
+    return _vertexToken.token;
+  } catch (err) {
+    console.warn('[ai/provider] Vertex token error:', err);
+    return null;
+  }
+}
+
+function getVertexProjectId(): string | null {
+  const credJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+  if (!credJson) return null;
+  try {
+    return (JSON.parse(credJson) as { project_id?: string }).project_id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function claudeGenerate(
+  model: string,
+  systemPrompt: string,
+  messages: AIMessage[],
+  opts: { temperature?: number; maxTokens?: number } = {}
+): Promise<string | null> {
+  const token = await getVertexToken();
+  const projectId = getVertexProjectId();
+  if (!token || !projectId) return null;
+
+  const endpoint = `https://${VERTEX_REGION}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${VERTEX_REGION}/publishers/anthropic/models/${model}:rawPredict`;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        anthropic_version: 'vertex-2023-10-16',
+        system: systemPrompt,
+        messages: messages.map(m => ({ role: m.role, content: m.content })),
+        max_tokens: opts.maxTokens ?? 1024,
+        temperature: opts.temperature ?? 0,
+      }),
+    });
+    if (!res.ok) {
+      console.warn(`[ai/provider] Claude generate failed:`, res.status, await res.text());
+      return null;
+    }
+    const json = await res.json() as { content?: Array<{ type: string; text?: string }> };
+    return json.content?.find(b => b.type === 'text')?.text ?? null;
+  } catch (err) {
+    console.warn('[ai/provider] Claude generate error:', err);
+    return null;
+  }
+}
+
+async function claudeStream(
+  model: string,
+  systemPrompt: string,
+  messages: AIMessage[],
+  opts: { temperature?: number; maxTokens?: number } = {}
+): Promise<Response | null> {
+  const token = await getVertexToken();
+  const projectId = getVertexProjectId();
+  if (!token || !projectId) return null;
+
+  const endpoint = `https://${VERTEX_REGION}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${VERTEX_REGION}/publishers/anthropic/models/${model}:streamRawPredict`;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        anthropic_version: 'vertex-2023-10-16',
+        system: systemPrompt,
+        messages: messages.map(m => ({ role: m.role, content: m.content })),
+        max_tokens: opts.maxTokens ?? 2048,
+        temperature: opts.temperature ?? 0.7,
+        thinking: { type: 'enabled', budget_tokens: 4000 },
+      }),
+    });
+    if (!res.ok) {
+      console.warn('[ai/provider] Claude stream failed:', res.status, await res.text());
+      return null;
+    }
+    return res;
+  } catch (err) {
+    console.warn('[ai/provider] Claude stream error:', err);
+    return null;
+  }
+}
+
+/**
+ * Konversi Anthropic SSE response → ReadableStream<StreamChunk>.
+ * Format: `data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"..."}}`
+ * Thinking blocks: type=thinking_delta → kind:'thinking', text_delta → kind:'answer'
+ */
+function buildClaudeStream(res: Response): ReadableStream<StreamChunk> {
+  return new ReadableStream({
+    async start(controller) {
+      const reader = res.body?.getReader();
+      if (!reader) { controller.close(); return; }
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let currentBlockThinking = false;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') continue;
+            try {
+              const json = JSON.parse(data) as {
+                type: string;
+                index?: number;
+                content_block?: { type: string };
+                delta?: { type: string; text?: string; thinking?: string };
+              };
+              // Track apakah block saat ini thinking atau text
+              if (json.type === 'content_block_start' && json.content_block) {
+                currentBlockThinking = json.content_block.type === 'thinking';
+              }
+              if (json.type === 'content_block_delta' && json.delta) {
+                const text = json.delta.thinking ?? json.delta.text ?? '';
+                if (text) {
+                  const isThinking = json.delta.type === 'thinking_delta' || currentBlockThinking;
+                  controller.enqueue({ text, kind: isThinking ? 'thinking' : 'answer' });
+                }
+              }
+            } catch { /* skip malformed */ }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+        controller.close();
+      }
+    },
+  });
+}
+
+// Public wrappers untuk Claude — dipakai langsung dari route handler
+export async function generateTextClaude(
+  systemPrompt: string,
+  messages: AIMessage[],
+  opts: { temperature?: number; maxTokens?: number } = {}
+): Promise<GenerateResult | null> {
+  const text = await claudeGenerate(CLAUDE_PARSE_MODEL, systemPrompt, messages, opts);
+  if (text === null) return null;
+  return { text, provider: 'claude', model: CLAUDE_PARSE_MODEL };
+}
+
+export async function streamTextClaude(
+  systemPrompt: string,
+  messages: AIMessage[],
+  opts: { temperature?: number; maxTokens?: number } = {}
+): Promise<StreamResult | null> {
+  const res = await claudeStream(CLAUDE_CHAT_MODEL, systemPrompt, messages, opts);
+  if (!res) return null;
+  return { stream: buildClaudeStream(res), provider: 'claude', model: CLAUDE_CHAT_MODEL };
+}
+
+export function isClaudeAvailable(): boolean {
+  return !!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@ import { createServerClient, getAuthenticatedUser, getBusinessRoleForUser } from
 import { buildFinancialContext } from '@/lib/ai/financialContext';
 import { CHAT_SYSTEM_PROMPT } from '@/lib/ai/prompts';
 import { needsReasoning } from '@/lib/ai/intent';
-import { streamText, PROVIDER_LABELS, MODEL_LABELS } from '@/lib/ai/provider';
+import { streamText, streamTextClaude, PROVIDER_LABELS, MODEL_LABELS } from '@/lib/ai/provider';
 import type { Transaction, Account } from '@/types';
 
 const bodySchema = z.object({
@@ -15,6 +15,7 @@ const bodySchema = z.object({
       content: z.string().min(1).max(4000),
     })
   ).min(1).max(20),
+  provider: z.enum(['auto', 'claude']).optional().default('auto'),
 });
 
 const SYSTEM_PROMPT = CHAT_SYSTEM_PROMPT;
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request', details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { business_id, messages } = parsed.data;
+  const { business_id, messages, provider } = parsed.data;
 
   const supabase = await createServerClient();
   const role = await getBusinessRoleForUser(supabase, user.id, business_id);
@@ -90,19 +91,19 @@ export async function POST(req: NextRequest) {
     aiMessages[0].content = `${financialContext}\n\n${aiMessages[0].content}`;
   }
 
-  // Audit/proyeksi/analisis mendalam → prioritaskan reasoning model (DeepSeek R1).
-  // Pertanyaan analitik biasa tetap Gemini dulu (cepat, hemat kuota).
   const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')?.content ?? '';
   const preferReasoning = needsReasoning(lastUserMsg);
 
-  const result = await streamText(SYSTEM_PROMPT, aiMessages, {
-    temperature: 0.7,
-    // Jawaban biasa butuh ruang cukup supaya tidak kepotong di tengah kalimat
-    // (Gemini 2.5 ikut pakai thinking tokens yang memakan jatah). Reasoning model
-    // (R1/Qwen) butuh lebih besar lagi karena chain-of-thought sebelum jawaban.
-    maxTokens: preferReasoning ? 3072 : 2048,
-    preferReasoning,
-  });
+  const result = provider === 'claude'
+    ? await streamTextClaude(SYSTEM_PROMPT, aiMessages, {
+        temperature: 0.7,
+        maxTokens: 4096,
+      })
+    : await streamText(SYSTEM_PROMPT, aiMessages, {
+        temperature: 0.7,
+        maxTokens: preferReasoning ? 3072 : 2048,
+        preferReasoning,
+      });
 
   if (!result) {
     return NextResponse.json({ error: 'AI tidak tersedia saat ini. Coba lagi nanti.' }, { status: 503 });

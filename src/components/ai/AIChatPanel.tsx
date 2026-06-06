@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useId } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check, Paperclip, FileSpreadsheet, Brain, ChevronRight } from 'lucide-react';
+import { X, Send, Bot, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check, Paperclip, FileSpreadsheet, Brain, ChevronRight, ChevronDown } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { parseExcelFile, validateFile } from '@/lib/import/excelParser';
 import { validateRowsSmart } from '@/lib/import/excelValidator';
@@ -124,6 +124,16 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
   const [mode, setMode] = useState<ChatMode>('ask');
   const [modeDirection, setModeDirection] = useState(1);
   const [activeModel, setActiveModel] = useState<string | null>(null);
+  // 'auto' = AXION chain (Gemini→Groq), 'claude' = Claude Sonnet via Vertex AI
+  const [selectedProvider, setSelectedProvider] = useState<'auto' | 'claude'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('axion_ai_provider') as 'auto' | 'claude') ?? 'auto';
+    }
+    return 'auto';
+  });
+  const [providerDropdownOpen, setProviderDropdownOpen] = useState(false);
+  // Apakah Claude (Vertex AI) dikonfigurasi di server — kalau tidak, opsi disabled
+  const [claudeAvailable, setClaudeAvailable] = useState(false);
   // Konteks transaksi yang nominalnya belum disebut — diisi saat API balas
   // 'needs_amount', dipakai untuk menggabungkan nominal dari pesan berikutnya.
   const [pendingTx, setPendingTx] = useState<{
@@ -143,7 +153,10 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
       if (!activeModel) {
         fetch('/api/ai/status')
           .then(r => r.ok ? r.json() : null)
-          .then(d => { if (d?.model) setActiveModel(d.model); })
+          .then(d => {
+            if (d?.model) setActiveModel(d.model);
+            setClaudeAvailable(!!d?.claudeAvailable);
+          })
           .catch(() => {});
       }
     }
@@ -184,6 +197,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
         body: JSON.stringify({
           business_id: businessId,
           messages: nextMessages.map(m => ({ role: m.role, content: m.content })),
+          provider: selectedProvider,
         }),
       });
 
@@ -693,11 +707,63 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                     </span>
                   </button>
                 </div>
-                {activeModel && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium truncate">
-                    {activeModel}
-                  </span>
-                )}
+                <div className="relative shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setProviderDropdownOpen(o => !o)}
+                    className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors max-w-[140px]"
+                    title="Pilih model AI"
+                  >
+                    <span className="truncate">
+                      {selectedProvider === 'claude' ? 'Claude Sonnet 4.6' : (activeModel ?? 'AXION Auto')}
+                    </span>
+                    <ChevronDown className="w-2.5 h-2.5 shrink-0" />
+                  </button>
+                  <AnimatePresence>
+                    {providerDropdownOpen && (
+                      <>
+                        {/* Backdrop untuk close on outside click */}
+                        <div
+                          className="fixed inset-0 z-10"
+                          onClick={() => setProviderDropdownOpen(false)}
+                        />
+                        <motion.div
+                          initial={{ opacity: 0, y: 4, scale: 0.96 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 4, scale: 0.96 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute bottom-full right-0 mb-1.5 z-20 w-44 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg overflow-hidden"
+                        >
+                          {([
+                            { id: 'auto' as const, label: 'AXION Auto', desc: 'Gemini · Groq', disabled: false },
+                            { id: 'claude' as const, label: 'Claude', desc: claudeAvailable ? 'Sonnet 4.6 · Vertex AI' : 'Belum dikonfigurasi', disabled: !claudeAvailable },
+                          ]).map(opt => (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              disabled={opt.disabled}
+                              onClick={() => {
+                                if (opt.disabled) return;
+                                setSelectedProvider(opt.id);
+                                localStorage.setItem('axion_ai_provider', opt.id);
+                                setProviderDropdownOpen(false);
+                              }}
+                              className="w-full flex items-start gap-2 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                            >
+                              <span className="mt-0.5 w-3.5 shrink-0">
+                                {selectedProvider === opt.id && !opt.disabled && <Check className="w-3.5 h-3.5 text-primary-500" />}
+                              </span>
+                              <span className="min-w-0">
+                                <span className="block text-[12px] font-medium text-gray-900 dark:text-gray-100">{opt.label}</span>
+                                <span className="block text-[10px] text-gray-400 dark:text-gray-500">{opt.desc}</span>
+                              </span>
+                            </button>
+                          ))}
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
               {/* Instagram-style pill input */}
               <div className="flex items-center gap-0.5 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 pl-4 pr-1.5 py-1.5 focus-within:border-primary-400 dark:focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20 transition-all">
