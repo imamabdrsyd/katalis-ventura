@@ -830,18 +830,9 @@ export default function DashboardPage() {
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-all duration-200 hover:shadow-md hover:border-gray-200 dark:hover:border-gray-600 hover:-translate-y-1">
             <div className="flex items-center justify-between gap-3 mb-4">
               <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.financialSummary}</h2>
-              <div className="flex items-center gap-2">
-                <span className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-2.5 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                  {selectedPeriodLabel}
-                </span>
-                <button
-                  onClick={() => router.push('/income-statement')}
-                  aria-label="Lihat Income Statement"
-                  className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-primary-500 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors cursor-pointer"
-                >
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
+              <span className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-2.5 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                {selectedPeriodLabel}
+              </span>
             </div>
 
             {/* Cap Table — kepemilikan dinamis dari akun is_stock */}
