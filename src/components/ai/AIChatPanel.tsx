@@ -124,7 +124,12 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<ChatMode>('ask');
   const [modeDirection, setModeDirection] = useState(1);
-  const [activeModel, setActiveModel] = useState<string | null>(null);
+  const [activeModel, setActiveModel] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('axion_ai_provider') === 'claude' ? 'claude-sonnet-4-6' : null;
+    }
+    return null;
+  });
   // 'auto' = AXION chain (Gemini→Groq), 'claude' = Claude Sonnet via Vertex AI
   const [selectedProvider, setSelectedProvider] = useState<'auto' | 'claude'>(() => {
     if (typeof window !== 'undefined') {
@@ -748,7 +753,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                               onClick={() => {
                                 if (opt.disabled) return;
                                 setSelectedProvider(opt.id);
-                                setActiveModel(null);
+                                setActiveModel(opt.id === 'claude' ? 'claude-sonnet-4-6' : null);
                                 localStorage.setItem('axion_ai_provider', opt.id);
                                 setProviderDropdownOpen(false);
                               }}
