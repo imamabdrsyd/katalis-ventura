@@ -8,9 +8,9 @@
  * - Groq: OpenAI-compatible, gratis dengan rate limit lebih longgar
  *
  * Dua Groq model dengan peran berbeda:
- * - GROQ_CHAT_MODEL  = deepseek-r1-distill-llama-70b — untuk chat analitik (mode Tanya).
+ * - GROQ_CHAT_MODEL  = qwen-qwq-32b — untuk chat analitik (mode Tanya).
  *   Model reasoning: lebih teliti untuk analisis keuangan, audit laporan, proyeksi.
- *   Thinking tokens (<think>...</think>) difilter sebelum dikirim ke user.
+ *   Thinking tokens (<think>...</think>) ditampilkan di ThinkingAccordion UI.
  * - GROQ_PARSE_MODEL = llama-3.3-70b-versatile — untuk parse transaksi & smart import.
  *   Cepat, hemat token, tidak butuh chain-of-thought untuk klasifikasi singkat.
  *
