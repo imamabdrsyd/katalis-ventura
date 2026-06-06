@@ -101,3 +101,24 @@ export function truncate(text: string, length: number): string {
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+/**
+ * Normalisasi nomor telepon Indonesia ke format internasional wa.me.
+ * - Buang karakter non-digit (spasi, +, -, (), dll)
+ * - Awalan 0 → 62 (mis. 08123 → 628123)
+ * - Awalan 62 dibiarkan
+ * - Tanpa awalan 0/62 dianggap sudah lokal → tambahkan 62
+ * Mengembalikan null jika nomor tidak valid (kurang dari 8 digit).
+ */
+export function whatsappUrl(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  let digits = phone.replace(/\D/g, '');
+  if (!digits) return null;
+  if (digits.startsWith('0')) {
+    digits = '62' + digits.slice(1);
+  } else if (!digits.startsWith('62')) {
+    digits = '62' + digits;
+  }
+  if (digits.length < 10) return null;
+  return `https://wa.me/${digits}`;
+}

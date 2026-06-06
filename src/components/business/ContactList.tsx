@@ -7,7 +7,7 @@ import { Modal } from '@/components/ui/Modal';
 import { FileUpload } from '@/components/ui/FileUpload';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import * as contactsApi from '@/lib/api/contacts';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, whatsappUrl } from '@/lib/utils';
 import { CATEGORY_LABELS } from '@/lib/calculations';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
 import { isImageType } from '@/lib/storage/attachments';
@@ -526,12 +526,27 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
                     </div>
                     {/* Show compact info */}
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      {contact.phone && (
-                        <span className="inline-flex items-center gap-1">
-                          <Phone className="w-3 h-3" />
-                          {contact.phone}
-                        </span>
-                      )}
+                      {contact.phone && (() => {
+                        const waUrl = whatsappUrl(contact.phone);
+                        return waUrl ? (
+                          <a
+                            href={waUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                            title="Chat via WhatsApp"
+                          >
+                            <Phone className="w-3 h-3" />
+                            {contact.phone}
+                          </a>
+                        ) : (
+                          <span className="inline-flex items-center gap-1">
+                            <Phone className="w-3 h-3" />
+                            {contact.phone}
+                          </span>
+                        );
+                      })()}
                       {contact.email && (
                         <span className="inline-flex items-center gap-1">
                           <Mail className="w-3 h-3" />
@@ -593,12 +608,26 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
                       )}
                     </div>
                     <div className="flex gap-x-3 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      {selectedContact.phone && (
-                        <span className="inline-flex items-center gap-1">
-                          <Phone className="w-3 h-3" />
-                          {selectedContact.phone}
-                        </span>
-                      )}
+                      {selectedContact.phone && (() => {
+                        const waUrl = whatsappUrl(selectedContact.phone);
+                        return waUrl ? (
+                          <a
+                            href={waUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                            title="Chat via WhatsApp"
+                          >
+                            <Phone className="w-3 h-3" />
+                            {selectedContact.phone}
+                          </a>
+                        ) : (
+                          <span className="inline-flex items-center gap-1">
+                            <Phone className="w-3 h-3" />
+                            {selectedContact.phone}
+                          </span>
+                        );
+                      })()}
                       {selectedContact.email && (
                         <span className="inline-flex items-center gap-1">
                           <Mail className="w-3 h-3" />
