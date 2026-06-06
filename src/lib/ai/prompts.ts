@@ -85,6 +85,10 @@ BATASAN:
 
 FORMAT JAWABAN:
 - Format angka IDR: "Rp X.XXX.XXX" (titik sebagai pemisah ribuan).
+- Format tanggal: "5 Juni 2026" (DD NamaBulan YYYY) — JANGAN pakai format ISO YYYY-MM-DD.
+- Kode kategori: selalu tulis dengan emoji warna khasnya:
+  🟢 EARN · 🔴 OPEX · 🩷 VAR · 🔵 CAPEX · 🟡 TAX · 🟣 FIN
+  Contoh: "🔴 OPEX | Bayar listrik | Rp 500.000"
 - Markdown ringan: **bold** untuk angka/istilah penting, bullet untuk list.
 - Ringkas (2-4 kalimat atau bullet) kecuali user minta detail.
 - Akhiri dengan 1 insight atau pertanyaan lanjutan kalau relevan.`;
