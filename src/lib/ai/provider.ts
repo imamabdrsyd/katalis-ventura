@@ -56,6 +56,7 @@ export const MODEL_LABELS: Record<string, string> = {
   'deepseek-r1-distill-llama-70b': 'DeepSeek R1 70B',
   'qwen-qwq-32b': 'Qwen QwQ 32B',
   'claude-sonnet-4-6': 'Claude Sonnet 4.6',
+  'claude-sonnet-4-6@20250514': 'Claude Sonnet 4.6',
   'claude-haiku-4-5@20251001': 'Claude Haiku 4.5',
 };
 
@@ -265,9 +266,9 @@ async function groqStream(
 // Auth: service account JSON disimpan di env GOOGLE_APPLICATION_CREDENTIALS_JSON.
 // Token di-cache sampai expiry supaya tidak exchange setiap request.
 
-const CLAUDE_CHAT_MODEL = 'claude-sonnet-4-6';
+const CLAUDE_CHAT_MODEL = 'claude-sonnet-4-6@20250514';
 const CLAUDE_PARSE_MODEL = 'claude-haiku-4-5@20251001';
-const VERTEX_REGION = 'global';
+const VERTEX_REGION = 'us-east5';
 
 let _vertexToken: { token: string; expiresAt: number } | null = null;
 
