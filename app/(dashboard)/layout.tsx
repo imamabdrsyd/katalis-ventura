@@ -66,6 +66,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import { FloatingQuickAdd } from '@/components/transactions/FloatingQuickAdd';
+import { AIChatFAB } from '@/components/ai/AIChatFAB';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
 import { useNotifications } from '@/hooks/useNotifications';
 import { isManagerRole } from '@/lib/roles';
@@ -1138,7 +1139,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { userRole, user } = useBusinessContext();
+  const { userRole, user, activeBusinessId, activeBusiness } = useBusinessContext();
   const pathname = usePathname();
   const prefersReducedMotion = useReducedMotion();
   const touchStartX = useRef<number | null>(null);
@@ -1237,6 +1238,14 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
 
       {/* Global Floating Quick Add Button with shared state */}
       <FloatingQuickAdd isOpen={quickAddOpen} onOpenChange={setQuickAddOpen} />
+
+      {/* Global AI Chat FAB */}
+      {activeBusinessId && (
+        <AIChatFAB
+          businessId={activeBusinessId}
+          businessName={activeBusiness?.business_name ?? ''}
+        />
+      )}
     </div>
   );
 }
