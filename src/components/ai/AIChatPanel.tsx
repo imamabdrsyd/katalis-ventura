@@ -126,7 +126,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
   const [modeDirection, setModeDirection] = useState(1);
   const [activeModel, setActiveModel] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('axion_ai_provider') === 'claude' ? 'claude-sonnet-4-6' : null;
+      return localStorage.getItem('axion_ai_provider') === 'claude' ? 'claude-sonnet-4-5' : null;
     }
     return null;
   });
@@ -744,7 +744,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                         >
                           {([
                             { id: 'auto' as const, label: 'AXION Auto', desc: 'Gemini · Llama · Qwen', logo: '/images/gemini.png', disabled: false },
-                            { id: 'claude' as const, label: 'Claude', desc: claudeAvailable ? 'Sonnet 4.6 · Haiku 4.5' : 'Belum dikonfigurasi', logo: '/images/claude.png', disabled: !claudeAvailable },
+                            { id: 'claude' as const, label: 'Claude', desc: claudeAvailable ? 'Sonnet 4.5 · Haiku 4.5' : 'Belum dikonfigurasi', logo: '/images/claude.png', disabled: !claudeAvailable },
                           ]).map(opt => (
                             <button
                               key={opt.id}
@@ -753,7 +753,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                               onClick={() => {
                                 if (opt.disabled) return;
                                 setSelectedProvider(opt.id);
-                                setActiveModel(opt.id === 'claude' ? 'claude-sonnet-4-6' : null);
+                                setActiveModel(opt.id === 'claude' ? 'claude-sonnet-4-5' : null);
                                 localStorage.setItem('axion_ai_provider', opt.id);
                                 setProviderDropdownOpen(false);
                               }}
