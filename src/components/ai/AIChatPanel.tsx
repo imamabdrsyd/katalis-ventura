@@ -732,11 +732,11 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 4, scale: 0.96 }}
                           transition={{ duration: 0.15 }}
-                          className="absolute bottom-full right-0 mb-1.5 z-20 w-44 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg overflow-hidden"
+                          className="absolute bottom-full right-0 mb-1.5 z-20 w-52 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg overflow-hidden"
                         >
                           {([
-                            { id: 'auto' as const, label: 'AXION Auto', desc: 'Gemini · Groq', disabled: false },
-                            { id: 'claude' as const, label: 'Claude', desc: claudeAvailable ? 'Sonnet 4.6 · Vertex AI' : 'Belum dikonfigurasi', disabled: !claudeAvailable },
+                            { id: 'auto' as const, label: 'AXION Auto', desc: 'Gemini · Llama · Qwen', logo: '/images/gemini.png', disabled: false },
+                            { id: 'claude' as const, label: 'Claude', desc: claudeAvailable ? 'Sonnet 4.6 · Haiku 4.5' : 'Belum dikonfigurasi', logo: '/images/claude.png', disabled: !claudeAvailable },
                           ]).map(opt => (
                             <button
                               key={opt.id}
@@ -748,14 +748,15 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                                 localStorage.setItem('axion_ai_provider', opt.id);
                                 setProviderDropdownOpen(false);
                               }}
-                              className="w-full flex items-start gap-2 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                              className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                             >
-                              <span className="mt-0.5 w-3.5 shrink-0">
-                                {selectedProvider === opt.id && !opt.disabled && <Check className="w-3.5 h-3.5 text-primary-500" />}
-                              </span>
-                              <span className="min-w-0">
+                              <img src={opt.logo} alt={opt.label} className="w-5 h-5 shrink-0 rounded-sm object-contain" />
+                              <span className="min-w-0 flex-1">
                                 <span className="block text-[12px] font-medium text-gray-900 dark:text-gray-100">{opt.label}</span>
                                 <span className="block text-[10px] text-gray-400 dark:text-gray-500">{opt.desc}</span>
+                              </span>
+                              <span className="w-3.5 shrink-0 flex justify-end">
+                                {selectedProvider === opt.id && !opt.disabled && <Check className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />}
                               </span>
                             </button>
                           ))}
