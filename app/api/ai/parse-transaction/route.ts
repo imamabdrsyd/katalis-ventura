@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { extracted, source, provider: aiProvider } = extractResult;
+  const { extracted, source, provider: aiProvider, model: aiModel } = extractResult;
   const { name, amount } = extracted;
 
   // Nama transaksi jelas tapi nominal belum disebut → balik tanya ke user.
@@ -87,6 +87,7 @@ export async function POST(req: NextRequest) {
       message: `Oke, **${name}**. Berapa nominalnya?`,
       source,
       provider: aiProvider,
+      model: aiModel,
     });
   }
 
@@ -114,5 +115,5 @@ export async function POST(req: NextRequest) {
     confidence: resolved.confidence,
   };
 
-  return NextResponse.json({ data: draft, source, provider: aiProvider });
+  return NextResponse.json({ data: draft, source, provider: aiProvider, model: aiModel });
 }

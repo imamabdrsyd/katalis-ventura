@@ -16,8 +16,10 @@ export interface ExtractResult {
   extracted: ExtractedTransaction;
   /** 'ai' = dari provider AI; 'rule_based' = fallback regex */
   source: 'ai' | 'rule_based';
-  /** Provider AI yang dipakai (gemini/groq), null kalau rule-based */
+  /** Provider AI yang dipakai (gemini/groq/claude), null kalau rule-based */
   provider: string | null;
+  /** Model spesifik yang dipakai (mis. claude-haiku-4-5@20251001), null kalau rule-based */
+  model: string | null;
 }
 
 export function resolveTransactionDate(
@@ -63,6 +65,7 @@ export async function extractTransactionFromText(text: string): Promise<ExtractR
           extracted: { name, amount, date: g.date ?? null, category_hint: g.category_hint ?? null },
           source: 'ai',
           provider: aiResult.provider,
+          model: aiResult.model,
         };
       }
       // Nama jelas tapi nominal belum disebut → minta user lengkapi
@@ -72,6 +75,7 @@ export async function extractTransactionFromText(text: string): Promise<ExtractR
           extracted: { name, amount: 0, date: g.date ?? null, category_hint: g.category_hint ?? null },
           source: 'ai',
           provider: aiResult.provider,
+          model: aiResult.model,
         };
       }
     } catch {
@@ -87,6 +91,7 @@ export async function extractTransactionFromText(text: string): Promise<ExtractR
       extracted: { name: rb.name, amount: rb.amount, date: null, category_hint: rb.category },
       source: 'rule_based',
       provider: null,
+      model: null,
     };
   }
 
@@ -97,6 +102,7 @@ export async function extractTransactionFromText(text: string): Promise<ExtractR
       extracted: { name: partial.name, amount: 0, date: null, category_hint: partial.category },
       source: 'rule_based',
       provider: null,
+      model: null,
     };
   }
 

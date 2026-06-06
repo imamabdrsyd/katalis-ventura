@@ -14,6 +14,7 @@ import { createClient } from '@/lib/supabase';
 import { useLanguage } from '@/context/LanguageContext';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { CATEGORY_BADGE_CLASSES, CATEGORY_LABELS } from '@/lib/categoryColors';
+import { MODEL_LABELS } from '@/lib/ai/provider';
 
 type ChatMode = 'ask' | 'record';
 
@@ -311,6 +312,8 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? 'Gagal memproses transaksi');
+
+      if (json.model) setActiveModel(json.model);
 
       // AI mengenali transaksi tapi nominal belum disebut → tanya balik
       if (json.status === 'needs_amount') {
@@ -715,7 +718,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                     title="Pilih model AI"
                   >
                     <span className="truncate">
-                      {selectedProvider === 'claude' ? 'Claude Sonnet 4.6' : (activeModel ?? 'AXION Auto')}
+                      {activeModel ? (MODEL_LABELS[activeModel] ?? activeModel) : (selectedProvider === 'claude' ? 'Claude' : 'AXION Auto')}
                     </span>
                     <ChevronDown className="w-2.5 h-2.5 shrink-0" />
                   </button>
@@ -745,6 +748,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                               onClick={() => {
                                 if (opt.disabled) return;
                                 setSelectedProvider(opt.id);
+                                setActiveModel(null);
                                 localStorage.setItem('axion_ai_provider', opt.id);
                                 setProviderDropdownOpen(false);
                               }}
