@@ -68,6 +68,19 @@ export const GEMINI_MODELS = [
   'gemini-2.5-flash-lite',
 ] as const;
 
+// Urutan khusus untuk CHAT (mode Tanya). Berbeda dari GEMINI_MODELS yang dipakai
+// parser transaksi. Tujuannya konsistensi: satu model utama dipakai untuk SEMUA
+// pesan dalam percakapan supaya gaya jawaban tidak gonta-ganti antar pesan
+// (penyebab chat terasa "ngadat"). Sisanya hanya fallback bila yang utama
+// kena rate limit. Gemini 2.5 Flash dipilih sbg utama: stabil, dukung thinking,
+// kuota lebih longgar dari 3.5.
+export const GEMINI_CHAT_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-3.5-flash',
+  'gemini-3.1-flash-lite',
+  'gemini-2.5-flash-lite',
+] as const;
+
 // ─── Gemini helpers ──────────────────────────────────────────────────────────
 
 function extractGeminiText(parts?: Array<{ text?: string; thought?: boolean }>): string {
@@ -290,7 +303,8 @@ export async function streamText(
   opts: { temperature?: number; maxTokens?: number; preferReasoning?: boolean } = {}
 ): Promise<StreamResult | null> {
   const tryGemini = async (): Promise<StreamResult | null> => {
-    for (const model of GEMINI_MODELS) {
+    // Chat pakai urutan konsisten (2.5 Flash utama) — beda dari parser transaksi.
+    for (const model of GEMINI_CHAT_MODELS) {
       const res = await geminiStream(model, systemPrompt, messages, opts);
       if (res) return { stream: buildGeminiStream(res), provider: 'gemini', model };
     }

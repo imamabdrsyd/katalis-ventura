@@ -97,7 +97,10 @@ export async function POST(req: NextRequest) {
 
   const result = await streamText(SYSTEM_PROMPT, aiMessages, {
     temperature: 0.7,
-    maxTokens: preferReasoning ? 2048 : 1024, // R1 butuh ruang utk thinking tokens
+    // Jawaban biasa butuh ruang cukup supaya tidak kepotong di tengah kalimat
+    // (Gemini 2.5 ikut pakai thinking tokens yang memakan jatah). Reasoning model
+    // (R1/Qwen) butuh lebih besar lagi karena chain-of-thought sebelum jawaban.
+    maxTokens: preferReasoning ? 3072 : 2048,
     preferReasoning,
   });
 
