@@ -728,7 +728,7 @@ export default function DashboardPage() {
             <button
               onClick={() => router.push('/ar-ap')}
               aria-label={t.dashboard.viewAll}
-              className="p-1.5 rounded-lg text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors cursor-pointer"
             >
               <ArrowRight className="w-4 h-4" />
             </button>
@@ -916,7 +916,7 @@ export default function DashboardPage() {
             <button
               onClick={() => router.push('/transactions')}
               aria-label={t.dashboard.viewAll}
-              className="p-1.5 rounded-lg text-primary-500 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-primary-500 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors cursor-pointer"
             >
               <ArrowRight className="w-4 h-4" />
             </button>
