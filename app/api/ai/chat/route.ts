@@ -4,7 +4,13 @@ import { createServerClient, getAuthenticatedUser, getBusinessRoleForUser } from
 import { buildFinancialContext } from '@/lib/ai/financialContext';
 import { CHAT_SYSTEM_PROMPT } from '@/lib/ai/prompts';
 import { needsReasoning } from '@/lib/ai/intent';
-import { streamText, streamTextClaude, PROVIDER_LABELS, MODEL_LABELS } from '@/lib/ai/provider';
+import {
+  AIProviderRequestError,
+  streamText,
+  streamTextClaude,
+  PROVIDER_LABELS,
+  MODEL_LABELS,
+} from '@/lib/ai/provider';
 import type { Transaction, Account } from '@/types';
 
 const bodySchema = z.object({
@@ -94,16 +100,27 @@ export async function POST(req: NextRequest) {
   const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')?.content ?? '';
   const preferReasoning = needsReasoning(lastUserMsg);
 
-  const result = provider === 'claude'
-    ? await streamTextClaude(SYSTEM_PROMPT, aiMessages, {
-        temperature: 0.7,
-        maxTokens: 4096,
-      })
-    : await streamText(SYSTEM_PROMPT, aiMessages, {
-        temperature: 0.7,
-        maxTokens: preferReasoning ? 3072 : 2048,
-        preferReasoning,
-      });
+  let result: import('@/lib/ai/provider').StreamResult | null;
+  try {
+    result = provider === 'claude'
+      ? await streamTextClaude(SYSTEM_PROMPT, aiMessages, {
+          maxTokens: 4096,
+        })
+      : await streamText(SYSTEM_PROMPT, aiMessages, {
+          temperature: 0.7,
+          maxTokens: preferReasoning ? 3072 : 2048,
+          preferReasoning,
+        });
+  } catch (error) {
+    if (error instanceof AIProviderRequestError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: error.status }
+      );
+    }
+    console.error('[api/ai/chat] Provider error:', error);
+    return NextResponse.json({ error: 'AI tidak tersedia saat ini. Coba lagi nanti.' }, { status: 503 });
+  }
 
   if (!result) {
     return NextResponse.json({ error: 'AI tidak tersedia saat ini. Coba lagi nanti.' }, { status: 503 });

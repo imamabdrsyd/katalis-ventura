@@ -126,7 +126,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
   const [modeDirection, setModeDirection] = useState(1);
   const [activeModel, setActiveModel] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('axion_ai_provider') === 'claude' ? 'claude-sonnet-4-5' : null;
+      return localStorage.getItem('axion_ai_provider') === 'claude' ? 'claude-sonnet-4-6' : null;
     }
     return null;
   });
@@ -155,18 +155,16 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 150);
-      // Cek provider standby supaya badge model tampil dari awal
-      if (!activeModel) {
-        fetch('/api/ai/status')
-          .then(r => r.ok ? r.json() : null)
-          .then(d => {
-            if (d?.model) setActiveModel(d.model);
-            setClaudeAvailable(!!d?.claudeAvailable);
-          })
-          .catch(() => {});
-      }
+      // Selalu refresh status Claude; badge standby hanya diisi bila belum ada model aktif.
+      fetch('/api/ai/status')
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (d?.model) setActiveModel(current => current ?? d.model);
+          setClaudeAvailable(!!d?.claudeAvailable);
+        })
+        .catch(() => {});
     }
-  }, [isOpen, activeModel]);
+  }, [isOpen]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -282,7 +280,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
       setLoading(false);
       abortRef.current = null;
     }
-  }, [messages, loading, businessId]);
+  }, [messages, loading, businessId, selectedProvider]);
 
   // Mode "record": parse teks → tampilkan preview draft transaksi (belum disimpan).
   // Kalau sebelumnya AI minta nominal (pendingTx), gabungkan jawaban user dgn
@@ -744,7 +742,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                         >
                           {([
                             { id: 'auto' as const, label: 'AXION Auto', desc: 'Gemini · Llama · Qwen', logo: '/images/gemini.png', disabled: false },
-                            { id: 'claude' as const, label: 'Claude', desc: claudeAvailable ? 'Sonnet 4.5 · Haiku 4.5' : 'Belum dikonfigurasi', logo: '/images/claude.png', disabled: !claudeAvailable },
+                            { id: 'claude' as const, label: 'Claude', desc: claudeAvailable ? 'Sonnet 4.6 via Vertex' : 'Belum dikonfigurasi', logo: '/images/claude.png', disabled: !claudeAvailable },
                           ]).map(opt => (
                             <button
                               key={opt.id}
@@ -753,7 +751,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                               onClick={() => {
                                 if (opt.disabled) return;
                                 setSelectedProvider(opt.id);
-                                setActiveModel(opt.id === 'claude' ? 'claude-sonnet-4-5' : null);
+                                setActiveModel(opt.id === 'claude' ? 'claude-sonnet-4-6' : null);
                                 localStorage.setItem('axion_ai_provider', opt.id);
                                 setProviderDropdownOpen(false);
                               }}

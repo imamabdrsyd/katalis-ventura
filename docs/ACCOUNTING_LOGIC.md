@@ -3035,6 +3035,19 @@ Format request berbeda dinormalisasi di provider.ts:
 `AIChatPanel` menampilkan badge model aktif (mis. "Gemini 2.5 Flash Lite" atau
 "Llama 3.3 70B") di sub-header setelah pesan pertama.
 
+**Claude via Vertex AI (opsi manual)**:
+- Semua pemanggilan Claude manual memakai `claude-sonnet-4-6` di region `us-east5`;
+  tidak ada fallback ke Sonnet 4.5 atau Haiku.
+- `GOOGLE_APPLICATION_CREDENTIALS_JSON` wajib berisi service-account JSON lengkap
+  dalam satu baris. Status provider hanya mengaktifkan opsi Claude bila JSON valid.
+- Model Claude harus diaktifkan lebih dulu di Vertex AI Model Garden dan service
+  account perlu izin `aiplatform.endpoints.predict`.
+- Chat memakai adaptive thinking + effort `medium` dan tidak mengirim `temperature`.
+- Kegagalan Claude manual dinormalisasi menjadi pesan actionable (kredensial, IAM,
+  model belum aktif, rate limit), bukan disamarkan sebagai `503` generik.
+- Panel selalu refresh status Claude saat dibuka dan callback kirim mengikuti provider
+  terbaru yang dipilih user.
+
 > **Prinsip AI = enhancement, bukan dependency**: setiap fitur AI punya fallback
 > berlapis (provider lain → rule-based). Kalau semua provider habis quota / error /
 > API key kosong, fitur TETAP jalan. Free tier Gemini di akun dev sangat ketat

@@ -6,7 +6,7 @@
  *
  * - Gemini: kualitas terbaik, JSON native, tapi free tier RPD sangat ketat
  * - Groq: OpenAI-compatible, gratis dengan rate limit lebih longgar
- * - Claude (Vertex AI): Claude Sonnet 4.6 untuk chat, Haiku 4.5 untuk parse
+ * - Claude (Vertex AI): Claude Sonnet 4.6 untuk chat dan generate manual
  *
  * Dua Groq model dengan peran berbeda:
  * - GROQ_CHAT_MODEL  = qwen-qwq-32b — chat analitik, reasoning mendalam
@@ -56,10 +56,9 @@ export const MODEL_LABELS: Record<string, string> = {
   'deepseek-r1-distill-llama-70b': 'DeepSeek R1 70B',
   'qwen-qwq-32b': 'Qwen QwQ 32B',
   'claude-sonnet-4-6': 'Claude Sonnet 4.6',
-  'claude-sonnet-4-6@20250514': 'Claude Sonnet 4.6',
   'claude-sonnet-4-5': 'Claude Sonnet 4.5',
+  'claude-sonnet-4-5@20250929': 'Claude Sonnet 4.5',
   'claude-haiku-4-5': 'Claude Haiku 4.5',
-  'claude-haiku-4-5@20251001': 'Claude Haiku 4.5',
   'claude-haiku-4-5@20251001': 'Claude Haiku 4.5',
 };
 
@@ -269,11 +268,44 @@ async function groqStream(
 // Auth: service account JSON disimpan di env GOOGLE_APPLICATION_CREDENTIALS_JSON.
 // Token di-cache sampai expiry supaya tidak exchange setiap request.
 
-const CLAUDE_CHAT_MODEL = 'claude-sonnet-4-5';
-const CLAUDE_PARSE_MODEL = 'claude-haiku-4-5';
+const CLAUDE_CHAT_MODEL = 'claude-sonnet-4-6';
+const CLAUDE_PARSE_MODEL = CLAUDE_CHAT_MODEL;
 const VERTEX_REGION = 'us-east5';
 
 let _vertexToken: { token: string; expiresAt: number } | null = null;
+
+interface VertexCredentials {
+  project_id: string;
+  client_email: string;
+  private_key: string;
+}
+
+export class AIProviderRequestError extends Error {
+  constructor(
+    public readonly provider: AIProvider,
+    public readonly code: string,
+    message: string,
+    public readonly status = 502
+  ) {
+    super(message);
+    this.name = 'AIProviderRequestError';
+  }
+}
+
+function getVertexCredentials(): VertexCredentials | null {
+  const credJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+  if (!credJson) return null;
+
+  try {
+    const credentials = JSON.parse(credJson) as Partial<VertexCredentials>;
+    if (!credentials.project_id || !credentials.client_email || !credentials.private_key) {
+      return null;
+    }
+    return credentials as VertexCredentials;
+  } catch {
+    return null;
+  }
+}
 
 async function getVertexToken(): Promise<string | null> {
   // Return cached token kalau masih valid (buffer 60 detik)
@@ -281,15 +313,10 @@ async function getVertexToken(): Promise<string | null> {
     return _vertexToken.token;
   }
 
-  const credJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-  if (!credJson) return null;
+  const creds = getVertexCredentials();
+  if (!creds) return null;
 
   try {
-    const creds = JSON.parse(credJson) as {
-      client_email: string;
-      private_key: string;
-    };
-
     // JWT untuk Google OAuth2 token exchange
     const now = Math.floor(Date.now() / 1000);
     const header = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
@@ -341,13 +368,47 @@ async function getVertexToken(): Promise<string | null> {
 }
 
 function getVertexProjectId(): string | null {
-  const credJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-  if (!credJson) return null;
-  try {
-    return (JSON.parse(credJson) as { project_id?: string }).project_id ?? null;
-  } catch {
-    return null;
+  return getVertexCredentials()?.project_id ?? null;
+}
+
+function claudeResponseError(status: number, detail: string): AIProviderRequestError {
+  if (status === 404) {
+    return new AIProviderRequestError(
+      'claude',
+      'claude_model_unavailable',
+      'Claude belum diaktifkan untuk project Vertex AI ini. Aktifkan model Claude di Model Garden lalu coba lagi.'
+    );
   }
+  if (status === 401 || status === 403) {
+    return new AIProviderRequestError(
+      'claude',
+      'claude_permission_denied',
+      'Service account Vertex AI tidak memiliki izin untuk memakai Claude.'
+    );
+  }
+  if (status === 400) {
+    return new AIProviderRequestError(
+      'claude',
+      'claude_invalid_request',
+      'Konfigurasi request Claude ditolak oleh Vertex AI. Periksa log server untuk detailnya.'
+    );
+  }
+  if (status === 429) {
+    return new AIProviderRequestError(
+      'claude',
+      'claude_rate_limited',
+      'Kuota Claude Sonnet 4.6 di Vertex AI belum tersedia atau sedang habis. Ajukan kenaikan kuota Vertex AI lalu coba lagi.',
+      503
+    );
+  }
+
+  console.warn('[ai/provider] Unclassified Claude response:', status, detail);
+  return new AIProviderRequestError(
+    'claude',
+    'claude_provider_error',
+    'Vertex AI gagal memproses request Claude. Coba lagi nanti.',
+    503
+  );
 }
 
 async function claudeGenerate(
@@ -358,7 +419,13 @@ async function claudeGenerate(
 ): Promise<string | null> {
   const token = await getVertexToken();
   const projectId = getVertexProjectId();
-  if (!token || !projectId) return null;
+  if (!token || !projectId) {
+    throw new AIProviderRequestError(
+      'claude',
+      'claude_invalid_credentials',
+      'Kredensial Vertex AI untuk Claude belum valid. GOOGLE_APPLICATION_CREDENTIALS_JSON harus berupa JSON satu baris yang lengkap.'
+    );
+  }
 
   const endpoint = `https://${VERTEX_REGION}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${VERTEX_REGION}/publishers/anthropic/models/${model}:rawPredict`;
 
@@ -378,14 +445,21 @@ async function claudeGenerate(
       }),
     });
     if (!res.ok) {
-      console.warn(`[ai/provider] Claude generate failed:`, res.status, await res.text());
-      return null;
+      const detail = await res.text();
+      console.warn(`[ai/provider] Claude generate failed:`, res.status, detail);
+      throw claudeResponseError(res.status, detail);
     }
     const json = await res.json() as { content?: Array<{ type: string; text?: string }> };
     return json.content?.find(b => b.type === 'text')?.text ?? null;
   } catch (err) {
+    if (err instanceof AIProviderRequestError) throw err;
     console.warn('[ai/provider] Claude generate error:', err);
-    return null;
+    throw new AIProviderRequestError(
+      'claude',
+      'claude_network_error',
+      'Tidak dapat terhubung ke Vertex AI untuk memanggil Claude.',
+      503
+    );
   }
 }
 
@@ -397,9 +471,16 @@ async function claudeStream(
 ): Promise<Response | null> {
   const token = await getVertexToken();
   const projectId = getVertexProjectId();
-  if (!token || !projectId) return null;
+  if (!token || !projectId) {
+    throw new AIProviderRequestError(
+      'claude',
+      'claude_invalid_credentials',
+      'Kredensial Vertex AI untuk Claude belum valid. GOOGLE_APPLICATION_CREDENTIALS_JSON harus berupa JSON satu baris yang lengkap.'
+    );
+  }
 
   const endpoint = `https://${VERTEX_REGION}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${VERTEX_REGION}/publishers/anthropic/models/${model}:streamRawPredict`;
+  const maxTokens = opts.maxTokens ?? 2048;
 
   try {
     const res = await fetch(endpoint, {
@@ -412,19 +493,27 @@ async function claudeStream(
         anthropic_version: 'vertex-2023-10-16',
         system: systemPrompt,
         messages: messages.map(m => ({ role: m.role, content: m.content })),
-        max_tokens: opts.maxTokens ?? 2048,
-        temperature: opts.temperature ?? 0.7,
-        thinking: { type: 'enabled', budget_tokens: 4000 },
+        max_tokens: maxTokens,
+        // Sonnet 4.6 direkomendasikan memakai adaptive thinking + effort eksplisit.
+        thinking: { type: 'adaptive' },
+        output_config: { effort: 'medium' },
       }),
     });
     if (!res.ok) {
-      console.warn('[ai/provider] Claude stream failed:', res.status, await res.text());
-      return null;
+      const detail = await res.text();
+      console.warn('[ai/provider] Claude stream failed:', res.status, detail);
+      throw claudeResponseError(res.status, detail);
     }
     return res;
   } catch (err) {
+    if (err instanceof AIProviderRequestError) throw err;
     console.warn('[ai/provider] Claude stream error:', err);
-    return null;
+    throw new AIProviderRequestError(
+      'claude',
+      'claude_network_error',
+      'Tidak dapat terhubung ke Vertex AI untuk memanggil Claude.',
+      503
+    );
   }
 }
 
@@ -503,7 +592,7 @@ export async function streamTextClaude(
 }
 
 export function isClaudeAvailable(): boolean {
-  return !!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+  return getVertexCredentials() !== null;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
