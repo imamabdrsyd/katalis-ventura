@@ -268,9 +268,9 @@ async function groqStream(
 // Auth: service account JSON disimpan di env GOOGLE_APPLICATION_CREDENTIALS_JSON.
 // Token di-cache sampai expiry supaya tidak exchange setiap request.
 
-const CLAUDE_CHAT_MODEL = 'claude-3-5-sonnet-v2@20241022';
-const CLAUDE_PARSE_MODEL = 'claude-3-5-haiku@20241022';
-const VERTEX_REGION = 'us-east5';
+const CLAUDE_CHAT_MODEL = 'claude-sonnet-4-6';
+const CLAUDE_PARSE_MODEL = 'claude-haiku-4-5@20251001';
+const VERTEX_REGION = 'global';
 
 let _vertexToken: { token: string; expiresAt: number } | null = null;
 
