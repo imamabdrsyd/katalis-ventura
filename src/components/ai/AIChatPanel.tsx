@@ -81,6 +81,39 @@ const SUGGESTED_QUESTIONS = [
   'Berapa burn rate saat ini?',
 ];
 
+// Pesan sapaan/akknowledgment singkat yang tidak punya muatan pertanyaan.
+// Di-handle lokal tanpa memanggil LLM (hemat kuota + tidak fetch 3000 transaksi).
+// Hanya berlaku di mode Ask. Daftar dibuat konservatif — hanya frasa yang
+// hampir pasti basa-basi, supaya tidak salah skip pertanyaan asli.
+const SMALL_TALK = new Set([
+  'oi', 'hai', 'halo', 'hallo', 'hi', 'hello', 'hey', 'p', 'pp', 'woi', 'oy',
+  'ok', 'oke', 'okay', 'oce', 'sip', 'siap', 'mantap', 'mantul', 'noted', 'baik',
+  'ya', 'iya', 'yo', 'yup', 'yoi', 'yes', 'y', 'ga', 'gak', 'nggak', 'no', 'tidak',
+  'makasih', 'thanks', 'thank you', 'terima kasih', 'tq', 'thx', 'trims',
+  'test', 'tes', 'testing', 'coba', 'wkwk', 'wkwkwk', 'haha', 'hehe', 'lol',
+]);
+
+/** Balasan ramah untuk small talk — bervariasi supaya tidak terasa robotik. */
+function smallTalkReply(text: string): string {
+  const t = text.toLowerCase().replace(/[^a-z\s]/g, '').trim();
+  if (/(makasih|thanks|thank|^tq$|^thx$|trims)/.test(t)) {
+    return 'Sama-sama! Ada lagi yang mau ditanyakan soal keuangan bisnismu?';
+  }
+  if (/^(oi|hai|halo|hallo|hi|hello|hey|p|pp|woi|oy)$/.test(t)) {
+    return 'Halo! 👋 Mau tanya apa soal keuangan bisnismu? Misalnya tren revenue, beban terbesar, atau kondisi laba rugi bulan ini.';
+  }
+  return 'Siap! Kalau ada yang mau dianalisis dari keuangan bisnismu, tinggal tanya ya. 😊';
+}
+
+/** Apakah teks ini small talk murni (≤3 kata & semua token ada di SMALL_TALK)? */
+function isSmallTalk(text: string): boolean {
+  const cleaned = text.toLowerCase().replace(/[^a-z0-9\s]/gi, ' ').trim();
+  if (!cleaned) return true; // hanya emoji/tanda baca
+  const words = cleaned.split(/\s+/);
+  if (words.length > 3) return false;
+  return words.every(w => SMALL_TALK.has(w));
+}
+
 export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AIChatPanelProps) {
   const { t } = useLanguage();
   const { user } = useBusinessContext();
@@ -128,6 +161,14 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
     const nextMessages = [...messages, userMsg];
     setMessages(nextMessages);
     setInput('');
+
+    // Small talk ("oi", "ok", "makasih") di-balas lokal — tidak panggil LLM
+    // maupun fetch transaksi. Hemat kuota Gemini & mempercepat respons.
+    if (isSmallTalk(trimmed)) {
+      setMessages(prev => [...prev, { role: 'assistant', content: smallTalkReply(trimmed) }]);
+      return;
+    }
+
     setLoading(true);
 
     // Placeholder streaming message
