@@ -47,6 +47,75 @@ export async function parseExcelFile(file: File): Promise<ParsedRow[]> {
 }
 
 /**
+ * Mapping kolom yang dihasilkan LLM: field standar AXION → nama header asli di file.
+ * null = field tidak ada padanannya di file.
+ */
+export interface ColumnMapping {
+  date: string | null;
+  description: string | null;
+  amount: string | null;
+  name: string | null;
+  category: string | null;
+}
+
+/**
+ * Parse file Excel/CSV jadi raw rows TANPA normalisasi kolom.
+ * Header dipertahankan apa adanya supaya bisa dipetakan oleh LLM.
+ * Mengembalikan { headers, rows } — rows berupa array object dgn key = header asli.
+ */
+export async function parseExcelRaw(
+  file: File
+): Promise<{ headers: string[]; rows: Record<string, any>[] }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        if (!data) {
+          reject(new Error('Failed to read file'));
+          return;
+        }
+        const workbook = XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, {
+          raw: false,
+          defval: '',
+        });
+        const headers = rows.length > 0 ? Object.keys(rows[0]) : [];
+        resolve({ headers, rows });
+      } catch (error) {
+        reject(new Error(`Failed to parse file: ${error instanceof Error ? error.message : 'Unknown error'}`));
+      }
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+/**
+ * Terapkan ColumnMapping (dari LLM) ke raw rows → ParsedRow[].
+ * Field yang mapping-nya null akan kosong. Field lain (account, debit, dst) dikosongkan
+ * karena smart-import resolver yang akan menentukan akun debit/kredit.
+ */
+export function applyColumnMapping(
+  rows: Record<string, any>[],
+  mapping: ColumnMapping
+): ParsedRow[] {
+  return rows.map((row) => {
+    const pick = (header: string | null) =>
+      header && header in row ? row[header] : '';
+    return {
+      date: String(pick(mapping.date) ?? '').trim(),
+      description: String(pick(mapping.description) ?? '').trim(),
+      amount: pick(mapping.amount),
+      name: String(pick(mapping.name) ?? '').trim(),
+      category: String(pick(mapping.category) ?? '').trim(),
+      account: '',
+    } as ParsedRow;
+  });
+}
+
+/**
  * Normalize row data - convert column names to standard format
  */
 function normalizeRow(row: any): ParsedRow {

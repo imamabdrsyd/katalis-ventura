@@ -8,6 +8,7 @@ import {
   AIProviderRequestError,
   streamText,
   streamTextClaude,
+  streamTextGeminiVertex,
   PROVIDER_LABELS,
   MODEL_LABELS,
 } from '@/lib/ai/provider';
@@ -21,7 +22,7 @@ const bodySchema = z.object({
       content: z.string().min(1).max(4000),
     })
   ).min(1).max(20),
-  provider: z.enum(['auto', 'claude']).optional().default('auto'),
+  provider: z.enum(['auto', 'claude', 'gemini-vertex']).optional().default('auto'),
 });
 
 const SYSTEM_PROMPT = CHAT_SYSTEM_PROMPT;
@@ -102,15 +103,20 @@ export async function POST(req: NextRequest) {
 
   let result: import('@/lib/ai/provider').StreamResult | null;
   try {
-    result = provider === 'claude'
-      ? await streamTextClaude(SYSTEM_PROMPT, aiMessages, {
-          maxTokens: 4096,
-        })
-      : await streamText(SYSTEM_PROMPT, aiMessages, {
-          temperature: 0.7,
-          maxTokens: preferReasoning ? 3072 : 2048,
-          preferReasoning,
-        });
+    if (provider === 'claude') {
+      result = await streamTextClaude(SYSTEM_PROMPT, aiMessages, { maxTokens: 4096 });
+    } else if (provider === 'gemini-vertex') {
+      result = await streamTextGeminiVertex(SYSTEM_PROMPT, aiMessages, {
+        temperature: 0.7,
+        maxTokens: 2048,
+      });
+    } else {
+      result = await streamText(SYSTEM_PROMPT, aiMessages, {
+        temperature: 0.7,
+        maxTokens: preferReasoning ? 3072 : 2048,
+        preferReasoning,
+      });
+    }
   } catch (error) {
     if (error instanceof AIProviderRequestError) {
       return NextResponse.json(

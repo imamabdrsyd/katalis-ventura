@@ -2,14 +2,18 @@
 
 import { useState, useRef, useEffect, useCallback, useId } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check, Paperclip, FileSpreadsheet, Brain, ChevronRight, ChevronDown } from 'lucide-react';
+import { X, Send, Bot, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check, Paperclip, FileSpreadsheet, Brain, ChevronRight, ChevronDown, ExternalLink } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
-import { parseExcelFile, validateFile } from '@/lib/import/excelParser';
+import { parseExcelFile, parseExcelRaw, applyColumnMapping, validateFile, type ColumnMapping } from '@/lib/import/excelParser';
 import { validateRowsSmart } from '@/lib/import/excelValidator';
 import { smartResolveTransaction } from '@/lib/import/smartResolver';
 import { getAccounts } from '@/lib/api/accounts';
 import { createTransactionsBulk, type TransactionInsert } from '@/lib/api/transactions';
+import { uploadAttachment } from '@/lib/storage/attachments';
+import { matchAccountByKeywords } from '@/lib/ocr/matcher';
+import type { OcrResult } from '@/lib/ocr/types';
 import { createClient } from '@/lib/supabase';
 import { useLanguage } from '@/context/LanguageContext';
 import { useBusinessContext } from '@/context/BusinessContext';
@@ -17,6 +21,91 @@ import { CATEGORY_BADGE_CLASSES, CATEGORY_LABELS } from '@/lib/categoryColors';
 import { MODEL_LABELS } from '@/lib/ai/provider';
 
 type ChatMode = 'ask' | 'record';
+
+/**
+ * Parse nominal uang dari berbagai format tanpa keliru memotong digit.
+ * Mendukung:
+ * - Indonesia: "1.234.567" (titik=ribuan) → 1234567 · "1.234.567,89" → 1234567.89
+ * - Internasional: "$1,234.56" (koma=ribuan, titik=desimal) → 1234.56
+ * - Plain: 1234567 / "1234567" → 1234567
+ * Heuristik: pemisah yang muncul TERAKHIR & diikuti 1-2 digit = desimal; sisanya ribuan.
+ */
+function sanitizeAmountFlexible(value: number | string): number {
+  if (typeof value === 'number') return value;
+  let s = String(value).trim();
+  if (!s) return NaN;
+
+  // Buang simbol mata uang & spasi, simpan digit, titik, koma, minus.
+  s = s.replace(/[^\d.,-]/g, '');
+  if (!s) return NaN;
+
+  const lastDot = s.lastIndexOf('.');
+  const lastComma = s.lastIndexOf(',');
+
+  if (lastDot === -1 && lastComma === -1) {
+    return parseFloat(s);
+  }
+
+  // Pemisah desimal = yang posisinya paling akhir.
+  const decimalSep = lastComma > lastDot ? ',' : '.';
+  const thousandSep = decimalSep === ',' ? '.' : ',';
+
+  // Buang semua pemisah ribuan, ubah desimal jadi titik.
+  const cleaned = s
+    .split(thousandSep).join('')
+    .replace(decimalSep, '.');
+
+  // Kalau "desimal" ternyata >2 digit, kemungkinan itu ribuan (mis. "1.234" Indonesia).
+  const decimalPart = cleaned.split('.')[1];
+  if (decimalPart && decimalPart.length > 2) {
+    return parseFloat(cleaned.replace('.', ''));
+  }
+  return parseFloat(cleaned);
+}
+
+/**
+ * Konversi berbagai format tanggal → ISO "YYYY-MM-DD" (format wajib server).
+ * Mendukung: YYYY-MM-DD (passthrough), DD/MM/YYYY, MM/DD/YYYY (Airbnb/US),
+ * DD-MM-YYYY, serta Date object. Return null kalau tidak bisa di-parse.
+ *
+ * Heuristik DD/MM vs MM/DD: kalau salah satu bagian > 12, itu pasti hari →
+ * bisa tentukan urutannya. Kalau ambigu (keduanya <= 12), default MM/DD/YYYY
+ * (format Airbnb & laporan marketplace internasional).
+ */
+function toISODate(value: unknown): string | null {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.toISOString().split('T')[0];
+  }
+  const s = String(value).trim();
+  if (!s) return null;
+
+  // Sudah ISO
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  // dd/mm/yyyy atau mm/dd/yyyy (separator / atau -)
+  const m = s.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})$/);
+  if (m) {
+    let [, a, b, y] = m;
+    const year = y.length === 2 ? `20${y}` : y;
+    const n1 = parseInt(a, 10);
+    const n2 = parseInt(b, 10);
+    let day: number, month: number;
+    if (n1 > 12) {        // a pasti hari → DD/MM
+      day = n1; month = n2;
+    } else if (n2 > 12) { // b pasti hari → MM/DD
+      month = n1; day = n2;
+    } else {              // ambigu → default MM/DD (Airbnb/US)
+      month = n1; day = n2;
+    }
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+
+  // Fallback: coba Date parser bawaan (mis. "Dec 30 2024")
+  const parsed = new Date(s);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().split('T')[0];
+}
 
 const MODE_PAGE_VARIANTS = {
   enter: (direction: number) => ({
@@ -66,6 +155,28 @@ interface Message {
   importPreview?: ImportPreview;
   importStatus?: 'pending' | 'importing' | 'done' | 'cancelled';
   importResult?: { inserted: number; failed: number };
+  // Pertanyaan follow-up dari LLM import (provider Vertex) saat ada baris yang ragu.
+  // Saat aktif, jawaban user berikutnya diteruskan ke LLM untuk finalisasi impor.
+  importQuestions?: string[];
+  // Aksi navigasi dari agent tool calling — tampil sebagai tombol di bawah jawaban
+  navigateAction?: {
+    page: string;
+    filters?: Record<string, string>;
+    message: string;
+    url: string;
+  };
+}
+
+/**
+ * State impor LLM yang menunggu jawaban klarifikasi user (provider Vertex).
+ * Disimpan terpisah dari Message supaya jawaban user (pesan berikutnya) bisa
+ * digabung dengan raw rows + pertanyaan lalu dikirim ulang ke /api/ai/parse-import.
+ */
+interface PendingLLMImport {
+  fileName: string;
+  rows: Record<string, unknown>[];
+  questions: string[];
+  provider: 'gemini-vertex' | 'claude';
 }
 
 interface AIChatPanelProps {
@@ -115,9 +226,31 @@ function isSmallTalk(text: string): boolean {
   return words.every(w => SMALL_TALK.has(w));
 }
 
+// Konversi navigate_to page + filters → URL path dengan query params
+function buildNavigateUrl(page: string, filters?: Record<string, string>): string {
+  const paths: Record<string, string> = {
+    transactions: '/transactions',
+    'income-statement': '/income-statement',
+    'balance-sheet': '/balance-sheet',
+    'cash-flow': '/cash-flow',
+    'general-ledger': '/general-ledger',
+    'trial-balance': '/trial-balance',
+    accounts: '/accounts',
+    reports: '/reports',
+    dashboard: '/dashboard',
+  };
+  const base = paths[page] ?? `/${page}`;
+  if (!filters || Object.keys(filters).length === 0) return base;
+  const params = new URLSearchParams(
+    Object.entries(filters).filter(([, v]) => v) as [string, string][]
+  );
+  return `${base}?${params.toString()}`;
+}
+
 export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AIChatPanelProps) {
   const { t } = useLanguage();
   const { user } = useBusinessContext();
+  const router = useRouter();
   const modeToggleLayoutId = useId();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -126,14 +259,17 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
   const [modeDirection, setModeDirection] = useState(1);
   const [activeModel, setActiveModel] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('axion_ai_provider') === 'claude' ? 'claude-sonnet-4-6' : null;
+      const p = localStorage.getItem('axion_ai_provider');
+      if (p === 'claude') return 'claude-sonnet-4-6';
+      if (p === 'gemini-vertex') return 'gemini-2.5-flash-vertex';
+      return null;
     }
     return null;
   });
-  // 'auto' = AXION chain (Gemini→Groq), 'claude' = Claude Sonnet via Vertex AI
-  const [selectedProvider, setSelectedProvider] = useState<'auto' | 'claude'>(() => {
+  // 'auto' = AXION chain (Gemini→Groq), 'claude' = Claude Sonnet via Vertex AI, 'gemini-vertex' = Gemini via Vertex AI
+  const [selectedProvider, setSelectedProvider] = useState<'auto' | 'claude' | 'gemini-vertex'>(() => {
     if (typeof window !== 'undefined') {
-      return (localStorage.getItem('axion_ai_provider') as 'auto' | 'claude') ?? 'auto';
+      return (localStorage.getItem('axion_ai_provider') as 'auto' | 'claude' | 'gemini-vertex') ?? 'auto';
     }
     return 'auto';
   });
@@ -147,6 +283,8 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
     category_hint: string | null;
     date: string | null;
   } | null>(null);
+  // Impor LLM (Vertex) yang menunggu jawaban klarifikasi user.
+  const [pendingLLMImport, setPendingLLMImport] = useState<PendingLLMImport | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -281,6 +419,82 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
       abortRef.current = null;
     }
   }, [messages, loading, businessId, selectedProvider]);
+
+  // Agent query (Gemini Vertex tool calling) — untuk provider gemini-vertex di mode ask.
+  // Berbeda dari sendMessage (SSE streaming): ini non-streaming, tapi dapat tool results
+  // dan bisa balik navigateAction untuk diarahkan ke halaman tertentu.
+  const sendAgentMessage = useCallback(async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed || loading) return;
+
+    const userMsg: Message = { role: 'user', content: trimmed };
+    const nextMessages = [...messages, userMsg];
+    setMessages(nextMessages);
+    setInput('');
+
+    if (isSmallTalk(trimmed)) {
+      setMessages(prev => [...prev, { role: 'assistant', content: smallTalkReply(trimmed) }]);
+      return;
+    }
+
+    setLoading(true);
+    setMessages(prev => [...prev, { role: 'assistant', content: '', streaming: true }]);
+
+    try {
+      const history = messages
+        .filter(m => !m.streaming)
+        .slice(-8)
+        .map(m => ({ role: m.role, content: m.content }));
+
+      const res = await fetch('/api/ai/agent-query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business_id: businessId, message: trimmed, history }),
+      });
+
+      const data = res.ok ? await res.json() : null;
+      if (!data) {
+        const err = await res.json().catch(() => ({ error: 'Gagal menghubungi agent' }));
+        throw new Error(err.error ?? 'Gagal menghubungi agent');
+      }
+
+      if (data.model) setActiveModel(MODEL_LABELS[data.model] ?? data.model);
+
+      const navigateAction = data.navigate
+        ? {
+            page: data.navigate.page as string,
+            filters: (data.navigate.filters ?? {}) as Record<string, string>,
+            message: data.navigate.message as string,
+            url: buildNavigateUrl(data.navigate.page as string, data.navigate.filters as Record<string, string>),
+          }
+        : undefined;
+
+      setMessages(prev => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last?.streaming) {
+          updated[updated.length - 1] = {
+            role: 'assistant',
+            content: (data.answer as string) || '_(tidak ada respons)_',
+            navigateAction,
+          };
+        }
+        return updated;
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan';
+      setMessages(prev => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last?.streaming) {
+          updated[updated.length - 1] = { role: 'assistant', content: `⚠️ ${msg}` };
+        }
+        return updated;
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [messages, loading, businessId]);
 
   // Mode "record": parse teks → tampilkan preview draft transaksi (belum disimpan).
   // Kalau sebelumnya AI minta nominal (pendingTx), gabungkan jawaban user dgn
@@ -417,10 +631,135 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
   }, []);
 
   // Router: kirim sesuai mode aktif
+  // ── LLM-driven import (provider Vertex saja) ───────────────────────────────
+  // Full LLM parse: kirim raw rows ke /api/ai/parse-import, LLM ekstrak transaksi
+  // cerdas (nama bermakna, buang baris ringkasan, klasifikasi per-baris). Kalau LLM
+  // ragu, dia balik pertanyaan → ditampilkan di chat, jawaban user dikirim ulang.
+  const runLLMImport = useCallback(async (
+    fileName: string,
+    rows: Record<string, unknown>[],
+    provider: 'gemini-vertex' | 'claude',
+    clarifications?: { question: string; answer: string }[],
+  ) => {
+    setLoading(true);
+    setMessages(prev => [...prev, { role: 'assistant', content: '', streaming: true }]);
+
+    try {
+      const res = await fetch('/api/ai/parse-import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business_id: businessId, provider, rows, clarifications }),
+      });
+      const data = res.ok ? await res.json() : null;
+      if (!data) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error ?? 'LLM gagal memproses file');
+      }
+
+      const llmTxs = (data.transactions ?? []) as Array<{
+        name: string; description: string; amount: number; date: string; category: string;
+      }>;
+      const questions = (data.questions ?? []) as string[];
+      const summary = (data.summary ?? '') as string;
+
+      // Kalau LLM masih ragu & belum ada klarifikasi → tanya user dulu.
+      if (questions.length > 0 && !clarifications) {
+        setPendingLLMImport({ fileName, rows, questions, provider });
+        setMessages(prev => {
+          const updated = [...prev];
+          const q = questions.map(x => `• ${x}`).join('\n');
+          updated[updated.length - 1] = {
+            role: 'assistant',
+            content: `${summary ? summary + '\n\n' : ''}Sebelum impor, aku perlu konfirmasi:\n${q}\n\n_Balas di chat untuk menjawab._`,
+            importQuestions: questions,
+          };
+          return updated;
+        });
+        return;
+      }
+
+      // Resolve akun debit/kredit untuk tiap transaksi LLM.
+      const accounts = await getAccounts(businessId);
+      const accByCode = new Map(accounts.map(a => [a.account_code, a]));
+      const today = new Date().toISOString().split('T')[0];
+      const ready: TransactionInsert[] = [];
+      let lowConfidenceCount = 0;
+
+      for (const tx of llmTxs) {
+        const resolved = smartResolveTransaction(tx.description || tx.name, accounts, tx.category);
+        if (resolved.confidence === 'low') lowConfidenceCount++;
+        const debit = accByCode.get(resolved.debit_account_code);
+        const credit = accByCode.get(resolved.credit_account_code);
+        if (!debit || !credit || debit.id === credit.id) continue;
+        const amountNum = sanitizeAmountFlexible(tx.amount);
+        if (!Number.isFinite(amountNum) || amountNum <= 0) continue;
+
+        ready.push({
+          business_id: businessId,
+          date: toISODate(tx.date) ?? today,
+          // LLM sudah klasifikasi per-baris → pakai kategori LLM, bukan hasil resolver.
+          category: (tx.category as TransactionInsert['category']) ?? resolved.category,
+          name: tx.name || tx.description,
+          description: tx.description || tx.name,
+          amount: amountNum,
+          account: '',
+          created_by: '',
+          debit_account_id: debit.id,
+          credit_account_id: credit.id,
+          is_double_entry: true,
+          status: 'posted',
+        });
+      }
+
+      setPendingLLMImport(null);
+      const preview: ImportPreview = {
+        fileName,
+        totalRows: rows.length,
+        validCount: ready.length,
+        errorCount: Math.max(0, rows.length - ready.length),
+        ready,
+        lowConfidenceCount,
+      };
+
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: 'assistant',
+          content: ready.length > 0
+            ? `${summary ? summary + ' ' : ''}${ready.length} transaksi siap-impor. Cek & konfirmasi:`
+            : (summary || 'Tidak ada transaksi valid yang bisa diimpor dari file ini.'),
+          importPreview: ready.length > 0 ? preview : undefined,
+          importStatus: ready.length > 0 ? 'pending' : undefined,
+        };
+        return updated;
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Gagal memproses file';
+      setPendingLLMImport(null);
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { role: 'assistant', content: `⚠️ ${msg}` };
+        return updated;
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [businessId]);
+
   const handleSend = useCallback((text: string) => {
+    // Kalau ada impor LLM yang menunggu jawaban klarifikasi → teruskan jawaban ke LLM.
+    if (pendingLLMImport && mode === 'record') {
+      const clar = pendingLLMImport.questions.map(q => ({ question: q, answer: text }));
+      setMessages(prev => [...prev, { role: 'user', content: text }]);
+      runLLMImport(pendingLLMImport.fileName, pendingLLMImport.rows, pendingLLMImport.provider, clar);
+      setInput('');
+      return;
+    }
     if (mode === 'record') recordTransaction(text);
+    // Mode ask + Gemini Vertex → gunakan agentic loop (tool calling)
+    else if (selectedProvider === 'gemini-vertex') sendAgentMessage(text);
     else sendMessage(text);
-  }, [mode, recordTransaction, sendMessage]);
+  }, [mode, recordTransaction, sendMessage, sendAgentMessage, selectedProvider, pendingLLMImport, runLLMImport]);
 
   // Attach file XLS/CSV → parse client-side → resolve akun → preview import.
   // Parsing & resolve pakai engine import yang sama dgn halaman /transactions
@@ -436,46 +775,119 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
       return;
     }
 
+    // Provider Vertex (Gemini Vertex / Claude) → full LLM parse (lebih cerdas, bisa
+    // tanya follow-up). Provider AXION Auto → rule-based + LLM column mapping (hemat token).
+    if (selectedProvider === 'gemini-vertex' || selectedProvider === 'claude') {
+      try {
+        const raw = await parseExcelRaw(file);
+        if (raw.rows.length === 0) {
+          setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ File kosong atau tidak terbaca.' }]);
+          return;
+        }
+        await runLLMImport(file.name, raw.rows, selectedProvider);
+        return;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Gagal membaca file';
+        setMessages(prev => [...prev, { role: 'assistant', content: `⚠️ ${msg}` }]);
+        return;
+      }
+    }
+
     setLoading(true);
     setMessages(prev => [...prev, { role: 'assistant', content: '', streaming: true }]);
 
     try {
       const accounts = await getAccounts(businessId);
       const accByCode = new Map(accounts.map(a => [a.account_code, a]));
-      const rows = await parseExcelFile(file);
-      const validation = validateRowsSmart(rows);
-
       const today = new Date().toISOString().split('T')[0];
-      let lowConfidenceCount = 0;
-      const ready: TransactionInsert[] = [];
 
-      for (const vr of validation.validRows) {
-        const r = vr.data;
-        const categoryHint = String(r.category || '').trim() || undefined;
-        const resolved = smartResolveTransaction(r.description || r.name, accounts, categoryHint);
-        if (resolved.confidence === 'low') lowConfidenceCount++;
+      // Helper: konversi ParsedRow[] → transaksi siap impor.
+      // defaultCategory (opsional, dari LLM) jadi hint kategori untuk SEMUA baris
+      // kalau baris itu sendiri tidak punya kategori — mis. file Airbnb → EARN.
+      const buildReady = (
+        parsedRows: import('@/lib/import/types').ParsedRow[],
+        defaultCategory?: string
+      ) => {
+        const validation = validateRowsSmart(parsedRows);
+        let lowConfidenceCount = 0;
+        const ready: TransactionInsert[] = [];
 
-        const debit = accByCode.get(resolved.debit_account_code);
-        const credit = accByCode.get(resolved.credit_account_code);
-        if (!debit || !credit || debit.id === credit.id) continue; // skip kalau akun tak resolve
+        for (const vr of validation.validRows) {
+          const r = vr.data;
+          const categoryHint = String(r.category || '').trim() || defaultCategory || undefined;
+          const resolved = smartResolveTransaction(r.description || r.name, accounts, categoryHint);
+          if (resolved.confidence === 'low') lowConfidenceCount++;
 
-        const amountNum = typeof r.amount === 'number' ? r.amount : parseFloat(String(r.amount).replace(/[^\d.-]/g, ''));
-        if (!Number.isFinite(amountNum) || amountNum <= 0) continue;
+          const debit = accByCode.get(resolved.debit_account_code);
+          const credit = accByCode.get(resolved.credit_account_code);
+          if (!debit || !credit || debit.id === credit.id) continue;
 
-        ready.push({
-          business_id: businessId,
-          date: r.date || today,
-          category: resolved.category,
-          name: resolved.name || r.name || r.description,
-          description: r.description || '',
-          amount: amountNum,
-          account: '',
-          created_by: '', // diisi server dari session
-          debit_account_id: debit.id,
-          credit_account_id: credit.id,
-          is_double_entry: true,
-          status: 'posted',
-        });
+          // Sanitize amount: handle format Indonesia (1.234.567) & internasional ($1,234.56)
+          const amountNum = sanitizeAmountFlexible(r.amount);
+          if (!Number.isFinite(amountNum) || amountNum <= 0) continue;
+
+          // Normalisasi tanggal → ISO (server WAJIB YYYY-MM-DD). File asing
+          // (Airbnb = MM/DD/YYYY) ditolak server kalau tidak dikonversi.
+          const isoDate = toISODate(r.date) ?? today;
+
+          ready.push({
+            business_id: businessId,
+            date: isoDate,
+            category: resolved.category,
+            name: resolved.name || r.name || r.description,
+            description: r.description || '',
+            amount: amountNum,
+            account: '',
+            created_by: '',
+            debit_account_id: debit.id,
+            credit_account_id: credit.id,
+            is_double_entry: true,
+            status: 'posted',
+          });
+        }
+        return { validation, ready, lowConfidenceCount };
+      };
+
+      // 1) Coba parser rule-based dulu (cepat, gratis).
+      const rows = await parseExcelFile(file);
+      let { validation, ready, lowConfidenceCount } = buildReady(rows);
+
+      // 2) Kalau hasil rule-based buruk (>40% baris gagal jadi transaksi),
+      //    minta LLM petakan kolom dari header asli, lalu parse ulang.
+      const totalRows = validation.totalRows;
+      const successRatio = totalRows > 0 ? ready.length / totalRows : 0;
+      if (totalRows > 0 && successRatio < 0.6) {
+        const raw = await parseExcelRaw(file);
+        if (raw.headers.length > 0 && raw.rows.length > 0) {
+          try {
+            const res = await fetch('/api/ai/map-columns', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                business_id: businessId,
+                headers: raw.headers,
+                sample_rows: raw.rows.slice(0, 3),
+              }),
+            });
+            const data = res.ok ? await res.json() : null;
+            const mapping: ColumnMapping | null = data?.mapping ?? null;
+            const defaultCategory: string | undefined = data?.default_category ?? undefined;
+            if (mapping && mapping.date && mapping.amount) {
+              const mappedRows = applyColumnMapping(raw.rows, mapping);
+              const llmResult = buildReady(mappedRows, defaultCategory);
+              // File non-standar: percayai mapping LLM kalau menghasilkan transaksi
+              // (>=) — karena rule-based di sini sudah terbukti buruk (deskripsi/akun salah).
+              // Mapping LLM punya kolom yang benar (Guest→nama, Type→deskripsi).
+              if (llmResult.ready.length >= ready.length && llmResult.ready.length > 0) {
+                validation = llmResult.validation;
+                ready = llmResult.ready;
+                lowConfidenceCount = llmResult.lowConfidenceCount;
+              }
+            }
+          } catch (mapErr) {
+            console.warn('[AIChatPanel] LLM column mapping failed:', mapErr);
+          }
+        }
       }
 
       const preview: ImportPreview = {
@@ -509,7 +921,128 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
     } finally {
       setLoading(false);
     }
+  }, [loading, businessId, selectedProvider, runLLMImport]);
+
+  // Attach gambar (struk/invoice) → upload → OCR scan server-side → resolve akun →
+  // preview import (pakai UI ImportPreview yang sama dgn Excel/CSV).
+  const handleImage = useCallback(async (file: File) => {
+    if (loading) return;
+
+    setMessages(prev => [...prev, { role: 'user', content: `📎 ${file.name}` }]);
+    setLoading(true);
+    setMessages(prev => [...prev, { role: 'assistant', content: '', streaming: true }]);
+
+    try {
+      // 1. Upload ke storage (Cloudinary) — sama dgn OCRScanButton.
+      const attachment = await uploadAttachment(businessId, file);
+
+      // 2. OCR scan server-side (scanning + parsing).
+      const res = await fetch('/api/ocr/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business_id: businessId, image_url: attachment.url }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'OCR gagal memproses gambar');
+
+      const ocr = json.data as OcrResult;
+      const p = ocr.parsed;
+      const amountNum = sanitizeAmountFlexible(p.total ?? 0);
+
+      if (!Number.isFinite(amountNum) || amountNum <= 0) {
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            role: 'assistant',
+            content: 'Aku tidak menemukan nominal yang jelas di struk ini. Coba foto yang lebih jelas, atau catat manual.',
+          };
+          return updated;
+        });
+        return;
+      }
+
+      // 3. Resolve akun debit/kredit dari keyword OCR.
+      const accounts = await getAccounts(businessId);
+      const accByCode = new Map(accounts.map(a => [a.account_code, a]));
+      const today = new Date().toISOString().split('T')[0];
+
+      const description = p.vendor || p.line_items?.[0]?.description || 'Transaksi dari struk';
+      const categoryHint = p.category;
+      // Coba match akun dari keyword OCR dulu; kalau tidak ada, pakai smart resolver.
+      const matchedAccount = matchAccountByKeywords(accounts, [
+        ...(p.keywords ?? []),
+        ...(p.fallback_keywords ?? []),
+      ]);
+      const resolved = smartResolveTransaction(description, accounts, categoryHint);
+
+      const debit = accByCode.get(resolved.debit_account_code);
+      const credit = accByCode.get(resolved.credit_account_code);
+      let lowConfidenceCount = resolved.confidence === 'low' ? 1 : 0;
+
+      const ready: TransactionInsert[] = [];
+      if (debit && credit && debit.id !== credit.id) {
+        // Kalau OCR keyword match menemukan akun beban/aset yang lebih spesifik, pakai itu sbg debit.
+        const debitId = matchedAccount && matchedAccount.id !== credit.id
+          ? matchedAccount.id
+          : debit.id;
+        ready.push({
+          business_id: businessId,
+          date: toISODate(p.date) ?? today,
+          category: resolved.category,
+          name: p.vendor || description,
+          description,
+          amount: amountNum,
+          account: '',
+          created_by: '',
+          debit_account_id: debitId,
+          credit_account_id: credit.id,
+          is_double_entry: true,
+          status: 'posted',
+        });
+      }
+
+      const preview: ImportPreview = {
+        fileName: file.name,
+        totalRows: 1,
+        validCount: ready.length,
+        errorCount: ready.length > 0 ? 0 : 1,
+        ready,
+        lowConfidenceCount,
+      };
+
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: 'assistant',
+          content: ready.length > 0
+            ? `Struk terbaca: **${p.vendor || description}** sebesar ${formatCurrency(amountNum)}. Cek & konfirmasi:`
+            : 'Struk terbaca tapi aku belum bisa menentukan akunnya. Coba catat manual.',
+          importPreview: ready.length > 0 ? preview : undefined,
+          importStatus: ready.length > 0 ? 'pending' : undefined,
+        };
+        return updated;
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Gagal memproses gambar';
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { role: 'assistant', content: `⚠️ ${msg}` };
+        return updated;
+      });
+    } finally {
+      setLoading(false);
+    }
   }, [loading, businessId]);
+
+  // Router: gambar → OCR scan, Excel/CSV → parser. Ditentukan dari tipe/ekstensi file.
+  const handleAttachment = useCallback((file: File) => {
+    const isImage = file.type.startsWith('image/') || /\.(jpe?g|png|webp)$/i.test(file.name);
+    if (isImage) {
+      handleImage(file);
+    } else {
+      handleFile(file);
+    }
+  }, [handleImage, handleFile]);
 
   const runImport = useCallback(async (msgIndex: number) => {
     const msg = messages[msgIndex];
@@ -663,6 +1196,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                     onCancelDraft={() => cancelDraft(i)}
                     onRunImport={() => runImport(i)}
                     onCancelImport={() => cancelImport(i)}
+                    onNavigate={(url) => { onClose(); router.push(url); router.refresh(); }}
                   />
                 ))
               )}
@@ -721,7 +1255,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                     title="Pilih model AI"
                   >
                     <span className="truncate">
-                      {activeModel ? (MODEL_LABELS[activeModel] ?? activeModel) : (selectedProvider === 'claude' ? 'Claude' : 'AXION Auto')}
+                      {activeModel ? (MODEL_LABELS[activeModel] ?? activeModel) : (selectedProvider === 'claude' ? 'Claude' : selectedProvider === 'gemini-vertex' ? 'Gemini Vertex' : 'AXION Auto')}
                     </span>
                     <ChevronDown className="w-2.5 h-2.5 shrink-0" />
                   </button>
@@ -741,7 +1275,8 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                           className="absolute bottom-full right-0 mb-1.5 z-20 w-52 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg overflow-hidden"
                         >
                           {([
-                            { id: 'auto' as const, label: 'AXION Auto', desc: 'Gemini · Llama · Qwen', logo: '/images/gemini.png', disabled: false },
+                            { id: 'auto' as const, label: 'AXION Auto', desc: 'Gemini · Llama · Qwen', logo: '/images/meta.png', disabled: false },
+                            { id: 'gemini-vertex' as const, label: 'Gemini Vertex', desc: claudeAvailable ? '2.5 Flash via Vertex AI' : 'Perlu Vertex credentials', logo: '/images/gemini.png', disabled: !claudeAvailable },
                             { id: 'claude' as const, label: 'Claude', desc: claudeAvailable ? 'Sonnet 4.6 via Vertex' : 'Belum dikonfigurasi', logo: '/images/claude.png', disabled: !claudeAvailable },
                           ]).map(opt => (
                             <button
@@ -751,7 +1286,9 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                               onClick={() => {
                                 if (opt.disabled) return;
                                 setSelectedProvider(opt.id);
-                                setActiveModel(opt.id === 'claude' ? 'claude-sonnet-4-6' : null);
+                                if (opt.id === 'claude') setActiveModel('claude-sonnet-4-6');
+                                else if (opt.id === 'gemini-vertex') setActiveModel('gemini-2.5-flash-vertex');
+                                else setActiveModel(null);
                                 localStorage.setItem('axion_ai_provider', opt.id);
                                 setProviderDropdownOpen(false);
                               }}
@@ -802,18 +1339,18 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept=".xlsx,.xls,.csv"
+                        accept=".xlsx,.xls,.csv,image/jpeg,image/png,image/webp"
                         className="hidden"
                         onChange={e => {
                           const f = e.target.files?.[0];
                           e.target.value = '';
-                          if (f) handleFile(f);
+                          if (f) handleAttachment(f);
                         }}
                       />
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         disabled={loading}
-                        title="Impor file Excel/CSV"
+                        title="Impor Excel/CSV atau scan struk (gambar)"
                         className="w-8 h-8 rounded-full text-gray-400 dark:text-gray-500 hover:text-primary-500 dark:hover:text-primary-400 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all"
                       >
                         <Paperclip className="w-4 h-4" />
@@ -834,7 +1371,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                 </div>
               </div>
               <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1.5 text-center">
-                {mode === 'record' ? 'Ketik transaksi atau lampirkan Excel/CSV' : 'Enter kirim · Shift+Enter baris baru'}
+                {mode === 'record' ? 'Ketik transaksi, lampirkan Excel/CSV, atau scan struk' : 'Enter kirim · Shift+Enter baris baru'}
               </p>
             </div>
           </motion.div>
@@ -905,6 +1442,7 @@ function ChatBubble({
   onCancelDraft,
   onRunImport,
   onCancelImport,
+  onNavigate,
 }: {
   message: Message;
   userAvatarUrl?: string;
@@ -913,6 +1451,7 @@ function ChatBubble({
   onCancelDraft: () => void;
   onRunImport: () => void;
   onCancelImport: () => void;
+  onNavigate: (url: string) => void;
 }) {
   const isUser = message.role === 'user';
   return (
@@ -973,6 +1512,9 @@ function ChatBubble({
                 onCancel={onCancelImport}
               />
             )}
+            {message.navigateAction && (
+              <NavigateActionCard action={message.navigateAction} onNavigate={onNavigate} />
+            )}
           </>
         )}
       </div>
@@ -1026,6 +1568,59 @@ function ThinkingAccordion({ text, streaming }: { text: string; streaming: boole
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+// Page labels untuk navigate_to
+const PAGE_LABELS: Record<string, string> = {
+  transactions: 'Halaman Transaksi',
+  'income-statement': 'Laporan Laba Rugi',
+  'balance-sheet': 'Neraca',
+  'cash-flow': 'Arus Kas',
+  'general-ledger': 'Buku Besar',
+  'trial-balance': 'Neraca Saldo',
+  accounts: 'Akun (CoA)',
+  reports: 'Laporan',
+  dashboard: 'Dashboard',
+};
+
+function NavigateActionCard({
+  action,
+  onNavigate,
+}: {
+  action: { page: string; filters?: Record<string, string>; message: string; url: string };
+  onNavigate: (url: string) => void;
+}) {
+  const filterEntries = Object.entries(action.filters ?? {}).filter(([, v]) => v);
+  return (
+    <div className="mt-2 rounded-xl border border-primary-200 dark:border-primary-700/50 bg-primary-50/60 dark:bg-primary-900/20 p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium text-primary-700 dark:text-primary-300 mb-0.5">
+            {PAGE_LABELS[action.page] ?? action.page}
+          </p>
+          {filterEntries.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {filterEntries.map(([k, v]) => (
+                <span
+                  key={k}
+                  className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] bg-primary-100 dark:bg-primary-800/40 text-primary-600 dark:text-primary-300"
+                >
+                  {k}: {v}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <button
+          onClick={() => onNavigate(action.url)}
+          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium transition-colors"
+        >
+          <ExternalLink className="w-3 h-3" />
+          Buka
+        </button>
+      </div>
     </div>
   );
 }

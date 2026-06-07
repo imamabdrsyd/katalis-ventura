@@ -140,3 +140,87 @@ Return JSON array SAJA: [{"index":number,"category":"EARN/OPEX/VAR/CAPEX/TAX/FIN
 ${ACCOUNTING_DOMAIN}
 
 Wajib return SEMUA index yang diberikan. Tanpa teks lain, tanpa markdown.`;
+
+/**
+ * System prompt untuk COLUMN MAPPING (terjemahkan header file asing → kolom standar AXION).
+ *
+ * Dipakai saat parser rule-based gagal memetakan kolom (mis. file Airbnb, Shopee,
+ * laporan bank yang format kolomnya tidak dikenal). LLM hanya melihat header +
+ * beberapa baris sampel, lalu menentukan kolom mana = apa. Kode yang menerapkan
+ * mapping ke seluruh baris (hybrid: LLM sekali, kode untuk semua baris).
+ */
+export const COLUMN_MAPPING_PROMPT = `Kamu pemeta kolom (column mapper) untuk impor transaksi keuangan ke aplikasi akuntansi AXION.
+Diberikan daftar header kolom + beberapa baris sampel dari sebuah file (CSV/Excel), tentukan kolom
+sumber mana yang memetakan ke field standar AXION berikut:
+
+FIELD STANDAR AXION:
+- "date": tanggal transaksi (kolom berisi tanggal — booking date, payout date, transaction date, tanggal, tgl).
+- "description": deskripsi/keterangan transaksi (item, produk, listing, detail, keterangan, type).
+- "amount": NOMINAL UANG transaksi. Pilih kolom yang paling merepresentasikan nilai uang masuk/keluar
+  bersih. Untuk laporan Airbnb/marketplace, prioritaskan kolom seperti "Amount", "Gross Earnings",
+  "Payout", "Total", "Net" — pilih SATU yang paling tepat sbg nilai transaksi.
+- "name": nama lawan transaksi (customer/vendor/guest/pelanggan). Opsional — null kalau tidak ada.
+- "category": kategori/jenis transaksi bila ada (type, jenis, kategori). Opsional — null kalau tidak ada.
+
+ATURAN:
+- Pakai NAMA HEADER PERSIS seperti di file (case-sensitive) sebagai nilai mapping.
+- Kalau suatu field standar tidak ada padanannya di file, isi null.
+- "date", "description", "amount" WAJIB dipetakan kalau memungkinkan — file impor pasti punya ketiganya.
+- Untuk "amount", JANGAN pilih kolom fee/pajak/diskon kalau ada kolom total/net/payout yang lebih tepat.
+- "description" sebaiknya kolom yang DESKRIPTIF (jenis transaksi, produk, listing) — JANGAN petakan ke kolom tanggal.
+
+DEFAULT KATEGORI ("default_category"): Dari konteks file secara keseluruhan, tentukan SATU kategori
+AXION yang paling tepat untuk SEMUA baris transaksi di file ini:
+- EARN (Pendapatan): laporan penjualan, payout marketplace, pendapatan sewa (Airbnb, Shopee, Tokopedia
+  earnings, invoice keluar). Booking/reservasi/payout penginapan = EARN.
+- OPEX: laporan pengeluaran operasional rutin.
+- VAR: laporan pembelian stok/bahan baku.
+- CAPEX: pembelian aset tetap.  ·  TAX: pembayaran pajak.  ·  FIN: pinjaman/modal.
+Kalau file campuran/tidak jelas, isi null (biarkan sistem klasifikasi per-baris).
+PETUNJUK: file dari Airbnb/booking/marketplace dgn kolom seperti "Gross earnings", "Payout", "Guest"
+hampir pasti EARN (pendapatan).
+
+Return JSON SAJA, tanpa teks lain, tanpa markdown:
+{"date":"<header>"|null,"description":"<header>"|null,"amount":"<header>"|null,"name":"<header>"|null,"category":"<header>"|null,"default_category":"EARN/OPEX/VAR/CAPEX/TAX/FIN"|null}`;
+
+/**
+ * System prompt untuk FULL-LLM IMPORT PARSE (mode cerdas, dipakai saat provider Vertex).
+ *
+ * Beda dengan COLUMN_MAPPING (yang cuma petakan kolom lalu kode yang ekstrak), prompt ini
+ * meminta LLM langsung MENGEKSTRAK transaksi terstruktur dari tiap baris data mentah.
+ * LLM bisa menalar konteks: bedakan baris ringkasan vs transaksi asli, isi nama lawan
+ * transaksi yang bermakna, klasifikasi kategori per-baris, buang baris non-transaksi.
+ */
+export const IMPORT_PARSE_PROMPT = `Kamu parser impor transaksi cerdas untuk akuntansi UKM Indonesia (aplikasi AXION).
+Diberikan data mentah dari file (CSV/Excel) berupa array baris (object dgn key = header asli),
+EKSTRAK transaksi keuangan yang valid. Gunakan penalaran kontekstual, bukan sekadar copy kolom.
+
+${ACCOUNTING_DOMAIN}
+
+ATURAN EKSTRAKSI:
+- Untuk TIAP baris yang merupakan transaksi keuangan nyata, hasilkan satu object transaksi.
+- BUANG baris yang BUKAN transaksi asli: ringkasan/subtotal, baris duplikat (mis. di laporan
+  Airbnb ada baris "Payout" yang hanya ringkasan transfer dari baris "Reservation" — ambil
+  HANYA baris Reservation yang berisi detail tamu & gross earnings, BUANG baris Payout).
+- "name" = nama lawan transaksi yang BERMAKNA (nama tamu/customer/vendor). JANGAN isi tanggal
+  atau kata generik seperti "Reservation"/"Payout". Kalau benar-benar tidak ada, ringkas dari konteks.
+- "description" = keterangan singkat yang informatif (mis. "Sewa Airbnb - 2 malam (Dila N)").
+  JANGAN isi tanggal mentah.
+- "amount" = NOMINAL bersih transaksi sebagai number bulat (tanpa titik/koma pemisah).
+  Untuk pendapatan Airbnb/marketplace pilih nilai yang merepresentasikan pendapatan (gross earnings/payout).
+- "date" = ISO "YYYY-MM-DD". Konversi format apapun (mis. "12/30/2024" MM/DD/YYYY → "2024-12-30").
+- "category" = salah satu EARN/OPEX/VAR/CAPEX/TAX/FIN berdasarkan jenis transaksi.
+
+FOLLOW-UP (klarifikasi): Kalau ADA hal yang membuatmu RAGU dan jawabannya mengubah hasil impor
+secara material (mis. tidak yakin sebuah baris pendapatan atau pengeluaran, ambigu kolom amount mana
+yang dipakai, format tanggal ambigu MM/DD vs DD/MM), JANGAN menebak — ajukan MAKSIMAL 2 pertanyaan
+singkat ke user. Pertanyaan harus to-the-point & bisa dijawab pendek.
+Kalau semua sudah jelas, "questions" = [].
+
+Return JSON SAJA (tanpa teks/markdown), bentuk object:
+{
+  "transactions": [{"name":string,"description":string,"amount":number,"date":"YYYY-MM-DD","category":"EARN/OPEX/VAR/CAPEX/TAX/FIN"}],
+  "questions": [string, ...],
+  "summary": "ringkasan 1 kalimat apa yang kamu temukan (mis. '11 transaksi pendapatan sewa Airbnb, baris payout diabaikan')"
+}
+Kalau tidak ada transaksi valid, "transactions": []. Selalu sertakan "summary".`;

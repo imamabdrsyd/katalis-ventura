@@ -354,7 +354,11 @@ function TransactionsPageInner() {
     if (start || end) {
       setDateRange({ start: start ?? '', end: end ?? '' });
     }
-  }, [searchParams, setCategoryFilter, setDateRange]);
+    const contact = searchParams.get('contact');
+    if (contact) {
+      setContactFilter(contact);
+    }
+  }, [searchParams, setCategoryFilter, setDateRange, setContactFilter]);
 
   useEffect(() => {
     if (!detailParam) return;

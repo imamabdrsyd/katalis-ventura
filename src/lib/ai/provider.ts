@@ -3,17 +3,19 @@
  *
  * Chain default (AXION Auto): Gemini → Groq
  * Provider opsional: Claude via Vertex AI (pilihan user di UI)
+ * Provider opsional: Gemini via Vertex AI (sementara, bangun GCP billing history)
  *
  * - Gemini: kualitas terbaik, JSON native, tapi free tier RPD sangat ketat
  * - Groq: OpenAI-compatible, gratis dengan rate limit lebih longgar
  * - Claude (Vertex AI): Claude Sonnet 4.6 untuk chat dan generate manual
+ * - Gemini Vertex: Gemini 2.5 Flash via Vertex AI (pakai GCP billing history)
  *
  * Dua Groq model dengan peran berbeda:
  * - GROQ_CHAT_MODEL  = qwen-qwq-32b — chat analitik, reasoning mendalam
  * - GROQ_PARSE_MODEL = llama-3.3-70b-versatile — parse transaksi, cepat
  */
 
-export type AIProvider = 'gemini' | 'groq' | 'claude';
+export type AIProvider = 'gemini' | 'groq' | 'claude' | 'gemini-vertex';
 
 export interface AIMessage {
   role: 'user' | 'assistant';
@@ -43,6 +45,7 @@ export const PROVIDER_LABELS: Record<AIProvider, string> = {
   gemini: 'Gemini',
   groq: 'Groq',
   claude: 'Claude',
+  'gemini-vertex': 'Gemini',
 };
 
 export const MODEL_LABELS: Record<string, string> = {
@@ -51,6 +54,7 @@ export const MODEL_LABELS: Record<string, string> = {
   'gemini-2.5-flash': 'Gemini 2.5 Flash',
   'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite',
   'gemini-2.5-pro': 'Gemini 2.5 Pro',
+  'gemini-2.5-flash-vertex': 'Gemini 2.5 Flash (Vertex)',
   'llama-3.3-70b-versatile': 'Llama 3.3 70B',
   'llama-3.1-8b-instant': 'Llama 3.1 8B',
   'deepseek-r1-distill-llama-70b': 'DeepSeek R1 70B',
@@ -270,7 +274,8 @@ async function groqStream(
 
 const CLAUDE_CHAT_MODEL = 'claude-sonnet-4-6';
 const CLAUDE_PARSE_MODEL = CLAUDE_CHAT_MODEL;
-const VERTEX_REGION = 'us-east5';
+const VERTEX_REGION = 'global';
+const VERTEX_API_ENDPOINT = 'aiplatform.googleapis.com';
 
 let _vertexToken: { token: string; expiresAt: number } | null = null;
 
@@ -427,7 +432,7 @@ async function claudeGenerate(
     );
   }
 
-  const endpoint = `https://${VERTEX_REGION}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${VERTEX_REGION}/publishers/anthropic/models/${model}:rawPredict`;
+  const endpoint = `https://${VERTEX_API_ENDPOINT}/v1/projects/${projectId}/locations/${VERTEX_REGION}/publishers/anthropic/models/${model}:rawPredict`;
 
   try {
     const res = await fetch(endpoint, {
@@ -479,7 +484,7 @@ async function claudeStream(
     );
   }
 
-  const endpoint = `https://${VERTEX_REGION}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${VERTEX_REGION}/publishers/anthropic/models/${model}:streamRawPredict`;
+  const endpoint = `https://${VERTEX_API_ENDPOINT}/v1/projects/${projectId}/locations/${VERTEX_REGION}/publishers/anthropic/models/${model}:streamRawPredict`;
   const maxTokens = opts.maxTokens ?? 2048;
 
   try {
@@ -593,6 +598,117 @@ export async function streamTextClaude(
 
 export function isClaudeAvailable(): boolean {
   return getVertexCredentials() !== null;
+}
+
+// ─── Gemini via Vertex AI ─────────────────────────────────────────────────────
+// Pakai service account yang sama dengan Claude Vertex.
+// Model: gemini-2.5-flash — tersedia di Vertex AI global endpoint.
+
+const GEMINI_VERTEX_MODEL = 'gemini-2.5-flash';
+const GEMINI_VERTEX_ENDPOINT = 'aiplatform.googleapis.com';
+
+async function geminiVertexStream(
+  systemPrompt: string,
+  messages: AIMessage[],
+  opts: { temperature?: number; maxTokens?: number } = {}
+): Promise<Response | null> {
+  const token = await getVertexToken();
+  const projectId = getVertexProjectId();
+  if (!token || !projectId) return null;
+
+  const contents = messages.map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }));
+
+  const endpoint = `https://${GEMINI_VERTEX_ENDPOINT}/v1/projects/${projectId}/locations/global/publishers/google/models/${GEMINI_VERTEX_MODEL}:streamGenerateContent?alt=sse`;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents,
+        generationConfig: {
+          temperature: opts.temperature ?? 0.7,
+          maxOutputTokens: opts.maxTokens ?? 2048,
+          thinkingConfig: { includeThoughts: true },
+        },
+      }),
+    });
+    if (!res.ok) {
+      console.warn('[ai/provider] Gemini Vertex stream failed:', res.status, await res.text());
+      return null;
+    }
+    return res;
+  } catch (err) {
+    console.warn('[ai/provider] Gemini Vertex stream error:', err);
+    return null;
+  }
+}
+
+export async function streamTextGeminiVertex(
+  systemPrompt: string,
+  messages: AIMessage[],
+  opts: { temperature?: number; maxTokens?: number } = {}
+): Promise<StreamResult | null> {
+  const res = await geminiVertexStream(systemPrompt, messages, opts);
+  if (!res) return null;
+  return { stream: buildGeminiStream(res), provider: 'gemini-vertex', model: 'gemini-2.5-flash-vertex' };
+}
+
+/**
+ * Generate teks non-streaming via Gemini Vertex AI — untuk parsing JSON terstruktur
+ * (mis. full-LLM import parse). Return null kalau credentials/Vertex tidak tersedia.
+ */
+export async function generateTextGeminiVertex(
+  systemPrompt: string,
+  messages: AIMessage[],
+  opts: { temperature?: number; maxTokens?: number } = {}
+): Promise<GenerateResult | null> {
+  const token = await getVertexToken();
+  const projectId = getVertexProjectId();
+  if (!token || !projectId) return null;
+
+  const contents = messages.map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }));
+
+  const endpoint = `https://${GEMINI_VERTEX_ENDPOINT}/v1/projects/${projectId}/locations/global/publishers/google/models/${GEMINI_VERTEX_MODEL}:generateContent`;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents,
+        generationConfig: {
+          temperature: opts.temperature ?? 0,
+          maxOutputTokens: opts.maxTokens ?? 8192,
+          responseMimeType: 'application/json',
+        },
+      }),
+    });
+    if (!res.ok) {
+      console.warn('[ai/provider] Gemini Vertex generate failed:', res.status, await res.text());
+      return null;
+    }
+    const json = await res.json();
+    const text = extractGeminiText(json.candidates?.[0]?.content?.parts);
+    return text ? { text, provider: 'gemini-vertex', model: 'gemini-2.5-flash-vertex' } : null;
+  } catch (err) {
+    console.warn('[ai/provider] Gemini Vertex generate error:', err);
+    return null;
+  }
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
