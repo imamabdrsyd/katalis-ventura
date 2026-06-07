@@ -234,9 +234,9 @@ async function handleTransactionMessage(chatId: number, text: string): Promise<v
     carriedHint = pending.category ?? undefined;
   }
 
-  // Ekstrak via AI provider chain (Gemini→Groq) + fallback regex.
-  // Sama dgn parser di chat panel web (reuse extractTransactionFromText).
-  const extractResult = await extractTransactionFromText(textForParse);
+  // Ekstrak via AI: Gemini Vertex dulu (lebih cerdas, billing GCP), fallback ke
+  // chain gratisan (Gemini AI Studio→Groq) lalu regex. Reuse extractTransactionFromText.
+  const extractResult = await extractTransactionFromText(textForParse, { preferVertex: true });
   if (!extractResult) {
     await sendMessage(
       chatId,

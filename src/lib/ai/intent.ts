@@ -23,6 +23,38 @@ const REASONING_KEYWORDS = [
   'mengapa', 'jelaskan kenapa', 'breakdown lengkap',
 ];
 
+const BUSINESS_INFO_KEYWORDS = [
+  'siapa pemilik',
+  'pemilik bisnis',
+  'pemilik usaha',
+  'bisnis ini punya siapa',
+  'usaha ini punya siapa',
+  'yang punya bisnis',
+  'owner bisnis',
+  'business owner',
+  'who owns',
+  'kepemilikan',
+  'ownership',
+  'cap table',
+  'siapa yang buat bisnis',
+  'siapa yang membuat bisnis',
+  'siapa yang create bisnis',
+  'siapa yang mendaftarkan bisnis',
+  'creator bisnis',
+  'pembuat bisnis',
+  'anggota bisnis',
+  'member bisnis',
+  'siapa saja anggota',
+  'siapa anggotanya',
+  'siapa yang mengelola bisnis',
+  'manajer bisnis',
+  'manager bisnis',
+  'siapa investornya',
+  'investor bisnis',
+  'struktur modal',
+  'modal disetor',
+];
+
 /**
  * True kalau pertanyaan terindikasi butuh reasoning mendalam (audit/proyeksi/analisis).
  * Memeriksa hanya pesan user TERAKHIR (intent percakapan terkini).
@@ -30,4 +62,14 @@ const REASONING_KEYWORDS = [
 export function needsReasoning(lastUserMessage: string): boolean {
   const text = lastUserMessage.toLowerCase();
   return REASONING_KEYWORDS.some(kw => text.includes(kw));
+}
+
+/**
+ * True kalau provider chat non-agentic perlu diberi konteks creator, anggota,
+ * dan cap table bisnis. Pertanyaan tentang produk AXION sendiri dikecualikan.
+ */
+export function needsBusinessInfo(lastUserMessage: string): boolean {
+  const text = lastUserMessage.toLowerCase();
+  if (text.includes('axion')) return false;
+  return BUSINESS_INFO_KEYWORDS.some(keyword => text.includes(keyword));
 }

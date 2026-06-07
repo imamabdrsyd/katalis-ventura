@@ -226,6 +226,12 @@ function isSmallTalk(text: string): boolean {
   return words.every(w => SMALL_TALK.has(w));
 }
 
+// Halaman laporan (pakai useReportData) baca param tanggal sebagai startDate/endDate.
+// Halaman transaksi baca start/end. Map nama param sesuai tujuan supaya filter ke-apply.
+const REPORT_PAGES = new Set([
+  'income-statement', 'balance-sheet', 'cash-flow', 'general-ledger', 'trial-balance',
+]);
+
 // Konversi navigate_to page + filters → URL path dengan query params
 function buildNavigateUrl(page: string, filters?: Record<string, string>): string {
   const paths: Record<string, string> = {
@@ -241,10 +247,18 @@ function buildNavigateUrl(page: string, filters?: Record<string, string>): strin
   };
   const base = paths[page] ?? `/${page}`;
   if (!filters || Object.keys(filters).length === 0) return base;
-  const params = new URLSearchParams(
-    Object.entries(filters).filter(([, v]) => v) as [string, string][]
-  );
-  return `${base}?${params.toString()}`;
+
+  // Map nama param tanggal sesuai konvensi halaman tujuan.
+  const isReport = REPORT_PAGES.has(page);
+  const mapped: [string, string][] = [];
+  for (const [key, value] of Object.entries(filters)) {
+    if (!value) continue;
+    if (key === 'start') mapped.push([isReport ? 'startDate' : 'start', value]);
+    else if (key === 'end') mapped.push([isReport ? 'endDate' : 'end', value]);
+    else mapped.push([key, value]);
+  }
+  if (mapped.length === 0) return base;
+  return `${base}?${new URLSearchParams(mapped).toString()}`;
 }
 
 export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AIChatPanelProps) {
@@ -261,7 +275,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
     if (typeof window !== 'undefined') {
       const p = localStorage.getItem('axion_ai_provider');
       if (p === 'claude') return 'claude-sonnet-4-6';
-      if (p === 'gemini-vertex') return 'gemini-2.5-flash-vertex';
+      if (p === 'gemini-vertex') return 'gemini-3.5-flash-vertex';
       return null;
     }
     return null;
@@ -452,31 +466,87 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
         body: JSON.stringify({ business_id: businessId, message: trimmed, history }),
       });
 
-      const data = res.ok ? await res.json() : null;
-      if (!data) {
+      if (!res.ok || !res.body) {
         const err = await res.json().catch(() => ({ error: 'Gagal menghubungi agent' }));
-        throw new Error(err.error ?? 'Gagal menghubungi agent');
+        throw new Error((err as { error?: string }).error ?? 'Gagal menghubungi agent');
       }
 
-      if (data.model) setActiveModel(MODEL_LABELS[data.model] ?? data.model);
+      // Consume SSE stream — sama persis dengan sendMessage
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let accumulatedAnswer = '';
+      let accumulatedThinking = '';
 
-      const navigateAction = data.navigate
-        ? {
-            page: data.navigate.page as string,
-            filters: (data.navigate.filters ?? {}) as Record<string, string>,
-            message: data.navigate.message as string,
-            url: buildNavigateUrl(data.navigate.page as string, data.navigate.filters as Record<string, string>),
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const raw = line.slice(6).trim();
+          if (!raw || raw === '[DONE]') continue;
+
+          let json: { kind: string; text?: string; data?: unknown };
+          try { json = JSON.parse(raw); } catch { continue; }
+
+          if (json.kind === 'thinking') {
+            accumulatedThinking += json.text ?? '';
+            setMessages(prev => {
+              const updated = [...prev];
+              const last = updated[updated.length - 1];
+              if (last?.streaming) {
+                updated[updated.length - 1] = { ...last, thinking: accumulatedThinking };
+              }
+              return updated;
+            });
+          } else if (json.kind === 'answer') {
+            accumulatedAnswer += json.text ?? '';
+            setMessages(prev => {
+              const updated = [...prev];
+              const last = updated[updated.length - 1];
+              if (last?.streaming) {
+                updated[updated.length - 1] = { ...last, content: accumulatedAnswer };
+              }
+              return updated;
+            });
+          } else if (json.kind === 'navigate' && json.data) {
+            const nav = json.data as { page: string; filters?: Record<string, string>; message: string };
+            const navigateAction = {
+              page: nav.page,
+              filters: nav.filters ?? {},
+              message: nav.message,
+              url: buildNavigateUrl(nav.page, nav.filters ?? {}),
+            };
+            setMessages(prev => {
+              const updated = [...prev];
+              const last = updated[updated.length - 1];
+              if (last?.streaming) {
+                updated[updated.length - 1] = { ...last, navigateAction };
+              }
+              return updated;
+            });
+          } else if (json.kind === 'model' && json.text) {
+            setActiveModel(MODEL_LABELS[json.text] ?? json.text);
+          } else if (json.kind === 'error') {
+            throw new Error(json.text ?? 'Terjadi kesalahan');
           }
-        : undefined;
+        }
+      }
 
+      // Finalize — hapus streaming flag
       setMessages(prev => {
         const updated = [...prev];
         const last = updated[updated.length - 1];
         if (last?.streaming) {
           updated[updated.length - 1] = {
-            role: 'assistant',
-            content: (data.answer as string) || '_(tidak ada respons)_',
-            navigateAction,
+            ...last,
+            content: accumulatedAnswer || '_(tidak ada respons)_',
+            streaming: false,
           };
         }
         return updated;
@@ -1276,7 +1346,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                         >
                           {([
                             { id: 'auto' as const, label: 'AXION Auto', desc: 'Gemini · Llama · Qwen', logo: '/images/meta.png', disabled: false },
-                            { id: 'gemini-vertex' as const, label: 'Gemini Vertex', desc: claudeAvailable ? '2.5 Flash via Vertex AI' : 'Perlu Vertex credentials', logo: '/images/gemini.png', disabled: !claudeAvailable },
+                            { id: 'gemini-vertex' as const, label: 'Gemini Vertex', desc: claudeAvailable ? '3.5 Flash via Vertex AI' : 'Perlu Vertex credentials', logo: '/images/gemini.png', disabled: !claudeAvailable },
                             { id: 'claude' as const, label: 'Claude', desc: claudeAvailable ? 'Sonnet 4.6 via Vertex' : 'Belum dikonfigurasi', logo: '/images/claude.png', disabled: !claudeAvailable },
                           ]).map(opt => (
                             <button
@@ -1287,7 +1357,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                                 if (opt.disabled) return;
                                 setSelectedProvider(opt.id);
                                 if (opt.id === 'claude') setActiveModel('claude-sonnet-4-6');
-                                else if (opt.id === 'gemini-vertex') setActiveModel('gemini-2.5-flash-vertex');
+                                else if (opt.id === 'gemini-vertex') setActiveModel('gemini-3.5-flash-vertex');
                                 else setActiveModel(null);
                                 localStorage.setItem('axion_ai_provider', opt.id);
                                 setProviderDropdownOpen(false);
@@ -1594,10 +1664,10 @@ function NavigateActionCard({
 }) {
   const filterEntries = Object.entries(action.filters ?? {}).filter(([, v]) => v);
   return (
-    <div className="mt-2 rounded-xl border border-primary-200 dark:border-primary-700/50 bg-primary-50/60 dark:bg-primary-900/20 p-3">
+    <div className="mt-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/40 p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-primary-700 dark:text-primary-300 mb-0.5">
+          <p className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-0.5">
             {PAGE_LABELS[action.page] ?? action.page}
           </p>
           {filterEntries.length > 0 && (
@@ -1615,7 +1685,7 @@ function NavigateActionCard({
         </div>
         <button
           onClick={() => onNavigate(action.url)}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium transition-colors"
+          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#474443] hover:bg-[#3a3837] dark:bg-gray-100 dark:hover:bg-white text-white dark:text-gray-900 text-xs font-medium transition-colors"
         >
           <ExternalLink className="w-3 h-3" />
           Buka

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { needsReasoning } from '@/lib/ai/intent';
+import { needsBusinessInfo, needsReasoning } from '@/lib/ai/intent';
 
 describe('needsReasoning', () => {
   it('pertanyaan analitik biasa → tidak butuh reasoning (Gemini dulu)', () => {
@@ -26,5 +26,26 @@ describe('needsReasoning', () => {
   it('case-insensitive', () => {
     expect(needsReasoning('AUDIT semua transaksi')).toBe(true);
     expect(needsReasoning('FORECAST pendapatan')).toBe(true);
+  });
+});
+
+describe('needsBusinessInfo', () => {
+  it('mendeteksi pertanyaan creator, anggota, dan cap table bisnis', () => {
+    expect(needsBusinessInfo('Siapa pemilik bisnis ini?')).toBe(true);
+    expect(needsBusinessInfo('Bisnis ini punya siapa?')).toBe(true);
+    expect(needsBusinessInfo('Siapa yang membuat bisnis ini?')).toBe(true);
+    expect(needsBusinessInfo('Siapa saja anggota bisnis ini?')).toBe(true);
+    expect(needsBusinessInfo('Tampilkan cap table dan modal disetor')).toBe(true);
+  });
+
+  it('tidak mengambil konteks bisnis untuk pertanyaan produk AXION atau transaksi biasa', () => {
+    expect(needsBusinessInfo('Siapa pemilik AXION?')).toBe(false);
+    expect(needsBusinessInfo('Berapa penarikan pemilik bulan ini?')).toBe(false);
+    expect(needsBusinessInfo('Berapa revenue bulan ini?')).toBe(false);
+  });
+
+  it('case-insensitive', () => {
+    expect(needsBusinessInfo('BUSINESS OWNER perusahaan ini siapa?')).toBe(true);
+    expect(needsBusinessInfo('CAP TABLE bisnis ini bagaimana?')).toBe(true);
   });
 });

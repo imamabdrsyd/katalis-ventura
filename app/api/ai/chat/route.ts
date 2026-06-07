@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { createServerClient, getAuthenticatedUser, getBusinessRoleForUser } from '@/lib/supabase-server';
 import { buildFinancialContext } from '@/lib/ai/financialContext';
 import { CHAT_SYSTEM_PROMPT } from '@/lib/ai/prompts';
-import { needsReasoning } from '@/lib/ai/intent';
+import { needsBusinessInfo, needsReasoning } from '@/lib/ai/intent';
+import { executeTool } from '@/lib/ai/agentTools';
 import {
   AIProviderRequestError,
   streamText,
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { business_id, messages, provider } = parsed.data;
+  const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')?.content ?? '';
 
   const supabase = await createServerClient();
   const role = await getBusinessRoleForUser(supabase, user.id, business_id);
@@ -53,8 +55,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  // Fetch business info + accounts + transaksi paralel
-  const [{ data: business }, { data: accounts }, { data: transactions }] = await Promise.all([
+  // Fetch konteks keuangan dasar + konteks kepemilikan hanya bila pertanyaannya relevan.
+  const [
+    { data: business },
+    { data: accounts },
+    { data: transactions },
+    businessInfoResult,
+  ] = await Promise.all([
     supabase
       .from('businesses')
       .select('business_name, business_sector')
@@ -82,6 +89,9 @@ export async function POST(req: NextRequest) {
       .or('status.is.null,status.eq.posted')
       .order('date', { ascending: false })
       .limit(3000),
+    needsBusinessInfo(lastUserMsg)
+      ? executeTool('get_business_info', {}, business_id)
+      : Promise.resolve(null),
   ]);
 
   const financialContext = buildFinancialContext(
@@ -91,14 +101,22 @@ export async function POST(req: NextRequest) {
     (accounts ?? []) as unknown as Account[],
     new Date()
   );
+  const businessInfoContext = businessInfoResult?.data
+    ? `\n\nINFORMASI BISNIS REAL-TIME:
+${JSON.stringify(businessInfoResult.data)}
 
-  // Inject konteks keuangan ke pesan pertama user
+ATURAN INTERPRETASI:
+- Bedakan creator terdaftar, anggota + role, dan indikasi pemilik dari cap table pembukuan.
+- Jangan menyebut siapa pun sebagai pemilik legal hanya dari data ini.
+- Cap table AXION berasal dari akun EQUITY bertanda is_stock, bukan bukti saham/legal formal.`
+    : '';
+
+  // Inject konteks keuangan dan, bila relevan, konteks bisnis ke pesan pertama user.
   const aiMessages = messages.map(m => ({ role: m.role, content: m.content })) as import('@/lib/ai/provider').AIMessage[];
   if (aiMessages[0]?.role === 'user') {
-    aiMessages[0].content = `${financialContext}\n\n${aiMessages[0].content}`;
+    aiMessages[0].content = `${financialContext}${businessInfoContext}\n\n${aiMessages[0].content}`;
   }
 
-  const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')?.content ?? '';
   const preferReasoning = needsReasoning(lastUserMsg);
 
   let result: import('@/lib/ai/provider').StreamResult | null;

@@ -1,4 +1,4 @@
-import { generateText } from './provider';
+import { generateText, generateTextGeminiVertex } from './provider';
 import { PARSE_SYSTEM_PROMPT } from './prompts';
 import { parseIncompleteTransactionMessage, parseTransactionMessage } from '@/lib/telegram/parser';
 
@@ -47,9 +47,19 @@ export function resolveTransactionDate(
  *                            bisa balik tanya "berapa?" lalu gabung jawabannya.
  * - null                   → bahkan nama transaksi pun tak terdeteksi.
  */
-export async function extractTransactionFromText(text: string): Promise<ExtractResult | null> {
-  // 1. Coba AI provider chain
-  const aiResult = await generateText(PARSE_SYSTEM_PROMPT, [{ role: 'user', content: text }], { temperature: 0 });
+export async function extractTransactionFromText(
+  text: string,
+  opts: { preferVertex?: boolean } = {}
+): Promise<ExtractResult | null> {
+  // 1. Coba AI provider. preferVertex → Gemini Vertex dulu (lebih cerdas, pakai
+  //    billing GCP), fallback ke chain gratisan (Gemini AI Studio → Groq).
+  const messages = [{ role: 'user' as const, content: text }];
+  let aiResult = opts.preferVertex
+    ? await generateTextGeminiVertex(PARSE_SYSTEM_PROMPT, messages, { temperature: 0 })
+    : null;
+  if (!aiResult) {
+    aiResult = await generateText(PARSE_SYSTEM_PROMPT, messages, { temperature: 0 });
+  }
   if (aiResult) {
     try {
       const clean = aiResult.text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();

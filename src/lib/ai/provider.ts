@@ -55,6 +55,7 @@ export const MODEL_LABELS: Record<string, string> = {
   'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite',
   'gemini-2.5-pro': 'Gemini 2.5 Pro',
   'gemini-2.5-flash-vertex': 'Gemini 2.5 Flash (Vertex)',
+  'gemini-3.5-flash-vertex': 'Gemini 3.5 Flash (Vert...)',
   'llama-3.3-70b-versatile': 'Llama 3.3 70B',
   'llama-3.1-8b-instant': 'Llama 3.1 8B',
   'deepseek-r1-distill-llama-70b': 'DeepSeek R1 70B',

@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { createAdminClient } from '@/lib/supabase-server';
-import { geminiOcr, parseGeminiJson } from './geminiOcr';
+import { geminiOcr, geminiVertexOcr, parseGeminiJson } from './geminiOcr';
 import { googleVisionOcr } from './googleVision';
 import { ocrSpaceOcr } from './ocrSpace';
 import { parseReceipt } from './parser';
@@ -215,7 +215,23 @@ export async function scanReceipt(
     };
   }
 
-  // Primary: Gemini multimodal (image → JSON), kalau quota & API key tersedia.
+  // Primary: Gemini Vertex (gemini-2.5-flash via Vertex AI) — lebih cerdas & tidak
+  // kena kuota gratisan. Pakai billing GCP. Kalau credentials Vertex tidak ada,
+  // geminiVertexOcr return null → lanjut ke AI Studio gratisan di bawah.
+  try {
+    const vertexResult = await geminiVertexOcr(fileBuffer, mimeType);
+    if (vertexResult) {
+      await Promise.all([
+        saveCacheRaw(hash, 'gemini', vertexResult.raw_text),
+        incrementUsage('gemini'),
+      ]);
+      return { provider: 'gemini', raw_text: vertexResult.raw_text, parsed: vertexResult.parsed, cached: false };
+    }
+  } catch (err) {
+    console.warn('[ocr] Gemini Vertex failed, falling back to AI Studio:', err);
+  }
+
+  // Fallback 1: Gemini AI Studio gratisan (image → JSON), kalau quota & API key tersedia.
   if (process.env.GEMINI_API_KEY) {
     const geminiUsage = await getMonthlyUsage('gemini');
     if (geminiUsage < OCR_LIMITS.gemini) {

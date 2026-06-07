@@ -24,7 +24,9 @@ async function handleWebhookGet(request: NextRequest) {
       body: JSON.stringify({
         url: webhookUrl,
         secret_token: process.env.TELEGRAM_WEBHOOK_SECRET,
-        allowed_updates: ['message', 'edited_message'],
+        // callback_query WAJIB ada — tanpa ini, klik tombol inline (Simpan/Batal)
+        // tidak pernah dikirim Telegram ke webhook, tombol loading selamanya.
+        allowed_updates: ['message', 'edited_message', 'callback_query'],
       }),
     });
     const data = await res.json();

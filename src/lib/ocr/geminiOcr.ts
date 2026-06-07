@@ -6,6 +6,7 @@ import {
   extractLineItemKeywords,
 } from './parser';
 import { GEMINI_MODELS } from '@/lib/ai/provider';
+import { getVertexTokenAndProject } from '@/lib/ai/vertexAuth';
 
 type GeminiResponse = {
   candidates?: Array<{
@@ -62,8 +63,75 @@ Aturan penting:
 - keywords: 2-5 kata kunci bahasa Indonesia tentang jenis transaksi ini (mis. ["internet","indihome","telkom"])
 - Jangan sertakan tanda titik/koma pada angka — gunakan bilangan bulat atau desimal standar`;
 
+// Body request Gemini generateContent — identik untuk AI Studio & Vertex
+// (keduanya pakai schema Gemini yang sama). Dipisah supaya dua transport reuse.
+function buildOcrRequestBody(imageBuffer: Buffer, mimeType: string) {
+  return {
+    system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    contents: [
+      {
+        parts: [
+          { inline_data: { mime_type: mimeType, data: imageBuffer.toString('base64') } },
+          { text: 'Parse struk ini dan return JSON sesuai schema.' },
+        ],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      responseMimeType: 'application/json',
+    },
+  };
+}
+
+function extractGeminiOcrText(json: GeminiResponse): string {
+  return json.candidates?.[0]?.content?.parts
+    ?.filter(part => !part.thought && part.text)
+    .map(part => part.text)
+    .join('') ?? '';
+}
+
 /**
- * Panggil Gemini Vision untuk parse struk langsung ke OcrParsed JSON.
+ * OCR struk via Gemini di VERTEX AI (model gemini-2.5-flash, JWT service account).
+ * Reuse SYSTEM_PROMPT + parseGeminiJson yang sama dengan path AI Studio — hanya
+ * beda transport. Return null kalau credentials Vertex tidak tersedia (biar caller
+ * fallback ke AI Studio gratisan).
+ */
+export async function geminiVertexOcr(imageBuffer: Buffer, mimeType = 'image/jpeg'): Promise<{
+  raw_text: string;
+  parsed: OcrParsed;
+} | null> {
+  const auth = await getVertexTokenAndProject();
+  if (!auth) return null;
+  const { token, projectId } = auth;
+
+  const model = 'gemini-2.5-flash';
+  const endpoint = `https://aiplatform.googleapis.com/v1/projects/${projectId}/locations/global/publishers/google/models/${model}:generateContent`;
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(buildOcrRequestBody(imageBuffer, mimeType)),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new OcrProviderError('gemini', `Vertex OCR HTTP ${res.status}: ${text.slice(0, 300)}`);
+  }
+
+  const json = (await res.json()) as GeminiResponse;
+  if (json.error) {
+    throw new OcrProviderError('gemini', `Vertex OCR error ${json.error.code}: ${json.error.message}`);
+  }
+
+  const rawText = extractGeminiOcrText(json);
+  if (!rawText) {
+    throw new OcrProviderError('gemini', 'Vertex OCR tidak menghasilkan output');
+  }
+  return { raw_text: rawText, parsed: parseGeminiJson(rawText) };
+}
+
+/**
+ * Panggil Gemini Vision (AI Studio gratisan) untuk parse struk langsung ke OcrParsed JSON.
  * Tidak perlu regex parser — Gemini memahami konteks dan bahasa Indonesia.
  */
 export async function geminiOcr(imageBuffer: Buffer, mimeType = 'image/jpeg'): Promise<{
@@ -75,38 +143,13 @@ export async function geminiOcr(imageBuffer: Buffer, mimeType = 'image/jpeg'): P
     throw new OcrProviderError('gemini', 'GEMINI_API_KEY not set');
   }
 
-  const base64 = imageBuffer.toString('base64');
-
   for (const model of GEMINI_MODELS) {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: {
-            parts: [{ text: SYSTEM_PROMPT }],
-          },
-          contents: [
-            {
-              parts: [
-                {
-                  inline_data: {
-                    mime_type: mimeType,
-                    data: base64,
-                  },
-                },
-                {
-                  text: 'Parse struk ini dan return JSON sesuai schema.',
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.1,
-            responseMimeType: 'application/json',
-          },
-        }),
+        body: JSON.stringify(buildOcrRequestBody(imageBuffer, mimeType)),
       }
     );
 
@@ -123,10 +166,7 @@ export async function geminiOcr(imageBuffer: Buffer, mimeType = 'image/jpeg'): P
       continue;
     }
 
-    const rawText = json.candidates?.[0]?.content?.parts
-      ?.filter(part => !part.thought && part.text)
-      .map(part => part.text)
-      .join('') ?? '';
+    const rawText = extractGeminiOcrText(json);
     if (rawText) {
       return { raw_text: rawText, parsed: parseGeminiJson(rawText) };
     }

@@ -7,11 +7,17 @@
  * 3. Server eksekusi handler → hasilnya dikirim kembali ke Gemini
  * 4. Gemini formulasi jawaban natural language berdasar data nyata
  *
- * Tools: query_transactions, get_financial_summary, get_contacts, navigate_to
+ * Tools: query_transactions, get_financial_summary, get_contacts,
+ * get_business_info, navigate_to
  */
 
 import { createServerClient } from '@/lib/supabase-server';
-import { calculateFinancialSummary, filterTransactionsByDateRange } from '@/lib/calculations';
+import {
+  calculateCapTable,
+  calculateFinancialSummary,
+  calculateInvestedCapital,
+  filterTransactionsByDateRange,
+} from '@/lib/calculations';
 import { formatIDR } from '@/lib/ai/financialContext';
 import type { Transaction } from '@/types';
 
@@ -23,7 +29,10 @@ export const TOOL_DEFINITIONS = [
     description:
       'Ambil daftar transaksi dari database bisnis. Gunakan untuk pertanyaan spesifik seperti ' +
       '"transaksi terbesar bulan X", "semua pengeluaran ke vendor Y", "transaksi CAPEX tahun ini". ' +
-      'Hasil berupa array transaksi terfilter yang bisa dianalisis.',
+      'Hasil berupa array transaksi terfilter yang bisa dianalisis. PENTING: tiap transaksi punya ' +
+      'flag is_settlement — jika true berarti PELUNASAN PIUTANG (Dr Kas/Bank / Cr Piutang), BUKAN ' +
+      'pendapatan baru. Untuk menjumlahkan pendapatan/revenue gunakan field total_excluding_settlements, ' +
+      'JANGAN total_amount, agar tidak double-count piutang dengan pelunasannya.',
     parameters: {
       type: 'object',
       properties: {
@@ -110,6 +119,23 @@ export const TOOL_DEFINITIONS = [
     },
   },
   {
+    name: 'get_business_info',
+    description:
+      'Ambil bukti yang tersedia tentang orang dan struktur modal bisnis: creator yang ' +
+      'membuat/mendaftarkan bisnis, anggota beserta perannya, akun modal pemilik (is_stock), ' +
+      'dan cap table pembukuan dari saldo akun tersebut. Gunakan untuk pertanyaan seperti ' +
+      '"bisnis ini punya siapa", "siapa yang buat bisnis ini", "siapa saja anggotanya", ' +
+      '"berapa modal disetor", "struktur kepemilikan". ' +
+      'Jangan menyimpulkan creator atau anggota sebagai pemilik legal. Cap table ini juga hanya ' +
+      'merepresentasikan pencatatan modal di AXION, bukan kepemilikan saham/legal formal. ' +
+      'Sebutkan sumber informasinya secara jujur.',
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
+  {
     name: 'navigate_to',
     description:
       'Arahkan user ke halaman tertentu di aplikasi AXION, dengan pre-apply filter opsional. ' +
@@ -181,15 +207,34 @@ export interface NavigateAction {
   message: string;
 }
 
+/**
+ * Sebuah transaksi adalah PELUNASAN PIUTANG (settlement), bukan pendapatan baru,
+ * bila meta.settlement_of_transaction_id terisi. Jurnalnya Dr Kas/Bank / Cr Piutang —
+ * uang masuk tapi BUKAN revenue baru (revenue sudah diakui saat piutang dibuat).
+ * Tanpa flag ini, AI menghitung piutang (Dr Piutang/Cr Pendapatan) + pelunasannya
+ * (Dr Bank/Cr Piutang) sebagai dua pendapatan terpisah → double-count.
+ */
+function isSettlementTx(meta: unknown): boolean {
+  if (!meta || typeof meta !== 'object') return false;
+  const m = meta as Record<string, unknown>;
+  return Boolean(m.settlement_of_transaction_id);
+}
+
 async function handleQueryTransactions(
   businessId: string,
   args: ToolCallArgs
 ): Promise<unknown> {
   const supabase = await createServerClient();
 
+  // Ambil meta + akun debit/kredit agar bisa membedakan SETTLE dari EARN dan
+  // menjelaskan arah double-entry ke AI.
   let query = supabase
     .from('transactions')
-    .select('id, date, name, description, category, amount')
+    .select(`
+      id, date, name, description, category, amount, meta,
+      debit_account:accounts!transactions_debit_account_id_fkey(account_code, account_name, account_type),
+      credit_account:accounts!transactions_credit_account_id_fkey(account_code, account_name, account_type)
+    `)
     .eq('business_id', businessId)
     .is('deleted_at', null)
     .or('status.is.null,status.eq.posted');
@@ -213,19 +258,61 @@ async function handleQueryTransactions(
   const { data, error } = await query;
   if (error) throw new Error(error.message);
 
-  const txs = (data ?? []) as { id: string; date: string; name: string; description: string; category: string; amount: number }[];
+  type AccountRef = { account_code: string; account_name: string; account_type: string } | null;
+  type Row = {
+    id: string;
+    date: string;
+    name: string;
+    description: string;
+    category: string;
+    amount: number;
+    meta: unknown;
+    debit_account: AccountRef | AccountRef[];
+    credit_account: AccountRef | AccountRef[];
+  };
+  const txs = (data ?? []) as unknown as Row[];
+  const acc = (a: AccountRef | AccountRef[]): AccountRef => (Array.isArray(a) ? a[0] ?? null : a);
 
-  return {
-    count: txs.length,
-    transactions: txs.map(t => ({
+  let realTotal = 0;
+  let settlementTotal = 0;
+
+  const transactions = txs.map(t => {
+    const isSettlement = isSettlementTx(t.meta);
+    if (isSettlement) settlementTotal += t.amount;
+    else realTotal += t.amount;
+
+    const debit = acc(t.debit_account);
+    const credit = acc(t.credit_account);
+
+    return {
       date: t.date,
       name: t.name,
       description: t.description,
-      category: t.category,
+      // Tampilkan SETTLE sebagai kategori efektif (sama seperti UI), tapi simpan kategori asli.
+      category: isSettlement ? 'SETTLE' : t.category,
+      original_category: t.category,
+      is_settlement: isSettlement,
       amount: formatIDR(t.amount),
       amount_raw: t.amount,
-    })),
-    total_amount: formatIDR(txs.reduce((s, t) => s + t.amount, 0)),
+      debit_account: debit ? `${debit.account_code} ${debit.account_name}` : null,
+      credit_account: credit ? `${credit.account_code} ${credit.account_name}` : null,
+    };
+  });
+
+  return {
+    count: transactions.length,
+    transactions,
+    // Total dipisah supaya AI tidak menjumlahkan pendapatan + pelunasan piutang.
+    total_amount: formatIDR(realTotal + settlementTotal),
+    total_excluding_settlements: formatIDR(realTotal),
+    total_settlements_only: formatIDR(settlementTotal),
+    settlement_count: transactions.filter(t => t.is_settlement).length,
+    _note:
+      'is_settlement=true berarti transaksi ini PELUNASAN PIUTANG (Dr Kas/Bank / Cr Piutang), ' +
+      'BUKAN pendapatan baru. Untuk pertanyaan "total pendapatan/revenue", pakai ' +
+      'total_excluding_settlements, JANGAN total_amount. Pendapatan dari penjualan kredit ' +
+      'sudah diakui saat piutang dibuat (entry EARN dengan debit Piutang Usaha), jadi ' +
+      'menambahkan pelunasannya lagi akan double-count.',
   };
 }
 
@@ -296,21 +383,33 @@ async function handleGetContacts(
 
   const contactList = (contacts ?? []) as { id: string; name: string; type: string; phone?: string; email?: string }[];
 
-  // Untuk tiap kontak, hitung total transaksi berdasar name match
+  // Untuk tiap kontak, hitung total transaksi berdasar name match.
+  // meta dibutuhkan untuk memisahkan pelunasan piutang (SETTLE) dari nominal lain
+  // supaya total per kontak tidak double-count piutang + pelunasannya.
   const { data: txSummary } = await supabase
     .from('transactions')
-    .select('name, amount, category')
+    .select('name, amount, category, meta')
     .eq('business_id', businessId)
     .is('deleted_at', null)
     .or('status.is.null,status.eq.posted');
 
-  const txsByName = new Map<string, { total: number; count: number; categories: Set<string> }>();
-  for (const tx of (txSummary ?? []) as { name: string; amount: number; category: string }[]) {
+  const txsByName = new Map<
+    string,
+    { total: number; settlementTotal: number; count: number; categories: Set<string> }
+  >();
+  for (const tx of (txSummary ?? []) as { name: string; amount: number; category: string; meta: unknown }[]) {
     const key = tx.name.toLowerCase();
-    const existing = txsByName.get(key) ?? { total: 0, count: 0, categories: new Set() };
-    existing.total += tx.amount;
+    const existing =
+      txsByName.get(key) ?? { total: 0, settlementTotal: 0, count: 0, categories: new Set() };
+    const isSettlement = isSettlementTx(tx.meta);
+    if (isSettlement) {
+      existing.settlementTotal += tx.amount;
+      existing.categories.add('SETTLE');
+    } else {
+      existing.total += tx.amount;
+      existing.categories.add(tx.category);
+    }
     existing.count++;
-    existing.categories.add(tx.category);
     txsByName.set(key, existing);
   }
 
@@ -324,10 +423,221 @@ async function handleGetContacts(
         phone: c.phone ?? null,
         email: c.email ?? null,
         transaction_count: stats?.count ?? 0,
+        // total_amount = nominal di luar pelunasan piutang; settlements dipisah.
         total_amount: stats ? formatIDR(stats.total) : 'Rp 0',
+        settlement_amount: stats ? formatIDR(stats.settlementTotal) : 'Rp 0',
         categories: stats ? Array.from(stats.categories).join(', ') : '',
       };
     }),
+    _note:
+      'total_amount per kontak SUDAH mengecualikan pelunasan piutang (SETTLE), yang dipisah ke ' +
+      'settlement_amount. Ini mencegah double-count piutang (Dr Piutang/Cr Pendapatan) dengan ' +
+      'pelunasannya (Dr Kas/Cr Piutang).',
+  };
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  business_manager: 'Manajer Bisnis',
+  investor: 'Investor',
+  superadmin: 'Super Admin',
+  both: 'Super Admin (role lama)',
+};
+
+async function handleGetBusinessInfo(businessId: string): Promise<unknown> {
+  const supabase = await createServerClient();
+
+  const [
+    { data: business, error: businessError },
+    { data: roles, error: rolesError },
+    { data: equityAccounts, error: accountsError },
+    { data: equityTxs, error: transactionsError },
+  ] = await Promise.all([
+    supabase
+      .from('businesses')
+      .select('business_name, business_sector, business_type, capital_investment, created_by, created_at')
+      .eq('id', businessId)
+      .single(),
+    supabase
+      .from('user_business_roles')
+      .select('user_id, role, joined_at')
+      .eq('business_id', businessId)
+      .order('joined_at', { ascending: true }),
+    supabase
+      .from('accounts')
+      .select(`
+        id, account_code, account_name, is_active, is_stock, is_dividend,
+        is_retained_earnings, profit_share_pct, contact_id
+      `)
+      .eq('business_id', businessId)
+      .eq('account_type', 'EQUITY')
+      .order('account_code', { ascending: true }),
+    supabase
+      .from('transactions')
+      .select(`
+        id, date, name, description, notes, amount, category,
+        is_double_entry, is_multi_line, deleted_at,
+        debit_account:accounts!transactions_debit_account_id_fkey(
+          id, account_code, account_name, account_type, is_stock, is_dividend
+        ),
+        credit_account:accounts!transactions_credit_account_id_fkey(
+          id, account_code, account_name, account_type, is_stock, is_dividend
+        ),
+        journal_lines(
+          debit_amount, credit_amount,
+          account:accounts(id, account_code, account_name, account_type, is_stock, is_dividend)
+        )
+      `)
+      .eq('business_id', businessId)
+      .is('deleted_at', null)
+      .or('status.is.null,status.eq.posted'),
+  ]);
+
+  if (businessError) throw new Error(businessError.message);
+  if (rolesError) throw new Error(rolesError.message);
+  if (accountsError) throw new Error(accountsError.message);
+  if (transactionsError) throw new Error(transactionsError.message);
+
+  type BusinessRoleRow = { user_id: string; role: string; joined_at: string | null };
+  type EquityAccountRow = {
+    id: string;
+    account_code: string;
+    account_name: string;
+    is_active: boolean;
+    is_stock: boolean;
+    is_dividend: boolean;
+    is_retained_earnings: boolean;
+    profit_share_pct: number | null;
+    contact_id: string | null;
+  };
+
+  const roleRows = (roles ?? []) as BusinessRoleRow[];
+  const accountRows = (equityAccounts ?? []) as EquityAccountRow[];
+
+  // Ambil nama profil anggota dan nama kontak yang ditautkan ke akun modal.
+  const userIds = new Set<string>();
+  if (business?.created_by) userIds.add(business.created_by);
+  for (const role of roleRows) userIds.add(role.user_id);
+
+  const contactIds = accountRows
+    .map(account => account.contact_id)
+    .filter((id): id is string => Boolean(id));
+
+  const [{ data: profiles, error: profilesError }, { data: contacts, error: contactsError }] =
+    await Promise.all([
+      userIds.size
+        ? supabase.from('profiles').select('id, full_name').in('id', Array.from(userIds))
+        : Promise.resolve({ data: [], error: null }),
+      contactIds.length
+        ? supabase.from('business_contacts').select('id, name').in('id', contactIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+  if (profilesError) throw new Error(profilesError.message);
+  if (contactsError) throw new Error(contactsError.message);
+
+  const profileNameById = new Map(
+    ((profiles ?? []) as { id: string; full_name: string | null }[]).map(profile => [
+      profile.id,
+      profile.full_name ?? 'Nama profil tidak tersedia',
+    ])
+  );
+  const contactNameById = new Map(
+    ((contacts ?? []) as { id: string; name: string }[]).map(contact => [contact.id, contact.name])
+  );
+
+  const creatorName = business?.created_by
+    ? profileNameById.get(business.created_by) ?? 'Nama profil tidak tersedia'
+    : null;
+
+  const members = roleRows.map(role => ({
+    name: profileNameById.get(role.user_id) ?? 'Nama profil tidak tersedia',
+    role: ROLE_LABELS[role.role] ?? role.role,
+    is_creator: role.user_id === business?.created_by,
+    joined_at: role.joined_at,
+  }));
+  if (business?.created_by && !roleRows.some(role => role.user_id === business.created_by)) {
+    members.unshift({
+      name: creatorName ?? 'Nama profil tidak tersedia',
+      role: ROLE_LABELS.business_manager,
+      is_creator: true,
+      joined_at: business.created_at,
+    });
+  }
+
+  const transactions = (equityTxs ?? []) as unknown as Transaction[];
+  const capTable = calculateCapTable(transactions);
+  const investedCapital = calculateInvestedCapital(
+    transactions,
+    Number(business?.capital_investment ?? 0)
+  );
+  const capEntryByAccountId = new Map(capTable.entries.map(entry => [entry.accountId, entry]));
+  const stockAccounts = accountRows.filter(account => account.is_stock);
+
+  const capTableEntries = stockAccounts.map(account => {
+    const entry = capEntryByAccountId.get(account.id);
+    const contactName = account.contact_id ? contactNameById.get(account.contact_id) ?? null : null;
+    const contributed = entry?.contributed ?? 0;
+    const capitalSharePct =
+      capTable.totalContributed > 0 ? (contributed / capTable.totalContributed) * 100 : 0;
+
+    return {
+      owner_label: contactName ?? account.account_name,
+      owner_label_source: contactName ? 'kontak yang ditautkan ke akun modal' : 'nama akun modal',
+      account_code: account.account_code,
+      account_name: account.account_name,
+      contributed_capital: formatIDR(contributed),
+      contributed_capital_raw: contributed,
+      capital_share_pct: Number(capitalSharePct.toFixed(2)),
+      profit_share_pct: account.profit_share_pct == null ? null : Number(account.profit_share_pct),
+      profit_share_source: account.profit_share_pct == null ? 'tidak ditetapkan' : 'ditetapkan di CoA',
+      is_active: account.is_active,
+    };
+  });
+
+  return {
+    business_name: business?.business_name ?? '',
+    sector: business?.business_sector ?? '',
+    type: business?.business_type ?? '',
+    creator: {
+      name: creatorName,
+      registered_business_at: business?.created_at ?? null,
+      evidence:
+        'Nama ini berasal dari user yang tercatat membuat/mendaftarkan bisnis di AXION. ' +
+        'Status creator tidak otomatis berarti pemilik legal.',
+    },
+    members,
+    member_count: members.length,
+    ownership_evidence_note:
+      'AXION tidak menyimpan kepemilikan saham/legal formal. Cap table berikut adalah interpretasi ' +
+      'pembukuan dari saldo akun EQUITY yang ditandai is_stock; nama pemilik berasal dari kontak ' +
+      'yang ditautkan atau nama akun modal.',
+    cap_table: {
+      entries: capTableEntries,
+      total_contributed_capital: formatIDR(capTable.totalContributed),
+      total_contributed_capital_raw: capTable.totalContributed,
+    },
+    invested_capital: {
+      gross: formatIDR(investedCapital.grossInvestedCapital),
+      remaining_after_withdrawals: formatIDR(investedCapital.remainingInvestedCapital),
+      injections_from_transactions: formatIDR(investedCapital.capitalInjections),
+      owner_withdrawals: formatIDR(investedCapital.ownerWithdrawals),
+      legacy_configured_capital:
+        Number(business?.capital_investment ?? 0) > 0
+          ? formatIDR(Number(business?.capital_investment))
+          : null,
+    },
+    equity_accounts: accountRows.map(account => ({
+      account_code: account.account_code,
+      account_name: account.account_name,
+      is_active: account.is_active,
+      classification: account.is_stock
+        ? 'modal disetor / cap table'
+        : account.is_dividend
+          ? 'dividen / prive'
+          : account.is_retained_earnings
+            ? 'saldo laba'
+            : 'ekuitas lainnya',
+    })),
   };
 }
 
@@ -347,6 +657,8 @@ export async function executeTool(
       data = await handleGetFinancialSummary(businessId, args);
     } else if (toolName === 'get_contacts') {
       data = await handleGetContacts(businessId, args);
+    } else if (toolName === 'get_business_info') {
+      data = await handleGetBusinessInfo(businessId);
     } else if (toolName === 'navigate_to') {
       // navigate_to tidak butuh DB query — langsung return args sebagai NavigateAction
       data = {
