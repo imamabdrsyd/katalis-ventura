@@ -173,6 +173,11 @@ export async function POST(req: NextRequest) {
         }
 
         // Step 4: Insert transaksi
+        // Pakai RPC create_multi_line_transaction (migrasi 082) — atomik:
+        // insert header + journal_lines dalam satu transaksi DB, set is_multi_line=TRUE,
+        // balance check + RLS + period-lock + account-ownership semua di server.
+        // Tidak ada risiko orphan header (yang ada di insert manual sebelumnya).
+        const hasCommission = !!accountConfig.commissionAccountId; // empty string → false
         let inserted = 0;
         let failed = 0;
         const insertErrors: string[] = [];
@@ -187,14 +192,23 @@ export async function POST(req: NextRequest) {
             total: parseResult.bookings.length,
           });
 
-          // Build journal lines
+          // Build description
           const nightsLabel = booking.nights > 0 ? `${booking.nights} malam` : '';
           const dateRange = booking.startDate !== booking.endDate
             ? ` (${booking.startDate} → ${booking.endDate})`
             : '';
           const description = `${nightsLabel ? nightsLabel + ' via ' : ''}Airbnb${dateRange}`.trim();
 
-          const journalLines = [];
+          // Build journal lines.
+          // Dengan commission account: Dr Bank + Dr Komisi / Cr Revenue (gross).
+          // Tanpa commission account: Dr Bank (net) / Cr Revenue (net).
+          const journalLines: Array<{
+            account_id: string;
+            debit_amount: number;
+            credit_amount: number;
+            description: string;
+            sort_order: number;
+          }> = [];
 
           // Dr Bank (paidOut / net)
           journalLines.push({
@@ -203,103 +217,47 @@ export async function POST(req: NextRequest) {
             credit_amount: 0,
             description: `Terima pembayaran Airbnb - ${booking.guest}`,
             sort_order: 0,
-            currency_code: 'IDR',
-            original_debit_amount: booking.paidOut,
-            original_credit_amount: 0,
-            fx_rate: 1,
           });
 
           // Dr Komisi Platform (service fee) — hanya jika ada commission account dan service fee > 0
-          if (accountConfig.commissionAccountId && booking.serviceFee > 0) {
+          if (hasCommission && booking.serviceFee > 0) {
             journalLines.push({
-              account_id: accountConfig.commissionAccountId,
+              account_id: accountConfig.commissionAccountId!,
               debit_amount: booking.serviceFee,
               credit_amount: 0,
               description: `Komisi Airbnb - ${booking.guest}`,
               sort_order: 1,
-              currency_code: 'IDR',
-              original_debit_amount: booking.serviceFee,
-              original_credit_amount: 0,
-              fx_rate: 1,
             });
           }
 
-          // Cr Revenue (gross earnings)
-          const grossForCredit = accountConfig.commissionAccountId
-            ? booking.grossEarnings
-            : booking.paidOut; // tanpa commission account: kredit net saja
-
+          // Cr Revenue: gross jika ada commission line (dengan service fee > 0),
+          // selain itu net (= total debit, supaya seimbang).
+          const totalDebitSoFar = journalLines.reduce((s, l) => s + l.debit_amount, 0);
           journalLines.push({
             account_id: accountConfig.revenueAccountId,
             debit_amount: 0,
-            credit_amount: grossForCredit,
+            credit_amount: totalDebitSoFar,
             description: `Pendapatan sewa Airbnb - ${booking.guest}${description ? ' - ' + description : ''}`,
             sort_order: journalLines.length,
-            currency_code: 'IDR',
-            original_debit_amount: 0,
-            original_credit_amount: grossForCredit,
-            fx_rate: 1,
           });
 
-          // Validate balance
-          const totalDebit = journalLines.reduce((s, l) => s + l.debit_amount, 0);
-          const totalCredit = journalLines.reduce((s, l) => s + l.credit_amount, 0);
-          if (Math.abs(totalDebit - totalCredit) > 1) {
-            insertErrors.push(`Booking ${booking.guest}: jurnal tidak seimbang (debit ${totalDebit} ≠ kredit ${totalCredit})`);
-            failed++;
-            continue;
-          }
-
-          // Insert via Supabase directly (server-side, no API fetch loop)
-          const { data: txHeader, error: txError } = await supabase
-            .from('transactions')
-            .insert({
+          // RPC butuh minimal 2 baris — terjamin (Bank + Revenue).
+          const { error: rpcErr } = await supabase.rpc('create_multi_line_transaction', {
+            p_header: {
               business_id: businessId,
               date: booking.date,
               category: 'EARN',
               name: booking.guest,
-              description: description || `Pendapatan Airbnb`,
-              amount: booking.grossEarnings,
-              account: 'Airbnb',
-              created_by: user.id,
-              status: 'posted',
-              is_double_entry: true,
-              debit_account_id: accountConfig.bankAccountId,
-              credit_account_id: accountConfig.revenueAccountId,
+              description: description || 'Pendapatan Airbnb',
               notes: `Import CSV Airbnb — ${channel}`,
+              status: 'posted',
               meta: { import_source: 'airbnb_csv', import_date: new Date().toISOString() },
-            })
-            .select('id')
-            .single();
+            },
+            p_lines: journalLines,
+          });
 
-          if (txError || !txHeader) {
-            insertErrors.push(`Booking ${booking.guest}: ${txError?.message ?? 'Gagal insert header'}`);
-            failed++;
-            continue;
-          }
-
-          // Insert journal lines
-          const journalInserts = journalLines.map(l => ({
-            transaction_id: txHeader.id,
-            account_id: l.account_id,
-            debit_amount: l.debit_amount,
-            credit_amount: l.credit_amount,
-            description: l.description,
-            sort_order: l.sort_order,
-            currency_code: l.currency_code,
-            original_debit_amount: l.original_debit_amount,
-            original_credit_amount: l.original_credit_amount,
-            fx_rate: l.fx_rate,
-          }));
-
-          const { error: linesError } = await supabase
-            .from('journal_lines')
-            .insert(journalInserts);
-
-          if (linesError) {
-            // Rollback: hapus header
-            await supabase.from('transactions').delete().eq('id', txHeader.id);
-            insertErrors.push(`Booking ${booking.guest}: gagal insert journal lines — ${linesError.message}`);
+          if (rpcErr) {
+            insertErrors.push(`Booking ${booking.guest}: ${rpcErr.message}`);
             failed++;
             continue;
           }

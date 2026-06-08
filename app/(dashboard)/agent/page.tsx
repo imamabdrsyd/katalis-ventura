@@ -102,8 +102,9 @@ export default function AgentPage() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let streamDone = false;
 
-      while (true) {
+      while (!streamDone) {
         const { done, value } = await reader.read();
         if (done) break;
 
@@ -120,34 +121,38 @@ export default function AgentPage() {
             const event = JSON.parse(json);
 
             if (event.type === 'done') {
+              // Tandai selesai → keluar dari outer while juga, lalu batalkan reader
+              // supaya tidak menunggu byte sisa / penutupan koneksi.
+              streamDone = true;
               setIsRunning(false);
               break;
             }
 
-            if (event.type === 'result' && event.data) {
-              if (!event.data.needsAccountConfirmation) {
-                setImportResult({
-                  inserted: event.data.inserted ?? 0,
-                  failed: event.data.failed ?? 0,
-                  skipped: event.data.skipped ?? 0,
-                  errors: event.data.errors ?? [],
-                });
-              }
-              // Akun konfirmasi belum diimplementasi di MVP ini
-            }
-
-            if (event.type !== 'done') {
-              addStep({
-                type: event.type,
-                message: event.message ?? '',
-                current: event.current,
-                total: event.total,
+            if (event.type === 'result' && event.data && !event.data.needsAccountConfirmation) {
+              setImportResult({
+                inserted: event.data.inserted ?? 0,
+                failed: event.data.failed ?? 0,
+                skipped: event.data.skipped ?? 0,
+                errors: event.data.errors ?? [],
               });
             }
+
+            // Log semua event kecuali 'done' (sudah ditangani di atas)
+            addStep({
+              type: event.type,
+              message: event.message ?? '',
+              current: event.current,
+              total: event.total,
+            });
           } catch {
             // skip malformed event
           }
         }
+      }
+
+      // Bersihkan reader bila kita berhenti karena event 'done'
+      if (streamDone) {
+        await reader.cancel().catch(() => {});
       }
     } catch (err) {
       addStep({ type: 'error', message: err instanceof Error ? err.message : 'Gagal menghubungi server' });

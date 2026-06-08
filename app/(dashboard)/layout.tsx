@@ -232,14 +232,12 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
     ];
 
     if (canManage) {
+      // /invoices & /reconciliation sudah ada via navSections — jangan di-splice lagi
+      // (mencegah duplikat key di SearchDialog).
       pages.splice(2, 0,
         { href: '/agent', label: 'AXION Agent', icon: BotMessageSquare },
-      );
-      pages.splice(3, 0,
         { href: '/transactions', label: t.nav.transactions, icon: CreditCard },
-        { href: '/transactions/journal-entry', label: t.nav.journalEntry, icon: Plus },
-        { href: '/invoices', label: t.nav.invoice, icon: FileText },
-        { href: '/reconciliation', label: t.nav.bankReconciliation, icon: ClipboardCheck }
+        { href: '/transactions/journal-entry', label: t.nav.journalEntry, icon: Plus }
       );
     }
 

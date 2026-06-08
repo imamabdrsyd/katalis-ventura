@@ -51,10 +51,13 @@ export interface AirbnbParseResult {
 
 function parseAmount(val: string | undefined): number {
   if (!val) return 0;
-  // Airbnb: "$487.22" atau "487.22" atau "(16.78)" untuk negative
+  // Airbnb: "$487.22" atau "487.22" atau "(16.78)" / "-16.78" untuk negatif (refund/adjustment).
+  // PENTING: pertahankan tanda negatif — JANGAN Math.abs(). Booking refund/cancel
+  // punya gross earnings negatif dan harus bisa di-deteksi (lalu dilewati), bukan
+  // jadi revenue palsu positif.
   const cleaned = val.replace(/[$,\s]/g, '').replace(/\(([^)]+)\)/, '-$1');
   const n = parseFloat(cleaned);
-  return isNaN(n) ? 0 : Math.abs(n);
+  return isNaN(n) ? 0 : n;
 }
 
 function parseAirbnbDate(val: string | undefined): string {
@@ -81,9 +84,9 @@ export function parseAirbnbCSV(csvText: string): AirbnbParseResult {
     return { bookings: [], skipped: 0, errors: ['File CSV kosong atau tidak valid'] };
   }
 
-  // Deteksi header (baris pertama)
-  const rawHeader = lines[0];
-  const headers = rawHeader.split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+  // Deteksi header (baris pertama). Pakai parseCsvLine — sama seperti baris data —
+  // supaya header yang quoted dan mengandung koma tidak menggeser index kolom.
+  const headers = parseCsvLine(lines[0]).map(h => h.trim().toLowerCase().replace(/"/g, ''));
 
   const idx = {
     date: headers.indexOf('date'),
@@ -124,7 +127,7 @@ export function parseAirbnbCSV(csvText: string): AirbnbParseResult {
       bookingDate: parseAirbnbDate(get(idx.bookingDate)),
       startDate: parseAirbnbDate(get(idx.startDate)),
       endDate: parseAirbnbDate(get(idx.endDate)),
-      nights: parseInt(get(idx.nights) ?? '0') || 0,
+      nights: parseInt(get(idx.nights) || '0', 10) || 0,
       guest: get(idx.guest),
       amount: parseAmount(get(idx.amount)),
       paidOut: parseAmount(get(idx.paidOut)),
@@ -146,21 +149,36 @@ export function parseAirbnbCSV(csvText: string): AirbnbParseResult {
   // Coba pair langsung: biasanya struktur Airbnb adalah Payout + Reservation berpasangan
   // Atau jika tidak berpasangan, pakai Reservation saja (paidOut = grossEarnings - serviceFee)
   if (reservations.length > 0) {
+    // Lacak payout yang sudah terpakai supaya satu baris payout tidak di-klaim
+    // oleh dua reservasi yang kebetulan punya net amount sama (double-count).
+    const consumedPayouts = new Set<number>();
+
     for (const res of reservations) {
-      // Cari payout yang paidOut ≈ grossEarnings - serviceFee
-      const expectedPaidOut = (res.grossEarnings ?? 0) - (res.serviceFee ?? 0);
-      const matchedPayout = payouts.find(
-        p => p.paidOut !== undefined && Math.abs(p.paidOut - expectedPaidOut) < 1
-      );
-
       const grossEarnings = res.grossEarnings ?? res.amount ?? 0;
-      const serviceFee = res.serviceFee ?? 0;
-      const paidOut = matchedPayout?.paidOut ?? (grossEarnings - serviceFee);
+      // Service fee selalu beban positif; ambil nilai absolut bila CSV menulis negatif.
+      const serviceFee = Math.abs(res.serviceFee ?? 0);
 
+      // Refund / cancellation (gross ≤ 0) → lewati, jangan jadi revenue palsu.
       if (grossEarnings <= 0) {
         skipped++;
         continue;
       }
+
+      // Cari payout yang paidOut ≈ grossEarnings - serviceFee, yang belum dipakai.
+      const expectedPaidOut = grossEarnings - serviceFee;
+      let matchedIdx = -1;
+      for (let pi = 0; pi < payouts.length; pi++) {
+        if (consumedPayouts.has(pi)) continue;
+        const p = payouts[pi];
+        if (p.paidOut !== undefined && Math.abs(p.paidOut - expectedPaidOut) < 1) {
+          matchedIdx = pi;
+          break;
+        }
+      }
+      const matchedPayout = matchedIdx >= 0 ? payouts[matchedIdx] : undefined;
+      if (matchedIdx >= 0) consumedPayouts.add(matchedIdx);
+
+      const paidOut = matchedPayout?.paidOut ?? (grossEarnings - serviceFee);
 
       bookings.push({
         date: matchedPayout?.date ?? res.date,
@@ -174,9 +192,10 @@ export function parseAirbnbCSV(csvText: string): AirbnbParseResult {
       });
     }
   } else if (payouts.length > 0) {
-    // Hanya ada Payout (tanpa Reservation detail)
+    // Hanya ada Payout (tanpa Reservation detail).
+    // Hanya terima payout positif — payout 0 atau refund negatif dilewati.
     for (const p of payouts) {
-      if (!p.paidOut) { skipped++; continue; }
+      if (p.paidOut === undefined || p.paidOut <= 0) { skipped++; continue; }
       bookings.push({
         date: p.date,
         startDate: p.date,
