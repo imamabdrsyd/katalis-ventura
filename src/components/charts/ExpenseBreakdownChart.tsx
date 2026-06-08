@@ -17,19 +17,19 @@ import { formatCurrency } from '@/lib/utils';
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const EXPENSE_COLORS = [
-  '#ef4444',
-  '#f59e0b',
-  '#8b5cf6',
-  '#3b82f6',
-  '#ec4899',
-  '#10b981',
-  '#f97316',
-  '#06b6d4',
-  '#84cc16',
-  '#6366f1',
+  '#fca5a5',
+  '#fcd34d',
+  '#c4b5fd',
+  '#7dd3fc',
+  '#f9a8d4',
+  '#6ee7b7',
+  '#fdba74',
+  '#67e8f9',
+  '#bef264',
+  '#a5b4fc',
 ];
 
-const OTHERS_COLOR = '#9ca3af';
+const OTHERS_COLOR = '#d1d5db';
 const TOP_N = 5;
 
 interface ExpenseBreakdownChartProps {
