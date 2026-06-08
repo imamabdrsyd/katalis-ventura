@@ -49,7 +49,7 @@ import {
   Upload,
   GitBranch,
   Landmark,
-  BotMessageSquare,
+  Bot,
 } from 'lucide-react';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -235,7 +235,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
       // /invoices & /reconciliation sudah ada via navSections — jangan di-splice lagi
       // (mencegah duplikat key di SearchDialog).
       pages.splice(2, 0,
-        { href: '/agent', label: 'AXION Agent', icon: BotMessageSquare },
+        { href: '/agent', label: 'AXION Agent', icon: Bot },
         { href: '/transactions', label: t.nav.transactions, icon: CreditCard },
         { href: '/transactions/journal-entry', label: t.nav.journalEntry, icon: Plus }
       );
@@ -1004,7 +1004,7 @@ function Sidebar({
           {[
             { href: '/dashboard', label: t.nav.dashboard, icon: PieChart },
             { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
-            ...(canManage ? [{ href: '/agent', label: 'AXION Agent', icon: BotMessageSquare }] : []),
+            ...(canManage ? [{ href: '/agent', label: 'AXION Agent', icon: Bot }] : []),
           ].map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
