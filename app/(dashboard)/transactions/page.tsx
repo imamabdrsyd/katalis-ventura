@@ -21,6 +21,8 @@ import { Upload, TrendingUp, TrendingDown, Plus, CheckSquare, X, Trash2, MoreVer
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
+import { AgentProgressToast, type AgentStep } from '@/components/agent/AgentProgressToast';
+import { AGENT_IMPORT_SESSION_EVENT, isAgentImportSessionRunning, readAgentImportSession } from '@/lib/agent/importSession';
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
@@ -320,6 +322,9 @@ function TransactionsPageInner() {
 
   // Highlight recently imported transactions
   const [highlightAfter, setHighlightAfter] = useState<string | null>(null);
+  const [agentImportSteps, setAgentImportSteps] = useState<AgentStep[]>([]);
+  const [agentImportRunning, setAgentImportRunning] = useState(false);
+  const [agentImportToastVisible, setAgentImportToastVisible] = useState(false);
 
   const handleImportComplete = useCallback((importedAt?: string) => {
     fetchTransactions();
@@ -338,6 +343,68 @@ function TransactionsPageInner() {
   // Read filters from URL search params (e.g., /transactions?category=EARN&start=2026-01-01&end=2026-01-31)
   const searchParams = useSearchParams();
   const detailParam = searchParams.get('detail');
+  const agentImportParam = searchParams.get('agentImport');
+
+  // Agent berjalan dari halaman sebelumnya; refresh daftar sampai session selesai
+  // agar transaksi baru terlihat satu per satu tanpa reload manual.
+  useEffect(() => {
+    if (agentImportParam !== '1' || !businessId) return;
+
+    let finished = false;
+
+    const syncAgentImportToast = () => {
+      const session = readAgentImportSession(businessId);
+      if (!session) return null;
+      const running = isAgentImportSessionRunning(session);
+      const steps = session.steps ?? [];
+      setAgentImportSteps(steps);
+      setAgentImportRunning(running);
+      if (running || steps.length > 0) setAgentImportToastVisible(true);
+      return session;
+    };
+
+    const finishWatching = () => {
+      if (finished) return;
+      finished = true;
+      fetchTransactions();
+      const nextParams = new URLSearchParams(searchParams.toString());
+      nextParams.delete('agentImport');
+      const queryString = nextParams.toString();
+      router.replace(queryString ? `/transactions?${queryString}` : '/transactions', { scroll: false });
+    };
+
+    const session = syncAgentImportToast();
+    if (!session || !isAgentImportSessionRunning(session)) {
+      finishWatching();
+      return;
+    }
+
+    setHighlightAfter(session.startedAt);
+    fetchTransactions();
+
+    const interval = window.setInterval(() => {
+      const latestSession = syncAgentImportToast();
+      if (!isAgentImportSessionRunning(latestSession)) {
+        window.clearInterval(interval);
+        finishWatching();
+        return;
+      }
+      fetchTransactions();
+    }, 800);
+
+    const handleSessionUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<{ businessId?: string }>).detail;
+      if (detail?.businessId !== businessId) return;
+      const latestSession = syncAgentImportToast();
+      if (!isAgentImportSessionRunning(latestSession)) finishWatching();
+    };
+
+    window.addEventListener(AGENT_IMPORT_SESSION_EVENT, handleSessionUpdate);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener(AGENT_IMPORT_SESSION_EVENT, handleSessionUpdate);
+    };
+  }, [agentImportParam, businessId, fetchTransactions, router, searchParams]);
 
   useEffect(() => {
     const view = searchParams.get('view');
@@ -1029,6 +1096,14 @@ function TransactionsPageInner() {
           handleExitSelectMode();
         }}
       />
+
+      {agentImportToastVisible && (
+        <AgentProgressToast
+          steps={agentImportSteps}
+          isRunning={agentImportRunning}
+          onDismiss={() => setAgentImportToastVisible(false)}
+        />
+      )}
 
     </div>
   );

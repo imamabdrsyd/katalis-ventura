@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { AgentProgressToast, type AgentStep } from '@/components/agent/AgentProgressToast';
+import { appendAgentImportStep, readAgentImportSession, startAgentImportSession, updateAgentImportSession } from '@/lib/agent/importSession';
 import {
   Bot,
   Upload,
@@ -30,6 +32,7 @@ interface ImportResult {
 }
 
 export default function AgentPage() {
+  const router = useRouter();
   const { activeBusinessId, userRole, activeBusiness } = useBusinessContext();
   const canManage = isManagerRole(userRole);
 
@@ -46,6 +49,7 @@ export default function AgentPage() {
   // Lock sinkron: state isRunning update async, jadi double-click cepat bisa lolos
   // guard sebelum re-render. Ref di-set seketika untuk mencegah submit ganda.
   const runningRef = useRef(false);
+  const hasNavigatedRef = useRef(false);
   // Counter untuk drag enter/leave — cegah flicker saat kursor lewat child element.
   const dragCounterRef = useRef(0);
 
@@ -54,11 +58,13 @@ export default function AgentPage() {
   const handleDismissToast = useCallback(() => setToastVisible(false), []);
 
   const addStep = useCallback((step: Omit<AgentStep, 'id' | 'timestamp'>) => {
+    const nextStep = { ...step, id: String(++stepIdRef.current), timestamp: Date.now() };
     setAgentSteps(prev => [
       ...prev,
-      { ...step, id: String(++stepIdRef.current), timestamp: Date.now() },
+      nextStep,
     ]);
-  }, []);
+    if (activeBusinessId) appendAgentImportStep(activeBusinessId, nextStep);
+  }, [activeBusinessId]);
 
   const handleFile = useCallback((file: File) => {
     if (!file.name.match(/\.csv$/i)) {
@@ -85,11 +91,13 @@ export default function AgentPage() {
     // Lock sinkron via ref — cegah double-submit sebelum state isRunning ter-commit.
     if (!selectedFile || !activeBusinessId || runningRef.current) return;
     runningRef.current = true;
+    hasNavigatedRef.current = false;
 
     setIsRunning(true);
     setAgentSteps([]);
     setImportResult(null);
     setToastVisible(true);
+    startAgentImportSession(activeBusinessId);
 
     const formData = new FormData();
     formData.append('file', selectedFile);
@@ -104,6 +112,7 @@ export default function AgentPage() {
 
       if (!response.ok || !response.body) {
         addStep({ type: 'error', message: `Server error: ${response.status}` });
+        updateAgentImportSession(activeBusinessId, { status: 'error' });
         setIsRunning(false);
         return;
       }
@@ -130,11 +139,30 @@ export default function AgentPage() {
             const event = JSON.parse(json);
 
             if (event.type === 'done') {
+              const session = readAgentImportSession(activeBusinessId);
+              if (session?.status === 'running') {
+                updateAgentImportSession(activeBusinessId, { status: 'completed' });
+              }
               // Tandai selesai → keluar dari outer while juga, lalu batalkan reader
               // supaya tidak menunggu byte sisa / penutupan koneksi.
               streamDone = true;
               setIsRunning(false);
               break;
+            }
+
+            if (event.type === 'progress') {
+              updateAgentImportSession(activeBusinessId, {
+                status: 'running',
+                current: event.current,
+                total: event.total,
+              });
+
+              if ((event.current ?? 0) > 0 && !hasNavigatedRef.current) {
+                hasNavigatedRef.current = true;
+                // Fetch SSE tetap berjalan setelah client-side navigation.
+                // Halaman transaksi membaca session ini untuk refresh daftar selama impor.
+                router.push('/transactions?agentImport=1');
+              }
             }
 
             if (event.type === 'result' && event.data && !event.data.needsAccountConfirmation) {
@@ -153,6 +181,15 @@ export default function AgentPage() {
               current: event.current,
               total: event.total,
             });
+
+            // Simpan terminal status setelah step terakhir agar toast lintas halaman
+            // sempat menerima pesan result/error sebelum polling dihentikan.
+            if (event.type === 'result' && event.data && !event.data.needsAccountConfirmation) {
+              updateAgentImportSession(activeBusinessId, { status: 'completed' });
+            }
+            if (event.type === 'error') {
+              updateAgentImportSession(activeBusinessId, { status: 'error' });
+            }
           } catch {
             // skip malformed event
           }
@@ -165,11 +202,16 @@ export default function AgentPage() {
       }
     } catch (err) {
       addStep({ type: 'error', message: err instanceof Error ? err.message : 'Gagal menghubungi server' });
+      updateAgentImportSession(activeBusinessId, { status: 'error' });
     } finally {
+      const session = readAgentImportSession(activeBusinessId);
+      if (session?.status === 'running') {
+        updateAgentImportSession(activeBusinessId, { status: 'error' });
+      }
       setIsRunning(false);
       runningRef.current = false;
     }
-  }, [selectedFile, activeBusinessId, selectedChannel, addStep]);
+  }, [selectedFile, activeBusinessId, selectedChannel, addStep, router]);
 
   if (!canManage) {
     return (
@@ -332,9 +374,9 @@ export default function AgentPage() {
           </div>
 
           {/* Info box */}
-          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-            <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
+            <Info className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
               {selectedChannel === 'airbnb'
                 ? 'Agent akan buat jurnal 3-baris per booking: Dr Bank (paidout), Dr Komisi Airbnb (service fee), Cr Pendapatan Sewa (gross). Transaksi langsung masuk sebagai posted.'
                 : 'Channel ini belum didukung. Pilih Airbnb untuk sekarang.'}
@@ -343,7 +385,11 @@ export default function AgentPage() {
 
           {/* Import result summary */}
           {importResult && !isRunning && (
-            <div className={`p-4 rounded-xl border ${importResult.failed > 0 ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' : 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'}`}>
+            <div className={`p-4 rounded-xl border ${
+              importResult.failed > 0
+                ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+                : 'bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700'
+            }`}>
               <div className="flex items-center gap-2 mb-2">
                 <CheckCircle className="w-4 h-4 text-emerald-500" />
                 <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Selesai!</span>

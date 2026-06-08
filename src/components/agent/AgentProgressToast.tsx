@@ -57,15 +57,14 @@ export function AgentProgressToast({ steps, isRunning, onDismiss }: AgentProgres
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.95 }}
           transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-          className="fixed bottom-24 right-4 z-[60] w-80 rounded-2xl shadow-2xl border overflow-hidden"
-          style={{
-            background: 'var(--toast-bg, white)',
-            borderColor: isError
-              ? 'rgb(252 165 165)'
+          className={`fixed bottom-24 right-4 z-[60] w-80 rounded-2xl shadow-2xl border overflow-hidden ${
+            isError
+              ? 'border-red-300 dark:border-red-800'
               : isDone
-              ? 'rgb(167 243 208)'
-              : 'rgb(199 210 254)',
-          }}
+              ? 'border-gray-200 dark:border-gray-700'
+              : 'border-indigo-200 dark:border-indigo-800'
+          }`}
+          style={{ background: 'var(--toast-bg, white)' }}
         >
           {/* Header */}
           <div
@@ -73,7 +72,7 @@ export function AgentProgressToast({ steps, isRunning, onDismiss }: AgentProgres
               isError
                 ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                 : isDone
-                ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'
+                ? 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
                 : 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800'
             }`}
           >
