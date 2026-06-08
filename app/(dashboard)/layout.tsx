@@ -49,6 +49,7 @@ import {
   Upload,
   GitBranch,
   Landmark,
+  BotMessageSquare,
 } from 'lucide-react';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -232,6 +233,9 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
 
     if (canManage) {
       pages.splice(2, 0,
+        { href: '/agent', label: 'AXION Agent', icon: BotMessageSquare },
+      );
+      pages.splice(3, 0,
         { href: '/transactions', label: t.nav.transactions, icon: CreditCard },
         { href: '/transactions/journal-entry', label: t.nav.journalEntry, icon: Plus },
         { href: '/invoices', label: t.nav.invoice, icon: FileText },
@@ -998,10 +1002,11 @@ function Sidebar({
             );
           })()}
 
-          {/* Dashboard & Manage Business — independent */}
+          {/* Dashboard & Manage Business & Agent — independent */}
           {[
-            { href: '/dashboard', label: t.nav.dashboard, icon: PieChart},
+            { href: '/dashboard', label: t.nav.dashboard, icon: PieChart },
             { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
+            ...(canManage ? [{ href: '/agent', label: 'AXION Agent', icon: BotMessageSquare }] : []),
           ].map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
