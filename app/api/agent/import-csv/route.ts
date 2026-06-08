@@ -199,9 +199,12 @@ export async function POST(req: NextRequest) {
             : '';
           const description = `${nightsLabel ? nightsLabel + ' via ' : ''}Airbnb${dateRange}`.trim();
 
-          // Build journal lines.
-          // Dengan commission account: Dr Bank + Dr Komisi / Cr Revenue (gross).
-          // Tanpa commission account: Dr Bank (net) / Cr Revenue (net).
+          // Build journal lines. Tergantung net payout (= paidOut):
+          //  - net > 0 (normal): Dr Bank(net) [+ Dr Komisi(fee)] / Cr Revenue(gross)
+          //  - net = 0 (gross==fee): Dr Komisi(fee) / Cr Revenue(gross) — tanpa Bank
+          //  - net < 0 (fee>gross): Dr Komisi(fee) / Cr Revenue(gross) + Cr Bank(|net|)
+          // RPC menolak baris dengan debit & kredit dua-duanya 0 atau dua-duanya >0,
+          // dan menolak nilai negatif — maka tiap baris harus satu sisi & positif.
           const journalLines: Array<{
             account_id: string;
             debit_amount: number;
@@ -209,39 +212,79 @@ export async function POST(req: NextRequest) {
             description: string;
             sort_order: number;
           }> = [];
+          const fee = hasCommission ? booking.serviceFee : 0;
+          const net = booking.paidOut;
 
-          // Dr Bank (paidOut / net)
-          journalLines.push({
-            account_id: accountConfig.bankAccountId,
-            debit_amount: booking.paidOut,
-            credit_amount: 0,
-            description: `Terima pembayaran Airbnb - ${booking.guest}`,
-            sort_order: 0,
-          });
+          // Tanpa commission account, net ≤ 0 tidak bisa dibuat jurnal yang benar
+          // (Bank jadi 0/negatif, dan tidak ada akun beban untuk menyerap fee).
+          if (!hasCommission && net <= 0) {
+            insertErrors.push(`Booking ${booking.guest}: net payout ≤ 0 tapi tidak ada akun Komisi Platform untuk mencatat fee. Lewati.`);
+            failed++;
+            continue;
+          }
 
-          // Dr Komisi Platform (service fee) — hanya jika ada commission account dan service fee > 0
-          if (hasCommission && booking.serviceFee > 0) {
+          // Dr Bank — hanya bila ada kas masuk (net > 0)
+          if (net > 0) {
             journalLines.push({
-              account_id: accountConfig.commissionAccountId!,
-              debit_amount: booking.serviceFee,
+              account_id: accountConfig.bankAccountId,
+              debit_amount: net,
               credit_amount: 0,
-              description: `Komisi Airbnb - ${booking.guest}`,
-              sort_order: 1,
+              description: `Terima pembayaran Airbnb - ${booking.guest}`,
+              sort_order: journalLines.length,
             });
           }
 
-          // Cr Revenue: gross jika ada commission line (dengan service fee > 0),
-          // selain itu net (= total debit, supaya seimbang).
-          const totalDebitSoFar = journalLines.reduce((s, l) => s + l.debit_amount, 0);
+          // Dr Komisi Platform (service fee) — hanya bila ada commission account & fee > 0
+          if (fee > 0) {
+            journalLines.push({
+              account_id: accountConfig.commissionAccountId!,
+              debit_amount: fee,
+              credit_amount: 0,
+              description: `Komisi Airbnb - ${booking.guest}`,
+              sort_order: journalLines.length,
+            });
+          }
+
+          // Cr Bank — bila net negatif (fee > gross): kas berkurang sebesar |net|
+          if (net < 0) {
+            journalLines.push({
+              account_id: accountConfig.bankAccountId,
+              debit_amount: 0,
+              credit_amount: -net,
+              description: `Potongan Airbnb (fee > pendapatan) - ${booking.guest}`,
+              sort_order: journalLines.length,
+            });
+          }
+
+          // Cr Revenue (gross) — total kredit harus = total debit.
+          // Dengan komisi: gross = net + fee (bila net>0) atau fee - |net| (bila net<0) → konsisten.
+          // Tanpa komisi (net>0): gross = net.
+          const totalDebit = journalLines.reduce((s, l) => s + l.debit_amount, 0);
+          const totalCreditSoFar = journalLines.reduce((s, l) => s + l.credit_amount, 0);
+          const revenueCredit = totalDebit - totalCreditSoFar;
+
+          // Pertahanan: revenue harus > 0 agar baris valid (debit XOR credit, positif).
+          if (revenueCredit <= 0) {
+            insertErrors.push(`Booking ${booking.guest}: pendapatan terhitung ≤ 0 (gross ${booking.grossEarnings}, fee ${booking.serviceFee}). Lewati.`);
+            failed++;
+            continue;
+          }
+
           journalLines.push({
             account_id: accountConfig.revenueAccountId,
             debit_amount: 0,
-            credit_amount: totalDebitSoFar,
+            credit_amount: revenueCredit,
             description: `Pendapatan sewa Airbnb - ${booking.guest}${description ? ' - ' + description : ''}`,
             sort_order: journalLines.length,
           });
 
-          // RPC butuh minimal 2 baris — terjamin (Bank + Revenue).
+          // RPC butuh minimal 2 baris. Kasus paling sedikit: net=0 → Komisi + Revenue = 2. OK.
+          if (journalLines.length < 2) {
+            insertErrors.push(`Booking ${booking.guest}: jurnal kurang dari 2 baris, dilewati.`);
+            failed++;
+            continue;
+          }
+
           const { error: rpcErr } = await supabase.rpc('create_multi_line_transaction', {
             p_header: {
               business_id: businessId,

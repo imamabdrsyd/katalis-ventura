@@ -43,8 +43,15 @@ export default function AgentPage() {
   const [toastVisible, setToastVisible] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const stepIdRef = useRef(0);
+  // Lock sinkron: state isRunning update async, jadi double-click cepat bisa lolos
+  // guard sebelum re-render. Ref di-set seketika untuk mencegah submit ganda.
+  const runningRef = useRef(false);
+  // Counter untuk drag enter/leave — cegah flicker saat kursor lewat child element.
+  const dragCounterRef = useRef(0);
 
   const channel = SUPPORTED_CHANNELS.find(c => c.value === selectedChannel)!;
+
+  const handleDismissToast = useCallback(() => setToastVisible(false), []);
 
   const addStep = useCallback((step: Omit<AgentStep, 'id' | 'timestamp'>) => {
     setAgentSteps(prev => [
@@ -54,8 +61,8 @@ export default function AgentPage() {
   }, []);
 
   const handleFile = useCallback((file: File) => {
-    if (!file.name.match(/\.(csv|xlsx|xls)$/i)) {
-      alert('Hanya file CSV, XLSX, atau XLS yang didukung');
+    if (!file.name.match(/\.csv$/i)) {
+      alert('Hanya file CSV yang didukung. Ekspor data dari channel sebagai CSV.');
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
@@ -75,7 +82,9 @@ export default function AgentPage() {
   }, [handleFile]);
 
   const handleCallAgent = useCallback(async () => {
-    if (!selectedFile || !activeBusinessId || isRunning) return;
+    // Lock sinkron via ref — cegah double-submit sebelum state isRunning ter-commit.
+    if (!selectedFile || !activeBusinessId || runningRef.current) return;
+    runningRef.current = true;
 
     setIsRunning(true);
     setAgentSteps([]);
@@ -158,8 +167,9 @@ export default function AgentPage() {
       addStep({ type: 'error', message: err instanceof Error ? err.message : 'Gagal menghubungi server' });
     } finally {
       setIsRunning(false);
+      runningRef.current = false;
     }
-  }, [selectedFile, activeBusinessId, selectedChannel, isRunning, addStep]);
+  }, [selectedFile, activeBusinessId, selectedChannel, addStep]);
 
   if (!canManage) {
     return (
@@ -268,9 +278,16 @@ export default function AgentPage() {
               File CSV
             </label>
             <div
-              onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleDrop}
+              onDragEnter={e => { e.preventDefault(); dragCounterRef.current += 1; setDragOver(true); }}
+              onDragOver={e => e.preventDefault()}
+              onDragLeave={e => {
+                e.preventDefault();
+                dragCounterRef.current -= 1;
+                // Hanya matikan highlight saat benar-benar keluar dropzone (counter 0),
+                // bukan saat kursor pindah antar child element.
+                if (dragCounterRef.current <= 0) { dragCounterRef.current = 0; setDragOver(false); }
+              }}
+              onDrop={e => { dragCounterRef.current = 0; handleDrop(e); }}
               onClick={() => fileInputRef.current?.click()}
               className={`relative border-2 border-dashed rounded-xl px-6 py-8 text-center cursor-pointer transition-all ${
                 dragOver
@@ -283,7 +300,7 @@ export default function AgentPage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".csv,.xlsx,.xls"
+                accept=".csv"
                 className="hidden"
                 onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
               />
@@ -308,7 +325,7 @@ export default function AgentPage() {
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
                     {dragOver ? 'Lepas file di sini' : 'Drag & drop atau klik untuk pilih file'}
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">CSV, XLSX, atau XLS · Maks 5MB</p>
+                  <p className="text-xs text-gray-400 mt-1">CSV · Maks 5MB</p>
                 </>
               )}
             </div>
@@ -384,7 +401,7 @@ export default function AgentPage() {
         <AgentProgressToast
           steps={agentSteps}
           isRunning={isRunning}
-          onDismiss={() => setToastVisible(false)}
+          onDismiss={handleDismissToast}
         />
       )}
     </div>

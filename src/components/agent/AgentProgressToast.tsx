@@ -23,9 +23,11 @@ export function AgentProgressToast({ steps, isRunning, onDismiss }: AgentProgres
   const scrollRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
+  // Tampil segera saat agent mulai bekerja atau begitu ada langkah —
+  // jangan menunggu event pertama (feedback instan saat re-run).
   useEffect(() => {
-    if (steps.length > 0) setVisible(true);
-  }, [steps.length]);
+    if (isRunning || steps.length > 0) setVisible(true);
+  }, [isRunning, steps.length]);
 
   // Auto-scroll ke bawah saat langkah baru muncul
   useEffect(() => {
