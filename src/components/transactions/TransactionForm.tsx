@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import type { Transaction, TransactionCategory, TransactionMeta, TransactionAttachment, Account, TransactionTemplate } from '@/types';
+import type { Transaction, TransactionCategory, TransactionMeta, TransactionAttachment, Account, TransactionTemplate, SalesChannel } from '@/types';
 import { CATEGORY_LABELS } from '@/lib/calculations';
 import { getAccounts } from '@/lib/api/accounts';
 import { AccountDropdown } from './AccountDropdown';
@@ -18,6 +18,7 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import type { UnitBreakdown } from '@/types';
 import { getTransactionTemplates, createTransactionTemplate, deleteTransactionTemplate } from '@/lib/api/transactionTemplates';
 import { getRecurringTransactions } from '@/lib/api/recurring';
+import { SALES_CHANNEL_OPTIONS } from '@/lib/salesChannels';
 import OCRScanButton from '@/components/transactions/OCRScanButton';
 import type { OcrResult } from '@/lib/ocr/types';
 import {
@@ -51,6 +52,9 @@ export interface TransactionFormData {
   debit_account_id?: string;
   credit_account_id?: string;
   is_double_entry?: boolean;
+
+  // Sales channel (untuk EARN transactions)
+  sales_channel?: SalesChannel | null;
 
   // Metadata
   meta?: TransactionMeta | null;
@@ -188,6 +192,7 @@ export function TransactionForm({
     debit_account_id: transaction?.debit_account_id || initialValues?.debit_account_id,
     credit_account_id: transaction?.credit_account_id || initialValues?.credit_account_id,
     is_double_entry: transaction?.is_double_entry || initialValues?.is_double_entry || false,
+    sales_channel: transaction?.sales_channel || initialValues?.sales_channel || null,
     meta: transaction?.meta || initialValues?.meta || null,
   });
 
@@ -830,6 +835,31 @@ export function TransactionForm({
               <Lightbulb className="w-3.5 h-3.5 inline-block mr-1 -mt-0.5" />{suggestedAccounts.description}
             </p>
           )}
+        </div>
+      )}
+
+      {/* 1b. SALES CHANNEL — hanya untuk EARN, full mode only */}
+      {mode === 'full' && formData.category === 'EARN' && (
+        <div>
+          <label className="label">Channel Penjualan</label>
+          <select
+            name="sales_channel"
+            value={formData.sales_channel ?? ''}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                sales_channel: (e.target.value as SalesChannel) || null,
+              }))
+            }
+            className="input"
+          >
+            <option value="">— Pilih channel (opsional) —</option>
+            {SALES_CHANNEL_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 

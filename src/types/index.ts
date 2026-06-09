@@ -3,6 +3,21 @@
 export type UserRole = 'business_manager' | 'investor' | 'superadmin';
 
 export type TransactionCategory = 'EARN' | 'OPEX' | 'VAR' | 'CAPEX' | 'TAX' | 'FIN';
+
+export type SalesChannel =
+  | 'tiktok'
+  | 'tokopedia'
+  | 'shopee'
+  | 'lazada'
+  | 'blibli'
+  | 'airbnb'
+  | 'booking_com'
+  | 'traveloka'
+  | 'instagram'
+  | 'whatsapp'
+  | 'website'
+  | 'offline'
+  | 'other';
 export type TransactionStatus = 'draft' | 'posted';
 
 // Double-entry bookkeeping types
@@ -252,6 +267,9 @@ export interface Transaction {
   is_reconciled?: boolean;
   reconciled_at?: string | null;
   reconciled_by?: string | null;
+
+  // Sales channel (untuk EARN transactions)
+  sales_channel?: SalesChannel | null;
 
   // Import batch (diisi saat dibuat via bulk import)
   import_batch_id?: string | null;

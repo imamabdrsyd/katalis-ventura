@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Lock, Contact as ContactIcon, TextSearch, Search, X, CalendarSearch } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import type { Transaction, TransactionCategory, Contact } from '@/types';
+import { SalesChannelBadge } from './SalesChannelBadge';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
 
 interface TransactionListProps {
@@ -703,6 +704,9 @@ export function TransactionList({
                     >
                       {transaction.category}
                     </span>
+                  )}
+                  {transaction.sales_channel && transaction.category === 'EARN' && (
+                    <SalesChannelBadge channel={transaction.sales_channel} size="sm" />
                   )}
                   {transaction.status === 'draft' && (
                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">

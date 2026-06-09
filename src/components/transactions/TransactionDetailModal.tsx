@@ -9,6 +9,7 @@ import type { TransactionFormData } from '@/components/transactions/TransactionF
 import { CATEGORY_LABELS } from '@/lib/calculations';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
 import { CategoryBadge } from '@/components/ui/CategoryBadge';
+import { SalesChannelBadge } from '@/components/transactions/SalesChannelBadge';
 import { formatCurrency, formatDate, formatDateWithDay, formatDateTime } from '@/lib/utils';
 import { getProfileName } from '@/lib/api/profiles';
 import { getRecordAuditHistory, getFieldChanges, formatFieldName, formatAuditValue } from '@/lib/api/audit';
@@ -535,6 +536,9 @@ export function TransactionDetailModal({
                     </>
                   )}
                 </div>
+              )}
+              {transaction.sales_channel && transaction.category === 'EARN' && (
+                <SalesChannelBadge channel={transaction.sales_channel} size="md" />
               )}
               {isDraft ? (
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">

@@ -7,6 +7,12 @@ import { SUPPORTED_CURRENCIES } from '@/lib/currency';
 
 const VALID_CATEGORIES = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'] as const;
 const VALID_STATUSES = ['draft', 'posted'] as const;
+const VALID_SALES_CHANNELS = [
+  'tiktok', 'tokopedia', 'shopee', 'lazada', 'blibli',
+  'airbnb', 'booking_com', 'traveloka',
+  'instagram', 'whatsapp', 'website',
+  'offline', 'other',
+] as const;
 const MAX_TRANSACTION_AMOUNT = 100_000_000_000; // 100 billion IDR
 const MAX_FX_RATE = 1_000_000;
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -73,6 +79,7 @@ export const createTransactionSchema = z.object({
   notes: z.string().max(2000).optional().nullable(),
   status: z.enum(VALID_STATUSES).optional().default('draft'),
   meta: z.record(z.string(), z.unknown()).optional().nullable(),
+  sales_channel: z.enum(VALID_SALES_CHANNELS).optional().nullable(),
 }).refine(
   (data) => {
     // If double-entry, both accounts must be present and different
@@ -106,6 +113,7 @@ export const updateTransactionSchema = z.object({
   notes: z.string().max(2000).optional().nullable(),
   status: z.enum(VALID_STATUSES).optional(),
   meta: z.record(z.string(), z.unknown()).optional().nullable(),
+  sales_channel: z.enum(VALID_SALES_CHANNELS).optional().nullable(),
 });
 
 export const transactionIdSchema = z.string().regex(UUID_REGEX, 'Invalid transaction ID format');
