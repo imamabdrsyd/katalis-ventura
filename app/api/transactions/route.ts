@@ -151,6 +151,7 @@ export async function POST(request: NextRequest) {
           account: 'Multi-line journal entry',
           status: parsed.data.status ?? 'draft',
           meta: parsed.data.meta ?? null,
+          sales_channel: parsed.data.sales_channel ?? null,
         },
         p_lines: lines,
       });

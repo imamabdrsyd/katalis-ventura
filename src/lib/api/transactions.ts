@@ -37,6 +37,7 @@ export interface MultiLineTransactionInsert {
   name: string;
   description: string;
   notes?: string;
+  sales_channel?: import('@/types').SalesChannel | null;
   status?: TransactionStatus;
   meta?: Record<string, unknown> | null;
   original_amount?: number | null;

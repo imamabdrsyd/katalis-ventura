@@ -154,6 +154,7 @@ export const createMultiLineTransactionSchema = z.object({
   notes: z.string().max(2000).optional().nullable(),
   status: z.enum(VALID_STATUSES).optional().default('draft'),
   meta: z.record(z.string(), z.unknown()).optional().nullable(),
+  sales_channel: z.enum(VALID_SALES_CHANNELS).optional().nullable(),
   ...currencyFields,
   journal_lines: z.array(journalLineSchema).min(2, 'Multi-line transaction requires at least 2 lines'),
 }).refine(
@@ -217,6 +218,7 @@ export const updateMultiLineTransactionSchema = z.object({
   notes: z.string().max(2000).optional().nullable(),
   status: z.enum(VALID_STATUSES).optional(),
   meta: z.record(z.string(), z.unknown()).optional().nullable(),
+  sales_channel: z.enum(VALID_SALES_CHANNELS).optional().nullable(),
   ...optionalCurrencyFields,
   journal_lines: z.array(journalLineSchema).min(2).optional(),
 }).refine(

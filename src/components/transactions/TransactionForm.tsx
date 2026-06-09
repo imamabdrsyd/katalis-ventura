@@ -838,8 +838,8 @@ export function TransactionForm({
         </div>
       )}
 
-      {/* 1b. SALES CHANNEL — hanya untuk EARN, full mode only */}
-      {mode === 'full' && formData.category === 'EARN' && (
+      {/* 1b. SALES CHANNEL — hanya untuk EARN (semua mode) */}
+      {formData.category === 'EARN' && (
         <div>
           <label className="label">Channel Penjualan</label>
           <select

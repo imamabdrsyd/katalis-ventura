@@ -90,6 +90,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (parsed.data.notes !== undefined) headerUpdate.notes = parsed.data.notes;
     if (parsed.data.status !== undefined) headerUpdate.status = parsed.data.status;
     if (parsed.data.meta !== undefined) headerUpdate.meta = parsed.data.meta;
+    if (parsed.data.sales_channel !== undefined) headerUpdate.sales_channel = parsed.data.sales_channel;
     if (parsed.data.fx_gain_loss_amount !== undefined) {
       headerUpdate.fx_gain_loss_amount = parsed.data.fx_gain_loss_amount ?? 0;
     }

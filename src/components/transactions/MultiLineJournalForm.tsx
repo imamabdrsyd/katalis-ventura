@@ -9,7 +9,8 @@ import { resolveContactTypeFromCategory, saveContactFromTransaction } from '@/li
 import { useParams } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { CATEGORY_LABELS } from '@/lib/calculations';
-import type { TransactionCategory, JournalLineInput, Account, TransactionAttachment } from '@/types';
+import type { TransactionCategory, JournalLineInput, Account, TransactionAttachment, SalesChannel } from '@/types';
+import { SALES_CHANNEL_OPTIONS } from '@/lib/salesChannels';
 import { FileUpload } from '@/components/ui/FileUpload';
 
 export interface MultiLineFormData {
@@ -18,6 +19,7 @@ export interface MultiLineFormData {
   name: string;
   description: string;
   notes?: string;
+  sales_channel?: SalesChannel | null;
   attachments?: TransactionAttachment[];
   journal_lines: JournalLineInput[];
 }
@@ -66,6 +68,7 @@ export function MultiLineJournalForm({
     name: initialData?.name ?? '',
     description: initialData?.description ?? '',
     notes: initialData?.notes ?? '',
+    sales_channel: initialData?.sales_channel ?? null,
   });
 
   const initialLines = initialData?.journal_lines && initialData.journal_lines.length >= 2
@@ -229,6 +232,30 @@ export function MultiLineJournalForm({
           </select>
         </div>
       </div>
+
+      {/* Sales channel — hanya untuk EARN */}
+      {formData.category === 'EARN' && (
+        <div>
+          <label className="label">Channel Penjualan</label>
+          <select
+            value={formData.sales_channel ?? ''}
+            onChange={(e) =>
+              setFormData((p) => ({
+                ...p,
+                sales_channel: (e.target.value as SalesChannel) || null,
+              }))
+            }
+            className="input"
+          >
+            <option value="">— Pilih channel (opsional) —</option>
+            {SALES_CHANNEL_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div>
         <label className="label">Nama / Referensi *</label>

@@ -232,6 +232,7 @@ export function useTransactions() {
         name: data.name,
         description: data.description,
         notes: data.notes,
+        sales_channel: data.sales_channel ?? undefined,
         attachments: data.attachments,
         journal_lines: data.journal_lines,
       });
@@ -261,6 +262,7 @@ export function useTransactions() {
         name: data.name,
         description: data.description,
         notes: data.notes,
+        sales_channel: data.sales_channel ?? undefined,
         meta: data.attachments !== undefined
           ? { ...existingMeta, attachments: data.attachments }
           : existingMeta,
