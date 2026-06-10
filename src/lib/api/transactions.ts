@@ -79,6 +79,22 @@ export interface BulkImportResult {
   data?: Transaction[];
 }
 
+export interface BulkDeleteEvent {
+  type: 'progress' | 'result' | 'error' | 'done';
+  message?: string;
+  current?: number;
+  total?: number;
+  deleted?: number;
+  failed?: number;
+  errors?: string[];
+}
+
+export interface BulkDeleteResult {
+  deleted: number;
+  failed: number;
+  errors: string[];
+}
+
 // Get all transactions for a business (used by dashboard & reports that need full dataset)
 export async function getTransactions(businessId: string): Promise<Transaction[]> {
   const supabase = createClient();
@@ -407,6 +423,79 @@ export async function updateTransaction(
 // Soft delete a transaction (routes through DELETE /api/transactions/[id])
 export async function deleteTransaction(id: string): Promise<void> {
   await apiFetch(`/api/transactions/${id}`, { method: 'DELETE' });
+}
+
+// Soft delete multiple transactions through one SSE request so the UI can
+// display server-side progress while each audited soft-delete RPC completes.
+export async function deleteTransactionsBulk(
+  ids: string[],
+  onEvent?: (event: BulkDeleteEvent) => void
+): Promise<BulkDeleteResult> {
+  if (ids.length === 0) return { deleted: 0, failed: 0, errors: [] };
+
+  const response = await fetch('/api/transactions/bulk-delete', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+
+  if (!response.ok || !response.body) {
+    const text = await response.text();
+    let message = `Request failed with status ${response.status}`;
+    if (text) {
+      try {
+        const payload = JSON.parse(text) as { error?: string };
+        message = payload.error ?? message;
+      } catch {
+        message = text;
+      }
+    }
+    throw new Error(message);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let result: BulkDeleteResult | null = null;
+  let streamError: string | null = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split('\n\n');
+    buffer = parts.pop() ?? '';
+
+    for (const part of parts) {
+      const dataLine = part
+        .split('\n')
+        .find((line) => line.startsWith('data: '));
+      if (!dataLine) continue;
+
+      try {
+        const event = JSON.parse(dataLine.slice(6)) as BulkDeleteEvent;
+        onEvent?.(event);
+
+        if (event.type === 'result') {
+          result = {
+            deleted: event.deleted ?? 0,
+            failed: event.failed ?? 0,
+            errors: event.errors ?? [],
+          };
+        } else if (event.type === 'error') {
+          streamError = event.message ?? 'Gagal menghapus transaksi';
+        }
+      } catch {
+        // Ignore malformed SSE chunks and continue reading subsequent events.
+      }
+    }
+  }
+
+  if (streamError) throw new Error(streamError);
+  if (!result) throw new Error('Server menutup stream sebelum bulk delete selesai');
+  return result;
 }
 
 // ============================================================

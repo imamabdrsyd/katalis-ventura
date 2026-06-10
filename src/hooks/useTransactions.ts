@@ -22,6 +22,15 @@ import type { TransactionFormData } from '@/components/transactions/TransactionF
 import type { MultiLineFormData } from '@/components/transactions/MultiLineJournalForm';
 import type { TransactionFilters } from '@/lib/api/transactions';
 
+export interface BulkDeleteProgressState {
+  status: 'running' | 'completed' | 'error';
+  current: number;
+  total: number;
+  deleted: number;
+  failed: number;
+  message: string;
+}
+
 export function useTransactions() {
   const { user, activeBusinessId: businessId, activeBusiness, loading: businessLoading, error: businessError, userRole } = useBusinessContext();
   const canManageTransactions = isManagerRole(userRole);
@@ -62,6 +71,7 @@ export function useTransactions() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [bulkDeleteProgress, setBulkDeleteProgress] = useState<BulkDeleteProgressState | null>(null);
 
   // Build filters object for server-side query
   const filters: TransactionFilters = useMemo(() => ({
@@ -438,22 +448,69 @@ export function useTransactions() {
   // Bulk delete selected transactions
   const handleBulkDelete = useCallback(async () => {
     if (selectedIds.size === 0) return;
+    const ids = [...selectedIds];
     setSaving(true);
+    setBulkDeleteProgress({
+      status: 'running',
+      current: 0,
+      total: ids.length,
+      deleted: 0,
+      failed: 0,
+      message: `Menyiapkan penghapusan ${ids.length} transaksi...`,
+    });
+
     try {
-      for (const id of selectedIds) {
-        await transactionsApi.deleteTransaction(id);
-      }
-      const count = selectedIds.size;
+      const result = await transactionsApi.deleteTransactionsBulk(ids, (event) => {
+        if (event.type !== 'progress') return;
+        setBulkDeleteProgress({
+          status: 'running',
+          current: event.current ?? 0,
+          total: event.total ?? ids.length,
+          deleted: event.deleted ?? 0,
+          failed: event.failed ?? 0,
+          message: event.message ?? 'Menghapus transaksi...',
+        });
+      });
+
+      setBulkDeleteProgress({
+        status: 'completed',
+        current: ids.length,
+        total: ids.length,
+        deleted: result.deleted,
+        failed: result.failed,
+        message: result.failed > 0
+          ? `${result.deleted} transaksi dihapus, ${result.failed} gagal.`
+          : `${result.deleted} transaksi berhasil dihapus.`,
+      });
       setSelectedIds(new Set());
       setSelectMode(false);
       invalidateTransactions();
-      toast.success(`${count} transaksi berhasil dihapus`);
+
+      if (result.failed > 0) {
+        toast.warning(`${result.deleted} transaksi dihapus, ${result.failed} gagal`);
+      } else {
+        toast.success(`${result.deleted} transaksi berhasil dihapus`);
+      }
     } catch (err: any) {
-      toast.error(err.message || 'Gagal menghapus transaksi');
+      const message = err.message || 'Gagal menghapus transaksi';
+      setBulkDeleteProgress((current) => ({
+        status: 'error',
+        current: current?.current ?? 0,
+        total: current?.total ?? ids.length,
+        deleted: current?.deleted ?? 0,
+        failed: current?.failed ?? 0,
+        message,
+      }));
+      invalidateTransactions();
+      toast.error(message);
     } finally {
       setSaving(false);
     }
   }, [selectedIds, invalidateTransactions]);
+
+  const dismissBulkDeleteProgress = useCallback(() => {
+    setBulkDeleteProgress(null);
+  }, []);
 
   // Post a single draft transaction
   const handlePostTransaction = useCallback(async (id: string) => {
@@ -703,6 +760,8 @@ export function useTransactions() {
     handleSelectAll,
     handleExitSelectMode,
     handleBulkDelete,
+    bulkDeleteProgress,
+    dismissBulkDeleteProgress,
     handleBulkPost,
     // Post actions
     handlePostTransaction,

@@ -23,6 +23,7 @@ import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { AgentProgressToast, type AgentStep } from '@/components/agent/AgentProgressToast';
 import { AGENT_IMPORT_SESSION_EVENT, isAgentImportSessionRunning, readAgentImportSession } from '@/lib/agent/importSession';
+import { BulkDeleteProgressToast } from '@/components/transactions/BulkDeleteProgressToast';
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
@@ -100,6 +101,8 @@ function TransactionsPageInner() {
     handleSelectAll,
     handleExitSelectMode,
     handleBulkDelete,
+    bulkDeleteProgress,
+    dismissBulkDeleteProgress,
     handleBulkPost,
     // Post actions
     handlePostTransaction,
@@ -691,8 +694,14 @@ function TransactionsPageInner() {
                     disabled={saving}
                     className="btn-secondary flex items-center gap-1.5"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    {t.common.delete} ({selectedIds.size})
+                    {bulkDeleteProgress?.status === 'running' ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5" />
+                    )}
+                    {bulkDeleteProgress?.status === 'running'
+                      ? `${bulkDeleteProgress.current}/${bulkDeleteProgress.total}`
+                      : `${t.common.delete} (${selectedIds.size})`}
                   </button>
                   {bulkInvoiceEligible && (
                     <button
@@ -1105,6 +1114,11 @@ function TransactionsPageInner() {
           onDismiss={() => setAgentImportToastVisible(false)}
         />
       )}
+
+      <BulkDeleteProgressToast
+        progress={bulkDeleteProgress}
+        onDismiss={dismissBulkDeleteProgress}
+      />
 
     </div>
   );

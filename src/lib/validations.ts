@@ -183,6 +183,11 @@ export const bulkPostTransactionsSchema = z.object({
   ids: z.array(z.string().regex(UUID_REGEX)).min(1).max(500),
 });
 
+// Bulk soft-delete with SSE progress
+export const bulkDeleteTransactionsSchema = z.object({
+  ids: z.array(z.string().regex(UUID_REGEX)).min(1).max(500),
+});
+
 // Bulk create (import excel/csv)
 export const bulkCreateTransactionsSchema = z.object({
   business_id: z.string().regex(UUID_REGEX, 'Invalid business ID format'),

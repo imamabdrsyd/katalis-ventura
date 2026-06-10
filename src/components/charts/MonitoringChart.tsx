@@ -17,6 +17,11 @@ import {
 import type { Transaction } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
+import {
+  buildMonitoringDataPoints,
+  type MonitoringInterval,
+  type MonitoringPeriod,
+} from '@/lib/monitoring';
 
 ChartJS.register(
   CategoryScale,
@@ -29,30 +34,15 @@ ChartJS.register(
   Filler
 );
 
-type PeriodType = 'monthly' | 'yearly';
-type IntervalType = '1m' | '1d' | '3d' | '1w';
-
 interface MonitoringChartProps {
   transactions: Transaction[];
   loading?: boolean;
   selectedYear: number;
 }
 
-interface ChartDataPoint {
-  label: string;
-  earning: number;
-  expense: number;
-}
-
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-function dayOfYear(date: Date, yearStart: Date): number {
-  return Math.floor((date.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24));
-}
-
 export default function MonitoringChart({ transactions, loading = false, selectedYear }: MonitoringChartProps) {
-  const [period, setPeriod] = useState<PeriodType>('monthly');
-  const [interval, setInterval] = useState<IntervalType>('1m');
+  const [period, setPeriod] = useState<MonitoringPeriod>('monthly');
+  const [interval, setInterval] = useState<MonitoringInterval>('1m');
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -66,90 +56,10 @@ export default function MonitoringChart({ transactions, loading = false, selecte
 
   const isDark = mounted && resolvedTheme === 'dark';
 
-  const chartDataPoints = useMemo(() => {
-    if (period === 'monthly') {
-      const now = new Date();
-      const isCurrentYear = selectedYear === now.getFullYear();
-      const cutoff = isCurrentYear ? now : new Date(selectedYear, 11, 31);
-      const yearStart = new Date(selectedYear, 0, 1);
-
-      const dataMap = new Map<string, ChartDataPoint>();
-
-      transactions.forEach((t) => {
-        const date = new Date(t.date);
-        if (date.getFullYear() !== selectedYear) return;
-        if (date > cutoff) return;
-
-        const day = dayOfYear(date, yearStart);
-        let key: string;
-        let label: string;
-
-        if (interval === '1m') {
-          const m = date.getMonth();
-          key = `${selectedYear}-${String(m).padStart(2, '0')}`;
-          label = MONTH_NAMES[m];
-        } else if (interval === '1d') {
-          key = t.date;
-          label = `${date.getDate()} ${MONTH_NAMES[date.getMonth()]}`;
-        } else if (interval === '3d') {
-          const blockIdx = Math.floor(day / 3);
-          key = `${selectedYear}-3d-${String(blockIdx).padStart(3, '0')}`;
-          const blockStart = new Date(yearStart.getTime() + blockIdx * 3 * 24 * 60 * 60 * 1000);
-          label = `${blockStart.getDate()} ${MONTH_NAMES[blockStart.getMonth()]}`;
-        } else {
-          const weekIdx = Math.floor(day / 7);
-          key = `${selectedYear}-1w-${String(weekIdx).padStart(3, '0')}`;
-          const weekStart = new Date(yearStart.getTime() + weekIdx * 7 * 24 * 60 * 60 * 1000);
-          label = `${weekStart.getDate()} ${MONTH_NAMES[weekStart.getMonth()]}`;
-        }
-
-        if (!dataMap.has(key)) {
-          dataMap.set(key, { label, earning: 0, expense: 0 });
-        }
-
-        const point = dataMap.get(key)!;
-        const amount = Number(t.amount);
-        const isSettlementEntry = t.is_double_entry && t.credit_account?.account_type !== 'REVENUE';
-        const debitsExpense = t.debit_account?.account_type === 'EXPENSE';
-        if (t.category === 'EARN' && !isSettlementEntry) point.earning += amount;
-        else if (t.category === 'OPEX') point.expense += amount;
-        else if (t.category === 'VAR' && debitsExpense) point.expense += amount;
-      });
-
-      return Array.from(dataMap.entries())
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([, v]) => v);
-    } else {
-      const dataMap = new Map<string, ChartDataPoint>();
-
-      transactions.forEach((t) => {
-        const date = new Date(t.date);
-        const key = `${date.getFullYear()}`;
-        const label = `${date.getFullYear()}`;
-
-        if (!dataMap.has(key)) {
-          dataMap.set(key, { label, earning: 0, expense: 0 });
-        }
-
-        const point = dataMap.get(key)!;
-        const amount = Number(t.amount);
-        const isSettlementEntry = t.is_double_entry && t.credit_account?.account_type !== 'REVENUE';
-        const debitsExpense = t.debit_account?.account_type === 'EXPENSE';
-
-        if (t.category === 'EARN' && !isSettlementEntry) {
-          point.earning += amount;
-        } else if (t.category === 'OPEX') {
-          point.expense += amount;
-        } else if (t.category === 'VAR' && debitsExpense) {
-          point.expense += amount;
-        }
-      });
-
-      return Array.from(dataMap.entries())
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([, value]) => value);
-    }
-  }, [transactions, period, interval, selectedYear]);
+  const chartDataPoints = useMemo(
+    () => buildMonitoringDataPoints({ transactions, period, interval, selectedYear }),
+    [transactions, period, interval, selectedYear]
+  );
 
   const pointRadius = chartDataPoints.length > 30 ? 3 : 6;
   const pointHoverRadius = chartDataPoints.length > 30 ? 5 : 8;
@@ -320,7 +230,7 @@ export default function MonitoringChart({ transactions, loading = false, selecte
         <div className="flex items-center gap-2">
           {period === 'monthly' && (
             <div className="flex items-center gap-3">
-              {(['1d', '3d', '1w'] as Exclude<IntervalType, '1m'>[]).map((iv) => (
+              {(['1d', '3d', '1w'] as Exclude<MonitoringInterval, '1m'>[]).map((iv) => (
                 <button
                   key={iv}
                   onClick={() => setInterval(iv === interval ? '1m' : iv)}

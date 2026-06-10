@@ -17,6 +17,7 @@ import { FxMiniWidget } from '@/components/market/FxMiniWidget';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import { isTradeReceivableTransaction, isSettled, isSettlementEntry, getOutstandingAmount } from '@/lib/accounting/guidance/receivableSettlement';
 import type { Transaction } from '@/types';
+import { buildMonthlyProfitAndLossSeries } from '@/lib/monitoring';
 
 // Lazy-load chart components — chart.js (~6.2 MB) only loads when charts render
 const MonitoringChart = dynamic(() => import('@/components/charts/MonitoringChart'), {
@@ -169,29 +170,10 @@ export default function DashboardPage() {
   const categoryCounts = useMemo(() => calculateCategoryCounts(filteredTransactions), [filteredTransactions]);
 
   // --- Monthly series untuk sparkline KPI cards (basis: tahun terpilih) ---
-  const monthlySeries = useMemo(() => {
-    const revenue = Array(12).fill(0) as number[];
-    const expense = Array(12).fill(0) as number[];
-    for (const tx of yearTransactions) {
-      const m = new Date(tx.date).getMonth();
-      const amt = Number(tx.amount);
-      if (tx.category === 'EARN') revenue[m] += amt;
-      else if (tx.category === 'OPEX' || tx.category === 'TAX') {
-        expense[m] += amt;
-      } else if (
-        tx.category === 'VAR' &&
-        // Hanya hitung VAR sebagai expense kalau debit ke EXPENSE (HPP recognition).
-        // VAR + debit ASSET = pembelian inventory, bukan expense. Konsisten dgn calculateFinancialSummary.
-        !(tx.is_double_entry && tx.debit_account?.account_type === 'ASSET')
-      ) {
-        expense[m] += amt;
-      }
-    }
-    const netProfit = revenue.map((r, i) => r - expense[i]);
-    // Trim ke bulan-bulan yang relevan: kalau yearly, gunakan 12 bulan;
-    // kalau monthly filter aktif, sparkline tetap 12 bulan supaya tetap memberi konteks tren.
-    return { revenue, netProfit, expense };
-  }, [yearTransactions]);
+  const monthlySeries = useMemo(
+    () => buildMonthlyProfitAndLossSeries(yearTransactions, selectedYear),
+    [yearTransactions, selectedYear]
+  );
 
   // --- AR Tracker: outstanding piutang across all time, bucketed by age ---
   const arData = useMemo(() => {
@@ -239,12 +221,12 @@ export default function DashboardPage() {
       const prevMonthDate = new Date(selectedYear, selectedMonth - 1, 1);
       const prevMonth = prevMonthDate.getMonth();
       const prevMonthYear = prevMonthDate.getFullYear();
-      const prevRevenue = transactions
-        .filter((t) => {
+      const prevRevenue = calculateFinancialSummary(
+        transactions.filter((t) => {
           const d = new Date(t.date);
-          return t.category === 'EARN' && d.getMonth() === prevMonth && d.getFullYear() === prevMonthYear;
+          return d.getMonth() === prevMonth && d.getFullYear() === prevMonthYear;
         })
-        .reduce((s, t) => s + Number(t.amount), 0);
+      ).totalEarn;
 
       if (prevRevenue > 0) {
         return {
@@ -255,12 +237,12 @@ export default function DashboardPage() {
       return { growth: null, label: null, isNew: currentRevenue > 0 };
     } else {
       // Yearly: compare total revenue this year vs total revenue last year
-      const lastYearRevenue = transactions
-        .filter((t) => {
+      const lastYearRevenue = calculateFinancialSummary(
+        transactions.filter((t) => {
           const d = new Date(t.date);
-          return t.category === 'EARN' && d.getFullYear() === selectedYear - 1;
+          return d.getFullYear() === selectedYear - 1;
         })
-        .reduce((s, t) => s + Number(t.amount), 0);
+      ).totalEarn;
 
       if (lastYearRevenue > 0) {
         return {
