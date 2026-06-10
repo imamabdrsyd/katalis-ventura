@@ -6,7 +6,7 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { createClient } from '@/lib/supabase';
 import { LOCALE_LABELS, LOCALE_FLAGS, type Locale } from '@/lib/i18n';
-import { Camera, User, Mail, Briefcase, Save, Globe, CheckCircle2, XCircle, Copy, RefreshCw, FileEdit, CheckCheck, LayoutList, ClipboardCheck, HandCoins, FileText, Landmark, LineChart, GitBranch } from 'lucide-react';
+import { Camera, User, Mail, Briefcase, Save, Globe, CheckCircle2, XCircle, Copy, RefreshCw, FileEdit, CheckCheck, LayoutList, ClipboardCheck, HandCoins, FileText, Landmark, LineChart, GitBranch, Bot } from 'lucide-react';
 
 function TelegramIcon({ className }: { className?: string }) {
   return (
@@ -66,6 +66,7 @@ export default function SettingsPage() {
     { href: '/reconciliation', label: 'Bank Reconciliation', icon: Landmark },
     { href: '/market', label: 'Market Tracker', icon: LineChart },
     { href: '/statement-of-changes-in-equity', label: 'Changes in Equity', icon: GitBranch },
+    { href: '/agent', label: 'Agentic Workflow', icon: Bot },
   ];
 
   const DEFAULT_HIDDEN = TOGGLEABLE_NAV_ITEMS.map(i => i.href);

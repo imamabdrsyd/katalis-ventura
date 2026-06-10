@@ -50,6 +50,7 @@ import {
   GitBranch,
   Landmark,
   Bot,
+  PackageOpen,
 } from 'lucide-react';
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -235,7 +236,8 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
       // /invoices & /reconciliation sudah ada via navSections — jangan di-splice lagi
       // (mencegah duplikat key di SearchDialog).
       pages.splice(2, 0,
-        { href: '/agent', label: 'AXION Agent', icon: Bot },
+        { href: '/catalog', label: t.nav.catalog, icon: PackageOpen },
+        { href: '/agent', label: 'Agentic Workflow', icon: Bot },
         { href: '/transactions', label: t.nav.transactions, icon: CreditCard },
         { href: '/transactions/journal-entry', label: t.nav.journalEntry, icon: Plus }
       );
@@ -853,7 +855,7 @@ function Sidebar({
   const canManage = isManagerRole(userRole);
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
-  const SIDEBAR_DEFAULT_HIDDEN = ['/trial-balance', '/ar-ap', '/invoices', '/reconciliation', '/market', '/statement-of-changes-in-equity'];
+  const SIDEBAR_DEFAULT_HIDDEN = ['/trial-balance', '/ar-ap', '/invoices', '/reconciliation', '/market', '/statement-of-changes-in-equity', '/agent'];
   const [hiddenNavItems, setHiddenNavItems] = useState<string[]>(SIDEBAR_DEFAULT_HIDDEN);
 
   useEffect(() => {
@@ -1004,8 +1006,9 @@ function Sidebar({
           {[
             { href: '/dashboard', label: t.nav.dashboard, icon: PieChart },
             { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
-            ...(canManage ? [{ href: '/agent', label: 'AXION Agent', icon: Bot }] : []),
-          ].map((item) => {
+            ...(canManage ? [{ href: '/catalog', label: t.nav.catalog, icon: PackageOpen }] : []),
+            ...(canManage ? [{ href: '/agent', label: 'Agentic Workflow', icon: Bot }] : []),
+          ].filter(item => !hiddenNavItems.includes(item.href)).map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             return (

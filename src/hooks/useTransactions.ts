@@ -262,7 +262,7 @@ export function useTransactions() {
         name: data.name,
         description: data.description,
         notes: data.notes,
-        sales_channel: data.sales_channel ?? undefined,
+        sales_channel: data.sales_channel ?? null,
         meta: data.attachments !== undefined
           ? { ...existingMeta, attachments: data.attachments }
           : existingMeta,

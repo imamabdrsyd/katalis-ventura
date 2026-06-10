@@ -132,6 +132,7 @@ export async function createMultiLineTransaction(
       description: insert.description,
       notes: insert.notes ?? '',
       status: insert.status ?? 'draft',
+      sales_channel: insert.sales_channel ?? undefined,
       meta: Object.keys(meta).length > 0 ? meta : undefined,
       original_amount: insert.original_amount ?? undefined,
       currency_code: insert.currency_code ?? undefined,
@@ -164,6 +165,7 @@ export async function updateMultiLineTransaction(
   if (updates.description !== undefined) body.description = updates.description;
   if (updates.notes !== undefined) body.notes = updates.notes;
   if (updates.status !== undefined) body.status = updates.status;
+  if (updates.sales_channel !== undefined) body.sales_channel = updates.sales_channel;
   if (updates.meta !== undefined) body.meta = updates.meta;
   if (updates.original_amount !== undefined) body.original_amount = updates.original_amount;
   if (updates.currency_code !== undefined) body.currency_code = updates.currency_code;

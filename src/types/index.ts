@@ -122,6 +122,31 @@ export interface Account {
   contact?: Contact;             // Hydrated: kontak pemilik (untuk akun is_stock dgn contact_id)
 }
 
+export type CatalogItemType = 'product' | 'service';
+
+// Katalog produk/jasa terpusat per bisnis. Dipakai sebagai master data saat
+// entry transaksi EARN (picker di multi-line form & quick entry).
+export interface CatalogItem {
+  id: string;
+  business_id: string;
+  name: string;
+  description?: string | null;
+  item_type: CatalogItemType;
+  default_price: number;
+  unit?: string | null;                  // satuan: pcs, jam, malam, dll
+  revenue_account_id?: string | null;    // akun pendapatan default (credit saat dijual)
+  sku?: string | null;                   // disiapkan untuk fase matching import (belum dipakai)
+  is_active: boolean;
+  sort_order: number;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string | null;
+  // Hydrated saat join dengan accounts
+  revenue_account?: Account | null;
+}
+
 export interface CategoryAccountSuggestion {
   category: TransactionCategory;
   defaultDebitCode: string;

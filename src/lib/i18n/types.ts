@@ -58,6 +58,7 @@ export interface Translations {
     journalEntry: string;
     viewTransactions: string;
     manageBusiness: string;
+    catalog: string;
     accounting: string;
     chartOfAccounts: string;
     invoice: string;
@@ -257,6 +258,67 @@ export interface Translations {
     updateFailed: string;
     deactivateFailed: string;
     activateFailed: string;
+  };
+
+  // Catalog Page
+  catalog: {
+    title: string;
+    subtitle: string;
+    addItem: string;
+    addFirstItem: string;
+    searchPlaceholder: string;
+    showInactive: string;
+    loading: string;
+    emptyAll: string;
+    emptyFiltered: string;
+    inactiveBadge: string;
+    edit: string;
+    delete: string;
+    formAddTitle: string;
+    formEditTitle: string;
+    typeLabel: string;
+    typeProduct: string;
+    typeService: string;
+    nameLabelProduct: string;
+    nameLabelService: string;
+    namePlaceholderProduct: string;
+    namePlaceholderService: string;
+    priceLabel: string;
+    unitLabel: string;
+    unitPlaceholder: string;
+    revenueAccountLabel: string;
+    revenueAccountPlaceholder: string;
+    revenueAccountHint: string;
+    descriptionLabel: string;
+    descriptionPlaceholder: string;
+    activeLabel: string;
+    cancel: string;
+    save: string;
+    saving: string;
+    create: string;
+    errorNameRequired: string;
+    errorNameTaken: string;
+    errorPriceNegative: string;
+    deleteTitle: string;
+    deleteBody: string;
+    deleting: string;
+    toastCreated: string;
+    toastUpdated: string;
+    toastDeleted: string;
+    toastLoadFailed: string;
+    toastSaveFailed: string;
+    toastDeleteFailed: string;
+    pickerTitle: string;
+    pickerSearchPlaceholder: string;
+    pickerLoading: string;
+    pickerEmpty: string;
+    pickerCreateLink: string;
+    pickerNoMatch: string;
+    pickerSelectedItems: string;
+    pickerTotal: string;
+    pickerApply: string;
+    quickPickerLabel: string;
+    addFromCatalog: string;
   };
 
   // Businesses Page

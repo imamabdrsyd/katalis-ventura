@@ -92,7 +92,7 @@ export function AgentProgressToast({ steps, isRunning, onDismiss }: AgentProgres
                   ? 'text-red-700 dark:text-red-300'
                   : isDone
                   ? 'text-emerald-700 dark:text-emerald-300'
-                  : 'text-indigo-700 dark:text-indigo-300'
+                  : 'text-gray-900 dark:text-gray-100'
               }`}
             >
               {isRunning ? 'AXION Agent bekerja...' : isError ? 'Agent gagal' : 'Agent selesai'}

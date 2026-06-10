@@ -8,6 +8,10 @@ export interface SalesChannelConfig {
   svgPath: string | null;
   /** Hex fill color for the SVG path */
   svgFill: string;
+  /** Path to image in /public (takes priority over svgPath) */
+  imagePath?: string;
+  /** Alternate image for larger/modal contexts (size='md') */
+  imagePathLarge?: string;
 }
 
 export const SALES_CHANNEL_CONFIG: Record<SalesChannel, SalesChannelConfig> = {
@@ -16,56 +20,54 @@ export const SALES_CHANNEL_CONFIG: Record<SalesChannel, SalesChannelConfig> = {
     bgColor: 'bg-black',
     textColor: 'text-white',
     svgFill: '#ffffff',
-    svgPath:
-      'M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.75a4.85 4.85 0 0 1-1.01-.06z',
+    svgPath: null,
+    imagePath: '/sales channel/tiktok.svg',
   },
   tokopedia: {
     label: 'Tokopedia',
     bgColor: 'bg-[#42b549]',
     textColor: 'text-white',
     svgFill: '#ffffff',
-    svgPath:
-      'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z',
+    svgPath: null,
+    imagePath: '/sales channel/mascot.png',
   },
   shopee: {
     label: 'Shopee',
     bgColor: 'bg-[#ee4d2d]',
     textColor: 'text-white',
     svgFill: '#ffffff',
-    svgPath:
-      'M12 2a7 7 0 0 0-7 7v.5H3.5A1.5 1.5 0 0 0 2 11v9a1.5 1.5 0 0 0 1.5 1.5h17A1.5 1.5 0 0 0 22 20v-9a1.5 1.5 0 0 0-1.5-1.5H19V9a7 7 0 0 0-7-7zm0 2a5 5 0 0 1 5 5v.5H7V9a5 5 0 0 1 5-5zm0 9a2 2 0 1 1 0 4 2 2 0 0 1 0-4z',
+    svgPath: null,
+    imagePath: '/sales channel/shopee-white.webp',
   },
   lazada: {
     label: 'Lazada',
     bgColor: 'bg-[#0F146D]',
     textColor: 'text-white',
     svgFill: '#ffffff',
-    svgPath:
-      'M4 4h16v2H4V4zm0 7h16v2H4v-2zm0 7h10v2H4v-2z',
+    svgPath: null,
   },
   blibli: {
     label: 'Blibli',
     bgColor: 'bg-[#0070cc]',
     textColor: 'text-white',
     svgFill: '#ffffff',
-    svgPath:
-      'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z',
+    svgPath: null,
   },
   airbnb: {
     label: 'Airbnb',
     bgColor: 'bg-[#FF5A5F]',
     textColor: 'text-white',
     svgFill: '#ffffff',
-    svgPath:
-      'M12 2C9.5 2 8 4.5 8 4.5S3 10 3 14a9 9 0 0 0 18 0c0-4-5-9.5-5-9.5S14.5 2 12 2zm0 2c.8 0 1.8 1.2 2.8 2.6C16.4 8.8 19 12.2 19 14a7 7 0 0 1-14 0c0-1.8 2.6-5.2 4.2-7.4C10.2 5.2 11.2 4 12 4zm0 5a5 5 0 0 0-5 5 5 5 0 0 0 5 5 5 5 0 0 0 5-5 5 5 0 0 0-5-5zm0 2a3 3 0 0 1 3 3 3 3 0 0 1-3 3 3 3 0 0 1-3-3 3 3 0 0 1 3-3z',
+    svgPath: null,
+    imagePath: '/sales channel/airbnb.png',
   },
   booking_com: {
     label: 'Booking.com',
     bgColor: 'bg-[#003580]',
     textColor: 'text-white',
     svgFill: '#ffffff',
-    svgPath:
-      'M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3zm5 3a5 5 0 1 0 0 10A5 5 0 0 0 12 7zm0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6z',
+    svgPath: null,
+    imagePath: '/sales channel/booking.png',
   },
   traveloka: {
     label: 'Traveloka',
@@ -90,6 +92,7 @@ export const SALES_CHANNEL_CONFIG: Record<SalesChannel, SalesChannelConfig> = {
     svgFill: '#ffffff',
     svgPath:
       'M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z M12 0C5.373 0 0 5.373 0 12c0 2.124.554 4.118 1.528 5.845L0 24l6.335-1.507A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z',
+    imagePath: '/sales channel/wa.webp',
   },
   website: {
     label: 'Website',

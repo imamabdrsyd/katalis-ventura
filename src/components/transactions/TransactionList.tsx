@@ -108,6 +108,54 @@ function DescriptionCell({ text }: { text: string }) {
   );
 }
 
+// Cash flow display for a multi-line journal: surface the most relevant account
+// with the right direction, mirroring how double-entry rows display.
+//
+//   1. Exactly one cash/bank account  → show it, direction by debit/credit.
+//   2. No cash account (pure accrual)  → show the largest debit account
+//      (e.g. "Piutang Usaha" for marketplace payouts held by the platform),
+//      direction by transaction category (EARN = in, otherwise = out).
+//
+// Returns null only when neither applies (e.g. multiple cash accounts) so the
+// caller can fall back to the generic "Multi-line journal" label.
+function getMultiLineCashDisplay(
+  transaction: Transaction
+): { accountName: string; isInflow: boolean; tooltip: string } | null {
+  const lines = transaction.journal_lines ?? [];
+  const cashLines = lines.filter(l => l.account?.is_cash_equivalent === true);
+
+  // Case 1: single cash account — direction follows actual cash movement
+  if (cashLines.length === 1) {
+    const cash = cashLines[0];
+    const accountName = cash.account?.account_name || 'Unknown';
+    const isInflow = cash.debit_amount > 0; // cash debited → money in
+    return {
+      accountName,
+      isInflow,
+      tooltip: isInflow ? `Masuk ke akun ${accountName}` : `Keluar dari akun ${accountName}`,
+    };
+  }
+
+  // Case 2: no cash account (accrual) — surface the largest debit account
+  if (cashLines.length === 0) {
+    const debitLines = lines.filter(l => l.debit_amount > 0 && l.account);
+    if (debitLines.length === 0) return null;
+    const largest = debitLines.reduce((max, l) =>
+      l.debit_amount > max.debit_amount ? l : max
+    );
+    const accountName = largest.account?.account_name || 'Unknown';
+    const isInflow = transaction.category === 'EARN';
+    return {
+      accountName,
+      isInflow,
+      tooltip: isInflow ? `Masuk ke akun ${accountName}` : `Keluar dari akun ${accountName}`,
+    };
+  }
+
+  // Case 3: multiple cash accounts — ambiguous, let caller fall back
+  return null;
+}
+
 // Helper function to format account display based on transaction type
 function getAccountDisplay(transaction: Transaction): { accountName: string; isInflow: boolean; tooltip: string } {
   const isInflow = transaction.category === 'EARN';
@@ -698,15 +746,14 @@ export function TransactionList({
                     <span className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${SETTLE_BADGE_CLASS}`}>
                       SETTLE
                     </span>
+                  ) : transaction.category === 'EARN' && transaction.sales_channel ? (
+                    <SalesChannelBadge channel={transaction.sales_channel} size="sm" />
                   ) : (
                     <span
                       className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${BADGE_CLASSES[transaction.category]}`}
                     >
                       {transaction.category}
                     </span>
-                  )}
-                  {transaction.sales_channel && transaction.category === 'EARN' && (
-                    <SalesChannelBadge channel={transaction.sales_channel} size="sm" />
                   )}
                   {transaction.status === 'draft' && (
                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">
@@ -764,16 +811,37 @@ export function TransactionList({
               </td>
               <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-800 dark:text-gray-200 break-words">
                 {(() => {
-                  // Multi-line journal: distinct icon
+                  // Multi-line journal: surface the cash account like double-entry
+                  // does. Falls back to a generic label for pure-accrual or
+                  // multi-cash entries where a single cash account isn't clear.
                   if (transaction.is_multi_line) {
+                    const cashDisplay = getMultiLineCashDisplay(transaction);
+                    if (!cashDisplay) {
+                      return (
+                        <div className="group/transfer relative flex items-center gap-1.5">
+                          <ArrowLeftRight className="w-3.5 h-3.5 flex-shrink-0 text-indigo-500 dark:text-indigo-400" />
+                          <span className="truncate font-medium">Multi-line journal</span>
+                          <div className="pointer-events-none absolute top-full left-0 mt-1.5 hidden group-hover/transfer:block z-30">
+                            <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-md px-2.5 py-1.5 whitespace-nowrap shadow-lg">
+                              <div className="absolute bottom-full left-3 border-4 border-transparent border-b-gray-900 dark:border-b-gray-700" />
+                              Jurnal multi-line (beberapa akun)
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
                     return (
                       <div className="group/transfer relative flex items-center gap-1.5">
-                        <ArrowLeftRight className="w-3.5 h-3.5 flex-shrink-0 text-indigo-500 dark:text-indigo-400" />
-                        <span className="truncate font-medium">Multi-line journal</span>
+                        {cashDisplay.isInflow ? (
+                          <ArrowDownLeft className="w-3.5 h-3.5 flex-shrink-0 text-emerald-500 dark:text-emerald-400" />
+                        ) : (
+                          <ArrowUpRight className="w-3.5 h-3.5 flex-shrink-0 text-red-500 dark:text-red-400" />
+                        )}
+                        <span className="truncate font-medium">{cashDisplay.accountName}</span>
                         <div className="pointer-events-none absolute top-full left-0 mt-1.5 hidden group-hover/transfer:block z-30">
                           <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-md px-2.5 py-1.5 whitespace-nowrap shadow-lg">
                             <div className="absolute bottom-full left-3 border-4 border-transparent border-b-gray-900 dark:border-b-gray-700" />
-                            Jurnal multi-line (beberapa akun)
+                            {cashDisplay.tooltip}
                           </div>
                         </div>
                       </div>

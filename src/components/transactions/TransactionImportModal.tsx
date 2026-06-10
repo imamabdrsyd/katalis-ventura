@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Upload, FileText, AlertCircle, CheckCircle, Download, Sparkles, Table2, ChevronDown } from 'lucide-react';
+import { X, Upload, FileText, AlertCircle, CheckCircle, Download, Sparkles, Table2, ChevronDown, Bot } from 'lucide-react';
+import { ChannelImportTab } from '@/components/agent/ChannelImportTab';
 import { parseExcelFile, validateFile, detectImportMode } from '@/lib/import/excelParser';
 import { validateRows, validateRowsSmart, sanitizeAmount, sanitizeText } from '@/lib/import/excelValidator';
 import { downloadTemplate, downloadSmartTemplate, downloadErrorReport } from '@/lib/import/templateGenerator';
@@ -69,7 +70,7 @@ export default function TransactionImportModal({
   const [importing, setImporting] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
-  const [importMode, setImportMode] = useState<ImportMode>('smart');
+  const [importMode, setImportMode] = useState<ImportMode | 'channel'>('smart');
   const [smartRows, setSmartRows] = useState<SmartResolvedRow[]>([]);
   const [showFilter, setShowFilter] = useState<'all' | 'review'>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -678,7 +679,7 @@ export default function TransactionImportModal({
       message: 'Choose an Excel file to import',
     });
     setImporting(false);
-    setImportMode('smart');
+    setImportMode('smart' as ImportMode);
     setShowFilter('all');
     onClose();
   };
@@ -715,10 +716,10 @@ export default function TransactionImportModal({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Mode Toggle */}
-          {progress.stage === 'idle' || progress.stage === 'error' ? (
+          {(progress.stage === 'idle' || progress.stage === 'error' || importMode === 'channel') && (
             <div className="flex border-b border-gray-200 dark:border-gray-700">
               <button
-                onClick={() => setImportMode('smart')}
+                onClick={() => setImportMode('smart' as ImportMode)}
                 className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${
                   importMode === 'smart'
                     ? 'border-primary-500 text-primary-600 dark:text-primary-400'
@@ -729,7 +730,7 @@ export default function TransactionImportModal({
                 Smart Import
               </button>
               <button
-                onClick={() => setImportMode('full')}
+                onClick={() => setImportMode('full' as ImportMode)}
                 className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${
                   importMode === 'full'
                     ? 'border-primary-500 text-primary-600 dark:text-primary-400'
@@ -739,37 +740,58 @@ export default function TransactionImportModal({
                 <Table2 className="h-4 w-4" />
                 Import Lengkap
               </button>
-            </div>
-          ) : null}
-
-          {/* Template Download */}
-          <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-            <div className="flex flex-col sm:flex-row sm:items-start gap-3">
-              <div className="flex items-start gap-3 flex-1">
-                <FileText className="h-5 w-5 text-gray-500 dark:text-gray-400 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-800 dark:text-gray-200">
-                    {importMode === 'smart' ? 'Template Smart Import' : 'Template Import Lengkap'}
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {importMode === 'smart'
-                      ? 'Upload file Excel apapun — AXION AI otomatis mendeteksi kolom dan mengisi kategori, akun, serta breakdown unit'
-                      : 'Download template Excel dengan semua kolom untuk import manual'}
-                  </p>
-                </div>
-              </div>
               <button
-                onClick={handleDownloadTemplate}
-                className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto whitespace-nowrap"
+                onClick={() => setImportMode('channel' as any)}
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${
+                  importMode === 'channel'
+                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
               >
-                <Download className="h-4 w-4" />
-                <span>Download Template</span>
+                <Bot className="h-4 w-4" />
+                Channel CSV
               </button>
             </div>
-          </div>
+          )}
 
-          {/* File Upload */}
-          {progress.stage === 'idle' || progress.stage === 'error' ? (
+          {/* Channel CSV Tab */}
+          {importMode === 'channel' && (
+            <ChannelImportTab
+              businessId={businessId}
+              onImportComplete={() => { onImportComplete(); handleClose(); }}
+            />
+          )}
+
+          {/* Template Download — only for smart/full modes */}
+          {importMode !== 'channel' && (
+            <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                <div className="flex items-start gap-3 flex-1">
+                  <FileText className="h-5 w-5 text-gray-500 dark:text-gray-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-800 dark:text-gray-200">
+                      {importMode === 'smart' ? 'Template Smart Import' : 'Template Import Lengkap'}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {importMode === 'smart'
+                        ? 'Upload file Excel apapun — AXION AI otomatis mendeteksi kolom dan mengisi kategori, akun, serta breakdown unit'
+                        : 'Download template Excel dengan semua kolom untuk import manual'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleDownloadTemplate}
+                  className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto whitespace-nowrap"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Download Template</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* File Upload — only for smart/full modes */}
+          {importMode !== 'channel' && (progress.stage === 'idle' || progress.stage === 'error') && (
             <div
               onDrop={handleDrop}
               onDragOver={handleDragOver}
@@ -794,7 +816,7 @@ export default function TransactionImportModal({
                 className="hidden"
               />
             </div>
-          ) : null}
+          )}
 
           {/* Error Message */}
           {progress.stage === 'error' && (

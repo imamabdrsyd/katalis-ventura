@@ -19,6 +19,8 @@ import { DividendEntryModeModal } from './DividendEntryModeModal';
 import { findDividendPayableAccount } from '@/lib/accounting/guidance/dividendSettlement';
 import { getStockTransactions } from '@/lib/utils/inventoryHelper';
 import { InventoryPicker } from './InventoryPicker';
+import { CatalogItemPicker } from '@/components/catalog/CatalogItemPicker';
+import type { CatalogItem } from '@/types';
 import { UnitBreakdownSection } from './UnitBreakdownSection';
 import { FileUpload } from '@/components/ui/FileUpload';
 import { ChevronDown, StickyNote, Paperclip, Zap, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
@@ -27,6 +29,7 @@ import { CurrencyPill } from '@/components/ui/CurrencyPill';
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
 import { resolveContactTypeFromFlow, saveContactFromTransaction, getContacts } from '@/lib/api/contacts';
 import { useBusinessContext } from '@/context/BusinessContext';
+import { useLanguage } from '@/context/LanguageContext';
 import OCRScanButton from '@/components/transactions/OCRScanButton';
 import type { OcrResult } from '@/lib/ocr/types';
 import { matchAccountByKeywords, matchContactByVendor } from '@/lib/ocr/matcher';
@@ -87,6 +90,7 @@ export function QuickTransactionForm({
   const params = useParams();
   const businessId = businessIdProp || (params?.businessId as string);
   const { user } = useBusinessContext();
+  const { t } = useLanguage();
 
   // Form state
   const [amount, setAmount] = useState(0);
@@ -229,6 +233,20 @@ export function QuickTransactionForm({
         ? prev.filter((id) => id !== transactionId)
         : [...prev, transactionId]
     );
+  };
+
+  // Quick entry: pilih satu item katalog → isi amount + nama otomatis.
+  // Kalau item punya akun pendapatan sendiri, pindahkan ke akun itu.
+  const handlePickCatalogItem = (item: CatalogItem) => {
+    setAmount(item.default_price);
+    setDisplayAmount(formatAmountForCurrency(item.default_price, currencyCode));
+    if (!name.trim()) setName(item.name);
+    if (item.revenue_account_id && item.revenue_account_id !== selectedAccountId) {
+      setSelectedAccountId(item.revenue_account_id);
+    }
+    if (errors.amount) {
+      setErrors((prev) => { const next = { ...prev }; delete next.amount; return next; });
+    }
   };
 
   // Handle account selection
@@ -735,6 +753,20 @@ export function QuickTransactionForm({
           selectedIds={selectedStockIds}
           onToggle={handleToggleStock}
         />
+      )}
+
+      {/* Catalog Picker - shown when a revenue account is selected */}
+      {isRevenueSelected && businessId && (
+        <div className="rounded-xl border border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/40 dark:bg-indigo-900/10 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-500 dark:text-indigo-400 mb-2">
+            {t.catalog.quickPickerLabel}
+          </p>
+          <CatalogItemPicker
+            businessId={businessId}
+            mode="single"
+            onPick={handlePickCatalogItem}
+          />
+        </div>
       )}
 
       {/* 3+4. TANGGAL + NAMA (2-column row) */}

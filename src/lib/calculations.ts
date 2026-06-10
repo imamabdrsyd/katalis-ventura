@@ -1760,6 +1760,21 @@ export function calculateCashFlow(
         bucket = 'operating';
     }
 
+    // Collect cash accounts and counter-accounts for display
+    const cashLines = lines.filter(l => l.account && isCashAccount(l.account));
+    const counterLines = lines.filter(l => l.account && !isCashAccount(l.account));
+    const formatAccLabel = (acc: Account) => `${acc.account_code} - ${acc.account_name}`;
+    const cashLabel = cashLines.length === 1 && cashLines[0].account
+      ? formatAccLabel(cashLines[0].account)
+      : cashLines.length > 1
+        ? cashLines.map(l => l.account ? formatAccLabel(l.account) : '').filter(Boolean).join(', ')
+        : undefined;
+    const counterLabel = counterLines.length === 1 && counterLines[0].account
+      ? formatAccLabel(counterLines[0].account)
+      : counterLines.length > 1
+        ? counterLines.map(l => l.account ? formatAccLabel(l.account) : '').filter(Boolean).join(', ')
+        : undefined;
+
     const entry: CashFlowTransaction = {
       id: t.id,
       date: t.date,
@@ -1767,6 +1782,8 @@ export function calculateCashFlow(
       description: t.description,
       amount: netCash,
       category: t.category,
+      debitAccount: netCash > 0 ? cashLabel : counterLabel,
+      creditAccount: netCash > 0 ? counterLabel : cashLabel,
     };
 
     if (bucket === 'operating') {

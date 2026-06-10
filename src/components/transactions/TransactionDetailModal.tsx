@@ -537,9 +537,6 @@ export function TransactionDetailModal({
                   )}
                 </div>
               )}
-              {transaction.sales_channel && transaction.category === 'EARN' && (
-                <SalesChannelBadge channel={transaction.sales_channel} size="md" />
-              )}
               {isDraft ? (
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">
                   {t.transactionDetail.draft}
@@ -551,6 +548,9 @@ export function TransactionDetailModal({
                 </span>
               )}
             </div>
+            {transaction.sales_channel && transaction.category === 'EARN' && (
+              <SalesChannelBadge channel={transaction.sales_channel} size="md" />
+            )}
             {showWarning && matchingWarning && !warningExpanded && (
               <button
                 onClick={() => setWarningExpanded(true)}

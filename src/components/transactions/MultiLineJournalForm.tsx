@@ -1,17 +1,20 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { PlusCircle, Trash2, AlertCircle } from 'lucide-react';
+import { PlusCircle, Trash2, AlertCircle, PackageOpen } from 'lucide-react';
 import { AccountDropdown } from './AccountDropdown';
 import { ContactAutocomplete } from './ContactAutocomplete';
 import { getAccounts } from '@/lib/api/accounts';
 import { resolveContactTypeFromCategory, saveContactFromTransaction } from '@/lib/api/contacts';
 import { useParams } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { CATEGORY_LABELS } from '@/lib/calculations';
 import type { TransactionCategory, JournalLineInput, Account, TransactionAttachment, SalesChannel } from '@/types';
 import { SALES_CHANNEL_OPTIONS } from '@/lib/salesChannels';
 import { FileUpload } from '@/components/ui/FileUpload';
+import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
+import { CatalogItemPicker, type PickedCatalogLine } from '@/components/catalog/CatalogItemPicker';
 
 export interface MultiLineFormData {
   date: string;
@@ -61,6 +64,7 @@ export function MultiLineJournalForm({
   const params = useParams();
   const businessId = businessIdProp || (params?.businessId as string);
   const { user } = useBusinessContext();
+  const { t } = useLanguage();
 
   const [formData, setFormData] = useState<Omit<MultiLineFormData, 'journal_lines'>>({
     date: initialData?.date ?? new Date().toISOString().split('T')[0],
@@ -91,6 +95,7 @@ export function MultiLineJournalForm({
   const [attachments, setAttachments] = useState<TransactionAttachment[]>(
     initialData?.attachments ?? []
   );
+  const [showCatalogPicker, setShowCatalogPicker] = useState(false);
 
   useEffect(() => {
     if (!businessId) return;
@@ -161,6 +166,51 @@ export function MultiLineJournalForm({
     setLines((prev) =>
       prev.map((l, i) => (i === idx ? { ...l, description: value } : l))
     );
+  }
+
+  // Terapkan item dari katalog → generate baris jurnal.
+  // Struktur: 1 baris Debit kosong (user pilih akun kas/piutang, amount = total)
+  // + 1 baris Credit per item ke akun pendapatannya.
+  function applyCatalogLines(picked: PickedCatalogLine[]) {
+    if (picked.length === 0) { setShowCatalogPicker(false); return; }
+
+    const total = picked.reduce((s, l) => s + l.lineTotal, 0);
+
+    // Baris debit: akun penampung (kas/bank/piutang) — user yang pilih akunnya.
+    const debitLine: JournalLineInput = {
+      account_id: '',
+      debit_amount: total,
+      credit_amount: 0,
+      description: 'Penerimaan penjualan',
+      sort_order: 0,
+    };
+
+    // Baris kredit per item ke akun pendapatannya (kalau di-set di katalog).
+    const creditLines: JournalLineInput[] = picked.map((l, i) => ({
+      account_id: l.item.revenue_account_id ?? '',
+      debit_amount: 0,
+      credit_amount: l.lineTotal,
+      description: l.qty > 1 ? `${l.item.name} ×${l.qty}` : l.item.name,
+      sort_order: i + 1,
+    }));
+
+    const newLines = [debitLine, ...creditLines];
+    setLines(newLines);
+    setDisplayDebit(newLines.map((l) => formatNumber(l.debit_amount)));
+    setDisplayCredit(newLines.map((l) => formatNumber(l.credit_amount)));
+
+    // Auto-isi deskripsi transaksi kalau masih kosong
+    setFormData((p) => {
+      const summary = picked.length === 1
+        ? (picked[0].qty > 1 ? `${picked[0].item.name} ×${picked[0].qty}` : picked[0].item.name)
+        : `${picked.length} item dari katalog`;
+      return {
+        ...p,
+        description: p.description.trim() || summary,
+      };
+    });
+
+    setShowCatalogPicker(false);
   }
 
   function validate(): boolean {
@@ -300,9 +350,20 @@ export function MultiLineJournalForm({
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
             Baris Jurnal *
           </label>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            Total harus seimbang (Debit = Kredit)
-          </span>
+          {formData.category === 'EARN' ? (
+            <button
+              type="button"
+              onClick={() => setShowCatalogPicker(true)}
+              className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 transition-colors"
+            >
+              <PackageOpen className="w-3.5 h-3.5" />
+              {t.catalog.addFromCatalog}
+            </button>
+          ) : (
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              Total harus seimbang (Debit = Kredit)
+            </span>
+          )}
         </div>
 
         {loadingAccounts ? (
@@ -465,6 +526,22 @@ export function MultiLineJournalForm({
           {loading ? 'Menyimpan...' : (submitLabel ?? 'Simpan Jurnal')}
         </button>
       </div>
+
+      {/* Catalog picker modal */}
+      <AnimatedDialog isOpen={showCatalogPicker} onClose={() => setShowCatalogPicker(false)}>
+        <div className="p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <PackageOpen className="w-5 h-5 text-indigo-500" />
+            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{t.catalog.pickerTitle}</h3>
+          </div>
+          <CatalogItemPicker
+            businessId={businessId}
+            mode="multi"
+            onApply={applyCatalogLines}
+            onClose={() => setShowCatalogPicker(false)}
+          />
+        </div>
+      </AnimatedDialog>
     </form>
   );
 }

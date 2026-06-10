@@ -109,6 +109,83 @@ export function resolveAirbnbAccounts(accounts: Account[]): AccountResolveResult
   };
 }
 
+// ── TikTok Shop / Tokopedia (penjualan produk marketplace) ──────────────
+// Bisnis produk/dagang: pendapatan = 4100 Pendapatan Penjualan, kas masuk ke
+// Kas/Bank. Tidak ada akun komisi (CSV order tidak memuat komisi platform).
+const MARKETPLACE_PREFERRED_CODES = {
+  revenue: ['4100', '4000'],
+  // Marketplace umumnya cair ke rekening bank; utamakan Bank lalu Kas.
+  bank: ['1200', '1100'],
+};
+
+const MARKETPLACE_REVENUE_KEYWORDS = ['penjualan', 'pendapatan penjualan', 'sales', 'pendapatan', 'revenue'];
+
+/**
+ * Resolve akun untuk impor penjualan TikTok Shop / Tokopedia.
+ * Jurnal hanya 2-baris (Dr Kas/Bank, Cr Pendapatan) — commissionAccount selalu null.
+ */
+export function resolveMarketplaceAccounts(accounts: Account[]): AccountResolveResult {
+  const missingAccounts: string[] = [];
+
+  const revenueAccount =
+    findByCode(accounts, MARKETPLACE_PREFERRED_CODES.revenue) ??
+    accounts.find(a => a.account_type === 'REVENUE' && a.is_active && a.default_category === 'EARN') ??
+    findByKeywords(accounts, MARKETPLACE_REVENUE_KEYWORDS, 'REVENUE');
+
+  if (!revenueAccount) missingAccounts.push('akun Pendapatan Penjualan (Revenue)');
+
+  const bankAccount =
+    findByCode(accounts, MARKETPLACE_PREFERRED_CODES.bank) ??
+    accounts.find(a =>
+      a.account_type === 'ASSET' &&
+      a.is_active &&
+      (a.is_cash_equivalent ?? false) &&
+      BANK_KEYWORDS.some(kw => a.account_name.toLowerCase().includes(kw))
+    ) ??
+    accounts.find(a =>
+      a.account_type === 'ASSET' &&
+      a.is_active &&
+      (a.is_cash_equivalent ?? false) &&
+      CASH_KEYWORDS.some(kw => a.account_name.toLowerCase().includes(kw))
+    ) ??
+    accounts.find(a => a.account_type === 'ASSET' && a.is_active && (a.is_cash_equivalent ?? false));
+
+  if (!bankAccount) missingAccounts.push('akun Kas/Bank (Asset)');
+
+  if (!revenueAccount || !bankAccount) {
+    return { config: null, missingAccounts, confident: false };
+  }
+
+  return {
+    config: {
+      revenueAccountId: revenueAccount.id,
+      commissionAccountId: null,
+      bankAccountId: bankAccount.id,
+    },
+    missingAccounts,
+    confident: true,
+  };
+}
+
+/**
+ * Cari akun Piutang Usaha (untuk impor marketplace mode 'receivable' — dana order
+ * belum cair ke bank). Prioritas: flag is_trade_receivable → kode 1130/1140 → keyword.
+ * Return null bila bisnis tidak punya akun piutang (caller fallback ke bank).
+ */
+export function resolveReceivableAccount(accounts: Account[]): Account | null {
+  const byFlag = accounts.find(a => a.account_type === 'ASSET' && a.is_active && a.is_trade_receivable);
+  if (byFlag) return byFlag;
+
+  const byCode = findByCode(accounts, ['1130', '1140', '1150']);
+  if (byCode && byCode.account_type === 'ASSET') return byCode;
+
+  const byKeyword = accounts.find(a =>
+    a.account_type === 'ASSET' && a.is_active &&
+    ['piutang', 'receivable'].some(kw => a.account_name.toLowerCase().includes(kw))
+  );
+  return byKeyword ?? null;
+}
+
 export interface ResolvedAccountSummary {
   revenueAccount: Account;
   commissionAccount: Account | null;
