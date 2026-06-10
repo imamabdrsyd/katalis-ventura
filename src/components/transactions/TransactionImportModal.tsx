@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Upload, FileText, AlertCircle, CheckCircle, Download, Sparkles, Table2, ChevronDown, Bot } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { X, Upload, FileText, AlertCircle, CheckCircle, Download, Sparkles, Table2, Bot } from 'lucide-react';
 import { ChannelImportTab } from '@/components/agent/ChannelImportTab';
 import { Tabs } from '@/components/ui/Tabs';
 import { parseExcelFile, validateFile, detectImportMode } from '@/lib/import/excelParser';
 import { validateRows, validateRowsSmart, sanitizeAmount, sanitizeText } from '@/lib/import/excelValidator';
 import { downloadTemplate, downloadSmartTemplate, downloadErrorReport } from '@/lib/import/templateGenerator';
-import { smartResolveTransaction, type SmartResolveResult } from '@/lib/import/smartResolver';
+import { smartResolveTransaction } from '@/lib/import/smartResolver';
 import { createTransactionsBulk, type TransactionInsert } from '@/lib/api/transactions';
 import {
   createImportBatch,
@@ -15,7 +15,7 @@ import {
   type ImportBatchError,
 } from '@/lib/api/importBatches';
 import { getAccounts } from '@/lib/api/accounts';
-import type { ParsedRow, ValidationResult, ImportProgress, SmartResolvedRow, ImportMode } from '@/lib/import/types';
+import type { ValidationResult, ImportProgress, SmartResolvedRow, ImportMode } from '@/lib/import/types';
 import type { Account, TransactionCategory } from '@/types';
 import { parseDate } from '@/lib/import/excelParser';
 import { formatCurrency } from '@/lib/utils';
@@ -61,7 +61,6 @@ export default function TransactionImportModal({
   onImportComplete,
 }: TransactionImportModalProps) {
   const [file, setFile] = useState<File | null>(null);
-  const [parsedData, setParsedData] = useState<ParsedRow[]>([]);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [progress, setProgress] = useState<ImportProgress>({
     stage: 'idle',
@@ -72,7 +71,6 @@ export default function TransactionImportModal({
   });
   const [importing, setImporting] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [importMode, setImportMode] = useState<TransactionImportMode>('smart');
   const [smartRows, setSmartRows] = useState<SmartResolvedRow[]>([]);
   const [showFilter, setShowFilter] = useState<'all' | 'review'>('all');
@@ -100,14 +98,11 @@ export default function TransactionImportModal({
           setAccounts(data);
         } catch (error) {
           console.error('Failed to fetch accounts:', error);
-        } finally {
-          setLoadingAccounts(false);
         }
       }
 
       fetchAccounts();
     } else {
-      setLoadingAccounts(true);
       setAccounts([]);
     }
   }, [isOpen, businessId]);
@@ -175,7 +170,6 @@ export default function TransactionImportModal({
 
   const handleFileSelect = async (selectedFile: File) => {
     setFile(null);
-    setParsedData([]);
     setValidationResult(null);
     setSmartRows([]);
 
@@ -223,7 +217,6 @@ export default function TransactionImportModal({
         return;
       }
 
-      setParsedData(data);
 
       // Auto-detect mode
       const detectedMode = detectImportMode(data);
@@ -671,7 +664,6 @@ export default function TransactionImportModal({
 
   const handleClose = () => {
     setFile(null);
-    setParsedData([]);
     setValidationResult(null);
     setSmartRows([]);
     setProgress({

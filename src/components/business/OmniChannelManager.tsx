@@ -398,7 +398,6 @@ export function OmniChannelManager({ business, userId, onBusinessUpdated }: Prop
                   />
                 </div>
                 <OmniChannelLinkList
-                  omniChannelId={channel.id}
                   businessId={businessId}
                   links={channel.links ?? []}
                   onChanged={fetchChannel}
@@ -455,4 +454,3 @@ export function OmniChannelManager({ business, userId, onBusinessUpdated }: Prop
     </div>
   );
 }
-

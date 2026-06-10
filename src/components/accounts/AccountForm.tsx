@@ -90,7 +90,6 @@ export function AccountForm({
   const [guideOpen, setGuideOpen] = useState(true);
   // Track auto-generated suggestion separately so user can override
   const [suggestedCode, setSuggestedCode] = useState('');
-  const [codeManuallyEdited, setCodeManuallyEdited] = useState(false);
   const [codeValidation, setCodeValidation] = useState<{ valid: boolean; message: string } | null>(null);
 
   // Kontak (untuk link akun is_stock ke pemilik) & daftar akun stock (untuk mapping owner akun dividen)
@@ -117,7 +116,6 @@ export function AccountForm({
     async function generateCode() {
       setLoadingCode(true);
       setCodeRangeError(null);
-      setCodeManuallyEdited(false);
       setCodeValidation(null);
       try {
         const nextCode = await accountsApi.getNextAccountCode(businessId, formData.parent_account_id!);
@@ -189,7 +187,6 @@ export function AccountForm({
   // Handle manual account code input
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 4); // numeric only, max 4 chars
-    setCodeManuallyEdited(value !== suggestedCode);
     setFormData(prev => ({
       ...prev,
       account_code: value,

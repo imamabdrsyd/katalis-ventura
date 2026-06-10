@@ -119,7 +119,7 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
 
   // Keyboard navigation
-  const [focusedIndex, setFocusedIndex] = useState<number>(-1);
+  const [, setFocusedIndex] = useState<number>(-1);
   const listRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 

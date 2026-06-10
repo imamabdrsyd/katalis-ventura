@@ -106,8 +106,6 @@ export function PeriodFilterCard({
     return { year: now.getFullYear(), month: now.getMonth() + 1 };
   })();
 
-  const activeMonthLabel = months[activeMonth.month - 1] ?? '';
-
   const handleMonthShift = (delta: number) => {
     let newMonth = activeMonth.month + delta;
     let newYear = activeMonth.year;

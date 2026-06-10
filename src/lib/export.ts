@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import type { FinancialSummary, BalanceSheetData, CashFlowData, Transaction, SCEData } from '@/types';
+import type { FinancialSummary, BalanceSheetData, Transaction, SCEData } from '@/types';
 import { formatCurrency } from './utils';
 import { calculateIncomeStatementMetrics } from './calculations';
 import type { IncomeStatementLineItems } from './calculations';

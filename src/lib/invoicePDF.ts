@@ -3,8 +3,6 @@ import autoTable from 'jspdf-autotable';
 import type { Invoice } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 
-// Neutral palette — only the "INVOICE" title uses INDIGO
-const INDIGO: [number, number, number] = [99, 102, 241];
 const WHITE: [number, number, number] = [255, 255, 255];
 const GRAY_TEXT: [number, number, number] = [107, 114, 128];
 const GRAY_LINE: [number, number, number] = [156, 163, 175];

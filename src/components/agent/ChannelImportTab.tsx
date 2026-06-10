@@ -3,14 +3,30 @@
 import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { AgentProgressToast, type AgentStep } from '@/components/agent/AgentProgressToast';
+import { SalesChannelBadge } from '@/components/transactions/SalesChannelBadge';
 import { appendAgentImportStep, readAgentImportSession, startAgentImportSession, updateAgentImportSession } from '@/lib/agent/importSession';
+import type { SalesChannel } from '@/types';
 import { Bot, Upload, FileSpreadsheet, CheckCircle, ChevronDown, X, Info } from 'lucide-react';
 
 const SUPPORTED_CHANNELS = [
-  { value: 'airbnb', label: 'Airbnb', description: 'CSV dari Airbnb Host dashboard', available: true },
-  { value: 'tiktok_tokopedia', label: 'TikTok Shop / Tokopedia', description: 'Ekspor pesanan Seller Center (gabungan)', available: true },
-  { value: 'shopee', label: 'Shopee', description: 'Laporan transaksi Shopee', available: false },
-];
+  { value: 'airbnb', label: 'Airbnb', badges: ['airbnb'], description: 'CSV dari Airbnb Host dashboard', available: true },
+  { value: 'tiktok_tokopedia', label: 'TikTok Shop / Tokopedia', badges: ['tiktok', 'tokopedia'], description: 'Ekspor pesanan Seller Center (gabungan)', available: true },
+  { value: 'shopee', label: 'Shopee', badges: ['shopee'], description: 'Laporan transaksi Shopee', available: false },
+] satisfies Array<{
+  value: string;
+  label: string;
+  badges: SalesChannel[];
+  description: string;
+  available: boolean;
+}>;
+
+function ChannelBadges({ badges }: { badges: SalesChannel[] }) {
+  return (
+    <span className="flex flex-wrap items-center gap-1.5">
+      {badges.map(badge => <SalesChannelBadge key={badge} channel={badge} size="sm" />)}
+    </span>
+  );
+}
 
 interface ImportResult {
   inserted: number;
@@ -205,9 +221,10 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
             <button
               onClick={() => setChannelDropdownOpen(prev => !prev)}
               className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors"
+              aria-label={`Pilih channel: ${channel.label}`}
             >
               <span className="flex items-center gap-2">
-                {channel.label}
+                <ChannelBadges badges={channel.badges} />
                 {!channel.available && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-400 font-normal">
                     Segera
@@ -233,11 +250,10 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
                           ? 'bg-indigo-50 dark:bg-indigo-900/30'
                           : 'hover:bg-gray-50 dark:hover:bg-gray-700'
                       }`}
+                      aria-label={ch.label}
                     >
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium ${selectedChannel === ch.value ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300'}`}>
-                          {ch.label}
-                        </p>
+                        <ChannelBadges badges={ch.badges} />
                         <p className="text-xs text-gray-400">{ch.description}</p>
                       </div>
                       {!ch.available && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-400">Segera</span>}

@@ -17,7 +17,7 @@ import type { TransactionCategory } from '@/types';
 import { QuickTransactionForm } from '@/components/transactions/QuickTransactionForm';
 import { RecurringList } from '@/components/transactions/RecurringList';
 import { useRecurringTransactions } from '@/hooks/useRecurringTransactions';
-import { Upload, TrendingUp, TrendingDown, Plus, CheckSquare, X, Trash2, MoreVertical, CreditCard, CheckCircle2, Calculator, RefreshCw, Printer, Loader2, Contact as ContactIcon, Receipt } from 'lucide-react';
+import { Upload, Plus, X, Trash2, CreditCard, CheckCircle2, Calculator, RefreshCw, Printer, Loader2, Contact as ContactIcon, Receipt } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
@@ -33,7 +33,6 @@ function TransactionsPageInner() {
   const {
     // Data
     visibleTransactions,
-    filteredTransactions,
     transactions,
     allTransactions,
     loading,
@@ -59,8 +58,6 @@ function TransactionsPageInner() {
     setDescriptionSearch,
     dateRange,
     setDateRange,
-    showFilterDropdown,
-    setShowFilterDropdown,
     // Pagination
     rowsPerPage,
     setRowsPerPage,
@@ -92,8 +89,6 @@ function TransactionsPageInner() {
     handleCreateFollowUp,
     handleConvertStockToCOGS,
     // Kebab menu & select mode
-    showKebabMenu,
-    setShowKebabMenu,
     selectMode,
     setSelectMode,
     selectedIds,
@@ -118,9 +113,6 @@ function TransactionsPageInner() {
     handleEditTransaction,
     handleEditMultiLineTransaction,
     handleDeleteTransaction,
-    handlePrint,
-    handleOpenInModal,
-    handleOpenOutModal,
   } = useTransactions();
 
   // Navigation between transactions in detail modal
@@ -530,30 +522,6 @@ function TransactionsPageInner() {
               <Plus className="h-4 w-4" />
               {t.transactions.journalEntry}
             </button>
-
-            {/* TEMPORARILY HIDDEN - To re-enable, uncomment this section */}
-            {/* <button
-              onClick={handleOpenInModal}
-              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors flex items-center gap-2 font-medium"
-            >
-              <TrendingUp className="h-5 w-5" />
-              Uang Masuk
-            </button>
-
-            <button
-              onClick={handleOpenOutModal}
-              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors flex items-center gap-2 font-medium"
-            >
-              <TrendingDown className="h-5 w-5" />
-              Uang Keluar
-            </button>
-
-            <button
-              onClick={() => { setTransactionMode(null); setShowAddModal(true); }}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm flex items-center gap-2"
-            >
-              + Form Lengkap
-            </button> */}
           </div>
         )}
       </div>

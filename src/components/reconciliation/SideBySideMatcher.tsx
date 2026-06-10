@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { CheckCircle2, Circle, Link as LinkIcon, AlertCircle, Loader2, Unlink, Inbox } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { useLanguage } from '@/context/LanguageContext';

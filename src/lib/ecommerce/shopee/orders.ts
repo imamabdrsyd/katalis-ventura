@@ -11,9 +11,6 @@ import type {
 const ORDER_LIST_PATH = '/api/v2/order/get_order_list';
 const ORDER_DETAIL_PATH = '/api/v2/order/get_order_detail';
 
-// Hanya sync order yang sudah selesai (pembayaran confirmed)
-const COMPLETED_STATUSES = ['COMPLETED'] as const;
-
 export interface FetchOrdersOptions {
   accessToken: string;
   shopId: number;

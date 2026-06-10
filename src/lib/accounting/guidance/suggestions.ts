@@ -11,7 +11,6 @@ import type {
 } from '../types';
 import { ACCOUNT_RULES, getCombinationDescription } from '../constants';
 import {
-  TRANSACTION_PATTERNS,
   findMatchingPatterns,
   detectPatternFromName,
 } from './transactionPatterns';

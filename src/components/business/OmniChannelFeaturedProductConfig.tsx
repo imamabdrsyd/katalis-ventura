@@ -18,16 +18,6 @@ interface Props {
   onChanged: () => void;
 }
 
-const EMPTY: FeaturedProduct = {
-  show: false,
-  name: '',
-  description: '',
-  image_url: '',
-  price_label: '',
-  link_url: '',
-  link_label: '',
-};
-
 export function OmniChannelFeaturedProductConfig({ businessId, userId, channel, onChanged }: Props) {
   const existing = channel?.featured_product ?? null;
   const [show, setShow] = useState(existing?.show ?? false);

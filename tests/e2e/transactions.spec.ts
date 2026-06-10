@@ -25,11 +25,6 @@ test.describe('Transactions Page', () => {
   });
 
   test('should have quick add button', async ({ page }) => {
-    // Look for quick add button (FloatingQuickAdd component)
-    const quickAddButton = page.locator('button:has-text("Add"), button:has-text("Quick")', {
-      hasText: /add|quick/i
-    }).first();
-
     // Button should be visible or the page should have a way to add transactions
     const addElements = page.locator('button').filter({ has: page.locator('text=/add|quick/i') });
 

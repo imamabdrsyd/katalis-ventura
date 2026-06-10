@@ -8,13 +8,12 @@ import { OmniChannelLinkItem } from './OmniChannelLinkItem';
 import { AddOmniChannelLinkModal } from './AddOmniChannelLinkModal';
 
 interface Props {
-  omniChannelId: string;
   businessId: string;
   links: OmniChannelLink[];
   onChanged: () => void;
 }
 
-export function OmniChannelLinkList({ omniChannelId, businessId, links, onChanged }: Props) {
+export function OmniChannelLinkList({ businessId, links, onChanged }: Props) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingLink, setEditingLink] = useState<OmniChannelLink | null>(null);
 

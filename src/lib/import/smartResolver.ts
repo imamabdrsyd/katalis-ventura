@@ -3,7 +3,7 @@
  */
 
 import type { Account, TransactionCategory } from '@/types';
-import { detectPatternFromName, TRANSACTION_PATTERNS } from '@/lib/accounting/guidance/transactionPatterns';
+import { detectPatternFromName } from '@/lib/accounting/guidance/transactionPatterns';
 import type { TransactionPattern } from '@/lib/accounting/types';
 
 export interface SmartResolveResult {

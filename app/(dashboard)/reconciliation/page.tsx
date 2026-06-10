@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useState, useRef, useEffect } from 'react';
+import { Suspense, useState, useRef, useEffect } from 'react';
 import {
   CheckCircle2,
   Circle,
@@ -60,7 +60,6 @@ function ReconciliationPageInner() {
     bookBalance,
     bankBalance,
     setBankBalance,
-    bankBalanceNum,
     difference,
     showReconciled,
     setShowReconciled,

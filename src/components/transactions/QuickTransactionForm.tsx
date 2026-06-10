@@ -535,7 +535,6 @@ export function QuickTransactionForm({
         </div>
         <div className="mt-2">
           <CurrencyInputWithCalculator
-            value={amount}
             displayValue={displayAmount}
             onChange={(numeric, formatted) => {
               setDisplayAmount(formatted);

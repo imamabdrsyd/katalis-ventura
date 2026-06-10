@@ -156,7 +156,6 @@ export function CatalogItemForm({
         <div>
           <label className="label">{tc.priceLabel}</label>
           <CurrencyInputWithCalculator
-            value={formData.default_price}
             displayValue={priceDisplay}
             onChange={(val, display) => {
               setFormData(prev => ({ ...prev, default_price: val }));

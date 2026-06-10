@@ -8,7 +8,6 @@ import type { Transaction, Account, AuditLog, Contact, TransactionAttachment } f
 import type { TransactionFormData } from '@/components/transactions/TransactionForm';
 import { CATEGORY_LABELS } from '@/lib/calculations';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
-import { CategoryBadge } from '@/components/ui/CategoryBadge';
 import { SalesChannelBadge } from '@/components/transactions/SalesChannelBadge';
 import { formatCurrency, formatDate, formatDateWithDay, formatDateTime } from '@/lib/utils';
 import { getProfileName } from '@/lib/api/profiles';
@@ -18,7 +17,6 @@ import {
   isReceivableTransaction,
   isTradeReceivableTransaction,
   isSettled,
-  isPartiallySettled,
   getOutstandingAmount,
   getPartialSettlementIds,
   isDividendDeclaration,
@@ -1037,7 +1035,6 @@ export function TransactionDetailModal({
                   </p>
                   <CurrencyInputWithCalculator
                     label={t.transactionDetail.partialAmountLabel}
-                    value={partialAmount}
                     displayValue={partialDisplayAmount}
                     onChange={(num, fmt) => {
                       setPartialAmount(num);
@@ -1252,7 +1249,6 @@ export function TransactionDetailModal({
                   </p>
                   <CurrencyInputWithCalculator
                     label="Jumlah pembayaran"
-                    value={partialAmount}
                     displayValue={partialDisplayAmount}
                     onChange={(num, fmt) => {
                       setPartialAmount(num);

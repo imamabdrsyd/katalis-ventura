@@ -189,7 +189,7 @@ async function handleSyncPost(request: NextRequest) {
 
     for (let i = 0; i < mapped.length; i += 100) {
       const batch = mapped.slice(i, i + 100);
-      const { error: insertError, count } = await supabase
+      const { error: insertError } = await supabase
         .from('transactions')
         .insert(batch.map((t) => ({ ...t, created_by: user.id })));
 

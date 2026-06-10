@@ -455,13 +455,6 @@ export function TransactionForm({
     }
   };
 
-  // Helper function to get account name by ID
-  const getAccountName = (accountId: string | undefined): string => {
-    if (!accountId) return '';
-    const account = accounts.find((acc) => acc.id === accountId);
-    return account ? account.account_name : '';
-  };
-
   // Helper function to get account description (or fallback to name) for auto-fill
   const getAccountDescription = (accountId: string | undefined): string => {
     if (!accountId) return '';
@@ -501,7 +494,7 @@ export function TransactionForm({
     }
   };
 
-  const handleAccountChange = (field: 'debit' | 'credit') => (accountId: string, accountCode: string) => {
+  const handleAccountChange = (field: 'debit' | 'credit') => (accountId: string) => {
     if (field === 'debit') {
       setFormData((prev) => ({ ...prev, debit_account_id: accountId }));
       if (errors.debit_account_id) {
@@ -784,7 +777,6 @@ export function TransactionForm({
         <>
           <CurrencyInputWithCalculator
             label="Jumlah"
-            value={originalAmount}
             displayValue={displayAmount}
             onChange={handleOriginalAmountChange}
             inputClassName="text-2xl font-bold"
@@ -868,7 +860,6 @@ export function TransactionForm({
         <>
           <CurrencyInputWithCalculator
             label="Jumlah"
-            value={originalAmount}
             displayValue={displayAmount}
             onChange={handleOriginalAmountChange}
             error={errors.amount}

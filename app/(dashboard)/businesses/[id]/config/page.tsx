@@ -615,7 +615,6 @@ export default function BusinessMembersPage() {
                 </div>
                 <JoinRequestList
                   businessId={business.id}
-                  reviewerId={user.id}
                   onApproved={fetchMembers}
                 />
               </div>

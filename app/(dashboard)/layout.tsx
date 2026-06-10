@@ -6,10 +6,8 @@ import Image from 'next/image';
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { BusinessProvider, useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { BusinessForm, type BusinessFormData } from '@/components/business/BusinessForm';
-import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
 import { createClient } from '@/lib/supabase';
-import * as businessesApi from '@/lib/api/businesses';
+import { BusinessSwitcher } from '@/components/business/BusinessSwitcher';
 import {
   PieChart,
   CreditCard,
@@ -21,11 +19,6 @@ import {
   Search,
   ChevronDown,
   LucideIcon,
-  Wheat,
-  Heart,
-  Palette,
-  UtensilsCrossed,
-  Home,
   Menu,
   PanelLeft,
   X,
@@ -53,16 +46,6 @@ import {
   PackageOpen,
 } from 'lucide-react';
 
-const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
-  agribusiness: <Wheat className="w-4 h-4" />,
-  personal_care: <Heart className="w-4 h-4" />,
-  accommodation: <Building2 className="w-4 h-4" />,
-  creative_agency: <Palette className="w-4 h-4" />,
-  food_and_beverage: <UtensilsCrossed className="w-4 h-4" />,
-  short_term_rental: <Home className="w-4 h-4" />,
-  property_management: <Building2 className="w-4 h-4" />,
-  real_estate: <Building2 className="w-4 h-4" />,
-};
 import { motion, useReducedMotion } from 'framer-motion';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { NotificationBell } from '@/components/ui/NotificationBell';
@@ -84,6 +67,8 @@ type NavSection = {
   icon: LucideIcon;
   items: NavItem[];
 };
+
+const SIDEBAR_DEFAULT_HIDDEN = ['/trial-balance', '/ar-ap', '/invoices', '/reconciliation', '/market', '/statement-of-changes-in-equity', '/agent'];
 
 function useNavData() {
   const { t } = useLanguage();
@@ -495,47 +480,21 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
 
 function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: () => void; onQuickAddClick: () => void; isCollapsed: boolean }) {
   const router = useRouter();
-  const { user, businesses, activeBusiness, setActiveBusiness, userRole, displayRole } = useBusinessContext();
+  const { user, businesses, activeBusiness, userRole, displayRole } = useBusinessContext();
   const { roleLabels, t } = useNavData();
   const { locale, setLocale } = useLanguage();
   const supabase = createClient();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-  const [showAddBusiness, setShowAddBusiness] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
 
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
   const labelRole = displayRole || userRole;
-  const isInvestor = userRole === 'investor';
   const canManage = isManagerRole(userRole);
 
   const businessIds = businesses.map((b) => b.id);
   const { pendingCount, refresh: refreshNotifications } = useNotifications(businessIds, canManage, user?.id);
-
-  const handleAddBusiness = async (formData: BusinessFormData) => {
-    setIsSubmitting(true);
-    try {
-      await businessesApi.createBusiness(
-        {
-          business_name: formData.business_name,
-          business_sector: formData.business_sector,
-          property_address: formData.property_address,
-        },
-        user?.id!
-      );
-      setShowAddBusiness(false);
-      setIsDropdownOpen(false);
-      router.refresh();
-    } catch (error) {
-      console.error('Failed to create business:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -544,9 +503,6 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
         setIsProfileDropdownOpen(false);
       }
@@ -586,109 +542,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
       </button>
 
       {/* Business Switcher */}
-      <div className="relative" ref={dropdownRef}>
-        {/* <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
-          Business
-        </div> */}
-        <button
-          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          className="flex items-center gap-2 text-gray-800 dark:text-gray-200 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
-        >
-          <span className="font-semibold">{activeBusiness?.business_name || t.nav.selectBusiness}</span>
-          {activeBusiness?.business_type && (
-            <span className="flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              {activeBusiness.business_type === 'jasa'
-                ? t.businessForm.categoryJasa
-                : activeBusiness.business_type === 'produk'
-                ? t.businessForm.categoryProduk
-                : activeBusiness.business_type === 'dagang'
-                ? t.businessForm.categoryDagang
-                : null}
-            </span>
-          )}
-          <ChevronDown className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
-        </button>
-
-        {isDropdownOpen && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
-            <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden">
-              <div className="max-h-64 overflow-y-auto py-1">
-                {businesses.map((business) => (
-                  <button
-                    key={business.id}
-                    onClick={() => {
-                      setActiveBusiness(business.id);
-                      setIsDropdownOpen(false);
-                    }}
-                    className={`flex items-center gap-3 w-full px-3 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                      business.id === activeBusiness?.id ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''
-                    }`}
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden ${
-                        business.logo_url
-                          ? 'bg-white'
-                          : business.id === activeBusiness?.id
-                            ? 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'
-                            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-                      }`}
-                    >
-                      {business.logo_url ? (
-                        <Image src={business.logo_url} alt={business.business_name} width={32} height={32} className="w-full h-full object-cover" unoptimized />
-                      ) : (
-                        BUSINESS_TYPE_ICONS[business.business_sector ?? ''] || <Building2 className="w-4 h-4" />
-                      )}
-                    </div>
-                    <span
-                      className={`text-sm flex-1 truncate ${
-                        business.id === activeBusiness?.id
-                          ? 'font-semibold text-indigo-500 dark:text-indigo-400'
-                          : 'text-gray-700 dark:text-gray-300'
-                      }`}
-                    >
-                      {business.business_name}
-                    </span>
-                    {business.id === activeBusiness?.id && (
-                      <svg className="w-4 h-4 text-indigo-500 dark:text-indigo-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </button>
-                ))}
-              </div>
-              <div className="border-t border-gray-100 dark:border-gray-700 grid grid-cols-2 py-1.5">
-                {canManage && (
-                  <button
-                    onClick={() => {
-                      setShowAddBusiness(true);
-                      setIsDropdownOpen(false);
-                    }}
-                    className="relative group flex justify-center p-2 rounded-lg text-gray-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors mx-1"
-                  >
-                    <Plus className="w-5 h-5" />
-                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                      {t.nav.createNewBusiness}
-                    </span>
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    setIsDropdownOpen(false);
-                    router.push('/join-business');
-                  }}
-                  className="relative group flex justify-center p-2 rounded-lg text-gray-500 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors mx-1"
-                >
-                  <UserPlus className="w-5 h-5" />
-                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                    {t.nav.joinBusiness}
-                  </span>
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+      <BusinessSwitcher />
 
       {/* Right Side Actions */}
       <div className="flex items-center gap-2 md:gap-4">
@@ -818,18 +672,6 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
 
     {/* Search Dialog */}
     <SearchDialog open={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
-
-    {/* Add Business Modal */}
-    <AnimatedDialog
-      isOpen={showAddBusiness && !isInvestor}
-      onClose={() => setShowAddBusiness(false)}
-    >
-      <BusinessForm
-        onSubmit={handleAddBusiness}
-        onCancel={() => setShowAddBusiness(false)}
-        loading={isSubmitting}
-      />
-    </AnimatedDialog>
     </>
   );
 }
@@ -855,7 +697,6 @@ function Sidebar({
   const canManage = isManagerRole(userRole);
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
-  const SIDEBAR_DEFAULT_HIDDEN = ['/trial-balance', '/ar-ap', '/invoices', '/reconciliation', '/market', '/statement-of-changes-in-equity', '/agent'];
   const [hiddenNavItems, setHiddenNavItems] = useState<string[]>(SIDEBAR_DEFAULT_HIDDEN);
 
   useEffect(() => {

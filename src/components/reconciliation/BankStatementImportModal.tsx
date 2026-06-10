@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowLeft, CheckCircle2, FileText, Loader2, Upload } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { createClient } from '@/lib/supabase';

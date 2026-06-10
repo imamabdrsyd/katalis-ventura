@@ -773,47 +773,6 @@ export default function JournalEntryPage() {
     setMlLines(prev => prev.map((l, i) => (i === idx ? { ...l, description: value } : l)));
   };
 
-  /** Get filtered accounts for a multi-line row based on entry type */
-  const getMlAccountsForRow = (side: 'debit' | 'credit'): Account[] => {
-    if (!selectedEntryType) return accounts;
-    if (selectedEntryType.id === 'penjualan') {
-      // Debit rows → ASSET or EXPENSE (komisi OTA, biaya bank, diskon penjualan)
-      // Credit rows → REVENUE only
-      return side === 'debit'
-        ? accounts.filter(a => a.account_type === 'ASSET' || a.account_type === 'EXPENSE')
-        : accounts.filter(a => a.account_type === 'REVENUE');
-    }
-    if (selectedEntryType.id === 'pengeluaran') {
-      // Debit rows → EXPENSE or ASSET; Credit rows → ASSET or LIABILITY
-      return side === 'debit'
-        ? accounts.filter(a => a.account_type === 'EXPENSE' || a.account_type === 'ASSET')
-        : accounts.filter(a => a.account_type === 'ASSET' || a.account_type === 'LIABILITY');
-    }
-    if (selectedEntryType.id === 'pinjaman') {
-      // Debit rows → ASSET or EXPENSE (biaya layanan, admin fee, provisi)
-      // Credit rows → LIABILITY only
-      return side === 'debit'
-        ? accounts.filter(a => a.account_type === 'ASSET' || a.account_type === 'EXPENSE')
-        : accounts.filter(a => a.account_type === 'LIABILITY');
-    }
-    return accounts;
-  };
-
-  /** Determine which side a line account should be filtered for */
-  const getMlLineSide = (line: MultiLineLine): 'debit' | 'credit' => {
-    if (line.debit_amount > 0) return 'debit';
-    if (line.credit_amount > 0) return 'credit';
-    // Default: infer from account type if set
-    if (line.account_id) {
-      const acc = accounts.find(a => a.id === line.account_id);
-      if (acc) {
-        if (acc.account_type === 'REVENUE' || acc.account_type === 'LIABILITY') return 'credit';
-        if (acc.account_type === 'EXPENSE') return 'debit';
-      }
-    }
-    return 'debit'; // default
-  };
-
   // ─── template handlers ─────────────────────────────────────────────────
 
   const applyTemplate = (tmpl: TransactionTemplate) => {
@@ -1294,7 +1253,6 @@ export default function JournalEntryPage() {
                   <div>
                     <CurrencyInputWithCalculator
                       label="Jumlah (Rp)"
-                      value={amount}
                       displayValue={displayAmount}
                       onChange={(numeric, formatted) => {
                         setDisplayAmount(formatted);
@@ -1455,7 +1413,6 @@ export default function JournalEntryPage() {
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                         {mlLines.map((line, idx) => {
-                          const side = getMlLineSide(line);
                           return (
                             <tr key={idx} className="bg-white dark:bg-gray-900">
                               <td className="px-3 py-2 text-gray-400 dark:text-gray-500">{idx + 1}</td>

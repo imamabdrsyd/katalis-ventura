@@ -7,7 +7,6 @@ import { getBusinessJoinRequests, type JoinRequest } from '@/lib/api/joinRequest
 
 interface JoinRequestListProps {
   businessId: string;
-  reviewerId?: string;
   onApproved?: () => void;
 }
 
@@ -20,7 +19,7 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-export function JoinRequestList({ businessId, reviewerId, onApproved }: JoinRequestListProps) {
+export function JoinRequestList({ businessId, onApproved }: JoinRequestListProps) {
   const [requests, setRequests] = useState<JoinRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);

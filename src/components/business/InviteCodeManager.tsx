@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Copy, Check, X, UserPlus, Clock, Users, Ban, Trash2, AlertCircle, CheckCircle2 } from 'lucide-react';
-import type { InviteCode, UserRole } from '@/types';
+import type { InviteCode } from '@/types';
 import * as inviteCodesApi from '@/lib/api/inviteCodes';
 
 interface InviteCodeManagerProps {

@@ -177,7 +177,6 @@ export function OmnichannelLinkCards({ business, index, businesses = [], onSelec
           {/* Primary link as full-width button */}
           {business.links.filter(l => l.is_primary).map((link) => {
             const meta = CHANNEL_META[link.channel_type as OmniChannelType] ?? CHANNEL_META.custom;
-            const png = CHANNEL_PNG[link.channel_type];
             return (
               <a
                 key={`primary-${link.id}`}

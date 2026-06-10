@@ -8,7 +8,6 @@ import {
 import {
   scanBankStatement,
   BankStatementParseError,
-  type BankCode,
 } from '@/lib/bankStatements';
 import {
   hashFile,
@@ -17,7 +16,6 @@ import {
 } from '@/lib/ocr';
 import { withRouteTiming } from '@/lib/api/server/timing';
 
-const VALID_BANK_CODES: BankCode[] = ['BCA', 'MANDIRI', 'BRI', 'BNI', 'GENERIC'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 const metadataSchema = z.object({

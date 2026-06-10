@@ -2,7 +2,7 @@
 
 import { useBusinessContext } from '@/context/BusinessContext';
 import { ChannelImportTab } from '@/components/agent/ChannelImportTab';
-import { Bot, AlertCircle } from 'lucide-react';
+import { Bot, AlertCircle, Table2 } from 'lucide-react';
 import { isManagerRole } from '@/lib/roles';
 import { useRouter } from 'next/navigation';
 
@@ -51,7 +51,7 @@ export default function AgentPage() {
       {/* Task: Import CSV */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
-          <Bot className="w-5 h-5 text-indigo-500 flex-shrink-0" />
+          <Table2 className="w-5 h-5 text-indigo-500 flex-shrink-0" />
           <div>
             <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Import Revenue CSV</h2>
             <p className="text-xs text-gray-500 dark:text-gray-400">Upload CSV dari channel penjualanmu, Agent yang proses</p>

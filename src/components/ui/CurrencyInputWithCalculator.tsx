@@ -95,7 +95,6 @@ function formatFxRateValue(value?: number): string {
 // ─── types ─────────────────────────────────────────────────────────────────
 
 interface CurrencyInputWithCalculatorProps {
-  value: number;
   displayValue: string;
   onChange: (numericValue: number, displayValue: string) => void;
   className?: string;
@@ -136,7 +135,6 @@ function evalCalc(a: number, op: CalcOp, b: number): number {
 // ─── component ─────────────────────────────────────────────────────────────
 
 export function CurrencyInputWithCalculator({
-  value,
   displayValue,
   onChange,
   className = '',
