@@ -471,7 +471,7 @@ export function TransactionList({
               <div className="relative" ref={categoryDropdownRef}>
                 <button
                   onClick={toggleCategoryDropdown}
-                  className={`flex items-center gap-1 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${categoryFilter ? 'text-indigo-500 dark:text-indigo-400 font-medium' : ''}`}
+                  className={`flex items-center gap-1 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${categoryFilter ? 'text-gray-900 dark:text-gray-100 font-medium' : ''}`}
                 >
                   {categoryFilter || t.transactions.tableCategory}
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -486,7 +486,7 @@ export function TransactionList({
                   >
                     <button
                       onClick={() => { onCategoryFilterChange?.(''); setShowCategoryDropdown(false); }}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${!categoryFilter ? 'text-indigo-500 dark:text-indigo-400 font-medium' : 'text-gray-700 dark:text-gray-300'}`}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${!categoryFilter ? 'text-gray-900 dark:text-gray-100 font-medium' : 'text-gray-700 dark:text-gray-300'}`}
                     >
                       {t.common.all}
                     </button>
@@ -511,7 +511,7 @@ export function TransactionList({
               <div className="relative" ref={contactDropdownRef}>
                 <button
                   onClick={toggleContactDropdown}
-                  className={`flex items-center gap-1 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${contactFilter ? 'text-indigo-500 dark:text-indigo-400 font-medium' : ''}`}
+                  className={`flex items-center gap-1 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${contactFilter ? 'text-gray-900 dark:text-gray-100 font-medium' : ''}`}
                 >
                   <span className={contactFilter ? 'truncate max-w-[140px]' : ''}>{contactFilter || t.transactions.tableSubject}</span>
                   <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -536,7 +536,7 @@ export function TransactionList({
                     <div className="overflow-y-auto">
                       <button
                         onClick={() => { onContactFilterChange?.(''); setShowContactDropdown(false); setContactSearch(''); }}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${!contactFilter ? 'text-indigo-500 dark:text-indigo-400 font-medium' : 'text-gray-700 dark:text-gray-300'}`}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${!contactFilter ? 'text-gray-900 dark:text-gray-100 font-medium' : 'text-gray-700 dark:text-gray-300'}`}
                       >
                         {t.common.all}
                       </button>
@@ -546,7 +546,7 @@ export function TransactionList({
                           <button
                             key={c.id}
                             onClick={() => { onContactFilterChange?.(c.name); setShowContactDropdown(false); setContactSearch(''); }}
-                            className={`w-full text-left px-3 py-2 text-sm normal-case hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 ${contactFilter === c.name ? 'text-indigo-500 dark:text-indigo-400 font-semibold' : 'text-gray-700 dark:text-gray-300'}`}
+                            className={`w-full text-left px-3 py-2 text-sm normal-case hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 ${contactFilter === c.name ? 'text-gray-900 dark:text-gray-100 font-semibold' : 'text-gray-700 dark:text-gray-300'}`}
                           >
                             <ContactIcon className="w-3.5 h-3.5 flex-shrink-0 text-gray-400 dark:text-gray-500" />
                             <span className="truncate">{c.name}</span>
@@ -568,7 +568,7 @@ export function TransactionList({
                 <button
                   type="button"
                   onClick={toggleDescriptionSearch}
-                  className={`flex min-w-0 items-center gap-1 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${activeDescriptionSearch ? 'text-indigo-500 dark:text-indigo-400 font-medium' : ''}`}
+                  className={`flex min-w-0 items-center gap-1 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${activeDescriptionSearch ? 'text-gray-900 dark:text-gray-100 font-medium' : ''}`}
                   title={activeDescriptionSearch ? `${t.transactions.tableDescription}: ${activeDescriptionSearch}` : `${t.common.search} ${t.transactions.tableDescription}`}
                 >
                   <span className="truncate max-w-[128px]">
@@ -632,7 +632,7 @@ export function TransactionList({
               <div className="relative" ref={dateDropdownRef}>
                 <button
                   onClick={() => setShowDateDropdown(!showDateDropdown)}
-                  className={`flex items-center gap-1 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${dateRange?.start || dateRange?.end ? 'text-indigo-500 dark:text-indigo-400 font-medium' : ''}`}
+                  className={`flex items-center gap-1 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${dateRange?.start || dateRange?.end ? 'text-gray-900 dark:text-gray-100 font-medium' : ''}`}
                 >
                   {t.transactions.tableDate}
                   <CalendarSearch className="w-3.5 h-3.5" />

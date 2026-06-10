@@ -827,7 +827,7 @@ function TransactionsPageInner() {
                       onClick={() => setCurrentPage(page)}
                       className={`min-w-[40px] h-[40px] rounded-lg text-sm font-medium transition-colors ${
                         currentPage === page
-                          ? 'bg-indigo-500 text-white dark:bg-indigo-500'
+                          ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
                           : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
                     >
