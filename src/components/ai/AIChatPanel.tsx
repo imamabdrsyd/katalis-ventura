@@ -1218,9 +1218,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
           >
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 shrink-0">
-              <div className="w-9 h-9 rounded-xl bg-primary-50 dark:bg-primary-900/30 text-primary-500 dark:text-primary-400 flex items-center justify-center shrink-0">
-                <Sparkles className="w-5 h-5" />
-              </div>
+              <Image src="/images/favicon.png" alt="AI Assistant" width={32} height={32} className="rounded-lg shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-50 leading-tight">AI Assistant</p>
                 <div className="flex items-center gap-1.5 flex-wrap">

@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, CheckCircle, XCircle, Loader2, Sparkles } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Sparkles } from 'lucide-react';
 
 export interface AgentStep {
   id: string;
@@ -78,7 +79,7 @@ export function AgentProgressToast({ steps, isRunning, onDismiss }: AgentProgres
           >
             {isRunning ? (
               <div className="relative flex-shrink-0">
-                <Bot className="w-5 h-5 text-indigo-500" />
+                <Image src="/images/favicon.png" alt="Agent" width={20} height={20} className="rounded-sm" />
                 <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-indigo-400 rounded-full animate-ping opacity-75" />
               </div>
             ) : isError ? (

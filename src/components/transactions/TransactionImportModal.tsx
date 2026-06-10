@@ -701,7 +701,7 @@ export default function TransactionImportModal({
       onClick={onClose}
     >
       <div
-        className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col transition-all duration-200 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}
+        className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col transition-all duration-300 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -717,7 +717,7 @@ export default function TransactionImportModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-[480px] transition-[min-height] duration-300 ease-out">
           {/* Mode Toggle */}
           {(progress.stage === 'idle' || progress.stage === 'error' || importMode === 'channel') && (
             <Tabs<TransactionImportMode>
@@ -759,7 +759,7 @@ export default function TransactionImportModal({
                 </div>
                 <button
                   onClick={handleDownloadTemplate}
-                  className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto whitespace-nowrap"
+                  className="btn-primary-glow flex items-center justify-center gap-2 w-full sm:w-auto whitespace-nowrap"
                 >
                   <Download className="h-4 w-4" />
                   <span>Download Template</span>

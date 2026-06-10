@@ -193,155 +193,145 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
   }, [selectedFile, businessId, selectedChannel, instruction, addStep, router, onImportComplete]);
 
   return (
-    <div className="space-y-4">
-      {/* Description */}
-      <p className="text-sm text-gray-500 dark:text-gray-400">
-        Upload CSV dari channel penjualanmu — Agent menganalisis, mencocokkan akun, dan menyimpan jurnal transaksi secara otomatis.
-      </p>
+    <div className="space-y-6">
+      {/* Channel + Instruksi — control row, mirrors the template card height of other tabs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Channel selector */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+            Channel
+          </label>
+          <div className="relative">
+            <button
+              onClick={() => setChannelDropdownOpen(prev => !prev)}
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                {channel.label}
+                {!channel.available && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-400 font-normal">
+                    Segera
+                  </span>
+                )}
+              </span>
+              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${channelDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
 
-      {/* Channel selector */}
-      <div>
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-          Channel
-        </label>
-        <div className="relative">
-          <button
-            onClick={() => setChannelDropdownOpen(prev => !prev)}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors"
-          >
-            <span className="flex items-center gap-2">
-              {channel.label}
-              {!channel.available && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-400 font-normal">
-                  Segera
-                </span>
-              )}
-            </span>
-            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${channelDropdownOpen ? 'rotate-180' : ''}`} />
-          </button>
+            {channelDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setChannelDropdownOpen(false)} />
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-20 overflow-hidden">
+                  {SUPPORTED_CHANNELS.map(ch => (
+                    <button
+                      key={ch.value}
+                      disabled={!ch.available}
+                      onClick={() => { setSelectedChannel(ch.value); setInstruction(''); setChannelDropdownOpen(false); }}
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                        !ch.available
+                          ? 'opacity-50 cursor-not-allowed'
+                          : selectedChannel === ch.value
+                          ? 'bg-indigo-50 dark:bg-indigo-900/30'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium ${selectedChannel === ch.value ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                          {ch.label}
+                        </p>
+                        <p className="text-xs text-gray-400">{ch.description}</p>
+                      </div>
+                      {!ch.available && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-400">Segera</span>}
+                      {ch.available && selectedChannel === ch.value && <CheckCircle className="w-4 h-4 text-indigo-500 flex-shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
 
-          {channelDropdownOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setChannelDropdownOpen(false)} />
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-20 overflow-hidden">
-                {SUPPORTED_CHANNELS.map(ch => (
-                  <button
-                    key={ch.value}
-                    disabled={!ch.available}
-                    onClick={() => { setSelectedChannel(ch.value); setInstruction(''); setChannelDropdownOpen(false); }}
-                    className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors ${
-                      !ch.available
-                        ? 'opacity-50 cursor-not-allowed'
-                        : selectedChannel === ch.value
-                        ? 'bg-indigo-50 dark:bg-indigo-900/30'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium ${selectedChannel === ch.value ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300'}`}>
-                        {ch.label}
-                      </p>
-                      <p className="text-xs text-gray-400">{ch.description}</p>
-                    </div>
-                    {!ch.available && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-400 self-center">Segera</span>}
-                    {ch.available && selectedChannel === ch.value && <CheckCircle className="w-4 h-4 text-indigo-500 self-center flex-shrink-0" />}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
+        {/* Instruksi tambahan */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+            Instruksi <span className="font-normal text-gray-400">(opsional)</span>
+          </label>
+          <input
+            type="text"
+            value={instruction}
+            onChange={e => setInstruction(e.target.value)}
+            disabled={isRunning || !channel.available}
+            placeholder={selectedChannel === 'airbnb'
+              ? '"hanya bulan Mei" · "masukkan ke piutang dulu" · "jadikan draft"'
+              : '"hanya TikTok bulan Mei" · "masukkan ke piutang dulu" · "jadikan draft"'
+            }
+            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500 disabled:opacity-50"
+          />
         </div>
       </div>
 
-      {/* File drop zone */}
-      <div>
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-          File CSV
-        </label>
-        <div
-          onDragEnter={e => { e.preventDefault(); dragCounterRef.current += 1; setDragOver(true); }}
-          onDragOver={e => e.preventDefault()}
-          onDragLeave={e => {
-            e.preventDefault();
-            dragCounterRef.current -= 1;
-            if (dragCounterRef.current <= 0) { dragCounterRef.current = 0; setDragOver(false); }
-          }}
-          onDrop={e => { dragCounterRef.current = 0; handleDrop(e); }}
-          onClick={() => fileInputRef.current?.click()}
-          className={`relative border-2 border-dashed rounded-xl px-6 py-8 text-center cursor-pointer transition-all ${
-            dragOver
-              ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
-              : selectedFile
-              ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20'
-              : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-          }`}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv"
-            className="hidden"
-            onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
-          />
+      {/* File drop zone — same dimensions as other tabs */}
+      <div
+        onDragEnter={e => { e.preventDefault(); dragCounterRef.current += 1; setDragOver(true); }}
+        onDragOver={e => e.preventDefault()}
+        onDragLeave={e => {
+          e.preventDefault();
+          dragCounterRef.current -= 1;
+          if (dragCounterRef.current <= 0) { dragCounterRef.current = 0; setDragOver(false); }
+        }}
+        onDrop={e => { dragCounterRef.current = 0; handleDrop(e); }}
+        onClick={() => fileInputRef.current?.click()}
+        className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+          dragOver
+            ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
+            : selectedFile
+            ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20'
+            : 'border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400'
+        }`}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv"
+          className="hidden"
+          onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+        />
 
-          {selectedFile ? (
-            <div className="flex items-center justify-center gap-3">
-              <FileSpreadsheet className="w-8 h-8 text-emerald-500" />
-              <div className="text-left">
-                <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">{selectedFile.name}</p>
-                <p className="text-xs text-gray-400">{(selectedFile.size / 1024).toFixed(1)} KB</p>
-              </div>
+        {selectedFile ? (
+          <>
+            <FileSpreadsheet className="h-8 w-8 text-emerald-500 mx-auto mb-3" />
+            <p className="text-base font-medium text-emerald-700 dark:text-emerald-300 mb-1.5 flex items-center justify-center gap-2">
+              {selectedFile.name}
               <button
                 onClick={e => { e.stopPropagation(); setSelectedFile(null); setImportResult(null); }}
-                className="ml-auto p-1 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-800/30 text-emerald-600 dark:text-emerald-400"
+                className="p-1 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-800/30 text-emerald-600 dark:text-emerald-400"
               >
                 <X className="w-4 h-4" />
               </button>
-            </div>
-          ) : (
-            <>
-              <Upload className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                {dragOver ? 'Lepas file di sini' : 'Drag & drop atau klik untuk pilih file'}
-              </p>
-              <p className="text-xs text-gray-400 mt-1">CSV · Maks 5MB</p>
-            </>
-          )}
-        </div>
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{(selectedFile.size / 1024).toFixed(1)} KB</p>
+          </>
+        ) : (
+          <>
+            <Upload className="h-8 w-8 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
+            <p className="text-base font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              {dragOver ? 'Lepas file di sini' : 'Drop file CSV di sini atau klik untuk pilih file'}
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Format: .csv (max 5MB)
+            </p>
+          </>
+        )}
       </div>
 
-      {/* Instruksi tambahan */}
-      {(selectedChannel === 'airbnb' || selectedChannel === 'tiktok_tokopedia') && (
-        <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-            Instruksi tambahan <span className="font-normal text-gray-400">(opsional)</span>
-          </label>
-          <textarea
-            value={instruction}
-            onChange={e => setInstruction(e.target.value)}
-            disabled={isRunning}
-            rows={2}
-            placeholder={selectedChannel === 'airbnb'
-              ? 'Mis. "masukkan ke piutang dulu, dana belum cair" · "hanya bulan Mei" · "jadikan draft"'
-              : 'Mis. "masukkan ke piutang dulu, dana belum cair" · "hanya TikTok bulan Mei" · "jadikan draft"'
-            }
-            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500 resize-none disabled:opacity-50"
-          />
-          <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
-            Agent menerjemahkan instruksi jadi filter & akun — perhitungan angka tetap akurat & deterministik.
-          </p>
-        </div>
-      )}
-
-      {/* Info box */}
-      <div className="flex items-start gap-2.5 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
-        <Info className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+      {/* Info box — single line */}
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
+        <Info className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+        <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
           {selectedChannel === 'airbnb'
-            ? 'Agent akan buat jurnal 3-baris per booking: Dr Bank (paidout), Dr Komisi Airbnb (service fee), Cr Pendapatan Sewa (gross). Transaksi langsung masuk sebagai posted.'
+            ? 'Jurnal 3-baris per booking: Dr Bank · Dr Komisi · Cr Pendapatan Sewa (gross). Agent menerjemahkan instruksi jadi filter & akun — angka tetap deterministik.'
             : selectedChannel === 'tiktok_tokopedia'
-            ? 'Agent akan buat 1 transaksi per pesanan (multi-SKU digabung): Dr Kas/Bank, Cr Pendapatan Penjualan sebesar subtotal net. Hanya pesanan "Selesai" diproses; Order ID yang sudah diimpor dilewati otomatis (anti-duplikat).'
-            : 'Channel ini belum didukung. Pilih channel lain untuk sekarang.'}
+            ? '1 transaksi per pesanan selesai; duplikat Order ID dilewati otomatis. Agent menerjemahkan instruksi jadi filter & akun — angka tetap deterministik.'
+            : 'Channel ini belum didukung. Pilih channel lain.'}
         </p>
       </div>
 
