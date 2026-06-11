@@ -460,7 +460,7 @@ export function TransactionList({
                   type="checkbox"
                   checked={allSelected}
                   onChange={() => onSelectAll?.()}
-                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 accent-indigo-500 focus:ring-indigo-500"
+                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 accent-gray-900 dark:accent-gray-100 focus:ring-gray-500"
                 />
               </th>
             )}
@@ -711,7 +711,7 @@ export function TransactionList({
                   isNewMonth ? 'border-t-2 border-t-gray-300 dark:border-t-gray-500' : ''
                 } ${
                   selectMode
-                    ? `cursor-pointer ${selectedIds?.has(transaction.id) ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`
+                    ? `cursor-pointer ${selectedIds?.has(transaction.id) ? 'bg-gray-100 dark:bg-gray-700/50' : ''}`
                     : onRowClick ? 'cursor-pointer' : ''
                 } ${
                   isHighlighted ? 'animate-import-highlight' : ''
@@ -729,7 +729,7 @@ export function TransactionList({
                       onToggleSelect?.(transaction.id);
                     }}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 accent-indigo-500 focus:ring-indigo-500"
+                    className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 accent-gray-900 dark:accent-gray-100 focus:ring-gray-500"
                   />
                 </td>
               )}
