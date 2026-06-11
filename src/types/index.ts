@@ -908,6 +908,87 @@ export interface Contact {
   updated_at: string;
 }
 
+// ==================== LEADS HUB ====================
+
+export type LeadChannel =
+  | 'whatsapp'
+  | 'airbnb'
+  | 'booking_com'
+  | 'instagram'
+  | 'shopee'
+  | 'tokopedia'
+  | 'tiktok_shop';
+
+/** 'auto' = AI langsung kirim balasan (WhatsApp), 'draft' = simpan draft utk manual approve (OTA) */
+export type AiMode = 'auto' | 'draft';
+
+export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
+
+export type LeadMessageDirection = 'inbound' | 'outbound';
+
+export type LeadMessageSender = 'customer' | 'ai' | 'human';
+
+export interface ChannelIntegration {
+  id: string;
+  business_id: string;
+  channel: LeadChannel;
+  is_active: boolean;
+  /** ID akun di platform eksternal (mis. WhatsApp phone_number_id) — dipakai webhook utk lookup bisnis */
+  external_account_id?: string | null;
+  config?: Record<string, unknown> | null;
+  ai_enabled: boolean;
+  ai_mode: AiMode;
+  /** Instruksi tone/persona tambahan untuk system prompt AI */
+  ai_persona?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string | null;
+}
+
+export interface Lead {
+  id: string;
+  business_id: string;
+  channel: LeadChannel;
+  /** Identitas kontak di platform eksternal: no WA (wa_id) / thread id OTA */
+  external_id: string;
+  name?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  status: LeadStatus;
+  last_message_at?: string | null;
+  assigned_to?: string | null;
+  meta?: Record<string, unknown> | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string | null;
+  // Hydrated join
+  messages?: LeadMessage[];
+}
+
+export interface LeadMessageMeta {
+  /** true = draft balasan AI yang belum dikirim (tunggu approve manager) */
+  is_draft?: boolean;
+  [key: string]: unknown;
+}
+
+export interface LeadMessage {
+  id: string;
+  lead_id: string;
+  business_id: string;
+  direction: LeadMessageDirection;
+  sender: LeadMessageSender;
+  content: string;
+  /** ID pesan di platform eksternal (mis. wamid WhatsApp) — dedup webhook retry */
+  external_message_id?: string | null;
+  meta?: LeadMessageMeta | null;
+  created_by?: string | null;
+  created_at: string;
+}
+
 // ==================== AR/AP AGING ====================
 
 export type AgingBucket = 'current' | '31-60' | '61-90' | '91-120' | '120+';

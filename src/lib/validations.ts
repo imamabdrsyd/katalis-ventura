@@ -13,6 +13,13 @@ const VALID_SALES_CHANNELS = [
   'instagram', 'whatsapp', 'website',
   'offline', 'other',
 ] as const;
+// Leads Hub — mirror CHECK constraints di migration 101_leads_hub.sql
+const VALID_LEAD_CHANNELS = [
+  'whatsapp', 'airbnb', 'booking_com', 'instagram',
+  'shopee', 'tokopedia', 'tiktok_shop',
+] as const;
+const VALID_LEAD_STATUSES = ['new', 'contacted', 'qualified', 'converted', 'lost'] as const;
+const VALID_AI_MODES = ['auto', 'draft'] as const;
 const MAX_TRANSACTION_AMOUNT = 100_000_000_000; // 100 billion IDR
 const MAX_FX_RATE = 1_000_000;
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -383,6 +390,78 @@ export const createInviteCodeSchema = z.object({
 export const inviteCodeIdSchema = z.string().regex(UUID_REGEX, 'Invalid invite code ID format');
 
 // ============================================
+// Leads Hub Schemas
+// ============================================
+
+export const createChannelIntegrationSchema = z.object({
+  business_id: z.string().regex(UUID_REGEX, 'Invalid business ID format'),
+  channel: z.enum(VALID_LEAD_CHANNELS, {
+    error: `Channel must be one of: ${VALID_LEAD_CHANNELS.join(', ')}`,
+  }),
+  is_active: z.boolean().optional().default(true),
+  external_account_id: z.string().max(200).optional().nullable(),
+  config: z.record(z.string(), z.unknown()).optional().nullable(),
+  ai_enabled: z.boolean().optional().default(false),
+  ai_mode: z.enum(VALID_AI_MODES).optional().default('draft'),
+  ai_persona: z.string().max(2000).optional().nullable(),
+});
+
+export const updateChannelIntegrationSchema = z.object({
+  is_active: z.boolean().optional(),
+  external_account_id: z.string().max(200).optional().nullable(),
+  config: z.record(z.string(), z.unknown()).optional().nullable(),
+  ai_enabled: z.boolean().optional(),
+  ai_mode: z.enum(VALID_AI_MODES).optional(),
+  ai_persona: z.string().max(2000).optional().nullable(),
+});
+
+export const createLeadSchema = z.object({
+  business_id: z.string().regex(UUID_REGEX, 'Invalid business ID format'),
+  channel: z.enum(VALID_LEAD_CHANNELS),
+  external_id: z.string().min(1, 'External ID is required').max(500),
+  name: z.string().max(200).optional().nullable(),
+  phone: z.string().max(30).optional().nullable(),
+  email: z.string().email().max(200).optional().nullable(),
+  status: z.enum(VALID_LEAD_STATUSES).optional().default('new'),
+  assigned_to: z.string().regex(UUID_REGEX).optional().nullable(),
+  meta: z.record(z.string(), z.unknown()).optional().nullable(),
+});
+
+export const updateLeadSchema = z.object({
+  name: z.string().max(200).optional().nullable(),
+  phone: z.string().max(30).optional().nullable(),
+  email: z.string().email().max(200).optional().nullable(),
+  status: z.enum(VALID_LEAD_STATUSES).optional(),
+  assigned_to: z.string().regex(UUID_REGEX).optional().nullable(),
+  meta: z.record(z.string(), z.unknown()).optional().nullable(),
+});
+
+export const createLeadMessageSchema = z.object({
+  lead_id: z.string().regex(UUID_REGEX, 'Invalid lead ID format'),
+  business_id: z.string().regex(UUID_REGEX, 'Invalid business ID format'),
+  direction: z.enum(['inbound', 'outbound']),
+  sender: z.enum(['customer', 'ai', 'human']),
+  content: z.string().min(1, 'Content is required').max(10000),
+  external_message_id: z.string().max(500).optional().nullable(),
+  meta: z.record(z.string(), z.unknown()).optional().nullable(),
+});
+
+// Payload ternormalisasi dari Zapier/Make → POST /api/webhooks/inbound (Fase 3)
+export const inboundWebhookSchema = z.object({
+  business_id: z.string().regex(UUID_REGEX, 'Invalid business ID format'),
+  channel: z.enum(VALID_LEAD_CHANNELS),
+  external_id: z.string().min(1, 'External ID is required').max(500),
+  name: z.string().max(200).optional().nullable(),
+  message: z.string().min(1, 'Message is required').max(10000),
+  contact: z.object({
+    phone: z.string().max(30).optional().nullable(),
+    email: z.string().email().max(200).optional().nullable(),
+  }).optional().nullable(),
+});
+
+export const leadIdSchema = z.string().regex(UUID_REGEX, 'Invalid lead ID format');
+
+// ============================================
 // Type exports
 // ============================================
 
@@ -395,3 +474,9 @@ export type UpdateAccountInput = z.infer<typeof updateAccountSchema>;
 export type CreateBusinessInput = z.infer<typeof createBusinessSchema>;
 export type UpdateBusinessInput = z.infer<typeof updateBusinessSchema>;
 export type CreateInviteCodeInput = z.infer<typeof createInviteCodeSchema>;
+export type CreateChannelIntegrationInput = z.infer<typeof createChannelIntegrationSchema>;
+export type UpdateChannelIntegrationInput = z.infer<typeof updateChannelIntegrationSchema>;
+export type CreateLeadInput = z.infer<typeof createLeadSchema>;
+export type UpdateLeadInput = z.infer<typeof updateLeadSchema>;
+export type CreateLeadMessageInput = z.infer<typeof createLeadMessageSchema>;
+export type InboundWebhookInput = z.infer<typeof inboundWebhookSchema>;
