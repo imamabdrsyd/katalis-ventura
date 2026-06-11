@@ -461,6 +461,12 @@ export const inboundWebhookSchema = z.object({
 
 export const leadIdSchema = z.string().regex(UUID_REGEX, 'Invalid lead ID format');
 
+// Balasan manual WhatsApp dari inbox — POST /api/leads/reply
+export const sendLeadReplySchema = z.object({
+  lead_id: z.string().regex(UUID_REGEX, 'Invalid lead ID format'),
+  message: z.string().min(1, 'Message is required').max(4096),
+});
+
 // ============================================
 // Type exports
 // ============================================

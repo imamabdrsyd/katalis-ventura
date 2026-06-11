@@ -44,6 +44,7 @@ import {
   Landmark,
   Bot,
   PackageOpen,
+  MessagesSquare,
 } from 'lucide-react';
 
 import { motion, useReducedMotion } from 'framer-motion';
@@ -212,6 +213,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
   const searchablePages = useMemo(() => {
     const pages: NavItem[] = [
       { href: '/dashboard', label: t.nav.dashboard, icon: PieChart},
+      { href: '/leads', label: 'Leads', icon: MessagesSquare },
       { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
       ...navSections.flatMap((s) => s.items),
       { href: '/settings', label: t.nav.settings, icon: Settings },
@@ -846,6 +848,7 @@ function Sidebar({
           {/* Dashboard & Manage Business & Agent — independent */}
           {[
             { href: '/dashboard', label: t.nav.dashboard, icon: PieChart },
+            { href: '/leads', label: 'Leads', icon: MessagesSquare },
             { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
             ...(canManage ? [{ href: '/catalog', label: t.nav.catalog, icon: PackageOpen }] : []),
             ...(canManage ? [{ href: '/agent', label: 'Agentic Workflow', icon: Bot }] : []),
