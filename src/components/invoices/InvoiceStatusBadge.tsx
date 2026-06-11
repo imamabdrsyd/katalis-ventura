@@ -13,7 +13,7 @@ const STATUS_CONFIG: Record<InvoicePaymentStatus, { label: string; className: st
   },
   unpaid: {
     label: 'Belum Bayar',
-    className: 'bg-amber-50 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400',
+    className: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300',
   },
   paid: {
     label: 'Lunas',
@@ -21,7 +21,7 @@ const STATUS_CONFIG: Record<InvoicePaymentStatus, { label: string; className: st
   },
   overdue: {
     label: 'Jatuh Tempo',
-    className: 'bg-red-50 dark:bg-red-900/50 text-red-600 dark:text-red-400',
+    className: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300',
   },
 };
 

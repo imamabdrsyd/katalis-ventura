@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface AnimatedDialogProps {
   isOpen: boolean;
@@ -25,6 +26,11 @@ export function AnimatedDialog({
 }: AnimatedDialogProps) {
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -37,9 +43,9 @@ export function AnimatedDialog({
     return () => clearTimeout(timeout);
   }, [isOpen]);
 
-  if (!shouldRender) return null;
+  if (!shouldRender || !mounted) return null;
 
-  return (
+  return createPortal(
     <div
       className={`${backdropClassName} transition-opacity duration-200 ease-out ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       onClick={onClose}
@@ -50,6 +56,7 @@ export function AnimatedDialog({
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -162,7 +162,7 @@ function GeneralLedgerPageInner() {
                 onClick={handleAllTime}
                 className={`relative px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   isAllTime
-                    ? 'text-indigo-600 dark:text-indigo-400'
+                    ? 'text-gray-900 dark:text-gray-100'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
@@ -181,7 +181,7 @@ function GeneralLedgerPageInner() {
                   onClick={() => handlePeriodChange(p)}
                   className={`relative px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                     period === p && !isAllTime
-                      ? 'text-indigo-600 dark:text-indigo-400'
+                      ? 'text-gray-900 dark:text-gray-100'
                       : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                   }`}
                 >
@@ -206,7 +206,7 @@ function GeneralLedgerPageInner() {
                 }}
                 className={`relative px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   period === 'custom' && !isAllTime
-                    ? 'text-indigo-600 dark:text-indigo-400'
+                    ? 'text-gray-900 dark:text-gray-100'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
@@ -238,7 +238,7 @@ function GeneralLedgerPageInner() {
                     onClick={() => setFilterType(type)}
                     className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
                       filterType === type
-                        ? 'bg-indigo-500 text-white'
+                        ? 'bg-black text-white dark:bg-gray-100 dark:text-gray-900'
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                     }`}
                   >
