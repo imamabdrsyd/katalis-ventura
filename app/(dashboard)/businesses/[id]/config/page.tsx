@@ -9,7 +9,7 @@ import { InviteCodeManager } from '@/components/business/InviteCodeManager';
 import { JoinRequestList } from '@/components/business/JoinRequestList';
 import { getBusinessMembers, type BusinessMember } from '@/lib/api/members';
 import Image from 'next/image';
-import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut, ShoppingBag, Contact, CalendarDays, Rocket, Pencil, Check, X, Info, FileText, Landmark, MapPinned, MoreVertical } from 'lucide-react';
+import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut, Blocks, Contact, CalendarDays, Rocket, Pencil, Check, X, Info, FileText, Landmark, MapPinned, MoreVertical } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { Tabs } from '@/components/ui/Tabs';
@@ -18,6 +18,7 @@ import * as businessesApi from '@/lib/api/businesses';
 import { EcommerceIntegration } from '@/components/ecommerce/EcommerceIntegration';
 import { ChannelIntegration } from '@/components/integrations/ChannelIntegration';
 import { ContactList } from '@/components/business/ContactList';
+import { useLanguage } from '@/context/LanguageContext';
 import { isManagerRole } from '@/lib/roles';
 import type { Business } from '@/types';
 
@@ -471,6 +472,7 @@ export default function BusinessMembersPage() {
   const router = useRouter();
   const businessId = params.id as string;
 
+  const { t } = useLanguage();
   const { user, userRole, isSuperadmin, businesses, activeBusiness, setActiveBusiness, refetch } = useBusinessContext();
   const isInvestor = userRole === 'investor';
   const canManage = isManagerRole(userRole);
@@ -554,7 +556,7 @@ export default function BusinessMembersPage() {
           tabs={[
             {
               value: 'members',
-              label: 'Anggota',
+              label: t.businessConfig.tabMembers,
               icon: <Users className="w-4 h-4" />,
               badge: !loading ? (
                 <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300 rounded-full text-xs">
@@ -564,19 +566,19 @@ export default function BusinessMembersPage() {
             },
             {
               value: 'contacts',
-              label: 'Kontak',
+              label: t.businessConfig.tabContacts,
               icon: <Contact className="w-4 h-4" />,
             },
             {
               value: 'omni-channel',
-              label: 'Omnichannel',
+              label: t.businessConfig.tabOmnichannel,
               icon: <Globe className="w-4 h-4" />,
               hidden: isInvestor,
             },
             {
               value: 'integrations',
-              label: 'Integrasi',
-              icon: <ShoppingBag className="w-4 h-4" />,
+              label: t.businessConfig.tabIntegrations,
+              icon: <Blocks className="w-4 h-4" />,
               hidden: isInvestor,
             },
           ]}
@@ -588,7 +590,7 @@ export default function BusinessMembersPage() {
             className="btn-primary-glow flex items-center justify-center gap-2 flex-shrink-0"
           >
             <UserPlus className="h-4 w-4" />
-            Undang Anggota
+            {t.businessConfig.inviteMember}
           </button>
         )}
       </div>

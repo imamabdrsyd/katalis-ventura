@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
-  Instagram,
   Loader2,
   ExternalLink,
   Unlink,
@@ -16,6 +15,7 @@ import {
 } from 'lucide-react';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import { Modal } from '@/components/ui/Modal';
+import { useLanguage } from '@/context/LanguageContext';
 import type { ChannelIntegration as Integration, AiMode } from '@/types';
 
 interface Props {
@@ -32,18 +32,19 @@ interface SafeConfig {
 }
 
 export function ChannelIntegration({ businessId, canManage }: Props) {
+  const { t } = useLanguage();
+  const ci = t.channelIntegration;
   const searchParams = useSearchParams();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Toast hasil OAuth (redirect balik dengan query param)
   useEffect(() => {
     if (searchParams.get('instagram_connected') === '1') {
-      toast.success('Instagram berhasil terhubung!');
+      toast.success(ci.instagramConnectedToast);
     }
     const err = searchParams.get('instagram_error');
     if (err) toast.error(decodeURIComponent(err));
-  }, [searchParams]);
+  }, [searchParams, ci]);
 
   const fetchIntegrations = useCallback(async () => {
     setLoading(true);
@@ -51,13 +52,13 @@ export function ChannelIntegration({ businessId, canManage }: Props) {
       const res = await fetch(`/api/integrations?businessId=${businessId}`);
       const json = await res.json();
       if (res.ok) setIntegrations((json.data as Integration[]) ?? []);
-      else toast.error(json.error || 'Gagal memuat integrasi');
+      else toast.error(json.error || ci.loadFailed);
     } catch {
-      toast.error('Gagal memuat integrasi');
+      toast.error(ci.loadFailed);
     } finally {
       setLoading(false);
     }
-  }, [businessId]);
+  }, [businessId, ci]);
 
   useEffect(() => {
     fetchIntegrations();
@@ -79,10 +80,10 @@ export function ChannelIntegration({ businessId, canManage }: Props) {
       {/* Header */}
       <div>
         <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-          Integrasi Pesan & Sosial
+          {ci.sectionTitle}
         </h2>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Hubungkan akun pesan agar DM masuk otomatis ke inbox Leads + dibalas AI.
+          {ci.sectionDesc}
         </p>
       </div>
 
@@ -116,6 +117,8 @@ function InstagramCard({
   canManage: boolean;
   onChanged: () => void;
 }) {
+  const { t } = useLanguage();
+  const ci = t.channelIntegration;
   const [disconnecting, setDisconnecting] = useState(false);
   const isConnected = !!integration;
   const config = (integration?.config as SafeConfig | null) ?? null;
@@ -126,18 +129,18 @@ function InstagramCard({
 
   const handleDisconnect = async () => {
     if (!integration) return;
-    if (!confirm('Putuskan koneksi Instagram? Riwayat percakapan tidak akan dihapus.')) return;
+    if (!confirm(ci.disconnectConfirmInstagram)) return;
     setDisconnecting(true);
     try {
       const res = await fetch(`/api/integrations/${integration.id}`, { method: 'DELETE' });
       if (!res.ok) {
         const json = await res.json();
-        throw new Error(json.error || 'Gagal memutus koneksi');
+        throw new Error(json.error || ci.disconnectFailed);
       }
-      toast.success('Koneksi Instagram diputus');
+      toast.success(ci.disconnectedInstagram);
       onChanged();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal memutus koneksi');
+      toast.error(err instanceof Error ? err.message : ci.disconnectFailed);
     } finally {
       setDisconnecting(false);
     }
@@ -148,8 +151,8 @@ function InstagramCard({
       <div className="flex flex-col sm:flex-row sm:items-start gap-4">
         <div className="flex items-start gap-3 flex-1 min-w-0">
           <div className="relative flex-shrink-0">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-purple-500 via-pink-500 to-amber-400 text-white">
-              <Instagram className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
+              <Image src="/images/ig.png" alt="Instagram" width={40} height={40} className="w-full h-full object-cover" />
             </div>
             {isConnected && (
               <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-800" />
@@ -161,17 +164,17 @@ function InstagramCard({
               <h3 className="font-semibold text-gray-900 dark:text-gray-100">Instagram</h3>
               {isConnected && (
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
-                  Terhubung
+                  {ci.connected}
                 </span>
               )}
             </div>
             {isConnected ? (
               <p className="mt-0.5 text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
-                {config?.username ? `@${config.username}` : 'Akun Instagram terhubung'}
+                {config?.username ? `@${config.username}` : ci.instagramConnected}
               </p>
             ) : (
               <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-                DM Instagram masuk otomatis ke inbox Leads
+                {ci.instagramDesc}
               </p>
             )}
           </div>
@@ -183,25 +186,23 @@ function InstagramCard({
                 <button
                   onClick={handleDisconnect}
                   disabled={disconnecting}
-                  title="Putuskan koneksi"
+                  title={ci.disconnect}
                   className="btn-icon text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
                 >
                   <Unlink className="w-4 h-4" />
                 </button>
               )
             : canManage && (
-                <button onClick={handleConnect} className="btn-primary flex items-center gap-1.5">
+                <button onClick={handleConnect} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                   <ExternalLink className="w-3.5 h-3.5" />
-                  Hubungkan
+                  {ci.connect}
                 </button>
               )}
         </div>
       </div>
 
-      {/* How it works — belum terhubung */}
       {!isConnected && <HowItWorks />}
 
-      {/* Setelan AI — terhubung */}
       {isConnected && integration && (
         <AiSettingsPanel integration={integration} canManage={canManage} onChanged={onChanged} />
       )}
@@ -210,15 +211,13 @@ function InstagramCard({
 }
 
 function HowItWorks() {
-  const steps = [
-    'Klik Hubungkan dan login akun Instagram profesional bisnis ini.',
-    'DM yang masuk otomatis tersimpan sebagai lead + riwayat percakapan.',
-    'Aktifkan AI untuk balasan otomatis atau draft yang kamu approve dulu.',
-  ];
+  const { t } = useLanguage();
+  const ci = t.channelIntegration;
+  const steps = [ci.howItWorksStep1, ci.howItWorksStep2, ci.howItWorksStep3];
   return (
     <div className="mt-4 bg-gray-50 dark:bg-gray-800/60 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
       <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-        Cara kerja
+        {ci.howItWorksTitle}
       </p>
       <ol className="space-y-2">
         {steps.map((step, i) => (
@@ -243,6 +242,8 @@ function AiSettingsPanel({
   canManage: boolean;
   onChanged: () => void;
 }) {
+  const { t } = useLanguage();
+  const ci = t.channelIntegration;
   const [enabled, setEnabled] = useState(integration.ai_enabled);
   const [mode, setMode] = useState<AiMode>(integration.ai_mode);
   const [persona, setPersona] = useState(integration.ai_persona ?? '');
@@ -267,12 +268,12 @@ function AiSettingsPanel({
       });
       if (!res.ok) {
         const json = await res.json();
-        throw new Error(json.error || 'Gagal menyimpan setelan');
+        throw new Error(json.error || ci.settingsFailed);
       }
-      toast.success('Setelan AI disimpan');
+      toast.success(ci.settingsSaved);
       onChanged();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal menyimpan setelan');
+      toast.error(err instanceof Error ? err.message : ci.settingsFailed);
     } finally {
       setSaving(false);
     }
@@ -280,15 +281,12 @@ function AiSettingsPanel({
 
   return (
     <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 space-y-4">
-      {/* Toggle aktif */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-start gap-2.5">
           <Bot className="w-4 h-4 text-primary-500 mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-gray-800 dark:text-gray-100">Balasan AI</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              AI menjawab DM berdasarkan info bisnis & katalog produk.
-            </p>
+            <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{ci.aiReplyTitle}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{ci.aiReplyDesc}</p>
           </div>
         </div>
         <button
@@ -309,30 +307,27 @@ function AiSettingsPanel({
         </button>
       </div>
 
-      {/* Mode + persona — hanya saat AI aktif */}
       {enabled && (
         <>
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <p className="text-sm font-medium text-gray-800 dark:text-gray-100">Mode balasan</p>
+            <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{ci.replyMode}</p>
             <SegmentedToggle<AiMode>
               value={mode}
               onChange={setMode}
-              ariaLabel="Mode balasan AI"
+              ariaLabel={ci.replyMode}
               options={[
-                { value: 'draft', label: 'Draft', icon: <Sparkles className="w-3.5 h-3.5" />, disabled: !canManage },
-                { value: 'auto', label: 'Auto-kirim', icon: <CheckCircle2 className="w-3.5 h-3.5" />, disabled: !canManage },
+                { value: 'draft', label: ci.modeDraftLabel, icon: <Sparkles className="w-3.5 h-3.5" />, disabled: !canManage },
+                { value: 'auto', label: ci.modeAutoLabel, icon: <CheckCircle2 className="w-3.5 h-3.5" />, disabled: !canManage },
               ]}
             />
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
-            {mode === 'draft'
-              ? 'AI membuat draft — kamu approve & kirim dari inbox.'
-              : 'AI langsung membalas DM (dalam 24 jam sejak pesan terakhir customer).'}
+            {mode === 'draft' ? ci.modeDraftDesc : ci.modeAutoDesc}
           </p>
 
           <div>
             <label className="text-sm font-medium text-gray-800 dark:text-gray-100">
-              Persona / instruksi AI
+              {ci.personaLabel}
             </label>
             <textarea
               value={persona}
@@ -340,7 +335,7 @@ function AiSettingsPanel({
               disabled={!canManage}
               rows={3}
               maxLength={2000}
-              placeholder="Contoh: Balas ramah & santai. Sebut promo bundling kalau ditanya harga."
+              placeholder={ci.personaPlaceholder}
               className="mt-1.5 w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none disabled:opacity-50"
             />
           </div>
@@ -355,7 +350,7 @@ function AiSettingsPanel({
             className="btn-primary flex items-center gap-1.5 disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            {saving ? 'Menyimpan…' : 'Simpan setelan'}
+            {saving ? ci.savingSettings : ci.saveSettings}
           </button>
         </div>
       )}
@@ -374,6 +369,8 @@ function WhatsAppCard({
   canManage: boolean;
   onChanged: () => void;
 }) {
+  const { t } = useLanguage();
+  const ci = t.channelIntegration;
   const [modalOpen, setModalOpen] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const isConnected = !!integration;
@@ -381,18 +378,18 @@ function WhatsAppCard({
 
   const handleDisconnect = async () => {
     if (!integration) return;
-    if (!confirm('Putuskan koneksi WhatsApp? Riwayat percakapan tidak akan dihapus.')) return;
+    if (!confirm(ci.disconnectConfirmWhatsApp)) return;
     setDisconnecting(true);
     try {
       const res = await fetch(`/api/integrations/${integration.id}`, { method: 'DELETE' });
       if (!res.ok) {
         const json = await res.json();
-        throw new Error(json.error || 'Gagal memutus koneksi');
+        throw new Error(json.error || ci.disconnectFailed);
       }
-      toast.success('Koneksi WhatsApp diputus');
+      toast.success(ci.disconnectedWhatsApp);
       onChanged();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal memutus koneksi');
+      toast.error(err instanceof Error ? err.message : ci.disconnectFailed);
     } finally {
       setDisconnecting(false);
     }
@@ -416,7 +413,7 @@ function WhatsAppCard({
               <h3 className="font-semibold text-gray-900 dark:text-gray-100">WhatsApp</h3>
               {isConnected && (
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
-                  Terhubung
+                  {ci.connected}
                 </span>
               )}
             </div>
@@ -427,7 +424,7 @@ function WhatsAppCard({
               </p>
             ) : (
               <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-                Hubungkan nomor WhatsApp Business bisnis ini (Cloud API)
+                {ci.whatsAppDesc}
               </p>
             )}
           </div>
@@ -442,12 +439,12 @@ function WhatsAppCard({
                   className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors"
                 >
                   <KeyRound className="w-3.5 h-3.5" />
-                  Perbarui token
+                  {ci.updateToken}
                 </button>
                 <button
                   onClick={handleDisconnect}
                   disabled={disconnecting}
-                  title="Putuskan koneksi"
+                  title={ci.disconnect}
                   className="btn-icon text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
                 >
                   <Unlink className="w-4 h-4" />
@@ -458,7 +455,7 @@ function WhatsAppCard({
             canManage && (
               <button onClick={() => setModalOpen(true)} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                 <Image src="/sales channel/wa.webp" alt="WhatsApp" width={16} height={16} className="w-4 h-4 rounded-sm object-cover" />
-                Hubungkan
+                {ci.connect}
               </button>
             )
           )}
@@ -497,6 +494,8 @@ function WhatsAppConnectModal({
   isUpdate: boolean;
   onSaved: () => void;
 }) {
+  const { t } = useLanguage();
+  const ci = t.channelIntegration;
   const [phoneNumberId, setPhoneNumberId] = useState('');
   const [accessToken, setAccessToken] = useState('');
   const [saving, setSaving] = useState(false);
@@ -518,13 +517,13 @@ function WhatsAppConnectModal({
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Gagal menghubungkan WhatsApp');
-      toast.success(isUpdate ? 'Token WhatsApp diperbarui' : 'WhatsApp berhasil terhubung!');
+      if (!res.ok) throw new Error(json.error || ci.connectFailed);
+      toast.success(isUpdate ? ci.tokenUpdated : ci.waConnected);
       setPhoneNumberId('');
       setAccessToken('');
       onSaved();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal menghubungkan WhatsApp');
+      toast.error(err instanceof Error ? err.message : ci.connectFailed);
     } finally {
       setSaving(false);
     }
@@ -534,18 +533,14 @@ function WhatsAppConnectModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isUpdate ? 'Perbarui Token WhatsApp' : 'Hubungkan WhatsApp'}
+      title={isUpdate ? ci.modalTitleUpdate : ci.modalTitleConnect}
     >
       <div className="space-y-4">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          Ambil dari Meta App Dashboard bisnis kamu: <strong>WhatsApp → API Setup</strong>.
-          Token permanen dibuat lewat System User (Business Settings). Kredensial diverifikasi
-          dulu sebelum disimpan, dan token disimpan terenkripsi.
-        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{ci.modalDesc}</p>
 
         <div>
           <label className="text-sm font-medium text-gray-800 dark:text-gray-100">
-            Phone Number ID
+            {ci.phoneNumberIdLabel}
           </label>
           <input
             type="text"
@@ -558,7 +553,7 @@ function WhatsAppConnectModal({
 
         <div>
           <label className="text-sm font-medium text-gray-800 dark:text-gray-100">
-            Access Token
+            {ci.accessTokenLabel}
           </label>
           <input
             type="password"
@@ -572,7 +567,7 @@ function WhatsAppConnectModal({
 
         <div className="flex gap-3 pt-2">
           <button onClick={onClose} className="btn-secondary flex-1" disabled={saving}>
-            Batal
+            {ci.cancel}
           </button>
           <button
             onClick={handleSubmit}
@@ -580,7 +575,7 @@ function WhatsAppConnectModal({
             className="btn-primary flex-1 flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            {saving ? 'Memverifikasi…' : isUpdate ? 'Perbarui' : 'Hubungkan'}
+            {saving ? ci.verifying : isUpdate ? ci.update : ci.verify}
           </button>
         </div>
       </div>

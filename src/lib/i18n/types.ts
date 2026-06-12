@@ -903,4 +903,84 @@ export interface Translations {
     editBtn: string;
     deleteBtn: string;
   };
+
+  // Business Config Page (tabs)
+  businessConfig: {
+    tabMembers: string;
+    tabContacts: string;
+    tabOmnichannel: string;
+    tabIntegrations: string;
+    inviteMember: string;
+  };
+
+  // Channel Integration (Pesan & Sosial)
+  channelIntegration: {
+    sectionTitle: string;
+    sectionDesc: string;
+    connected: string;
+    connect: string;
+    disconnect: string;
+    disconnectConfirmInstagram: string;
+    disconnectConfirmWhatsApp: string;
+    disconnectedInstagram: string;
+    disconnectedWhatsApp: string;
+    disconnectFailed: string;
+    instagramConnected: string;
+    instagramDesc: string;
+    whatsAppDesc: string;
+    howItWorksTitle: string;
+    howItWorksStep1: string;
+    howItWorksStep2: string;
+    howItWorksStep3: string;
+    aiReplyTitle: string;
+    aiReplyDesc: string;
+    replyMode: string;
+    modeDraftLabel: string;
+    modeAutoLabel: string;
+    modeDraftDesc: string;
+    modeAutoDesc: string;
+    personaLabel: string;
+    personaPlaceholder: string;
+    saveSettings: string;
+    savingSettings: string;
+    settingsSaved: string;
+    settingsFailed: string;
+    updateToken: string;
+    modalTitleConnect: string;
+    modalTitleUpdate: string;
+    modalDesc: string;
+    phoneNumberIdLabel: string;
+    accessTokenLabel: string;
+    cancel: string;
+    verify: string;
+    verifying: string;
+    update: string;
+    connectFailed: string;
+    tokenUpdated: string;
+    waConnected: string;
+    loadFailed: string;
+    instagramConnectedToast: string;
+  };
+
+  // E-Commerce Integration
+  ecommerceIntegration: {
+    sectionTitle: string;
+    sectionDesc: string;
+    connected: string;
+    connect: string;
+    disconnect: string;
+    disconnectConfirm: string;
+    disconnected: string;
+    disconnectFailed: string;
+    connectFailed: string;
+    statusActive: string;
+    statusPending: string;
+    statusExpired: string;
+    statusLoading: string;
+    comingSoon: string;
+    howItWorksTitle: string;
+    howItWorksStep1Shopee: string;
+    howItWorksStep2: string;
+    howItWorksStep3: string;
+  };
 }

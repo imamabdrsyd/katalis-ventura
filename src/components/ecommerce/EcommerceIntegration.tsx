@@ -13,7 +13,6 @@ import {
   Loader2,
   ExternalLink,
   ArrowRight,
-  ShoppingBag,
   Zap,
   BookOpen,
   Link2,
@@ -296,7 +295,6 @@ export function EcommerceIntegration({ businessId, canManage }: Props) {
       {/* Header */}
       <div>
         <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-          <ShoppingBag className="w-4 h-4 text-primary-500" />
           Integrasi E-Commerce
         </h2>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -405,7 +403,7 @@ export function EcommerceIntegration({ businessId, canManage }: Props) {
                     !config.comingSoon && (
                       <button
                         onClick={() => handleConnect(platform)}
-                        className="btn-primary flex items-center gap-1.5"
+                        className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                         Hubungkan
