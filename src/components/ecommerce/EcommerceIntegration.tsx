@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -150,6 +150,10 @@ export function EcommerceIntegration({ businessId, canManage, onReady }: Props) 
   const [syncing, setSyncing] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  // Simpan onReady di ref agar perubahan referensi callback dari parent
+  // tidak men-trigger ulang fetch (mencegah loop & flicker).
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
 
   useEffect(() => {
     if (searchParams.get('shopee_connected') === '1') {
@@ -182,8 +186,8 @@ export function EcommerceIntegration({ businessId, canManage, onReady }: Props) 
     setConnections((connResult.data as EcommerceConnection[]) ?? []);
     setSyncLogs((logResult.data as SyncLog[]) ?? []);
     setLoading(false);
-    onReady?.();
-  }, [businessId, onReady]);
+    onReadyRef.current?.();
+  }, [businessId]);
 
   useEffect(() => {
     fetchData();

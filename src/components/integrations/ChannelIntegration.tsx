@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -37,6 +37,10 @@ export function ChannelIntegration({ businessId, canManage, onReady }: Props) {
   const searchParams = useSearchParams();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
+  // Simpan onReady di ref agar perubahan referensi callback dari parent
+  // tidak men-trigger ulang fetch (mencegah loop & flicker).
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
 
   useEffect(() => {
     if (searchParams.get('instagram_connected') === '1') {
@@ -57,9 +61,9 @@ export function ChannelIntegration({ businessId, canManage, onReady }: Props) {
       toast.error(ci.loadFailed);
     } finally {
       setLoading(false);
-      onReady?.();
+      onReadyRef.current?.();
     }
-  }, [businessId, ci, onReady]);
+  }, [businessId, ci]);
 
   useEffect(() => {
     fetchIntegrations();
