@@ -15,6 +15,28 @@ export interface SendMessageResult {
   error?: string;
 }
 
+/**
+ * Fetch nama/username pengirim dari Graph API.
+ * Return null kalau gagal (permission denied, token expired, dll) — caller
+ * harus fallback ke "@senderId".
+ */
+export async function getInstagramSenderName(
+  accessToken: string,
+  senderId: string
+): Promise<string | null> {
+  if (!accessToken) return null;
+  try {
+    const res = await fetch(
+      `https://graph.instagram.com/${IG_GRAPH_VERSION}/${senderId}?fields=name,username&access_token=${accessToken}`
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as { name?: string; username?: string };
+    return json.username ? `@${json.username}` : (json.name ?? null);
+  } catch {
+    return null;
+  }
+}
+
 export async function sendInstagramMessage(
   accessToken: string,
   recipientId: string,

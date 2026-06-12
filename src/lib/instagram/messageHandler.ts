@@ -22,7 +22,7 @@ import {
 } from '@/lib/leads';
 import { generateLeadReply } from '@/lib/ai/leadAssistant';
 import { getDecryptedToken } from '@/lib/integrations/config';
-import { sendInstagramMessage } from './api';
+import { sendInstagramMessage, getInstagramSenderName } from './api';
 import type { InstagramWebhookEntry, InstagramMessaging } from './types';
 import type { ChannelIntegration } from '@/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -65,9 +65,11 @@ async function processEvent(
   const senderId = event.sender?.id;
   if (!senderId) return;
 
-  // Username pengirim tidak tersedia di payload webhook — pakai "@senderId"
-  // sebagai placeholder sampai ada cara lain lookup (misal Graph API /sender).
-  const senderName = `@${senderId}`;
+  // Coba lookup nama/username via Graph API — gagal → fallback @senderId.
+  const businessToken = getDecryptedToken(integration);
+  const senderName =
+    (businessToken ? await getInstagramSenderName(businessToken, senderId) : null) ??
+    `@${senderId}`;
 
   // 1. Upsert lead
   const lead = await upsertLead(supabase, {
