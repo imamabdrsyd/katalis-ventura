@@ -4,15 +4,16 @@ import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { useLeads } from '@/hooks/useLeads';
 import {
-  CHANNEL_BADGE_CLASSES,
   CHANNEL_LABELS,
+  LEAD_CHANNEL_TO_SALES_CHANNEL,
   LEAD_STATUS_BADGE_CLASSES,
   LEAD_STATUS_LABELS,
 } from '@/lib/leadColors';
+import { SalesChannelBadge } from '@/components/transactions/SalesChannelBadge';
 import type { Lead, LeadChannel, LeadMessage, LeadStatus } from '@/types';
 import {
   MessagesSquare, RefreshCw, Send, Copy, Check, Trash2, ArrowLeft,
-  Inbox, Bot, User, UserRound, Sparkles,
+  Inbox, Bot, User, UserRound, Sparkles, ChevronDown,
 } from 'lucide-react';
 
 const ALL_CHANNELS = Object.keys(CHANNEL_LABELS) as LeadChannel[];
@@ -61,9 +62,7 @@ function LeadListItem({
         )}
       </div>
       <div className="flex items-center gap-1.5">
-        <span className={`badge text-[10px] ${CHANNEL_BADGE_CLASSES[lead.channel]}`}>
-          {CHANNEL_LABELS[lead.channel]}
-        </span>
+        <SalesChannelBadge channel={LEAD_CHANNEL_TO_SALES_CHANNEL[lead.channel]} />
         <span className={`badge text-[10px] ${LEAD_STATUS_BADGE_CLASSES[lead.status]}`}>
           {LEAD_STATUS_LABELS[lead.status]}
         </span>
@@ -185,7 +184,9 @@ export default function LeadsPage() {
   }, [messages]);
 
   const selectClass =
-    'px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent';
+    'appearance-none pl-3 pr-9 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent cursor-pointer';
+  const selectChevronClass =
+    'absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none';
 
   return (
     <div className="p-4 md:p-6">
@@ -203,26 +204,32 @@ export default function LeadsPage() {
       {/* Toolbar filter */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-wrap gap-3 items-center">
-          <select
-            value={channelFilter}
-            onChange={(e) => setChannelFilter(e.target.value as LeadChannel | '')}
-            className={selectClass}
-          >
-            <option value="">Semua channel</option>
-            {ALL_CHANNELS.map((c) => (
-              <option key={c} value={c}>{CHANNEL_LABELS[c]}</option>
-            ))}
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as LeadStatus | '')}
-            className={selectClass}
-          >
-            <option value="">Semua status</option>
-            {ALL_STATUSES.map((s) => (
-              <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={channelFilter}
+              onChange={(e) => setChannelFilter(e.target.value as LeadChannel | '')}
+              className={selectClass}
+            >
+              <option value="">Semua channel</option>
+              {ALL_CHANNELS.map((c) => (
+                <option key={c} value={c}>{CHANNEL_LABELS[c]}</option>
+              ))}
+            </select>
+            <ChevronDown className={selectChevronClass} />
+          </div>
+          <div className="relative">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as LeadStatus | '')}
+              className={selectClass}
+            >
+              <option value="">Semua status</option>
+              {ALL_STATUSES.map((s) => (
+                <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>
+              ))}
+            </select>
+            <ChevronDown className={selectChevronClass} />
+          </div>
           <button
             onClick={refreshLeads}
             disabled={loadingLeads}
@@ -293,24 +300,25 @@ export default function LeadsPage() {
                     {selectedLead.name || selectedLead.external_id}
                   </p>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className={`badge text-[10px] ${CHANNEL_BADGE_CLASSES[selectedLead.channel]}`}>
-                      {CHANNEL_LABELS[selectedLead.channel]}
-                    </span>
+                    <SalesChannelBadge channel={LEAD_CHANNEL_TO_SALES_CHANNEL[selectedLead.channel]} />
                     {selectedLead.phone && (
                       <span className="text-[11px] text-gray-400 dark:text-gray-500">{selectedLead.phone}</span>
                     )}
                   </div>
                 </div>
                 {canManage ? (
-                  <select
-                    value={selectedLead.status}
-                    onChange={(e) => handleSetStatus(selectedLead, e.target.value as LeadStatus)}
-                    className="px-2 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  >
-                    {ALL_STATUSES.map((s) => (
-                      <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={selectedLead.status}
+                      onChange={(e) => handleSetStatus(selectedLead, e.target.value as LeadStatus)}
+                      className="appearance-none pl-3 pr-8 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent cursor-pointer"
+                    >
+                      {ALL_STATUSES.map((s) => (
+                        <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-gray-500 pointer-events-none" />
+                  </div>
                 ) : (
                   <span className={`badge text-[10px] ${LEAD_STATUS_BADGE_CLASSES[selectedLead.status]}`}>
                     {LEAD_STATUS_LABELS[selectedLead.status]}
