@@ -9,7 +9,7 @@ import { InviteCodeManager } from '@/components/business/InviteCodeManager';
 import { JoinRequestList } from '@/components/business/JoinRequestList';
 import { getBusinessMembers, type BusinessMember } from '@/lib/api/members';
 import Image from 'next/image';
-import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut, Blocks, Contact, CalendarDays, Rocket, Pencil, Check, X, Info, FileText, Landmark, MapPinned, MoreVertical } from 'lucide-react';
+import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut, Blocks, Contact, CalendarDays, Rocket, Pencil, Check, X, Info, FileText, Landmark, MapPinned, MoreVertical, Loader2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { Tabs } from '@/components/ui/Tabs';
@@ -488,6 +488,8 @@ export default function BusinessMembersPage() {
   const [showInviteManager, setShowInviteManager] = useState(false);
   const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
   const [leaveLoading, setLeaveLoading] = useState(false);
+  const [integrationReadyCount, setIntegrationReadyCount] = useState(0);
+  const integrationLoading = integrationReadyCount < 2;
 
   const fetchMembers = useCallback(async () => {
     if (!businessId) return;
@@ -649,14 +651,25 @@ export default function BusinessMembersPage() {
       )}
       {activeTab === 'integrations' && business && (
         <div className="space-y-10">
-          <ChannelIntegration
-            businessId={business.id}
-            canManage={canManage}
-          />
-          <EcommerceIntegration
-            businessId={business.id}
-            canManage={canManage}
-          />
+          {integrationLoading && (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            </div>
+          )}
+          <div className={integrationLoading ? 'hidden' : ''}>
+            <ChannelIntegration
+              businessId={business.id}
+              canManage={canManage}
+              onReady={() => setIntegrationReadyCount((n) => n + 1)}
+            />
+          </div>
+          <div className={integrationLoading ? 'hidden' : ''}>
+            <EcommerceIntegration
+              businessId={business.id}
+              canManage={canManage}
+              onReady={() => setIntegrationReadyCount((n) => n + 1)}
+            />
+          </div>
         </div>
       )}
 

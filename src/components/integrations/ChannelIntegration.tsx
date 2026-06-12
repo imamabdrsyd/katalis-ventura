@@ -20,6 +20,7 @@ import type { ChannelIntegration as Integration, AiMode } from '@/types';
 interface Props {
   businessId: string;
   canManage: boolean;
+  onReady?: () => void;
 }
 
 /** config aman (token sudah di-strip server-side) — hanya field non-rahasia. */
@@ -30,7 +31,7 @@ interface SafeConfig {
   verified_name?: string | null;
 }
 
-export function ChannelIntegration({ businessId, canManage }: Props) {
+export function ChannelIntegration({ businessId, canManage, onReady }: Props) {
   const { t } = useLanguage();
   const ci = t.channelIntegration;
   const searchParams = useSearchParams();
@@ -56,8 +57,9 @@ export function ChannelIntegration({ businessId, canManage }: Props) {
       toast.error(ci.loadFailed);
     } finally {
       setLoading(false);
+      onReady?.();
     }
-  }, [businessId, ci]);
+  }, [businessId, ci, onReady]);
 
   useEffect(() => {
     fetchIntegrations();
@@ -66,13 +68,7 @@ export function ChannelIntegration({ businessId, canManage }: Props) {
   const instagram = integrations.find((i) => i.channel === 'instagram' && i.is_active);
   const whatsapp = integrations.find((i) => i.channel === 'whatsapp' && i.is_active);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-      </div>
-    );
-  }
+  if (loading) return null;
 
   return (
     <div className="max-w-2xl space-y-6">
