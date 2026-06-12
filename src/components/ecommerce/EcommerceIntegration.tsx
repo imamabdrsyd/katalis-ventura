@@ -11,7 +11,6 @@ import {
   AlertCircle,
   Clock,
   Loader2,
-  ExternalLink,
   ArrowRight,
   Zap,
   BookOpen,
@@ -405,7 +404,7 @@ export function EcommerceIntegration({ businessId, canManage }: Props) {
                         onClick={() => handleConnect(platform)}
                         className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                       >
-                        <ExternalLink className="w-3.5 h-3.5" />
+                        <Image src={config.logo} alt={config.label} width={16} height={16} className="w-4 h-4 rounded-sm object-cover" />
                         Hubungkan
                       </button>
                     )

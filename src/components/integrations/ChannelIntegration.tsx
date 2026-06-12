@@ -6,7 +6,6 @@ import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   Loader2,
-  ExternalLink,
   Unlink,
   Sparkles,
   Bot,
@@ -152,7 +151,7 @@ function InstagramCard({
         <div className="flex items-start gap-3 flex-1 min-w-0">
           <div className="relative flex-shrink-0">
             <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
-              <Image src="/images/ig.png" alt="Instagram" width={40} height={40} className="w-full h-full object-cover" />
+              <Image src="/sales channel/ig.png" alt="Instagram" width={40} height={40} className="w-full h-full object-cover" />
             </div>
             {isConnected && (
               <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-800" />
@@ -194,7 +193,7 @@ function InstagramCard({
               )
             : canManage && (
                 <button onClick={handleConnect} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                  <ExternalLink className="w-3.5 h-3.5" />
+                  <Image src="/sales channel/ig.png" alt="Instagram" width={16} height={16} className="w-4 h-4 rounded-sm object-cover" />
                   {ci.connect}
                 </button>
               )}
