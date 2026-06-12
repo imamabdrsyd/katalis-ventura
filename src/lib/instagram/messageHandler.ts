@@ -65,11 +65,16 @@ async function processEvent(
   const senderId = event.sender?.id;
   if (!senderId) return;
 
+  // Username pengirim tidak tersedia di payload webhook — pakai "@senderId"
+  // sebagai placeholder sampai ada cara lain lookup (misal Graph API /sender).
+  const senderName = `@${senderId}`;
+
   // 1. Upsert lead
   const lead = await upsertLead(supabase, {
     businessId,
     channel: 'instagram',
     externalId: senderId,
+    name: senderName,
     lastMessageAt: new Date(event.timestamp || Date.now()).toISOString(),
   });
   if (!lead) return;
