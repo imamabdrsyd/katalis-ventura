@@ -1,23 +1,28 @@
-# Integrasi Leads Hub — WhatsApp & Webhook Inbound (Zapier/Make)
+# Integrasi Leads Hub — Instagram, WhatsApp & Webhook Inbound
 
 > Terakhir diupdate: 12 Juni 2026
 
 Leads Hub menerima pesan masuk dari berbagai channel dan menyimpannya sebagai
-`leads` + `lead_messages`. Dua jalur masuk:
+`leads` + `lead_messages`. Jalur masuk:
 
-| Jalur | Channel | AI |
-|-------|---------|-----|
-| `/api/whatsapp/webhook` | WhatsApp (Meta Cloud API) | `ai_mode='auto'` — balasan langsung dikirim |
-| `/api/webhooks/inbound` | Airbnb, Booking.com, dll (via Zapier/Make) | `ai_mode='draft'` — draft disimpan, manager approve manual |
+| Jalur | Channel | Model token | AI default |
+|-------|---------|-------------|------------|
+| `/api/integrations/instagram/webhook` | Instagram DM | **Per-bisnis** (OAuth, terenkripsi di `config`) | `draft` — manager approve |
+| `/api/whatsapp/webhook` | WhatsApp (Meta Cloud API) | Global (env) — *per-bisnis menyusul* | `auto` — kirim langsung |
+| `/api/webhooks/inbound` | Airbnb, Booking.com, dll (Zapier/Make) | — (lookup via business_id) | `draft` — manager approve |
 
-Kedua webhook menulis ke database via service role (bypass RLS) dan
+Semua webhook menulis ke database via service role (bypass RLS) dan
 di-exclude dari middleware auth (lihat `middleware.ts`).
 
 ---
 
-## 1. Prasyarat: baris `channel_integrations`
+## 1. Baris `channel_integrations`
 
-Setiap bisnis yang mau menerima pesan harus punya baris di `channel_integrations`:
+Setiap bisnis yang mau menerima pesan butuh baris di `channel_integrations`.
+
+- **Instagram**: baris dibuat **otomatis** lewat tombol "Hubungkan Instagram"
+  di `Bisnis → Integrasi` (OAuth) — tidak perlu SQL manual.
+- **WhatsApp / OTA**: untuk sekarang masih di-insert manual:
 
 ```sql
 INSERT INTO channel_integrations
@@ -36,9 +41,77 @@ VALUES
 
 ---
 
-## 2. WhatsApp (Meta Cloud API)
+## 2. Instagram DM (multi-tenant via OAuth)
+
+Tiap bisnis login akun Instagram profesionalnya sendiri lewat satu Meta App
+("AXION"). Token long-lived disimpan **terenkripsi** (AES-256-GCM) di
+`channel_integrations.config.access_token`, di-decrypt server-side saat kirim DM.
 
 ### Environment variables (Vercel → Settings → Environment Variables)
+
+| Nama | Sumber |
+|------|--------|
+| `INSTAGRAM_APP_ID` | Meta App → produk Instagram → **API setup with Instagram login** → Instagram app ID |
+| `INSTAGRAM_APP_SECRET` | Lokasi sama → Instagram app secret |
+| `INSTAGRAM_VERIFY_TOKEN` | Bebas — string acak yang sama dengan yang diisi di webhook Meta |
+| `TOKEN_ENCRYPTION_KEY` | 64 hex char (`openssl rand -hex 32`). Opsional kalau `SHOPEE_TOKEN_ENCRYPTION_KEY` sudah di-set (dipakai sebagai fallback) |
+| `NEXT_PUBLIC_APP_URL` | URL publik aplikasi (sudah ada) |
+
+### Setup di Meta App Dashboard
+
+1. **Create app** → use case **"Manage messaging & content on Instagram"**.
+   (Jangan "Engage with customers on Messenger from Meta" — itu Messenger FB Page.)
+2. Connect **business portfolio** yang akan diverifikasi (wajib untuk go-live).
+3. Produk **Instagram** → **API setup with Instagram login**:
+   - **OAuth redirect URI**: `https://<domain>/api/integrations/instagram/callback`
+   - Ambil **Instagram app ID** + **secret** → env di atas.
+4. **Webhooks** (objek Instagram):
+   - **Callback URL**: `https://<domain>/api/integrations/instagram/webhook`
+   - **Verify token**: nilai `INSTAGRAM_VERIFY_TOKEN`
+   - Subscribe field **`messages`**.
+5. Scopes: `instagram_business_basic`, `instagram_business_manage_messages`.
+
+> **App Review**: untuk akun di luar tester, `instagram_business_manage_messages`
+> butuh Advanced Access (App Review + business verification). Mode Development
+> jalan untuk akun yang punya role di app. Webhook hanya hidup di URL publik
+> (localhost tidak menerima webhook).
+
+### Alur connect (OAuth)
+
+```
+Manager klik "Hubungkan Instagram" → /api/integrations/instagram/auth
+  → redirect ke Instagram OAuth (state = businessId)
+  → /api/integrations/instagram/callback
+     → tukar code → short-lived → long-lived token (~60 hari)
+     → ambil user_id (IGSID) + username
+     → simpan terenkripsi ke channel_integrations (external_account_id = IGSID)
+  → redirect balik ke tab Integrasi (?instagram_connected=1)
+```
+
+### Alur DM masuk
+
+```
+Customer kirim DM → Meta POST /api/integrations/instagram/webhook
+  → verifikasi X-Hub-Signature-256 (HMAC INSTAGRAM_APP_SECRET)
+  → skip echo (pesan kita sendiri) → lookup bisnis via recipient.id (IGSID)
+  → upsert leads + simpan lead_messages (dedup by mid)
+  → ai_enabled:
+       ai_mode='auto'  → decrypt token bisnis → kirim DM → simpan outbound (ai)
+       ai_mode='draft' → simpan draft (meta.is_draft=true), manager approve di inbox
+```
+
+Kirim DM hanya bisa dalam **24-jam window** sejak pesan customer terakhir.
+Di luar window Graph API menolak — error di-log, inbound tetap tersimpan.
+
+> **Token expiry**: long-lived token ~60 hari (`token_expires_at` disimpan di
+> config). Job refresh otomatis = pekerjaan lanjutan; sementara reconnect manual
+> via tombol Hubungkan.
+
+---
+
+## 3. WhatsApp (Meta Cloud API)
+
+### Environment variables
 
 | Nama | Sumber |
 |------|--------|
@@ -46,6 +119,11 @@ VALUES
 | `WHATSAPP_APP_SECRET` | Meta App Dashboard → App Settings → Basic → App Secret |
 | `WHATSAPP_PHONE_NUMBER_ID` | Meta App Dashboard → WhatsApp → API Setup |
 | `WHATSAPP_ACCESS_TOKEN` | System User token permanen (Business Settings → System Users) |
+
+> **Rencana**: WhatsApp akan diarahkan ke model **nomor per-bisnis** (sama
+> seperti Instagram — token per-bisnis di `config`, lewat Embedded Signup),
+> menggantikan token global di env. Helper `src/lib/integrations/config.ts`
+> sudah disiapkan generic untuk ini.
 
 ### Setup webhook di Meta App Dashboard
 
@@ -74,7 +152,7 @@ di-log, pesan inbound tetap tersimpan.
 
 ---
 
-## 3. Webhook Inbound Generic (Airbnb/Booking.com via Zapier/Make)
+## 4. Webhook Inbound Generic (Airbnb/Booking.com via Zapier/Make)
 
 Airbnb & Booking.com tidak punya API messaging publik — jalur realistis:
 notifikasi email → Zapier/Make → POST ke endpoint ini.
@@ -139,15 +217,19 @@ Status lead tetap `'new'` sampai manager menindaklanjuti.
 
 ---
 
-## 4. Referensi kode
+## 5. Referensi kode
 
 | Concern | File |
 |---------|------|
+| OAuth Instagram (auth + callback) | `app/api/integrations/instagram/{auth,callback}/route.ts` |
+| Webhook Instagram | `app/api/integrations/instagram/webhook/route.ts` |
+| Kirim / handler / OAuth Instagram | `src/lib/instagram/` |
+| Token config per-bisnis (encrypt/decrypt/strip) | `src/lib/integrations/config.ts` |
+| API manajemen integrasi (list/PATCH/DELETE) | `app/api/integrations/route.ts`, `app/api/integrations/[id]/route.ts` |
+| UI tab Integrasi (Pesan & Sosial) | `src/components/integrations/ChannelIntegration.tsx` |
 | Webhook WhatsApp | `app/api/whatsapp/webhook/route.ts` |
 | Webhook generic inbound | `app/api/webhooks/inbound/route.ts` |
-| Kirim pesan WhatsApp | `src/lib/whatsapp/api.ts` |
-| Handler pesan WhatsApp | `src/lib/whatsapp/messageHandler.ts` |
 | Helper leads (upsert, dedup, history) | `src/lib/leads/index.ts` |
 | AI balasan/draft | `src/lib/ai/leadAssistant.ts` |
+| Enkripsi token (AES-256-GCM) | `src/lib/utils/tokenCrypto.ts` |
 | Schema & RLS | `database/migrations/101_leads_hub.sql` |
-| Zod validation | `src/lib/validations.ts` (`inboundWebhookSchema`) |

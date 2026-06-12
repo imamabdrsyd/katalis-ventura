@@ -16,6 +16,7 @@ import { Tabs } from '@/components/ui/Tabs';
 import { OmniChannelManager } from '@/components/business/OmniChannelManager';
 import * as businessesApi from '@/lib/api/businesses';
 import { EcommerceIntegration } from '@/components/ecommerce/EcommerceIntegration';
+import { ChannelIntegration } from '@/components/integrations/ChannelIntegration';
 import { ContactList } from '@/components/business/ContactList';
 import { isManagerRole } from '@/lib/roles';
 import type { Business } from '@/types';
@@ -645,10 +646,16 @@ export default function BusinessMembersPage() {
         />
       )}
       {activeTab === 'integrations' && business && (
-        <EcommerceIntegration
-          businessId={business.id}
-          canManage={canManage}
-        />
+        <div className="space-y-10">
+          <ChannelIntegration
+            businessId={business.id}
+            canManage={canManage}
+          />
+          <EcommerceIntegration
+            businessId={business.id}
+            canManage={canManage}
+          />
+        </div>
       )}
 
       {/* Invite Code Manager Modal */}

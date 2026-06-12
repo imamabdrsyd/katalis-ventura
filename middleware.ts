@@ -59,6 +59,6 @@ export const config = {
     '/market/:path*',
     '/setup-business/:path*',
     '/join-business/:path*',
-    '/api/((?!stats|public-businesses|market/|telegram/webhook|whatsapp/webhook|webhooks/inbound).*)',
+    '/api/((?!stats|public-businesses|market/|telegram/webhook|whatsapp/webhook|webhooks/inbound|integrations/instagram/webhook).*)',
   ],
 };
