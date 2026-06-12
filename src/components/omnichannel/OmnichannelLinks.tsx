@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { ExternalLink } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { CHANNEL_META } from '@/lib/omniChannelMeta';
+import { safeLinkUrl } from '@/lib/utils/urlSafety';
 import type { OmniChannelType } from '@/types';
 import type { PublicLink } from './types';
 
@@ -118,7 +119,7 @@ export function OmnichannelLinks({ links, buttonColor }: Props) {
               {chunk.items.map((link) => (
                 <a
                   key={link.id}
-                  href={link.url}
+                  href={safeLinkUrl(link.url) ?? undefined}
                   target="_blank"
                   rel="noopener noreferrer"
                   title={link.label}
@@ -138,7 +139,7 @@ export function OmnichannelLinks({ links, buttonColor }: Props) {
           return (
             <a
               key={link.id}
-              href={link.url}
+              href={safeLinkUrl(link.url) ?? undefined}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2.5 w-full py-3.5 px-4 rounded-xl text-white font-semibold text-sm transition-opacity hover:opacity-90"
@@ -154,7 +155,7 @@ export function OmnichannelLinks({ links, buttonColor }: Props) {
         return (
           <a
             key={link.id}
-            href={link.url}
+            href={safeLinkUrl(link.url) ?? undefined}
             target="_blank"
             rel="noopener noreferrer"
             className="group flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-primary-300 dark:hover:border-primary-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition"

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { ChevronDown, ExternalLink, Link2, ShoppingCart } from 'lucide-react';
 import { CHANNEL_META } from '@/lib/omniChannelMeta';
+import { safeLinkUrl } from '@/lib/utils/urlSafety';
 import type { OmniChannelType } from '@/types';
 import { BusinessInitialsAvatar } from './BusinessInitialsAvatar';
 import { PublicBusiness, PublicLink, formatCategory, formatSector } from './types';
@@ -54,7 +55,7 @@ function LinkRow({ link }: { link: PublicLink }) {
   const meta = CHANNEL_META[link.channel_type as OmniChannelType] ?? CHANNEL_META.custom;
   return (
     <a
-      href={link.url}
+      href={safeLinkUrl(link.url) ?? undefined}
       target="_blank"
       rel="noopener noreferrer"
       className="group flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
@@ -180,7 +181,7 @@ export function OmnichannelLinkCards({ business, index, businesses = [], onSelec
             return (
               <a
                 key={`primary-${link.id}`}
-                href={link.url}
+                href={safeLinkUrl(link.url) ?? undefined}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2.5 w-full py-3.5 px-4 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-semibold text-sm transition-colors"

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { canManageBusiness, getAuthenticatedUser, createAdminClient, createServerClient } from '@/lib/supabase-server';
+import { isSafeLinkUrl } from '@/lib/utils/urlSafety';
 import { z } from 'zod';
 
 const VALID_CHANNEL_TYPES = [
@@ -12,7 +13,9 @@ const patchSchema = z.object({
   channel_type: z.enum(VALID_CHANNEL_TYPES).optional(),
   label: z.string().min(1).max(200).optional(),
   subtitle: z.string().max(200).nullable().optional(),
-  url: z.string().min(1).max(2048).optional(),
+  url: z.string().min(1).max(2048)
+    .refine(isSafeLinkUrl, 'URL harus memakai skema http(s), tel:, atau mailto:')
+    .optional(),
   is_active: z.boolean().optional(),
   is_primary: z.boolean().optional(),
   sort_order: z.number().int().optional(),

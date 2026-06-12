@@ -202,10 +202,28 @@ export function calculateFinancialSummary(
         // For double-entry: only count if credit account is REVENUE type.
         // Settlement entries (Dr Kas / Cr Piutang) are ASSET-to-ASSET — no revenue recognized.
         // This catches both manual journal entries and button-based settlements.
-        if (t.is_double_entry && t.credit_account?.account_type !== 'REVENUE') break;
+        if (t.is_double_entry && t.credit_account?.account_type !== 'REVENUE') {
+          // Sales return (Dr Pendapatan / Cr Kas) = contra-revenue
+          if (t.debit_account?.account_type === 'REVENUE') {
+            summary.totalEarn -= amount;
+          }
+          break;
+        }
         summary.totalEarn += amount;
         break;
       case 'OPEX': {
+        // Reimbursement (Dr Kas / Cr Beban) = contra-expense
+        if (t.is_double_entry && t.credit_account?.account_type === 'EXPENSE') {
+          const section = resolveExpenseSection(t.credit_account);
+          if (section === 'cost_of_revenue') {
+            summary.totalVar -= amount;
+          } else {
+            summary.totalOpex -= amount;
+          }
+          break;
+        }
+        // Accrual settlement (Dr Hutang / Cr Kas) — beban sudah diakui saat akrual
+        if (t.is_double_entry && t.debit_account?.account_type === 'LIABILITY') break;
         // Respect override if debit account has income_statement_section set
         if (t.is_double_entry && t.debit_account?.account_type === 'EXPENSE') {
           const section = resolveExpenseSection(t.debit_account);
@@ -242,6 +260,13 @@ export function calculateFinancialSummary(
         summary.totalCapex += amount;
         break;
       case 'TAX':
+        // Restitusi pajak (Dr Kas / Cr Beban Pajak) = contra-expense
+        if (t.is_double_entry && t.credit_account?.account_type === 'EXPENSE') {
+          summary.totalTax -= amount;
+          break;
+        }
+        // Pelunasan hutang pajak (Dr Hutang Pajak / Cr Kas) — beban sudah diakui saat akrual
+        if (t.is_double_entry && t.debit_account?.account_type === 'LIABILITY') break;
         summary.totalTax += amount;
         break;
       case 'FIN':
@@ -831,7 +856,13 @@ export function extractIncomeStatementLineItems(
     // --- Simple double-entry ---
     switch (t.category) {
       case 'EARN': {
-        if (t.is_double_entry && t.credit_account?.account_type !== 'REVENUE') break;
+        if (t.is_double_entry && t.credit_account?.account_type !== 'REVENUE') {
+          // Sales return (Dr Pendapatan / Cr Kas) = contra-revenue
+          if (t.debit_account?.account_type === 'REVENUE') {
+            addToMap(revenueMap, t.debit_account, -amount, t);
+          }
+          break;
+        }
         const acc = t.credit_account;
         if (acc) {
           addToMap(revenueMap, acc, amount, t);
@@ -852,6 +883,14 @@ export function extractIncomeStatementLineItems(
         break;
       }
       case 'OPEX': {
+        // Reimbursement (Dr Kas / Cr Beban) = contra-expense
+        if (t.is_double_entry && t.credit_account?.account_type === 'EXPENSE') {
+          const section = resolveExpenseSection(t.credit_account);
+          addToMap(section === 'cost_of_revenue' ? cogsMap : opexMap, t.credit_account, -amount, t);
+          break;
+        }
+        // Accrual settlement (Dr Hutang / Cr Kas) — beban sudah diakui saat akrual
+        if (t.is_double_entry && t.debit_account?.account_type === 'LIABILITY') break;
         const acc = t.debit_account;
         if (acc) {
           const section = resolveExpenseSection(acc);
@@ -864,6 +903,13 @@ export function extractIncomeStatementLineItems(
         break;
       }
       case 'TAX': {
+        // Restitusi pajak (Dr Kas / Cr Beban Pajak) = contra-expense
+        if (t.is_double_entry && t.credit_account?.account_type === 'EXPENSE') {
+          addToMap(taxMap, t.credit_account, -amount, t);
+          break;
+        }
+        // Pelunasan hutang pajak (Dr Hutang Pajak / Cr Kas) — beban sudah diakui saat akrual
+        if (t.is_double_entry && t.debit_account?.account_type === 'LIABILITY') break;
         const acc = t.debit_account;
         if (acc) {
           addToMap(taxMap, acc, amount, t);
@@ -1021,11 +1067,17 @@ export function groupTransactionsByMonth(
         const acc = line.account;
         if (!acc) continue;
         if (line.debit_amount > 0 && acc.account_type === 'EXPENSE') {
-          const cat = acc.default_category;
-          if (cat === 'VAR') monthData.var += line.debit_amount;
-          else if (cat === 'TAX') monthData.tax += line.debit_amount;
-          else monthData.opex += line.debit_amount;
-          if (t.category === 'FIN') monthData.interest += line.debit_amount;
+          // Mirror calculateFinancialSummary: interest adalah else-branch,
+          // bukan additive — jangan double-count baris bunga FIN di netProfit
+          if (acc.default_category === 'TAX') {
+            monthData.tax += line.debit_amount;
+          } else if (t.category === 'FIN') {
+            monthData.interest += line.debit_amount;
+          } else {
+            const section = resolveExpenseSection(acc);
+            if (section === 'cost_of_revenue') monthData.var += line.debit_amount;
+            else monthData.opex += line.debit_amount;
+          }
         }
         if (line.credit_amount > 0 && acc.account_type === 'REVENUE') {
           monthData.earn += line.credit_amount;
@@ -1038,9 +1090,32 @@ export function groupTransactionsByMonth(
       // Simple double-entry and legacy path
       switch (t.category) {
         case 'EARN':
+          // Mirror calculateFinancialSummary: settlement piutang (Dr Kas / Cr Piutang)
+          // bukan pendapatan; retur penjualan (Dr Pendapatan) = contra-revenue
+          if (t.is_double_entry && t.credit_account?.account_type !== 'REVENUE') {
+            if (t.debit_account?.account_type === 'REVENUE') {
+              monthData.earn -= amount;
+            }
+            break;
+          }
           monthData.earn += amount;
           break;
         case 'OPEX':
+          // Reimbursement (Dr Kas / Cr Beban) = contra-expense
+          if (t.is_double_entry && t.credit_account?.account_type === 'EXPENSE') {
+            const section = resolveExpenseSection(t.credit_account);
+            if (section === 'cost_of_revenue') monthData.var -= amount;
+            else monthData.opex -= amount;
+            break;
+          }
+          // Pelunasan beban akrual (Dr Hutang / Cr Kas) — beban sudah diakui saat akrual
+          if (t.is_double_entry && t.debit_account?.account_type === 'LIABILITY') break;
+          if (t.is_double_entry && t.debit_account?.account_type === 'EXPENSE') {
+            const section = resolveExpenseSection(t.debit_account);
+            if (section === 'cost_of_revenue') monthData.var += amount;
+            else monthData.opex += amount;
+            break;
+          }
           monthData.opex += amount;
           break;
         case 'VAR':
@@ -1055,6 +1130,13 @@ export function groupTransactionsByMonth(
           monthData.capex += amount;
           break;
         case 'TAX':
+          // Restitusi pajak (Dr Kas / Cr Beban Pajak) = contra-expense
+          if (t.is_double_entry && t.credit_account?.account_type === 'EXPENSE') {
+            monthData.tax -= amount;
+            break;
+          }
+          // Pelunasan hutang pajak (Dr Hutang Pajak / Cr Kas) — beban sudah diakui saat akrual
+          if (t.is_double_entry && t.debit_account?.account_type === 'LIABILITY') break;
           monthData.tax += amount;
           break;
         case 'FIN':

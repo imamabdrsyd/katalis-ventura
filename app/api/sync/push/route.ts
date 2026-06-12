@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { canManageBusiness, getAuthenticatedUser, createServerClient } from '@/lib/supabase-server';
-import { businessIdSchema, createTransactionSchema } from '@/lib/validations';
+import {
+  businessIdSchema,
+  createTransactionSchema,
+  updateTransactionSchema,
+  transactionIdSchema,
+} from '@/lib/validations';
 
 interface PushPayload {
   businessId: string;
@@ -53,6 +58,15 @@ export async function POST(request: NextRequest) {
 
     const conflicts = [];
 
+    // Period-lock: jalur sync harus menghormati tutup buku seperti jalur web
+    // (audit 2026-06-11, SEC-M1)
+    const { data: biz } = await supabase
+      .from('businesses')
+      .select('closed_until_date')
+      .eq('id', parsed.data)
+      .single();
+    const closedUntil: string | null = biz?.closed_until_date ?? null;
+
     // Handle created transactions
     if (changes.transactions.created && changes.transactions.created.length > 0) {
       for (const tx of changes.transactions.created) {
@@ -70,8 +84,20 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
+        if (closedUntil && validation.data.date <= closedUntil) {
+          conflicts.push({
+            id: tx.id,
+            error: `Periode hingga ${closedUntil} sudah dikunci. Tidak dapat membuat transaksi di periode ini.`,
+          });
+          continue;
+        }
+
+        // Pertahankan id dari client (idempotensi sync) bila valid UUID;
+        // field lain whitelist via schema (hindari mass-assignment)
+        const clientId = transactionIdSchema.safeParse(tx.id);
         const { error: insertError } = await supabase.from('transactions').insert({
-          ...tx,
+          ...validation.data,
+          ...(clientId.success ? { id: clientId.data } : {}),
           business_id: parsed.data,
           created_by: user.id,
           updated_by: user.id,
@@ -95,7 +121,7 @@ export async function POST(request: NextRequest) {
         // Also enforces business_id scope — only fetch if owned by this business
         const { data: existing } = await supabase
           .from('transactions')
-          .select('updated_at')
+          .select('updated_at, date')
           .eq('id', id)
           .eq('business_id', parsed.data)
           .is('deleted_at', null)
@@ -114,10 +140,31 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
+        // Whitelist field via schema (hindari mass-assignment ke kolom sensitif)
+        const validation = updateTransactionSchema.safeParse(updateData);
+        if (!validation.success) {
+          conflicts.push({ id, error: 'Validation failed' });
+          continue;
+        }
+
+        // Period-lock: tolak edit transaksi di periode terkunci, maupun
+        // memindahkan transaksi ke periode terkunci
+        if (
+          closedUntil &&
+          (existing.date <= closedUntil ||
+            (validation.data.date && validation.data.date <= closedUntil))
+        ) {
+          conflicts.push({
+            id,
+            error: `Periode hingga ${closedUntil} sudah dikunci. Transaksi tidak dapat diedit.`,
+          });
+          continue;
+        }
+
         const { error: updateError } = await supabase
           .from('transactions')
           .update({
-            ...updateData,
+            ...validation.data,
             updated_by: user.id,
           })
           .eq('id', id)
@@ -138,7 +185,7 @@ export async function POST(request: NextRequest) {
         // Verify ownership before calling the SECURITY DEFINER RPC (which skips RLS)
         const { data: owned } = await supabase
           .from('transactions')
-          .select('id')
+          .select('id, date')
           .eq('id', txId)
           .eq('business_id', parsed.data)
           .is('deleted_at', null)
@@ -146,6 +193,15 @@ export async function POST(request: NextRequest) {
 
         if (!owned) {
           conflicts.push({ id: txId, error: 'Transaction not found in this business' });
+          continue;
+        }
+
+        // Period-lock: transaksi di periode terkunci tidak boleh dihapus
+        if (closedUntil && owned.date <= closedUntil) {
+          conflicts.push({
+            id: txId,
+            error: `Periode hingga ${closedUntil} sudah dikunci. Transaksi tidak dapat dihapus.`,
+          });
           continue;
         }
 

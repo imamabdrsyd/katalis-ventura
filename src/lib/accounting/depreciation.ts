@@ -9,6 +9,11 @@
  *   monthlyDepreciation = (cost - residualValue) / usefulLifeMonths
  *   accumulatedDepreciation = monthlyDepreciation × monthsElapsed
  *   bookValue = cost - accumulatedDepreciation
+ *
+ * Konvensi full-month: bulan akuisisi dihitung sebagai bulan ke-1 (langsung
+ * menyusut penuh di bulan perolehan). Konvensi ini HARUS sama antara
+ * akumulasi (Neraca) dan beban periode (Laba Rugi) agar net income tie-out
+ * ke ΔLaba Ditahan (audit 2026-06-11, ACC-H7).
  */
 
 import type { Account } from '@/types';
@@ -52,8 +57,10 @@ export function calculateStraightLineDepreciation(
   const today = new Date();
   const effectiveReportDate = reportDate > today ? today : reportDate;
 
-  // Calculate months elapsed from acquisition to report date
-  const monthsElapsed = getMonthsElapsed(acquisitionDate, effectiveReportDate);
+  // Months elapsed from acquisition to report date, full-month convention:
+  // bulan akuisisi = bulan ke-1 — sama dengan konvensi periodDepreciation
+  // di calculateDepreciationSummary (getMonthsElapsed + 1)
+  const monthsElapsed = getMonthsElapsed(acquisitionDate, effectiveReportDate) + 1;
 
   // Cap at useful life
   const effectiveMonths = Math.min(Math.max(0, monthsElapsed), usefulLifeMonths);

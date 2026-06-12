@@ -48,6 +48,42 @@ export function isPayableSettlementEntry(transaction: Transaction): boolean {
   return !!transaction.meta?.settlement_of_transaction_id;
 }
 
+/**
+ * Returns the payable (hutang) amount yang sebenarnya tercatat pada transaksi —
+ * yaitu net credit pada baris akun LIABILITY saja, BUKAN total header `amount`.
+ *
+ * Penting untuk multi-line: pembelian Dr Peralatan 10jt / Cr Kas 3jt + Cr Hutang 7jt
+ * punya header amount 10jt, tapi hutangnya hanya 7jt. Memakai header amount membuat
+ * pelunasan meng-overclear hutang & meng-overstate kas keluar (mirror Issue #26
+ * sisi AP — audit 2026-06-11, ACC-H1).
+ *
+ * Single double-entry: baris hutang = seluruh `transaction.amount`, jadi sama saja.
+ */
+export function getPayableLineAmount(transaction: Transaction): number {
+  if (transaction.is_multi_line && transaction.journal_lines) {
+    const net = transaction.journal_lines
+      .filter((l) => l.account?.account_type === 'LIABILITY')
+      .reduce((sum, l) => sum + (l.credit_amount - l.debit_amount), 0);
+    // Fallback ke header amount kalau (tak terduga) tidak ada baris liability terdeteksi.
+    return net > 0 ? net : transaction.amount;
+  }
+  return transaction.amount;
+}
+
+/**
+ * Returns the outstanding (remaining) amount on a payable.
+ * If fully settled → 0.
+ * If partially settled → remaining_amount from meta (or falls back to payable line amount).
+ * Otherwise → payable line amount (net, bukan gross header amount).
+ */
+export function getPayableOutstandingAmount(transaction: Transaction): number {
+  if (isPayableSettled(transaction)) return 0;
+  if (transaction.meta?.remaining_amount !== undefined) {
+    return Math.max(0, transaction.meta.remaining_amount);
+  }
+  return getPayableLineAmount(transaction);
+}
+
 export interface PayableSettlementPrefill {
   debit_account_id: string;
   credit_account_id: string;
@@ -90,12 +126,13 @@ function getPayableAccountId(original: Transaction): string {
 export function buildPayableSettlementPrefill(original: Transaction, accounts: Account[]): PayableSettlementPrefill {
   const cashAccount = findDefaultCashAccount(accounts);
   const payableAccountId = getPayableAccountId(original);
+  const outstanding = getPayableOutstandingAmount(original);
 
   return {
     debit_account_id: payableAccountId,
     credit_account_id: cashAccount?.id ?? '',
-    amount: original.amount,
-    original_amount: original.original_amount ?? original.amount,
+    amount: outstanding,
+    original_amount: original.is_multi_line ? outstanding : (original.original_amount ?? outstanding),
     currency_code: original.currency_code ?? 'IDR',
     fx_rate: original.fx_rate ?? 1,
     fx_rate_date: new Date().toISOString().slice(0, 10),

@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useReportData } from './useReportData';
 import { isTradeReceivableTransaction, isSettled, isSettlementEntry, getOutstandingAmount } from '@/lib/accounting/guidance/receivableSettlement';
-import { isPayableTransaction, isPayableSettled, isPayableSettlementEntry } from '@/lib/accounting/guidance/payableSettlement';
+import { isPayableTransaction, isPayableSettled, isPayableSettlementEntry, getPayableOutstandingAmount } from '@/lib/accounting/guidance/payableSettlement';
 import { isTradeReceivableAccount } from '@/lib/accounting/classification';
 import type { Transaction, ArApSummary, AgingRow, RepaymentRow, RepaymentSummary } from '@/types';
 
@@ -186,9 +186,10 @@ export function useArApAging() {
     [transactions, referenceDate]
   );
 
-  // AP (Hutang) — payable transactions that haven't been settled
+  // AP (Hutang) — payable transactions that haven't been settled.
+  // getPayableOutstandingAmount: net baris hutang (bukan gross header multi-line)
   const apSummary = useMemo(
-    () => buildAgingSummary(transactions, referenceDate, isPayableTransaction, isPayableSettled, isPayableSettlementEntry),
+    () => buildAgingSummary(transactions, referenceDate, isPayableTransaction, isPayableSettled, isPayableSettlementEntry, getPayableOutstandingAmount),
     [transactions, referenceDate]
   );
 

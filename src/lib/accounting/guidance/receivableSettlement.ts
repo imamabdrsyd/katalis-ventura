@@ -146,12 +146,15 @@ export interface SettlementPrefill {
 /**
  * Finds the receivable (piutang) account ID from the original transaction.
  * For single double-entry: the debit account is the receivable.
- * For multi-line: the first debit line hitting a receivable ASSET account.
+ * For multi-line: the first debit line hitting a RECEIVABLE account —
+ * filter dengan isAnyReceivableAccount, konsisten dengan deteksi di
+ * isReceivableTransaction. Penjualan campuran (Dr Bank + Dr Piutang) tidak
+ * boleh memilih baris Bank hanya karena ASSET pertama (audit ACC-H2).
  */
 function getReceivableAccountId(original: Transaction): string {
   if (original.is_multi_line && original.journal_lines) {
     const line = original.journal_lines.find(
-      (l) => l.debit_amount > 0 && l.account?.account_type === 'ASSET'
+      (l) => l.debit_amount > 0 && isAnyReceivableAccount(l.account)
     );
     if (line) return line.account_id;
   }
@@ -166,7 +169,7 @@ function getReceivableAccountId(original: Transaction): string {
 function getSettlementCategory(original: Transaction): TransactionCategory {
   if (original.is_multi_line && original.journal_lines) {
     const line = original.journal_lines.find(
-      (l) => l.debit_amount > 0 && l.account?.account_type === 'ASSET'
+      (l) => l.debit_amount > 0 && isAnyReceivableAccount(l.account)
     );
     if (line?.account?.default_category === 'FIN') return 'FIN';
   }
