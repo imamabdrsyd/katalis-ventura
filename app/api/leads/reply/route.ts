@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { canManageBusiness, getAuthenticatedUser, createServerClient } from '@/lib/supabase-server';
 import { sendLeadReplySchema } from '@/lib/validations';
-import { sendWhatsAppMessage } from '@/lib/whatsapp';
+import { sendWhatsAppMessage, getWhatsAppCredentials } from '@/lib/whatsapp';
 import { withRouteTiming } from '@/lib/api/server/timing';
+import type { ChannelIntegration } from '@/types';
 
 /**
  * POST /api/leads/reply — kirim balasan manual WhatsApp dari inbox Leads.
@@ -61,7 +62,21 @@ async function handleReplyPost(request: NextRequest) {
       );
     }
 
-    const sent = await sendWhatsAppMessage(lead.external_id, message);
+    // Kredensial kirim per-bisnis (channel_integrations.config) — fallback env
+    const { data: integration } = await supabase
+      .from('channel_integrations')
+      .select('*')
+      .eq('business_id', lead.business_id)
+      .eq('channel', 'whatsapp')
+      .eq('is_active', true)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    const creds = integration
+      ? getWhatsAppCredentials(integration as ChannelIntegration)
+      : undefined;
+
+    const sent = await sendWhatsAppMessage(lead.external_id, message, creds);
     if (!sent.ok) {
       return NextResponse.json(
         { error: `Gagal kirim ke WhatsApp: ${sent.error ?? 'unknown'}. Cek 24-hour window / kredensial.` },

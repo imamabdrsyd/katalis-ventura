@@ -8,7 +8,7 @@ Leads Hub menerima pesan masuk dari berbagai channel dan menyimpannya sebagai
 | Jalur | Channel | Model token | AI default |
 |-------|---------|-------------|------------|
 | `/api/integrations/instagram/webhook` | Instagram DM | **Per-bisnis** (OAuth, terenkripsi di `config`) | `draft` — manager approve |
-| `/api/whatsapp/webhook` | WhatsApp (Meta Cloud API) | Global (env) — *per-bisnis menyusul* | `auto` — kirim langsung |
+| `/api/whatsapp/webhook` | WhatsApp (Meta Cloud API) | **Per-bisnis** (form kredensial, terenkripsi di `config`) — env global = fallback | `auto` — kirim langsung |
 | `/api/webhooks/inbound` | Airbnb, Booking.com, dll (Zapier/Make) | — (lookup via business_id) | `draft` — manager approve |
 
 Semua webhook menulis ke database via service role (bypass RLS) dan
@@ -22,15 +22,14 @@ Setiap bisnis yang mau menerima pesan butuh baris di `channel_integrations`.
 
 - **Instagram**: baris dibuat **otomatis** lewat tombol "Hubungkan Instagram"
   di `Bisnis → Integrasi` (OAuth) — tidak perlu SQL manual.
-- **WhatsApp / OTA**: untuk sekarang masih di-insert manual:
+- **WhatsApp**: baris dibuat **otomatis** lewat form "Hubungkan" di tab
+  Integrasi (Phone Number ID + Access Token) — tidak perlu SQL manual.
+- **OTA (Airbnb/Booking.com)**: untuk sekarang masih di-insert manual:
 
 ```sql
 INSERT INTO channel_integrations
   (business_id, channel, is_active, external_account_id, ai_enabled, ai_mode, ai_persona)
 VALUES
-  -- WhatsApp: external_account_id = phone_number_id dari Meta App Dashboard
-  ('<business_uuid>', 'whatsapp', true, '<phone_number_id>', true, 'auto',
-   'Balas dengan gaya santai. Sebut nama properti "Villa Hillside".'),
   -- Airbnb: external_account_id tidak dipakai (lookup via business_id di payload)
   ('<business_uuid>', 'airbnb', true, NULL, true, 'draft', NULL);
 ```
@@ -109,32 +108,48 @@ Di luar window Graph API menolak — error di-log, inbound tetap tersimpan.
 
 ---
 
-## 3. WhatsApp (Meta Cloud API)
+## 3. WhatsApp (Meta Cloud API, per-bisnis)
+
+Tiap bisnis menghubungkan **nomornya sendiri** lewat form di `Bisnis →
+Integrasi → WhatsApp → Hubungkan`: isi **Phone Number ID** + **Access Token**
+dari Meta dashboard bisnis masing-masing. Kredensial diverifikasi live ke
+Graph API sebelum disimpan; token disimpan **terenkripsi** di
+`channel_integrations.config.access_token` (`external_account_id` =
+phone_number_id). Token expired → tombol **Perbarui token**.
+
+> Upgrade ke **Embedded Signup** (tombol connect ala Instagram, tanpa
+> copy-paste token) = pekerjaan lanjutan; butuh business verification +
+> Advanced Access `whatsapp_business_management`/`messaging`. Storage shape
+> tidak berubah.
 
 ### Environment variables
 
-| Nama | Sumber |
-|------|--------|
-| `WHATSAPP_VERIFY_TOKEN` | Bebas — string acak yang sama dengan yang diisi di Meta Dashboard |
-| `WHATSAPP_APP_SECRET` | Meta App Dashboard → App Settings → Basic → App Secret |
-| `WHATSAPP_PHONE_NUMBER_ID` | Meta App Dashboard → WhatsApp → API Setup |
-| `WHATSAPP_ACCESS_TOKEN` | System User token permanen (Business Settings → System Users) |
+| Nama | Sumber | Status |
+|------|--------|--------|
+| `WHATSAPP_VERIFY_TOKEN` | Bebas — string acak yang sama dengan yang diisi di Meta Dashboard | **Wajib** (handshake webhook) |
+| `WHATSAPP_APP_SECRET` | Meta App Dashboard → App Settings → Basic → App Secret | **Wajib** (signature webhook) |
+| `WHATSAPP_PHONE_NUMBER_ID` | Meta App Dashboard → WhatsApp → API Setup | Fallback — dipakai hanya kalau bisnis belum simpan kredensial sendiri |
+| `WHATSAPP_ACCESS_TOKEN` | System User token permanen (Business Settings → System Users) | Fallback — sama seperti di atas |
 
-> **Rencana**: WhatsApp akan diarahkan ke model **nomor per-bisnis** (sama
-> seperti Instagram — token per-bisnis di `config`, lewat Embedded Signup),
-> menggantikan token global di env. Helper `src/lib/integrations/config.ts`
-> sudah disiapkan generic untuk ini.
+Webhook tetap **satu untuk semua bisnis** — yang per-bisnis hanya kredensial
+kirim. Routing inbound sudah per-bisnis via `phone_number_id`.
 
-### Setup webhook di Meta App Dashboard
+### Cara ambil kredensial (per bisnis, di Meta dashboard mereka)
 
-1. Buat Meta App tipe Business + tambah produk **WhatsApp**.
-2. WhatsApp → Configuration → Webhook:
+1. Meta App tipe Business + produk **WhatsApp** (atau pakai app AXION dengan
+   nomor tambahan).
+2. **Phone Number ID**: WhatsApp → API Setup.
+3. **Access Token permanen**: Business Settings → System Users → buat system
+   user → generate token dengan permission `whatsapp_business_messaging`.
+4. Isi keduanya di form Hubungkan WhatsApp di AXION.
+
+### Setup webhook di Meta App Dashboard (sekali, global)
+
+1. WhatsApp → Configuration → Webhook:
    - **Callback URL**: `https://axionventura.com/api/whatsapp/webhook`
    - **Verify token**: nilai `WHATSAPP_VERIFY_TOKEN`
    - Klik Verify and Save — Meta kirim GET, route membalas `hub.challenge`.
-3. Subscribe ke webhook field **`messages`**.
-4. Isi `channel_integrations.external_account_id` dengan `phone_number_id`
-   (satu nomor WhatsApp = satu bisnis).
+2. Subscribe ke webhook field **`messages`**.
 
 ### Alur pesan masuk
 
@@ -143,12 +158,14 @@ Customer kirim WA → Meta POST /api/whatsapp/webhook
   → verifikasi X-Hub-Signature-256 (HMAC app secret)
   → lookup bisnis via phone_number_id
   → upsert leads + simpan lead_messages (dedup by wamid)
-  → ai_enabled && ai_mode='auto' → generate balasan → kirim → simpan outbound
+  → ai_enabled:
+       ai_mode='auto'  → generate → kirim (token bisnis, fallback env) → simpan outbound
+       ai_mode='draft' → simpan draft (meta.is_draft=true), manager approve di inbox
 ```
 
 Catatan: balasan hanya bisa dikirim dalam **24-hour customer service window**
 (sejak pesan customer terakhir). Di luar window, Graph API menolak — error
-di-log, pesan inbound tetap tersimpan.
+di-log, pesan inbound tetap tersimpan (auto yang gagal kirim jatuh jadi draft).
 
 ---
 
@@ -226,6 +243,7 @@ Status lead tetap `'new'` sampai manager menindaklanjuti.
 | Kirim / handler / OAuth Instagram | `src/lib/instagram/` |
 | Token config per-bisnis (encrypt/decrypt/strip) | `src/lib/integrations/config.ts` |
 | API manajemen integrasi (list/PATCH/DELETE) | `app/api/integrations/route.ts`, `app/api/integrations/[id]/route.ts` |
+| Connect WhatsApp per-bisnis (kredensial) | `app/api/integrations/whatsapp/route.ts` |
 | UI tab Integrasi (Pesan & Sosial) | `src/components/integrations/ChannelIntegration.tsx` |
 | Webhook WhatsApp | `app/api/whatsapp/webhook/route.ts` |
 | Webhook generic inbound | `app/api/webhooks/inbound/route.ts` |

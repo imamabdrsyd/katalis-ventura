@@ -12,8 +12,11 @@ import {
   Sparkles,
   Bot,
   CheckCircle2,
+  KeyRound,
+  Link2,
 } from 'lucide-react';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
+import { Modal } from '@/components/ui/Modal';
 import type { ChannelIntegration as Integration, AiMode } from '@/types';
 
 interface Props {
@@ -25,6 +28,8 @@ interface Props {
 interface SafeConfig {
   username?: string;
   token_expires_at?: string;
+  display_phone_number?: string | null;
+  verified_name?: string | null;
 }
 
 export function ChannelIntegration({ businessId, canManage }: Props) {
@@ -60,6 +65,7 @@ export function ChannelIntegration({ businessId, canManage }: Props) {
   }, [fetchIntegrations]);
 
   const instagram = integrations.find((i) => i.channel === 'instagram' && i.is_active);
+  const whatsapp = integrations.find((i) => i.channel === 'whatsapp' && i.is_active);
 
   if (loading) {
     return (
@@ -90,12 +96,12 @@ export function ChannelIntegration({ businessId, canManage }: Props) {
         onChanged={fetchIntegrations}
       />
 
-      {/* WhatsApp — segera */}
-      <ComingSoonCard
-        icon={<MessageCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />}
-        iconBg="bg-emerald-50 dark:bg-emerald-900/30"
-        label="WhatsApp"
-        description="Hubungkan nomor WhatsApp Business per bisnis"
+      {/* WhatsApp — kredensial per-bisnis */}
+      <WhatsAppCard
+        integration={whatsapp}
+        businessId={businessId}
+        canManage={canManage}
+        onChanged={fetchIntegrations}
       />
     </div>
   );
@@ -359,33 +365,227 @@ function AiSettingsPanel({
   );
 }
 
-function ComingSoonCard({
-  icon,
-  iconBg,
-  label,
-  description,
+function WhatsAppCard({
+  integration,
+  businessId,
+  canManage,
+  onChanged,
 }: {
-  icon: React.ReactNode;
-  iconBg: string;
-  label: string;
-  description: string;
+  integration?: Integration;
+  businessId: string;
+  canManage: boolean;
+  onChanged: () => void;
 }) {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const isConnected = !!integration;
+  const config = (integration?.config as SafeConfig | null) ?? null;
+
+  const handleDisconnect = async () => {
+    if (!integration) return;
+    if (!confirm('Putuskan koneksi WhatsApp? Riwayat percakapan tidak akan dihapus.')) return;
+    setDisconnecting(true);
+    try {
+      const res = await fetch(`/api/integrations/${integration.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || 'Gagal memutus koneksi');
+      }
+      toast.success('Koneksi WhatsApp diputus');
+      onChanged();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Gagal memutus koneksi');
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
   return (
     <div className="card-static rounded-xl p-5 bg-white dark:bg-gray-800">
-      <div className="flex items-start gap-3">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${iconBg}`}>
-          {icon}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100">{label}</h3>
-            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-              Segera
-            </span>
+      <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          <div className="relative flex-shrink-0">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-500 text-white">
+              <MessageCircle className="w-5 h-5" />
+            </div>
+            {isConnected && (
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-800" />
+            )}
           </div>
-          <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{description}</p>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">WhatsApp</h3>
+              {isConnected && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
+                  Terhubung
+                </span>
+              )}
+            </div>
+            {isConnected ? (
+              <p className="mt-0.5 text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+                {config?.display_phone_number ?? integration?.external_account_id}
+                {config?.verified_name ? ` — ${config.verified_name}` : ''}
+              </p>
+            ) : (
+              <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                Hubungkan nomor WhatsApp Business bisnis ini (Cloud API)
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-shrink-0 sm:pt-0.5">
+          {isConnected ? (
+            canManage && (
+              <>
+                <button
+                  onClick={() => setModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors"
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  Perbarui token
+                </button>
+                <button
+                  onClick={handleDisconnect}
+                  disabled={disconnecting}
+                  title="Putuskan koneksi"
+                  className="btn-icon text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
+                >
+                  <Unlink className="w-4 h-4" />
+                </button>
+              </>
+            )
+          ) : (
+            canManage && (
+              <button onClick={() => setModalOpen(true)} className="btn-primary flex items-center gap-1.5">
+                <Link2 className="w-3.5 h-3.5" />
+                Hubungkan
+              </button>
+            )
+          )}
         </div>
       </div>
+
+      {/* Setelan AI — terhubung */}
+      {isConnected && integration && (
+        <AiSettingsPanel integration={integration} canManage={canManage} onChanged={onChanged} />
+      )}
+
+      <WhatsAppConnectModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        businessId={businessId}
+        isUpdate={isConnected}
+        onSaved={() => {
+          setModalOpen(false);
+          onChanged();
+        }}
+      />
     </div>
+  );
+}
+
+function WhatsAppConnectModal({
+  isOpen,
+  onClose,
+  businessId,
+  isUpdate,
+  onSaved,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  businessId: string;
+  isUpdate: boolean;
+  onSaved: () => void;
+}) {
+  const [phoneNumberId, setPhoneNumberId] = useState('');
+  const [accessToken, setAccessToken] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const inputClass =
+    'w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent';
+
+  const handleSubmit = async () => {
+    if (!phoneNumberId.trim() || !accessToken.trim() || saving) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/integrations/whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          business_id: businessId,
+          phone_number_id: phoneNumberId.trim(),
+          access_token: accessToken.trim(),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Gagal menghubungkan WhatsApp');
+      toast.success(isUpdate ? 'Token WhatsApp diperbarui' : 'WhatsApp berhasil terhubung!');
+      setPhoneNumberId('');
+      setAccessToken('');
+      onSaved();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Gagal menghubungkan WhatsApp');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={isUpdate ? 'Perbarui Token WhatsApp' : 'Hubungkan WhatsApp'}
+    >
+      <div className="space-y-4">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Ambil dari Meta App Dashboard bisnis kamu: <strong>WhatsApp → API Setup</strong>.
+          Token permanen dibuat lewat System User (Business Settings). Kredensial diverifikasi
+          dulu sebelum disimpan, dan token disimpan terenkripsi.
+        </p>
+
+        <div>
+          <label className="text-sm font-medium text-gray-800 dark:text-gray-100">
+            Phone Number ID
+          </label>
+          <input
+            type="text"
+            value={phoneNumberId}
+            onChange={(e) => setPhoneNumberId(e.target.value)}
+            placeholder="mis. 1065520xxxxxxxxx"
+            className={`mt-1.5 ${inputClass}`}
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-gray-800 dark:text-gray-100">
+            Access Token
+          </label>
+          <input
+            type="password"
+            value={accessToken}
+            onChange={(e) => setAccessToken(e.target.value)}
+            placeholder="EAAG…"
+            autoComplete="off"
+            className={`mt-1.5 ${inputClass}`}
+          />
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <button onClick={onClose} className="btn-secondary flex-1" disabled={saving}>
+            Batal
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={saving || !phoneNumberId.trim() || !accessToken.trim()}
+            className="btn-primary flex-1 flex items-center justify-center gap-1.5 disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {saving ? 'Memverifikasi…' : isUpdate ? 'Perbarui' : 'Hubungkan'}
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }

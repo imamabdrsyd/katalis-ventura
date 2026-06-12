@@ -415,6 +415,17 @@ export const updateChannelIntegrationSchema = z.object({
   ai_persona: z.string().max(2000).optional().nullable(),
 });
 
+// Kredensial WhatsApp per-bisnis (form manual di tab Integrasi)
+export const connectWhatsAppSchema = z.object({
+  business_id: z.string().regex(UUID_REGEX, 'Invalid business ID format'),
+  phone_number_id: z
+    .string()
+    .min(1, 'Phone Number ID wajib diisi')
+    .max(50)
+    .regex(/^\d+$/, 'Phone Number ID harus berupa angka'),
+  access_token: z.string().min(10, 'Access token tidak valid').max(1000),
+});
+
 export const createLeadSchema = z.object({
   business_id: z.string().regex(UUID_REGEX, 'Invalid business ID format'),
   channel: z.enum(VALID_LEAD_CHANNELS),

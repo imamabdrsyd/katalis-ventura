@@ -5,7 +5,9 @@
  * 1. Lookup bisnis dari metadata.phone_number_id di channel_integrations
  * 2. Upsert lead by (business_id, 'whatsapp', wa_id pengirim)
  * 3. Simpan inbound ke lead_messages (dedup by wamid)
- * 4. Kalau ai_enabled && ai_mode='auto': generate balasan AI → kirim → simpan outbound
+ * 4. Kalau ai_enabled: generate balasan AI
+ *    - ai_mode='auto'  → kirim (token per-bisnis dari config, fallback env) → simpan outbound
+ *    - ai_mode='draft' → simpan draft (meta.is_draft=true), manager approve di inbox
  *
  * Error di-log saja, tidak throw — webhook harus selalu balas 200 agar
  * Meta tidak retry berlebihan.
@@ -19,8 +21,23 @@ import {
   upsertLead,
 } from '@/lib/leads';
 import { generateLeadReply } from '@/lib/ai/leadAssistant';
-import { sendWhatsAppMessage } from './api';
+import { getDecryptedToken } from '@/lib/integrations/config';
+import { sendWhatsAppMessage, type WhatsAppCredentials } from './api';
 import type { WhatsAppWebhookValue } from './types';
+import type { ChannelIntegration } from '@/types';
+
+/**
+ * Susun kredensial kirim per-bisnis dari integration.config.
+ * Return undefined kalau bisnis belum simpan token sendiri → caller
+ * fallback ke env global (model lama).
+ */
+export function getWhatsAppCredentials(
+  integration: ChannelIntegration
+): WhatsAppCredentials | undefined {
+  const accessToken = getDecryptedToken(integration);
+  if (!accessToken || !integration.external_account_id) return undefined;
+  return { phoneNumberId: integration.external_account_id, accessToken };
+}
 
 /** Konversi pesan non-teks jadi placeholder yang tetap tersimpan di riwayat. */
 function extractContent(type: string, textBody?: string): string {
@@ -76,26 +93,39 @@ export async function handleWhatsAppMessage(value: WhatsAppWebhookValue): Promis
       });
       if (!saved) continue;
 
-      // 4. AI auto-reply — hanya untuk pesan teks
-      if (integration.ai_enabled && integration.ai_mode === 'auto' && msg.type === 'text') {
+      // 4. AI — hanya untuk pesan teks
+      if (integration.ai_enabled && msg.type === 'text') {
         const history = await fetchLeadHistoryForAI(supabase, lead.id);
         const result = await generateLeadReply(supabase, integration, lead, history);
         if (!result) continue;
 
-        const sent = await sendWhatsAppMessage(msg.from, result.reply);
-        if (!sent.ok) {
+        if (integration.ai_mode === 'auto') {
+          // Token per-bisnis dari config; undefined → fallback env global
+          const creds = getWhatsAppCredentials(integration);
+          const sent = await sendWhatsAppMessage(msg.from, result.reply, creds);
+          if (sent.ok) {
+            await insertLeadMessage(supabase, {
+              leadId: lead.id,
+              businessId: integration.business_id,
+              direction: 'outbound',
+              sender: 'ai',
+              content: result.reply,
+              externalMessageId: sent.messageId ?? null,
+              meta: { provider: result.provider, model: result.model },
+            });
+            continue;
+          }
           console.warn('[whatsapp/handler] kirim balasan gagal:', sent.error);
-          continue;
         }
 
+        // ai_mode='draft' ATAU auto yang gagal kirim → simpan sebagai draft
         await insertLeadMessage(supabase, {
           leadId: lead.id,
           businessId: integration.business_id,
           direction: 'outbound',
           sender: 'ai',
           content: result.reply,
-          externalMessageId: sent.messageId ?? null,
-          meta: { provider: result.provider, model: result.model },
+          meta: { provider: result.provider, model: result.model, is_draft: true },
         });
       }
     } catch (err) {

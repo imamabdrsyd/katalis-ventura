@@ -233,7 +233,8 @@ export default function BusinessesPage() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
+            <Building2 className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
             {isInvestor ? `${t.businesses.portfolio} ${firstName}` : t.businesses.manageBusiness}
           </h1>
           {/* <p className="text-gray-500 mt-1">
