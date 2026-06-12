@@ -108,12 +108,12 @@ function MessageBubble({
             inbound
               ? 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-bl-md'
               : draft
-                ? 'border-2 border-dashed border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 text-gray-800 dark:text-gray-100'
-                : 'bg-primary-500 dark:bg-primary-600 text-white rounded-br-md'
+                ? 'border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100'
+                : 'bg-[#474443] dark:bg-gray-100 text-white dark:text-gray-900 rounded-br-md'
           }`}
         >
           {draft && (
-            <p className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400 mb-1.5">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1.5">
               <Sparkles className="w-3 h-3" />
               Draft AI — belum terkirim
             </p>
@@ -144,7 +144,7 @@ function MessageBubble({
               <>
                 <button
                   onClick={() => onApprove(message)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 >
                   <Check className="w-3.5 h-3.5" />
                   Approve & Tandai Terkirim
