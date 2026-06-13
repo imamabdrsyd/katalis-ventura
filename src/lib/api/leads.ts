@@ -1,9 +1,30 @@
 import { createClient } from '@/lib/supabase';
-import type { Lead, LeadChannel, LeadMessage, LeadStatus } from '@/types';
+import type { AiMode, Lead, LeadChannel, LeadMessage, LeadStatus } from '@/types';
 
 export interface LeadFilters {
   channel?: LeadChannel | '';
   status?: LeadStatus | '';
+}
+
+/** Status koneksi channel untuk indikator inbox — hanya kolom non-rahasia (tanpa token). */
+export interface ChannelStatus {
+  channel: LeadChannel;
+  is_active: boolean;
+  ai_enabled: boolean;
+  ai_mode: AiMode;
+}
+
+/** Daftar integrasi channel bisnis (tanpa config/token). RLS batasi ke member bisnis. */
+export async function getChannelStatuses(businessId: string): Promise<ChannelStatus[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('channel_integrations')
+    .select('channel, is_active, ai_enabled, ai_mode')
+    .eq('business_id', businessId)
+    .is('deleted_at', null);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as ChannelStatus[];
 }
 
 /** Ambil leads bisnis, terbaru dulu (by last_message_at). RLS enforce akses. */

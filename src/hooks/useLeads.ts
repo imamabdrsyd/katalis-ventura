@@ -23,6 +23,15 @@ export function useLeads() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loadingLeads, setLoadingLeads] = useState(true);
 
+  // Status koneksi channel (indikator inbox + empty state pintar)
+  const [channelStatuses, setChannelStatuses] = useState<leadsApi.ChannelStatus[]>([]);
+  const [loadingChannels, setLoadingChannels] = useState(true);
+
+  const connectedChannels = useMemo(
+    () => channelStatuses.filter((c) => c.is_active),
+    [channelStatuses]
+  );
+
   // Thread state
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [messages, setMessages] = useState<LeadMessage[]>([]);
@@ -57,6 +66,23 @@ export function useLeads() {
   useEffect(() => {
     refreshLeads();
   }, [refreshLeads]);
+
+  const refreshChannelStatuses = useCallback(async () => {
+    if (!businessId) return;
+    setLoadingChannels(true);
+    try {
+      const data = await leadsApi.getChannelStatuses(businessId);
+      setChannelStatuses(data);
+    } catch (err) {
+      console.error('Failed to fetch channel statuses:', err);
+    } finally {
+      setLoadingChannels(false);
+    }
+  }, [businessId]);
+
+  useEffect(() => {
+    refreshChannelStatuses();
+  }, [refreshChannelStatuses]);
 
   // Reset thread saat ganti bisnis
   useEffect(() => {
@@ -171,6 +197,10 @@ export function useLeads() {
     leads,
     loadingLeads,
     refreshLeads,
+    // status channel
+    connectedChannels,
+    loadingChannels,
+    refreshChannelStatuses,
     // thread
     selectedLead,
     selectLead,

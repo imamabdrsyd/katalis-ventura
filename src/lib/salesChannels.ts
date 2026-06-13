@@ -79,7 +79,8 @@ export const SALES_CHANNEL_CONFIG: Record<SalesChannel, SalesChannelConfig> = {
   },
   instagram: {
     label: 'Instagram',
-    bgColor: 'bg-gradient-to-br from-[#833ab4] via-[#fd1d1d] to-[#fcb045]',
+    // Solid magenta khas Instagram — konsisten dengan badge channel lain yang 1 warna solid
+    bgColor: 'bg-[#E1306C]',
     textColor: 'text-white',
     svgFill: '#ffffff',
     svgPath: null,

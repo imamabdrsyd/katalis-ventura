@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useLeads } from '@/hooks/useLeads';
+import { useBusinessContext } from '@/context/BusinessContext';
 import {
   CHANNEL_LABELS,
   LEAD_CHANNEL_TO_SALES_CHANNEL,
@@ -10,10 +12,11 @@ import {
   LEAD_STATUS_LABELS,
 } from '@/lib/leadColors';
 import { SalesChannelBadge } from '@/components/transactions/SalesChannelBadge';
+import type { ChannelStatus } from '@/lib/api/leads';
 import type { Lead, LeadChannel, LeadMessage, LeadStatus } from '@/types';
 import {
   MessagesSquare, RefreshCw, Send, Copy, Check, Trash2, ArrowLeft,
-  Inbox, Bot, User, UserRound, Sparkles, ChevronDown,
+  Inbox, Bot, User, UserRound, Sparkles, ChevronDown, Plug, Blocks,
 } from 'lucide-react';
 
 const ALL_CHANNELS = Object.keys(CHANNEL_LABELS) as LeadChannel[];
@@ -165,17 +168,45 @@ function MessageBubble({
   );
 }
 
+/** Pill status koneksi channel di toolbar: titik hijau "live" + badge channel + mode AI. */
+function ChannelStatusChip({ status }: { status: ChannelStatus }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/40"
+      title={`${CHANNEL_LABELS[status.channel]} terhubung${
+        status.ai_enabled ? ` · AI ${status.ai_mode === 'auto' ? 'otomatis' : 'draft'}` : ''
+      }`}
+    >
+      <span className="relative flex h-2 w-2 flex-shrink-0">
+        <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+      </span>
+      <SalesChannelBadge channel={LEAD_CHANNEL_TO_SALES_CHANNEL[status.channel]} />
+      {status.ai_enabled && (
+        <span className="flex items-center gap-0.5 text-[10px] font-medium text-indigo-500 dark:text-indigo-400">
+          <Bot className="w-3 h-3" />
+          {status.ai_mode === 'auto' ? 'Auto' : 'Draft'}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export default function LeadsPage() {
   const {
     canManage,
     channelFilter, setChannelFilter,
     statusFilter, setStatusFilter,
     leads, loadingLeads, refreshLeads,
+    connectedChannels, loadingChannels, refreshChannelStatuses,
     selectedLead, selectLead,
     messages, loadingMessages,
     replyText, setReplyText, sending, handleSendReply,
     handleSetStatus, handleApproveDraft, handleDiscardDraft,
   } = useLeads();
+
+  const router = useRouter();
+  const { activeBusinessId } = useBusinessContext();
 
   const threadEndRef = useRef<HTMLDivElement>(null);
 
@@ -191,14 +222,28 @@ export default function LeadsPage() {
   return (
     <div className="p-4 md:p-6">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
-          <MessagesSquare className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
-          Leads
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Inbox pesan masuk dari WhatsApp, Airbnb, Booking.com, dan channel lain
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
+            <MessagesSquare className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
+            Leads
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Inbox pesan masuk dari WhatsApp, Airbnb, Booking.com, dan channel lain
+          </p>
+        </div>
+        {canManage && activeBusinessId && (
+          <button
+            onClick={() =>
+              router.push(`/businesses/${activeBusinessId}/config?tab=integrations`)
+            }
+            className="btn-primary-glow flex items-center gap-2 flex-shrink-0 whitespace-nowrap"
+            title="Hubungkan & atur channel (WhatsApp, Instagram, dll)"
+          >
+            <Blocks className="w-4 h-4" />
+            <span className="hidden sm:inline">Kelola Integrasi</span>
+          </button>
+        )}
       </div>
 
       {/* Toolbar filter */}
@@ -230,14 +275,29 @@ export default function LeadsPage() {
             </select>
             <ChevronDown className={selectChevronClass} />
           </div>
-          <button
-            onClick={refreshLeads}
-            disabled={loadingLeads}
-            className="ml-auto p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-            title="Refresh"
-          >
-            <RefreshCw className={`w-4 h-4 ${loadingLeads ? 'animate-spin' : ''}`} />
-          </button>
+          {/* Indikator status koneksi channel */}
+          <div className="flex flex-wrap items-center gap-2 ml-auto">
+            {!loadingChannels && (
+              connectedChannels.length > 0 ? (
+                connectedChannels.map((c) => (
+                  <ChannelStatusChip key={c.channel} status={c} />
+                ))
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-[11px] text-gray-400 dark:text-gray-500">
+                  <span className="h-2 w-2 rounded-full bg-gray-300 dark:bg-gray-600" />
+                  Belum ada channel terhubung
+                </span>
+              )
+            )}
+            <button
+              onClick={() => { refreshLeads(); refreshChannelStatuses(); }}
+              disabled={loadingLeads}
+              className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+              title="Refresh"
+            >
+              <RefreshCw className={`w-4 h-4 ${loadingLeads ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -254,10 +314,46 @@ export default function LeadsPage() {
               <div className="text-center py-16 text-gray-400 dark:text-gray-500 text-sm">Memuat leads…</div>
             ) : leads.length === 0 ? (
               <div className="text-center py-16 px-4">
-                <Inbox className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Belum ada lead. Pesan masuk dari channel yang terhubung akan muncul di sini.
-                </p>
+                {loadingChannels ? (
+                  <>
+                    <Inbox className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Belum ada lead.
+                    </p>
+                  </>
+                ) : connectedChannels.length === 0 ? (
+                  <>
+                    <Plug className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                      Belum ada channel terhubung
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      Hubungkan WhatsApp atau Instagram dulu agar pesan masuk muncul di sini.
+                    </p>
+                    {canManage && activeBusinessId && (
+                      <button
+                        onClick={() =>
+                          router.push(`/businesses/${activeBusinessId}/config?tab=integrations`)
+                        }
+                        className="btn-ghost inline-flex items-center gap-2 mt-4"
+                      >
+                        <Plug className="w-4 h-4" />
+                        Hubungkan channel
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Inbox className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                      Menunggu pesan masuk
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {connectedChannels.map((c) => CHANNEL_LABELS[c.channel]).join(' & ')} sudah
+                      terhubung. Lead baru akan otomatis muncul di sini.
+                    </p>
+                  </>
+                )}
               </div>
             ) : (
               leads.map((lead) => (
