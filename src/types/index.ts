@@ -147,6 +147,33 @@ export interface CatalogItem {
   revenue_account?: Account | null;
 }
 
+/**
+ * Field terstruktur fakta bisnis yang sering ditanya calon pelanggan. Diedit di
+ * editor terpisah, ditampilkan sebagai ringkasan di atas catatan bebas. Semua opsional.
+ */
+export interface AiKnowledgeFields {
+  hours?: string;     // jam buka
+  location?: string;  // lokasi
+  policies?: string;  // kebijakan
+  faq?: string;       // FAQ
+}
+
+/**
+ * Pengetahuan bisnis level-bisnis yang dibaca AI saat membalas lead di semua
+ * channel. Berisi FAKTA bisnis (jam buka, lokasi, kebijakan, FAQ) — melengkapi
+ * channel_integrations.ai_persona yang per-channel & soal nada bicara. 1:1 dengan businesses.
+ */
+export interface BusinessAiKnowledge {
+  id: string;
+  business_id: string;
+  content: string;
+  fields: AiKnowledgeFields;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface CategoryAccountSuggestion {
   category: TransactionCategory;
   defaultDebitCode: string;

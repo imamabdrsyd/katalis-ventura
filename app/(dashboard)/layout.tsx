@@ -35,6 +35,7 @@ import {
   LineChart,
   Target,
   Calendar,
+  CalendarDays,
   HandCoins,
   Languages,
   FileText,
@@ -43,7 +44,7 @@ import {
   GitBranch,
   Landmark,
   Bot,
-  PackageOpen,
+  Store,
   MessagesSquare,
 } from 'lucide-react';
 
@@ -62,6 +63,23 @@ type NavItem = {
   label: string;
   icon: LucideIcon;
 };
+
+/**
+ * Menu "Catalog" lama kini swap by tipe bisnis (hub Point of Sales / Calendar):
+ * - jasa → "Calendar" (/calendar)
+ * - produk/dagang/legacy (tipe kosong) → "Point of Sales" (/point-of-sales)
+ * Dipakai DUA situs (Sidebar + SearchDialog) — keduanya wajib panggil helper ini
+ * agar tidak drift.
+ */
+function getPosNavItem(
+  businessType: string | undefined,
+  nav: { pointOfSales: string; calendar: string }
+): NavItem {
+  if (businessType === 'jasa') {
+    return { href: '/calendar', label: nav.calendar, icon: CalendarDays };
+  }
+  return { href: '/point-of-sales', label: nav.pointOfSales, icon: Store };
+}
 
 type NavSection = {
   label: string;
@@ -201,7 +219,7 @@ function formatSearchAmount(amount?: number): string | null {
 
 function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
-  const { activeBusinessId, userRole } = useBusinessContext();
+  const { activeBusinessId, activeBusiness, userRole } = useBusinessContext();
   const { navSections, t } = useNavData();
   const [query, setQuery] = useState('');
   const [dataResults, setDataResults] = useState<SearchResult[]>([]);
@@ -223,7 +241,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
       // /invoices & /reconciliation sudah ada via navSections — jangan di-splice lagi
       // (mencegah duplikat key di SearchDialog).
       pages.splice(2, 0,
-        { href: '/catalog', label: t.nav.catalog, icon: PackageOpen },
+        getPosNavItem(activeBusiness?.business_type, t.nav),
         { href: '/agent', label: 'Agentic Workflow', icon: Bot },
         { href: '/transactions', label: t.nav.transactions, icon: CreditCard },
         { href: '/transactions/journal-entry', label: t.nav.journalEntry, icon: Plus }
@@ -231,7 +249,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
     }
 
     return pages;
-  }, [canManage, navSections, t]);
+  }, [canManage, navSections, t, activeBusiness?.business_type]);
 
   const filteredPages = useMemo(
     () =>
@@ -696,6 +714,7 @@ function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
   const { navSections, t } = useNavData();
+  const { activeBusiness } = useBusinessContext();
   const canManage = isManagerRole(userRole);
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
@@ -850,7 +869,7 @@ function Sidebar({
             { href: '/dashboard', label: t.nav.dashboard, icon: PieChart },
             { href: '/leads', label: 'Leads', icon: MessagesSquare },
             { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
-            ...(canManage ? [{ href: '/catalog', label: t.nav.catalog, icon: PackageOpen }] : []),
+            ...(canManage ? [getPosNavItem(activeBusiness?.business_type, t.nav)] : []),
             ...(canManage ? [{ href: '/agent', label: 'Agentic Workflow', icon: Bot }] : []),
           ].filter(item => !hiddenNavItems.includes(item.href)).map((item) => {
             const Icon = item.icon;

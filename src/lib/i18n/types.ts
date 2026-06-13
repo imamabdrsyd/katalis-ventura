@@ -59,6 +59,8 @@ export interface Translations {
     viewTransactions: string;
     manageBusiness: string;
     catalog: string;
+    pointOfSales: string;
+    calendar: string;
     accounting: string;
     chartOfAccounts: string;
     invoice: string;
@@ -319,6 +321,44 @@ export interface Translations {
     pickerApply: string;
     quickPickerLabel: string;
     addFromCatalog: string;
+  };
+
+  // Hub (Point of Sales / Calendar) — wadah Katalog + Info AI + panel operasional
+  hub: {
+    posTitle: string;
+    posSubtitle: string;
+    calendarTitle: string;
+    calendarSubtitle: string;
+    tabCatalog: string;
+    tabAiInfo: string;
+    tabKasir: string;
+    tabKalender: string;
+    kasirComingSoon: string;
+    kasirComingSoonDesc: string;
+    kalenderComingSoon: string;
+    kalenderComingSoonDesc: string;
+    aiInfoTitle: string;
+    aiInfoDesc: string;
+    aiInfoPlaceholder: string;
+    aiInfoReadonly: string;
+    aiInfoNotesLabel: string;
+    editFields: string;
+    fieldsModalTitle: string;
+    fieldHours: string;
+    fieldHoursPlaceholder: string;
+    fieldLocation: string;
+    fieldLocationPlaceholder: string;
+    fieldPolicies: string;
+    fieldPoliciesPlaceholder: string;
+    fieldFaq: string;
+    fieldFaqPlaceholder: string;
+    fieldsCancel: string;
+    fieldsApply: string;
+    save: string;
+    saving: string;
+    saved: string;
+    saveFailed: string;
+    loadFailed: string;
   };
 
   // Businesses Page

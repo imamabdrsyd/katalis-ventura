@@ -5,6 +5,7 @@ import type { CatalogItem } from '@/types';
 import { getCatalogItems } from '@/lib/api/catalog';
 import { formatCurrency } from '@/lib/utils';
 import { useLanguage } from '@/context/LanguageContext';
+import { useBusinessContext } from '@/context/BusinessContext';
 import { Package, Wrench, Search, Plus, Minus, ShoppingCart, X } from 'lucide-react';
 
 export interface PickedCatalogLine {
@@ -35,7 +36,10 @@ export function CatalogItemPicker({
   onClose,
 }: CatalogItemPickerProps) {
   const { t } = useLanguage();
+  const { activeBusiness } = useBusinessContext();
   const tc = t.catalog;
+  // Hub katalog kini swap by tipe bisnis (jasa → /calendar, lainnya → /point-of-sales)
+  const catalogHref = activeBusiness?.business_type === 'jasa' ? '/calendar' : '/point-of-sales';
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -108,7 +112,7 @@ export function CatalogItemPicker({
       <div className="py-8 text-center">
         <Package className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
         <p className="text-sm text-gray-500 dark:text-gray-400">{tc.pickerEmpty}</p>
-        <a href="/catalog" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline mt-1 inline-block">
+        <a href={catalogHref} className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline mt-1 inline-block">
           {tc.pickerCreateLink}
         </a>
       </div>

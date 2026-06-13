@@ -42,12 +42,31 @@ function formatPrice(price: number): string {
   return `Rp ${price.toLocaleString('id-ID')}`;
 }
 
+/**
+ * Gabungkan field terstruktur (hours/location/policies/faq) + catatan bebas
+ * jadi satu blok teks berlabel Indonesia untuk system prompt. Return null kalau
+ * semua kosong → section "INFORMASI BISNIS" di-skip.
+ */
+function formatBusinessKnowledge(
+  fields: { hours?: string; location?: string; policies?: string; faq?: string } | null,
+  content: string | null
+): string | null {
+  const lines: string[] = [];
+  if (fields?.hours?.trim()) lines.push(`Jam buka: ${fields.hours.trim()}`);
+  if (fields?.location?.trim()) lines.push(`Lokasi: ${fields.location.trim()}`);
+  if (fields?.policies?.trim()) lines.push(`Kebijakan: ${fields.policies.trim()}`);
+  if (fields?.faq?.trim()) lines.push(`FAQ: ${fields.faq.trim()}`);
+  if (content?.trim()) lines.push(content.trim());
+  return lines.length > 0 ? lines.join('\n') : null;
+}
+
 function buildSystemPrompt(
   businessName: string,
   businessSector: string | null,
   channel: string,
   aiPersona: string | null,
-  catalogItems: CatalogItemSummary[]
+  catalogItems: CatalogItemSummary[],
+  businessKnowledge: string | null
 ): string {
   const lines: string[] = [
     `Kamu adalah customer service untuk bisnis "${businessName}"${businessSector ? ` (sektor: ${businessSector})` : ''}.`,
@@ -67,6 +86,10 @@ function buildSystemPrompt(
       const desc = item.description ? ` — ${item.description}` : '';
       lines.push(`- ${item.name}: ${formatPrice(item.default_price)}${unit}${desc}`);
     }
+  }
+
+  if (businessKnowledge && businessKnowledge.trim()) {
+    lines.push('', 'INFORMASI BISNIS (dari pemilik — pakai sebagai fakta saat menjawab):', businessKnowledge.trim());
   }
 
   if (aiPersona && aiPersona.trim()) {
@@ -110,7 +133,7 @@ export async function generateLeadReply(
 ): Promise<LeadReplyResult | null> {
   if (history.length === 0) return null;
 
-  const [{ data: business }, { data: catalog }] = await Promise.all([
+  const [{ data: business }, { data: catalog }, { data: knowledge }] = await Promise.all([
     supabase
       .from('businesses')
       .select('business_name, business_sector')
@@ -124,6 +147,11 @@ export async function generateLeadReply(
       .is('deleted_at', null)
       .order('sort_order', { ascending: true })
       .limit(30),
+    supabase
+      .from('business_ai_knowledge')
+      .select('content, fields')
+      .eq('business_id', integration.business_id)
+      .maybeSingle(),
   ]);
 
   const systemPrompt = buildSystemPrompt(
@@ -131,7 +159,8 @@ export async function generateLeadReply(
     business?.business_sector ?? null,
     lead.channel,
     integration.ai_persona ?? null,
-    (catalog ?? []) as CatalogItemSummary[]
+    (catalog ?? []) as CatalogItemSummary[],
+    formatBusinessKnowledge(knowledge?.fields ?? null, knowledge?.content ?? null)
   );
 
   const result = await generateText(systemPrompt, history, {
