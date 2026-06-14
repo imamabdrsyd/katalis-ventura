@@ -17,16 +17,16 @@ import { formatCurrency } from '@/lib/utils';
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const EXPENSE_COLORS = [
-  '#fca5a5',
-  '#fcd34d',
-  '#c4b5fd',
-  '#7dd3fc',
-  '#f9a8d4',
-  '#6ee7b7',
-  '#fdba74',
-  '#67e8f9',
-  '#bef264',
-  '#a5b4fc',
+  '#6b8fc4', // cobalt blue     — oklch(60% 0.13 240)
+  '#9ec898', // light sage green — oklch(75% 0.10 140)
+  '#e8d07a', // soft warm yellow — oklch(83% 0.12 85)
+  '#c47a7a', // dusty rose      — oklch(60% 0.12 18)
+  '#6aadb5', // soft teal       — oklch(67% 0.10 196)
+  '#a87aad', // muted mauve     — oklch(58% 0.11 310)
+  '#c49070', // warm terracotta — oklch(65% 0.10 48)
+  '#7a8fc4', // steel blue      — oklch(61% 0.12 262)
+  '#96ad6b', // muted olive     — oklch(68% 0.11 120)
+  '#9a8fc4', // dusty lavender  — oklch(63% 0.10 278)
 ];
 
 const OTHERS_COLOR = '#d1d5db';
