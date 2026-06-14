@@ -120,23 +120,22 @@ export function AiKnowledgePanel() {
         </button>
       )}
 
-      <div className="flex items-start gap-2.5 mb-1 pr-8">
-        <Bot className="w-5 h-5 text-primary-500 mt-0.5 flex-shrink-0" />
-        <div>
-          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{th.aiInfoTitle}</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{th.aiInfoDesc}</p>
-        </div>
+      <div className="flex items-center gap-2 mb-3 pr-8">
+        <Bot className="w-5 h-5 text-primary-500 flex-shrink-0" />
+        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{th.aiInfoTitle}</h2>
       </div>
 
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{th.aiInfoDesc}</p>
+
       {!canManage && (
-        <p className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 mt-3">
+        <p className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 mb-3">
           <Lock className="w-3.5 h-3.5" /> {th.aiInfoReadonly}
         </p>
       )}
 
       {/* Ringkasan field terstruktur (kalau ada) — di atas textarea */}
       {filledFields.length > 0 && (
-        <div className="mt-4 space-y-2.5 rounded-lg bg-gray-50 dark:bg-gray-700/40 border border-gray-100 dark:border-gray-700 p-3">
+        <div className="mb-4 space-y-2.5 rounded-lg bg-gray-50 dark:bg-gray-700/40 border border-gray-100 dark:border-gray-700 p-3">
           {filledFields.map((f) => (
             <div key={f.key}>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">{f.label}</p>
@@ -146,36 +145,34 @@ export function AiKnowledgePanel() {
         </div>
       )}
 
-      <div className="mt-4">
-        {filledFields.length > 0 && (
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-            {th.aiInfoNotesLabel}
-          </label>
+      {filledFields.length > 0 && (
+        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+          {th.aiInfoNotesLabel}
+        </label>
+      )}
+      <textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        disabled={!canManage || loading}
+        rows={filledFields.length > 0 ? 6 : 10}
+        maxLength={MAX_LEN}
+        placeholder={th.aiInfoPlaceholder}
+        className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-y disabled:opacity-60"
+      />
+      <div className="flex items-center justify-between mt-1.5">
+        <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums">
+          {content.length} / {MAX_LEN}
+        </span>
+        {canManage && dirty && (
+          <button
+            onClick={() => persist(content, fields)}
+            disabled={saving}
+            className="btn-primary flex items-center gap-1.5 disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {saving ? th.saving : th.save}
+          </button>
         )}
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          disabled={!canManage || loading}
-          rows={filledFields.length > 0 ? 6 : 10}
-          maxLength={MAX_LEN}
-          placeholder={th.aiInfoPlaceholder}
-          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-y disabled:opacity-60"
-        />
-        <div className="flex items-center justify-between mt-1.5">
-          <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums">
-            {content.length} / {MAX_LEN}
-          </span>
-          {canManage && dirty && (
-            <button
-              onClick={() => persist(content, fields)}
-              disabled={saving}
-              className="btn-primary flex items-center gap-1.5 disabled:opacity-50"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {saving ? th.saving : th.save}
-            </button>
-          )}
-        </div>
       </div>
 
       {/* Modal edit field terstruktur */}

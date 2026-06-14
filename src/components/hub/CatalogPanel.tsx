@@ -12,7 +12,7 @@ import { formatCurrency } from '@/lib/utils';
 import { CatalogItemForm, type CatalogItemFormData } from '@/components/catalog/CatalogItemForm';
 import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
 import {
-  Plus, Search, Package, Wrench, Pencil, Trash2, X, EyeOff,
+  Plus, Search, Package, Wrench, Pencil, Trash2, X, Eye, EyeOff,
 } from 'lucide-react';
 
 /**
@@ -154,15 +154,14 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
               className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
           </div>
-          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer whitespace-nowrap">
-            <input
-              type="checkbox"
-              checked={showInactive}
-              onChange={(e) => setShowInactive(e.target.checked)}
-              className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
-            />
-            <EyeOff className="w-3.5 h-3.5" /> {tc.showInactive}
-          </label>
+          <button
+            type="button"
+            onClick={() => setShowInactive(v => !v)}
+            className={`flex items-center gap-1.5 text-sm whitespace-nowrap transition-colors ${showInactive ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
+          >
+            {showInactive ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+            Inactive
+          </button>
           {canManage && (
             <button
               onClick={openAdd}
