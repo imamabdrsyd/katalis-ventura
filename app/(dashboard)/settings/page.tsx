@@ -660,7 +660,7 @@ export default function SettingsPage() {
                       role="switch"
                       aria-checked={isVisible}
                     >
-                      <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isVisible ? 'translate-x-4' : 'translate-x-0'}`} />
+                      <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ease-in-out ${isVisible ? 'translate-x-4 shadow-[0_1px_3px_rgba(0,0,0,0.4),0_1px_2px_rgba(0,0,0,0.25)] ring-1 ring-black/10' : 'translate-x-0 shadow'}`} />
                     </button>
                   </div>
                 );

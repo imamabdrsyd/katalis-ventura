@@ -418,7 +418,7 @@ export default function AgentPage() {
   return (
     <div className="flex flex-col h-[calc(100dvh-4rem)] w-full">
       {/* Header */}
-      <div className="px-4 md:px-6 pt-4 md:pt-6 pb-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+      <div className="px-4 md:px-6 pt-4 md:pt-6 pb-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
         <div className="flex items-center gap-3">
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
@@ -457,8 +457,8 @@ export default function AgentPage() {
           </div>
 
           {/* Composer */}
-          <div className="px-3 md:px-6 py-3 border-t border-gray-100 dark:border-gray-800 shrink-0">
-            <div className="flex items-center gap-2 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 pl-4 pr-1.5 py-1.5 focus-within:border-primary-400 dark:focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20 transition-all">
+          <div className="px-3 md:px-6 py-3 border-t border-gray-200 dark:border-gray-800 shrink-0">
+            <div className="flex items-center gap-2 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 pl-4 pr-1.5 py-1.5 focus-within:border-primary-400 dark:focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20 transition-all">
               {/* Indikator file terpilih */}
               {selectedFile && (
                 <span className="inline-flex items-center gap-1 shrink-0 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 max-w-[120px]">
@@ -509,7 +509,7 @@ export default function AgentPage() {
         </div>
 
         {/* Panel widget impor — desktop (sticky, tidak tenggelam di chat) */}
-        <aside className="hidden lg:block w-[360px] xl:w-[400px] shrink-0 border-l border-gray-100 dark:border-gray-800 overflow-y-auto p-5 bg-gray-50/50 dark:bg-gray-900/30">
+        <aside className="hidden lg:block w-[360px] xl:w-[400px] shrink-0 border-l border-gray-200 dark:border-gray-800 overflow-y-auto p-5 bg-gray-50/50 dark:bg-gray-900/30">
           {importWidget}
         </aside>
       </div>
@@ -533,12 +533,12 @@ function ChatRow({ message }: { message: ChatMessage }) {
   // assistant rows
   return (
     <div className="flex gap-2.5">
-      <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+      <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 bg-primary-50 dark:bg-primary-500/15 text-primary-600 dark:text-primary-400">
         <Bot className="w-3.5 h-3.5" />
       </div>
       <div className="min-w-0 flex-1">
         {message.kind === 'intro' && (
-          <div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-700 px-3.5 py-2.5 text-[13px] leading-relaxed">
+          <div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 px-3.5 py-2.5 text-[13px] leading-relaxed">
             {message.text}
           </div>
         )}
@@ -555,7 +555,7 @@ function AnswerBubble({ message }: { message: Extract<ChatMessage, { kind: 'answ
   // Hanya tampilkan dot-typing kalau benar-benar belum ada apa-apa (teks & thinking).
   const isEmpty = message.streaming && !message.text && !message.thinking;
   return (
-    <div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-700 px-3.5 py-2.5 text-[13px] leading-relaxed">
+    <div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 px-3.5 py-2.5 text-[13px] leading-relaxed">
       {isEmpty ? (
         <span className="inline-flex gap-1 items-center h-4">
           <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -649,7 +649,7 @@ function RunBubble({ run }: { run: Extract<ChatMessage, { kind: 'run' }> }) {
   const lastIsError = run.steps[run.steps.length - 1]?.type === 'error';
 
   return (
-    <div className="max-w-[440px] rounded-2xl rounded-tl-sm border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 overflow-hidden">
+    <div className="max-w-[440px] rounded-2xl rounded-tl-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-gray-100 dark:border-gray-700">
         {run.isRunning ? (

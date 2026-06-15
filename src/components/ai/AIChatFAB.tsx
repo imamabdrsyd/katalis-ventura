@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, X } from 'lucide-react';
+import { X, Bot } from 'lucide-react';
 import { AIChatPanel } from './AIChatPanel';
 
 interface AIChatFABProps {

@@ -121,7 +121,7 @@ export function AiKnowledgePanel() {
       )}
 
       <div className="flex items-center gap-2 mb-3 pr-8">
-        <Bot className="w-5 h-5 text-primary-500 flex-shrink-0" />
+        <Bot className="w-5 h-5 text-blue-500 dark:text-blue-400 flex-shrink-0" />
         <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{th.aiInfoTitle}</h2>
       </div>
 

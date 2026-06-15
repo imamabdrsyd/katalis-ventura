@@ -183,7 +183,7 @@ function ChannelStatusChip({ status }: { status: ChannelStatus }) {
       </span>
       <SalesChannelBadge channel={LEAD_CHANNEL_TO_SALES_CHANNEL[status.channel]} />
       {status.ai_enabled && (
-        <span className="flex items-center gap-0.5 text-[10px] font-medium text-indigo-500 dark:text-indigo-400">
+        <span className="flex items-center gap-0.5 text-[10px] font-medium text-blue-500 dark:text-blue-400">
           <Bot className="w-3 h-3" />
           {status.ai_mode === 'auto' ? 'Auto' : 'Draft'}
         </span>

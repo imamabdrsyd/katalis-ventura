@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback, useId } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check, Paperclip, FileSpreadsheet, Brain, ChevronRight, ChevronDown, ExternalLink } from 'lucide-react';
+import { X, Send, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check, Paperclip, FileSpreadsheet, Brain, ChevronRight, ChevronDown, ExternalLink, Bot } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { parseExcelFile, parseExcelRaw, applyColumnMapping, validateFile, type ColumnMapping } from '@/lib/import/excelParser';
 import { validateRowsSmart } from '@/lib/import/excelValidator';
@@ -1218,7 +1218,9 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
           >
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 shrink-0">
-              <Image src="/images/favicon.png" alt="Accountant Agent" width={32} height={32} className="rounded-lg shrink-0" />
+              <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0">
+                <Bot className="w-5 h-5" />
+              </span>
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-50 leading-tight">Accountant Agent</p>
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -1461,8 +1463,10 @@ function EmptyState({
   const isRecord = mode === 'record';
   return (
     <div className="flex flex-col items-center justify-center h-full gap-4 py-4">
-      <Image src="/images/agent.png" alt="AXION Agent" width={48} height={48} className="object-contain" />
-      <p className="text-[13px] font-semibold text-gray-800 dark:text-gray-100">Hi! I&apos;m AXION Agent</p>
+      <span className="flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+        <Bot className="w-7 h-7" />
+      </span>
+      <p className="text-[13px] font-semibold text-gray-800 dark:text-gray-100">Hi! I&apos;m your Accountant Agent</p>
       <div className="relative h-[224px] w-full overflow-hidden">
         <AnimatePresence initial={false} custom={direction} mode="popLayout">
           <motion.div
@@ -1540,7 +1544,7 @@ function ChatBubble({
         ) : isUser ? (
           <User className="w-3.5 h-3.5" />
         ) : (
-          <Image src="/images/agent.png" alt="AXION Agent" width={16} height={16} className="object-contain" />
+          <Bot className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
         )}
       </div>
       <div className={`max-w-[82%] min-w-0 rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${

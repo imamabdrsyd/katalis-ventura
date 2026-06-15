@@ -282,7 +282,7 @@ function AiSettingsPanel({
     <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-start gap-2.5">
-          <Bot className="w-4 h-4 text-primary-500 mt-0.5" />
+          <Bot className="w-4 h-4 text-blue-500 dark:text-blue-400 mt-0.5" />
           <div>
             <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{ci.aiReplyTitle}</p>
             <p className="text-xs text-gray-500 dark:text-gray-400">{ci.aiReplyDesc}</p>
@@ -300,7 +300,9 @@ function AiSettingsPanel({
         >
           <span
             className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-              enabled ? 'translate-x-6' : 'translate-x-1'
+              enabled
+                ? 'translate-x-6 shadow-[0_1px_3px_rgba(0,0,0,0.4),0_1px_2px_rgba(0,0,0,0.25)] ring-1 ring-black/10'
+                : 'translate-x-1 shadow'
             }`}
           />
         </button>
