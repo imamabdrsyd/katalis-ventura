@@ -124,6 +124,34 @@ export interface Translations {
     profileUpdateFailed: string;
     language: string;
     languageHint: string;
+    // Telegram Bot card
+    telegramTitle: string;
+    telegramSubtitle: string;
+    telegramLoadingStatus: string;
+    telegramConnectedAs: string;
+    telegramConnected: string;
+    telegramSince: string;
+    telegramHowToTitle: string;
+    telegramHowToEarn: string;
+    telegramHowToExpense: string;
+    telegramHowToBalance: string;
+    telegramDefaultStatusTitle: string;
+    telegramDefaultStatusDesc: string;
+    telegramStatusDraft: string;
+    telegramStatusPosted: string;
+    telegramDisconnect: string;
+    telegramTokenValid: string;
+    telegramOpenHint: string;
+    telegramOpen: string;
+    telegramCopyLink: string;
+    telegramCopied: string;
+    telegramRefreshToken: string;
+    telegramConnectHint: string;
+    telegramConnect: string;
+    telegramInvestorOnly: string;
+    // Sidebar visibility card
+    sidebarMenuTitle: string;
+    sidebarMenuDesc: string;
   };
 
   // Dashboard Page

@@ -112,7 +112,7 @@ function MessageBubble({
               ? 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-bl-md'
               : draft
                 ? 'border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100'
-                : 'bg-[#474443] dark:bg-gray-100 text-white dark:text-gray-900 rounded-br-md'
+                : 'bg-stone-800 dark:bg-gray-100 text-white dark:text-gray-900 rounded-br-md'
           }`}
         >
           {draft && (
@@ -206,7 +206,19 @@ export default function LeadsPage() {
   } = useLeads();
 
   const router = useRouter();
-  const { activeBusinessId } = useBusinessContext();
+  const { activeBusinessId, activeBusiness } = useBusinessContext();
+
+  // Subtitle menyesuaikan tipe bisnis — sebut channel yang relevan saja
+  const leadsSubtitle = (() => {
+    const type = activeBusiness?.business_type;
+    if (type === 'produk' || type === 'dagang') {
+      return 'Inbox pesan masuk dari WhatsApp, Instagram, marketplace, dan channel lain';
+    }
+    if (type === 'jasa') {
+      return 'Inbox pesan masuk dari WhatsApp, Airbnb, Booking.com, dan channel lain';
+    }
+    return 'Inbox pesan masuk dari WhatsApp, Instagram, dan channel lain';
+  })();
 
   const threadEndRef = useRef<HTMLDivElement>(null);
 
@@ -229,7 +241,7 @@ export default function LeadsPage() {
             Leads
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Inbox pesan masuk dari WhatsApp, Airbnb, Booking.com, dan channel lain
+            {leadsSubtitle}
           </p>
         </div>
         {canManage && activeBusinessId && (
@@ -311,9 +323,9 @@ export default function LeadsPage() {
         >
           <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-0.5">
             {loadingLeads ? (
-              <div className="text-center py-16 text-gray-400 dark:text-gray-500 text-sm">Memuat leads…</div>
+              <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-500 text-sm">Memuat leads…</div>
             ) : leads.length === 0 ? (
-              <div className="text-center py-16 px-4">
+              <div className="flex flex-col items-center justify-center h-full text-center px-4">
                 {loadingChannels ? (
                   <>
                     <Inbox className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
@@ -323,7 +335,7 @@ export default function LeadsPage() {
                   </>
                 ) : connectedChannels.length === 0 ? (
                   <>
-                    <Plug className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+                    <Inbox className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
                     <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
                       Belum ada channel terhubung
                     </p>

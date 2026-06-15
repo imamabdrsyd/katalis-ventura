@@ -11,7 +11,7 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { CATEGORY_LABELS } from '@/lib/calculations';
 import type { TransactionCategory, JournalLineInput, Account, TransactionAttachment, SalesChannel } from '@/types';
-import { SALES_CHANNEL_OPTIONS } from '@/lib/salesChannels';
+import { getSalesChannelOptions, SALES_CHANNEL_CONFIG } from '@/lib/salesChannels';
 import { FileUpload } from '@/components/ui/FileUpload';
 import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
 import { CatalogItemPicker, type PickedCatalogLine } from '@/components/catalog/CatalogItemPicker';
@@ -63,8 +63,9 @@ export function MultiLineJournalForm({
 }: MultiLineJournalFormProps) {
   const params = useParams();
   const businessId = businessIdProp || (params?.businessId as string);
-  const { user } = useBusinessContext();
+  const { user, activeBusiness } = useBusinessContext();
   const { t } = useLanguage();
+  const baseChannelOptions = getSalesChannelOptions(activeBusiness?.business_type);
 
   const [formData, setFormData] = useState<Omit<MultiLineFormData, 'journal_lines'>>({
     date: initialData?.date ?? new Date().toISOString().split('T')[0],
@@ -298,7 +299,17 @@ export function MultiLineJournalForm({
             className="input"
           >
             <option value="">— Pilih channel (opsional) —</option>
-            {SALES_CHANNEL_OPTIONS.map((opt) => (
+            {(() => {
+              const saved = formData.sales_channel;
+              const opts =
+                saved && !baseChannelOptions.some((o) => o.value === saved)
+                  ? [
+                      ...baseChannelOptions,
+                      { value: saved, label: SALES_CHANNEL_CONFIG[saved].label },
+                    ]
+                  : baseChannelOptions;
+              return opts;
+            })().map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>

@@ -452,7 +452,7 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
               aria-checked={displayMode === 'icon_only'}
               onClick={() => setDisplayMode(displayMode === 'icon_only' ? 'default' : 'icon_only')}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                displayMode === 'icon_only' ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
+                displayMode === 'icon_only' ? 'bg-gray-900 dark:bg-gray-100' : 'bg-gray-300 dark:bg-gray-600'
               }`}
             >
               <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${displayMode === 'icon_only' ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -468,7 +468,7 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
               aria-checked={isActive}
               onClick={() => setIsActive(!isActive)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                isActive ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
+                isActive ? 'bg-gray-900 dark:bg-gray-100' : 'bg-gray-300 dark:bg-gray-600'
               }`}
             >
               <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isActive ? 'translate-x-6' : 'translate-x-1'}`} />

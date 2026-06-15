@@ -186,7 +186,7 @@ function InstagramCard({
                   onClick={handleDisconnect}
                   disabled={disconnecting}
                   title={ci.disconnect}
-                  className="btn-icon text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
+                  className="btn-icon text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 disabled:opacity-50"
                 >
                   <Unlink className="w-4 h-4" />
                 </button>
@@ -295,7 +295,7 @@ function AiSettingsPanel({
           disabled={!canManage}
           onClick={() => setEnabled((v) => !v)}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 disabled:opacity-50 ${
-            enabled ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
+            enabled ? 'bg-gray-900 dark:bg-gray-100' : 'bg-gray-300 dark:bg-gray-600'
           }`}
         >
           <span
@@ -444,7 +444,7 @@ function WhatsAppCard({
                   onClick={handleDisconnect}
                   disabled={disconnecting}
                   title={ci.disconnect}
-                  className="btn-icon text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
+                  className="btn-icon text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 disabled:opacity-50"
                 >
                   <Unlink className="w-4 h-4" />
                 </button>

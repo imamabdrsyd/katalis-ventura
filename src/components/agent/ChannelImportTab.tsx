@@ -1,23 +1,27 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { AgentProgressToast, type AgentStep } from '@/components/agent/AgentProgressToast';
 import { SalesChannelBadge } from '@/components/transactions/SalesChannelBadge';
 import { appendAgentImportStep, readAgentImportSession, startAgentImportSession, updateAgentImportSession } from '@/lib/agent/importSession';
+import { useBusinessContext } from '@/context/BusinessContext';
+import type { BusinessTypeKey } from '@/lib/salesChannels';
 import type { SalesChannel } from '@/types';
 import { Bot, Upload, FileSpreadsheet, CheckCircle, ChevronDown, X, Info } from 'lucide-react';
 
 const SUPPORTED_CHANNELS = [
-  { value: 'airbnb', label: 'Airbnb', badges: ['airbnb'], description: 'CSV dari Airbnb Host dashboard', available: true },
-  { value: 'tiktok_tokopedia', label: 'TikTok Shop / Tokopedia', badges: ['tiktok', 'tokopedia'], description: 'Ekspor pesanan Seller Center (gabungan)', available: true },
-  { value: 'shopee', label: 'Shopee', badges: ['shopee'], description: 'Laporan transaksi Shopee', available: false },
+  { value: 'airbnb', label: 'Airbnb', badges: ['airbnb'], description: 'CSV dari Airbnb Host dashboard', available: true, businessTypes: ['jasa'] },
+  { value: 'tiktok_tokopedia', label: 'TikTok Shop / Tokopedia', badges: ['tiktok', 'tokopedia'], description: 'Ekspor pesanan Seller Center (gabungan)', available: true, businessTypes: ['produk', 'dagang'] },
+  { value: 'shopee', label: 'Shopee', badges: ['shopee'], description: 'Laporan transaksi Shopee', available: false, businessTypes: ['produk', 'dagang'] },
 ] satisfies Array<{
   value: string;
   label: string;
   badges: SalesChannel[];
   description: string;
   available: boolean;
+  /** Tipe bisnis tempat channel ini relevan. `undefined` = semua tipe. */
+  businessTypes?: BusinessTypeKey[];
 }>;
 
 function ChannelBadges({ badges }: { badges: SalesChannel[] }) {
@@ -43,8 +47,21 @@ interface ChannelImportTabProps {
 
 export function ChannelImportTab({ businessId, onImportComplete }: ChannelImportTabProps) {
   const router = useRouter();
+  const { activeBusiness } = useBusinessContext();
+  const businessType = activeBusiness?.business_type;
 
-  const [selectedChannel, setSelectedChannel] = useState('airbnb');
+  // Channel yang relevan dengan tipe bisnis aktif (channel tanpa businessTypes = semua)
+  const availableChannels = useMemo(
+    () =>
+      SUPPORTED_CHANNELS.filter(
+        (ch) => !ch.businessTypes || !businessType || (ch.businessTypes as readonly BusinessTypeKey[]).includes(businessType as BusinessTypeKey)
+      ),
+    [businessType]
+  );
+
+  const [selectedChannel, setSelectedChannel] = useState(
+    () => availableChannels[0]?.value ?? SUPPORTED_CHANNELS[0].value
+  );
   const [instruction, setInstruction] = useState('');
   const [channelDropdownOpen, setChannelDropdownOpen] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -59,7 +76,16 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
   const hasNavigatedRef = useRef(false);
   const dragCounterRef = useRef(0);
 
-  const channel = SUPPORTED_CHANNELS.find(c => c.value === selectedChannel)!;
+  // Bila business_type baru termuat (async) dan channel terpilih jadi tak relevan,
+  // pindahkan pilihan ke channel pertama yang tersedia.
+  useEffect(() => {
+    if (availableChannels.length > 0 && !availableChannels.some(c => c.value === selectedChannel)) {
+      setSelectedChannel(availableChannels[0].value);
+    }
+  }, [availableChannels, selectedChannel]);
+
+  const channel =
+    SUPPORTED_CHANNELS.find(c => c.value === selectedChannel) ?? availableChannels[0] ?? SUPPORTED_CHANNELS[0];
 
   const addStep = useCallback((step: Omit<AgentStep, 'id' | 'timestamp'>) => {
     const nextStep = { ...step, id: String(++stepIdRef.current), timestamp: Date.now() };
@@ -238,7 +264,7 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setChannelDropdownOpen(false)} />
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-20 overflow-hidden">
-                  {SUPPORTED_CHANNELS.map(ch => (
+                  {availableChannels.map(ch => (
                     <button
                       key={ch.value}
                       disabled={!ch.available}

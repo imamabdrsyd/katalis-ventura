@@ -1218,9 +1218,9 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
           >
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 shrink-0">
-              <Image src="/images/favicon.png" alt="AI Assistant" width={32} height={32} className="rounded-lg shrink-0" />
+              <Image src="/images/favicon.png" alt="Accountant Agent" width={32} height={32} className="rounded-lg shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-50 leading-tight">AI Assistant</p>
+                <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-50 leading-tight">Accountant Agent</p>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="relative flex w-1.5 h-1.5 shrink-0">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-60" />
@@ -1545,7 +1545,7 @@ function ChatBubble({
       </div>
       <div className={`max-w-[82%] min-w-0 rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
         isUser
-          ? 'bg-[#474443] dark:bg-gray-100 text-white dark:text-gray-900 rounded-tr-sm'
+          ? 'bg-stone-800 dark:bg-gray-100 text-white dark:text-gray-900 rounded-tr-sm'
           : 'bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-tl-sm border border-gray-100 dark:border-gray-700'
       }`}>
         {message.streaming && !message.content && !message.thinking ? (
@@ -1683,7 +1683,7 @@ function NavigateActionCard({
         </div>
         <button
           onClick={() => onNavigate(action.url)}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#474443] hover:bg-[#3a3837] dark:bg-gray-100 dark:hover:bg-white text-white dark:text-gray-900 text-xs font-medium transition-colors"
+          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-900 dark:bg-gray-100 dark:hover:bg-white text-white dark:text-gray-900 text-xs font-medium transition-colors"
         >
           <ExternalLink className="w-3 h-3" />
           Buka

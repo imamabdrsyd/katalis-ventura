@@ -272,7 +272,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
           aria-checked={isPublished}
           onClick={() => setIsPublished(!isPublished)}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-            isPublished ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
+            isPublished ? 'bg-gray-900 dark:bg-gray-100' : 'bg-gray-300 dark:bg-gray-600'
           }`}
         >
           <span

@@ -63,7 +63,7 @@ function TabToggle({
           if (!disabled) onClick();
         }
       }}
-      className={`relative inline-flex h-3.5 w-6 items-center rounded-full transition-colors cursor-pointer flex-shrink-0 ${disabled ? 'opacity-50' : ''} ${checked ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+      className={`relative inline-flex h-3.5 w-6 items-center rounded-full transition-colors cursor-pointer flex-shrink-0 ${disabled ? 'opacity-50' : ''} ${checked ? 'bg-gray-900 dark:bg-gray-100' : 'bg-gray-300 dark:bg-gray-600'}`}
       title={label}
     >
       <span className={`inline-block h-2.5 w-2.5 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-3' : 'translate-x-0.5'}`} />

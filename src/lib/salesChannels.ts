@@ -1,5 +1,8 @@
 import type { SalesChannel } from '@/types';
 
+/** Tipe bisnis yang relevan untuk sebuah sales channel. */
+export type BusinessTypeKey = 'jasa' | 'produk' | 'dagang';
+
 export interface SalesChannelConfig {
   label: string;
   bgColor: string;       // Tailwind bg class for badge background
@@ -12,6 +15,13 @@ export interface SalesChannelConfig {
   imagePath?: string;
   /** Alternate image for larger/modal contexts (size='md') */
   imagePathLarge?: string;
+  /**
+   * Tipe bisnis tempat channel ini relevan. `undefined` = berlaku untuk semua
+   * tipe (channel umum seperti WhatsApp, Instagram, Website, Offline).
+   * - Marketplace produk (Tokopedia, Shopee, dll) → produk & dagang
+   * - Akomodasi/travel (Airbnb, Booking.com, Traveloka) → jasa
+   */
+  businessTypes?: BusinessTypeKey[];
 }
 
 export const SALES_CHANNEL_CONFIG: Record<SalesChannel, SalesChannelConfig> = {
@@ -22,6 +32,7 @@ export const SALES_CHANNEL_CONFIG: Record<SalesChannel, SalesChannelConfig> = {
     svgFill: '#ffffff',
     svgPath: null,
     imagePath: '/sales channel/tiktok.svg',
+    businessTypes: ['produk', 'dagang'],
   },
   tokopedia: {
     label: 'Tokopedia',
@@ -30,6 +41,7 @@ export const SALES_CHANNEL_CONFIG: Record<SalesChannel, SalesChannelConfig> = {
     svgFill: '#ffffff',
     svgPath: null,
     imagePath: '/sales channel/mascot.png',
+    businessTypes: ['produk', 'dagang'],
   },
   shopee: {
     label: 'Shopee',
@@ -38,6 +50,7 @@ export const SALES_CHANNEL_CONFIG: Record<SalesChannel, SalesChannelConfig> = {
     svgFill: '#ffffff',
     svgPath: null,
     imagePath: '/sales channel/shopee-white.webp',
+    businessTypes: ['produk', 'dagang'],
   },
   lazada: {
     label: 'Lazada',
@@ -45,6 +58,7 @@ export const SALES_CHANNEL_CONFIG: Record<SalesChannel, SalesChannelConfig> = {
     textColor: 'text-white',
     svgFill: '#ffffff',
     svgPath: null,
+    businessTypes: ['produk', 'dagang'],
   },
   blibli: {
     label: 'Blibli',
@@ -52,6 +66,7 @@ export const SALES_CHANNEL_CONFIG: Record<SalesChannel, SalesChannelConfig> = {
     textColor: 'text-white',
     svgFill: '#ffffff',
     svgPath: null,
+    businessTypes: ['produk', 'dagang'],
   },
   airbnb: {
     label: 'Airbnb',
@@ -60,6 +75,7 @@ export const SALES_CHANNEL_CONFIG: Record<SalesChannel, SalesChannelConfig> = {
     svgFill: '#ffffff',
     svgPath: null,
     imagePath: '/sales channel/airbnb.png',
+    businessTypes: ['jasa'],
   },
   booking_com: {
     label: 'Booking.com',
@@ -68,6 +84,7 @@ export const SALES_CHANNEL_CONFIG: Record<SalesChannel, SalesChannelConfig> = {
     svgFill: '#ffffff',
     svgPath: null,
     imagePath: '/sales channel/booking.png',
+    businessTypes: ['jasa'],
   },
   traveloka: {
     label: 'Traveloka',
@@ -76,6 +93,7 @@ export const SALES_CHANNEL_CONFIG: Record<SalesChannel, SalesChannelConfig> = {
     svgFill: '#ffffff',
     svgPath:
       'M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z',
+    businessTypes: ['jasa'],
   },
   instagram: {
     label: 'Instagram',
@@ -124,3 +142,30 @@ export const SALES_CHANNEL_OPTIONS: { value: SalesChannel; label: string }[] =
   (Object.entries(SALES_CHANNEL_CONFIG) as [SalesChannel, SalesChannelConfig][]).map(
     ([value, cfg]) => ({ value, label: cfg.label })
   );
+
+/**
+ * Apakah channel relevan untuk tipe bisnis tertentu.
+ * Channel tanpa `businessTypes` (umum) selalu relevan untuk semua tipe.
+ * `businessType` yang kosong/tak dikenal → tampilkan semua (jangan menyembunyikan).
+ */
+export function isChannelForBusinessType(
+  channel: SalesChannel,
+  businessType?: string | null
+): boolean {
+  const allowed = SALES_CHANNEL_CONFIG[channel]?.businessTypes;
+  if (!allowed) return true; // channel umum
+  if (!businessType) return true; // tipe belum diset → jangan sembunyikan apa pun
+  return allowed.includes(businessType as BusinessTypeKey);
+}
+
+/**
+ * Opsi sales channel yang sudah difilter sesuai tipe bisnis aktif.
+ * Dipakai dropdown pemilihan channel di form transaksi & import.
+ */
+export function getSalesChannelOptions(
+  businessType?: string | null
+): { value: SalesChannel; label: string }[] {
+  return SALES_CHANNEL_OPTIONS.filter((opt) =>
+    isChannelForBusinessType(opt.value, businessType)
+  );
+}

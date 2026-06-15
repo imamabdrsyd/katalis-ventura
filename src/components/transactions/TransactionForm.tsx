@@ -18,7 +18,7 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import type { UnitBreakdown } from '@/types';
 import { getTransactionTemplates, createTransactionTemplate, deleteTransactionTemplate } from '@/lib/api/transactionTemplates';
 import { getRecurringTransactions } from '@/lib/api/recurring';
-import { SALES_CHANNEL_OPTIONS } from '@/lib/salesChannels';
+import { getSalesChannelOptions, SALES_CHANNEL_CONFIG } from '@/lib/salesChannels';
 import OCRScanButton from '@/components/transactions/OCRScanButton';
 import type { OcrResult } from '@/lib/ocr/types';
 import {
@@ -162,7 +162,8 @@ export function TransactionForm({
 }: TransactionFormProps) {
   const params = useParams();
   const businessId = businessIdProp || (params?.businessId as string);
-  const { user } = useBusinessContext();
+  const { user, activeBusiness } = useBusinessContext();
+  const baseChannelOptions = getSalesChannelOptions(activeBusiness?.business_type);
 
   const categories = allowedCategories || ALL_CATEGORIES;
   const initialCurrency = normalizeCurrencyCode(transaction?.currency_code ?? initialValues?.currency_code);
@@ -846,7 +847,19 @@ export function TransactionForm({
             className="input"
           >
             <option value="">— Pilih channel (opsional) —</option>
-            {SALES_CHANNEL_OPTIONS.map((opt) => (
+            {(() => {
+              // Pastikan channel yang sudah tersimpan tetap tampil walau tak relevan
+              // dengan tipe bisnis (mis. data lama), agar value tidak terlihat kosong.
+              const saved = formData.sales_channel;
+              const opts =
+                saved && !baseChannelOptions.some((o) => o.value === saved)
+                  ? [
+                      ...baseChannelOptions,
+                      { value: saved, label: SALES_CHANNEL_CONFIG[saved].label },
+                    ]
+                  : baseChannelOptions;
+              return opts;
+            })().map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>

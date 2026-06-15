@@ -473,12 +473,6 @@ export default function SettingsPage() {
 
         {/* RIGHT PANEL — Integrations */}
         <div className="flex-1 min-w-0 space-y-6">
-          {/* Section label */}
-          <div>
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Integrasi</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Hubungkan tools eksternal untuk mempercepat pencatatan</p>
-          </div>
-
           {/* Telegram Bot */}
           {canUseTelegram ? (
             <div className="card">
@@ -487,15 +481,15 @@ export default function SettingsPage() {
                   <TelegramIcon className="w-5 h-5 text-sky-500" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Telegram Bot</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Input transaksi langsung dari Telegram</p>
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.settings.telegramTitle}</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t.settings.telegramSubtitle}</p>
                 </div>
               </div>
 
               {telegramLoading ? (
                 <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
                   <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-                  Memuat status koneksi...
+                  {t.settings.telegramLoadingStatus}
                 </div>
               ) : telegramConn ? (
                 <div>
@@ -503,34 +497,52 @@ export default function SettingsPage() {
                     <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0" />
                     <div>
                       <p className="text-sm font-medium text-gray-800 dark:text-gray-100">
-                        Terhubung{telegramConn.telegram_username ? ` sebagai @${telegramConn.telegram_username}` : telegramConn.telegram_first_name ? ` sebagai ${telegramConn.telegram_first_name}` : ''}
+                        {telegramConn.telegram_username
+                          ? t.settings.telegramConnectedAs.replace('{name}', `@${telegramConn.telegram_username}`)
+                          : telegramConn.telegram_first_name
+                          ? t.settings.telegramConnectedAs.replace('{name}', telegramConn.telegram_first_name)
+                          : t.settings.telegramConnected}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        Sejak {new Date(telegramConn.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        {t.settings.telegramSince.replace(
+                          '{date}',
+                          new Date(telegramConn.created_at).toLocaleDateString(locale === 'en' ? 'en-US' : 'id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+                        )}
                       </p>
                     </div>
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 mb-4">
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cara pakai:</p>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t.settings.telegramHowToTitle}</p>
                     <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-disc list-inside">
-                      <li>Ketik <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">jual kopi 150000</code> untuk catat pendapatan</li>
-                      <li>Ketik <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">bayar gaji 2jt</code> untuk catat beban</li>
-                      <li>Gunakan <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">/saldo</code> untuk lihat ringkasan</li>
+                      {([
+                        [t.settings.telegramHowToEarn, 'jual kopi 150000'],
+                        [t.settings.telegramHowToExpense, 'bayar gaji 2jt'],
+                        [t.settings.telegramHowToBalance, '/saldo'],
+                      ] as const).map(([tmpl, cmd]) => {
+                        const [before, after] = tmpl.split('{cmd}');
+                        return (
+                          <li key={cmd}>
+                            {before}
+                            <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-xs">{cmd}</code>
+                            {after}
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 mb-4">
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status default transaksi dari bot</p>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.settings.telegramDefaultStatusTitle}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                      Pilih apakah transaksi yang masuk via Telegram disimpan sebagai <strong>Draft</strong> (perlu review dulu) atau <strong>Posted</strong> (langsung final).
+                      {t.settings.telegramDefaultStatusDesc}
                     </p>
                     <SegmentedToggle
                       value={telegramConn.default_transaction_status}
                       onChange={handleUpdateTelegramStatus}
                       disabled={telegramStatusSaving}
-                      ariaLabel="Status default transaksi dari bot"
+                      ariaLabel={t.settings.telegramDefaultStatusTitle}
                       options={[
-                        { value: 'draft', label: 'Draft', icon: <FileEdit className="w-3.5 h-3.5" /> },
-                        { value: 'posted', label: 'Posted', icon: <CheckCheck className="w-3.5 h-3.5" /> },
+                        { value: 'draft', label: t.settings.telegramStatusDraft, icon: <FileEdit className="w-3.5 h-3.5" /> },
+                        { value: 'posted', label: t.settings.telegramStatusPosted, icon: <CheckCheck className="w-3.5 h-3.5" /> },
                       ]}
                     />
                   </div>
@@ -540,7 +552,7 @@ export default function SettingsPage() {
                     className="inline-flex items-center gap-2 text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors disabled:opacity-50"
                   >
                     <XCircle className="w-4 h-4" />
-                    Putuskan Koneksi Telegram
+                    {t.settings.telegramDisconnect}
                   </button>
                 </div>
               ) : (
@@ -550,25 +562,25 @@ export default function SettingsPage() {
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
                         <span className="text-sm text-amber-600 dark:text-amber-400 font-medium">
-                          Token berlaku {formatCountdown(telegramCountdown)}
+                          {t.settings.telegramTokenValid.replace('{time}', formatCountdown(telegramCountdown))}
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                        Tap tombol di bawah untuk membuka Telegram dan menghubungkan akun secara otomatis.
+                        {t.settings.telegramOpenHint}
                       </p>
                       <div className="flex gap-3 flex-wrap">
                         <a
                           href={`https://t.me/${telegramBotUsername}?start=${telegramToken}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-5 py-2.5 text-white text-sm font-semibold rounded-xl transition-all duration-150 bg-gradient-to-b from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 active:from-sky-600 active:to-sky-700 shadow-sm shadow-sky-500/20 hover:shadow-md hover:shadow-sky-500/30"
+                          className="flex items-center gap-2 px-5 py-2.5 text-white text-sm font-semibold rounded-xl transition-all duration-150 bg-gradient-to-b from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 active:from-indigo-700 active:to-indigo-800 shadow-sm shadow-indigo-500/20 hover:shadow-md hover:shadow-indigo-500/30"
                         >
                           <TelegramIcon className="w-4 h-4" />
-                          Buka di Telegram
+                          {t.settings.telegramOpen}
                         </a>
                         <button onClick={handleCopyTelegramLink} className="btn-ghost flex items-center gap-2">
                           <Copy className="w-4 h-4" />
-                          {telegramCopied ? 'Tersalin!' : 'Salin Link'}
+                          {telegramCopied ? t.settings.telegramCopied : t.settings.telegramCopyLink}
                         </button>
                         <button
                           onClick={handleGenerateTelegramToken}
@@ -576,26 +588,26 @@ export default function SettingsPage() {
                           className="btn-ghost flex items-center gap-2"
                         >
                           <RefreshCw className="w-4 h-4" />
-                          Perbarui Token
+                          {t.settings.telegramRefreshToken}
                         </button>
                       </div>
                     </div>
                   ) : (
                     <div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                        Hubungkan akun Telegram kamu untuk bisa input transaksi langsung dari chat, tanpa buka aplikasi.
+                        {t.settings.telegramConnectHint}
                       </p>
                       <button
                         onClick={handleGenerateTelegramToken}
                         disabled={telegramActionLoading}
-                        className="flex items-center gap-2 px-5 py-2.5 text-white text-sm font-semibold rounded-xl transition-all duration-150 bg-gradient-to-b from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 active:from-sky-600 active:to-sky-700 shadow-sm shadow-sky-500/20 hover:shadow-md hover:shadow-sky-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+                        className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl transition-colors duration-150 bg-gray-100 dark:bg-gray-700/50 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {telegramActionLoading ? (
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <div className="w-4 h-4 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
                         ) : (
-                          <TelegramIcon className="w-4 h-4" />
+                          <TelegramIcon className="w-4 h-4 text-sky-500" />
                         )}
-                        Hubungkan Telegram
+                        {t.settings.telegramConnect}
                       </button>
                     </div>
                   )}
@@ -610,28 +622,24 @@ export default function SettingsPage() {
                   <TelegramIcon className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Telegram Bot</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Input transaksi langsung dari Telegram</p>
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.settings.telegramTitle}</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t.settings.telegramSubtitle}</p>
                 </div>
               </div>
               <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Integrasi Telegram hanya tersedia untuk Business Manager.
+                  {t.settings.telegramInvestorOnly}
                 </p>
               </div>
             </div>
           )}
           {/* Sidebar Menu Visibility */}
-          <div>
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Tampilan Sidebar</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Pilih menu mana yang tampil di sidebar</p>
-          </div>
           <div className="card">
             <div className="flex items-center gap-3 mb-5">
-              <LayoutList className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+              <LayoutList className="w-5 h-5 text-gray-900 dark:text-gray-100" />
               <div>
-                <h3 className="font-semibold text-gray-800 dark:text-gray-100">Menu Sidebar</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Menu yang disembunyikan tetap bisa diakses lewat URL</p>
+                <h3 className="font-semibold text-gray-800 dark:text-gray-100">{t.settings.sidebarMenuTitle}</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t.settings.sidebarMenuDesc}</p>
               </div>
             </div>
             <div className="divide-y divide-gray-100 dark:divide-gray-700/60">
@@ -648,7 +656,7 @@ export default function SettingsPage() {
                     </div>
                     <button
                       onClick={() => toggleNavItem(href)}
-                      className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isVisible ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                      className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isVisible ? 'bg-gray-900 dark:bg-gray-100' : 'bg-gray-300 dark:bg-gray-600'}`}
                       role="switch"
                       aria-checked={isVisible}
                     >

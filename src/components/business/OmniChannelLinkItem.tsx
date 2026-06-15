@@ -107,7 +107,7 @@ export function OmniChannelLinkItem({ link, index, total, onMove, onEdit, onChan
           onClick={handleToggle}
           disabled={toggling}
           className={`ml-1 relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-            link.is_active ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
+            link.is_active ? 'bg-gray-900 dark:bg-gray-100' : 'bg-gray-300 dark:bg-gray-600'
           }`}
         >
           <span

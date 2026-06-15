@@ -174,7 +174,7 @@ export function OmniChannelFeaturedProductConfig({ businessId, userId, channel, 
           role="switch"
           aria-checked={show}
           onClick={() => setShow(!show)}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${show ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${show ? 'bg-gray-900 dark:bg-gray-100' : 'bg-gray-300 dark:bg-gray-600'}`}
         >
           <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${show ? 'translate-x-6' : 'translate-x-1'}`} />
         </button>
