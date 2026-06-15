@@ -66,7 +66,7 @@ export default function SettingsPage() {
     { href: '/reconciliation', label: 'Bank Reconciliation', icon: Landmark },
     { href: '/market', label: 'Market Tracker', icon: LineChart },
     { href: '/statement-of-changes-in-equity', label: 'Changes in Equity', icon: GitBranch },
-    { href: '/agent', label: 'Agentic Workflow', icon: Bot },
+    { href: '/agent', label: 'Agentic Workspace', icon: Bot },
   ];
 
   const DEFAULT_HIDDEN = TOGGLEABLE_NAV_ITEMS.map(i => i.href);

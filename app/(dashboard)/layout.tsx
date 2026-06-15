@@ -242,7 +242,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
       // (mencegah duplikat key di SearchDialog).
       pages.splice(2, 0,
         getPosNavItem(activeBusiness?.business_type, t.nav),
-        { href: '/agent', label: 'Agentic Workflow', icon: Bot },
+        { href: '/agent', label: 'Agentic Workspace', icon: Bot },
         { href: '/transactions', label: t.nav.transactions, icon: CreditCard },
         { href: '/transactions/journal-entry', label: t.nav.journalEntry, icon: Plus }
       );
@@ -870,7 +870,7 @@ function Sidebar({
             { href: '/leads', label: 'Leads', icon: MessagesSquare },
             { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
             ...(canManage ? [getPosNavItem(activeBusiness?.business_type, t.nav)] : []),
-            ...(canManage ? [{ href: '/agent', label: 'Agentic Workflow', icon: Bot }] : []),
+            ...(canManage ? [{ href: '/agent', label: 'Agentic Workspace', icon: Bot }] : []),
           ].filter(item => !hiddenNavItems.includes(item.href)).map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');

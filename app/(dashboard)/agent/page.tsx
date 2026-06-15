@@ -1,70 +1,757 @@
 'use client';
 
-import { useBusinessContext } from '@/context/BusinessContext';
-import { ChannelImportTab } from '@/components/agent/ChannelImportTab';
-import { Bot, AlertCircle, Table2 } from 'lucide-react';
-import { isManagerRole } from '@/lib/roles';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useBusinessContext } from '@/context/BusinessContext';
+import { ImportRevenueWidget, type SupportedChannel } from '@/components/agent/ImportRevenueWidget';
+import {
+  appendAgentImportStep,
+  readAgentImportSession,
+  startAgentImportSession,
+  updateAgentImportSession,
+} from '@/lib/agent/importSession';
+import type { AgentStep } from '@/components/agent/AgentProgressToast';
+import type { BusinessTypeKey } from '@/lib/salesChannels';
+import type { SalesChannel } from '@/types';
+import { isManagerRole } from '@/lib/roles';
+import {
+  Bot, AlertCircle, Send, ArrowUp, Sparkles, CheckCircle, XCircle, Loader2, Paperclip, Brain, ChevronRight,
+} from 'lucide-react';
+
+const SUPPORTED_CHANNELS = [
+  { value: 'airbnb', label: 'Airbnb', badges: ['airbnb'], description: 'CSV dari Airbnb Host dashboard', available: true, businessTypes: ['jasa'] },
+  { value: 'tiktok_tokopedia', label: 'TikTok Shop / Tokopedia', badges: ['tiktok', 'tokopedia'], description: 'Ekspor pesanan Seller Center (gabungan)', available: true, businessTypes: ['produk', 'dagang'] },
+  { value: 'shopee', label: 'Shopee', badges: ['shopee'], description: 'Laporan transaksi Shopee', available: false, businessTypes: ['produk', 'dagang'] },
+] satisfies Array<SupportedChannel & { businessTypes?: BusinessTypeKey[] }>;
+
+function channelHint(channel: string): string {
+  if (channel === 'airbnb') {
+    return 'Jurnal 3-baris per booking: Dr Bank · Dr Komisi · Cr Pendapatan Sewa (gross). Agent menerjemahkan instruksi jadi filter & akun — angka tetap deterministik.';
+  }
+  if (channel === 'tiktok_tokopedia') {
+    return '1 transaksi per pesanan selesai; duplikat Order ID dilewati otomatis. Agent menerjemahkan instruksi jadi filter & akun — angka tetap deterministik.';
+  }
+  return 'Channel ini belum didukung. Pilih channel lain.';
+}
+
+function instructionPlaceholder(channel: string): string {
+  return channel === 'airbnb'
+    ? '"hanya bulan Mei" · "masukkan ke piutang dulu" · "jadikan draft"'
+    : '"hanya TikTok bulan Mei" · "masukkan ke piutang dulu" · "jadikan draft"';
+}
+
+interface ImportResult {
+  inserted: number;
+  failed: number;
+  skipped: number;
+  duplicate?: number;
+  errors: string[];
+}
+
+// ── Chat message model ───────────────────────────────────────────────────────
+// Bubble yang muncul di stream: sapaan (assistant), pesan user, jawaban LLM
+// general-purpose (assistant), dan blok progres/hasil run agent impor.
+// Widget impor TIDAK lagi di stream — pindah ke panel kanan.
+type ChatMessage =
+  | { id: string; role: 'assistant'; kind: 'intro'; text: string }
+  | { id: string; role: 'user'; kind: 'text'; text: string }
+  | { id: string; role: 'assistant'; kind: 'answer'; text: string; thinking?: string; streaming?: boolean }
+  | {
+      id: string;
+      role: 'assistant';
+      kind: 'run';
+      steps: AgentStep[];
+      isRunning: boolean;
+      result: ImportResult | null;
+      fileName: string;
+    };
+
+// ID unik per pesan. Pakai randomUUID supaya tidak bentrok saat Fast Refresh
+// me-reset counter modul sementara state `messages` lama masih hidup.
+let messageSeq = 0;
+const nextId = () =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `m${Date.now().toString(36)}-${++messageSeq}`;
 
 export default function AgentPage() {
   const router = useRouter();
   const { activeBusinessId, userRole, activeBusiness } = useBusinessContext();
   const canManage = isManagerRole(userRole);
+  const businessType = activeBusiness?.business_type;
+
+  const availableChannels = useMemo(
+    () =>
+      SUPPORTED_CHANNELS.filter(
+        (ch) => !ch.businessTypes || !businessType || (ch.businessTypes as readonly BusinessTypeKey[]).includes(businessType as BusinessTypeKey)
+      ),
+    [businessType]
+  );
+
+  const [selectedChannel, setSelectedChannel] = useState(
+    () => availableChannels[0]?.value ?? SUPPORTED_CHANNELS[0].value
+  );
+  const [channelDropdownOpen, setChannelDropdownOpen] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [input, setInput] = useState('');
+  const [isRunning, setIsRunning] = useState(false);
+  const [isChatting, setIsChatting] = useState(false);
+
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [
+    {
+      id: nextId(),
+      role: 'assistant',
+      kind: 'intro',
+      text: 'Hai! Aku AXION Agent. Tanya apa saja — topik bebas. Atau, kalau mau impor revenue, gunakan panel Import Revenue CSV di sebelah kanan.',
+    },
+  ]);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const runningRef = useRef(false);
+  const hasNavigatedRef = useRef(false);
+  const stepIdRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const channel = SUPPORTED_CHANNELS.find(c => c.value === selectedChannel) ?? availableChannels[0] ?? SUPPORTED_CHANNELS[0];
+
+  // Bila business_type baru termuat (async) dan channel terpilih jadi tak relevan,
+  // pindahkan pilihan ke channel pertama yang tersedia.
+  useEffect(() => {
+    if (availableChannels.length > 0 && !availableChannels.some(c => c.value === selectedChannel)) {
+      setSelectedChannel(availableChannels[0].value);
+    }
+  }, [availableChannels, selectedChannel]);
+
+  // Auto-scroll ke bawah saat pesan/langkah baru muncul.
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Batalkan chat yang masih streaming saat halaman ditinggalkan.
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  // Tambahkan langkah agent ke bubble "run" yang sedang aktif (terakhir).
+  const pushStepToRun = useCallback((runId: string, step: Omit<AgentStep, 'id' | 'timestamp'>) => {
+    const fullStep: AgentStep = { ...step, id: String(++stepIdRef.current), timestamp: Date.now() };
+    if (activeBusinessId) appendAgentImportStep(activeBusinessId, fullStep);
+    setMessages(prev => prev.map(m =>
+      m.id === runId && m.kind === 'run' ? { ...m, steps: [...m.steps, fullStep] } : m
+    ));
+  }, [activeBusinessId]);
+
+  const updateRun = useCallback((runId: string, patch: Partial<Extract<ChatMessage, { kind: 'run' }>>) => {
+    setMessages(prev => prev.map(m =>
+      m.id === runId && m.kind === 'run' ? { ...m, ...patch } : m
+    ));
+  }, []);
+
+  const handleCallAgent = useCallback(async () => {
+    if (!selectedFile || !activeBusinessId || runningRef.current || !channel.available) return;
+    runningRef.current = true;
+    hasNavigatedRef.current = false;
+
+    const trimmedInstruction = input.trim();
+    const fileName = selectedFile.name;
+    const runId = nextId();
+
+    setIsRunning(true);
+    startAgentImportSession(activeBusinessId);
+
+    // Tambah bubble instruksi user (kalau ada) + bubble run kosong.
+    setMessages(prev => {
+      const additions: ChatMessage[] = [];
+      const label = trimmedInstruction
+        ? `${trimmedInstruction}\n\n📎 ${fileName}`
+        : `📎 ${fileName}`;
+      additions.push({ id: nextId(), role: 'user', kind: 'text', text: label });
+      additions.push({ id: runId, role: 'assistant', kind: 'run', steps: [], isRunning: true, result: null, fileName });
+      return [...prev, ...additions];
+    });
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('businessId', activeBusinessId);
+    formData.append('channel', selectedChannel);
+    if (trimmedInstruction) formData.append('instruction', trimmedInstruction);
+
+    setInput('');
+
+    try {
+      const response = await fetch('/api/agent/import-csv', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok || !response.body) {
+        pushStepToRun(runId, { type: 'error', message: `Server error: ${response.status}` });
+        updateRun(runId, { isRunning: false });
+        updateAgentImportSession(activeBusinessId, { status: 'error' });
+        setIsRunning(false);
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let streamDone = false;
+
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() ?? '';
+
+        for (const part of parts) {
+          const dataLine = part.trim();
+          if (!dataLine.startsWith('data: ')) continue;
+          const json = dataLine.slice(6);
+
+          try {
+            const event = JSON.parse(json);
+
+            if (event.type === 'done') {
+              const session = readAgentImportSession(activeBusinessId);
+              if (session?.status === 'running') {
+                updateAgentImportSession(activeBusinessId, { status: 'completed' });
+              }
+              updateRun(runId, { isRunning: false });
+              streamDone = true;
+              setIsRunning(false);
+              break;
+            }
+
+            if (event.type === 'progress') {
+              updateAgentImportSession(activeBusinessId, {
+                status: 'running',
+                current: event.current,
+                total: event.total,
+              });
+
+              if ((event.current ?? 0) > 0 && !hasNavigatedRef.current) {
+                hasNavigatedRef.current = true;
+                // Toast progres (lewat session storage) tetap muncul di /transactions.
+                router.push('/transactions?agentImport=1');
+              }
+            }
+
+            if (event.type === 'result' && event.data && !event.data.needsAccountConfirmation) {
+              updateRun(runId, {
+                result: {
+                  inserted: event.data.inserted ?? 0,
+                  failed: event.data.failed ?? 0,
+                  skipped: event.data.skipped ?? 0,
+                  duplicate: event.data.duplicate ?? 0,
+                  errors: event.data.errors ?? [],
+                },
+              });
+              updateAgentImportSession(activeBusinessId, { status: 'completed' });
+            }
+
+            pushStepToRun(runId, {
+              type: event.type,
+              message: event.message ?? '',
+              current: event.current,
+              total: event.total,
+            });
+
+            if (event.type === 'error') {
+              updateAgentImportSession(activeBusinessId, { status: 'error' });
+            }
+          } catch {
+            // skip malformed event
+          }
+        }
+      }
+
+      if (streamDone) {
+        await reader.cancel().catch(() => {});
+      }
+    } catch (err) {
+      pushStepToRun(runId, { type: 'error', message: err instanceof Error ? err.message : 'Gagal menghubungi server' });
+      updateRun(runId, { isRunning: false });
+      updateAgentImportSession(activeBusinessId, { status: 'error' });
+    } finally {
+      const session = readAgentImportSession(activeBusinessId);
+      if (session?.status === 'running') {
+        updateAgentImportSession(activeBusinessId, { status: 'error' });
+      }
+      updateRun(runId, { isRunning: false });
+      setIsRunning(false);
+      runningRef.current = false;
+      // Bersihkan file supaya widget kembali ke keadaan siap untuk run berikutnya.
+      setSelectedFile(null);
+    }
+  }, [selectedFile, activeBusinessId, selectedChannel, input, channel.available, pushStepToRun, updateRun, router]);
+
+  // Chat general-purpose: pure pass-through ke LLM (Vertex). Tidak terkait keuangan
+  // AXION — bisa terima topik apapun. Streaming SSE, dukung kind thinking/answer.
+  const sendChatMessage = useCallback(async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed || isChatting || isRunning) return;
+
+    const answerId = nextId();
+    // Riwayat dialog (hanya bubble teks user + jawaban LLM) untuk konteks percakapan.
+    const history = messages
+      .filter((m): m is Extract<ChatMessage, { kind: 'text' | 'answer' }> => m.kind === 'text' || m.kind === 'answer')
+      .filter(m => (m.kind === 'answer' ? !m.streaming && !!m.text : true))
+      .slice(-12)
+      .map(m => ({ role: m.role, content: m.text }));
+
+    setMessages(prev => [
+      ...prev,
+      { id: nextId(), role: 'user', kind: 'text', text: trimmed },
+      { id: answerId, role: 'assistant', kind: 'answer', text: '', streaming: true },
+    ]);
+    setInput('');
+    setIsChatting(true);
+
+    abortRef.current = new AbortController();
+
+    const patchAnswer = (patch: Partial<Extract<ChatMessage, { kind: 'answer' }>>) => {
+      setMessages(prev => prev.map(m =>
+        m.id === answerId && m.kind === 'answer' ? { ...m, ...patch } : m
+      ));
+    };
+
+    try {
+      const res = await fetch('/api/agent/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: abortRef.current.signal,
+        body: JSON.stringify({ messages: [...history, { role: 'user', content: trimmed }] }),
+      });
+
+      if (!res.ok || !res.body) {
+        const err = await res.json().catch(() => ({ error: 'Gagal menghubungi AI' }));
+        throw new Error((err as { error?: string }).error ?? 'Gagal menghubungi AI');
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let accumulated = '';
+      let thinking = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (!data || data === '[DONE]') continue;
+          try {
+            const json = JSON.parse(data);
+            if (json.text) {
+              if (json.kind === 'thinking') thinking += json.text;
+              else accumulated += json.text;
+              patchAnswer({ text: accumulated, thinking: thinking || undefined });
+            }
+          } catch { /* skip */ }
+        }
+      }
+
+      patchAnswer({ text: accumulated || '_(tidak ada respons)_', thinking: thinking || undefined, streaming: false });
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') { patchAnswer({ streaming: false }); return; }
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan';
+      patchAnswer({ text: `⚠️ ${msg}`, streaming: false });
+    } finally {
+      setIsChatting(false);
+      abortRef.current = null;
+    }
+  }, [messages, isChatting, isRunning]);
+
+  // Router submit: ada file → jalankan agent import; tanpa file → chat LLM general.
+  const handleSubmit = useCallback(() => {
+    if (selectedFile) handleCallAgent();
+    else sendChatMessage(input);
+  }, [selectedFile, handleCallAgent, sendChatMessage, input]);
 
   if (!canManage) {
     return (
       <div className="p-6 flex flex-col items-center justify-center min-h-[60vh] text-center">
         <AlertCircle className="w-12 h-12 text-amber-400 mb-4" />
         <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Akses Terbatas</h2>
-        <p className="text-gray-500 dark:text-gray-400 mt-2">Hanya Business Manager yang dapat menggunakan Agentic Workflow.</p>
+        <p className="text-gray-500 dark:text-gray-400 mt-2">Hanya Business Manager yang dapat menggunakan Agentic Workspace.</p>
       </div>
     );
   }
 
   if (!activeBusinessId) return null;
 
+  const busy = isRunning || isChatting;
+  // Mode import (ada file) → butuh channel available. Mode chat (tanpa file) → butuh teks.
+  const canSend = busy
+    ? false
+    : selectedFile
+    ? channel.available
+    : input.trim().length > 0;
+  const importMode = !!selectedFile;
+
+  const importWidget = (
+    <ImportRevenueWidget
+      channels={availableChannels}
+      selectedChannel={selectedChannel}
+      onSelectChannel={setSelectedChannel}
+      dropdownOpen={channelDropdownOpen}
+      onToggleDropdown={() => setChannelDropdownOpen(o => !o)}
+      onCloseDropdown={() => setChannelDropdownOpen(false)}
+      selectedFile={selectedFile}
+      onFile={setSelectedFile}
+      onClearFile={() => setSelectedFile(null)}
+      dragOver={dragOver}
+      onDragStateChange={setDragOver}
+      disabled={isRunning}
+      hint={channelHint(selectedChannel)}
+    />
+  );
+
   return (
-    <div className="p-4 md:p-6 max-w-2xl mx-auto">
+    <div className="flex flex-col h-[calc(100dvh-4rem)] w-full">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
+      <div className="px-4 md:px-6 pt-4 md:pt-6 pb-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+        <div className="flex items-center gap-3">
           <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
             style={{
               background: 'radial-gradient(circle at 30% 25%, #a5b4fc 0%, #6366f1 45%, #3730a3 100%)',
             }}
           >
             <Bot className="w-5 h-5 text-white" />
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Agentic Workflow</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">Agentic Workspace</h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
               {activeBusiness?.business_name ?? 'Bisnis Aktif'}
             </p>
           </div>
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-300">
-          Impor data revenue dari channel bisnis secara otomatis. Agent akan menganalisis CSV, mencocokkan akun, dan menyimpan transaksi langsung.
-        </p>
       </div>
 
-      {/* Task: Import CSV */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
-          <Table2 className="w-5 h-5 text-indigo-500 flex-shrink-0" />
-          <div>
-            <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Import Revenue CSV</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Upload CSV dari channel penjualanmu, Agent yang proses</p>
+      {/* Body: chat (kiri) + panel widget impor (kanan) */}
+      <div className="flex-1 flex min-h-0 overflow-hidden">
+        {/* Kolom chat */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Widget impor — versi mobile (panel kanan disembunyikan di < lg) */}
+          <div className="lg:hidden px-4 pt-4 shrink-0">
+            {importWidget}
+          </div>
+
+          {/* Chat stream */}
+          <div
+            ref={scrollRef}
+            className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-6 py-5 space-y-4 min-h-0"
+          >
+            {messages.map(msg => (
+              <ChatRow key={msg.id} message={msg} />
+            ))}
+          </div>
+
+          {/* Composer */}
+          <div className="px-3 md:px-6 py-3 border-t border-gray-100 dark:border-gray-800 shrink-0">
+            <div className="flex items-center gap-2 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 pl-4 pr-1.5 py-1.5 focus-within:border-primary-400 dark:focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20 transition-all">
+              {/* Indikator file terpilih */}
+              {selectedFile && (
+                <span className="inline-flex items-center gap-1 shrink-0 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 max-w-[120px]">
+                  <Paperclip className="w-3 h-3 shrink-0" />
+                  <span className="truncate">{selectedFile.name}</span>
+                </span>
+              )}
+              <input
+                type="text"
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && canSend) { e.preventDefault(); handleSubmit(); } }}
+                disabled={busy || (importMode && !channel.available)}
+                placeholder={
+                  importMode
+                    ? !channel.available
+                      ? 'Channel belum didukung — pilih channel lain'
+                      : `Instruksi (opsional): ${instructionPlaceholder(selectedChannel)}`
+                    : 'Tanya apa saja, atau unggah CSV di panel untuk impor…'
+                }
+                className="flex-1 min-w-0 bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-[13px] leading-[1.5] focus:outline-none disabled:opacity-50"
+              />
+              <button
+                onClick={handleSubmit}
+                disabled={!canSend}
+                title={importMode ? 'Panggil Agent' : 'Kirim'}
+                className="shrink-0 inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full font-semibold text-[13px] text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
+                style={canSend ? { background: 'radial-gradient(circle at 30% 25%, #a5b4fc 0%, #6366f1 45%, #3730a3 100%)' } : { background: '#9ca3af' }}
+              >
+                {busy ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : importMode ? (
+                  <>
+                    <Send className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Panggil Agent</span>
+                  </>
+                ) : (
+                  <ArrowUp className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+            <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1.5 text-center">
+              {importMode
+                ? 'Agent menerjemahkan instruksi jadi filter & akun — angka tetap deterministik.'
+                : 'Chat bebas topik · Unggah CSV di panel kanan untuk impor revenue channel'}
+            </p>
           </div>
         </div>
 
-        <div className="p-5">
-          <ChannelImportTab
-            businessId={activeBusinessId}
-            onImportComplete={() => router.push('/transactions?agentImport=1')}
-          />
+        {/* Panel widget impor — desktop (sticky, tidak tenggelam di chat) */}
+        <aside className="hidden lg:block w-[360px] xl:w-[400px] shrink-0 border-l border-gray-100 dark:border-gray-800 overflow-y-auto p-5 bg-gray-50/50 dark:bg-gray-900/30">
+          {importWidget}
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+// ── Row renderer ─────────────────────────────────────────────────────────────
+
+function ChatRow({ message }: { message: ChatMessage }) {
+  if (message.role === 'user') {
+    return (
+      <div className="flex justify-end">
+        <div className="max-w-[82%] rounded-2xl rounded-tr-sm bg-stone-800 dark:bg-gray-100 text-white dark:text-gray-900 px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap">
+          {message.text}
         </div>
       </div>
+    );
+  }
+
+  // assistant rows
+  return (
+    <div className="flex gap-2.5">
+      <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+        <Bot className="w-3.5 h-3.5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        {message.kind === 'intro' && (
+          <div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-700 px-3.5 py-2.5 text-[13px] leading-relaxed">
+            {message.text}
+          </div>
+        )}
+
+        {message.kind === 'answer' && <AnswerBubble message={message} />}
+
+        {message.kind === 'run' && <RunBubble run={message} />}
+      </div>
+    </div>
+  );
+}
+
+function AnswerBubble({ message }: { message: Extract<ChatMessage, { kind: 'answer' }> }) {
+  // Hanya tampilkan dot-typing kalau benar-benar belum ada apa-apa (teks & thinking).
+  const isEmpty = message.streaming && !message.text && !message.thinking;
+  return (
+    <div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-700 px-3.5 py-2.5 text-[13px] leading-relaxed">
+      {isEmpty ? (
+        <span className="inline-flex gap-1 items-center h-4">
+          <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+          <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+          <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+        </span>
+      ) : (
+        <>
+          {message.thinking && (
+            <ThinkingAccordion
+              text={message.thinking}
+              streaming={!!message.streaming && !message.text}
+            />
+          )}
+          {message.text && (
+            <div className="space-y-1">
+              {message.text.split('\n').map((line, i) => {
+                if (!line.trim()) return <div key={i} className="h-1" />;
+                const isBullet = /^[\-\*•]\s/.test(line);
+                const content = isBullet ? line.replace(/^[\-\*•]\s/, '') : line;
+                const parts = content.split(/(\*\*[^*]+\*\*)/g).map((part, j) =>
+                  part.startsWith('**') && part.endsWith('**')
+                    ? <strong key={j} className="text-gray-900 dark:text-gray-50">{part.slice(2, -2)}</strong>
+                    : part
+                );
+                return (
+                  <div key={i} className={isBullet ? 'flex gap-1.5' : ''}>
+                    {isBullet && <span className="mt-1.5 w-1 h-1 rounded-full shrink-0 bg-gray-400 dark:bg-gray-500" />}
+                    <span>{parts}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// Accordion proses berpikir (reasoning model). Default tertutup; auto-buka saat
+// thinking sedang mengalir (sebelum jawaban muncul), auto-tutup begitu selesai.
+function ThinkingAccordion({ text, streaming }: { text: string; streaming: boolean }) {
+  const [open, setOpen] = useState(false);
+  const wasStreaming = useRef(false);
+
+  useEffect(() => {
+    if (streaming && !wasStreaming.current) setOpen(true);
+    if (!streaming && wasStreaming.current) setOpen(false);
+    wasStreaming.current = streaming;
+  }, [streaming]);
+
+  return (
+    <div className="mb-2 rounded-xl border border-gray-200/70 dark:border-gray-700/70 bg-gray-50/60 dark:bg-gray-800/40 overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100/60 dark:hover:bg-gray-700/40 transition-colors"
+      >
+        <Brain className={`w-3 h-3 shrink-0 ${streaming ? 'text-primary-500 dark:text-primary-400' : ''}`} />
+        <span className="flex-1 text-left">{streaming ? 'Sedang berpikir…' : 'Proses berpikir'}</span>
+        {streaming && (
+          <span className="inline-flex gap-0.5">
+            <span className="w-1 h-1 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+            <span className="w-1 h-1 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+            <span className="w-1 h-1 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          </span>
+        )}
+        <ChevronRight className={`w-3 h-3 shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="px-2.5 pb-2 pt-0.5 text-[11.5px] leading-relaxed text-gray-500 dark:text-gray-400 whitespace-pre-wrap border-t border-gray-200/60 dark:border-gray-700/60 max-h-52 overflow-y-auto">
+              {text}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function RunBubble({ run }: { run: Extract<ChatMessage, { kind: 'run' }> }) {
+  const progressStep = [...run.steps].reverse().find(s => s.type === 'progress' && s.total);
+  const lastIsError = run.steps[run.steps.length - 1]?.type === 'error';
+
+  return (
+    <div className="max-w-[440px] rounded-2xl rounded-tl-sm border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-gray-100 dark:border-gray-700">
+        {run.isRunning ? (
+          <div className="relative shrink-0">
+            <Bot className="w-4 h-4 text-primary-500 dark:text-primary-400" />
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-primary-400 rounded-full animate-ping opacity-75" />
+          </div>
+        ) : lastIsError ? (
+          <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+        ) : (
+          <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+        )}
+        <span className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">
+          {run.isRunning ? 'AXION Agent bekerja…' : lastIsError ? 'Agent gagal' : 'Agent selesai'}
+        </span>
+        <span className="ml-auto text-[11px] text-gray-400 dark:text-gray-500 truncate max-w-[120px]">{run.fileName}</span>
+      </div>
+
+      {/* Progress bar */}
+      {progressStep && progressStep.total ? (
+        <div className="px-3.5 py-2 border-b border-gray-100 dark:border-gray-700">
+          <div className="flex justify-between text-[11px] text-gray-500 dark:text-gray-400 mb-1">
+            <span>Progres import</span>
+            <span className="tabular-nums">{progressStep.current}/{progressStep.total}</span>
+          </div>
+          <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-primary-500 rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${((progressStep.current ?? 0) / progressStep.total) * 100}%` }}
+              transition={{ duration: 0.3 }}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {/* Steps log */}
+      <div className="max-h-56 overflow-y-auto px-3.5 py-2.5 space-y-2">
+        {run.steps.map((step, i) => (
+          <motion.div
+            key={step.id}
+            initial={{ opacity: 0, x: -6 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.2 }}
+            className="flex items-start gap-2"
+          >
+            <span className="flex-shrink-0 mt-0.5">
+              {step.type === 'thinking' && <Sparkles className="w-3.5 h-3.5 text-primary-400" />}
+              {step.type === 'progress' && (
+                i === run.steps.length - 1 && run.isRunning
+                  ? <Loader2 className="w-3.5 h-3.5 text-primary-500 animate-spin" />
+                  : <span className="w-3.5 h-3.5 flex items-center justify-center"><span className="w-1.5 h-1.5 rounded-full bg-primary-400" /></span>
+              )}
+              {step.type === 'result' && <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />}
+              {step.type === 'error' && <XCircle className="w-3.5 h-3.5 text-red-400" />}
+            </span>
+            <span className={`text-[12px] leading-relaxed ${
+              step.type === 'error'
+                ? 'text-red-600 dark:text-red-400'
+                : step.type === 'result'
+                ? 'text-emerald-700 dark:text-emerald-300 font-medium'
+                : 'text-gray-600 dark:text-gray-300'
+            }`}>
+              {step.message}
+            </span>
+          </motion.div>
+        ))}
+
+        {run.isRunning && (
+          <div className="flex items-center gap-1.5 pt-0.5">
+            {[0, 1, 2].map(i => (
+              <motion.span
+                key={i}
+                className="w-1.5 h-1.5 rounded-full bg-primary-400"
+                animate={{ scale: [1, 1.4, 1], opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15 }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Result summary */}
+      {run.result && !run.isRunning && (
+        <div className={`px-3.5 py-2.5 border-t text-[12px] space-y-0.5 ${
+          run.result.failed > 0
+            ? 'bg-amber-50 dark:bg-amber-900/15 border-amber-100 dark:border-amber-900/30'
+            : 'bg-emerald-50 dark:bg-emerald-900/15 border-emerald-100 dark:border-emerald-900/30'
+        }`}>
+          <p className="text-gray-700 dark:text-gray-200">✓ <strong>{run.result.inserted}</strong> transaksi diimpor sebagai <em>posted</em></p>
+          {run.result.skipped > 0 && <p className="text-gray-500 dark:text-gray-400">⊘ <strong>{run.result.skipped}</strong> dilewati (bukan pesanan selesai)</p>}
+          {(run.result.duplicate ?? 0) > 0 && <p className="text-gray-500 dark:text-gray-400">⊘ <strong>{run.result.duplicate}</strong> duplikat dilewati</p>}
+          {run.result.failed > 0 && <p className="text-amber-700 dark:text-amber-400">✗ <strong>{run.result.failed}</strong> gagal</p>}
+          {run.result.errors.length > 0 && (
+            <div className="mt-1 space-y-0.5">
+              {run.result.errors.map((e, i) => (
+                <p key={i} className="text-red-600 dark:text-red-400">• {e}</p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
