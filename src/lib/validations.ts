@@ -10,7 +10,7 @@ const VALID_STATUSES = ['draft', 'posted'] as const;
 const VALID_SALES_CHANNELS = [
   'tiktok', 'tokopedia', 'shopee', 'lazada', 'blibli',
   'airbnb', 'booking_com', 'traveloka',
-  'instagram', 'whatsapp', 'website',
+  'instagram', 'whatsapp', 'sinarmas', 'website',
   'offline', 'other',
 ] as const;
 // Leads Hub — mirror CHECK constraints di migration 101_leads_hub.sql

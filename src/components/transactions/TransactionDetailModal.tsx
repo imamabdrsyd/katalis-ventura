@@ -828,30 +828,38 @@ export function TransactionDetailModal({
             <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
               {t.transactionDetail.soldInventory}
             </h4>
-            <div className="space-y-2">
-              {soldStockTransactions.map((stock) => (
-                <div
-                  key={stock.id}
-                  className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-600 rounded-lg"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                      {stock.name}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {formatDate(stock.date)}
-                      {stock.debit_account && (
-                        <span className="ml-2">
-                          {stock.debit_account.account_code} - {stock.debit_account.account_name}
-                        </span>
-                      )}
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden divide-y divide-gray-100 dark:divide-gray-700">
+              {soldStockTransactions.map((stock) => {
+                const clickable = !!onShowRelatedTransaction;
+                return (
+                  <div
+                    key={stock.id}
+                    onClick={clickable ? () => onShowRelatedTransaction!(stock) : undefined}
+                    className={`flex items-center justify-between p-3 ${
+                      clickable ? 'cursor-pointer group hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors' : ''
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-sm font-medium text-gray-900 dark:text-gray-100 truncate ${
+                        clickable ? 'group-hover:underline' : ''
+                      }`}>
+                        {stock.description || stock.name}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {formatDate(stock.date)}
+                        {stock.debit_account && (
+                          <span className="ml-2">
+                            {stock.debit_account.account_code} - {stock.debit_account.account_name}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 ml-3 flex-shrink-0">
+                      {formatCurrency(stock.amount)}
                     </p>
                   </div>
-                  <p className="text-sm font-semibold text-amber-500 dark:text-amber-300 ml-3 flex-shrink-0">
-                    {formatCurrency(stock.amount)}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

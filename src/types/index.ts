@@ -15,6 +15,7 @@ export type SalesChannel =
   | 'traveloka'
   | 'instagram'
   | 'whatsapp'
+  | 'sinarmas'
   | 'website'
   | 'offline'
   | 'other';

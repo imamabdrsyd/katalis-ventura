@@ -16,10 +16,12 @@ export function SalesChannelBadge({ channel, size = 'sm' }: Props) {
   const iconSize = size === 'md' ? 18 : 16;
   const padding = size === 'md' ? 'px-2 py-1 gap-1.5' : 'px-1.5 py-0.5 gap-1';
   const textSize = size === 'md' ? 'text-xs' : 'text-[10px]';
+  // Di badge kecil (list) pakai label ringkas bila tersedia, agar tidak wrap 2 baris.
+  const labelText = size === 'sm' && cfg.labelShort ? cfg.labelShort : cfg.label;
 
   return (
     <span
-      className={`inline-flex items-center rounded-full font-semibold ${cfg.bgColor} ${cfg.textColor} ${padding} ${textSize}`}
+      className={`inline-flex items-center whitespace-nowrap rounded-full font-semibold ${cfg.bgColor} ${cfg.textColor} ${padding} ${textSize}`}
       title={cfg.label}
     >
       {cfg.imagePath ? (
@@ -43,7 +45,7 @@ export function SalesChannelBadge({ channel, size = 'sm' }: Props) {
           <path d={cfg.svgPath} />
         </svg>
       ) : null}
-      <span>{cfg.label}</span>
+      <span>{labelText}</span>
     </span>
   );
 }
