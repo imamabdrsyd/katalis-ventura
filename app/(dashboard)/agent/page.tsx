@@ -16,7 +16,7 @@ import type { BusinessTypeKey } from '@/lib/salesChannels';
 import type { SalesChannel } from '@/types';
 import { isManagerRole } from '@/lib/roles';
 import {
-  Bot, AlertCircle, Send, ArrowUp, Sparkles, CheckCircle, XCircle, Loader2, Paperclip, Brain, ChevronRight,
+  Bot, AlertCircle, Send, ArrowUp, Sparkles, CheckCircle, XCircle, Loader2, Paperclip, Brain, ChevronRight, Globe,
 } from 'lucide-react';
 
 const SUPPORTED_CHANNELS = [
@@ -49,6 +49,12 @@ interface ImportResult {
   errors: string[];
 }
 
+/** Sumber dari grounding Google Search (sitasi jawaban agent). */
+interface GroundingSource {
+  title: string;
+  uri: string;
+}
+
 // ── Chat message model ───────────────────────────────────────────────────────
 // Bubble yang muncul di stream: sapaan (assistant), pesan user, jawaban LLM
 // general-purpose (assistant), dan blok progres/hasil run agent impor.
@@ -56,7 +62,7 @@ interface ImportResult {
 type ChatMessage =
   | { id: string; role: 'assistant'; kind: 'intro'; text: string }
   | { id: string; role: 'user'; kind: 'text'; text: string }
-  | { id: string; role: 'assistant'; kind: 'answer'; text: string; thinking?: string; streaming?: boolean }
+  | { id: string; role: 'assistant'; kind: 'answer'; text: string; thinking?: string; sources?: GroundingSource[]; model?: string; streaming?: boolean }
   | {
       id: string;
       role: 'assistant';
@@ -332,11 +338,15 @@ export default function AgentPage() {
         throw new Error((err as { error?: string }).error ?? 'Gagal menghubungi AI');
       }
 
+      const model = res.headers.get('X-AI-Model') || undefined;
+      if (model) patchAnswer({ model });
+
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
       let accumulated = '';
       let thinking = '';
+      let sources: GroundingSource[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -350,7 +360,14 @@ export default function AgentPage() {
           if (!data || data === '[DONE]') continue;
           try {
             const json = JSON.parse(data);
-            if (json.text) {
+            if (json.kind === 'sources' && Array.isArray(json.sources)) {
+              // Dedup by uri lintas chunk (grounding bisa muncul beberapa kali).
+              const seen = new Set(sources.map(s => s.uri));
+              for (const s of json.sources as GroundingSource[]) {
+                if (s?.uri && !seen.has(s.uri)) { seen.add(s.uri); sources.push(s); }
+              }
+              patchAnswer({ sources: [...sources] });
+            } else if (json.text) {
               if (json.kind === 'thinking') thinking += json.text;
               else accumulated += json.text;
               patchAnswer({ text: accumulated, thinking: thinking || undefined });
@@ -359,7 +376,12 @@ export default function AgentPage() {
         }
       }
 
-      patchAnswer({ text: accumulated || '_(tidak ada respons)_', thinking: thinking || undefined, streaming: false });
+      patchAnswer({
+        text: accumulated || '_(tidak ada respons)_',
+        thinking: thinking || undefined,
+        sources: sources.length ? sources : undefined,
+        streaming: false,
+      });
     } catch (err) {
       if ((err as Error).name === 'AbortError') { patchAnswer({ streaming: false }); return; }
       const msg = err instanceof Error ? err.message : 'Terjadi kesalahan';
@@ -588,6 +610,34 @@ function AnswerBubble({ message }: { message: Extract<ChatMessage, { kind: 'answ
                   </div>
                 );
               })}
+            </div>
+          )}
+          {message.sources && message.sources.length > 0 && (
+            <div className="mt-2.5 pt-2 border-t border-gray-100 dark:border-gray-700">
+              <div className="flex items-center gap-1 mb-1 text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                <Globe className="w-3 h-3" />
+                Sumber
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {message.sources.map((s, i) => (
+                  <a
+                    key={i}
+                    href={s.uri}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={s.uri}
+                    className="inline-flex items-center max-w-[200px] truncate rounded-md bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 px-1.5 py-0.5 text-[11px] text-gray-600 dark:text-gray-300 hover:border-primary-300 hover:text-primary-600 dark:hover:text-primary-300 transition-colors"
+                  >
+                    <span className="truncate">{s.title}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+          {message.model && !message.streaming && (
+            <div className="mt-2 flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500">
+              <Sparkles className="w-2.5 h-2.5" />
+              <span>{message.model}</span>
             </div>
           )}
         </>

@@ -28,10 +28,21 @@ export interface GenerateResult {
   model: string;
 }
 
+/** Satu sumber dari grounding Google Search (Gemini). */
+export interface GroundingSource {
+  title: string;
+  uri: string;
+}
+
 export interface StreamChunk {
   text: string;
-  /** 'thinking' = proses berpikir model (reasoning), 'answer' = jawaban final */
-  kind: 'thinking' | 'answer';
+  /**
+   * 'thinking' = proses berpikir model (reasoning), 'answer' = jawaban final,
+   * 'sources' = metadata sumber dari grounding Google Search (text kosong; pakai `sources`).
+   */
+  kind: 'thinking' | 'answer' | 'sources';
+  /** Hanya terisi saat kind === 'sources'. */
+  sources?: GroundingSource[];
 }
 
 export interface StreamResult {
@@ -611,7 +622,7 @@ const GEMINI_VERTEX_ENDPOINT = 'aiplatform.googleapis.com';
 async function geminiVertexStream(
   systemPrompt: string,
   messages: AIMessage[],
-  opts: { temperature?: number; maxTokens?: number } = {}
+  opts: { temperature?: number; maxTokens?: number; grounding?: boolean } = {}
 ): Promise<Response | null> {
   const token = await getVertexToken();
   const projectId = getVertexProjectId();
@@ -624,6 +635,21 @@ async function geminiVertexStream(
 
   const endpoint = `https://${GEMINI_VERTEX_ENDPOINT}/v1/projects/${projectId}/locations/global/publishers/google/models/${GEMINI_VERTEX_MODEL}:streamGenerateContent?alt=sse`;
 
+  // Grounding Google Search — biar fakta terkini akurat & punya sitasi.
+  // Hanya diaktifkan untuk chat agent; parser/import JSON tidak boleh pakai ini.
+  const requestBody: Record<string, unknown> = {
+    system_instruction: { parts: [{ text: systemPrompt }] },
+    contents,
+    generationConfig: {
+      temperature: opts.temperature ?? 0.7,
+      maxOutputTokens: opts.maxTokens ?? 2048,
+      thinkingConfig: { includeThoughts: true },
+    },
+  };
+  if (opts.grounding) {
+    requestBody.tools = [{ googleSearch: {} }];
+  }
+
   try {
     const res = await fetch(endpoint, {
       method: 'POST',
@@ -631,15 +657,7 @@ async function geminiVertexStream(
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemPrompt }] },
-        contents,
-        generationConfig: {
-          temperature: opts.temperature ?? 0.7,
-          maxOutputTokens: opts.maxTokens ?? 2048,
-          thinkingConfig: { includeThoughts: true },
-        },
-      }),
+      body: JSON.stringify(requestBody),
     });
     if (!res.ok) {
       console.warn('[ai/provider] Gemini Vertex stream failed:', res.status, await res.text());
@@ -655,7 +673,7 @@ async function geminiVertexStream(
 export async function streamTextGeminiVertex(
   systemPrompt: string,
   messages: AIMessage[],
-  opts: { temperature?: number; maxTokens?: number } = {}
+  opts: { temperature?: number; maxTokens?: number; grounding?: boolean } = {}
 ): Promise<StreamResult | null> {
   const res = await geminiVertexStream(systemPrompt, messages, opts);
   if (!res) return null;
@@ -805,11 +823,28 @@ function buildGeminiStream(res: Response): ReadableStream<StreamChunk> {
             if (data === '[DONE]') continue;
             try {
               const json = JSON.parse(data);
+              const candidate = json.candidates?.[0];
               const parts: Array<{ text?: string; thought?: boolean }> =
-                json.candidates?.[0]?.content?.parts ?? [];
+                candidate?.content?.parts ?? [];
               for (const part of parts) {
                 if (!part.text) continue;
                 controller.enqueue({ text: part.text, kind: part.thought ? 'thinking' : 'answer' });
+              }
+              // Grounding Google Search → emit sumber (dedup by uri).
+              const grounding: Array<{ web?: { uri?: string; title?: string } }> =
+                candidate?.groundingMetadata?.groundingChunks ?? [];
+              if (grounding.length > 0) {
+                const seen = new Set<string>();
+                const sources: GroundingSource[] = [];
+                for (const g of grounding) {
+                  const uri = g.web?.uri;
+                  if (!uri || seen.has(uri)) continue;
+                  seen.add(uri);
+                  sources.push({ uri, title: g.web?.title || uri });
+                }
+                if (sources.length > 0) {
+                  controller.enqueue({ text: '', kind: 'sources', sources });
+                }
               }
             } catch { /* skip malformed */ }
           }

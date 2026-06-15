@@ -29,9 +29,30 @@ const bodySchema = z.object({
 
 // System prompt terbuka — bukan asisten keuangan. Bebas topik, jawab Bahasa Indonesia
 // kecuali user pakai bahasa lain.
-const SYSTEM_PROMPT = `Kamu adalah AXION Agent, asisten AI serbaguna yang membantu pengguna dengan topik apa pun.
+//
+// PENTING: tanggal saat ini di-inject runtime supaya model tidak jatuh ke
+// pengetahuan training cutoff-nya (yang bisa keliru menyebut tahun/fakta lama).
+function buildSystemPrompt(): string {
+  const now = new Date();
+  const tanggalHariIni = new Intl.DateTimeFormat('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Asia/Jakarta',
+  }).format(now);
+
+  return `Kamu adalah AXION Agent, asisten AI serbaguna yang membantu pengguna dengan topik apa pun.
 Jawab dengan jelas, akurat, dan ringkas. Gunakan Bahasa Indonesia kecuali pengguna menggunakan bahasa lain.
-Kamu boleh membahas topik apa saja — tidak terbatas pada keuangan atau akuntansi.`;
+Kamu boleh membahas topik apa saja — tidak terbatas pada keuangan atau akuntansi.
+
+Tanggal hari ini: ${tanggalHariIni} (zona waktu WIB / Asia/Jakarta).
+Gunakan tanggal ini sebagai acuan "sekarang" untuk semua pertanyaan terkait waktu.
+Pengetahuanmu punya batas waktu (training cutoff), jadi untuk fakta yang bisa berubah —
+misalnya jabatan publik, harga, kurs, atau peristiwa terkini — kamu mungkin tidak punya
+informasi terbaru. Jangan menebak dengan percaya diri. Sebutkan dengan jujur bila kamu
+tidak yakin apakah informasimu masih berlaku per tanggal hari ini.`;
+}
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -56,9 +77,10 @@ export async function POST(req: NextRequest) {
   // Provider khusus agent = Vertex (Gemini Vertex) — keputusan produk.
   let result: StreamResult | null;
   try {
-    result = await streamTextGeminiVertex(SYSTEM_PROMPT, aiMessages, {
+    result = await streamTextGeminiVertex(buildSystemPrompt(), aiMessages, {
       temperature: 0.7,
       maxTokens: 2048,
+      grounding: true, // Google Search grounding — fakta terkini akurat + sitasi
     });
   } catch (error) {
     if (error instanceof AIProviderRequestError) {
@@ -83,7 +105,11 @@ export async function POST(req: NextRequest) {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          if (value.text) {
+          if (value.kind === 'sources') {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ kind: 'sources', sources: value.sources })}\n\n`)
+            );
+          } else if (value.text) {
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ text: value.text, kind: value.kind })}\n\n`)
             );
