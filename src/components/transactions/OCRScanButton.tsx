@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ScanText } from 'lucide-react';
-import { uploadAttachment, validateFile } from '@/lib/storage/attachments';
+import { validateFile } from '@/lib/storage/attachments';
 import type { OcrResult } from '@/lib/ocr/types';
 
 type OcrStage = 'uploading' | 'scanning' | 'parsing';
@@ -36,7 +36,11 @@ function useRotatingPhrase(stage: OcrStage | null, intervalMs = 1400) {
 
 type Props = {
   businessId: string;
-  onParsed: (result: OcrResult) => void;
+  /**
+   * Dipanggil saat OCR sukses. `file` adalah file struk mentah — caller bisa
+   * menjadikannya lampiran (source 'ocr') tanpa upload terpisah ke Cloudinary.
+   */
+  onParsed: (result: OcrResult, file: File) => void;
   variant?: 'primary' | 'secondary' | 'compact';
   disabled?: boolean;
   label?: string;
@@ -44,7 +48,9 @@ type Props = {
 
 /**
  * Tombol "Scan Struk" reusable.
- * Flow: file picker → upload Cloudinary → POST /api/ocr/scan → emit onParsed(result).
+ * Flow: file picker → POST file langsung (multipart) ke /api/ocr/scan → emit
+ * onParsed(result, file). Gambar TIDAK diupload ke Cloudinary di sini; baru naik
+ * kalau transaksi disimpan (file diteruskan ke form sebagai lampiran pending).
  *
  * Variant:
  * - 'primary': tombol biru besar (default header form)
@@ -84,18 +90,14 @@ export default function OCRScanButton({
     setStage('uploading');
 
     try {
-      // 1. Upload ke Cloudinary
-      const attachment = await uploadAttachment(businessId, file);
-
-      // 2. Panggil OCR API (scanning + parsing happen server-side)
+      // Kirim byte file langsung ke server (multipart) — tanpa numpang Cloudinary.
       setStage('scanning');
+      const form = new FormData();
+      form.append('business_id', businessId);
+      form.append('file', file);
       const scanPromise = fetch('/api/ocr/scan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          business_id: businessId,
-          image_url: attachment.url,
-        }),
+        body: form,
       });
 
       // Switch to "parsing" phrases mid-flight so user sees progression
@@ -111,7 +113,7 @@ export default function OCRScanButton({
       }
 
       const result = json.data as OcrResult;
-      onParsed(result);
+      onParsed(result, file);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Gagal memproses gambar';
       setError(msg);

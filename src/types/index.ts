@@ -47,6 +47,14 @@ export interface TransactionAttachment {
   uploaded_at: string;
   /** Cloudinary resource_type: 'image' untuk gambar, 'raw' untuk PDF. Default 'image' untuk attachment lama. */
   resource_type?: 'image' | 'raw' | 'video';
+  /** Asal lampiran: 'manual' = diupload user, 'ocr' = hasil scan struk. Default 'manual' (lampiran lama). */
+  source?: 'manual' | 'ocr';
+  /**
+   * TRANSIENT — tidak pernah dipersist ke DB. File mentah untuk lampiran yang
+   * belum diupload (mode defer upload di form transaksi). uploadPendingAttachments()
+   * mengganti entry pending dengan hasil upload + membuang field ini sebelum simpan.
+   */
+  pendingFile?: File;
 }
 
 export interface TransactionMeta {

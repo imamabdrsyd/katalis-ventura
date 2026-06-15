@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
-import { Paperclip, X, FileText, Upload, Loader2, Plus } from 'lucide-react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { Paperclip, X, FileText, Upload, Loader2, Plus, ScanText } from 'lucide-react';
 import type { TransactionAttachment } from '@/types';
 import {
   uploadAttachment,
   deleteAttachment,
+  makePendingAttachment,
+  isPendingAttachment,
   validateFile,
   formatFileSize,
   isImageType,
@@ -18,19 +20,40 @@ interface FileUploadProps {
   value: TransactionAttachment[];
   onChange: (attachments: TransactionAttachment[]) => void;
   disabled?: boolean;
+  /**
+   * Saat true: file yang dipilih TIDAK langsung diupload ke Cloudinary, melainkan
+   * ditahan sebagai entry pending (preview lokal) sampai form disimpan. Cancel =
+   * tidak ada file yang pernah naik ke Cloudinary. Dipakai form transaksi.
+   */
+  deferUpload?: boolean;
 }
 
-export function FileUpload({ businessId, value, onChange, disabled = false }: FileUploadProps) {
+export function FileUpload({ businessId, value, onChange, disabled = false, deferUpload = false }: FileUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const canAddMore = value.length < MAX_FILES;
+  // Lampiran OCR tidak menghitung kuota slot manual — user tetap bisa menambah
+  // sampai MAX_FILES file manual meski sudah ada lampiran dari OCR.
+  const manualCount = value.filter((a) => a.source !== 'ocr').length;
+  const canAddMore = manualCount < MAX_FILES;
+
+  // Revoke object URL milik entry pending saat komponen unmount agar tidak bocor.
+  // Pakai ref supaya yang di-revoke adalah value TERBARU (bukan snapshot saat mount).
+  const valueRef = useRef(value);
+  valueRef.current = value;
+  useEffect(() => {
+    return () => {
+      valueRef.current.forEach((a) => {
+        if (isPendingAttachment(a) && a.url.startsWith('blob:')) URL.revokeObjectURL(a.url);
+      });
+    };
+  }, []);
 
   const handleFiles = useCallback(async (files: File[]) => {
     setError(null);
-    const slots = MAX_FILES - value.length;
+    const slots = MAX_FILES - manualCount;
     const toUpload = files.slice(0, slots);
 
     if (files.length > slots) {
@@ -42,6 +65,14 @@ export function FileUpload({ businessId, value, onChange, disabled = false }: Fi
     for (const file of toUpload) {
       const err = validateFile(file);
       if (err) { setError(err); return; }
+    }
+
+    // Mode defer: tahan sebagai pending (preview lokal), upload saat submit.
+    if (deferUpload) {
+      const pendings = toUpload.map((f) => makePendingAttachment(f, 'manual'));
+      onChange([...value, ...pendings]);
+      if (inputRef.current) inputRef.current.value = '';
+      return;
     }
 
     setUploading(true);
@@ -58,7 +89,7 @@ export function FileUpload({ businessId, value, onChange, disabled = false }: Fi
       setUploading(false);
       if (inputRef.current) inputRef.current.value = '';
     }
-  }, [businessId, onChange, value]);
+  }, [businessId, onChange, value, manualCount, deferUpload]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -76,8 +107,14 @@ export function FileUpload({ businessId, value, onChange, disabled = false }: Fi
 
   const handleRemove = async (att: TransactionAttachment) => {
     if (disabled) return;
-    deleteAttachment(att.path, businessId, att.resource_type ?? 'image');
-    onChange(value.filter((a) => a.path !== att.path));
+    if (isPendingAttachment(att)) {
+      // Belum pernah diupload — cukup buang dari list & revoke preview lokal.
+      if (att.url.startsWith('blob:')) URL.revokeObjectURL(att.url);
+      onChange(value.filter((a) => a !== att));
+    } else {
+      deleteAttachment(att.path, businessId, att.resource_type ?? 'image');
+      onChange(value.filter((a) => a.path !== att.path));
+    }
     setError(null);
   };
 
@@ -88,7 +125,7 @@ export function FileUpload({ businessId, value, onChange, disabled = false }: Fi
         <div className="space-y-1.5">
           {value.map((att) => (
             <AttachmentRow
-              key={att.path}
+              key={att.url || att.path}
               attachment={att}
               disabled={disabled}
               onRemove={handleRemove}
@@ -121,7 +158,7 @@ export function FileUpload({ businessId, value, onChange, disabled = false }: Fi
           ) : value.length > 0 ? (
             <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
               <Plus className="w-4 h-4" />
-              <span>Add file ({value.length}/{MAX_FILES})</span>
+              <span>Add file ({manualCount}/{MAX_FILES})</span>
             </div>
           ) : (
             <>
@@ -201,7 +238,15 @@ function AttachmentRow({
         </a>
       )}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{attachment.filename}</p>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{attachment.filename}</p>
+          {attachment.source === 'ocr' && (
+            <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
+              <ScanText className="w-3 h-3" />
+              Hasil scan
+            </span>
+          )}
+        </div>
         <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(attachment.size)}</p>
       </div>
       {!disabled && (
@@ -226,9 +271,10 @@ interface FileUploadCompactProps {
   value: TransactionAttachment[];
   onChange: (attachments: TransactionAttachment[]) => void;
   disabled?: boolean;
+  deferUpload?: boolean;
 }
 
-export function FileUploadCompact({ businessId, value, onChange, disabled = false }: FileUploadCompactProps) {
+export function FileUploadCompact({ businessId, value, onChange, disabled = false, deferUpload = false }: FileUploadCompactProps) {
   const [expanded, setExpanded] = useState(value.length > 0);
 
   if (!expanded && value.length === 0) {
@@ -270,6 +316,7 @@ export function FileUploadCompact({ businessId, value, onChange, disabled = fals
           if (atts.length === 0) setExpanded(false);
         }}
         disabled={disabled}
+        deferUpload={deferUpload}
       />
     </div>
   );

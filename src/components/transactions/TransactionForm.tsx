@@ -12,6 +12,7 @@ import { AlertCircle, Lightbulb, AlertTriangle, BookTemplate, ChevronDown, Trash
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { UnitBreakdownSection } from '@/components/transactions/UnitBreakdownSection';
 import { FileUpload } from '@/components/ui/FileUpload';
+import { makePendingAttachment, isPendingAttachment, uploadPendingAttachments } from '@/lib/storage/attachments';
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
 import { resolveContactTypeFromCategory, saveContactFromTransaction } from '@/lib/api/contacts';
 import { useBusinessContext } from '@/context/BusinessContext';
@@ -231,6 +232,21 @@ export function TransactionForm({
     transaction?.meta?.attachments ??
     (transaction?.meta?.attachment ? [transaction.meta.attachment] : [])
   );
+  // Sedang mengupload lampiran pending ke Cloudinary saat submit
+  const [uploadingAttachments, setUploadingAttachments] = useState(false);
+
+  // Tambah/ganti lampiran hasil OCR (selalu maksimal 1, yaitu scan terbaru).
+  // Tidak menghitung kuota slot manual.
+  const addOcrAttachment = (file: File) => {
+    setAttachments((prev) => {
+      prev.forEach((a) => {
+        if (a.source === 'ocr' && isPendingAttachment(a) && a.url.startsWith('blob:')) {
+          URL.revokeObjectURL(a.url);
+        }
+      });
+      return [...prev.filter((a) => a.source !== 'ocr'), makePendingAttachment(file, 'ocr')];
+    });
+  };
 
   // Fetch accounts on mount
   useEffect(() => {
@@ -384,6 +400,22 @@ export function TransactionForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validate()) {
+      // Upload lampiran pending ke Cloudinary HANYA saat submit (defer upload).
+      // Kalau user cancel sebelum ini, tidak ada file yang pernah naik ke Cloudinary.
+      let finalAttachments = attachments;
+      if (businessId && attachments.some(isPendingAttachment)) {
+        setUploadingAttachments(true);
+        try {
+          finalAttachments = await uploadPendingAttachments(businessId, attachments);
+          setAttachments(finalAttachments);
+        } catch (err: any) {
+          setUploadingAttachments(false);
+          setErrors((prev) => ({ ...prev, submit: err?.message || 'Gagal mengupload lampiran' }));
+          return;
+        }
+        setUploadingAttachments(false);
+      }
+
       const currency = normalizeCurrencyCode(formData.currency_code);
       const submittedOriginalAmount = formData.original_amount ?? formData.amount;
       const submittedFxRate = currency === BASE_CURRENCY ? 1 : Number(formData.fx_rate ?? 1);
@@ -398,7 +430,7 @@ export function TransactionForm({
         meta: {
           ...formData.meta,
           unit_breakdown: unitBreakdown && unitBreakdown.unit ? unitBreakdown : undefined,
-          attachments: attachments.length > 0 ? attachments : undefined,
+          attachments: finalAttachments.length > 0 ? finalAttachments : undefined,
         },
       };
 
@@ -562,12 +594,14 @@ export function TransactionForm({
 
   // Gate OCR result: kalau parent kasih `onOcrResult` (mode preview modal),
   // delegate ke parent dan JANGAN auto-apply. Kalau tidak, fallback langsung apply.
-  const handleOcrParsed = (result: OcrResult) => {
+  const handleOcrParsed = (result: OcrResult, file: File) => {
     if (onOcrResult) {
+      // Jalur preview modal (bisa split jadi banyak transaksi) — lampiran di-defer.
       onOcrResult(result);
       return;
     }
     applyOcrResultInternal(result);
+    addOcrAttachment(file);
   };
 
   // Watch `pendingOcrApply`: parent set ini ketika user pilih opsi "single transaction"
@@ -956,7 +990,8 @@ export function TransactionForm({
             businessId={businessId}
             value={attachments}
             onChange={setAttachments}
-            disabled={loading}
+            disabled={loading || uploadingAttachments}
+            deferUpload
           />
         </div>
       )}
@@ -1338,12 +1373,12 @@ export function TransactionForm({
           type="button"
           onClick={onCancel}
           className="btn-secondary flex-1"
-          disabled={loading}
+          disabled={loading || uploadingAttachments}
         >
           Batal
         </button>
-        <button type="submit" className="btn-primary-glow flex-1" disabled={loading}>
-          {loading ? 'Menyimpan...' : transaction ? 'Update Transaksi' : 'Simpan'}
+        <button type="submit" className="btn-primary-glow flex-1" disabled={loading || uploadingAttachments}>
+          {uploadingAttachments ? 'Mengupload lampiran...' : loading ? 'Menyimpan...' : transaction ? 'Update Transaksi' : 'Simpan'}
         </button>
       </div>
     </form>

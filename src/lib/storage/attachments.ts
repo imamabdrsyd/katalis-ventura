@@ -37,9 +37,61 @@ export function isImageType(mimeType: string): boolean {
   return mimeType.startsWith('image/');
 }
 
+/**
+ * Buat entry attachment "pending" — file masih di memori, BELUM diupload ke
+ * Cloudinary. Dipakai mode defer upload: file baru naik ke Cloudinary hanya saat
+ * transaksi benar-benar disimpan (lihat uploadPendingAttachments). Kalau user
+ * cancel, entry ini dibuang tanpa pernah menyentuh Cloudinary.
+ *
+ * `url` diisi object URL lokal (URL.createObjectURL) untuk preview; pemanggil
+ * wajib URL.revokeObjectURL saat entry dihapus / komponen unmount.
+ */
+export function makePendingAttachment(
+  file: File,
+  source: 'manual' | 'ocr' = 'manual'
+): TransactionAttachment {
+  return {
+    path: '',
+    url: URL.createObjectURL(file),
+    filename: file.name,
+    size: file.size,
+    mime_type: file.type || `image/${getExtension(file.name)}`,
+    uploaded_at: new Date().toISOString(),
+    resource_type: file.type === 'application/pdf' ? 'raw' : 'image',
+    source,
+    pendingFile: file,
+  };
+}
+
+export function isPendingAttachment(att: TransactionAttachment): boolean {
+  return !!att.pendingFile;
+}
+
+/**
+ * Upload semua attachment pending ke Cloudinary lalu kembalikan list bersih
+ * (siap dipersist): entry pending diganti hasil upload, entry yang sudah ber-URL
+ * dilewatkan apa adanya dengan field transient `pendingFile` dibuang.
+ */
+export async function uploadPendingAttachments(
+  businessId: string,
+  list: TransactionAttachment[]
+): Promise<TransactionAttachment[]> {
+  const out: TransactionAttachment[] = [];
+  for (const att of list) {
+    if (att.pendingFile) {
+      out.push(await uploadAttachment(businessId, att.pendingFile, att.source ?? 'manual'));
+    } else {
+      const { pendingFile: _drop, ...rest } = att;
+      out.push(rest);
+    }
+  }
+  return out;
+}
+
 export async function uploadAttachment(
   businessId: string,
-  file: File
+  file: File,
+  source: 'manual' | 'ocr' = 'manual'
 ): Promise<TransactionAttachment> {
   const validationError = validateFile(file);
   if (validationError) throw new Error(validationError);
@@ -73,6 +125,7 @@ export async function uploadAttachment(
     mime_type: file.type || `image/${getExtension(file.name)}`,
     uploaded_at: new Date().toISOString(),
     resource_type: resource_type || 'image',
+    source,
   };
 }
 

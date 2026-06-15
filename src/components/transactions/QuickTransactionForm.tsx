@@ -23,6 +23,7 @@ import { CatalogItemPicker } from '@/components/catalog/CatalogItemPicker';
 import type { CatalogItem } from '@/types';
 import { UnitBreakdownSection } from './UnitBreakdownSection';
 import { FileUpload } from '@/components/ui/FileUpload';
+import { makePendingAttachment, isPendingAttachment, uploadPendingAttachments } from '@/lib/storage/attachments';
 import { ChevronDown, StickyNote, Paperclip, Zap, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { CurrencyPill } from '@/components/ui/CurrencyPill';
@@ -105,6 +106,19 @@ export function QuickTransactionForm({
 
   // Attachment state
   const [attachments, setAttachments] = useState<TransactionAttachment[]>([]);
+  const [uploadingAttachments, setUploadingAttachments] = useState(false);
+
+  // Tambah/ganti lampiran hasil OCR (maks 1, scan terbaru). Tidak menghitung slot manual.
+  const addOcrAttachment = (file: File) => {
+    setAttachments((prev) => {
+      prev.forEach((a) => {
+        if (a.source === 'ocr' && isPendingAttachment(a) && a.url.startsWith('blob:')) {
+          URL.revokeObjectURL(a.url);
+        }
+      });
+      return [...prev.filter((a) => a.source !== 'ocr'), makePendingAttachment(file, 'ocr')];
+    });
+  };
 
   // Unit breakdown state
   const [unitBreakdown, setUnitBreakdown] = useState<UnitBreakdown | null>(null);
@@ -357,12 +371,14 @@ export function QuickTransactionForm({
   };
 
   // Gate OCR result melalui parent kalau `onOcrResult` provided (preview modal mode).
-  const handleOcrParsed = (result: OcrResult) => {
+  const handleOcrParsed = (result: OcrResult, file: File) => {
     if (onOcrResult) {
+      // Jalur preview modal (bisa split) — lampiran di-defer.
       onOcrResult(result);
       return;
     }
     void applyOcrResultInternal(result);
+    addOcrAttachment(file);
   };
 
   // Watch `pendingOcrApply`: parent set ini saat user pilih "single transaction"
@@ -465,12 +481,28 @@ export function QuickTransactionForm({
       }
     }
 
+    // Upload lampiran pending ke Cloudinary HANYA saat submit (defer upload).
+    // Cancel sebelum ini = tidak ada file yang pernah naik ke Cloudinary.
+    let finalAttachments = attachments;
+    if (businessId && attachments.some(isPendingAttachment)) {
+      setUploadingAttachments(true);
+      try {
+        finalAttachments = await uploadPendingAttachments(businessId, attachments);
+        setAttachments(finalAttachments);
+      } catch (err: any) {
+        setUploadingAttachments(false);
+        setErrors({ submit: err?.message || 'Gagal mengupload lampiran' });
+        return;
+      }
+      setUploadingAttachments(false);
+    }
+
     // Attach meta: sold_stock_ids + unit_breakdown + attachment
     const formData = result as TransactionFormData;
     formData.meta = {
       ...(selectedStockIds.length > 0 ? { sold_stock_ids: selectedStockIds } : {}),
       unit_breakdown: unitBreakdown && unitBreakdown.unit ? unitBreakdown : undefined,
-      attachments: attachments.length > 0 ? attachments : undefined,
+      attachments: finalAttachments.length > 0 ? finalAttachments : undefined,
     };
     formData.amount = baseAmount;
     formData.original_amount = amount;
@@ -894,7 +926,8 @@ export function QuickTransactionForm({
                 businessId={businessId}
                 value={attachments}
                 onChange={setAttachments}
-                disabled={loading}
+                disabled={loading || uploadingAttachments}
+                deferUpload
               />
             ) : null}
           </div>
@@ -906,9 +939,11 @@ export function QuickTransactionForm({
         <button
           type="submit"
           className="btn-primary-glow flex-1 flex items-center justify-center gap-2"
-          disabled={loading || loadingAccounts}
+          disabled={loading || loadingAccounts || uploadingAttachments}
         >
-          {loading ? (
+          {uploadingAttachments ? (
+            'Mengupload lampiran...'
+          ) : loading ? (
             'Saving...'
           ) : (
             <>
@@ -920,7 +955,7 @@ export function QuickTransactionForm({
         <button
           type="button"
           onClick={onCancel}
-          disabled={loading}
+          disabled={loading || uploadingAttachments}
           className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium transition-colors disabled:opacity-50"
         >
           Cancel
