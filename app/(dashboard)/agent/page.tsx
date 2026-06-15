@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBusinessContext } from '@/context/BusinessContext';
@@ -573,6 +573,25 @@ function ChatRow({ message }: { message: ChatMessage }) {
   );
 }
 
+// Render inline markdown sederhana: **bold**, *italic*, `code`.
+// Renderer minimal (bukan react-markdown) — cukup untuk gaya jawaban LLM.
+function renderInline(text: string): ReactNode[] {
+  // Pisah berdasar token; urutan: bold dulu (** lebih spesifik dari *), lalu code, lalu italic.
+  const tokens = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*\s][^*]*\*)/g);
+  return tokens.map((tok, j) => {
+    if (tok.startsWith('**') && tok.endsWith('**')) {
+      return <strong key={j} className="text-gray-900 dark:text-gray-50">{tok.slice(2, -2)}</strong>;
+    }
+    if (tok.startsWith('`') && tok.endsWith('`')) {
+      return <code key={j} className="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-[12px] font-mono">{tok.slice(1, -1)}</code>;
+    }
+    if (tok.startsWith('*') && tok.endsWith('*') && tok.length > 2) {
+      return <em key={j}>{tok.slice(1, -1)}</em>;
+    }
+    return tok;
+  });
+}
+
 function AnswerBubble({ message }: { message: Extract<ChatMessage, { kind: 'answer' }> }) {
   // Hanya tampilkan dot-typing kalau benar-benar belum ada apa-apa (teks & thinking).
   const isEmpty = message.streaming && !message.text && !message.thinking;
@@ -596,19 +615,42 @@ function AnswerBubble({ message }: { message: Extract<ChatMessage, { kind: 'answ
             <div className="space-y-1">
               {message.text.split('\n').map((line, i) => {
                 if (!line.trim()) return <div key={i} className="h-1" />;
-                const isBullet = /^[\-\*•]\s/.test(line);
-                const content = isBullet ? line.replace(/^[\-\*•]\s/, '') : line;
-                const parts = content.split(/(\*\*[^*]+\*\*)/g).map((part, j) =>
-                  part.startsWith('**') && part.endsWith('**')
-                    ? <strong key={j} className="text-gray-900 dark:text-gray-50">{part.slice(2, -2)}</strong>
-                    : part
-                );
-                return (
-                  <div key={i} className={isBullet ? 'flex gap-1.5' : ''}>
-                    {isBullet && <span className="mt-1.5 w-1 h-1 rounded-full shrink-0 bg-gray-400 dark:bg-gray-500" />}
-                    <span>{parts}</span>
-                  </div>
-                );
+
+                // Horizontal rule: --- / *** / ___
+                if (/^\s*([-*_])\1{2,}\s*$/.test(line)) {
+                  return <hr key={i} className="my-2 border-gray-100 dark:border-gray-700" />;
+                }
+
+                // Heading: # / ## / ### → ukuran turun bertahap, tetap bold.
+                const heading = line.match(/^(#{1,6})\s+(.*)$/);
+                if (heading) {
+                  const level = heading[1].length;
+                  const sizeCls = level <= 2 ? 'text-[14px]' : 'text-[13px]';
+                  return (
+                    <div key={i} className={`font-semibold text-gray-900 dark:text-gray-50 ${sizeCls} mt-1.5`}>
+                      {renderInline(heading[2])}
+                    </div>
+                  );
+                }
+
+                // List: bullet (-, *, •) atau bernomor (1. 2. …)
+                const bullet = line.match(/^\s*[-*•]\s+(.*)$/);
+                const numbered = line.match(/^\s*(\d+)\.\s+(.*)$/);
+                if (bullet || numbered) {
+                  const content = bullet ? bullet[1] : numbered![2];
+                  return (
+                    <div key={i} className="flex gap-1.5">
+                      {bullet ? (
+                        <span className="mt-1.5 w-1 h-1 rounded-full shrink-0 bg-gray-400 dark:bg-gray-500" />
+                      ) : (
+                        <span className="shrink-0 tabular-nums text-gray-500 dark:text-gray-400">{numbered![1]}.</span>
+                      )}
+                      <span>{renderInline(content)}</span>
+                    </div>
+                  );
+                }
+
+                return <div key={i}><span>{renderInline(line)}</span></div>;
               })}
             </div>
           )}
