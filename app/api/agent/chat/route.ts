@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from '@/lib/supabase-server';
 import {
   AIProviderRequestError,
   streamTextGeminiVertex,
+  triageVertexModel,
   PROVIDER_LABELS,
   MODEL_LABELS,
   type AIMessage,
@@ -74,6 +75,10 @@ export async function POST(req: NextRequest) {
 
   const aiMessages = parsed.data.messages.map(m => ({ role: m.role, content: m.content })) as AIMessage[];
 
+  // Triase adaptif: tentukan model ringan/berat dari konteks percakapan
+  // sebelum stream jawaban. Gagal-aman ke model ringan.
+  const chatModel = await triageVertexModel(aiMessages);
+
   // Provider khusus agent = Vertex (Gemini Vertex) — keputusan produk.
   let result: StreamResult | null;
   try {
@@ -81,6 +86,7 @@ export async function POST(req: NextRequest) {
       temperature: 0.7,
       maxTokens: 2048,
       grounding: true, // Google Search grounding — fakta terkini akurat + sitasi
+      model: chatModel,
     });
   } catch (error) {
     if (error instanceof AIProviderRequestError) {

@@ -66,7 +66,8 @@ export const MODEL_LABELS: Record<string, string> = {
   'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite',
   'gemini-2.5-pro': 'Gemini 2.5 Pro',
   'gemini-2.5-flash-vertex': 'Gemini 2.5 Flash (Vertex)',
-  'gemini-3.5-flash-vertex': 'Gemini 3.5 Flash (Vert...)',
+  'gemini-3.5-flash-vertex': 'Gemini 3.5 Flash (Vertex)',
+  'gemini-2.5-pro-vertex': 'Gemini 2.5 Pro (Vertex)',
   'llama-3.3-70b-versatile': 'Llama 3.3 70B',
   'llama-3.1-8b-instant': 'Llama 3.1 8B',
   'deepseek-r1-distill-llama-70b': 'DeepSeek R1 70B',
@@ -619,21 +620,27 @@ export function isClaudeAvailable(): boolean {
 const GEMINI_VERTEX_MODEL = 'gemini-2.5-flash';
 const GEMINI_VERTEX_ENDPOINT = 'aiplatform.googleapis.com';
 
+// Pasangan model untuk chat agent yang adaptif (triase 2-tahap, keputusan user):
+// pertanyaan ringan → Flash (cepat/murah), berat → Pro (reasoning lebih dalam).
+export const VERTEX_CHAT_MODEL_LIGHT = 'gemini-3.5-flash';
+export const VERTEX_CHAT_MODEL_HEAVY = 'gemini-2.5-pro';
+
 async function geminiVertexStream(
   systemPrompt: string,
   messages: AIMessage[],
-  opts: { temperature?: number; maxTokens?: number; grounding?: boolean } = {}
+  opts: { temperature?: number; maxTokens?: number; grounding?: boolean; model?: string } = {}
 ): Promise<Response | null> {
   const token = await getVertexToken();
   const projectId = getVertexProjectId();
   if (!token || !projectId) return null;
 
+  const model = opts.model ?? GEMINI_VERTEX_MODEL;
   const contents = messages.map(m => ({
     role: m.role === 'assistant' ? 'model' : 'user',
     parts: [{ text: m.content }],
   }));
 
-  const endpoint = `https://${GEMINI_VERTEX_ENDPOINT}/v1/projects/${projectId}/locations/global/publishers/google/models/${GEMINI_VERTEX_MODEL}:streamGenerateContent?alt=sse`;
+  const endpoint = `https://${GEMINI_VERTEX_ENDPOINT}/v1/projects/${projectId}/locations/global/publishers/google/models/${model}:streamGenerateContent?alt=sse`;
 
   // Grounding Google Search — biar fakta terkini akurat & punya sitasi.
   // Hanya diaktifkan untuk chat agent; parser/import JSON tidak boleh pakai ini.
@@ -673,11 +680,52 @@ async function geminiVertexStream(
 export async function streamTextGeminiVertex(
   systemPrompt: string,
   messages: AIMessage[],
-  opts: { temperature?: number; maxTokens?: number; grounding?: boolean } = {}
+  opts: { temperature?: number; maxTokens?: number; grounding?: boolean; model?: string } = {}
 ): Promise<StreamResult | null> {
   const res = await geminiVertexStream(systemPrompt, messages, opts);
   if (!res) return null;
-  return { stream: buildGeminiStream(res), provider: 'gemini-vertex', model: 'gemini-2.5-flash-vertex' };
+  // Label model = "<id>-vertex" supaya cocok dengan key di MODEL_LABELS.
+  const modelKey = `${opts.model ?? GEMINI_VERTEX_MODEL}-vertex`;
+  return { stream: buildGeminiStream(res), provider: 'gemini-vertex', model: modelKey };
+}
+
+/**
+ * Triase 2-tahap: panggilan kecil ke model ringan untuk memutuskan apakah
+ * pertanyaan user butuh model "berat" (Pro) atau cukup "ringan" (Flash).
+ * Pertimbangkan KESELURUHAN konteks percakapan, bukan hanya pesan terakhir.
+ *
+ * Return model ID (bukan label). Fallback aman ke model ringan bila triase
+ * gagal/timeout/credential tidak ada — jadi chat tetap jalan.
+ */
+export async function triageVertexModel(messages: AIMessage[]): Promise<string> {
+  // Ambil beberapa giliran terakhir sebagai konteks (hemat token).
+  const recent = messages.slice(-6)
+    .map(m => `${m.role === 'assistant' ? 'AI' : 'User'}: ${m.content}`)
+    .join('\n')
+    .slice(0, 4000);
+
+  const triagePrompt = `Klasifikasikan apakah percakapan berikut butuh model AI yang KUAT untuk dijawab dengan baik.
+Jawab HANYA satu kata: "HEAVY" atau "LIGHT".
+
+HEAVY = analisis mendalam, penalaran bertingkat, perhitungan/proyeksi keuangan, perbandingan kompleks, penulisan/koding panjang, pertanyaan ambigu yang butuh strukturisasi.
+LIGHT = sapaan, fakta singkat, tanya-jawab sederhana, klarifikasi, obrolan ringan.
+
+Saat ragu, pilih LIGHT.
+
+Percakapan:
+${recent}`;
+
+  try {
+    const res = await generateTextGeminiVertex(
+      triagePrompt,
+      [{ role: 'user', content: 'Klasifikasi sekarang.' }],
+      { temperature: 0, maxTokens: 8, model: VERTEX_CHAT_MODEL_LIGHT, plainText: true }
+    );
+    const verdict = (res?.text ?? '').toUpperCase();
+    return verdict.includes('HEAVY') ? VERTEX_CHAT_MODEL_HEAVY : VERTEX_CHAT_MODEL_LIGHT;
+  } catch {
+    return VERTEX_CHAT_MODEL_LIGHT;
+  }
 }
 
 /**
@@ -687,18 +735,29 @@ export async function streamTextGeminiVertex(
 export async function generateTextGeminiVertex(
   systemPrompt: string,
   messages: AIMessage[],
-  opts: { temperature?: number; maxTokens?: number } = {}
+  opts: { temperature?: number; maxTokens?: number; model?: string; plainText?: boolean } = {}
 ): Promise<GenerateResult | null> {
   const token = await getVertexToken();
   const projectId = getVertexProjectId();
   if (!token || !projectId) return null;
 
+  const model = opts.model ?? GEMINI_VERTEX_MODEL;
   const contents = messages.map(m => ({
     role: m.role === 'assistant' ? 'model' : 'user',
     parts: [{ text: m.content }],
   }));
 
-  const endpoint = `https://${GEMINI_VERTEX_ENDPOINT}/v1/projects/${projectId}/locations/global/publishers/google/models/${GEMINI_VERTEX_MODEL}:generateContent`;
+  const endpoint = `https://${GEMINI_VERTEX_ENDPOINT}/v1/projects/${projectId}/locations/global/publishers/google/models/${model}:generateContent`;
+
+  // Default JSON (parser import). plainText:true → matikan responseMimeType
+  // (mis. triase yang cuma butuh "HEAVY"/"LIGHT").
+  const generationConfig: Record<string, unknown> = {
+    temperature: opts.temperature ?? 0,
+    maxOutputTokens: opts.maxTokens ?? 8192,
+  };
+  if (!opts.plainText) {
+    generationConfig.responseMimeType = 'application/json';
+  }
 
   try {
     const res = await fetch(endpoint, {
@@ -710,11 +769,7 @@ export async function generateTextGeminiVertex(
       body: JSON.stringify({
         system_instruction: { parts: [{ text: systemPrompt }] },
         contents,
-        generationConfig: {
-          temperature: opts.temperature ?? 0,
-          maxOutputTokens: opts.maxTokens ?? 8192,
-          responseMimeType: 'application/json',
-        },
+        generationConfig,
       }),
     });
     if (!res.ok) {
@@ -723,7 +778,7 @@ export async function generateTextGeminiVertex(
     }
     const json = await res.json();
     const text = extractGeminiText(json.candidates?.[0]?.content?.parts);
-    return text ? { text, provider: 'gemini-vertex', model: 'gemini-2.5-flash-vertex' } : null;
+    return text ? { text, provider: 'gemini-vertex', model: `${model}-vertex` } : null;
   } catch (err) {
     console.warn('[ai/provider] Gemini Vertex generate error:', err);
     return null;
