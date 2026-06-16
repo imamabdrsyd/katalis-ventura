@@ -1324,6 +1324,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
             {/* Header — identitas agent aktif (Bianca di Entry, Stanley/Sri Mulyani di Ask) */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 shrink-0">
               <Image
+                key={activePersona.avatar}
                 src={activePersona.avatar}
                 alt={activePersona.name}
                 width={32}
