@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback, useId } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check, Paperclip, FileSpreadsheet, Brain, ChevronRight, ChevronDown, ExternalLink, Bot, TrendingUp, Receipt } from 'lucide-react';
+import { X, Send, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check, Paperclip, FileSpreadsheet, Brain, ChevronRight, ChevronDown, ExternalLink, Bot } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { parseExcelFile, parseExcelRaw, applyColumnMapping, validateFile, type ColumnMapping } from '@/lib/import/excelParser';
 import { validateRowsSmart } from '@/lib/import/excelValidator';
@@ -199,48 +199,64 @@ const SUGGESTED_QUESTIONS = [
 type AskPersona = 'analis_fpna' | 'pajak';
 
 interface PersonaMeta {
-  /** Nama agent (ditampilkan di header & greeting). */
+  /** Nama agent (TIDAK diterjemahkan). */
   name: string;
-  /** Peran singkat (subtitle). */
+  /** Peran singkat (subtitle) — dari i18n. */
   role: string;
-  /** Sapaan pembuka di empty state. */
+  /** Path avatar di /public/persona. */
+  avatar: string;
+  /** Sapaan pembuka di empty state — dari i18n. */
   greeting: string;
-  /** Deskripsi 1 baris di empty state. */
+  /** Deskripsi 1 baris di empty state — dari i18n. */
   tagline: string;
   /** Contoh pertanyaan khas persona. */
   suggestions: string[];
 }
 
-// Persona untuk tab Ask (dropdown). Default = Stanley (analis).
-const ASK_PERSONAS: Record<AskPersona, PersonaMeta> = {
-  analis_fpna: {
-    name: 'Stanley',
-    role: 'Analis Keuangan',
-    greeting: 'Hi! Saya Stanley, analis keuanganmu',
-    tagline: 'Tanya soal tren, margin, proyeksi, atau performa bisnismu',
-    suggestions: SUGGESTED_QUESTIONS,
-  },
-  pajak: {
-    name: 'Sri Mulyani',
-    role: 'Penasihat Pajak',
-    greeting: 'Hi! Saya Sri Mulyani, penasihat pajakmu',
-    tagline: 'Tanya estimasi pajak UKM (bersifat indikatif, bukan nasihat resmi)',
-    suggestions: [
-      'Berapa estimasi PPh final saya bulan ini?',
-      'Apa saja kewajiban pajak bisnis saya?',
-      'Bagaimana cara hitung PPh final UMKM 0,5%?',
-    ],
-  },
-};
+type Translations = ReturnType<typeof useLanguage>['t'];
 
-// Identitas untuk tab Entry (mode Catat) — Bianca. Mesin tetap parser transaksi.
-const ENTRY_PERSONA: PersonaMeta = {
-  name: 'Bianca',
-  role: 'Pembukuan',
-  greeting: 'Hi! Saya Bianca, yang bantu rapikan pembukuanmu',
-  tagline: 'Ketik transaksi, aku bantu catat ke pembukuan',
-  suggestions: ['bayar listrik 500rb', 'jual kopi ke Budi 2.5jt', 'beli bahan baku 750.000'],
-};
+// Contoh pertanyaan pajak (Sri Mulyani) — dipakai di buildAskPersonas.
+const TAX_SUGGESTIONS = [
+  'Berapa estimasi PPh final saya bulan ini?',
+  'Apa saja kewajiban pajak bisnis saya?',
+  'Bagaimana cara hitung PPh final UMKM 0,5%?',
+];
+
+// Persona tab Ask — role/greeting/tagline dari i18n; name/avatar tetap.
+function buildAskPersonas(t: Translations): Record<AskPersona, PersonaMeta> {
+  const p = t.aiChat.persona;
+  return {
+    analis_fpna: {
+      name: 'Stanley',
+      avatar: '/persona/stanley.png',
+      role: p.analystRole,
+      greeting: p.analystGreeting,
+      tagline: p.analystTagline,
+      suggestions: SUGGESTED_QUESTIONS,
+    },
+    pajak: {
+      name: 'Sri Mulyani',
+      avatar: '/persona/sri-mulyani.png',
+      role: p.taxRole,
+      greeting: p.taxGreeting,
+      tagline: p.taxTagline,
+      suggestions: TAX_SUGGESTIONS,
+    },
+  };
+}
+
+// Identitas tab Entry — Bianca. Mesin tetap parser transaksi.
+function buildEntryPersona(t: Translations): PersonaMeta {
+  const p = t.aiChat.persona;
+  return {
+    name: 'Bianca',
+    avatar: '/persona/bianca.png',
+    role: p.bookkeeperRole,
+    greeting: p.bookkeeperGreeting,
+    tagline: p.bookkeeperTagline,
+    suggestions: ['bayar listrik 500rb', 'jual kopi ke Budi 2.5jt', 'beli bahan baku 750.000'],
+  };
+}
 
 // Pesan sapaan/akknowledgment singkat yang tidak punya muatan pertanyaan.
 // Di-handle lokal tanpa memanggil LLM (hemat kuota + tidak fetch 3000 transaksi).
@@ -1277,7 +1293,8 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
   };
 
   // Identitas agent yang sedang standby: Bianca di tab Entry, Stanley/Sri Mulyani di Ask.
-  const activePersona = mode === 'record' ? ENTRY_PERSONA : ASK_PERSONAS[persona];
+  const askPersonas = buildAskPersonas(t);
+  const activePersona = mode === 'record' ? buildEntryPersona(t) : askPersonas[persona];
 
   return (
     <AnimatePresence>
@@ -1306,9 +1323,13 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
           >
             {/* Header — identitas agent aktif (Bianca di Entry, Stanley/Sri Mulyani di Ask) */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 shrink-0">
-              <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0">
-                <Bot className="w-5 h-5" />
-              </span>
+              <Image
+                src={activePersona.avatar}
+                alt={activePersona.name}
+                width={32}
+                height={32}
+                className="w-8 h-8 rounded-full object-cover shrink-0 ring-2 ring-gray-200 dark:ring-gray-700 bg-gray-100 dark:bg-gray-800"
+              />
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-50 leading-tight">{activePersona.name}</p>
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -1408,21 +1429,19 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                 <div className="flex items-center gap-1.5 shrink-0">
                 {/* Pemilih persona spesialis — hanya di mode Tanya (Stanley / Sri Mulyani) */}
                 {mode === 'ask' && (() => {
-                  const PERSONA_OPTS: { id: AskPersona; desc: string; Icon: typeof TrendingUp }[] = [
-                    { id: 'analis_fpna', desc: 'Tren, margin, proyeksi', Icon: TrendingUp },
-                    { id: 'pajak', desc: 'Estimasi pajak UKM (indikatif)', Icon: Receipt },
+                  const PERSONA_OPTS: { id: AskPersona; desc: string }[] = [
+                    { id: 'analis_fpna', desc: t.aiChat.persona.analystDesc },
+                    { id: 'pajak', desc: t.aiChat.persona.taxDesc },
                   ];
-                  const ActiveIcon = persona === 'pajak' ? Receipt : TrendingUp;
                   return (
                     <div className="relative shrink-0">
                       <button
                         type="button"
                         onClick={() => setPersonaDropdownOpen(o => !o)}
                         className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors max-w-[120px]"
-                        title="Pilih agent"
+                        title={askPersonas[persona].role}
                       >
-                        <ActiveIcon className="w-2.5 h-2.5 shrink-0" />
-                        <span className="truncate">{ASK_PERSONAS[persona].name}</span>
+                        <span className="truncate">{askPersonas[persona].name}</span>
                         <ChevronDown className="w-2.5 h-2.5 shrink-0" />
                       </button>
                       <AnimatePresence>
@@ -1437,8 +1456,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                               className="absolute bottom-full right-0 mb-1.5 z-20 w-52 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg overflow-hidden"
                             >
                               {PERSONA_OPTS.map(opt => {
-                                const OptIcon = opt.Icon;
-                                const meta = ASK_PERSONAS[opt.id];
+                                const meta = askPersonas[opt.id];
                                 return (
                                   <button
                                     key={opt.id}
@@ -1450,7 +1468,6 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                                     }}
                                     className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                                   >
-                                    <OptIcon className="w-4 h-4 shrink-0 text-gray-400 dark:text-gray-500" />
                                     <span className="min-w-0 flex-1">
                                       <span className="block text-[12px] font-medium text-gray-900 dark:text-gray-100">{meta.name}</span>
                                       <span className="block text-[10px] text-gray-400 dark:text-gray-500">{meta.role} · {opt.desc}</span>
@@ -1617,9 +1634,13 @@ function EmptyState({
   const isRecord = mode === 'record';
   return (
     <div className="flex flex-col items-center justify-center h-full gap-4 py-4">
-      <span className="flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-        <Bot className="w-7 h-7" />
-      </span>
+      <Image
+        src={persona.avatar}
+        alt={persona.name}
+        width={56}
+        height={56}
+        className="w-14 h-14 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700 bg-gray-100 dark:bg-gray-800"
+      />
       <p className="text-[13px] font-semibold text-gray-800 dark:text-gray-100">{persona.greeting}</p>
       <div className="relative h-[224px] w-full overflow-hidden">
         <AnimatePresence initial={false} custom={direction} mode="popLayout">

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBusinessContext } from '@/context/BusinessContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { ImportRevenueWidget, type SupportedChannel } from '@/components/agent/ImportRevenueWidget';
 import {
   appendAgentImportStep,
@@ -85,6 +86,8 @@ const nextId = () =>
 
 export default function AgentPage() {
   const router = useRouter();
+  const { t } = useLanguage();
+  const headerTools = buildAgentTools(t.aiChat.agentPage);
   const { activeBusinessId, userRole, activeBusiness } = useBusinessContext();
   const canManage = isManagerRole(userRole);
   const businessType = activeBusiness?.business_type;
@@ -448,7 +451,7 @@ export default function AgentPage() {
           <div className="flex items-center gap-1.5 min-w-0">
             {/* Chip nama tools — berjejer di header (sembunyi di layar kecil) */}
             <div className="hidden lg:flex items-center gap-1.5">
-              {AGENT_TOOLS.map(tool => (
+              {headerTools.map(tool => (
                 <span
                   key={tool.fn}
                   title={tool.label}
@@ -697,57 +700,40 @@ function AnswerBubble({ message }: { message: Extract<ChatMessage, { kind: 'answ
 // sub-agent yang ada di sistem + kapabilitas tool-calling. Bersifat INFORMASI
 // (peta), bukan klaim bahwa halaman ini menjalankan semuanya — tiap sub-agent
 // diakses dari tempatnya sendiri (lihat field `access`).
-const SUB_AGENTS: {
+type AgentPageT = ReturnType<typeof useLanguage>['t']['aiChat']['agentPage'];
+
+// Nama & avatar tetap (tak diterjemahkan); role/desc/access dari i18n.
+function buildSubAgents(ap: AgentPageT): {
   name: string;
   role: string;
   desc: string;
   access: string;
   avatar: string;
-  ring: string;
-}[] = [
-  {
-    name: 'Stanley',
-    role: 'Analis Keuangan & FP&A',
-    desc: 'Analisis tren, margin, burn rate, proyeksi.',
-    access: 'Asisten FAB · tab Tanya',
-    avatar: '/persona/stanley.png',
-    ring: 'ring-emerald-200 dark:ring-emerald-500/30',
-  },
-  {
-    name: 'Sri Mulyani',
-    role: 'Penasihat Pajak',
-    desc: 'Estimasi PPh final UMKM, PPN, kewajiban pajak (indikatif).',
-    access: 'Asisten FAB · tab Tanya',
-    avatar: '/persona/sri-mulyani.png',
-    ring: 'ring-amber-200 dark:ring-amber-500/30',
-  },
-  {
-    name: 'Bianca',
-    role: 'Pembukuan',
-    desc: 'Catat & klasifikasi transaksi, impor file ke pembukuan.',
-    access: 'Asisten FAB · tab Catat',
-    avatar: '/persona/bianca.png',
-    ring: 'ring-blue-200 dark:ring-blue-500/30',
-  },
-  {
-    name: 'Concierge',
-    role: 'Customer Service (leads)',
-    desc: 'Balas calon pelanggan, adaptif per sektor bisnis.',
-    access: 'Otomatis di Leads (IG/WA/OTA)',
-    avatar: '/persona/concierge.png',
-    ring: 'ring-pink-200 dark:ring-pink-500/30',
-  },
-];
+}[] {
+  return [
+    { name: 'Stanley', avatar: '/persona/stanley.png', role: ap.analystRole, desc: ap.analystDesc, access: ap.accessAsk },
+    { name: 'Sri Mulyani', avatar: '/persona/sri-mulyani.png', role: ap.taxRole, desc: ap.taxDesc, access: ap.accessAsk },
+    { name: 'Bianca', avatar: '/persona/bianca.png', role: ap.bookkeeperRole, desc: ap.bookkeeperDesc, access: ap.accessEntry },
+    { name: 'Concierge', avatar: '/persona/concierge.png', role: ap.conciergeRole, desc: ap.conciergeDesc, access: ap.accessLeads },
+  ];
+}
 
-const AGENT_TOOLS: { label: string; fn: string }[] = [
-  { label: 'Query & filter transaksi', fn: 'query_transactions' },
-  { label: 'Hitung laba rugi (P&L) per periode', fn: 'get_financial_summary' },
-  { label: 'Daftar kontak + statistik', fn: 'get_contacts' },
-  { label: 'Info bisnis & cap table', fn: 'get_business_info' },
-  { label: 'Navigasi ke halaman/laporan', fn: 'navigate_to' },
-];
+// Nama fungsi (fn) tetap; label dari i18n.
+function buildAgentTools(ap: AgentPageT): { label: string; fn: string }[] {
+  return [
+    { label: ap.toolQueryTransactions, fn: 'query_transactions' },
+    { label: ap.toolFinancialSummary, fn: 'get_financial_summary' },
+    { label: ap.toolContacts, fn: 'get_contacts' },
+    { label: ap.toolBusinessInfo, fn: 'get_business_info' },
+    { label: ap.toolNavigate, fn: 'navigate_to' },
+  ];
+}
 
 function AgentCapabilitiesBadge() {
+  const { t } = useLanguage();
+  const ap = t.aiChat.agentPage;
+  const subAgents = buildSubAgents(ap);
+  const agentTools = buildAgentTools(ap);
   const [open, setOpen] = useState(false);
   return (
     <div className="relative shrink-0">
@@ -758,8 +744,7 @@ function AgentCapabilitiesBadge() {
         aria-expanded={open}
       >
         <Network className="w-3.5 h-3.5" />
-        <span className="hidden sm:inline">Kapabilitas Agent</span>
-        <span className="sm:hidden">Agent</span>
+        <span>{ap.capabilitiesChip}</span>
       </button>
 
       <AnimatePresence>
@@ -775,8 +760,8 @@ function AgentCapabilitiesBadge() {
             >
               <div className="flex items-start justify-between gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                 <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">AXION Agent · Orchestrator</p>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Mengoordinasi sub-agent spesialis di bawah ini</p>
+                  <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">{ap.orchestratorTitle}</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">{ap.orchestratorSubtitle}</p>
                 </div>
                 <button
                   type="button"
@@ -790,7 +775,7 @@ function AgentCapabilitiesBadge() {
 
               <div className="max-h-[60vh] overflow-y-auto">
                 <div className="px-2 py-2 space-y-0.5">
-                  {SUB_AGENTS.map(a => {
+                  {subAgents.map(a => {
                     return (
                       <div key={a.name} className="flex items-start gap-2.5 px-2 py-2 rounded-xl">
                         <Image
@@ -798,7 +783,7 @@ function AgentCapabilitiesBadge() {
                           alt={a.name}
                           width={36}
                           height={36}
-                          className={`w-9 h-9 rounded-full object-cover shrink-0 ring-2 ${a.ring} bg-gray-50 dark:bg-gray-700`}
+                          className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-gray-200 dark:ring-gray-700 bg-gray-50 dark:bg-gray-700"
                         />
                         <div className="min-w-0 flex-1">
                           <p className="text-[12px] font-semibold text-gray-900 dark:text-gray-100 leading-tight">
@@ -814,10 +799,10 @@ function AgentCapabilitiesBadge() {
 
                 <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2">
-                    Tool-calling (di tab Tanya)
+                    {ap.toolsSectionTitle}
                   </p>
                   <ul className="space-y-1.5">
-                    {AGENT_TOOLS.map(tool => (
+                    {agentTools.map(tool => (
                       <li key={tool.fn} className="flex items-start gap-2 text-[11px] text-gray-600 dark:text-gray-300">
                         <Sparkles className="w-3 h-3 mt-0.5 text-primary-400 dark:text-primary-500 shrink-0" />
                         <span className="min-w-0">

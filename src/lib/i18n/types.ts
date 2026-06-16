@@ -855,6 +855,46 @@ export interface Translations {
   aiChat: {
     ask: string;
     entry: string;
+    // Persona spesialis (nama TIDAK diterjemahkan; role/greeting/tagline diterjemahkan)
+    persona: {
+      analystRole: string;
+      analystGreeting: string;
+      analystTagline: string;
+      taxRole: string;
+      taxGreeting: string;
+      taxTagline: string;
+      bookkeeperRole: string;
+      bookkeeperGreeting: string;
+      bookkeeperTagline: string;
+      // Deskripsi singkat di dropdown
+      analystDesc: string;
+      taxDesc: string;
+    };
+    // Halaman /agent (rumah orchestrator)
+    agentPage: {
+      capabilitiesChip: string;
+      orchestratorTitle: string;
+      orchestratorSubtitle: string;
+      toolsSectionTitle: string;
+      // Sub-agent: peran + deskripsi + akses (nama TIDAK diterjemahkan)
+      analystRole: string;
+      analystDesc: string;
+      taxRole: string;
+      taxDesc: string;
+      bookkeeperRole: string;
+      bookkeeperDesc: string;
+      conciergeRole: string;
+      conciergeDesc: string;
+      accessAsk: string;
+      accessEntry: string;
+      accessLeads: string;
+      // Label ramah tools (nama fungsi TIDAK diterjemahkan)
+      toolQueryTransactions: string;
+      toolFinancialSummary: string;
+      toolContacts: string;
+      toolBusinessInfo: string;
+      toolNavigate: string;
+    };
   };
 
   // Reports
