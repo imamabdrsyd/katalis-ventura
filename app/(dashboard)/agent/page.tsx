@@ -17,6 +17,7 @@ import type { SalesChannel } from '@/types';
 import { isManagerRole } from '@/lib/roles';
 import {
   Bot, AlertCircle, Send, ArrowUp, Sparkles, CheckCircle, XCircle, Loader2, Paperclip, Brain, ChevronRight, Globe,
+  TrendingUp, Receipt, BookOpen, MessageCircle, X, Network,
 } from 'lucide-react';
 
 const SUPPORTED_CHANNELS = [
@@ -441,21 +442,24 @@ export default function AgentPage() {
     <div className="flex flex-col h-[calc(100dvh-4rem)] w-full">
       {/* Header */}
       <div className="px-4 md:px-6 pt-4 md:pt-6 pb-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
-        <div className="flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{
-              background: 'radial-gradient(circle at 30% 25%, #a5b4fc 0%, #6366f1 45%, #3730a3 100%)',
-            }}
-          >
-            <Bot className="w-5 h-5 text-white" />
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{
+                background: 'radial-gradient(circle at 30% 25%, #a5b4fc 0%, #6366f1 45%, #3730a3 100%)',
+              }}
+            >
+              <Bot className="w-5 h-5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">Agentic Workspace</h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                {activeBusiness?.business_name ?? 'Bisnis Aktif'}
+              </p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">Agentic Workspace</h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-              {activeBusiness?.business_name ?? 'Bisnis Aktif'}
-            </p>
-          </div>
+          <AgentCapabilitiesBadge />
         </div>
       </div>
 
@@ -684,6 +688,148 @@ function AnswerBubble({ message }: { message: Extract<ChatMessage, { kind: 'answ
           )}
         </>
       )}
+    </div>
+  );
+}
+
+// ── Peta orchestrator + sub-agent AXION ───────────────────────────────────────
+// Halaman /agent = "rumah" AXION Agent (orchestrator). Badge ini menampilkan peta
+// sub-agent yang ada di sistem + kapabilitas tool-calling. Bersifat INFORMASI
+// (peta), bukan klaim bahwa halaman ini menjalankan semuanya — tiap sub-agent
+// diakses dari tempatnya sendiri (lihat field `access`).
+const SUB_AGENTS: {
+  name: string;
+  role: string;
+  desc: string;
+  access: string;
+  Icon: typeof Bot;
+  accent: string;
+}[] = [
+  {
+    name: 'Stanley',
+    role: 'Analis Keuangan & FP&A',
+    desc: 'Analisis tren, margin, burn rate, proyeksi.',
+    access: 'Asisten FAB · tab Tanya',
+    Icon: TrendingUp,
+    accent: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/15',
+  },
+  {
+    name: 'Sri Mulyani',
+    role: 'Penasihat Pajak',
+    desc: 'Estimasi PPh final UMKM, PPN, kewajiban pajak (indikatif).',
+    access: 'Asisten FAB · tab Tanya',
+    Icon: Receipt,
+    accent: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/15',
+  },
+  {
+    name: 'Bianca',
+    role: 'Pembukuan',
+    desc: 'Catat & klasifikasi transaksi, impor file ke pembukuan.',
+    access: 'Asisten FAB · tab Catat',
+    Icon: BookOpen,
+    accent: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/15',
+  },
+  {
+    name: 'Concierge',
+    role: 'Customer Service (leads)',
+    desc: 'Balas calon pelanggan, adaptif per sektor bisnis.',
+    access: 'Otomatis di Leads (IG/WA/OTA)',
+    Icon: MessageCircle,
+    accent: 'text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-500/15',
+  },
+];
+
+const AGENT_TOOLS: { label: string; fn: string }[] = [
+  { label: 'Query & filter transaksi', fn: 'query_transactions' },
+  { label: 'Hitung laba rugi (P&L) per periode', fn: 'get_financial_summary' },
+  { label: 'Daftar kontak + statistik', fn: 'get_contacts' },
+  { label: 'Info bisnis & cap table', fn: 'get_business_info' },
+  { label: 'Navigasi ke halaman/laporan', fn: 'navigate_to' },
+];
+
+function AgentCapabilitiesBadge() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors"
+        aria-expanded={open}
+      >
+        <Network className="w-3.5 h-3.5" />
+        <span className="hidden sm:inline">Kapabilitas Agent</span>
+        <span className="sm:hidden">Agent</span>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+            <motion.div
+              initial={{ opacity: 0, y: -6, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -6, scale: 0.97 }}
+              transition={{ duration: 0.15 }}
+              className="absolute top-full right-0 mt-2 z-40 w-[320px] max-w-[calc(100vw-2rem)] rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl overflow-hidden"
+            >
+              <div className="flex items-start justify-between gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">AXION Agent · Orchestrator</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Mengoordinasi sub-agent spesialis di bawah ini</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shrink-0"
+                  aria-label="Tutup"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="max-h-[60vh] overflow-y-auto">
+                <div className="px-2 py-2 space-y-0.5">
+                  {SUB_AGENTS.map(a => {
+                    const Icon = a.Icon;
+                    return (
+                      <div key={a.name} className="flex items-start gap-2.5 px-2 py-2 rounded-xl">
+                        <span className={`flex items-center justify-center w-7 h-7 rounded-lg shrink-0 ${a.accent}`}>
+                          <Icon className="w-4 h-4" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[12px] font-semibold text-gray-900 dark:text-gray-100 leading-tight">
+                            {a.name} <span className="font-normal text-gray-400 dark:text-gray-500">· {a.role}</span>
+                          </p>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{a.desc}</p>
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{a.access}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2">
+                    Tool-calling (di tab Tanya)
+                  </p>
+                  <ul className="space-y-1.5">
+                    {AGENT_TOOLS.map(tool => (
+                      <li key={tool.fn} className="flex items-start gap-2 text-[11px] text-gray-600 dark:text-gray-300">
+                        <Sparkles className="w-3 h-3 mt-0.5 text-primary-400 dark:text-primary-500 shrink-0" />
+                        <span className="min-w-0">
+                          <span className="block leading-tight">{tool.label}</span>
+                          <code className="block text-[10px] text-gray-400 dark:text-gray-500 font-mono">{tool.fn}</code>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
