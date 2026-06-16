@@ -31,8 +31,8 @@ import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, Ext
 import { useLanguage } from '@/context/LanguageContext';
 import { updateTransaction } from '@/lib/api/transactions';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
-import { formatFileSize, isImageType, downloadAttachment } from '@/lib/storage/attachments';
-import { useDeliverableAttachmentUrl } from '@/lib/storage/signedUrl';
+import { formatFileSize, isImageType } from '@/lib/storage/attachments';
+import { useDeliverableAttachmentUrl, triggerAttachmentDownload } from '@/lib/storage/signedUrl';
 
 interface TransactionDetailModalProps {
   transaction: Transaction | null;
@@ -1705,7 +1705,7 @@ function AttachmentPreviewItem({
     if (!ready || downloading) return;
     setDownloading(true);
     try {
-      await downloadAttachment(url, attachment.filename);
+      await triggerAttachmentDownload(attachment);
     } catch {
       // gagal unduh — diabaikan diam-diam; user bisa coba lagi
     } finally {
@@ -1879,7 +1879,7 @@ function SignedAttachmentDownloadButton({
     if (!ready || downloading) return;
     setDownloading(true);
     try {
-      await downloadAttachment(url, attachment.filename);
+      await triggerAttachmentDownload(attachment);
     } catch {
       // gagal unduh — diabaikan
     } finally {

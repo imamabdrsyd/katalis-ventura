@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { downloadAttachment } from '@/lib/storage/attachments';
 
 // Helper untuk mengakses file legacy di bucket Supabase Storage
 // transaction-attachments yang kini bersifat private (lihat CRIT-04 fix di
@@ -63,6 +64,7 @@ type DeliverableAttachment = {
   url?: string | null;
   path?: string | null;
   resource_type?: 'image' | 'raw' | 'video';
+  filename?: string | null;
 };
 
 export function isCloudinaryAuthenticatedUrl(url: string | null | undefined): boolean {
@@ -106,6 +108,36 @@ export async function resolveDeliverableAttachmentUrl(
     return fetchSignedCloudinaryUrl(publicId, att.resource_type ?? 'image');
   }
   return resolveAttachmentUrl(rawUrl, ttlSeconds);
+}
+
+/**
+ * Picu unduhan file lampiran.
+ * - Cloudinary `authenticated`: lewat proxy server same-origin (Content-Disposition
+ *   attachment) — hindari kegagalan CORS saat fetch langsung ke res.cloudinary.com.
+ * - Lainnya (legacy Supabase, blob, eksternal): resolve URL lalu fetch→blob.
+ */
+export async function triggerAttachmentDownload(att: DeliverableAttachment): Promise<void> {
+  const rawUrl = att.url ?? '';
+  const filename = att.filename ?? 'lampiran';
+
+  if (isCloudinaryAuthenticatedUrl(rawUrl) && att.path) {
+    const params = new URLSearchParams({
+      public_id: att.path,
+      resource_type: att.resource_type ?? 'image',
+      filename,
+    });
+    const a = document.createElement('a');
+    a.href = `/api/transactions/attachments/download?${params.toString()}`;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return;
+  }
+
+  const url = await resolveDeliverableAttachmentUrl(att);
+  if (!url) throw new Error('URL lampiran tidak tersedia');
+  await downloadAttachment(url, filename);
 }
 
 /**
