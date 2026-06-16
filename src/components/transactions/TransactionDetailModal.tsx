@@ -1699,8 +1699,16 @@ function AttachmentPreviewItem({
   const isPdf = isPdfAttachment(attachment);
   const [downloading, setDownloading] = useState(false);
   const [contentLoaded, setContentLoaded] = useState(false);
-  // Reset status muat saat URL berubah (mis. signed URL baru di-resolve)
-  useEffect(() => setContentLoaded(false), [url]);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  // Saat URL berubah: reset status muat, TAPI tangani gambar yang sudah ter-cache
+  // (browser cache → onLoad tidak fire) dengan mengecek `complete`.
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
+      setContentLoaded(true);
+    } else {
+      setContentLoaded(false);
+    }
+  }, [url]);
 
   const handleDownload = async (e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -1729,9 +1737,11 @@ function AttachmentPreviewItem({
           {ready && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
+              ref={imgRef}
               src={url}
               alt={attachment.filename}
               onLoad={() => setContentLoaded(true)}
+              onError={() => setContentLoaded(true)}
               className={`w-full max-h-64 object-contain transition-opacity duration-300 ${contentLoaded ? 'opacity-100 group-hover:opacity-90' : 'opacity-0'}`}
             />
           )}
@@ -1953,16 +1963,25 @@ function SignedAttachmentImage({
 }: { attachment: TransactionAttachment; alt: string } & React.ImgHTMLAttributes<HTMLImageElement>) {
   const url = useDeliverableAttachmentUrl(attachment);
   const [loaded, setLoaded] = useState(false);
-  useEffect(() => setLoaded(false), [url]);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
+      setLoaded(true);
+    } else {
+      setLoaded(false);
+    }
+  }, [url]);
   return (
     <div className={`relative flex items-center justify-center ${loaded ? '' : 'min-h-[40vh] min-w-[260px]'}`}>
       {url && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           {...rest}
+          ref={imgRef}
           src={url}
           alt={alt}
           onLoad={() => setLoaded(true)}
+          onError={() => setLoaded(true)}
           className={`${className ?? ''} transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
         />
       )}
