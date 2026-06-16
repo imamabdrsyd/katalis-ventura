@@ -38,6 +38,26 @@ export function isImageType(mimeType: string): boolean {
 }
 
 /**
+ * Unduh file lampiran ke perangkat (memicu download, BUKAN buka di tab browser).
+ * Ambil sebagai blob lalu trigger anchor download — bekerja lintas-origin
+ * (Cloudinary mengirim CORS permisif) dan tetap kompatibel saat URL sudah signed.
+ * `url` harus URL yang siap pakai (sudah di-resolve/sign bila perlu).
+ */
+export async function downloadAttachment(url: string, filename: string): Promise<void> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Gagal mengunduh file');
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = objectUrl;
+  a.download = filename || 'lampiran';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(objectUrl);
+}
+
+/**
  * Buat entry attachment "pending" — file masih di memori, BELUM diupload ke
  * Cloudinary. Dipakai mode defer upload: file baru naik ke Cloudinary hanya saat
  * transaksi benar-benar disimpan (lihat uploadPendingAttachments). Kalau user

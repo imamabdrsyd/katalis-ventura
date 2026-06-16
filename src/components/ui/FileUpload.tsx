@@ -13,7 +13,7 @@ import {
   isImageType,
   MAX_FILES,
 } from '@/lib/storage/attachments';
-import { useSignedAttachmentUrl } from '@/lib/storage/signedUrl';
+import { useDeliverableAttachmentUrl } from '@/lib/storage/signedUrl';
 
 interface FileUploadProps {
   businessId: string;
@@ -194,9 +194,10 @@ export function FileUpload({ businessId, value, onChange, disabled = false, defe
 }
 
 /**
- * Subkomponen baris attachment. Pakai useSignedAttachmentUrl supaya URL
- * legacy bucket Supabase Storage (yang kini private) di-resolve ke signed
- * URL — kalau URL sudah Cloudinary atau external, di-return apa adanya.
+ * Subkomponen baris attachment. Pakai useDeliverableAttachmentUrl supaya:
+ * - file pending (blob:) tampil dari preview lokal,
+ * - Cloudinary `authenticated` di-resolve ke signed URL,
+ * - legacy Supabase Storage (kini private) di-resolve ke signed URL.
  */
 function AttachmentRow({
   attachment,
@@ -207,7 +208,7 @@ function AttachmentRow({
   disabled?: boolean;
   onRemove: (att: TransactionAttachment) => void;
 }) {
-  const url = useSignedAttachmentUrl(attachment.url);
+  const url = useDeliverableAttachmentUrl(attachment);
   const isImg = isImageType(attachment.mime_type);
   const ready = !!url;
 

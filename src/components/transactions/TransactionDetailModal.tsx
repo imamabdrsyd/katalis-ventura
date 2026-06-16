@@ -31,8 +31,8 @@ import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, Ext
 import { useLanguage } from '@/context/LanguageContext';
 import { updateTransaction } from '@/lib/api/transactions';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
-import { formatFileSize, isImageType } from '@/lib/storage/attachments';
-import { useSignedAttachmentUrl } from '@/lib/storage/signedUrl';
+import { formatFileSize, isImageType, downloadAttachment } from '@/lib/storage/attachments';
+import { useDeliverableAttachmentUrl } from '@/lib/storage/signedUrl';
 
 interface TransactionDetailModalProps {
   transaction: Transaction | null;
@@ -1616,17 +1616,13 @@ export function TransactionDetailModal({
                 </button>
               </>
             )}
-            <SignedAttachmentAnchor
-              rawUrl={previewAttachment.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
-              title="Buka di tab baru"
-              aria-label="Buka di tab baru"
+            <SignedAttachmentDownloadButton
+              attachment={previewAttachment}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+              title="Unduh file"
             >
-              <ExternalLink className="w-5 h-5" />
-            </SignedAttachmentAnchor>
+              <Download className="w-5 h-5" />
+            </SignedAttachmentDownloadButton>
             <button
               type="button"
               onClick={(e) => {
@@ -1649,7 +1645,7 @@ export function TransactionDetailModal({
           {isPdfAttachment(previewAttachment) ? (
             <div className="h-full min-h-[60vh] overflow-hidden rounded-lg bg-white shadow-2xl">
               <SignedAttachmentPdf
-                rawUrl={previewAttachment.url}
+                attachment={previewAttachment}
                 title={`Preview ${previewAttachment.filename}`}
                 className="h-full w-full"
               />
@@ -1657,7 +1653,7 @@ export function TransactionDetailModal({
           ) : (
             <div className="min-h-full flex items-center justify-center">
               <SignedAttachmentImage
-                rawUrl={previewAttachment.url}
+                attachment={previewAttachment}
                 alt={previewAttachment.filename}
                 className="max-w-full max-h-full rounded-lg shadow-2xl select-none"
                 style={{
@@ -1697,10 +1693,25 @@ function AttachmentPreviewItem({
   attachment: TransactionAttachment;
   onOpenPreview: (att: TransactionAttachment) => void;
 }) {
-  const url = useSignedAttachmentUrl(attachment.url);
+  const url = useDeliverableAttachmentUrl(attachment);
   const ready = !!url;
   const isImg = isImageType(attachment.mime_type);
   const isPdf = isPdfAttachment(attachment);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    e?.preventDefault();
+    if (!ready || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadAttachment(url, attachment.filename);
+    } catch {
+      // gagal unduh — diabaikan diam-diam; user bisa coba lagi
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   if (isImg) {
     return (
@@ -1780,29 +1791,28 @@ function AttachmentPreviewItem({
           >
             <Maximize2 className="h-4 w-4" />
           </button>
-          <a
-            href={ready ? url : undefined}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-disabled={!ready}
-            className={`inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-indigo-500 dark:hover:bg-gray-700 dark:hover:text-indigo-400 transition-colors ${ready ? '' : 'pointer-events-none'}`}
-            title="Buka di tab baru"
-            aria-label={`Buka ${attachment.filename} di tab baru`}
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={!ready || downloading}
+            className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-gray-700 dark:hover:text-indigo-400 transition-colors"
+            title="Unduh file"
+            aria-label={`Unduh ${attachment.filename}`}
           >
-            <ExternalLink className="h-4 w-4" />
-          </a>
+            <Download className="h-4 w-4" />
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <a
-      href={ready ? url : undefined}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-disabled={!ready}
-      className={`flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors group ${ready ? 'hover:bg-gray-100 dark:hover:bg-gray-800' : 'pointer-events-none opacity-60'}`}
+    <button
+      type="button"
+      onClick={handleDownload}
+      disabled={!ready || downloading}
+      aria-label={`Unduh ${attachment.filename}`}
+      className={`flex w-full items-center gap-3 p-3 text-left bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors group ${ready && !downloading ? 'hover:bg-gray-100 dark:hover:bg-gray-800' : 'cursor-not-allowed opacity-60'}`}
     >
       <FileText className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
       <div className="flex-1 min-w-0">
@@ -1814,7 +1824,7 @@ function AttachmentPreviewItem({
         </p>
       </div>
       <Download className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors flex-shrink-0" />
-    </a>
+    </button>
   );
 }
 
@@ -1837,28 +1847,56 @@ function PdfViewerFrame({
  * PDF iframe pembungkus yang pakai signed URL untuk src.
  */
 function SignedAttachmentPdf({
-  rawUrl,
+  attachment,
   title,
   ...rest
-}: { rawUrl: string; title: string } & React.IframeHTMLAttributes<HTMLIFrameElement>) {
-  const url = useSignedAttachmentUrl(rawUrl);
+}: { attachment: TransactionAttachment; title: string } & React.IframeHTMLAttributes<HTMLIFrameElement>) {
+  const url = useDeliverableAttachmentUrl(attachment);
   if (!url) return null;
   return <PdfViewerFrame {...rest} url={url} title={title} />;
 }
 
 /**
- * Anchor pembungkus yang otomatis pakai signed URL untuk href.
+ * Tombol unduh lampiran — resolve signed URL lalu trigger download (bukan buka
+ * di tab browser), supaya tidak perlu mengandalkan URL publik.
  */
-function SignedAttachmentAnchor({
-  rawUrl,
+function SignedAttachmentDownloadButton({
+  attachment,
   children,
-  ...rest
-}: { rawUrl: string } & React.AnchorHTMLAttributes<HTMLAnchorElement>) {
-  const url = useSignedAttachmentUrl(rawUrl);
+  className,
+  title,
+}: {
+  attachment: TransactionAttachment;
+  children: React.ReactNode;
+  className?: string;
+  title?: string;
+}) {
+  const url = useDeliverableAttachmentUrl(attachment);
+  const [downloading, setDownloading] = useState(false);
+  const ready = !!url;
+  const handleClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!ready || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadAttachment(url, attachment.filename);
+    } catch {
+      // gagal unduh — diabaikan
+    } finally {
+      setDownloading(false);
+    }
+  };
   return (
-    <a {...rest} href={url || undefined} aria-disabled={!url}>
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={!ready || downloading}
+      className={className}
+      title={title}
+      aria-label={title}
+    >
       {children}
-    </a>
+    </button>
   );
 }
 
@@ -1866,11 +1904,11 @@ function SignedAttachmentAnchor({
  * Image pembungkus yang pakai signed URL untuk src.
  */
 function SignedAttachmentImage({
-  rawUrl,
+  attachment,
   alt,
   ...rest
-}: { rawUrl: string; alt: string } & React.ImgHTMLAttributes<HTMLImageElement>) {
-  const url = useSignedAttachmentUrl(rawUrl);
+}: { attachment: TransactionAttachment; alt: string } & React.ImgHTMLAttributes<HTMLImageElement>) {
+  const url = useDeliverableAttachmentUrl(attachment);
   if (!url) return null;
   // eslint-disable-next-line @next/next/no-img-element
   return <img {...rest} src={url} alt={alt} />;
