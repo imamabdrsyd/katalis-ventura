@@ -37,9 +37,15 @@ export async function GET(request: NextRequest) {
       return forbidden('Hanya manager yang dapat mengunggah lampiran');
     }
 
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
-    const apiKey = process.env.CLOUDINARY_API_KEY!;
-    const apiSecret = process.env.CLOUDINARY_API_SECRET!;
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    if (!cloudName || !apiKey || !apiSecret) {
+      console.error('[upload-sign] Cloudinary credentials belum lengkap di env server');
+      return serverError(
+        new Error('Konfigurasi server belum lengkap (Cloudinary credentials)')
+      );
+    }
 
     const timestamp = Math.floor(Date.now() / 1000);
     const folder = `axion/attachments/${businessId}`;
