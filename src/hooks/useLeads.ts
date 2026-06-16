@@ -12,7 +12,7 @@ import type { Lead, LeadChannel, LeadMessage, LeadStatus } from '@/types';
  * useTransactions: filter, list, thread terpilih, dan semua aksi manager.
  */
 export function useLeads() {
-  const { activeBusinessId: businessId, userRole } = useBusinessContext();
+  const { activeBusinessId: businessId, userRole, refreshLeadCounts } = useBusinessContext();
   const canManage = isManagerRole(userRole);
 
   // Filter state
@@ -108,10 +108,23 @@ export function useLeads() {
     (leadId: string | null) => {
       setSelectedLeadId(leadId);
       setReplyText('');
-      if (leadId) refreshMessages(leadId);
-      else setMessages([]);
+      if (leadId) {
+        refreshMessages(leadId);
+        // Tandai sudah dilihat → badge notifikasi (bell + switcher) hilang.
+        // Optimistik: update last_read_at di list lokal lalu refresh count global.
+        const now = new Date().toISOString();
+        setLeads((prev) =>
+          prev.map((l) => (l.id === leadId ? { ...l, last_read_at: now } : l))
+        );
+        void leadsApi
+          .markLeadRead(leadId)
+          .then(() => refreshLeadCounts())
+          .catch((err) => console.warn('[useLeads] markLeadRead failed:', err));
+      } else {
+        setMessages([]);
+      }
     },
-    [refreshMessages]
+    [refreshMessages, refreshLeadCounts]
   );
 
   // ── Aksi manager ──

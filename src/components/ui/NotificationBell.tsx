@@ -1,7 +1,8 @@
 'use client';
 
-import { Bell, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { Bell, CheckCircle2, XCircle, AlertCircle, MessagesSquare } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase';
 
@@ -27,10 +28,13 @@ interface NotificationBellProps {
   count: number;
   href: string;
   userId: string;
+  /** Jumlah lead baru (status='new') di semua bisnis user. */
+  leadCount?: number;
   onChange?: () => void;
 }
 
-export function NotificationBell({ count, userId, onChange }: NotificationBellProps) {
+export function NotificationBell({ count, userId, leadCount = 0, onChange }: NotificationBellProps) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [requests, setRequests] = useState<JoinRequest[]>([]);
   const [loading, setLoading] = useState(false);
@@ -139,23 +143,58 @@ export function NotificationBell({ count, userId, onChange }: NotificationBellPr
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const totalBadge = count + leadCount;
+
+  const bellTitle = (() => {
+    const parts: string[] = [];
+    if (count > 0) parts.push(`${count} permintaan bergabung menunggu`);
+    if (leadCount > 0) parts.push(`${leadCount} lead baru`);
+    return parts.length > 0 ? parts.join(' · ') : 'Notifikasi';
+  })();
+
   return (
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 rounded-xl text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-        title={count > 0 ? `${count} permintaan bergabung menunggu` : 'Notifikasi'}
+        title={bellTitle}
       >
         <Bell className="w-5 h-5" />
-        {count > 0 && (
+        {totalBadge > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1 leading-none">
-            {count > 99 ? '99+' : count}
+            {totalBadge > 99 ? '99+' : totalBadge}
           </span>
         )}
       </button>
 
       {isOpen && (
         <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+          {/* Leads baru — masuk dari WhatsApp, Instagram, dll */}
+          {leadCount > 0 && (
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                router.push('/leads');
+              }}
+              className="w-full flex items-center gap-3 p-4 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors text-left"
+            >
+              <div className="w-9 h-9 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
+                <MessagesSquare className="w-4.5 h-4.5 text-indigo-500 dark:text-indigo-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {leadCount} lead baru
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Pesan masuk menunggu ditindaklanjuti
+                </p>
+              </div>
+              <span className="min-w-[20px] h-5 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 flex-shrink-0">
+                {leadCount > 99 ? '99+' : leadCount}
+              </span>
+            </button>
+          )}
+
           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <h3 className="font-semibold text-gray-900 dark:text-white">Permintaan Bergabung</h3>
           </div>

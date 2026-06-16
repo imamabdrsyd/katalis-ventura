@@ -500,7 +500,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
 
 function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: () => void; onQuickAddClick: () => void; isCollapsed: boolean }) {
   const router = useRouter();
-  const { user, businesses, activeBusiness, userRole, displayRole } = useBusinessContext();
+  const { user, businesses, activeBusiness, userRole, displayRole, leadCounts } = useBusinessContext();
   const { roleLabels, t } = useNavData();
   const { locale, setLocale } = useLanguage();
   const supabase = createClient();
@@ -603,6 +603,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
         {canManage && (
           <NotificationBell
             count={pendingCount}
+            leadCount={leadCounts.total}
             href="/businesses"
             userId={user?.id || ''}
             onChange={refreshNotifications}
@@ -714,8 +715,11 @@ function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
   const { navSections, t } = useNavData();
-  const { activeBusiness } = useBusinessContext();
+  const { activeBusiness, activeBusinessId, leadCounts } = useBusinessContext();
   const canManage = isManagerRole(userRole);
+
+  // Badge unread lead untuk bisnis yang sedang aktif (sidebar scoped ke 1 bisnis).
+  const activeLeadCount = activeBusinessId ? leadCounts.byBusiness[activeBusinessId] ?? 0 : 0;
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [hiddenNavItems, setHiddenNavItems] = useState<string[]>(SIDEBAR_DEFAULT_HIDDEN);
@@ -874,6 +878,7 @@ function Sidebar({
           ].filter(item => !hiddenNavItems.includes(item.href)).map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+            const badge = item.href === '/leads' ? activeLeadCount : 0;
             return (
               <div key={item.href} className="relative group">
                 <Link
@@ -885,14 +890,26 @@ function Sidebar({
                       : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-indigo-500 dark:hover:text-indigo-400'
                     }`}
                 >
-                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`} />
+                  <span className="relative flex-shrink-0">
+                    <Icon className={`w-5 h-5 ${isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`} />
+                    {/* Saat collapsed label tersembunyi — pakai dot kecil di ikon sbg indikator unread. */}
+                    {badge > 0 && isCollapsed && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white dark:ring-gray-800" />
+                    )}
+                  </span>
                   <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
                     {item.label}
                   </span>
+                  {badge > 0 && !isCollapsed && (
+                    <span className="ml-auto min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1 leading-none">
+                      {badge > 99 ? '99+' : badge}
+                    </span>
+                  )}
                 </Link>
                 {isCollapsed && (
                   <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg px-3 py-2 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-[60]">
                     {item.label}
+                    {badge > 0 && ` (${badge > 99 ? '99+' : badge})`}
                     <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
                   </div>
                 )}

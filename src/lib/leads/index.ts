@@ -36,6 +36,15 @@ export async function findActiveIntegration(
   return data as ChannelIntegration | null;
 }
 
+/**
+ * Nama fallback = "@<digits>" atau "<digits>" (raw sender/page ID), dipakai saat
+ * lookup username Graph API gagal. Dipakai utk self-heal: nama begini boleh
+ * ditimpa username asli, sedangkan username/nama beneran tidak.
+ */
+function isNumericFallbackName(name: string): boolean {
+  return /^@?\d+$/.test(name.trim());
+}
+
 export interface UpsertLeadParams {
   businessId: string;
   channel: LeadChannel;
@@ -76,7 +85,12 @@ export async function upsertLead(
     // Isi field identitas hanya kalau masih kosong — jangan timpa
     // data yang sudah dirapikan manager di inbox.
     const updates: Record<string, unknown> = { last_message_at: lastMessageAt };
-    if (params.name && !existing.name) updates.name = params.name;
+    // Nama: isi kalau kosong, ATAU self-heal saat nama lama cuma fallback
+    // numerik (@<digits>/<digits>) — terjadi bila lookup username gagal di
+    // awal (mis. token IG belum beres) lalu kini sudah dapat username asli.
+    if (params.name && (!existing.name || isNumericFallbackName(existing.name)) && !isNumericFallbackName(params.name)) {
+      updates.name = params.name;
+    }
     if (params.phone && !existing.phone) updates.phone = params.phone;
     if (params.email && !existing.email) updates.email = params.email;
 

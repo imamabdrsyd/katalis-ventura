@@ -994,6 +994,10 @@ export interface Lead {
   email?: string | null;
   status: LeadStatus;
   last_message_at?: string | null;
+  /** Waktu pesan inbound (customer) terakhir — sinyal unread. */
+  last_inbound_at?: string | null;
+  /** Waktu thread terakhir dibuka tim; lead unread jika < last_inbound_at. */
+  last_read_at?: string | null;
   assigned_to?: string | null;
   meta?: Record<string, unknown> | null;
   created_by?: string | null;

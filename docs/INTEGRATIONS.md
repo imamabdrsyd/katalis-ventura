@@ -100,6 +100,12 @@ Customer kirim DM → Meta POST /api/integrations/instagram/webhook
 Kirim DM hanya bisa dalam **24-jam window** sejak pesan customer terakhir.
 Di luar window Graph API menolak — error di-log, inbound tetap tersimpan.
 
+> **Nama pengirim**: di-resolve via Graph API (`fields=name,username`) → `@username`.
+> Kalau lookup gagal (token belum beres saat itu) → fallback `@<senderId>` (angka).
+> `upsertLead` **self-heal**: nama fallback numerik (`@<digits>`) otomatis di-upgrade
+> ke username asli saat pesan berikutnya berhasil di-lookup (`isNumericFallbackName`
+> di `src/lib/leads/index.ts`). Nama/username beneran tidak pernah ditimpa.
+
 > **Token expiry**: long-lived token ~60 hari (`token_expires_at` disimpan di
 > config). Job refresh otomatis = pekerjaan lanjutan; sementara reconnect manual
 > via tombol Hubungkan.
@@ -239,10 +245,39 @@ Status lead tetap `'new'` sampai manager menindaklanjuti.
 
 ---
 
+## 4.5 Notifikasi pesan masuk (badge bell + business switcher)
+
+Notifikasi inbox = **pesan masuk (inbound) yang belum dilihat**, bukan "menghitung
+leads" / `status='new'`. Dihitung **per-tim/shared** (bukan per-user).
+
+**Sinyal unread** — sebuah lead unread jika:
+`last_inbound_at IS NOT NULL AND (last_read_at IS NULL OR last_read_at < last_inbound_at)`
+
+- `leads.last_inbound_at` — di-set oleh trigger `trg_touch_lead_last_inbound` setiap
+  ada `lead_messages` inbound baru (apa pun jalur insert-nya). Tidak ikut bergerak
+  saat tim mengirim balasan (outbound), jadi tidak seperti `last_message_at`.
+- `leads.last_read_at` — di-set ke `now()` saat manager membuka thread lead
+  (`useLeads.selectLead` → `markLeadRead`). Begitu satu manager buka, badge hilang
+  untuk seluruh tim.
+
+**Aliran data:**
+- `useLeadCounts(businessIds, isManager)` (di `BusinessContext`) — satu query semua
+  bisnis user, grup unread per `business_id`. Realtime subscribe tabel `leads` +
+  polling 60 dtk. Hasil: `{ byBusiness, total }`.
+- **Bell** (`NotificationBell`) — badge = join requests + `leadCounts.total`; dropdown
+  punya section "lead baru" yang klik → `/leads`. Hanya render utk manager.
+- **Business switcher** — badge merah per baris bisnis (= unread bisnis itu) + badge
+  di trigger (= unread di bisnis yang sedang TIDAK aktif).
+
 ## 5. Referensi kode
 
 | Concern | File |
 |---------|------|
+| Notifikasi unread per bisnis (count) | `src/hooks/useLeadCounts.ts` |
+| Mark thread sudah dibaca | `src/lib/api/leads.ts` (`markLeadRead`) |
+| Badge bell | `src/components/ui/NotificationBell.tsx` |
+| Badge business switcher | `src/components/business/BusinessSwitcher.tsx` |
+| Schema read-state (last_read_at/last_inbound_at + trigger) | `database/migrations/105_leads_last_read_at.sql` |
 | OAuth Instagram (auth + callback) | `app/api/integrations/instagram/{auth,callback}/route.ts` |
 | Webhook Instagram | `app/api/integrations/instagram/webhook/route.ts` |
 | Kirim / handler / OAuth Instagram | `src/lib/instagram/` |

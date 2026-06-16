@@ -11,7 +11,8 @@ import {
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
-import { normalizeRole, pickHighestRole } from '@/lib/roles';
+import { normalizeRole, pickHighestRole, isManagerRole } from '@/lib/roles';
+import { useLeadCounts, type LeadCounts } from '@/hooks/useLeadCounts';
 import type { AuthUser } from '@supabase/supabase-js';
 import type { Business, UserRole } from '@/types';
 
@@ -31,6 +32,9 @@ interface BusinessContextType {
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
+  /** Jumlah lead baru (status='new') per bisnis + total — untuk badge notifikasi. */
+  leadCounts: LeadCounts;
+  refreshLeadCounts: () => Promise<void>;
 }
 
 const BusinessContext = createContext<BusinessContextType | null>(null);
@@ -199,6 +203,13 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     await fetchData();
   }, [fetchData]);
 
+  // Lead baru per bisnis untuk badge — hanya manager yang menindaklanjuti lead.
+  const businessIds = useMemo(() => businesses.map((b) => b.id), [businesses]);
+  const { leadCounts, refreshLeadCounts } = useLeadCounts(
+    businessIds,
+    isManagerRole(userRole)
+  );
+
   const switchRole = useCallback(
     (role: UserRole) => {
       if (!isSuperadmin) {
@@ -227,7 +238,9 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     loading,
     error,
     refetch,
-  }), [user, userRole, displayRole, isSuperadmin, businesses, activeBusiness, activeBusinessId, setActiveBusiness, switchRole, loading, error, refetch]);
+    leadCounts,
+    refreshLeadCounts,
+  }), [user, userRole, displayRole, isSuperadmin, businesses, activeBusiness, activeBusinessId, setActiveBusiness, switchRole, loading, error, refetch, leadCounts, refreshLeadCounts]);
 
   return (
     <BusinessContext.Provider value={contextValue}>

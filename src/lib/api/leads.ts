@@ -58,6 +58,19 @@ export async function getLeadMessages(leadId: string): Promise<LeadMessage[]> {
   return data as LeadMessage[];
 }
 
+/**
+ * Tandai thread lead sudah dilihat tim: set last_read_at = now().
+ * Menghilangkan badge notifikasi unread (bell + business switcher).
+ */
+export async function markLeadRead(leadId: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('leads')
+    .update({ last_read_at: new Date().toISOString() })
+    .eq('id', leadId);
+  if (error) throw new Error(error.message);
+}
+
 export async function updateLeadStatus(leadId: string, status: LeadStatus): Promise<Lead> {
   const supabase = createClient();
   const { data, error } = await supabase

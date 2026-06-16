@@ -40,6 +40,7 @@ export function BusinessSwitcher() {
     setActiveBusiness,
     userRole,
     refetch,
+    leadCounts,
   } = useBusinessContext();
   const { t } = useLanguage();
   const router = useRouter();
@@ -88,6 +89,13 @@ export function BusinessSwitcher() {
     }
   };
 
+  // Badge di trigger: jumlah lead baru di bisnis LAIN (yang sedang tidak dibuka),
+  // supaya user tahu ada lead masuk di bisnis yang tidak aktif tanpa membuka dropdown.
+  const otherBusinessLeadCount = businesses.reduce((sum, b) => {
+    if (b.id === activeBusiness?.id) return sum;
+    return sum + (leadCounts.byBusiness[b.id] ?? 0);
+  }, 0);
+
   const businessTypeLabel = activeBusiness?.business_type === 'jasa'
     ? t.businessForm.categoryJasa
     : activeBusiness?.business_type === 'produk'
@@ -111,6 +119,14 @@ export function BusinessSwitcher() {
               {businessTypeLabel}
             </span>
           )}
+          {otherBusinessLeadCount > 0 && (
+            <span
+              className="flex-shrink-0 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1 leading-none"
+              title={`${otherBusinessLeadCount} lead baru di bisnis lain`}
+            >
+              {otherBusinessLeadCount > 99 ? '99+' : otherBusinessLeadCount}
+            </span>
+          )}
           <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
 
@@ -119,7 +135,9 @@ export function BusinessSwitcher() {
             <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
             <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-50 overflow-visible">
               <div className="max-h-64 overflow-y-auto py-1">
-                {businesses.map((business) => (
+                {businesses.map((business) => {
+                  const businessLeadCount = leadCounts.byBusiness[business.id] ?? 0;
+                  return (
                   <button
                     key={business.id}
                     onClick={() => {
@@ -161,6 +179,14 @@ export function BusinessSwitcher() {
                     >
                       {business.business_name}
                     </span>
+                    {businessLeadCount > 0 && (
+                      <span
+                        className="flex-shrink-0 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1 leading-none"
+                        title={`${businessLeadCount} lead baru`}
+                      >
+                        {businessLeadCount > 99 ? '99+' : businessLeadCount}
+                      </span>
+                    )}
                     {business.id === activeBusiness?.id && (
                       <svg
                         className="w-4 h-4 text-indigo-500 dark:text-indigo-400 flex-shrink-0"
@@ -175,7 +201,8 @@ export function BusinessSwitcher() {
                       </svg>
                     )}
                   </button>
-                ))}
+                  );
+                })}
               </div>
               <div className="border-t border-gray-100 dark:border-gray-700 grid grid-cols-2 py-1.5">
                 {canManage && (
