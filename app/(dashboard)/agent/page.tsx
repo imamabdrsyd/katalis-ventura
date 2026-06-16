@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect, useMemo, type ReactNode } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBusinessContext } from '@/context/BusinessContext';
@@ -17,7 +18,7 @@ import type { SalesChannel } from '@/types';
 import { isManagerRole } from '@/lib/roles';
 import {
   Bot, AlertCircle, Send, ArrowUp, Sparkles, CheckCircle, XCircle, Loader2, Paperclip, Brain, ChevronRight, Globe,
-  TrendingUp, Receipt, BookOpen, MessageCircle, X, Network,
+  X, Network,
 } from 'lucide-react';
 
 const SUPPORTED_CHANNELS = [
@@ -442,24 +443,23 @@ export default function AgentPage() {
     <div className="flex flex-col h-[calc(100dvh-4rem)] w-full">
       {/* Header */}
       <div className="px-4 md:px-6 pt-4 md:pt-6 pb-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-              style={{
-                background: 'radial-gradient(circle at 30% 25%, #a5b4fc 0%, #6366f1 45%, #3730a3 100%)',
-              }}
-            >
-              <Bot className="w-5 h-5 text-white" />
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight shrink-0">Agentic Workspace</h1>
+          <div className="flex items-center gap-1.5 min-w-0">
+            {/* Chip nama tools — berjejer di header (sembunyi di layar kecil) */}
+            <div className="hidden lg:flex items-center gap-1.5">
+              {AGENT_TOOLS.map(tool => (
+                <span
+                  key={tool.fn}
+                  title={tool.label}
+                  className="px-2 py-1 rounded-full text-[10px] font-mono text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 whitespace-nowrap"
+                >
+                  {tool.fn}
+                </span>
+              ))}
             </div>
-            <div className="min-w-0">
-              <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">Agentic Workspace</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                {activeBusiness?.business_name ?? 'Bisnis Aktif'}
-              </p>
-            </div>
+            <AgentCapabilitiesBadge />
           </div>
-          <AgentCapabilitiesBadge />
         </div>
       </div>
 
@@ -702,40 +702,40 @@ const SUB_AGENTS: {
   role: string;
   desc: string;
   access: string;
-  Icon: typeof Bot;
-  accent: string;
+  avatar: string;
+  ring: string;
 }[] = [
   {
     name: 'Stanley',
     role: 'Analis Keuangan & FP&A',
     desc: 'Analisis tren, margin, burn rate, proyeksi.',
     access: 'Asisten FAB · tab Tanya',
-    Icon: TrendingUp,
-    accent: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/15',
+    avatar: '/persona/stanley.png',
+    ring: 'ring-emerald-200 dark:ring-emerald-500/30',
   },
   {
     name: 'Sri Mulyani',
     role: 'Penasihat Pajak',
     desc: 'Estimasi PPh final UMKM, PPN, kewajiban pajak (indikatif).',
     access: 'Asisten FAB · tab Tanya',
-    Icon: Receipt,
-    accent: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/15',
+    avatar: '/persona/sri-mulyani.png',
+    ring: 'ring-amber-200 dark:ring-amber-500/30',
   },
   {
     name: 'Bianca',
     role: 'Pembukuan',
     desc: 'Catat & klasifikasi transaksi, impor file ke pembukuan.',
     access: 'Asisten FAB · tab Catat',
-    Icon: BookOpen,
-    accent: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/15',
+    avatar: '/persona/bianca.png',
+    ring: 'ring-blue-200 dark:ring-blue-500/30',
   },
   {
     name: 'Concierge',
     role: 'Customer Service (leads)',
     desc: 'Balas calon pelanggan, adaptif per sektor bisnis.',
     access: 'Otomatis di Leads (IG/WA/OTA)',
-    Icon: MessageCircle,
-    accent: 'text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-500/15',
+    avatar: '/persona/concierge.png',
+    ring: 'ring-pink-200 dark:ring-pink-500/30',
   },
 ];
 
@@ -791,12 +791,15 @@ function AgentCapabilitiesBadge() {
               <div className="max-h-[60vh] overflow-y-auto">
                 <div className="px-2 py-2 space-y-0.5">
                   {SUB_AGENTS.map(a => {
-                    const Icon = a.Icon;
                     return (
                       <div key={a.name} className="flex items-start gap-2.5 px-2 py-2 rounded-xl">
-                        <span className={`flex items-center justify-center w-7 h-7 rounded-lg shrink-0 ${a.accent}`}>
-                          <Icon className="w-4 h-4" />
-                        </span>
+                        <Image
+                          src={a.avatar}
+                          alt={a.name}
+                          width={36}
+                          height={36}
+                          className={`w-9 h-9 rounded-full object-cover shrink-0 ring-2 ${a.ring} bg-gray-50 dark:bg-gray-700`}
+                        />
                         <div className="min-w-0 flex-1">
                           <p className="text-[12px] font-semibold text-gray-900 dark:text-gray-100 leading-tight">
                             {a.name} <span className="font-normal text-gray-400 dark:text-gray-500">· {a.role}</span>
