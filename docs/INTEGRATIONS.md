@@ -1,6 +1,6 @@
 # Integrasi Leads Hub — Instagram, WhatsApp & Webhook Inbound
 
-> Terakhir diupdate: 12 Juni 2026
+> Terakhir diupdate: 16 Juni 2026
 
 Leads Hub menerima pesan masuk dari berbagai channel dan menyimpannya sebagai
 `leads` + `lead_messages`. Jalur masuk:
@@ -24,15 +24,13 @@ Setiap bisnis yang mau menerima pesan butuh baris di `channel_integrations`.
   di `Bisnis → Integrasi` (OAuth) — tidak perlu SQL manual.
 - **WhatsApp**: baris dibuat **otomatis** lewat form "Hubungkan" di tab
   Integrasi (Phone Number ID + Access Token) — tidak perlu SQL manual.
-- **OTA (Airbnb/Booking.com)**: untuk sekarang masih di-insert manual:
-
-```sql
-INSERT INTO channel_integrations
-  (business_id, channel, is_active, external_account_id, ai_enabled, ai_mode, ai_persona)
-VALUES
-  -- Airbnb: external_account_id tidak dipakai (lookup via business_id di payload)
-  ('<business_uuid>', 'airbnb', true, NULL, true, 'draft', NULL);
-```
+- **OTA (Airbnb/Booking.com)**: baris dibuat **otomatis** lewat tombol
+  "Aktifkan" di kartu Airbnb/Booking.com pada tab Integrasi — tidak ada
+  token/OAuth untuk channel ini (pesan masuk lewat webhook generic Zapier/Make,
+  lihat §4), jadi tombol cuma memanggil `POST /api/integrations` dengan
+  `{ business_id, channel }`. `ai_mode` dipaksa `'draft'` di UI (tidak ada
+  API kirim resmi dari Airbnb/Booking.com untuk auto-reply). Disconnect via
+  tombol power → `DELETE /api/integrations/[id]` (soft-disable, `is_active=false`).
 
 - `ai_enabled=false` → pesan tetap tersimpan, tapi tanpa balasan/draft AI.
 - `ai_persona` → instruksi tone tambahan yang masuk ke system prompt AI.
@@ -207,6 +205,13 @@ Body (ternormalisasi — mapping dilakukan di Zapier/Make):
 - Response: `200 { ok, lead_id, draft_created }` | `401` secret salah |
   `422` integrasi channel belum aktif untuk bisnis tsb.
 
+### Aktivasi integrasi (UI, self-service)
+
+Sebelum webhook Zapier/Make bisa mengirim draft AI, channel harus aktif untuk
+bisnis tsb: manager klik **Aktifkan** di kartu Airbnb/Booking.com (tab
+Integrasi) — tidak perlu SQL manual (lihat §1). Tanpa baris `channel_integrations`
+aktif, `/api/webhooks/inbound` membalas `422` (integrasi belum aktif).
+
 ### Setup Zapier (contoh Airbnb)
 
 1. **Trigger**: Email by Zapier (atau Gmail) — forward notifikasi
@@ -243,8 +248,9 @@ Status lead tetap `'new'` sampai manager menindaklanjuti.
 | Kirim / handler / OAuth Instagram | `src/lib/instagram/` |
 | Token config per-bisnis (encrypt/decrypt/strip) | `src/lib/integrations/config.ts` |
 | API manajemen integrasi (list/PATCH/DELETE) | `app/api/integrations/route.ts`, `app/api/integrations/[id]/route.ts` |
+| Aktivasi OTA tanpa token (Airbnb/Booking.com) | `POST /api/integrations` (`app/api/integrations/route.ts`) |
 | Connect WhatsApp per-bisnis (kredensial) | `app/api/integrations/whatsapp/route.ts` |
-| UI tab Integrasi (Pesan & Sosial) | `src/components/integrations/ChannelIntegration.tsx` |
+| UI tab Integrasi (Pesan & Sosial, termasuk kartu OTA) | `src/components/integrations/ChannelIntegration.tsx` |
 | Webhook WhatsApp | `app/api/whatsapp/webhook/route.ts` |
 | Webhook generic inbound | `app/api/webhooks/inbound/route.ts` |
 | Helper leads (upsert, dedup, history) | `src/lib/leads/index.ts` |

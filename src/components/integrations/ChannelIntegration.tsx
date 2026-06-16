@@ -11,11 +11,12 @@ import {
   Bot,
   CheckCircle2,
   KeyRound,
+  Power,
 } from 'lucide-react';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import { Modal } from '@/components/ui/Modal';
 import { useLanguage } from '@/context/LanguageContext';
-import type { ChannelIntegration as Integration, AiMode } from '@/types';
+import type { ChannelIntegration as Integration, AiMode, LeadChannel } from '@/types';
 
 interface Props {
   businessId: string;
@@ -71,6 +72,8 @@ export function ChannelIntegration({ businessId, canManage, onReady }: Props) {
 
   const instagram = integrations.find((i) => i.channel === 'instagram' && i.is_active);
   const whatsapp = integrations.find((i) => i.channel === 'whatsapp' && i.is_active);
+  const airbnb = integrations.find((i) => i.channel === 'airbnb' && i.is_active);
+  const bookingCom = integrations.find((i) => i.channel === 'booking_com' && i.is_active);
 
   if (loading) return null;
 
@@ -97,6 +100,28 @@ export function ChannelIntegration({ businessId, canManage, onReady }: Props) {
       {/* WhatsApp — kredensial per-bisnis */}
       <WhatsAppCard
         integration={whatsapp}
+        businessId={businessId}
+        canManage={canManage}
+        onChanged={fetchIntegrations}
+      />
+
+      {/* Airbnb — webhook generic via Zapier/Make */}
+      <OtaCard
+        channel="airbnb"
+        label="Airbnb"
+        logoSrc="/sales channel/airbnb.png"
+        integration={airbnb}
+        businessId={businessId}
+        canManage={canManage}
+        onChanged={fetchIntegrations}
+      />
+
+      {/* Booking.com — webhook generic via Zapier/Make */}
+      <OtaCard
+        channel="booking_com"
+        label="Booking.com"
+        logoSrc="/sales channel/booking.png"
+        integration={bookingCom}
         businessId={businessId}
         canManage={canManage}
         onChanged={fetchIntegrations}
@@ -236,15 +261,17 @@ function AiSettingsPanel({
   integration,
   canManage,
   onChanged,
+  forceDraftOnly = false,
 }: {
   integration: Integration;
   canManage: boolean;
   onChanged: () => void;
+  forceDraftOnly?: boolean;
 }) {
   const { t } = useLanguage();
   const ci = t.channelIntegration;
   const [enabled, setEnabled] = useState(integration.ai_enabled);
-  const [mode, setMode] = useState<AiMode>(integration.ai_mode);
+  const [mode, setMode] = useState<AiMode>(forceDraftOnly ? 'draft' : integration.ai_mode);
   const [persona, setPersona] = useState(integration.ai_persona ?? '');
   const [saving, setSaving] = useState(false);
 
@@ -310,21 +337,25 @@ function AiSettingsPanel({
 
       {enabled && (
         <>
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{ci.replyMode}</p>
-            <SegmentedToggle<AiMode>
-              value={mode}
-              onChange={setMode}
-              ariaLabel={ci.replyMode}
-              options={[
-                { value: 'draft', label: ci.modeDraftLabel, icon: <Sparkles className="w-3.5 h-3.5" />, disabled: !canManage },
-                { value: 'auto', label: ci.modeAutoLabel, icon: <CheckCircle2 className="w-3.5 h-3.5" />, disabled: !canManage },
-              ]}
-            />
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
-            {mode === 'draft' ? ci.modeDraftDesc : ci.modeAutoDesc}
-          </p>
+          {!forceDraftOnly && (
+            <>
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{ci.replyMode}</p>
+                <SegmentedToggle<AiMode>
+                  value={mode}
+                  onChange={setMode}
+                  ariaLabel={ci.replyMode}
+                  options={[
+                    { value: 'draft', label: ci.modeDraftLabel, icon: <Sparkles className="w-3.5 h-3.5" />, disabled: !canManage },
+                    { value: 'auto', label: ci.modeAutoLabel, icon: <CheckCircle2 className="w-3.5 h-3.5" />, disabled: !canManage },
+                  ]}
+                />
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
+                {mode === 'draft' ? ci.modeDraftDesc : ci.modeAutoDesc}
+              </p>
+            </>
+          )}
 
           <div>
             <label className="text-sm font-medium text-gray-800 dark:text-gray-100">
@@ -354,6 +385,160 @@ function AiSettingsPanel({
             {saving ? ci.savingSettings : ci.saveSettings}
           </button>
         </div>
+      )}
+    </div>
+  );
+}
+
+function OtaHowItWorks() {
+  const { t } = useLanguage();
+  const ci = t.channelIntegration;
+  const steps = [ci.otaHowItWorksStep1, ci.otaHowItWorksStep2, ci.otaHowItWorksStep3];
+  return (
+    <div className="mt-4 bg-gray-50 dark:bg-gray-800/60 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+        {ci.howItWorksTitle}
+      </p>
+      <ol className="space-y-2">
+        {steps.map((step, i) => (
+          <li key={i} className="flex items-start gap-2.5 text-sm text-gray-600 dark:text-gray-300">
+            <span className="w-5 h-5 rounded-full bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-xs font-semibold flex items-center justify-center flex-shrink-0 mt-0.5">
+              {i + 1}
+            </span>
+            {step}
+          </li>
+        ))}
+      </ol>
+      <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">{ci.otaDocsLink}: docs/INTEGRATIONS.md</p>
+    </div>
+  );
+}
+
+function OtaCard({
+  channel,
+  label,
+  logoSrc,
+  integration,
+  businessId,
+  canManage,
+  onChanged,
+}: {
+  channel: LeadChannel;
+  label: string;
+  logoSrc: string;
+  integration?: Integration;
+  businessId: string;
+  canManage: boolean;
+  onChanged: () => void;
+}) {
+  const { t } = useLanguage();
+  const ci = t.channelIntegration;
+  const [saving, setSaving] = useState(false);
+  const isActive = !!integration;
+
+  const handleActivate = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/integrations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business_id: businessId, channel }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || ci.otaActivateFailed);
+      toast.success(ci.otaActivatedToast);
+      onChanged();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : ci.otaActivateFailed);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeactivate = async () => {
+    if (!integration) return;
+    if (!confirm(ci.otaDeactivateConfirm)) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/integrations/${integration.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || ci.otaDeactivateFailed);
+      }
+      toast.success(ci.otaDeactivated);
+      onChanged();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : ci.otaDeactivateFailed);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="card-static rounded-xl p-5 bg-white dark:bg-gray-800">
+      <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          <div className="relative flex-shrink-0">
+            <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
+              <Image src={logoSrc} alt={label} width={40} height={40} className="w-full h-full object-cover" />
+            </div>
+            {isActive && (
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-800" />
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">{label}</h3>
+              {isActive && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
+                  {ci.otaActive}
+                </span>
+              )}
+            </div>
+            <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{ci.otaDesc}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-shrink-0 sm:pt-0.5">
+          {isActive
+            ? canManage && (
+                <button
+                  onClick={handleDeactivate}
+                  disabled={saving}
+                  title={ci.otaDeactivate}
+                  className="btn-icon text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 disabled:opacity-50"
+                >
+                  <Power className="w-4 h-4" />
+                </button>
+              )
+            : canManage && (
+                <button
+                  onClick={handleActivate}
+                  disabled={saving}
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  {saving ? ci.otaActivating : ci.otaActivate}
+                </button>
+              )}
+        </div>
+      </div>
+
+      {!isActive && <OtaHowItWorks />}
+
+      {isActive && integration && (
+        <>
+          <p className="mt-4 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2">
+            {ci.otaDraftOnlyNotice}
+          </p>
+          <AiSettingsPanel
+            integration={integration}
+            canManage={canManage}
+            onChanged={onChanged}
+            forceDraftOnly
+          />
+        </>
       )}
     </div>
   );

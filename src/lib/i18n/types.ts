@@ -1028,6 +1028,22 @@ export interface Translations {
     waConnected: string;
     loadFailed: string;
     instagramConnectedToast: string;
+    otaTitle: string;
+    otaDesc: string;
+    otaActivate: string;
+    otaActivating: string;
+    otaActive: string;
+    otaActivatedToast: string;
+    otaActivateFailed: string;
+    otaDeactivateConfirm: string;
+    otaDeactivated: string;
+    otaDeactivateFailed: string;
+    otaDeactivate: string;
+    otaHowItWorksStep1: string;
+    otaHowItWorksStep2: string;
+    otaHowItWorksStep3: string;
+    otaDocsLink: string;
+    otaDraftOnlyNotice: string;
   };
 
   // E-Commerce Integration
