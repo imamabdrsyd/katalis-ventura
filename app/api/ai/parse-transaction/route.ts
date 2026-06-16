@@ -4,6 +4,8 @@ import { createServerClient, getAuthenticatedUser, getBusinessRoleForUser } from
 import { isManagerRole } from '@/lib/roles';
 import { smartResolveTransaction } from '@/lib/import/smartResolver';
 import { extractTransactionFromText, resolveTransactionDate } from '@/lib/ai/parseTransaction';
+import { generateTextGeminiVertex } from '@/lib/ai/provider';
+import { BIANCA_CHAT_PROMPT } from '@/lib/ai/prompts';
 import type { Account, TransactionCategory } from '@/types';
 
 const bodySchema = z.object({
@@ -72,6 +74,28 @@ export async function POST(req: NextRequest) {
   //    (AI provider chain → fallback regex). Sama dgn yg dipakai Telegram bot.
   const extractResult = await extractTransactionFromText(text, { preferVertex });
   if (!extractResult) {
+    // Vertex aktif → Bianca merespons secara komunikatif lewat LLM.
+    // Non-Vertex → tetap error kaku (hemat kuota gratis).
+    if (preferVertex) {
+      try {
+        const chatResult = await generateTextGeminiVertex(
+          BIANCA_CHAT_PROMPT,
+          [{ role: 'user', content: text }],
+          { temperature: 0.7, maxTokens: 256, plainText: true }
+        );
+        if (chatResult?.text) {
+          return NextResponse.json({
+            status: 'chat',
+            message: chatResult.text,
+            provider: chatResult.provider,
+            model: chatResult.model,
+          });
+        }
+      } catch {
+        // Vertex gagal → fallback ke pesan statis di bawah
+      }
+    }
+
     return NextResponse.json(
       { error: 'Tidak bisa mendeteksi transaksi. Coba mis. "bayar listrik 500rb"' },
       { status: 422 }

@@ -662,6 +662,19 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
 
       if (json.model) setActiveModel(json.model);
 
+      // Bianca merespons komunikatif (Vertex aktif, input bukan transaksi)
+      if (json.status === 'chat') {
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            role: 'assistant',
+            content: json.message ?? 'Ada yang bisa aku bantu catat?',
+          };
+          return updated;
+        });
+        return;
+      }
+
       // AI mengenali transaksi tapi nominal belum disebut → tanya balik
       if (json.status === 'needs_amount') {
         setPendingTx({
