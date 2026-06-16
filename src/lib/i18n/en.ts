@@ -938,6 +938,8 @@ export const en: Translations = {
   channelIntegration: {
     sectionTitle: 'Messaging & Social Integration',
     sectionDesc: 'Connect messaging accounts so DMs automatically go to the Leads inbox + replied by AI.',
+    otaSectionTitle: 'OTA Channels (via Zapier/Make)',
+    otaSectionDesc: 'Guest messages from Airbnb & Booking.com — activate then connect via Zapier/Make.',
     connected: 'Connected',
     connect: 'Connect',
     disconnect: 'Disconnect',

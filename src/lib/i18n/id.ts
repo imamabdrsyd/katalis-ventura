@@ -942,6 +942,8 @@ export const id: Translations = {
   channelIntegration: {
     sectionTitle: 'Integrasi Pesan & Sosial',
     sectionDesc: 'Hubungkan akun pesan agar DM masuk otomatis ke inbox Leads + dibalas AI.',
+    otaSectionTitle: 'Channel OTA (via Zapier/Make)',
+    otaSectionDesc: 'Pesan tamu dari Airbnb & Booking.com — aktifkan lalu hubungkan lewat Zapier/Make.',
     connected: 'Terhubung',
     connect: 'Hubungkan',
     disconnect: 'Putuskan koneksi',

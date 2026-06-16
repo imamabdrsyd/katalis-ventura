@@ -78,54 +78,68 @@ export function ChannelIntegration({ businessId, canManage, onReady }: Props) {
   if (loading) return null;
 
   return (
-    <div className="max-w-2xl space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-          {ci.sectionTitle}
-        </h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          {ci.sectionDesc}
-        </p>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6 items-start">
+      {/* Kolom kiri — Pesan & Sosial (Connect: OAuth / kredensial) */}
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+            {ci.sectionTitle}
+          </h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            {ci.sectionDesc}
+          </p>
+        </div>
+
+        {/* Instagram */}
+        <InstagramCard
+          integration={instagram}
+          businessId={businessId}
+          canManage={canManage}
+          onChanged={fetchIntegrations}
+        />
+
+        {/* WhatsApp — kredensial per-bisnis */}
+        <WhatsAppCard
+          integration={whatsapp}
+          businessId={businessId}
+          canManage={canManage}
+          onChanged={fetchIntegrations}
+        />
       </div>
 
-      {/* Instagram */}
-      <InstagramCard
-        integration={instagram}
-        businessId={businessId}
-        canManage={canManage}
-        onChanged={fetchIntegrations}
-      />
+      {/* Kolom kanan — Channel OTA (Activate: webhook generic Zapier/Make) */}
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+            {ci.otaSectionTitle}
+          </h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            {ci.otaSectionDesc}
+          </p>
+        </div>
 
-      {/* WhatsApp — kredensial per-bisnis */}
-      <WhatsAppCard
-        integration={whatsapp}
-        businessId={businessId}
-        canManage={canManage}
-        onChanged={fetchIntegrations}
-      />
+        {/* Airbnb — webhook generic via Zapier/Make */}
+        <OtaCard
+          channel="airbnb"
+          label="Airbnb"
+          logoSrc="/images/airbnb.png"
+          integration={airbnb}
+          businessId={businessId}
+          canManage={canManage}
+          onChanged={fetchIntegrations}
+        />
 
-      {/* Airbnb — webhook generic via Zapier/Make */}
-      <OtaCard
-        channel="airbnb"
-        label="Airbnb"
-        logoSrc="/images/airbnb.png"
-        integration={airbnb}
-        businessId={businessId}
-        canManage={canManage}
-        onChanged={fetchIntegrations}
-      />
-
-      {/* Booking.com — webhook generic via Zapier/Make */}
-      <OtaCard
-        channel="booking_com"
-        label="Booking.com"
-        logoSrc="/sales channel/booking.png"
-        integration={bookingCom}
-        businessId={businessId}
-        canManage={canManage}
-        onChanged={fetchIntegrations}
-      />
+        {/* Booking.com — webhook generic via Zapier/Make */}
+        <OtaCard
+          channel="booking_com"
+          label="Booking.com"
+          logoSrc="/sales channel/booking.png"
+          integration={bookingCom}
+          businessId={businessId}
+          canManage={canManage}
+          onChanged={fetchIntegrations}
+        />
+      </div>
     </div>
   );
 }

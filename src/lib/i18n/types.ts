@@ -985,6 +985,8 @@ export interface Translations {
   channelIntegration: {
     sectionTitle: string;
     sectionDesc: string;
+    otaSectionTitle: string;
+    otaSectionDesc: string;
     connected: string;
     connect: string;
     disconnect: string;
