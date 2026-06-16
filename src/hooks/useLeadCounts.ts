@@ -12,11 +12,15 @@ export interface LeadCounts {
 
 const EMPTY: LeadCounts = { byBusiness: {}, total: 0 };
 
+function computeTotal(byBusiness: Record<string, number>): number {
+  return Object.values(byBusiness).reduce((s, n) => s + n, 0);
+}
+
 /**
  * Hitung notifikasi pesan masuk yang belum dilihat (unread) per bisnis untuk
- * badge bell + business switcher. Bukan "menghitung leads"/status='new',
- * melainkan lead yang punya pesan inbound lebih baru dari last_read_at
- * (last_read_at di-set saat thread dibuka — lihat useLeads.selectLead).
+ * badge bell + sidebar Leads. Bukan "menghitung leads"/status='new', melainkan
+ * lead yang punya pesan inbound lebih baru dari last_read_at (di-set saat thread
+ * dibuka — lihat useLeads.selectLead).
  *
  * Satu query untuk semua bisnis user, lalu di-grup di client.
  * Realtime: re-fetch saat tabel `leads` berubah (RLS sudah filter ke bisnis user).
@@ -25,6 +29,9 @@ const EMPTY: LeadCounts = { byBusiness: {}, total: 0 };
 export function useLeadCounts(businessIds: string[], enabled: boolean) {
   const [counts, setCounts] = useState<LeadCounts>(EMPTY);
   const supabaseRef = useRef(createClient());
+  // Channel name unik per instance hook → hindari tabrakan channel duplikat
+  // yang bikin subscribe gagal diam-diam (badge tidak update setelah read).
+  const channelIdRef = useRef(`lead-counts-${Math.random().toString(36).slice(2)}`);
 
   // Stabilkan dependency: gabung jadi string agar tidak re-subscribe tiap render.
   const idsKey = businessIds.join(',');
@@ -52,22 +59,34 @@ export function useLeadCounts(businessIds: string[], enabled: boolean) {
       }
 
       const byBusiness: Record<string, number> = {};
-      let total = 0;
       for (const row of data ?? []) {
         const unread =
           !row.last_read_at ||
           new Date(row.last_read_at) < new Date(row.last_inbound_at as string);
         if (!unread) continue;
         byBusiness[row.business_id] = (byBusiness[row.business_id] ?? 0) + 1;
-        total += 1;
       }
-      setCounts({ byBusiness, total });
+      setCounts({ byBusiness, total: computeTotal(byBusiness) });
     } catch (err) {
       console.error('[useLeadCounts] failed:', err);
       setCounts(EMPTY);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, idsKey]);
+
+  /**
+   * Optimistik: nol-kan unread satu bisnis SEKARANG (saat thread dibuka), tanpa
+   * menunggu round-trip. Mencegah badge "nyangkut" akibat race read-your-write
+   * atau realtime yang telat. refresh() menyusul untuk rekonsiliasi.
+   */
+  const clearBusiness = useCallback((businessId: string) => {
+    setCounts((prev) => {
+      if (!prev.byBusiness[businessId]) return prev;
+      const byBusiness = { ...prev.byBusiness };
+      delete byBusiness[businessId];
+      return { byBusiness, total: computeTotal(byBusiness) };
+    });
+  }, []);
 
   useEffect(() => {
     refresh();
@@ -78,7 +97,7 @@ export function useLeadCounts(businessIds: string[], enabled: boolean) {
 
     const supabase = supabaseRef.current;
     const channel = supabase
-      .channel('lead-counts')
+      .channel(channelIdRef.current)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'leads' },
@@ -95,5 +114,5 @@ export function useLeadCounts(businessIds: string[], enabled: boolean) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, idsKey, refresh]);
 
-  return { leadCounts: counts, refreshLeadCounts: refresh };
+  return { leadCounts: counts, refreshLeadCounts: refresh, clearBusinessLeadCount: clearBusiness };
 }

@@ -32,9 +32,11 @@ interface BusinessContextType {
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
-  /** Jumlah lead baru (status='new') per bisnis + total — untuk badge notifikasi. */
+  /** Jumlah lead unread per bisnis + total — untuk badge notifikasi. */
   leadCounts: LeadCounts;
   refreshLeadCounts: () => Promise<void>;
+  /** Optimistik nol-kan badge unread satu bisnis (dipanggil saat thread dibuka). */
+  clearBusinessLeadCount: (businessId: string) => void;
 }
 
 const BusinessContext = createContext<BusinessContextType | null>(null);
@@ -205,7 +207,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
 
   // Lead baru per bisnis untuk badge — hanya manager yang menindaklanjuti lead.
   const businessIds = useMemo(() => businesses.map((b) => b.id), [businesses]);
-  const { leadCounts, refreshLeadCounts } = useLeadCounts(
+  const { leadCounts, refreshLeadCounts, clearBusinessLeadCount } = useLeadCounts(
     businessIds,
     isManagerRole(userRole)
   );
@@ -240,7 +242,8 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     refetch,
     leadCounts,
     refreshLeadCounts,
-  }), [user, userRole, displayRole, isSuperadmin, businesses, activeBusiness, activeBusinessId, setActiveBusiness, switchRole, loading, error, refetch, leadCounts, refreshLeadCounts]);
+    clearBusinessLeadCount,
+  }), [user, userRole, displayRole, isSuperadmin, businesses, activeBusiness, activeBusinessId, setActiveBusiness, switchRole, loading, error, refetch, leadCounts, refreshLeadCounts, clearBusinessLeadCount]);
 
   return (
     <BusinessContext.Provider value={contextValue}>

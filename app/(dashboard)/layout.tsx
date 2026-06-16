@@ -894,14 +894,14 @@ function Sidebar({
                     <Icon className={`w-5 h-5 ${isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`} />
                     {/* Saat collapsed label tersembunyi — pakai dot kecil di ikon sbg indikator unread. */}
                     {badge > 0 && isCollapsed && (
-                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white dark:ring-gray-800" />
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-indigo-500 rounded-full ring-2 ring-white dark:ring-gray-800" />
                     )}
                   </span>
                   <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
                     {item.label}
                   </span>
                   {badge > 0 && !isCollapsed && (
-                    <span className="ml-auto min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1 leading-none">
+                    <span className="ml-auto min-w-[18px] h-[18px] flex items-center justify-center bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold rounded-full px-1.5 leading-none">
                       {badge > 99 ? '99+' : badge}
                     </span>
                   )}

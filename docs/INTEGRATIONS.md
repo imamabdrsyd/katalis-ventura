@@ -245,7 +245,7 @@ Status lead tetap `'new'` sampai manager menindaklanjuti.
 
 ---
 
-## 4.5 Notifikasi pesan masuk (badge bell + business switcher)
+## 4.5 Notifikasi pesan masuk (badge bell + sidebar Leads)
 
 Notifikasi inbox = **pesan masuk (inbound) yang belum dilihat**, bukan "menghitung
 leads" / `status='new'`. Dihitung **per-tim/shared** (bukan per-user).
@@ -262,12 +262,20 @@ leads" / `status='new'`. Dihitung **per-tim/shared** (bukan per-user).
 
 **Aliran data:**
 - `useLeadCounts(businessIds, isManager)` (di `BusinessContext`) — satu query semua
-  bisnis user, grup unread per `business_id`. Realtime subscribe tabel `leads` +
-  polling 60 dtk. Hasil: `{ byBusiness, total }`.
-- **Bell** (`NotificationBell`) — badge = join requests + `leadCounts.total`; dropdown
-  punya section "lead baru" yang klik → `/leads`. Hanya render utk manager.
-- **Business switcher** — badge merah per baris bisnis (= unread bisnis itu) + badge
-  di trigger (= unread di bisnis yang sedang TIDAK aktif).
+  bisnis user, grup unread per `business_id`. Realtime subscribe tabel `leads`
+  (channel name unik per instance, hindari tabrakan) + polling 60 dtk. Hasil:
+  `{ byBusiness, total }` + `refreshLeadCounts` + `clearBusinessLeadCount`.
+- **Bell** (`NotificationBell`) — badge MERAH = join requests + `leadCounts.total`;
+  dropdown punya section "lead baru" yang klik → `/leads`. Hanya render utk manager.
+- **Sidebar menu Leads** — badge INDIGO (primary) = unread bisnis aktif
+  (`leadCounts.byBusiness[activeBusinessId]`); jadi dot indigo kecil di ikon saat
+  sidebar collapsed.
+- **Business switcher** — TIDAK ada badge (keputusan user).
+
+**Anti badge "nyangkut":** saat thread dibuka, `selectLead` (1) update `last_read_at`
+list lokal, (2) panggil `clearBusinessLeadCount(businessId)` → nol-kan badge bisnis
+itu seketika di context (anti race read-your-write), (3) `markLeadRead` persist +
+`refreshLeadCounts` rekonsiliasi.
 
 ## 5. Referensi kode
 
@@ -275,8 +283,8 @@ leads" / `status='new'`. Dihitung **per-tim/shared** (bukan per-user).
 |---------|------|
 | Notifikasi unread per bisnis (count) | `src/hooks/useLeadCounts.ts` |
 | Mark thread sudah dibaca | `src/lib/api/leads.ts` (`markLeadRead`) |
-| Badge bell | `src/components/ui/NotificationBell.tsx` |
-| Badge business switcher | `src/components/business/BusinessSwitcher.tsx` |
+| Badge bell (merah) | `src/components/ui/NotificationBell.tsx` |
+| Badge sidebar Leads (indigo) | `app/(dashboard)/layout.tsx` (Sidebar) |
 | Schema read-state (last_read_at/last_inbound_at + trigger) | `database/migrations/105_leads_last_read_at.sql` |
 | OAuth Instagram (auth + callback) | `app/api/integrations/instagram/{auth,callback}/route.ts` |
 | Webhook Instagram | `app/api/integrations/instagram/webhook/route.ts` |
