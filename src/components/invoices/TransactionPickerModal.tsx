@@ -12,7 +12,7 @@ import {
   isSettlementEntry,
 } from '@/lib/accounting/guidance';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { CheckSquare, Square, Receipt, Search, AlertCircle } from 'lucide-react';
+import { CheckSquare, Square, Receipt, Search, AlertCircle, ChevronDown } from 'lucide-react';
 import type { Transaction, Invoice } from '@/types';
 
 interface TransactionPickerModalProps {
@@ -179,24 +179,27 @@ export function TransactionPickerModal({
               className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
-          <select
-            value={customerFilter}
-            onChange={(e) => setCustomerFilter(e.target.value)}
-            disabled={selectedTransactions.length > 0}
-            className="sm:w-56 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60"
-            title={
-              selectedTransactions.length > 0
-                ? 'Customer dikunci selama ada transaksi yang dipilih'
-                : undefined
-            }
-          >
-            <option value="">Semua customer</option>
-            {customers.map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
+          <div className="relative sm:w-56">
+            <select
+              value={customerFilter}
+              onChange={(e) => setCustomerFilter(e.target.value)}
+              disabled={selectedTransactions.length > 0}
+              className="w-full appearance-none px-3 py-2 pr-9 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+              title={
+                selectedTransactions.length > 0
+                  ? 'Customer dikunci selama ada transaksi yang dipilih'
+                  : undefined
+              }
+            >
+              <option value="">Semua customer</option>
+              {customers.map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          </div>
         </div>
 
         {/* Lock notice */}
@@ -232,10 +235,10 @@ export function TransactionPickerModal({
                   <li
                     key={t.id}
                     onClick={() => toggleSelect(t.id)}
-                    className={`group flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
+                    className={`group flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-l-2 ${
                       checked
-                        ? 'bg-gray-50 dark:bg-gray-800/60'
-                        : 'hover:bg-gray-100 dark:hover:bg-gray-700/60'
+                        ? 'bg-primary-50/60 dark:bg-primary-900/15 border-primary-500'
+                        : 'border-transparent hover:bg-gray-100 dark:hover:bg-gray-700/60'
                     }`}
                   >
                     <div className="flex-shrink-0">

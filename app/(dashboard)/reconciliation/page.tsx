@@ -418,8 +418,8 @@ function ReconciliationRow({
 
   return (
     <div
-      className={`group transition-colors ${!isReconciled ? 'cursor-pointer' : ''} ${
-        isSelected ? 'bg-emerald-50/60 dark:bg-emerald-900/10' : 'hover:bg-gray-50 dark:hover:bg-gray-700/40'
+      className={`group transition-colors border-l-2 ${!isReconciled ? 'cursor-pointer' : ''} ${
+        isSelected ? 'bg-primary-50/60 dark:bg-primary-900/15 border-primary-500' : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-700/40'
       }`}
       onClick={!isReconciled ? onToggle : undefined}
     >
