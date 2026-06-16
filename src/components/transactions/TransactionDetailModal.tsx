@@ -27,7 +27,7 @@ import {
 import { useInvoiceFromTransactions } from '@/hooks/useInvoiceFromTransactions';
 import { CreateInvoiceFromTransactionsModal } from '@/components/invoices/CreateInvoiceFromTransactionsModal';
 import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
-import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, RotateCcw, ZoomIn, ZoomOut, Receipt, CirclePlus, ChevronRight, Maximize2 } from 'lucide-react';
+import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, RotateCcw, ZoomIn, ZoomOut, Receipt, CirclePlus, ChevronRight, Maximize2, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { updateTransaction } from '@/lib/api/transactions';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
@@ -1698,6 +1698,9 @@ function AttachmentPreviewItem({
   const isImg = isImageType(attachment.mime_type);
   const isPdf = isPdfAttachment(attachment);
   const [downloading, setDownloading] = useState(false);
+  const [contentLoaded, setContentLoaded] = useState(false);
+  // Reset status muat saat URL berubah (mis. signed URL baru di-resolve)
+  useEffect(() => setContentLoaded(false), [url]);
 
   const handleDownload = async (e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -1722,18 +1725,22 @@ function AttachmentPreviewItem({
         className="block w-full text-left group disabled:opacity-60 disabled:cursor-not-allowed"
         aria-label={`Lihat ${attachment.filename}`}
       >
-        <div className="relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-          {ready ? (
+        <div className="relative min-h-[8rem] overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+          {ready && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={url}
               alt={attachment.filename}
-              className="w-full max-h-64 object-contain group-hover:opacity-90 transition-opacity"
+              onLoad={() => setContentLoaded(true)}
+              className={`w-full max-h-64 object-contain transition-opacity duration-300 ${contentLoaded ? 'opacity-100 group-hover:opacity-90' : 'opacity-0'}`}
             />
-          ) : (
-            <div className="w-full h-32" />
           )}
-          {ready && (
+          {(!ready || !contentLoaded) && (
+            <div className="absolute inset-0 animate-pulse bg-gray-100 dark:bg-gray-800">
+              <AttachmentLoading label="Memuat gambar…" />
+            </div>
+          )}
+          {ready && contentLoaded && (
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
               <ZoomIn className="w-6 h-6 text-white drop-shadow-lg" />
             </div>
@@ -1751,14 +1758,18 @@ function AttachmentPreviewItem({
     return (
       <div className={`overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 ${ready ? '' : 'opacity-60'}`}>
         <div className="relative h-80 sm:h-96 bg-gray-100 dark:bg-gray-900">
-          {ready ? (
+          {ready && (
             <PdfViewerFrame
               url={url}
               title={`Preview ${attachment.filename}`}
-              className="h-full w-full"
+              onLoad={() => setContentLoaded(true)}
+              className={`h-full w-full transition-opacity duration-300 ${contentLoaded ? 'opacity-100' : 'opacity-0'}`}
             />
-          ) : (
-            <div className="h-full w-full" />
+          )}
+          {(!ready || !contentLoaded) && (
+            <div className="absolute inset-0">
+              <AttachmentLoading label="Memuat PDF…" />
+            </div>
           )}
           <button
             type="button"
@@ -1843,17 +1854,48 @@ function PdfViewerFrame({
   );
 }
 
+/** Indikator loading lampiran (saat menunggu signed URL + file termuat). */
+function AttachmentLoading({ dark, label = 'Memuat…' }: { dark?: boolean; label?: string }) {
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-2">
+      <Loader2 className={`h-7 w-7 animate-spin ${dark ? 'text-white/80' : 'text-indigo-500'}`} />
+      <span className={`text-[11px] font-medium ${dark ? 'text-white/60' : 'text-gray-400 dark:text-gray-500'}`}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
 /**
  * PDF iframe pembungkus yang pakai signed URL untuk src.
  */
 function SignedAttachmentPdf({
   attachment,
   title,
+  className,
   ...rest
 }: { attachment: TransactionAttachment; title: string } & React.IframeHTMLAttributes<HTMLIFrameElement>) {
   const url = useDeliverableAttachmentUrl(attachment);
-  if (!url) return null;
-  return <PdfViewerFrame {...rest} url={url} title={title} />;
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => setLoaded(false), [url]);
+  return (
+    <div className="relative h-full w-full">
+      {url && (
+        <PdfViewerFrame
+          {...rest}
+          url={url}
+          title={title}
+          onLoad={() => setLoaded(true)}
+          className={`${className ?? ''} transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        />
+      )}
+      {(!url || !loaded) && (
+        <div className="absolute inset-0">
+          <AttachmentLoading dark label="Memuat PDF…" />
+        </div>
+      )}
+    </div>
+  );
 }
 
 /**
@@ -1906,10 +1948,29 @@ function SignedAttachmentDownloadButton({
 function SignedAttachmentImage({
   attachment,
   alt,
+  className,
   ...rest
 }: { attachment: TransactionAttachment; alt: string } & React.ImgHTMLAttributes<HTMLImageElement>) {
   const url = useDeliverableAttachmentUrl(attachment);
-  if (!url) return null;
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img {...rest} src={url} alt={alt} />;
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => setLoaded(false), [url]);
+  return (
+    <div className={`relative flex items-center justify-center ${loaded ? '' : 'min-h-[40vh] min-w-[260px]'}`}>
+      {url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          {...rest}
+          src={url}
+          alt={alt}
+          onLoad={() => setLoaded(true)}
+          className={`${className ?? ''} transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        />
+      )}
+      {(!url || !loaded) && (
+        <div className="absolute inset-0">
+          <AttachmentLoading dark label="Memuat gambar…" />
+        </div>
+      )}
+    </div>
+  );
 }
