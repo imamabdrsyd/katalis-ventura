@@ -232,17 +232,17 @@ export function TransactionPickerModal({
                   <li
                     key={t.id}
                     onClick={() => toggleSelect(t.id)}
-                    className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
+                    className={`group flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
                       checked
-                        ? 'bg-emerald-50 dark:bg-emerald-900/20'
+                        ? 'bg-gray-50 dark:bg-gray-800/60'
                         : 'hover:bg-gray-100 dark:hover:bg-gray-700/60'
                     }`}
                   >
                     <div className="flex-shrink-0">
                       {checked ? (
-                        <CheckSquare className="w-5 h-5 text-emerald-500" />
+                        <CheckSquare className="w-5 h-5 text-gray-900 dark:text-gray-100" />
                       ) : (
-                        <Square className="w-5 h-5 text-gray-400" />
+                        <Square className="w-5 h-5 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 dark:group-hover:text-gray-500 transition-colors" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">

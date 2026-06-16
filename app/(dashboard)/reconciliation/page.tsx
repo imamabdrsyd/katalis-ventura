@@ -3,7 +3,8 @@
 import { Suspense, useState, useRef, useEffect } from 'react';
 import {
   CheckCircle2,
-  Circle,
+  CheckSquare,
+  Square,
   Calendar,
   Check,
   Undo2,
@@ -427,9 +428,9 @@ function ReconciliationRow({
         {/* Checkbox */}
         <div className="flex-shrink-0">
           {isReconciled || isSelected ? (
-            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+            <CheckSquare className="w-5 h-5 text-gray-900 dark:text-gray-100" />
           ) : (
-            <Circle className="w-5 h-5 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 dark:group-hover:text-gray-500 transition-colors" />
+            <Square className="w-5 h-5 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 dark:group-hover:text-gray-500 transition-colors" />
           )}
         </div>
 
@@ -472,9 +473,9 @@ function ReconciliationRow({
       <div className="flex sm:hidden items-center gap-3 px-4 py-3">
         <div className="flex-shrink-0">
           {isReconciled || isSelected ? (
-            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+            <CheckSquare className="w-5 h-5 text-gray-900 dark:text-gray-100" />
           ) : (
-            <Circle className="w-5 h-5 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 transition-colors" />
+            <Square className="w-5 h-5 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 transition-colors" />
           )}
         </div>
         <div className="flex-1 min-w-0">
