@@ -116,16 +116,26 @@ export async function uploadAttachment(
   const validationError = validateFile(file);
   if (validationError) throw new Error(validationError);
 
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
-  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!;
+  // Signed upload: server menandatangani param dengan type=authenticated supaya
+  // lampiran langsung private (tidak bisa diakses tanpa signed URL). Berbeda dari
+  // galeri link-in-bio yang tetap pakai preset unsigned publik.
+  const signRes = await fetch(
+    `/api/transactions/attachments/upload-sign?businessId=${encodeURIComponent(businessId)}`,
+    { credentials: 'include' }
+  );
+  if (!signRes.ok) throw new Error('Gagal menyiapkan upload lampiran');
+  const { data: sign } = await signRes.json();
+  const { cloudName, apiKey, timestamp, folder, type, signature } = sign;
 
   // Cloudinary memisahkan PDF (resource_type=raw) dan gambar (resource_type=image).
-  // PDF yang di-upload ke /image/upload tidak bisa di-deliver tanpa add-on PDF.
   // Pakai /auto/upload supaya Cloudinary auto-detect: PDF jadi raw, image jadi image.
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('upload_preset', uploadPreset);
-  formData.append('folder', `axion/attachments/${businessId}`);
+  formData.append('api_key', apiKey);
+  formData.append('timestamp', String(timestamp));
+  formData.append('folder', folder);
+  formData.append('type', type);
+  formData.append('signature', signature);
 
   const res = await fetch(
     `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
