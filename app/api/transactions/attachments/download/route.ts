@@ -14,6 +14,7 @@ const PUBLIC_ID_PREFIX_REGEX = /^axion\/attachments\/([0-9a-f-]{36})\//i;
 const querySchema = z.object({
   public_id: z.string().min(1).max(500),
   resource_type: z.enum(['image', 'raw', 'video']).optional(),
+  type: z.enum(['upload', 'authenticated']).optional(),
   filename: z.string().min(1).max(255).optional(),
 });
 
@@ -66,14 +67,17 @@ export async function GET(request: NextRequest) {
     }
 
     cloudinary.config({ cloud_name: cloudName, api_key: apiKey, api_secret: apiSecret, secure: true });
-    const signedUrl = cloudinary.url(publicId, {
-      type: 'authenticated',
+    // File lama = type 'upload' (publik, tak perlu sign); file baru/migrasi =
+    // 'authenticated' (perlu signed URL). Server fetch dua-duanya → tak ada CORS.
+    const deliveryType = parsed.data.type ?? 'authenticated';
+    const fileUrl = cloudinary.url(publicId, {
+      type: deliveryType,
       resource_type: resourceType,
-      sign_url: true,
+      sign_url: deliveryType === 'authenticated',
       secure: true,
     });
 
-    const upstream = await fetch(signedUrl, { cache: 'no-store' });
+    const upstream = await fetch(fileUrl, { cache: 'no-store' });
     if (!upstream.ok || !upstream.body) {
       return NextResponse.json({ error: 'Gagal mengambil file dari storage' }, { status: 502 });
     }

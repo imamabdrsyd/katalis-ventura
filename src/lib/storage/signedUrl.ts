@@ -72,6 +72,15 @@ export function isCloudinaryAuthenticatedUrl(url: string | null | undefined): bo
   return /res\.cloudinary\.com\/[^/]+\/(?:image|raw|video)\/authenticated\//.test(url);
 }
 
+/** Lampiran Cloudinary kita (upload publik lama ATAU authenticated baru) di folder axion/attachments. */
+export function isCloudinaryAttachmentUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  return (
+    /res\.cloudinary\.com\/[^/]+\/(?:image|raw|video)\/(?:upload|authenticated)\//.test(url) &&
+    url.includes('/axion/attachments/')
+  );
+}
+
 export async function fetchSignedCloudinaryUrl(
   publicId: string,
   resourceType: 'image' | 'raw' | 'video' = 'image'
@@ -120,14 +129,18 @@ export async function triggerAttachmentDownload(att: DeliverableAttachment): Pro
   const rawUrl = att.url ?? '';
   const filename = att.filename ?? 'lampiran';
 
-  if (isCloudinaryAuthenticatedUrl(rawUrl) && att.path) {
+  // Semua lampiran Cloudinary (upload publik lama ATAU authenticated baru) lewat
+  // proxy server: same-origin → bebas CORS, dan tetap dicek auth+role di server.
+  if (isCloudinaryAttachmentUrl(rawUrl) && att.path) {
     const params = new URLSearchParams({
       public_id: att.path,
       resource_type: att.resource_type ?? 'image',
+      type: isCloudinaryAuthenticatedUrl(rawUrl) ? 'authenticated' : 'upload',
       filename,
     });
     const a = document.createElement('a');
     a.href = `/api/transactions/attachments/download?${params.toString()}`;
+    a.download = filename;
     a.rel = 'noopener';
     document.body.appendChild(a);
     a.click();
@@ -135,6 +148,7 @@ export async function triggerAttachmentDownload(att: DeliverableAttachment): Pro
     return;
   }
 
+  // Lainnya (legacy Supabase, blob, eksternal): resolve URL lalu fetch→blob.
   const url = await resolveDeliverableAttachmentUrl(att);
   if (!url) throw new Error('URL lampiran tidak tersedia');
   await downloadAttachment(url, filename);
