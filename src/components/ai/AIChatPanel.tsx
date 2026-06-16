@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback, useId } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check, Paperclip, FileSpreadsheet, Brain, ChevronRight, ChevronDown, ExternalLink, Bot } from 'lucide-react';
+import { X, Send, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check, Paperclip, FileSpreadsheet, Brain, ChevronRight, ChevronDown, ExternalLink, Bot, BookOpen, TrendingUp, Receipt, Sparkles } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { parseExcelFile, parseExcelRaw, applyColumnMapping, validateFile, type ColumnMapping } from '@/lib/import/excelParser';
 import { validateRowsSmart } from '@/lib/import/excelValidator';
@@ -288,6 +288,15 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
     return 'auto';
   });
   const [providerDropdownOpen, setProviderDropdownOpen] = useState(false);
+  // Persona sub-agent keuangan untuk mode Tanya. null = AXION Agent generalis (default).
+  const [persona, setPersona] = useState<'pembukuan' | 'analis_fpna' | 'pajak' | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('axion_ai_persona');
+      if (saved === 'pembukuan' || saved === 'analis_fpna' || saved === 'pajak') return saved;
+    }
+    return null;
+  });
+  const [personaDropdownOpen, setPersonaDropdownOpen] = useState(false);
   // Apakah Claude (Vertex AI) dikonfigurasi di server — kalau tidak, opsi disabled
   const [claudeAvailable, setClaudeAvailable] = useState(false);
   // Konteks transaksi yang nominalnya belum disebut — diisi saat API balas
@@ -463,7 +472,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
       const res = await fetch('/api/ai/agent-query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ business_id: businessId, message: trimmed, history }),
+        body: JSON.stringify({ business_id: businessId, message: trimmed, history, ...(persona ? { persona } : {}) }),
       });
 
       if (!res.ok || !res.body) {
@@ -564,7 +573,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
     } finally {
       setLoading(false);
     }
-  }, [messages, loading, businessId]);
+  }, [messages, loading, businessId, persona]);
 
   // Mode "record": parse teks → tampilkan preview draft transaksi (belum disimpan).
   // Kalau sebelumnya AI minta nominal (pendingTx), gabungkan jawaban user dgn
@@ -1317,6 +1326,72 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                     </span>
                   </button>
                 </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                {/* Pemilih persona sub-agent keuangan — hanya di mode Tanya */}
+                {mode === 'ask' && (() => {
+                  const PERSONA_OPTS = [
+                    { id: null as null, label: 'Umum', desc: 'AXION Agent serbaguna', Icon: Sparkles },
+                    { id: 'pembukuan' as const, label: 'Pembukuan', desc: 'Akurasi & klasifikasi transaksi', Icon: BookOpen },
+                    { id: 'analis_fpna' as const, label: 'Analis', desc: 'Tren, margin, proyeksi', Icon: TrendingUp },
+                    { id: 'pajak' as const, label: 'Pajak', desc: 'Estimasi pajak UKM (indikatif)', Icon: Receipt },
+                  ];
+                  const active = PERSONA_OPTS.find(o => o.id === persona) ?? PERSONA_OPTS[0];
+                  const ActiveIcon = active.Icon;
+                  return (
+                    <div className="relative shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setPersonaDropdownOpen(o => !o)}
+                        className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors max-w-[120px]"
+                        title="Pilih persona agent"
+                      >
+                        <ActiveIcon className="w-2.5 h-2.5 shrink-0" />
+                        <span className="truncate">{active.label}</span>
+                        <ChevronDown className="w-2.5 h-2.5 shrink-0" />
+                      </button>
+                      <AnimatePresence>
+                        {personaDropdownOpen && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setPersonaDropdownOpen(false)} />
+                            <motion.div
+                              initial={{ opacity: 0, y: 4, scale: 0.96 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: 4, scale: 0.96 }}
+                              transition={{ duration: 0.15 }}
+                              className="absolute bottom-full right-0 mb-1.5 z-20 w-52 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg overflow-hidden"
+                            >
+                              {PERSONA_OPTS.map(opt => {
+                                const OptIcon = opt.Icon;
+                                return (
+                                  <button
+                                    key={opt.id ?? 'umum'}
+                                    type="button"
+                                    onClick={() => {
+                                      setPersona(opt.id);
+                                      if (opt.id) localStorage.setItem('axion_ai_persona', opt.id);
+                                      else localStorage.removeItem('axion_ai_persona');
+                                      setPersonaDropdownOpen(false);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                                  >
+                                    <OptIcon className="w-4 h-4 shrink-0 text-gray-400 dark:text-gray-500" />
+                                    <span className="min-w-0 flex-1">
+                                      <span className="block text-[12px] font-medium text-gray-900 dark:text-gray-100">{opt.label}</span>
+                                      <span className="block text-[10px] text-gray-400 dark:text-gray-500">{opt.desc}</span>
+                                    </span>
+                                    <span className="w-3.5 shrink-0 flex justify-end">
+                                      {persona === opt.id && <Check className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </motion.div>
+                          </>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                })()}
                 <div className="relative shrink-0">
                   <button
                     type="button"
@@ -1378,6 +1453,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                       </>
                     )}
                   </AnimatePresence>
+                </div>
                 </div>
               </div>
               {/* Instagram-style pill input */}

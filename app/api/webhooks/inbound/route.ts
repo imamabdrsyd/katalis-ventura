@@ -9,6 +9,8 @@ import {
   upsertLead,
 } from '@/lib/leads';
 import { generateLeadReply } from '@/lib/ai/leadAssistant';
+import { generateConciergeReply } from '@/lib/ai/concierge';
+import { getAiTier } from '@/lib/ai/concierge/tier';
 import { withRouteTiming } from '@/lib/api/server/timing';
 
 /**
@@ -95,7 +97,9 @@ async function handleInboundPost(request: NextRequest) {
   if (saved && integration.ai_enabled && integration.ai_mode === 'draft') {
     try {
       const history = await fetchLeadHistoryForAI(supabase, lead.id);
-      const result = await generateLeadReply(supabase, integration, lead, history);
+      const result = getAiTier(integration) === 'pro'
+        ? await generateConciergeReply(supabase, integration, lead, history)
+        : await generateLeadReply(supabase, integration, lead, history);
       if (result) {
         const draft = await insertLeadMessage(supabase, {
           leadId: lead.id,

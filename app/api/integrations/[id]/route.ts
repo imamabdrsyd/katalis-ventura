@@ -40,7 +40,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   const loaded = await loadManageableIntegration(id);
   if (loaded.error) return loaded.error;
-  const { supabase } = loaded;
+  const { supabase, integration } = loaded;
 
   let body: unknown;
   try {
@@ -62,6 +62,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   if (parsed.data.ai_enabled !== undefined) patch.ai_enabled = parsed.data.ai_enabled;
   if (parsed.data.ai_mode !== undefined) patch.ai_mode = parsed.data.ai_mode;
   if (parsed.data.ai_persona !== undefined) patch.ai_persona = parsed.data.ai_persona;
+  // Tier Concierge: merge ke config JSONB existing (jangan timpa token/field config lain).
+  if (parsed.data.ai_tier !== undefined) {
+    const currentConfig = (integration.config as Record<string, unknown> | null) ?? {};
+    patch.config = { ...currentConfig, ai_tier: parsed.data.ai_tier };
+  }
 
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: 'Tidak ada field untuk diubah' }, { status: 400 });

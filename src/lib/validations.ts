@@ -413,6 +413,8 @@ export const updateChannelIntegrationSchema = z.object({
   ai_enabled: z.boolean().optional(),
   ai_mode: z.enum(VALID_AI_MODES).optional(),
   ai_persona: z.string().max(2000).optional().nullable(),
+  /** Tier Concierge AI — disimpan (di-merge) ke kolom config JSONB oleh route. */
+  ai_tier: z.enum(['free', 'pro']).optional(),
 });
 
 // Kredensial WhatsApp per-bisnis (form manual di tab Integrasi)

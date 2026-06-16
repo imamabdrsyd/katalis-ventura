@@ -21,6 +21,8 @@ import {
   upsertLead,
 } from '@/lib/leads';
 import { generateLeadReply } from '@/lib/ai/leadAssistant';
+import { generateConciergeReply } from '@/lib/ai/concierge';
+import { getAiTier } from '@/lib/ai/concierge/tier';
 import { getDecryptedToken } from '@/lib/integrations/config';
 import { sendWhatsAppMessage, type WhatsAppCredentials } from './api';
 import type { WhatsAppWebhookValue } from './types';
@@ -96,7 +98,9 @@ export async function handleWhatsAppMessage(value: WhatsAppWebhookValue): Promis
       // 4. AI — hanya untuk pesan teks
       if (integration.ai_enabled && msg.type === 'text') {
         const history = await fetchLeadHistoryForAI(supabase, lead.id);
-        const result = await generateLeadReply(supabase, integration, lead, history);
+        const result = getAiTier(integration) === 'pro'
+          ? await generateConciergeReply(supabase, integration, lead, history)
+          : await generateLeadReply(supabase, integration, lead, history);
         if (!result) continue;
 
         if (integration.ai_mode === 'auto') {

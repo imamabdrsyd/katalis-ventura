@@ -12,10 +12,13 @@ import {
   CheckCircle2,
   KeyRound,
   Power,
+  Gem,
+  Zap,
 } from 'lucide-react';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import { Modal } from '@/components/ui/Modal';
 import { useLanguage } from '@/context/LanguageContext';
+import { getAiTier, type AiTier } from '@/lib/ai/concierge/tier';
 import type { ChannelIntegration as Integration, AiMode, LeadChannel } from '@/types';
 
 interface Props {
@@ -292,12 +295,14 @@ function AiSettingsPanel({
   const [enabled, setEnabled] = useState(integration.ai_enabled);
   const [mode, setMode] = useState<AiMode>(forceDraftOnly ? 'draft' : integration.ai_mode);
   const [persona, setPersona] = useState(integration.ai_persona ?? '');
+  const [tier, setTier] = useState<AiTier>(getAiTier(integration));
   const [saving, setSaving] = useState(false);
 
   const dirty =
     enabled !== integration.ai_enabled ||
     mode !== integration.ai_mode ||
-    (persona.trim() || null) !== (integration.ai_persona ?? null);
+    (persona.trim() || null) !== (integration.ai_persona ?? null) ||
+    tier !== getAiTier(integration);
 
   const handleSave = async () => {
     setSaving(true);
@@ -309,6 +314,7 @@ function AiSettingsPanel({
           ai_enabled: enabled,
           ai_mode: mode,
           ai_persona: persona.trim() || null,
+          ai_tier: tier,
         }),
       });
       if (!res.ok) {
@@ -375,6 +381,29 @@ function AiSettingsPanel({
               </p>
             </>
           )}
+
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-start gap-2.5">
+              <Gem className="w-4 h-4 text-primary-500 dark:text-primary-400 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-100">Kualitas Concierge</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {tier === 'pro'
+                    ? 'Pro: persona CS premium adaptif-sektor via Vertex AI (fallback otomatis).'
+                    : 'Free: balasan AI standar (Gemini/Groq gratis).'}
+                </p>
+              </div>
+            </div>
+            <SegmentedToggle<AiTier>
+              value={tier}
+              onChange={setTier}
+              ariaLabel="Kualitas Concierge AI"
+              options={[
+                { value: 'free', label: 'Free', icon: <Zap className="w-3.5 h-3.5" />, disabled: !canManage },
+                { value: 'pro', label: 'Pro', icon: <Gem className="w-3.5 h-3.5" />, disabled: !canManage },
+              ]}
+            />
+          </div>
 
           <div>
             <label className="text-sm font-medium text-gray-800 dark:text-gray-100">

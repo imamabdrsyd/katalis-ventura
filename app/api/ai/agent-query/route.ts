@@ -18,7 +18,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { createServerClient, getAuthenticatedUser, getBusinessRoleForUser } from '@/lib/supabase-server';
 import { buildFinancialContext } from '@/lib/ai/financialContext';
-import { CHAT_SYSTEM_PROMPT } from '@/lib/ai/prompts';
+import { buildAgentSystemPrompt } from '@/lib/ai/financialPersonas';
 import { TOOL_DEFINITIONS, executeTool, type NavigateAction } from '@/lib/ai/agentTools';
 import { getVertexTokenAndProject } from '@/lib/ai/vertexAuth';
 import type { Transaction, Account } from '@/types';
@@ -31,50 +31,13 @@ const bodySchema = z.object({
     .max(10)
     .optional()
     .default([]),
+  persona: z.enum(['pembukuan', 'analis_fpna', 'pajak']).optional(),
 });
 
 // Gemini 3.5 Flash: generasi terbaru (3.5), near-Pro level, thinking model.
 // Lebih canggih dari 2.5 Pro untuk reasoning analitik, lebih cepat dari 3.1 Pro Preview.
 const GEMINI_VERTEX_MODEL = 'gemini-3.5-flash';
 const MAX_TOOL_ITERATIONS = 3;
-
-const AGENT_SYSTEM_PROMPT =
-  CHAT_SYSTEM_PROMPT +
-  `
-
-KEMAMPUAN TAMBAHAN (Tool Calling):
-Kamu punya akses ke 5 tools untuk mengambil data real-time dari database bisnis:
-- query_transactions: ambil & filter transaksi
-- get_financial_summary: hitung P&L untuk periode tertentu
-- get_contacts: daftar kontak + statistik per kontak
-- get_business_info: creator terdaftar, anggota, CoA equity, dan cap table pembukuan
-- navigate_to: arahkan user ke halaman/fitur tertentu di AXION
-
-KAPAN PAKAI TOOL:
-- Gunakan query_transactions saat user tanya detail transaksi spesifik yang tidak ada di konteks (mis. "transaksi dari Dila", "CAPEX bulan Maret", "5 transaksi terbesar").
-- Gunakan get_financial_summary saat butuh P&L periode yang tidak ada di snapshot 6 bulan (mis. "revenue Q1", "laba tahun lalu").
-- Gunakan get_contacts saat user tanya kontak/customer/vendor spesifik.
-- Gunakan get_business_info saat user tanya siapa yang membuat, mengelola, menjadi anggota, atau memiliki bisnis; juga saat user tanya modal disetor, cap table, atau struktur kepemilikan.
-- Gunakan navigate_to saat user minta MELIHAT/MEMBUKA halaman atau data tertentu (kata kunci: "lihat", "buka", "tampilkan", "cek di halaman", "pergi ke"). JANGAN gunakan navigate_to untuk menjawab pertanyaan analitik — gunakan tool data dulu, jawab, BARU tawarkan navigate kalau relevan.
-- Kalau data sudah ada di konteks keuangan yang dikirim, JANGAN panggil tool — jawab langsung dari konteks.
-
-ATURAN KEJUJURAN UNTUK KEPEMILIKAN:
-- Jangan menyebut creator atau anggota sebagai pemilik legal hanya karena mereka membuat atau bergabung ke bisnis.
-- Bedakan dengan jelas: creator terdaftar, anggota + role, dan indikasi pemilik dari akun modal/cap table pembukuan.
-- Cap table AXION berasal dari saldo akun EQUITY bertanda is_stock. Itu bukan bukti kepemilikan saham/legal formal.
-
-ATURAN AKUNTANSI — PELUNASAN PIUTANG (SETTLE) vs PENDAPATAN (EARN):
-- AXION pakai double-entry akrual. Penjualan kredit dicatat 2 kali sepanjang siklusnya:
-  1) Saat akui pendapatan: Dr Piutang Usaha / Cr Pendapatan (kategori EARN) — INI pendapatan.
-  2) Saat pelanggan bayar: Dr Kas/Bank / Cr Piutang Usaha — INI PELUNASAN (SETTLE), uang masuk
-     tapi BUKAN pendapatan baru. Di hasil tool ditandai is_settlement=true / kategori "SETTLE".
-- JANGAN PERNAH menjumlahkan transaksi EARN + transaksi SETTLE sebagai pendapatan. Itu double-count.
-  Contoh salah: piutang Rp500 (ke Piutang Usaha) + pelunasan Rp500 (ke Bank) dihitung Rp1.000.
-- Untuk "total pendapatan/revenue" gunakan total_excluding_settlements dari query_transactions, atau
-  lebih baik lagi pakai get_financial_summary / angka per-bulan di konteks (sudah pakai engine resmi).
-- SETTLE hanya relevan untuk pertanyaan arus kas masuk / pelunasan piutang, bukan untuk laba rugi.
-
-PENTING: Gunakan tool hanya jika benar-benar butuh data yang tidak ada. Jangan overuse — satu tool call per pertanyaan sudah cukup di kebanyakan kasus.`;
 
 type GeminiPart = { text: string; thought?: boolean };
 type GeminiContent = { role: 'user' | 'model'; parts: GeminiPart[] };
@@ -178,7 +141,8 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Invalid request' }), { status: 400 });
   }
 
-  const { business_id, message, history } = parsed.data;
+  const { business_id, message, history, persona } = parsed.data;
+  const systemPrompt = buildAgentSystemPrompt(persona ?? null);
 
   const supabase = await createServerClient();
   const role = await getBusinessRoleForUser(supabase, user.id, business_id);
@@ -232,7 +196,7 @@ export async function POST(req: NextRequest) {
 
         for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
           const reqBody = {
-            system_instruction: { parts: [{ text: AGENT_SYSTEM_PROMPT }] },
+            system_instruction: { parts: [{ text: systemPrompt }] },
             contents,
             tools: [{ function_declarations: TOOL_DEFINITIONS }],
             tool_config: { function_calling_config: { mode: 'AUTO' } },

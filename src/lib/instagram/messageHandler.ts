@@ -21,6 +21,8 @@ import {
   upsertLead,
 } from '@/lib/leads';
 import { generateLeadReply } from '@/lib/ai/leadAssistant';
+import { generateConciergeReply } from '@/lib/ai/concierge';
+import { getAiTier } from '@/lib/ai/concierge/tier';
 import { getDecryptedToken } from '@/lib/integrations/config';
 import { sendInstagramMessage, getInstagramSenderName } from './api';
 import type { InstagramWebhookEntry, InstagramMessaging } from './types';
@@ -97,7 +99,9 @@ async function processEvent(
   if (!integration.ai_enabled || !message.text) return;
 
   const history = await fetchLeadHistoryForAI(supabase, lead.id);
-  const result = await generateLeadReply(supabase, integration, lead, history);
+  const result = getAiTier(integration) === 'pro'
+    ? await generateConciergeReply(supabase, integration, lead, history)
+    : await generateLeadReply(supabase, integration, lead, history);
   if (!result) return;
 
   if (integration.ai_mode === 'auto') {
