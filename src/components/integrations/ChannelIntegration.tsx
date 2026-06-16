@@ -109,7 +109,7 @@ export function ChannelIntegration({ businessId, canManage, onReady }: Props) {
       <OtaCard
         channel="airbnb"
         label="Airbnb"
-        logoSrc="/sales channel/airbnb.png"
+        logoSrc="/images/airbnb.png"
         integration={airbnb}
         businessId={businessId}
         canManage={canManage}
