@@ -489,7 +489,12 @@ export default function BusinessMembersPage() {
   const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
   const [leaveLoading, setLeaveLoading] = useState(false);
   const [integrationReadyCount, setIntegrationReadyCount] = useState(0);
-  const integrationLoading = integrationReadyCount < 2;
+  // E-Commerce hanya dirender untuk bisnis produk/dagang — jasa cuma 1 komponen
+  // integrasi (ChannelIntegration), jadi ambang "siap" ikut menyesuaikan.
+  const showEcommerce =
+    business?.business_type === 'produk' || business?.business_type === 'dagang';
+  const expectedIntegrationReady = showEcommerce ? 2 : 1;
+  const integrationLoading = integrationReadyCount < expectedIntegrationReady;
 
   const fetchMembers = useCallback(async () => {
     if (!businessId) return;
@@ -661,13 +666,15 @@ export default function BusinessMembersPage() {
               businessId={business.id}
               canManage={canManage}
               onReady={() => setIntegrationReadyCount((n) => n + 1)}
-            />
-          </div>
-          <div className={integrationLoading ? 'hidden' : ''}>
-            <EcommerceIntegration
-              businessId={business.id}
-              canManage={canManage}
-              onReady={() => setIntegrationReadyCount((n) => n + 1)}
+              leftColumnExtra={
+                showEcommerce ? (
+                  <EcommerceIntegration
+                    businessId={business.id}
+                    canManage={canManage}
+                    onReady={() => setIntegrationReadyCount((n) => n + 1)}
+                  />
+                ) : null
+              }
             />
           </div>
         </div>

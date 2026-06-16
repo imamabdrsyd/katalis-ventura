@@ -256,7 +256,7 @@ export function EcommerceIntegration({ businessId, canManage, onReady }: Props) 
   const hasAnyConnection = connections.some((c) => c.is_active);
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="space-y-6">
       {/* Toast */}
       {toast && (
         <div

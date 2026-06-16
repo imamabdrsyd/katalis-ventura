@@ -22,6 +22,8 @@ interface Props {
   businessId: string;
   canManage: boolean;
   onReady?: () => void;
+  /** Slot tambahan di bawah kolom kiri (mis. E-Commerce Integration). */
+  leftColumnExtra?: React.ReactNode;
 }
 
 /** config aman (token sudah di-strip server-side) — hanya field non-rahasia. */
@@ -32,7 +34,7 @@ interface SafeConfig {
   verified_name?: string | null;
 }
 
-export function ChannelIntegration({ businessId, canManage, onReady }: Props) {
+export function ChannelIntegration({ businessId, canManage, onReady, leftColumnExtra }: Props) {
   const { t } = useLanguage();
   const ci = t.channelIntegration;
   const searchParams = useSearchParams();
@@ -105,6 +107,9 @@ export function ChannelIntegration({ businessId, canManage, onReady }: Props) {
           canManage={canManage}
           onChanged={fetchIntegrations}
         />
+
+        {/* Slot tambahan (E-Commerce Integration) — hanya bisnis produk/dagang */}
+        {leftColumnExtra}
       </div>
 
       {/* Kolom kanan — Channel OTA (Activate: webhook generic Zapier/Make) */}
