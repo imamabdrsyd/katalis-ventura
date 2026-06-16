@@ -316,6 +316,9 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
   const router = useRouter();
   const modeToggleLayoutId = useId();
   const [messages, setMessages] = useState<Message[]>([]);
+  // Histori tab non-aktif disimpan di sini saat pindah tab — supaya percakapan
+  // Ask (Stanley/Sri Mulyani) terpisah dari Entry (Bianca) & tidak tercampur.
+  const stashedMessagesRef = useRef<Record<ChatMode, Message[]>>({ ask: [], record: [] });
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<ChatMode>('ask');
@@ -1246,6 +1249,14 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
 
   const changeMode = (nextMode: ChatMode) => {
     if (nextMode === mode) return;
+    // Hentikan stream yang sedang jalan supaya tidak menulis ke tab yang salah.
+    abortRef.current?.abort();
+    setLoading(false);
+    // Simpan histori tab saat ini, pulihkan histori tab tujuan (Ask & Entry terpisah).
+    setMessages(current => {
+      stashedMessagesRef.current[mode] = current;
+      return stashedMessagesRef.current[nextMode];
+    });
     setModeDirection(nextMode === 'record' ? 1 : -1);
     setMode(nextMode);
     setPendingTx(null); // konteks "berapa nominalnya?" tidak relevan lintas-mode
@@ -1254,6 +1265,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
   const handleReset = () => {
     abortRef.current?.abort();
     setMessages([]);
+    stashedMessagesRef.current = { ask: [], record: [] };
     setInput('');
     setLoading(false);
     setPendingTx(null);
