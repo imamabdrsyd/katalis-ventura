@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback, useId } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check, Paperclip, FileSpreadsheet, Brain, ChevronRight, ChevronDown, ExternalLink, Bot, BookOpen, TrendingUp, Receipt, Sparkles } from 'lucide-react';
+import { X, Send, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check, Paperclip, FileSpreadsheet, Brain, ChevronRight, ChevronDown, ExternalLink, Bot, TrendingUp, Receipt } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { parseExcelFile, parseExcelRaw, applyColumnMapping, validateFile, type ColumnMapping } from '@/lib/import/excelParser';
 import { validateRowsSmart } from '@/lib/import/excelValidator';
@@ -193,6 +193,55 @@ const SUGGESTED_QUESTIONS = [
   'Berapa burn rate saat ini?',
 ];
 
+// Persona sub-agent keuangan yang dikirim ke /api/ai/agent-query.
+// Pembukuan tidak ada di sini karena tab Entry pakai parser (bukan chat agent);
+// identitas "Bianca" di Entry murni labeling header/greeting.
+type AskPersona = 'analis_fpna' | 'pajak';
+
+interface PersonaMeta {
+  /** Nama agent (ditampilkan di header & greeting). */
+  name: string;
+  /** Peran singkat (subtitle). */
+  role: string;
+  /** Sapaan pembuka di empty state. */
+  greeting: string;
+  /** Deskripsi 1 baris di empty state. */
+  tagline: string;
+  /** Contoh pertanyaan khas persona. */
+  suggestions: string[];
+}
+
+// Persona untuk tab Ask (dropdown). Default = Stanley (analis).
+const ASK_PERSONAS: Record<AskPersona, PersonaMeta> = {
+  analis_fpna: {
+    name: 'Stanley',
+    role: 'Analis Keuangan',
+    greeting: 'Hi! Saya Stanley, analis keuanganmu',
+    tagline: 'Tanya soal tren, margin, proyeksi, atau performa bisnismu',
+    suggestions: SUGGESTED_QUESTIONS,
+  },
+  pajak: {
+    name: 'Sri Mulyani',
+    role: 'Penasihat Pajak',
+    greeting: 'Hi! Saya Sri Mulyani, penasihat pajakmu',
+    tagline: 'Tanya estimasi pajak UKM (bersifat indikatif, bukan nasihat resmi)',
+    suggestions: [
+      'Berapa estimasi PPh final saya bulan ini?',
+      'Apa saja kewajiban pajak bisnis saya?',
+      'Bagaimana cara hitung PPh final UMKM 0,5%?',
+    ],
+  },
+};
+
+// Identitas untuk tab Entry (mode Catat) — Bianca. Mesin tetap parser transaksi.
+const ENTRY_PERSONA: PersonaMeta = {
+  name: 'Bianca',
+  role: 'Pembukuan',
+  greeting: 'Hi! Saya Bianca, yang bantu rapikan pembukuanmu',
+  tagline: 'Ketik transaksi, aku bantu catat ke pembukuan',
+  suggestions: ['bayar listrik 500rb', 'jual kopi ke Budi 2.5jt', 'beli bahan baku 750.000'],
+};
+
 // Pesan sapaan/akknowledgment singkat yang tidak punya muatan pertanyaan.
 // Di-handle lokal tanpa memanggil LLM (hemat kuota + tidak fetch 3000 transaksi).
 // Hanya berlaku di mode Ask. Daftar dibuat konservatif — hanya frasa yang
@@ -288,13 +337,14 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
     return 'auto';
   });
   const [providerDropdownOpen, setProviderDropdownOpen] = useState(false);
-  // Persona sub-agent keuangan untuk mode Tanya. null = AXION Agent generalis (default).
-  const [persona, setPersona] = useState<'pembukuan' | 'analis_fpna' | 'pajak' | null>(() => {
+  // Persona spesialis untuk mode Tanya (Ask). Default = Stanley (analis).
+  // Pembukuan tidak di sini — itu identitas tab Entry (mesin parser, bukan agent-query).
+  const [persona, setPersona] = useState<AskPersona>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('axion_ai_persona');
-      if (saved === 'pembukuan' || saved === 'analis_fpna' || saved === 'pajak') return saved;
+      if (saved === 'analis_fpna' || saved === 'pajak') return saved;
     }
-    return null;
+    return 'analis_fpna';
   });
   const [personaDropdownOpen, setPersonaDropdownOpen] = useState(false);
   // Apakah Claude (Vertex AI) dikonfigurasi di server — kalau tidak, opsi disabled
@@ -472,7 +522,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
       const res = await fetch('/api/ai/agent-query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ business_id: businessId, message: trimmed, history, ...(persona ? { persona } : {}) }),
+        body: JSON.stringify({ business_id: businessId, message: trimmed, history, persona }),
       });
 
       if (!res.ok || !res.body) {
@@ -604,6 +654,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
           text: textToParse,
           category_hint: carryHint,
           pending_date: carryDate,
+          provider: selectedProvider,
         }),
       });
       const json = await res.json();
@@ -650,7 +701,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
     } finally {
       setLoading(false);
     }
-  }, [loading, businessId, pendingTx]);
+  }, [loading, businessId, pendingTx, selectedProvider]);
 
   // Simpan draft transaksi ke API (setelah user konfirmasi di preview card)
   const saveDraft = useCallback(async (msgIndex: number) => {
@@ -1200,6 +1251,9 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
       .catch(() => setActiveModel(null));
   };
 
+  // Identitas agent yang sedang standby: Bianca di tab Entry, Stanley/Sri Mulyani di Ask.
+  const activePersona = mode === 'record' ? ENTRY_PERSONA : ASK_PERSONAS[persona];
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -1225,19 +1279,19 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
             className="fixed bottom-20 right-4 z-50 w-[calc(100vw-2rem)] max-w-[400px] flex flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-[0_8px_40px_-8px_rgba(0,0,0,0.22),0_2px_12px_-2px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_-8px_rgba(0,0,0,0.7),0_2px_12px_-2px_rgba(0,0,0,0.5)]"
             style={{ height: 'min(560px, calc(100dvh - 120px))', transformOrigin: 'bottom right' }}
           >
-            {/* Header */}
+            {/* Header — identitas agent aktif (Bianca di Entry, Stanley/Sri Mulyani di Ask) */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 shrink-0">
               <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0">
                 <Bot className="w-5 h-5" />
               </span>
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-50 leading-tight">Accountant Agent</p>
+                <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-50 leading-tight">{activePersona.name}</p>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="relative flex w-1.5 h-1.5 shrink-0">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-60" />
                     <span className="relative inline-flex rounded-full w-1.5 h-1.5 bg-emerald-400" />
                   </span>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{businessName}</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{activePersona.role} · {businessName}</p>
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
@@ -1263,7 +1317,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
             {/* Messages */}
             <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 space-y-4 min-h-0">
               {messages.length === 0 ? (
-                <EmptyState mode={mode} direction={modeDirection} onSuggest={handleSend} />
+                <EmptyState mode={mode} persona={activePersona} direction={modeDirection} onSuggest={handleSend} />
               ) : (
                 messages.map((msg, i) => (
                   <ChatBubble
@@ -1327,26 +1381,23 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                   </button>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                {/* Pemilih persona sub-agent keuangan — hanya di mode Tanya */}
+                {/* Pemilih persona spesialis — hanya di mode Tanya (Stanley / Sri Mulyani) */}
                 {mode === 'ask' && (() => {
-                  const PERSONA_OPTS = [
-                    { id: null as null, label: 'Umum', desc: 'AXION Agent serbaguna', Icon: Sparkles },
-                    { id: 'pembukuan' as const, label: 'Pembukuan', desc: 'Akurasi & klasifikasi transaksi', Icon: BookOpen },
-                    { id: 'analis_fpna' as const, label: 'Analis', desc: 'Tren, margin, proyeksi', Icon: TrendingUp },
-                    { id: 'pajak' as const, label: 'Pajak', desc: 'Estimasi pajak UKM (indikatif)', Icon: Receipt },
+                  const PERSONA_OPTS: { id: AskPersona; desc: string; Icon: typeof TrendingUp }[] = [
+                    { id: 'analis_fpna', desc: 'Tren, margin, proyeksi', Icon: TrendingUp },
+                    { id: 'pajak', desc: 'Estimasi pajak UKM (indikatif)', Icon: Receipt },
                   ];
-                  const active = PERSONA_OPTS.find(o => o.id === persona) ?? PERSONA_OPTS[0];
-                  const ActiveIcon = active.Icon;
+                  const ActiveIcon = persona === 'pajak' ? Receipt : TrendingUp;
                   return (
                     <div className="relative shrink-0">
                       <button
                         type="button"
                         onClick={() => setPersonaDropdownOpen(o => !o)}
                         className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors max-w-[120px]"
-                        title="Pilih persona agent"
+                        title="Pilih agent"
                       >
                         <ActiveIcon className="w-2.5 h-2.5 shrink-0" />
-                        <span className="truncate">{active.label}</span>
+                        <span className="truncate">{ASK_PERSONAS[persona].name}</span>
                         <ChevronDown className="w-2.5 h-2.5 shrink-0" />
                       </button>
                       <AnimatePresence>
@@ -1362,22 +1413,22 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                             >
                               {PERSONA_OPTS.map(opt => {
                                 const OptIcon = opt.Icon;
+                                const meta = ASK_PERSONAS[opt.id];
                                 return (
                                   <button
-                                    key={opt.id ?? 'umum'}
+                                    key={opt.id}
                                     type="button"
                                     onClick={() => {
                                       setPersona(opt.id);
-                                      if (opt.id) localStorage.setItem('axion_ai_persona', opt.id);
-                                      else localStorage.removeItem('axion_ai_persona');
+                                      localStorage.setItem('axion_ai_persona', opt.id);
                                       setPersonaDropdownOpen(false);
                                     }}
                                     className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                                   >
                                     <OptIcon className="w-4 h-4 shrink-0 text-gray-400 dark:text-gray-500" />
                                     <span className="min-w-0 flex-1">
-                                      <span className="block text-[12px] font-medium text-gray-900 dark:text-gray-100">{opt.label}</span>
-                                      <span className="block text-[10px] text-gray-400 dark:text-gray-500">{opt.desc}</span>
+                                      <span className="block text-[12px] font-medium text-gray-900 dark:text-gray-100">{meta.name}</span>
+                                      <span className="block text-[10px] text-gray-400 dark:text-gray-500">{meta.role} · {opt.desc}</span>
                                     </span>
                                     <span className="w-3.5 shrink-0 flex justify-end">
                                       {persona === opt.id && <Check className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />}
@@ -1529,10 +1580,12 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
 
 function EmptyState({
   mode,
+  persona,
   direction,
   onSuggest,
 }: {
   mode: ChatMode;
+  persona: PersonaMeta;
   direction: number;
   onSuggest: (q: string) => void;
 }) {
@@ -1542,7 +1595,7 @@ function EmptyState({
       <span className="flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
         <Bot className="w-7 h-7" />
       </span>
-      <p className="text-[13px] font-semibold text-gray-800 dark:text-gray-100">Hi! I&apos;m your Accountant Agent</p>
+      <p className="text-[13px] font-semibold text-gray-800 dark:text-gray-100">{persona.greeting}</p>
       <div className="relative h-[224px] w-full overflow-hidden">
         <AnimatePresence initial={false} custom={direction} mode="popLayout">
           <motion.div
@@ -1556,16 +1609,13 @@ function EmptyState({
             className="absolute inset-0 w-full"
           >
             <p className="text-center text-[12px] text-gray-500 dark:text-gray-400 mb-4">
-              {isRecord ? 'Ketik transaksi, aku bantu catat ke pembukuan' : 'Tanya apa saja tentang keuangan bisnismu'}
+              {persona.tagline}
             </p>
             <div className="w-full space-y-1.5">
               <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 text-center mb-2">
                 {isRecord ? 'Contoh' : 'Coba tanya ini'}
               </p>
-              {(isRecord
-                ? ['bayar listrik 500rb', 'jual kopi ke Budi 2.5jt', 'beli bahan baku 750.000']
-                : SUGGESTED_QUESTIONS
-              ).map((q) => (
+              {persona.suggestions.map((q) => (
                 <button
                   key={q}
                   onClick={() => onSuggest(q)}

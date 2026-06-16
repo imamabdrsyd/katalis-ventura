@@ -12,6 +12,9 @@ const bodySchema = z.object({
   // Hint kategori yang dibawa dari turn sebelumnya (saat user melengkapi nominal).
   category_hint: z.string().nullish(),
   pending_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
+  // Pilihan model dari selector FAB. 'gemini-vertex'/'claude' → parse pakai Vertex
+  // (lebih pintar), selainnya → chain gratis. Default 'auto'.
+  provider: z.enum(['auto', 'gemini-vertex', 'claude']).optional(),
 });
 
 type ParsedDraft = {
@@ -45,7 +48,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request', details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { business_id, text, category_hint: carriedHint, pending_date: carriedDate } = parsed.data;
+  const { business_id, text, category_hint: carriedHint, pending_date: carriedDate, provider } = parsed.data;
+  const preferVertex = provider === 'gemini-vertex' || provider === 'claude';
 
   const supabase = await createServerClient();
   const role = await getBusinessRoleForUser(supabase, user.id, business_id);
@@ -66,7 +70,7 @@ export async function POST(req: NextRequest) {
 
   // 1. Extract name + amount + date + category_hint via shared helper
   //    (AI provider chain → fallback regex). Sama dgn yg dipakai Telegram bot.
-  const extractResult = await extractTransactionFromText(text);
+  const extractResult = await extractTransactionFromText(text, { preferVertex });
   if (!extractResult) {
     return NextResponse.json(
       { error: 'Tidak bisa mendeteksi transaksi. Coba mis. "bayar listrik 500rb"' },
