@@ -735,11 +735,11 @@ export default function DashboardPage() {
                 {/* Aging bar */}
                 <div className="flex rounded-lg overflow-hidden h-2 bg-gray-100 dark:bg-gray-700 mb-3">
                   {([
-                    { key: 'current', value: arData.buckets.current, color: 'bg-emerald-400 dark:bg-emerald-500' },
-                    { key: 'b30', value: arData.buckets.b30, color: 'bg-sky-400 dark:bg-sky-500' },
-                    { key: 'b60', value: arData.buckets.b60, color: 'bg-amber-400 dark:bg-amber-500' },
-                    { key: 'b90', value: arData.buckets.b90, color: 'bg-orange-400 dark:bg-orange-500' },
-                    { key: 'over90', value: arData.buckets.over90, color: 'bg-red-500 dark:bg-red-500' },
+                    { key: 'current', value: arData.buckets.current, color: 'bg-[#6ec196]' },
+                    { key: 'b30', value: arData.buckets.b30, color: 'bg-[#b9cc78]' },
+                    { key: 'b60', value: arData.buckets.b60, color: 'bg-[#e8c772]' },
+                    { key: 'b90', value: arData.buckets.b90, color: 'bg-[#e0a169]' },
+                    { key: 'over90', value: arData.buckets.over90, color: 'bg-[#d47a72]' },
                   ] as const)
                     .filter((b) => b.value > 0)
                     .map((b) => (
@@ -754,11 +754,11 @@ export default function DashboardPage() {
                 {/* Aging chips */}
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                   {([
-                    { label: t.arAp.current, value: arData.buckets.current, dot: 'bg-emerald-400 dark:bg-emerald-500' },
-                    { label: t.arAp.days1to30, value: arData.buckets.b30, dot: 'bg-sky-400 dark:bg-sky-500' },
-                    { label: t.arAp.days31to60, value: arData.buckets.b60, dot: 'bg-amber-400 dark:bg-amber-500' },
-                    { label: t.arAp.days61to90, value: arData.buckets.b90, dot: 'bg-orange-400 dark:bg-orange-500' },
-                    { label: t.arAp.daysOver90, value: arData.buckets.over90, dot: 'bg-red-500 dark:bg-red-500' },
+                    { label: t.arAp.current, value: arData.buckets.current, dot: 'bg-[#6ec196]' },
+                    { label: t.arAp.days1to30, value: arData.buckets.b30, dot: 'bg-[#b9cc78]' },
+                    { label: t.arAp.days31to60, value: arData.buckets.b60, dot: 'bg-[#e8c772]' },
+                    { label: t.arAp.days61to90, value: arData.buckets.b90, dot: 'bg-[#e0a169]' },
+                    { label: t.arAp.daysOver90, value: arData.buckets.over90, dot: 'bg-[#d47a72]' },
                   ] as const).map((bucket) => (
                     <div key={bucket.label} className="p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                       <div className="flex items-center gap-1.5 mb-1">
