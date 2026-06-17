@@ -660,7 +660,7 @@ function TransactionsPageInner() {
                   <button
                     onClick={handleBulkDelete}
                     disabled={saving}
-                    className="btn-secondary flex items-center gap-1.5"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-red-200 dark:border-red-800 bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
                   >
                     {bulkDeleteProgress?.status === 'running' ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
