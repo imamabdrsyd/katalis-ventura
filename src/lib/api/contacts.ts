@@ -128,7 +128,8 @@ export async function getContactTransactions(businessId: string, contactName: st
     .select(`
       *,
       debit_account:accounts!transactions_debit_account_id_fkey(*),
-      credit_account:accounts!transactions_credit_account_id_fkey(*)
+      credit_account:accounts!transactions_credit_account_id_fkey(*),
+      journal_lines(*, account:accounts(*))
     `)
     .eq('business_id', businessId)
     .ilike('name', contactName)
