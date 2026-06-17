@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useCallback } from 'react';
+import { toast } from 'sonner';
 import { SalesChannelBadge } from '@/components/transactions/SalesChannelBadge';
 import type { SalesChannel } from '@/types';
 import { Upload, FileSpreadsheet, CheckCircle, ChevronDown, X, Table2 } from 'lucide-react';
@@ -66,11 +67,11 @@ export function ImportRevenueWidget({
 
   const handleFile = useCallback((file: File) => {
     if (!file.name.match(/\.csv$/i)) {
-      alert('Hanya file CSV yang didukung. Ekspor data dari channel sebagai CSV.');
+      toast.error('Hanya file CSV yang didukung. Ekspor data dari channel sebagai CSV.');
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      alert('File terlalu besar (maks 5MB)');
+      toast.error('File terlalu besar (maks 5MB)');
       return;
     }
     onFile(file);

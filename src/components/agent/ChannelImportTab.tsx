@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { AgentProgressToast, type AgentStep } from '@/components/agent/AgentProgressToast';
 import { SalesChannelBadge } from '@/components/transactions/SalesChannelBadge';
 import { appendAgentImportStep, readAgentImportSession, startAgentImportSession, updateAgentImportSession } from '@/lib/agent/importSession';
@@ -95,11 +96,11 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
 
   const handleFile = useCallback((file: File) => {
     if (!file.name.match(/\.csv$/i)) {
-      alert('Hanya file CSV yang didukung. Ekspor data dari channel sebagai CSV.');
+      toast.error('Hanya file CSV yang didukung. Ekspor data dari channel sebagai CSV.');
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      alert('File terlalu besar (maks 5MB)');
+      toast.error('File terlalu besar (maks 5MB)');
       return;
     }
     setSelectedFile(file);
