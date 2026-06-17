@@ -8,9 +8,11 @@ import { AIChatPanel } from './AIChatPanel';
 interface AIChatFABProps {
   businessId: string;
   businessName: string;
+  /** Buka modal Quick Entry (form transaksi terstruktur) — dipakai tombol mobile di tab Entry. */
+  onQuickAdd?: () => void;
 }
 
-export function AIChatFAB({ businessId, businessName }: AIChatFABProps) {
+export function AIChatFAB({ businessId, businessName, onQuickAdd }: AIChatFABProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -20,6 +22,7 @@ export function AIChatFAB({ businessId, businessName }: AIChatFABProps) {
         onClose={() => setIsOpen(false)}
         businessId={businessId}
         businessName={businessName}
+        onQuickAdd={onQuickAdd ? () => { setIsOpen(false); onQuickAdd(); } : undefined}
       />
 
       {/* FAB Button */}

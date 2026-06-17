@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback, useId } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check, Paperclip, FileSpreadsheet, Brain, ChevronRight, ChevronDown, ExternalLink } from 'lucide-react';
+import { X, Send, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check, Paperclip, FileSpreadsheet, Brain, ChevronRight, ChevronDown, ExternalLink, Zap } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { parseExcelFile, parseExcelRaw, applyColumnMapping, validateFile, type ColumnMapping } from '@/lib/import/excelParser';
 import { validateRowsSmart } from '@/lib/import/excelValidator';
@@ -183,6 +183,8 @@ interface AIChatPanelProps {
   onClose: () => void;
   businessId: string;
   businessName: string;
+  /** Buka modal Quick Entry terstruktur. Tombolnya hanya muncul di mobile (tab Entry). */
+  onQuickAdd?: () => void;
 }
 
 const SUGGESTED_QUESTIONS = [
@@ -325,7 +327,7 @@ function buildNavigateUrl(page: string, filters?: Record<string, string>): strin
   return `${base}?${new URLSearchParams(mapped).toString()}`;
 }
 
-export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AIChatPanelProps) {
+export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuickAdd }: AIChatPanelProps) {
   const { t } = useLanguage();
   const { user } = useBusinessContext();
   const router = useRouter();
@@ -1552,6 +1554,19 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                 </div>
                 </div>
               </div>
+              {/* Quick Entry (form terstruktur) — mobile only, hanya di tab Entry.
+                  Di desktop tombol ini sudah ada di top bar. */}
+              {mode === 'record' && onQuickAdd && (
+                <button
+                  type="button"
+                  onClick={onQuickAdd}
+                  className="sm:hidden w-full mb-2 inline-flex items-center justify-center gap-2 rounded-full border-[1.5px] border-primary-300 dark:border-primary-800 bg-primary-50/50 dark:bg-primary-900/20 px-3 py-1.5 text-[12px] font-medium text-primary-600 dark:text-primary-400 hover:border-primary-500 dark:hover:border-primary-400 hover:bg-primary-100/60 dark:hover:bg-primary-900/30 transition-colors"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  {t.nav.quickEntry}
+                </button>
+              )}
+
               {/* Instagram-style pill input */}
               <div className="flex items-center gap-0.5 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 pl-4 pr-1.5 py-1.5 focus-within:border-primary-400 dark:focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20 transition-all">
                 <textarea

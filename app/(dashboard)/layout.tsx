@@ -1130,6 +1130,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
         <AIChatFAB
           businessId={activeBusinessId}
           businessName={activeBusiness?.business_name ?? ''}
+          onQuickAdd={() => setQuickAddOpen(true)}
         />
       )}
     </div>
