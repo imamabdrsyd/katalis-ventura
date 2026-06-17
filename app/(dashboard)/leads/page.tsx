@@ -48,7 +48,7 @@ function LeadListItem({
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left px-3 py-3 rounded-xl transition-colors ${
+      className={`w-full text-left px-3 py-3 transition-colors ${
         active
           ? 'bg-indigo-50 dark:bg-indigo-900/30'
           : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
@@ -321,7 +321,7 @@ export default function LeadsPage() {
             selectedLead ? 'hidden md:flex' : 'flex'
           }`}
         >
-          <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-0.5">
+          <div className="flex-1 min-h-0 overflow-y-auto p-2 divide-y divide-gray-100 dark:divide-gray-700/60">
             {loadingLeads ? (
               <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-500 text-sm">Memuat leads…</div>
             ) : leads.length === 0 ? (
