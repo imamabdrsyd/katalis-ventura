@@ -79,13 +79,17 @@ Lampiran lama di bucket Supabase `transaction-attachments` kini **private** (fix
 migration 091). Diakses via signed URL TTL pendek lewat
 `GET /api/transactions/attachments/sign` (lihat `src/lib/storage/signedUrl.ts`).
 
-### 3.6 Migrasi file lama → authenticated
+### 3.6 Migrasi file lama → authenticated (SELESAI 17 Jun 2026)
 
-File lampiran yang diunggah **sebelum** signed-upload aktif masih `type: upload` (publik).
+File lampiran yang diunggah **sebelum** signed-upload aktif dulunya `type: upload` (publik).
 Skrip `scripts/migrate-cloudinary-authenticated.mjs` me-rename asset di
 `axion/attachments/` ke `authenticated` + rewrite URL di `transactions.meta` &
 `business_contacts.id_card_attachments`. Punya mode **dry-run** (default), `LIMIT` untuk
 tes kecil, dan throttle anti rate-limit. Folder publik `axion/gallery` tidak disentuh.
+
+**Status:** seluruh **205 asset** lama sudah dimigrasi (batch 10 → 50 → 145). Dry-run ulang
+menunjukkan 0 sisa. Skrip tetap idempotent — aman dijalankan ulang bila ada upload
+yang lolos sebagai `upload` di kemudian hari.
 
 ---
 
@@ -106,7 +110,7 @@ tes kecil, dan throttle anti rate-limit. Folder publik `axion/gallery` tidak dis
 
 | Item | Status | Catatan |
 |------|--------|---------|
-| File lampiran **lama** masih publik | ⬜ Open | Tertutup setelah `scripts/migrate-cloudinary-authenticated.mjs` dijalankan (langkah migrasi). |
+| File lampiran **lama** masih publik | ✅ Selesai (17 Jun 2026) | Semua 205 asset `axion/attachments/` sudah dimigrasi ke `authenticated` via `scripts/migrate-cloudinary-authenticated.mjs`. Dry-run ulang = 0 sisa. |
 | Signed URL **tanpa TTL** | 🟡 By design | Signature-gated (butuh secret). Expiry per-waktu butuh fitur `auth_token` Cloudinary (opsional). |
 | Upload **preset unsigned** (`axion_gallery`) bisa disalahgunakan | 🟡 Diterima | Hanya dipakai galeri publik; lampiran privat sudah pindah ke signed upload. |
 | Orphan-on-cancel di `journal-entry` & `MultiLineJournalForm` | 🟡 Minor | Upload sudah private; bisa tinggalkan file yatim bila form dibatalkan (form transaksi utama sudah pakai defer upload). |
