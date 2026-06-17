@@ -12,9 +12,10 @@ import { formatCurrency } from '@/lib/utils';
 import { CatalogItemForm, type CatalogItemFormData } from '@/components/catalog/CatalogItemForm';
 import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
 import {
-  Plus, Search, Package, Wrench, Pencil, Trash2, X, Eye, EyeOff,
+  Plus, Search, Package, Pencil, Trash2, X, Eye, EyeOff,
   LayoutGrid, List,
 } from 'lucide-react';
+import { getSectorIcon } from '@/lib/sectorIcons';
 
 type ViewMode = 'grid' | 'list';
 const VIEW_MODE_KEY = 'katalis_catalog_view_mode';
@@ -33,6 +34,8 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
   const tc = t.catalog;
   const businessId = activeBusiness?.id;
   const canManage = isManagerRole(userRole);
+  // Ikon item katalog mengikuti sektor bisnis aktif (mis. F&B → garpu-sendok).
+  const SectorIcon = getSectorIcon(activeBusiness?.business_sector);
 
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -242,7 +245,6 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filteredItems.map(item => {
-            const Icon = item.item_type === 'service' ? Wrench : Package;
             return (
               <div
                 key={item.id}
@@ -254,7 +256,7 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
               >
                 <div className="flex items-start gap-3">
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-                    <Icon className="w-4 h-4" />
+                    <SectorIcon className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{item.name}</p>
@@ -299,7 +301,6 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
       ) : (
         <div className="flex flex-col gap-2">
           {filteredItems.map(item => {
-            const Icon = item.item_type === 'service' ? Wrench : Package;
             return (
               <div
                 key={item.id}
@@ -310,7 +311,7 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
                 }`}
               >
                 <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-                  <Icon className="w-4 h-4" />
+                  <SectorIcon className="w-4 h-4" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">

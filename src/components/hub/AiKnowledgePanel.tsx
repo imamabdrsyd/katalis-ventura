@@ -126,7 +126,19 @@ export function AiKnowledgePanel() {
         <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{th.aiInfoTitle}</h2>
       </div>
 
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{th.aiInfoDesc}</p>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{th.aiInfoDesc}</p>
+
+      {/* Chip kategori fakta yang sebaiknya diisi */}
+      <div className="flex flex-wrap gap-1.5 mb-4">
+        {[th.fieldHours, th.fieldLocation, th.fieldPolicies, th.fieldFaq].map((label) => (
+          <span
+            key={label}
+            className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700/60 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-300"
+          >
+            {label}
+          </span>
+        ))}
+      </div>
 
       {!canManage && (
         <p className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 mb-3">
@@ -236,7 +248,7 @@ export function AiKnowledgePanel() {
             <button onClick={() => setShowFields(false)} disabled={saving} className="btn-secondary flex-1">
               {th.fieldsCancel}
             </button>
-            <button onClick={handleApplyFields} disabled={saving} className="btn-primary flex-1 flex items-center justify-center gap-1.5 disabled:opacity-50">
+            <button onClick={handleApplyFields} disabled={saving} className="btn-primary-glow flex-1 flex items-center justify-center gap-1.5 disabled:opacity-50">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
               {saving ? th.saving : th.fieldsApply}
             </button>

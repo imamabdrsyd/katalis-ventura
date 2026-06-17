@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, PackageOpen, Home, UserPlus, Coins, Lock, MoreVertical, Pencil, Archive, RotateCcw, Trash2 } from 'lucide-react';
+import { MapPin, PackageOpen, UserPlus, Lock, MoreVertical, Pencil, Archive, RotateCcw, Trash2 } from 'lucide-react';
 import type { Business } from '@/types';
 import { formatCurrency } from '@/lib/utils';
+import { getSectorIcon } from '@/lib/sectorIcons';
 
 interface BusinessCardProps {
   business: Business;
@@ -38,18 +39,6 @@ const BUSINESS_TYPE_LABELS: Record<string, string> = {
   short_term_rental: 'Short-term Rental',
   property_management: 'Property Management',
   real_estate: 'Real Estate',
-};
-
-const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
-  agribusiness: <Wheat className="w-6 h-6" />,
-  personal_care: <Heart className="w-6 h-6" />,
-  accommodation: <Building2 className="w-6 h-6" />,
-  creative_agency: <Palette className="w-6 h-6" />,
-  food_and_beverage: <UtensilsCrossed className="w-6 h-6" />,
-  finance: <Coins className="w-6 h-6" />,
-  short_term_rental: <Home className="w-6 h-6" />,
-  property_management: <Building2 className="w-6 h-6" />,
-  real_estate: <Building2 className="w-6 h-6" />,
 };
 
 export function BusinessCard({
@@ -174,7 +163,7 @@ export function BusinessCard({
             ) : business.is_archived ? (
               <PackageOpen className="w-6 h-6" />
             ) : (
-              BUSINESS_TYPE_ICONS[business.business_sector ?? ''] || <Building2 className="w-6 h-6" />
+              (() => { const SectorIcon = getSectorIcon(business.business_sector); return <SectorIcon className="w-6 h-6" />; })()
             )}
           </div>
           <div>

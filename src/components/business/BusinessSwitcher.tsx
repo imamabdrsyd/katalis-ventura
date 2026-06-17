@@ -4,15 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
-  Building2,
   ChevronDown,
-  Heart,
-  Home,
-  Palette,
   Plus,
   UserPlus,
-  UtensilsCrossed,
-  Wheat,
 } from 'lucide-react';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -20,17 +14,7 @@ import { isManagerRole } from '@/lib/roles';
 import * as businessesApi from '@/lib/api/businesses';
 import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
 import { BusinessForm, type BusinessFormData } from './BusinessForm';
-
-const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
-  agribusiness: <Wheat className="w-4 h-4" />,
-  personal_care: <Heart className="w-4 h-4" />,
-  accommodation: <Building2 className="w-4 h-4" />,
-  creative_agency: <Palette className="w-4 h-4" />,
-  food_and_beverage: <UtensilsCrossed className="w-4 h-4" />,
-  short_term_rental: <Home className="w-4 h-4" />,
-  property_management: <Building2 className="w-4 h-4" />,
-  real_estate: <Building2 className="w-4 h-4" />,
-};
+import { getSectorIcon } from '@/lib/sectorIcons';
 
 export function BusinessSwitcher() {
   const {
@@ -149,7 +133,7 @@ export function BusinessSwitcher() {
                           unoptimized
                         />
                       ) : (
-                        BUSINESS_TYPE_ICONS[business.business_sector ?? ''] || <Building2 className="w-4 h-4" />
+                        (() => { const SectorIcon = getSectorIcon(business.business_sector); return <SectorIcon className="w-4 h-4" />; })()
                       )}
                     </div>
                     <span

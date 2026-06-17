@@ -355,7 +355,7 @@ export const en: Translations = {
     kalenderComingSoon: 'Calendar — coming soon',
     kalenderComingSoonDesc: 'Scheduling and availability for service businesses will live here.',
     aiInfoTitle: 'Concierge Agent',
-    aiInfoDesc: 'Brief your concierge — it uses this to reply to prospects across all channels (WhatsApp, Instagram, etc). Tell it the facts: hours, location, policies, FAQ.',
+    aiInfoDesc: 'Brief your concierge, it uses this to reply to prospects across all channels (WhatsApp, Instagram, etc.)',
     aiInfoPlaceholder: 'Anything else the AI should know — promos, payment methods, how to order…',
     aiInfoReadonly: 'Only managers can edit this information.',
     aiInfoNotesLabel: 'Additional notes',
