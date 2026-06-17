@@ -86,7 +86,7 @@ export function ImportRevenueWidget({
   if (!channel) return null;
 
   return (
-    <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
+    <div className="rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md hover:border-gray-200 dark:hover:border-gray-600 hover:-translate-y-1">
       {/* Widget header */}
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2.5">
         <Table2 className="w-4 h-4 text-primary-500 flex-shrink-0" />
