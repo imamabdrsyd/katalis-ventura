@@ -593,7 +593,7 @@ function ChatRow({ message }: { message: ChatMessage }) {
       />
       <div className="min-w-0 flex-1">
         {message.kind === 'intro' && (
-          <div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 shadow-sm px-3.5 py-2.5 text-[13px] leading-relaxed">
+          <div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 shadow-sm px-3.5 py-2.5 text-[13px] leading-relaxed">
             {message.text}
           </div>
         )}
@@ -629,7 +629,7 @@ function AnswerBubble({ message }: { message: Extract<ChatMessage, { kind: 'answ
   // Hanya tampilkan dot-typing kalau benar-benar belum ada apa-apa (teks & thinking).
   const isEmpty = message.streaming && !message.text && !message.thinking;
   return (
-    <div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 shadow-sm px-3.5 py-2.5 text-[13px] leading-relaxed">
+    <div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 shadow-sm px-3.5 py-2.5 text-[13px] leading-relaxed">
       {isEmpty ? (
         <span className="inline-flex gap-1 items-center h-4">
           <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
