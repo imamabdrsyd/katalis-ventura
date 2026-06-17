@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Bot, Loader2, Lock, Pencil, X } from 'lucide-react';
+import Image from 'next/image';
+import { Loader2, Lock, Pencil, X } from 'lucide-react';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { isManagerRole } from '@/lib/roles';
@@ -121,7 +122,7 @@ export function AiKnowledgePanel() {
       )}
 
       <div className="flex items-center gap-2 mb-3 pr-8">
-        <Bot className="w-5 h-5 text-blue-500 dark:text-blue-400 flex-shrink-0" />
+        <Image src="/persona/concierge.png" alt="Concierge" width={24} height={24} className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
         <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{th.aiInfoTitle}</h2>
       </div>
 
