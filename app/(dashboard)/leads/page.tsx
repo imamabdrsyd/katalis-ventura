@@ -337,7 +337,7 @@ export default function LeadsPage() {
             selectedLead ? 'hidden md:flex' : 'flex'
           }`}
         >
-          <div className="flex-1 min-h-0 overflow-y-auto p-2 divide-y divide-gray-100 dark:divide-gray-700/60">
+          <div className="flex-1 min-h-0 overflow-y-auto py-2 divide-y divide-gray-100 dark:divide-gray-700/60">
             {loadingLeads ? (
               <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-500 text-sm">Memuat leads…</div>
             ) : leads.length === 0 ? (
@@ -503,8 +503,7 @@ export default function LeadsPage() {
                     <p className="flex items-start gap-2 text-xs text-gray-400 dark:text-gray-500">
                       <Info className="w-3.5 h-3.5 mt-px shrink-0" />
                       <span>
-                        {CHANNEL_LABELS[selectedLead.channel]} tidak mendukung kirim langsung —
-                        approve draft AI lalu salin &amp; kirim manual lewat platformnya.
+                        {`${CHANNEL_LABELS[selectedLead.channel]} tidak mendukung kirim langsung — approve draft AI lalu salin & kirim manual lewat platformnya.`}
                       </span>
                     </p>
                   </div>
