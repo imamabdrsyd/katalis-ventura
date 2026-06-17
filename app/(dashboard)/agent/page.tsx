@@ -63,7 +63,7 @@ interface GroundingSource {
 // general-purpose (assistant), dan blok progres/hasil run agent impor.
 // Widget impor TIDAK lagi di stream — pindah ke panel kanan.
 type ChatMessage =
-  | { id: string; role: 'assistant'; kind: 'intro'; text: string }
+  | { id: string; role: 'assistant'; kind: 'intro'; text: string; userName?: string }
   | { id: string; role: 'user'; kind: 'text'; text: string }
   | { id: string; role: 'assistant'; kind: 'answer'; text: string; thinking?: string; sources?: GroundingSource[]; model?: string; streaming?: boolean }
   | {
@@ -88,7 +88,7 @@ export default function AgentPage() {
   const router = useRouter();
   const { t } = useLanguage();
   const headerTools = buildAgentTools(t.aiChat.agentPage);
-  const { activeBusinessId, userRole, activeBusiness } = useBusinessContext();
+  const { activeBusinessId, userRole, activeBusiness, user } = useBusinessContext();
   const canManage = isManagerRole(userRole);
   const businessType = activeBusiness?.business_type;
 
@@ -110,14 +110,30 @@ export default function AgentPage() {
   const [isRunning, setIsRunning] = useState(false);
   const [isChatting, setIsChatting] = useState(false);
 
+  const userName = (user?.user_metadata?.full_name as string | undefined)?.split(' ')[0]
+    ?? user?.email?.split('@')[0]
+    ?? '';
+
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
       id: nextId(),
       role: 'assistant',
       kind: 'intro',
-      text: 'Hai! Aku AXION Agent. Tanya apa saja — topik bebas. Atau, kalau mau impor revenue, gunakan panel Import Revenue CSV di sebelah kanan.',
+      text: '',
+      userName: '',
     },
   ]);
+
+  // Patch nama user ke intro bubble setelah user context termuat
+  useEffect(() => {
+    if (!user) return;
+    const name = (user.user_metadata?.full_name as string | undefined)?.split(' ')[0]
+      ?? user.email?.split('@')[0]
+      ?? '';
+    setMessages(prev => prev.map(m =>
+      m.kind === 'intro' ? { ...m, userName: name } : m
+    ));
+  }, [user]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const runningRef = useRef(false);
@@ -593,8 +609,11 @@ function ChatRow({ message }: { message: ChatMessage }) {
       />
       <div className="min-w-0 flex-1">
         {message.kind === 'intro' && (
-          <div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 shadow-sm px-3.5 py-2.5 text-[13px] leading-relaxed">
-            {message.text}
+          <div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 shadow-sm px-4 py-3.5 text-[13px] leading-relaxed">
+            <p className="font-semibold text-[13px] text-gray-900 dark:text-gray-100 mb-0.5">AXION Agent</p>
+            <p>
+              Halo{message.userName ? ` ${message.userName}` : ''}! Mau melakukan apa hari ini?
+            </p>
           </div>
         )}
 
