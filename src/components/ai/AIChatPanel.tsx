@@ -338,7 +338,11 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
   const stashedMessagesRef = useRef<Record<ChatMode, Message[]>>({ ask: [], record: [] });
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<ChatMode>('ask');
+  // Mobile web (<640px, breakpoint `sm`) default ke tab Entry (catat transaksi);
+  // desktop tetap Ask. SSR-safe: window dicek lewat lazy initializer.
+  const [mode, setMode] = useState<ChatMode>(() =>
+    typeof window !== 'undefined' && window.innerWidth < 640 ? 'record' : 'ask'
+  );
   const [modeDirection, setModeDirection] = useState(1);
   const [activeModel, setActiveModel] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
