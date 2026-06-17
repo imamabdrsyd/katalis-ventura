@@ -89,6 +89,7 @@ export async function GET(request: NextRequest) {
         'Content-Type': upstream.headers.get('content-type') ?? 'application/octet-stream',
         'Content-Disposition': `attachment; filename="${filename}"`,
         'Cache-Control': 'private, no-store',
+        'X-Content-Type-Options': 'nosniff',
       },
     });
   } catch (err) {
