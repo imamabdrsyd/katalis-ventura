@@ -370,9 +370,9 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
         <Info className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
         <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
           {selectedChannel === 'airbnb'
-            ? 'Jurnal 3-baris per booking: Dr Bank · Dr Komisi · Cr Pendapatan Sewa (gross). Agent menerjemahkan instruksi jadi filter & akun — angka tetap deterministik.'
+            ? 'Jurnal 3-baris per booking: Dr Bank · Dr Komisi · Cr Pendapatan Sewa (gross). Bianca menerjemahkan instruksi jadi filter & akun — angka tetap deterministik.'
             : selectedChannel === 'tiktok_tokopedia'
-            ? '1 transaksi per pesanan selesai; duplikat Order ID dilewati otomatis. Agent menerjemahkan instruksi jadi filter & akun — angka tetap deterministik.'
+            ? '1 transaksi per pesanan selesai; duplikat Order ID dilewati otomatis. Bianca menerjemahkan instruksi jadi filter & akun — angka tetap deterministik.'
             : 'Channel ini belum didukung. Pilih channel lain.'}
         </p>
       </div>
@@ -422,12 +422,12 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
         {isRunning ? (
           <>
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            Agent sedang bekerja...
+            Bianca sedang membukukan...
           </>
         ) : (
           <>
             <Bot className="w-4 h-4" />
-            Panggil Agent
+            Panggil Bianca
           </>
         )}
       </button>

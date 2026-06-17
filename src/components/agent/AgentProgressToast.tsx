@@ -95,7 +95,7 @@ export function AgentProgressToast({ steps, isRunning, onDismiss }: AgentProgres
                   : 'text-gray-900 dark:text-gray-100'
               }`}
             >
-              {isRunning ? 'AXION Agent bekerja...' : isError ? 'Agent gagal' : 'Agent selesai'}
+              {isRunning ? 'Bianca sedang membukukan...' : isError ? 'Bianca berhenti' : 'Bianca selesai'}
             </span>
             {onDismiss && !isRunning && (
               <button

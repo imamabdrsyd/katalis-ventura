@@ -30,10 +30,10 @@ const SUPPORTED_CHANNELS = [
 
 function channelHint(channel: string): string {
   if (channel === 'airbnb') {
-    return 'Jurnal 3-baris per booking: Dr Bank · Dr Komisi · Cr Pendapatan Sewa (gross). Agent menerjemahkan instruksi jadi filter & akun — angka tetap deterministik.';
+    return 'Jurnal 3-baris per booking: Dr Bank · Dr Komisi · Cr Pendapatan Sewa (gross). Bianca menerjemahkan instruksi jadi filter & akun — angka tetap deterministik.';
   }
   if (channel === 'tiktok_tokopedia') {
-    return '1 transaksi per pesanan selesai; duplikat Order ID dilewati otomatis. Agent menerjemahkan instruksi jadi filter & akun — angka tetap deterministik.';
+    return '1 transaksi per pesanan selesai; duplikat Order ID dilewati otomatis. Bianca menerjemahkan instruksi jadi filter & akun — angka tetap deterministik.';
   }
   return 'Channel ini belum didukung. Pilih channel lain.';
 }
@@ -551,7 +551,7 @@ export default function AgentPage() {
               <button
                 onClick={handleSubmit}
                 disabled={!canSend}
-                title={importMode ? 'Panggil Agent' : 'Kirim'}
+                title={importMode ? 'Panggil Bianca' : 'Kirim'}
                 className="shrink-0 inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full font-semibold text-[13px] text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
                 style={canSend ? { background: 'radial-gradient(circle at 30% 25%, #a5b4fc 0%, #6366f1 45%, #3730a3 100%)' } : { background: '#9ca3af' }}
               >
@@ -560,7 +560,7 @@ export default function AgentPage() {
                 ) : importMode ? (
                   <>
                     <Send className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Panggil Agent</span>
+                    <span className="hidden sm:inline">Panggil Bianca</span>
                   </>
                 ) : (
                   <ArrowUp className="w-4 h-4" />
@@ -569,7 +569,7 @@ export default function AgentPage() {
             </div>
             <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1.5 text-center">
               {importMode
-                ? 'Agent menerjemahkan instruksi jadi filter & akun — angka tetap deterministik.'
+                ? 'Bianca menerjemahkan instruksi jadi filter & akun — angka tetap deterministik.'
                 : 'Chat bebas topik · Unggah CSV di panel kanan untuk impor revenue channel'}
             </p>
           </div>
@@ -961,7 +961,7 @@ function RunBubble({ run }: { run: Extract<ChatMessage, { kind: 'run' }> }) {
           <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
         )}
         <span className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">
-          {run.isRunning ? 'AXION Agent bekerja…' : lastIsError ? 'Agent gagal' : 'Agent selesai'}
+          {run.isRunning ? 'Bianca sedang membukukan…' : lastIsError ? 'Bianca berhenti' : 'Bianca selesai'}
         </span>
         <span className="ml-auto text-[11px] text-gray-400 dark:text-gray-500 truncate max-w-[120px]">{run.fileName}</span>
       </div>

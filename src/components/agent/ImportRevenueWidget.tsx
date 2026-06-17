@@ -41,7 +41,7 @@ function ChannelBadges({ badges }: { badges: SalesChannel[] }) {
 
 /**
  * Widget pemilih channel + dropzone CSV, dirancang untuk hidup di dalam bubble chat
- * pada halaman Agentic Workspace. Instruksi & tombol "Panggil Agent" tidak ada di sini —
+ * pada halaman Agentic Workspace. Instruksi & tombol "Panggil Bianca" tidak ada di sini —
  * keduanya pindah ke composer chat di bawah. Komponen ini fully controlled oleh parent.
  */
 export function ImportRevenueWidget({
@@ -92,7 +92,7 @@ export function ImportRevenueWidget({
         <Table2 className="w-4 h-4 text-primary-500 flex-shrink-0" />
         <div className="min-w-0">
           <h3 className="text-[13px] font-semibold text-gray-800 dark:text-gray-100 leading-tight">Import Revenue CSV</h3>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">Pilih channel & unggah CSV, lalu kirim ke Agent</p>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">Pilih channel & unggah CSV, lalu kirim ke Bianca</p>
         </div>
       </div>
 
