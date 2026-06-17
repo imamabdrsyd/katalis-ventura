@@ -744,6 +744,19 @@ function Sidebar({
       });
   }, [userId]);
 
+  // Saat ganti bisnis sambil berada di hub (Calendar/Point of Sales), route bisa
+  // jadi tak cocok dengan tipe bisnis baru (mis. tetap di /calendar padahal bisnis
+  // produk → harusnya /point-of-sales). Sidebar sudah swap href-nya, tapi halaman
+  // tak ikut pindah. Redirect ke route hub yang benar agar tab/variant ikut ganti.
+  useEffect(() => {
+    if (!activeBusiness) return;
+    const correctHubHref = getPosNavItem(activeBusiness.business_type, t.nav).href;
+    const wrongHubHref = correctHubHref === '/calendar' ? '/point-of-sales' : '/calendar';
+    if (pathname === wrongHubHref || pathname.startsWith(wrongHubHref + '/')) {
+      router.replace(correctHubHref);
+    }
+  }, [activeBusiness, pathname, router, t.nav]);
+
   const isSectionExpanded = (label: string) => expandedSections[label] ?? true;
 
   const toggleSection = (label: string) => {
