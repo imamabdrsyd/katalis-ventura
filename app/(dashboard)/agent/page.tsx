@@ -589,8 +589,8 @@ export default function AgentPage() {
 function IntroCard({ message }: { message: Extract<ChatMessage, { kind: 'intro' }> }) {
   return (
     <div className="flex flex-col items-center justify-center text-center px-6 py-16 select-none min-h-[60%]">
-      <div className="w-20 h-20 rounded-full overflow-hidden ring-4 ring-white dark:ring-gray-800 shadow-md mb-6 bg-gray-100 dark:bg-gray-700">
-        <Image src={ORCHESTRATOR_AVATAR} alt="AXION Agent" width={80} height={80} className="w-full h-full object-cover" />
+      <div className="w-20 h-20 rounded-full overflow-hidden ring-4 ring-white dark:ring-gray-800 shadow-md mb-6 bg-white dark:bg-gray-100">
+        <Image src={ORCHESTRATOR_AVATAR} alt="AXION Agent" width={80} height={80} className="w-full h-full object-contain p-2" />
       </div>
       <h2 className="text-3xl md:text-4xl font-light text-gray-800 dark:text-gray-100 mb-10 leading-snug tracking-tight">
         Halo{message.userName ? ` ${message.userName}` : ''}, mau melakukan apa hari ini?
