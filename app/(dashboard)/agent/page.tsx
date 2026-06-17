@@ -469,7 +469,7 @@ export default function AgentPage() {
               alt="AXION Agent"
               width={36}
               height={36}
-              className="w-9 h-9 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700 bg-gray-100 dark:bg-gray-800 shrink-0"
+              className="w-9 h-9 rounded-full object-contain p-1 ring-2 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-100 shrink-0"
             />
             <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight shrink-0">Agentic Workspace</h1>
             {/* Avatar sub-agent yang dikoordinasi, sembunyi di layar kecil */}
@@ -622,7 +622,7 @@ function ChatRow({ message }: { message: ChatMessage }) {
         alt="AXION Agent"
         width={28}
         height={28}
-        className="w-7 h-7 rounded-full object-cover shrink-0 mt-0.5 ring-2 ring-gray-200 dark:ring-gray-700 bg-gray-100 dark:bg-gray-800"
+        className="w-7 h-7 rounded-full object-contain p-0.5 shrink-0 mt-0.5 ring-2 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-100"
       />
       <div className="min-w-0 flex-1">
 
@@ -828,7 +828,7 @@ function AgentCapabilitiesBadge() {
                     alt="AXION Agent"
                     width={32}
                     height={32}
-                    className="w-8 h-8 rounded-full object-cover shrink-0 ring-2 ring-gray-200 dark:ring-gray-700 bg-gray-50 dark:bg-gray-700"
+                    className="w-8 h-8 rounded-full object-contain p-1 shrink-0 ring-2 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-100"
                   />
                   <div className="min-w-0">
                     <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">{ap.orchestratorTitle}</p>
