@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback, useId } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check, Paperclip, FileSpreadsheet, Brain, ChevronRight, ChevronDown, ExternalLink, Bot } from 'lucide-react';
+import { X, Send, User, Loader2, RotateCcw, MessageSquare, PlusCircle, Check, Paperclip, FileSpreadsheet, Brain, ChevronRight, ChevronDown, ExternalLink } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { parseExcelFile, parseExcelRaw, applyColumnMapping, validateFile, type ColumnMapping } from '@/lib/import/excelParser';
 import { validateRowsSmart } from '@/lib/import/excelValidator';
@@ -1372,6 +1372,8 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
                     message={msg}
                     userAvatarUrl={user?.user_metadata?.avatar_url}
                     userName={user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
+                    aiAvatar={activePersona.avatar}
+                    aiName={activePersona.name}
                     onSaveDraft={() => saveDraft(i)}
                     onCancelDraft={() => cancelDraft(i)}
                     onRunImport={() => runImport(i)}
@@ -1683,6 +1685,8 @@ function ChatBubble({
   message,
   userAvatarUrl,
   userName,
+  aiAvatar,
+  aiName,
   onSaveDraft,
   onCancelDraft,
   onRunImport,
@@ -1692,6 +1696,8 @@ function ChatBubble({
   message: Message;
   userAvatarUrl?: string;
   userName: string;
+  aiAvatar: string;
+  aiName: string;
   onSaveDraft: () => void;
   onCancelDraft: () => void;
   onRunImport: () => void;
@@ -1701,25 +1707,30 @@ function ChatBubble({
   const isUser = message.role === 'user';
   return (
     <div className={`flex gap-2.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-        isUser
-          ? 'bg-primary-500 text-white'
-          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
-      }`}>
-        {isUser && userAvatarUrl ? (
-          <Image
-            src={userAvatarUrl}
-            alt={userName}
-            width={28}
-            height={28}
-            className="w-full h-full rounded-full object-cover"
-          />
-        ) : isUser ? (
-          <User className="w-3.5 h-3.5" />
-        ) : (
-          <Bot className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-        )}
-      </div>
+      {isUser ? (
+        <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 bg-primary-500 text-white">
+          {userAvatarUrl ? (
+            <Image
+              src={userAvatarUrl}
+              alt={userName}
+              width={28}
+              height={28}
+              className="w-full h-full rounded-full object-cover"
+            />
+          ) : (
+            <User className="w-3.5 h-3.5" />
+          )}
+        </div>
+      ) : (
+        <Image
+          key={aiAvatar}
+          src={aiAvatar}
+          alt={aiName}
+          width={28}
+          height={28}
+          className="w-7 h-7 rounded-full object-cover shrink-0 mt-0.5 ring-2 ring-gray-200 dark:ring-gray-700 bg-gray-100 dark:bg-gray-800"
+        />
+      )}
       <div className={`max-w-[82%] min-w-0 rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
         isUser
           ? 'bg-stone-800 dark:bg-gray-100 text-white dark:text-gray-900 rounded-tr-sm'

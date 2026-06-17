@@ -447,7 +447,29 @@ export default function AgentPage() {
       {/* Header */}
       <div className="px-4 md:px-6 pt-4 md:pt-6 pb-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight shrink-0">Agentic Workspace</h1>
+          <div className="flex items-center gap-3 min-w-0 shrink-0">
+            <Image
+              src={ORCHESTRATOR_AVATAR}
+              alt="AXION Agent"
+              width={36}
+              height={36}
+              className="w-9 h-9 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700 bg-gray-100 dark:bg-gray-800 shrink-0"
+            />
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight shrink-0">Agentic Workspace</h1>
+            {/* Avatar sub-agent yang dikoordinasi (stack), sembunyi di layar kecil */}
+            <div className="hidden sm:flex items-center -space-x-2 pl-1">
+              {SUB_AGENT_AVATARS.map(src => (
+                <Image
+                  key={src}
+                  src={src}
+                  alt="sub-agent"
+                  width={24}
+                  height={24}
+                  className="w-6 h-6 rounded-full object-cover ring-2 ring-white dark:ring-gray-900 bg-gray-100 dark:bg-gray-800"
+                />
+              ))}
+            </div>
+          </div>
           <div className="flex items-center gap-1.5 min-w-0">
             {/* Chip nama tools — berjejer di header (sembunyi di layar kecil) */}
             <div className="hidden lg:flex items-center gap-1.5">
@@ -559,12 +581,16 @@ function ChatRow({ message }: { message: ChatMessage }) {
     );
   }
 
-  // assistant rows
+  // assistant rows — avatar orchestrator (AXION Agent)
   return (
     <div className="flex gap-2.5">
-      <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 bg-primary-50 dark:bg-primary-500/15 text-primary-600 dark:text-primary-400">
-        <Bot className="w-3.5 h-3.5" />
-      </div>
+      <Image
+        src={ORCHESTRATOR_AVATAR}
+        alt="AXION Agent"
+        width={28}
+        height={28}
+        className="w-7 h-7 rounded-full object-cover shrink-0 mt-0.5 ring-2 ring-gray-200 dark:ring-gray-700 bg-gray-100 dark:bg-gray-800"
+      />
       <div className="min-w-0 flex-1">
         {message.kind === 'intro' && (
           <div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 px-3.5 py-2.5 text-[13px] leading-relaxed">
@@ -700,6 +726,15 @@ function AnswerBubble({ message }: { message: Extract<ChatMessage, { kind: 'answ
 // sub-agent yang ada di sistem + kapabilitas tool-calling. Bersifat INFORMASI
 // (peta), bukan klaim bahwa halaman ini menjalankan semuanya — tiap sub-agent
 // diakses dari tempatnya sendiri (lihat field `access`).
+// Avatar orchestrator (AXION Agent). Sub-agent avatar di buildSubAgents.
+const ORCHESTRATOR_AVATAR = '/persona/agent.png';
+const SUB_AGENT_AVATARS = [
+  '/persona/stanley.png',
+  '/persona/sri-mulyani.png',
+  '/persona/bianca.png',
+  '/persona/concierge.png',
+];
+
 type AgentPageT = ReturnType<typeof useLanguage>['t']['aiChat']['agentPage'];
 
 // Nama & avatar tetap (tak diterjemahkan); role/desc/access dari i18n.
@@ -759,9 +794,18 @@ function AgentCapabilitiesBadge() {
               className="absolute top-full right-0 mt-2 z-40 w-[320px] max-w-[calc(100vw-2rem)] rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl overflow-hidden"
             >
               <div className="flex items-start justify-between gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-                <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">{ap.orchestratorTitle}</p>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">{ap.orchestratorSubtitle}</p>
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <Image
+                    src={ORCHESTRATOR_AVATAR}
+                    alt="AXION Agent"
+                    width={32}
+                    height={32}
+                    className="w-8 h-8 rounded-full object-cover shrink-0 ring-2 ring-gray-200 dark:ring-gray-700 bg-gray-50 dark:bg-gray-700"
+                  />
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">{ap.orchestratorTitle}</p>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">{ap.orchestratorSubtitle}</p>
+                  </div>
                 </div>
                 <button
                   type="button"
