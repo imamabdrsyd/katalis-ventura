@@ -766,7 +766,7 @@ export default function TransactionImportModal({
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-12 text-center cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 transition-colors"
+              className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-12 text-center cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors"
             >
               <Upload className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
               <p className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -812,7 +812,7 @@ export default function TransactionImportModal({
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${progress.percentage}%` }}
                 />
               </div>

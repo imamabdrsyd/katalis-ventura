@@ -174,7 +174,7 @@ export function ImportRevenueWidget({
               : selectedFile
               ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20'
               : !disabled
-              ? 'border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400'
+              ? 'border-gray-300 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500'
               : ''
           }`}
         >

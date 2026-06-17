@@ -328,7 +328,7 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
             ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
             : selectedFile
             ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20'
-            : 'border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400'
+            : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500'
         }`}
       >
         <input
