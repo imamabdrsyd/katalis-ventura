@@ -266,11 +266,19 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
     return matchSearch && matchType;
   });
 
-  // Sync focusedIndex ke posisi selectedContact di filteredContacts
+  // Sync focusedIndex ke posisi selectedContact di filteredContacts +
+  // scroll item terpilih ke viewport. Penting untuk deep-link (?contact=<id>):
+  // kontak bisa jauh di bawah, tanpa ini highlight-nya tak terlihat di list.
   useEffect(() => {
     if (!selectedContact) return;
     const idx = filteredContacts.findIndex(c => c.id === selectedContact.id);
     setFocusedIndex(idx);
+    if (idx >= 0) {
+      // rAF: tunggu list ter-render (mis. setelah search/filter di-reset deep-link).
+      requestAnimationFrame(() => {
+        itemRefs.current[idx]?.scrollIntoView({ block: 'nearest' });
+      });
+    }
   }, [selectedContact?.id, search, filterType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const navigateList = useCallback((direction: 'up' | 'down') => {
