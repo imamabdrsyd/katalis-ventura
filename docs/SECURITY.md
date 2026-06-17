@@ -88,8 +88,20 @@ Skrip `scripts/migrate-cloudinary-authenticated.mjs` me-rename asset di
 tes kecil, dan throttle anti rate-limit. Folder publik `axion/gallery` tidak disentuh.
 
 **Status:** seluruh **205 asset** lama sudah dimigrasi (batch 10 → 50 → 145). Dry-run ulang
-menunjukkan 0 sisa. Skrip tetap idempotent — aman dijalankan ulang bila ada upload
-yang lolos sebagai `upload` di kemudian hari.
+menunjukkan 0 sisa.
+
+**⚠️ Gotcha (ditemukan & diperbaiki 17 Jun 2026):** menjalankan skrip dalam beberapa batch
+`LIMIT` membuat **rewrite URL di DB di-gate oleh `migratedSet`** (hanya asset yang di-rename
+di run yang sama). Karena cursor pagination Cloudinary berjalan di atas koleksi yang
+ikut berubah saat rename, sebagian asset ter-rename ke `authenticated` tetapi **URL di DB
+tertinggal `/upload/`** → URL `/upload/` jadi 404 (asset sudah pindah), dan resolver tidak
+menandainya sebagai authenticated sehingga preview/komponen menampilkan file rusak.
+Terjadi pada **15 transaksi**; sudah diperbaiki via SQL blanket-rewrite `/upload/` →
+`/authenticated/` untuk seluruh URL `axion/attachments/` (aman karena 0 asset upload tersisa).
+Kontak (`id_card_attachments`) DB-nya sudah benar — masalah preview KTP murni **render**:
+`ContactList.tsx` dulu memuat `attachment.url` mentah; kini pakai `useDeliverableAttachmentUrl`
+(signed URL) seperti komponen lain. Jalur OCR `image_url` di `AIChatPanel` juga dipindah ke
+multipart (kirim byte file) supaya tidak mengirim URL authenticated mentah ke server OCR.
 
 ---
 

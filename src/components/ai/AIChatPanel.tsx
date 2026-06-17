@@ -11,7 +11,6 @@ import { validateRowsSmart } from '@/lib/import/excelValidator';
 import { smartResolveTransaction } from '@/lib/import/smartResolver';
 import { getAccounts } from '@/lib/api/accounts';
 import { createTransactionsBulk, type TransactionInsert } from '@/lib/api/transactions';
-import { uploadAttachment } from '@/lib/storage/attachments';
 import { matchAccountByKeywords } from '@/lib/ocr/matcher';
 import type { OcrResult } from '@/lib/ocr/types';
 import { createClient } from '@/lib/supabase';
@@ -1095,14 +1094,15 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName }: AICha
     setMessages(prev => [...prev, { role: 'assistant', content: '', streaming: true }]);
 
     try {
-      // 1. Upload ke storage (Cloudinary) — sama dgn OCRScanButton.
-      const attachment = await uploadAttachment(businessId, file);
-
-      // 2. OCR scan server-side (scanning + parsing).
+      // 1. OCR scan server-side: kirim byte file langsung (multipart) — sama dgn
+      // OCRScanButton. Tidak upload ke Cloudinary di sini (hindari orphan + jalur
+      // image_url authenticated yang akan 401 saat server coba download).
+      const form = new FormData();
+      form.append('business_id', businessId);
+      form.append('file', file);
       const res = await fetch('/api/ocr/scan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ business_id: businessId, image_url: attachment.url }),
+        body: form,
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? 'OCR gagal memproses gambar');

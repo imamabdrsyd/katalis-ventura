@@ -11,6 +11,7 @@ import { formatCurrency, formatDate, whatsappUrl } from '@/lib/utils';
 import { CATEGORY_LABELS } from '@/lib/calculations';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
 import { isImageType } from '@/lib/storage/attachments';
+import { useDeliverableAttachmentUrl, triggerAttachmentDownload } from '@/lib/storage/signedUrl';
 import type { Contact as ContactType, ContactType as ContactTypeEnum, Transaction, TransactionAttachment } from '@/types';
 
 const CONTACT_TYPE_CONFIG: Record<ContactTypeEnum, { label: string; icon: React.ReactNode; className: string }> = {
@@ -87,6 +88,62 @@ interface ContactListProps {
   businessId: string;
   userId: string;
   canManage: boolean;
+}
+
+/**
+ * Preview KTP kontak. Lampiran Cloudinary kini ber-`type: authenticated` sehingga
+ * URL mentahnya 401 — harus di-resolve jadi signed URL lewat server dulu. Klik =
+ * unduh file (lewat proxy, tidak mengandalkan URL publik).
+ */
+function IdCardImage({ attachment, contactName }: { attachment: TransactionAttachment; contactName: string }) {
+  const url = useDeliverableAttachmentUrl(attachment);
+  const ready = !!url;
+  const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) setLoaded(true);
+    else setLoaded(false);
+  }, [url]);
+
+  const handleClick = async () => {
+    if (!ready || downloading) return;
+    setDownloading(true);
+    try {
+      await triggerAttachmentDownload(attachment);
+    } catch {
+      // gagal unduh — diabaikan, user bisa coba lagi
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={!ready}
+      aria-label={`Unduh ID card ${contactName}`}
+      className="relative block mt-3 aspect-[85.6/54] w-full max-w-md overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 disabled:cursor-not-allowed"
+    >
+      {ready && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          ref={imgRef}
+          src={url}
+          alt={`ID card ${contactName}`}
+          onLoad={() => setLoaded(true)}
+          onError={() => setLoaded(true)}
+          className={`h-full w-full object-cover object-center transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        />
+      )}
+      {(!ready || !loaded) && (
+        <div className="absolute inset-0 flex items-center justify-center animate-pulse bg-gray-100 dark:bg-gray-800">
+          <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
+        </div>
+      )}
+    </button>
+  );
 }
 
 export function ContactList({ businessId, userId, canManage }: ContactListProps) {
@@ -640,19 +697,10 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
               </div>
 
               {selectedIdCardImage && (
-                <a
-                  href={selectedIdCardImage.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block mt-3 aspect-[85.6/54] w-full max-w-md overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={selectedIdCardImage.url}
-                    alt={`ID card ${selectedContact.name}`}
-                    className="h-full w-full object-cover object-center"
-                  />
-                </a>
+                <IdCardImage
+                  attachment={selectedIdCardImage}
+                  contactName={selectedContact.name}
+                />
               )}
 
               {/* Summary row */}
