@@ -29,6 +29,12 @@ import { createClient } from '@supabase/supabase-js';
 
 const APPLY = process.env.APPLY === '1';
 const PREFIX = 'axion/attachments/';
+// Batasi jumlah asset Cloudinary yang dimigrasi (untuk tes kecil dulu). Kosong = semua.
+const LIMIT = process.env.LIMIT ? parseInt(process.env.LIMIT, 10) : Infinity;
+// Jeda antar-rename (ms) agar tidak kena rate limit Cloudinary Admin API.
+const RENAME_DELAY_MS = process.env.RENAME_DELAY_MS ? parseInt(process.env.RENAME_DELAY_MS, 10) : 250;
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function requireEnv(name) {
   const v = process.env[name];
@@ -73,9 +79,9 @@ function isTargetUrl(url) {
 
 // --- 1. Rename semua asset Cloudinary di prefix ke type authenticated ---
 async function migrateCloudinaryAssets() {
+  const migratedIds = new Set();
   let migrated = 0;
-  let skipped = 0;
-  for (const resourceType of ['image', 'raw', 'video']) {
+  outer: for (const resourceType of ['image', 'raw', 'video']) {
     let nextCursor;
     do {
       const res = await cloudinary.api.resources({
@@ -86,6 +92,7 @@ async function migrateCloudinaryAssets() {
         next_cursor: nextCursor,
       });
       for (const asset of res.resources) {
+        if (migrated >= LIMIT) break outer;
         const publicId = asset.public_id;
         if (APPLY) {
           await cloudinary.uploader.rename(publicId, publicId, {
@@ -94,21 +101,28 @@ async function migrateCloudinaryAssets() {
             overwrite: true,
             invalidate: true,
           });
+          await sleep(RENAME_DELAY_MS); // throttle anti rate-limit
         }
+        migratedIds.add(publicId);
         migrated += 1;
         log(`${APPLY ? '✓ migrasi' : '· akan migrasi'} [${resourceType}] ${publicId}`);
       }
       nextCursor = res.next_cursor;
     } while (nextCursor);
   }
-  log(`\nCloudinary: ${migrated} asset ${APPLY ? 'dimigrasi' : 'akan dimigrasi'} ke authenticated (${skipped} dilewati).`);
+  const limitNote = Number.isFinite(LIMIT) ? ` (LIMIT=${LIMIT})` : '';
+  log(`\nCloudinary: ${migrated} asset ${APPLY ? 'dimigrasi' : 'akan dimigrasi'} ke authenticated${limitNote}.`);
+  return migratedIds;
 }
 
 // --- 2. Rewrite URL di DB (transactions.meta + business_contacts.id_card_attachments) ---
-async function rewriteAttachmentArray(arr) {
+// Hanya rewrite attachment yang public_id-nya BENAR-BENAR ikut dimigrasi
+// (migratedSet) — penting saat LIMIT dipakai agar DB tidak menunjuk
+// /authenticated/ untuk asset yang belum di-rename.
+function rewriteAttachmentArray(arr, migratedSet) {
   let changed = false;
   const out = (arr ?? []).map((att) => {
-    if (att && isTargetUrl(att.url)) {
+    if (att && migratedSet.has(att.path) && isTargetUrl(att.url)) {
       changed = true;
       return { ...att, url: toAuthenticatedUrl(att.url) };
     }
@@ -117,7 +131,7 @@ async function rewriteAttachmentArray(arr) {
   return { out, changed };
 }
 
-async function migrateTransactions() {
+async function migrateTransactions(migratedSet) {
   const { data, error } = await supabase
     .from('transactions')
     .select('id, meta')
@@ -130,10 +144,10 @@ async function migrateTransactions() {
     let dirty = false;
 
     if (Array.isArray(meta.attachments)) {
-      const { out, changed } = await rewriteAttachmentArray(meta.attachments);
+      const { out, changed } = rewriteAttachmentArray(meta.attachments, migratedSet);
       if (changed) { meta.attachments = out; dirty = true; }
     }
-    if (meta.attachment && isTargetUrl(meta.attachment.url)) {
+    if (meta.attachment && migratedSet.has(meta.attachment.path) && isTargetUrl(meta.attachment.url)) {
       meta.attachment = { ...meta.attachment, url: toAuthenticatedUrl(meta.attachment.url) };
       dirty = true;
     }
@@ -150,7 +164,7 @@ async function migrateTransactions() {
   log(`transactions: ${updated} baris ${APPLY ? 'diupdate' : 'akan diupdate'}.`);
 }
 
-async function migrateContacts() {
+async function migrateContacts(migratedSet) {
   const { data, error } = await supabase
     .from('business_contacts')
     .select('id, id_card_attachments')
@@ -159,7 +173,7 @@ async function migrateContacts() {
 
   let updated = 0;
   for (const row of data) {
-    const { out, changed } = await rewriteAttachmentArray(row.id_card_attachments);
+    const { out, changed } = rewriteAttachmentArray(row.id_card_attachments, migratedSet);
     if (changed) {
       updated += 1;
       log(`${APPLY ? '✓' : '·'} business_contacts ${row.id}`);
@@ -177,10 +191,10 @@ async function migrateContacts() {
 
 async function main() {
   log(APPLY ? '=== MODE EKSEKUSI (APPLY=1) ===\n' : '=== DRY-RUN (set APPLY=1 untuk eksekusi) ===\n');
-  await migrateCloudinaryAssets();
+  const migratedSet = await migrateCloudinaryAssets();
   log('');
-  await migrateTransactions();
-  await migrateContacts();
+  await migrateTransactions(migratedSet);
+  await migrateContacts(migratedSet);
   log('\nSelesai.');
 }
 
