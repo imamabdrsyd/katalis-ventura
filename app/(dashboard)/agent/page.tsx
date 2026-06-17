@@ -470,7 +470,7 @@ export default function AgentPage() {
               ))}
             </div>
           </div>
-          <div className="flex items-center gap-1.5 min-w-0">
+          <div className="flex items-center gap-4 min-w-0">
             {/* Chip nama tools — berjejer di header (sembunyi di layar kecil) */}
             <div className="hidden lg:flex items-center gap-1.5">
               {headerTools.map(tool => (
