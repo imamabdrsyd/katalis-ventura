@@ -16,7 +16,7 @@ import type { ChannelStatus } from '@/lib/api/leads';
 import type { Lead, LeadChannel, LeadMessage, LeadStatus } from '@/types';
 import {
   MessagesSquare, RefreshCw, Send, Copy, Check, Trash2, ArrowLeft,
-  Inbox, Bot, User, UserRound, Sparkles, ChevronDown, Plug, Blocks,
+  Inbox, Bot, User, UserRound, Sparkles, ChevronDown, Plug, Blocks, Paperclip, Info,
 } from 'lucide-react';
 
 const ALL_CHANNELS = Object.keys(CHANNEL_LABELS) as LeadChannel[];
@@ -36,6 +36,15 @@ function isDraft(message: LeadMessage): boolean {
   return message.direction === 'outbound' && message.meta?.is_draft === true;
 }
 
+/**
+ * Pesan non-teks dari webhook disimpan sbg placeholder "[pesan <tipe>]"
+ * (mis. "[pesan instagram]", "[pesan image]"). Deteksi di render-time supaya
+ * data lama & baru sama-sama tampil ramah ("Lampiran"), bukan token mentah.
+ */
+function isMediaPlaceholder(content: string): boolean {
+  return /^\[pesan .+\]$/i.test(content.trim());
+}
+
 function LeadListItem({
   lead,
   active,
@@ -48,10 +57,10 @@ function LeadListItem({
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left px-3 py-3 transition-colors ${
+      className={`w-full text-left px-3 py-3 border-l-2 transition-colors ${
         active
-          ? 'bg-indigo-50 dark:bg-indigo-900/30'
-          : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+          ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-500 dark:border-indigo-400'
+          : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-700/50'
       }`}
     >
       <div className="flex items-center justify-between gap-2 mb-1">
@@ -121,7 +130,14 @@ function MessageBubble({
               Draft AI — belum terkirim
             </p>
           )}
-          {message.content}
+          {isMediaPlaceholder(message.content) ? (
+            <span className="flex items-center gap-1.5 italic text-gray-500 dark:text-gray-400">
+              <Paperclip className="w-3.5 h-3.5 shrink-0" />
+              Lampiran (buka di platform aslinya)
+            </span>
+          ) : (
+            message.content
+          )}
         </div>
         <div className={`flex items-center gap-2 mt-1 px-1 ${inbound ? '' : 'justify-end'}`}>
           {senderLabel && (
@@ -484,9 +500,12 @@ export default function LeadsPage() {
                   </div>
                 ) : (
                   <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-3">
-                    <p className="text-xs text-gray-400 dark:text-gray-500">
-                      {CHANNEL_LABELS[selectedLead.channel]} tidak mendukung kirim langsung —
-                      approve draft AI lalu salin & kirim manual lewat platformnya.
+                    <p className="flex items-start gap-2 text-xs text-gray-400 dark:text-gray-500">
+                      <Info className="w-3.5 h-3.5 mt-px shrink-0" />
+                      <span>
+                        {CHANNEL_LABELS[selectedLead.channel]} tidak mendukung kirim langsung —
+                        approve draft AI lalu salin &amp; kirim manual lewat platformnya.
+                      </span>
                     </p>
                   </div>
                 )
