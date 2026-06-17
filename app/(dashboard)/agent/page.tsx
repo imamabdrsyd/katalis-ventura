@@ -477,7 +477,7 @@ export default function AgentPage() {
                 <span
                   key={tool.fn}
                   title={tool.label}
-                  className="px-2 py-1 rounded-full text-[10px] font-mono text-primary-700 dark:text-primary-300 bg-primary-100 dark:bg-primary-900/40 whitespace-nowrap"
+                  className="px-2 py-1 rounded-full text-[10px] font-mono text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 whitespace-nowrap"
                 >
                   {tool.fn}
                 </span>
@@ -593,7 +593,7 @@ function ChatRow({ message }: { message: ChatMessage }) {
       />
       <div className="min-w-0 flex-1">
         {message.kind === 'intro' && (
-          <div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow-sm px-3.5 py-2.5 text-[13px] leading-relaxed">
+          <div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 shadow-sm px-3.5 py-2.5 text-[13px] leading-relaxed">
             {message.text}
           </div>
         )}
@@ -629,7 +629,7 @@ function AnswerBubble({ message }: { message: Extract<ChatMessage, { kind: 'answ
   // Hanya tampilkan dot-typing kalau benar-benar belum ada apa-apa (teks & thinking).
   const isEmpty = message.streaming && !message.text && !message.thinking;
   return (
-    <div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow-sm px-3.5 py-2.5 text-[13px] leading-relaxed">
+    <div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 shadow-sm px-3.5 py-2.5 text-[13px] leading-relaxed">
       {isEmpty ? (
         <span className="inline-flex gap-1 items-center h-4">
           <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -919,7 +919,7 @@ function RunBubble({ run }: { run: Extract<ChatMessage, { kind: 'run' }> }) {
   const lastIsError = run.steps[run.steps.length - 1]?.type === 'error';
 
   return (
-    <div className="max-w-[440px] rounded-2xl rounded-tl-sm bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
+    <div className="max-w-[440px] rounded-2xl rounded-tl-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-gray-100 dark:border-gray-700">
         {run.isRunning ? (
