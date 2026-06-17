@@ -457,7 +457,7 @@ export default function AgentPage() {
             />
             <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight shrink-0">Agentic Workspace</h1>
             {/* Avatar sub-agent yang dikoordinasi, sembunyi di layar kecil */}
-            <div className="hidden sm:flex items-center gap-1.5 pl-2">
+            <div className="hidden sm:flex items-center gap-2 pl-2">
               {SUB_AGENT_AVATARS.map(src => (
                 <Image
                   key={src}
@@ -465,7 +465,7 @@ export default function AgentPage() {
                   alt="sub-agent"
                   width={24}
                   height={24}
-                  className="w-6 h-6 rounded-full object-cover bg-gray-100 dark:bg-gray-800"
+                  className="w-6 h-6 rounded-full object-cover ring-1 ring-gray-200 dark:ring-gray-700 bg-gray-100 dark:bg-gray-800"
                 />
               ))}
             </div>
@@ -477,7 +477,7 @@ export default function AgentPage() {
                 <span
                   key={tool.fn}
                   title={tool.label}
-                  className="px-2 py-1 rounded-full text-[10px] font-mono text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 whitespace-nowrap"
+                  className="px-2 py-1 rounded-full text-[10px] font-mono text-gray-700 dark:text-gray-200 bg-gray-300/70 dark:bg-gray-600 whitespace-nowrap"
                 >
                   {tool.fn}
                 </span>
@@ -775,7 +775,7 @@ function AgentCapabilitiesBadge() {
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+        className="inline-flex items-center gap-1.5 text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
         aria-expanded={open}
       >
         <Network className="w-3.5 h-3.5" />
