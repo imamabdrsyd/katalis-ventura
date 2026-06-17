@@ -519,7 +519,7 @@ export default function AgentPage() {
             className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-6 py-5 space-y-4 min-h-0 bg-white dark:bg-gray-900"
           >
             {messages.map(msg => (
-              <ChatRow key={msg.id} message={msg} />
+              <ChatRow key={msg.id} message={msg} onPrompt={text => { setInput(text); sendChatMessage(text); }} />
             ))}
           </div>
 
@@ -586,7 +586,43 @@ export default function AgentPage() {
 
 // ── Row renderer ─────────────────────────────────────────────────────────────
 
-function ChatRow({ message }: { message: ChatMessage }) {
+const STARTER_PROMPTS = [
+  'Bagaimana kondisi laba rugi bisnis saya bulan ini?',
+  'Apa beban terbesar saya 3 bulan terakhir?',
+  'Berapa total revenue saya tahun ini?',
+];
+
+function IntroCard({ message, onPrompt }: { message: Extract<ChatMessage, { kind: 'intro' }>; onPrompt: (text: string) => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center px-6 py-16 select-none min-h-[60%]">
+      <div className="w-20 h-20 rounded-full overflow-hidden ring-4 ring-white dark:ring-gray-800 shadow-md mb-6 bg-gray-100 dark:bg-gray-700">
+        <Image src={ORCHESTRATOR_AVATAR} alt="AXION Agent" width={80} height={80} className="w-full h-full object-cover" />
+      </div>
+      <h2 className="text-3xl md:text-4xl font-light text-gray-800 dark:text-gray-100 mb-10 leading-snug tracking-tight">
+        Halo{message.userName ? ` ${message.userName}` : ''}, mau melakukan apa hari ini?
+      </h2>
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">Coba tanya ini</p>
+      <div className="w-full max-w-md space-y-2">
+        {STARTER_PROMPTS.map(p => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => onPrompt(p)}
+            className="w-full text-left text-[13px] text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 hover:border-primary-300 hover:text-primary-700 dark:hover:border-primary-600 dark:hover:text-primary-300 transition-colors shadow-sm"
+          >
+            {p}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ChatRow({ message, onPrompt }: { message: ChatMessage; onPrompt?: (text: string) => void }) {
+  if (message.kind === 'intro') {
+    return <IntroCard message={message} onPrompt={onPrompt ?? (() => {})} />;
+  }
+
   if (message.role === 'user') {
     return (
       <div className="flex justify-end">
@@ -608,14 +644,6 @@ function ChatRow({ message }: { message: ChatMessage }) {
         className="w-7 h-7 rounded-full object-cover shrink-0 mt-0.5 ring-2 ring-gray-200 dark:ring-gray-700 bg-gray-100 dark:bg-gray-800"
       />
       <div className="min-w-0 flex-1">
-        {message.kind === 'intro' && (
-          <div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 shadow-sm px-4 py-3.5 text-[13px] leading-relaxed">
-            <p className="font-semibold text-[13px] text-gray-900 dark:text-gray-100 mb-0.5">AXION Agent</p>
-            <p>
-              Halo{message.userName ? ` ${message.userName}` : ''}! Mau melakukan apa hari ini?
-            </p>
-          </div>
-        )}
 
         {message.kind === 'answer' && <AnswerBubble message={message} />}
 
