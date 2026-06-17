@@ -13,7 +13,11 @@ import { CatalogItemForm, type CatalogItemFormData } from '@/components/catalog/
 import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
 import {
   Plus, Search, Package, Wrench, Pencil, Trash2, X, Eye, EyeOff,
+  LayoutGrid, List,
 } from 'lucide-react';
+
+type ViewMode = 'grid' | 'list';
+const VIEW_MODE_KEY = 'katalis_catalog_view_mode';
 
 /**
  * Panel manajemen Katalog produk/jasa di dalam HubPage.
@@ -41,6 +45,18 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showInactive, setShowInactive] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+
+  // Pulihkan preferensi view (grid/list) dari localStorage setelah mount.
+  useEffect(() => {
+    const saved = localStorage.getItem(VIEW_MODE_KEY);
+    if (saved === 'grid' || saved === 'list') setViewMode(saved);
+  }, []);
+
+  function changeView(mode: ViewMode) {
+    setViewMode(mode);
+    localStorage.setItem(VIEW_MODE_KEY, mode);
+  }
 
   useEffect(() => {
     async function fetchData() {
@@ -162,6 +178,37 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
             {showInactive ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
             Inactive
           </button>
+          {/* View toggle (grid / list) — segmented */}
+          <div className="flex items-center gap-1 p-1 rounded-full bg-gray-100 dark:bg-gray-700">
+            <button
+              type="button"
+              onClick={() => changeView('grid')}
+              aria-label="Grid view"
+              aria-pressed={viewMode === 'grid'}
+              title="Grid"
+              className={`p-1.5 rounded-full transition-colors ${
+                viewMode === 'grid'
+                  ? 'bg-white dark:bg-gray-600 text-indigo-500 dark:text-indigo-400 shadow-sm'
+                  : 'bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => changeView('list')}
+              aria-label="List view"
+              aria-pressed={viewMode === 'list'}
+              title="List"
+              className={`p-1.5 rounded-full transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-white dark:bg-gray-600 text-indigo-500 dark:text-indigo-400 shadow-sm'
+                  : 'bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+              }`}
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
           {canManage && (
             <button
               onClick={openAdd}
@@ -192,7 +239,7 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
             </button>
           )}
         </div>
-      ) : (
+      ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filteredItems.map(item => {
             const Icon = item.item_type === 'service' ? Wrench : Package;
@@ -229,6 +276,63 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
                 )}
                 {canManage && (
                   <div className="absolute bottom-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => openEdit(item)}
+                      className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                      title={tc.edit}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setDeleteItem(item)}
+                      className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                      title={tc.delete}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {filteredItems.map(item => {
+            const Icon = item.item_type === 'service' ? Wrench : Package;
+            return (
+              <div
+                key={item.id}
+                className={`group flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${
+                  item.is_active
+                    ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
+                    : 'border-gray-200/60 dark:border-gray-700/60 bg-gray-50 dark:bg-gray-800/40 opacity-70'
+                }`}
+              >
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                  <Icon className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{item.name}</p>
+                    {!item.is_active && (
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 flex-shrink-0">
+                        {tc.inactiveBadge}
+                      </span>
+                    )}
+                  </div>
+                  {item.description && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">
+                      {item.description}
+                    </p>
+                  )}
+                </div>
+                <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium tabular-nums whitespace-nowrap flex-shrink-0">
+                  {formatCurrency(item.default_price)}
+                  {item.unit && <span className="text-gray-400 dark:text-gray-500 font-normal"> / {item.unit}</span>}
+                </p>
+                {canManage && (
+                  <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => openEdit(item)}
                       className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
