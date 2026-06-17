@@ -214,11 +214,26 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
     setSearch(contactSearchParam);
   }, [contactParam, contactSearchParam]);
 
+  // Deep-link dari detail transaksi (?contact=<id>) hanya boleh memilih kontak
+  // SEKALI per nilai param — saat pertama masuk. Tanpa guard ini, klik kontak
+  // lain akan terus dipaksa balik ke kontak URL karena effect re-run tiap
+  // selectedContact berubah. Ref di-reset bila contactParam berganti, supaya
+  // deep-link ke kontak berbeda (komponen tetap mounted) tetap dihormati.
+  const deepLinkHandledRef = useRef(false);
+  const lastDeepLinkParamRef = useRef<string | null>(null);
+  if (contactParam && contactParam !== lastDeepLinkParamRef.current) {
+    lastDeepLinkParamRef.current = contactParam;
+    deepLinkHandledRef.current = false;
+  }
   useEffect(() => {
     if (loading || contacts.length === 0 || !contactParam) return;
+    if (deepLinkHandledRef.current) return;
 
     const contactToShow = contacts.find((contact) => contact.id === contactParam);
-    if (!contactToShow || selectedContact?.id === contactToShow.id) return;
+    if (!contactToShow) return;
+
+    deepLinkHandledRef.current = true;
+    if (selectedContact?.id === contactToShow.id) return;
 
     setSelectedContact(contactToShow);
     setSearch('');
