@@ -786,6 +786,7 @@ function buildAgentTools(ap: AgentPageT): { label: string; fn: string }[] {
   return [
     { label: ap.toolQueryTransactions, fn: 'query_transactions' },
     { label: ap.toolFinancialSummary, fn: 'get_financial_summary' },
+    { label: ap.toolImportCsv, fn: 'import_csv' },
     { label: ap.toolContacts, fn: 'get_contacts' },
     { label: ap.toolBusinessInfo, fn: 'get_business_info' },
     { label: ap.toolNavigate, fn: 'navigate_to' },
@@ -877,9 +878,9 @@ function AgentCapabilitiesBadge() {
                     {agentTools.map(tool => (
                       <li key={tool.fn} className="flex items-start gap-2 text-[11px] text-gray-600 dark:text-gray-300">
                         <Sparkles className="w-3 h-3 mt-0.5 text-primary-400 dark:text-primary-500 shrink-0" />
-                        <span className="min-w-0">
-                          <span className="block leading-tight">{tool.label}</span>
-                          <code className="block text-[10px] text-gray-400 dark:text-gray-500 font-mono">{tool.fn}</code>
+                        <span className="min-w-0 flex flex-wrap items-center gap-1.5">
+                          <span className="leading-tight">{tool.label}</span>
+                          <code className="inline-flex items-center rounded-md bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-[10px] text-gray-500 dark:text-gray-400 font-mono">{tool.fn}</code>
                         </span>
                       </li>
                     ))}

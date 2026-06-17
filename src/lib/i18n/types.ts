@@ -891,6 +891,7 @@ export interface Translations {
       // Label ramah tools (nama fungsi TIDAK diterjemahkan)
       toolQueryTransactions: string;
       toolFinancialSummary: string;
+      toolImportCsv: string;
       toolContacts: string;
       toolBusinessInfo: string;
       toolNavigate: string;
