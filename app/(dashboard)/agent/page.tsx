@@ -477,7 +477,7 @@ export default function AgentPage() {
                 <span
                   key={tool.fn}
                   title={tool.label}
-                  className="px-2 py-1 rounded-full text-[10px] font-mono text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 whitespace-nowrap"
+                  className="px-2 py-1 rounded-full text-[10px] font-mono text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 whitespace-nowrap"
                 >
                   {tool.fn}
                 </span>
