@@ -40,21 +40,45 @@ interface PDFRow {
   kind: RowKind;
 }
 
-/** Load an image from a URL and return as base64 data URI */
-async function loadImageAsBase64(url: string): Promise<string | null> {
+/** Load an image, resize it using HTML5 Canvas, and return as a compressed JPEG data URL */
+async function loadImageAsBase64(url: string, maxSize = 64): Promise<string | null> {
   try {
     const res = await fetch(url);
+    if (!res.ok) return null;
     const blob = await res.blob();
-    return new Promise((resolve) => {
+
+    const originalDataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
+      reader.onerror = () => reject(reader.error);
       reader.readAsDataURL(blob);
     });
+
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('image decode failed'));
+      el.src = originalDataUrl;
+    });
+
+    const scale = Math.min(1, maxSize / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.round(img.naturalWidth * scale);
+    const h = Math.round(img.naturalHeight * scale);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+
+    return canvas.toDataURL('image/jpeg', 0.75);
   } catch {
     return null;
   }
 }
+
 
 // Export Income Statement to PDF — Xero-inspired layout with per-account breakdown
 export async function exportIncomeStatementToPDF(
@@ -291,7 +315,7 @@ export async function exportIncomeStatementToPDF(
 
     // Center: favicon logo
     if (faviconBase64) {
-      doc.addImage(faviconBase64, 'PNG', (pageWidth - logoSize) / 2, footerY - 3, logoSize, logoSize);
+      doc.addImage(faviconBase64, 'JPEG', (pageWidth - logoSize) / 2, footerY - 3, logoSize, logoSize);
     }
   }
   doc.setTextColor(0, 0, 0);
@@ -542,7 +566,7 @@ export async function exportCashFlowToPDF(
 
     // Center: favicon logo
     if (faviconBase64) {
-      doc.addImage(faviconBase64, 'PNG', (pageWidth - logoSize) / 2, footerY - 3, logoSize, logoSize);
+      doc.addImage(faviconBase64, 'JPEG', (pageWidth - logoSize) / 2, footerY - 3, logoSize, logoSize);
     }
   }
   doc.setTextColor(0, 0, 0);
@@ -644,20 +668,26 @@ export async function exportSelectedTransactionsToPDF(
 
   // ── Table rows ──
   const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date));
-  const body = sorted.map((tr, idx) => [
-    String(idx + 1),
-    tr.description ?? tr.name ?? '-',
-    new Date(tr.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
-    formatCurrency(tr.amount),
-  ]);
+  const body = sorted.map((tr, idx) => {
+    const qty = tr.meta?.unit_breakdown?.quantity;
+    const unit = tr.meta?.unit_breakdown?.unit;
+    return [
+      String(idx + 1),
+      tr.description ?? tr.name ?? '-',
+      qty !== undefined ? String(qty) : '-',
+      unit ?? '-',
+      new Date(tr.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+      formatCurrency(tr.amount),
+    ];
+  });
 
   const totalAmount = sorted.reduce((sum, tr) => sum + tr.amount, 0);
 
   autoTable(doc, {
     startY: cursorY + 6,
-    head: [['No.', 'Deskripsi', 'Tanggal', 'Jumlah (Rp)']],
+    head: [['No.', 'Deskripsi', 'Qty', 'Satuan', 'Tanggal', 'Jumlah (Rp)']],
     body,
-    foot: [['', '', 'Total', formatCurrency(totalAmount)]],
+    foot: [['', '', '', '', 'Total', formatCurrency(totalAmount)]],
     theme: 'plain',
     headStyles: {
       fillColor: [245, 245, 245],
@@ -681,10 +711,12 @@ export async function exportSelectedTransactionsToPDF(
       textColor: [40, 40, 40],
     },
     columnStyles: {
-      0: { cellWidth: 12, halign: 'right' },
+      0: { cellWidth: 10, halign: 'right' },
       1: { cellWidth: 'auto' },
-      2: { cellWidth: 30 },
-      3: { cellWidth: 40, halign: 'right' },
+      2: { cellWidth: 15, halign: 'center' },
+      3: { cellWidth: 20, halign: 'center' },
+      4: { cellWidth: 28 },
+      5: { cellWidth: 35, halign: 'right' },
     },
   });
 
@@ -708,7 +740,7 @@ export async function exportSelectedTransactionsToPDF(
     doc.text(`Halaman ${i} dari ${pageCount}`, pageWidth - 14, footerY + 1, { align: 'right' });
 
     if (faviconBase64) {
-      doc.addImage(faviconBase64, 'PNG', (pageWidth - logoSize) / 2, footerY - 3, logoSize, logoSize);
+      doc.addImage(faviconBase64, 'JPEG', (pageWidth - logoSize) / 2, footerY - 3, logoSize, logoSize);
     }
   }
   doc.setTextColor(0, 0, 0);
@@ -922,7 +954,7 @@ export async function exportBalanceSheetToPDF(
 
     // Center: favicon logo
     if (faviconBase64) {
-      doc.addImage(faviconBase64, 'PNG', (pageWidth - logoSize) / 2, footerY - 3, logoSize, logoSize);
+      doc.addImage(faviconBase64, 'JPEG', (pageWidth - logoSize) / 2, footerY - 3, logoSize, logoSize);
     }
   }
   doc.setTextColor(0, 0, 0);
@@ -1145,7 +1177,7 @@ export async function exportSCEToPDF(
     );
     doc.text(`Halaman ${i} dari ${pageCount}`, pageWidth - 14, footerY + 1, { align: 'right' });
     if (faviconBase64) {
-      doc.addImage(faviconBase64, 'PNG', (pageWidth - logoSize) / 2, footerY - 3, logoSize, logoSize);
+      doc.addImage(faviconBase64, 'JPEG', (pageWidth - logoSize) / 2, footerY - 3, logoSize, logoSize);
     }
   }
   doc.setTextColor(0, 0, 0);
