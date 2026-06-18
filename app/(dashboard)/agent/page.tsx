@@ -499,14 +499,14 @@ export default function AgentPage() {
               ))}
             </div>
           </div>
-          <div className="flex items-center gap-4 min-w-0">
+          <div className="flex items-center gap-4 min-w-0 flex-1 justify-end">
             {/* Chip nama tools — berjejer di header (sembunyi di layar kecil) */}
-            <div className="hidden lg:flex items-center gap-1.5">
+            <div className="hidden lg:flex items-center gap-1.5 overflow-x-auto scrollbar-hide min-w-0 py-1 px-2 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 rounded-full max-w-[500px] xl:max-w-[800px] 2xl:max-w-[1000px]">
               {headerTools.map(tool => (
                 <span
                   key={tool.fn}
                   title={tool.label}
-                  className="px-2 py-1 rounded-full text-[10px] font-mono text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 whitespace-nowrap"
+                  className="px-2.5 py-1 rounded-full text-[10px] font-mono text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700 shadow-sm whitespace-nowrap shrink-0"
                 >
                   {tool.fn}
                 </span>

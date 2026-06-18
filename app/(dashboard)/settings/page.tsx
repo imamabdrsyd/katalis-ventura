@@ -6,7 +6,7 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { createClient } from '@/lib/supabase';
 import { LOCALE_LABELS, LOCALE_FLAGS, type Locale } from '@/lib/i18n';
-import { Camera, User, Mail, Briefcase, Save, Globe, CheckCircle2, XCircle, Copy, RefreshCw, FileEdit, CheckCheck, LayoutList, ClipboardCheck, HandCoins, FileText, Landmark, LineChart, GitBranch, Bot } from 'lucide-react';
+import { Camera, User, Mail, Briefcase, Save, Globe, CheckCircle2, XCircle, Copy, RefreshCw, FileEdit, CheckCheck, LayoutList, ClipboardCheck, HandCoins, FileText, Landmark, LineChart, GitBranch, Bot, Database } from 'lucide-react';
 
 function TelegramIcon({ className }: { className?: string }) {
   return (
@@ -19,9 +19,10 @@ import Image from 'next/image';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import { isManagerRole } from '@/lib/roles';
 import type { UserRole } from '@/types';
+import { toast } from 'sonner';
 
 export default function SettingsPage() {
-  const { user, userRole, displayRole, isSuperadmin, switchRole, refetch } = useBusinessContext();
+  const { user, userRole, displayRole, isSuperadmin, switchRole, refetch, activeBusinessId } = useBusinessContext();
   const { locale, setLocale, t } = useLanguage();
   const router = useRouter();
   const supabase = createClient();
@@ -38,8 +39,6 @@ export default function SettingsPage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDisplayRole, setSelectedDisplayRole] = useState<UserRole>('superadmin');
 
@@ -58,6 +57,10 @@ export default function SettingsPage() {
   const [telegramActionLoading, setTelegramActionLoading] = useState(false);
   const [telegramCopied, setTelegramCopied] = useState(false);
   const [telegramCountdown, setTelegramCountdown] = useState(0);
+
+  // GCP Sync State
+  const [gcpLoading, setGcpLoading] = useState(false);
+  const [gcpSyncing, setGcpSyncing] = useState(false);
 
   const TOGGLEABLE_NAV_ITEMS = [
     { href: '/trial-balance', label: 'Trial Balance', icon: ClipboardCheck },
@@ -154,7 +157,7 @@ export default function SettingsPage() {
       setTelegramTokenExpiry(new Date(data.expires_at));
       setTelegramBotUsername(data.bot_username || '');
     } catch {
-      setError('Gagal membuat token Telegram.');
+      toast.error('Gagal membuat token Telegram.');
     } finally {
       setTelegramActionLoading(false);
     }
@@ -168,7 +171,7 @@ export default function SettingsPage() {
       setTelegramConn(null);
       setTelegramToken(null);
     } catch {
-      setError('Gagal memutuskan koneksi Telegram.');
+      toast.error('Gagal memutuskan koneksi Telegram.');
     } finally {
       setTelegramActionLoading(false);
     }
@@ -184,8 +187,9 @@ export default function SettingsPage() {
       });
       if (!res.ok) throw new Error('fail');
       setTelegramConn((prev) => (prev ? { ...prev, default_transaction_status: newStatus } : prev));
+      toast.success('Preferensi Telegram berhasil diperbarui.');
     } catch {
-      setError('Gagal menyimpan preferensi Telegram.');
+      toast.error('Gagal menyimpan preferensi Telegram.');
     } finally {
       setTelegramStatusSaving(false);
     }
@@ -199,6 +203,43 @@ export default function SettingsPage() {
     setTimeout(() => setTelegramCopied(false), 2000);
   };
 
+  const handleInitGcpSchema = async () => {
+    if (!confirm('Inisialisasi skema GCP akan menjalankan DDL query. Lanjutkan?')) return;
+    setGcpLoading(true);
+    try {
+      const res = await fetch('/api/admin/gcp/init-schema', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      toast.success('Skema GCP berhasil diinisialisasi.');
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal inisialisasi GCP.');
+    } finally {
+      setGcpLoading(false);
+    }
+  };
+
+  const handleSyncGcp = async () => {
+    if (!activeBusinessId) {
+      toast.error('Pilih bisnis terlebih dahulu.');
+      return;
+    }
+    setGcpSyncing(true);
+    try {
+      const res = await fetch('/api/admin/gcp/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business_id: activeBusinessId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      toast.success(`Berhasil sinkronisasi: ${data.details.transactions} transaksi disalin.`);
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal sinkronisasi GCP.');
+    } finally {
+      setGcpSyncing(false);
+    }
+  };
+
   const formatCountdown = (seconds: number) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
     const s = (seconds % 60).toString().padStart(2, '0');
@@ -208,7 +249,6 @@ export default function SettingsPage() {
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true);
-      setError(null);
 
       if (!event.target.files || event.target.files.length === 0) {
         return;
@@ -233,10 +273,10 @@ export default function SettingsPage() {
       const { data } = supabase.storage.from('profiles').getPublicUrl(filePath);
 
       setAvatarUrl(data.publicUrl);
-      setSuccess(t.settings.photoUploaded);
+      toast.success(t.settings.photoUploaded);
     } catch (error: any) {
       console.error('Error uploading avatar:', error);
-      setError(error.message || t.settings.photoUploadFailed);
+      toast.error(error.message || t.settings.photoUploadFailed);
     } finally {
       setUploading(false);
     }
@@ -245,8 +285,6 @@ export default function SettingsPage() {
   const handleSaveProfile = async () => {
     try {
       setSaving(true);
-      setError(null);
-      setSuccess(null);
 
       if (!user) return;
 
@@ -277,7 +315,7 @@ export default function SettingsPage() {
         switchRole(selectedDisplayRole);
       }
 
-      setSuccess(t.settings.profileUpdated);
+      toast.success(t.settings.profileUpdated);
       await refetch();
 
       // Refresh after 1.5s
@@ -286,7 +324,7 @@ export default function SettingsPage() {
       }, 1500);
     } catch (error: any) {
       console.error('Error updating profile:', error);
-      setError(error.message || t.settings.profileUpdateFailed);
+      toast.error(error.message || t.settings.profileUpdateFailed);
     } finally {
       setSaving(false);
     }
@@ -311,17 +349,7 @@ export default function SettingsPage() {
         <p className="text-gray-500 dark:text-gray-400 mt-1">{t.settings.subtitle}</p>
       </div>
 
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl">
-          <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
-        </div>
-      )}
-
-      {success && (
-        <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-xl">
-          <p className="text-sm text-green-700 dark:text-green-400">{success}</p>
-        </div>
-      )}
+      {/* Messages handled via toast notifications */}
 
       {/* 2-panel layout */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
@@ -667,6 +695,43 @@ export default function SettingsPage() {
               })}
             </div>
           </div>
+
+          {/* Integrasi Database (GCP) */}
+          {(isManagerRole(userRole) || isSuperadmin) && (
+            <div className="card">
+              <div className="flex items-center gap-3 mb-5">
+                <Database className="w-5 h-5 text-gray-900 dark:text-gray-100" />
+                <div>
+                  <h3 className="font-semibold text-gray-800 dark:text-gray-100">Integrasi Database (GCP)</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Sinkronisasi data ke Cloud SQL (pgvector)</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {isSuperadmin && (
+                  <div>
+                    <button
+                      onClick={handleInitGcpSchema}
+                      disabled={gcpLoading}
+                      className="btn-secondary w-full justify-start text-sm"
+                    >
+                      {gcpLoading ? 'Memproses...' : 'Inisialisasi Skema (DDL)'}
+                    </button>
+                    <p className="text-xs text-gray-500 mt-1">Hanya dijalankan sekali oleh superadmin untuk membuat tabel OLAP di GCP.</p>
+                  </div>
+                )}
+                <div>
+                  <button
+                    onClick={handleSyncGcp}
+                    disabled={gcpSyncing || !activeBusinessId}
+                    className="btn-primary-glow w-full justify-start text-sm"
+                  >
+                    {gcpSyncing ? 'Menyinkronkan...' : 'Sinkronkan Data Bisnis Sekarang'}
+                  </button>
+                  <p className="text-xs text-gray-500 mt-1">Salin data transaksi, akun, dan bisnis ke GCP untuk keperluan analitik dan AI.</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
       </div>

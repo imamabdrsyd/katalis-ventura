@@ -22,6 +22,7 @@ export const gcpSql =
     max: 10, // Max number of connections in the pool
     idle_timeout: 20, // Idle connection timeout in seconds
     connect_timeout: 10, // Connect timeout in seconds
+    ssl: connectionString && !connectionString.includes('localhost') && !connectionString.includes('127.0.0.1') ? 'require' : false,
   });
 
 if (process.env.NODE_ENV !== 'production') {
