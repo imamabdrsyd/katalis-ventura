@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { needsBusinessInfo, needsReasoning } from '@/lib/ai/intent';
+import { needsBusinessInfo, needsReasoning, routeIntent } from '@/lib/ai/intent';
 
 describe('needsReasoning', () => {
   it('pertanyaan analitik biasa → tidak butuh reasoning (Gemini dulu)', () => {
@@ -49,3 +49,26 @@ describe('needsBusinessInfo', () => {
     expect(needsBusinessInfo('CAP TABLE bisnis ini bagaimana?')).toBe(true);
   });
 });
+
+describe('routeIntent', () => {
+  it('mendeteksi persona secara deterministik', () => {
+    expect(routeIntent('hitung pajak saya').persona).toBe('pajak');
+    expect(routeIntent('cek jurnal kemarin').persona).toBe('pembukuan');
+    expect(routeIntent('berapa margin bulan ini').persona).toBe('analis_fpna');
+  });
+
+  it('fallback ke analis_fpna jika pertanyaan butuh reasoning tapi tidak spesifik pajak/pembukuan', () => {
+    const route = routeIntent('buat proyeksi bulan depan');
+    expect(route.needsReasoning).toBe(true);
+    expect(route.persona).toBe('analis_fpna');
+    expect(route.isFinancial).toBe(true);
+  });
+
+  it('pertanyaan non-finansial tidak akan memicu isFinancial atau persona tertentu', () => {
+    const route = routeIntent('halo apa kabar');
+    expect(route.isFinancial).toBe(false);
+    expect(route.persona).toBe(null);
+    expect(route.needsReasoning).toBe(false);
+  });
+});
+

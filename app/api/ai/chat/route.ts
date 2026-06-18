@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { createServerClient, getAuthenticatedUser, getBusinessRoleForUser } from '@/lib/supabase-server';
 import { buildFinancialContext } from '@/lib/ai/financialContext';
 import { CHAT_SYSTEM_PROMPT } from '@/lib/ai/prompts';
-import { needsBusinessInfo, needsReasoning } from '@/lib/ai/intent';
+import { routeIntent } from '@/lib/ai/intent';
 import { executeTool } from '@/lib/ai/agentTools';
 import {
   AIProviderRequestError,
@@ -56,6 +56,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Fetch konteks keuangan dasar + konteks kepemilikan hanya bila pertanyaannya relevan.
+  const route = routeIntent(lastUserMsg);
+  
   const [
     { data: business },
     { data: accounts },
@@ -67,15 +69,10 @@ export async function POST(req: NextRequest) {
       .select('business_name, business_sector')
       .eq('id', business_id)
       .single(),
-    // Accounts dibutuhkan untuk hitung depresiasi periode (sama spt halaman laporan)
     supabase
       .from('accounts')
       .select('*')
       .eq('business_id', business_id),
-    // Transaksi dgn relasi account + journal_lines — WAJIB karena
-    // calculateFinancialSummary mengklasifikasi via account_type (debit/credit/journal line),
-    // bukan dari field `category` mentah. Tanpa join ini angka P&L salah total.
-    // Filter posted (null status = transaksi lama dianggap posted, konsisten useReportData).
     supabase
       .from('transactions')
       .select(`
@@ -89,7 +86,7 @@ export async function POST(req: NextRequest) {
       .or('status.is.null,status.eq.posted')
       .order('date', { ascending: false })
       .limit(3000),
-    needsBusinessInfo(lastUserMsg)
+    route.needsBusinessInfo
       ? executeTool('get_business_info', {}, business_id)
       : Promise.resolve(null),
   ]);
@@ -117,7 +114,7 @@ ATURAN INTERPRETASI:
     aiMessages[0].content = `${financialContext}${businessInfoContext}\n\n${aiMessages[0].content}`;
   }
 
-  const preferReasoning = needsReasoning(lastUserMsg);
+  const preferReasoning = route.needsReasoning;
 
   let result: import('@/lib/ai/provider').StreamResult | null;
   try {

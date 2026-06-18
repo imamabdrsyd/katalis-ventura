@@ -65,7 +65,7 @@ interface GroundingSource {
 type ChatMessage =
   | { id: string; role: 'assistant'; kind: 'intro'; text: string; userName?: string }
   | { id: string; role: 'user'; kind: 'text'; text: string }
-  | { id: string; role: 'assistant'; kind: 'answer'; text: string; thinking?: string; sources?: GroundingSource[]; model?: string; streaming?: boolean }
+  | { id: string; role: 'assistant'; kind: 'answer'; text: string; thinking?: string; sources?: GroundingSource[]; model?: string; streaming?: boolean; agentAvatar?: string }
   | {
       id: string;
       role: 'assistant';
@@ -347,11 +347,16 @@ export default function AgentPage() {
     };
 
     try {
-      const res = await fetch('/api/agent/chat', {
+      const res = await fetch('/api/ai/agent-query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: abortRef.current.signal,
-        body: JSON.stringify({ messages: [...history, { role: 'user', content: trimmed }] }),
+        body: JSON.stringify({ 
+          business_id: activeBusinessId,
+          message: trimmed,
+          history: history,
+          persona: 'auto'
+        }),
       });
 
       if (!res.ok || !res.body) {
@@ -381,13 +386,21 @@ export default function AgentPage() {
           if (!data || data === '[DONE]') continue;
           try {
             const json = JSON.parse(data);
-            if (json.kind === 'sources' && Array.isArray(json.sources)) {
+            if (json.kind === 'route') {
+              let agentAvatar: string | undefined;
+              if (json.persona === 'pajak') agentAvatar = '/persona/sri-mulyani.png';
+              else if (json.persona === 'pembukuan') agentAvatar = '/persona/bianca.png';
+              else if (json.persona === 'analis_fpna') agentAvatar = '/persona/stanley.png';
+              patchAnswer({ agentAvatar });
+            } else if (json.kind === 'sources' && Array.isArray(json.sources)) {
               // Dedup by uri lintas chunk (grounding bisa muncul beberapa kali).
               const seen = new Set(sources.map(s => s.uri));
               for (const s of json.sources as GroundingSource[]) {
                 if (s?.uri && !seen.has(s.uri)) { seen.add(s.uri); sources.push(s); }
               }
               patchAnswer({ sources: [...sources] });
+            } else if (json.kind === 'model') {
+              if (json.text) patchAnswer({ model: json.text });
             } else if (json.text) {
               if (json.kind === 'thinking') thinking += json.text;
               else accumulated += json.text;
@@ -411,7 +424,7 @@ export default function AgentPage() {
       setIsChatting(false);
       abortRef.current = null;
     }
-  }, [messages, isChatting, isRunning]);
+  }, [messages, isChatting, isRunning, activeBusinessId]);
 
   // Router submit: ada file → jalankan agent import; tanpa file → chat LLM general.
   const handleSubmit = useCallback(() => {
@@ -614,15 +627,17 @@ function ChatRow({ message }: { message: ChatMessage }) {
     );
   }
 
-  // assistant rows — avatar orchestrator (AXION Agent)
+  // assistant rows — avatar orchestrator atau spesialis jika ada agentAvatar
+  const avatarSrc = message.kind === 'answer' && message.agentAvatar ? message.agentAvatar : ORCHESTRATOR_AVATAR;
+
   return (
     <div className="flex gap-2.5">
       <Image
-        src={ORCHESTRATOR_AVATAR}
-        alt="AXION Agent"
+        src={avatarSrc}
+        alt="Agent"
         width={28}
         height={28}
-        className="w-7 h-7 rounded-full object-contain p-0.5 shrink-0 mt-0.5 ring-2 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-100"
+        className="w-7 h-7 rounded-full object-cover p-0.5 shrink-0 mt-0.5 ring-2 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-100"
       />
       <div className="min-w-0 flex-1">
 

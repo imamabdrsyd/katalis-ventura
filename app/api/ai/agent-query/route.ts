@@ -19,6 +19,7 @@ import { z } from 'zod';
 import { createServerClient, getAuthenticatedUser, getBusinessRoleForUser } from '@/lib/supabase-server';
 import { buildFinancialContext } from '@/lib/ai/financialContext';
 import { buildAgentSystemPrompt } from '@/lib/ai/financialPersonas';
+import { routeIntent } from '@/lib/ai/intent';
 import { TOOL_DEFINITIONS, executeTool, type NavigateAction } from '@/lib/ai/agentTools';
 import { getVertexTokenAndProject } from '@/lib/ai/vertexAuth';
 import type { Transaction, Account } from '@/types';
@@ -31,7 +32,7 @@ const bodySchema = z.object({
     .max(10)
     .optional()
     .default([]),
-  persona: z.enum(['pembukuan', 'analis_fpna', 'pajak']).optional(),
+  persona: z.enum(['auto', 'pembukuan', 'analis_fpna', 'pajak']).optional().default('auto'),
 });
 
 // Gemini 3.5 Flash: generasi terbaru (3.5), near-Pro level, thinking model.
@@ -122,6 +123,23 @@ async function streamGeminiIteration(
           }
         }
       }
+
+      // Grounding Google Search → emit sumber
+      const grounding: Array<{ web?: { uri?: string; title?: string } }> =
+        (candidate as any)?.groundingMetadata?.groundingChunks ?? [];
+      if (grounding.length > 0) {
+        const sources: Array<{ uri: string; title: string }> = [];
+        const seen = new Set<string>();
+        for (const g of grounding) {
+          const uri = g.web?.uri;
+          if (!uri || seen.has(uri)) continue;
+          seen.add(uri);
+          sources.push({ uri, title: g.web?.title || uri });
+        }
+        if (sources.length > 0) {
+          controller.enqueue(sseEvent({ kind: 'sources', sources }));
+        }
+      }
     }
   }
 
@@ -138,37 +156,49 @@ export async function POST(req: NextRequest) {
 
   const parsed = bodySchema.safeParse(body);
   if (!parsed.success) {
-    return new Response(JSON.stringify({ error: 'Invalid request' }), { status: 400 });
+    console.error('[agent-query] Zod validation failed:', parsed.error.flatten());
+    return new Response(JSON.stringify({ error: 'Invalid request', details: parsed.error.flatten() }), { status: 400 });
   }
 
   const { business_id, message, history, persona } = parsed.data;
-  const systemPrompt = buildAgentSystemPrompt(persona ?? null);
+  
+  const route = (persona === 'auto')
+    ? routeIntent(message)
+    : { persona: persona as any, needsReasoning: false, needsBusinessInfo: false, isFinancial: true };
+
+  const systemPrompt = route.isFinancial
+    ? buildAgentSystemPrompt(route.persona ?? null)
+    : `Kamu adalah AXION Agent, asisten AI serbaguna yang membantu pengguna dengan topik apa pun. Jawab dengan jelas, akurat, dan ringkas. Gunakan Bahasa Indonesia kecuali pengguna menggunakan bahasa lain.`;
 
   const supabase = await createServerClient();
   const role = await getBusinessRoleForUser(supabase, user.id, business_id);
   if (!role) return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 });
 
-  // Fetch business context (paralel)
-  const [{ data: business }, { data: accounts }, { data: transactions }] = await Promise.all([
-    supabase.from('businesses').select('business_name, business_sector').eq('id', business_id).single(),
-    supabase.from('accounts').select('*').eq('business_id', business_id),
-    supabase
-      .from('transactions')
-      .select(`*, debit_account:accounts!transactions_debit_account_id_fkey(*), credit_account:accounts!transactions_credit_account_id_fkey(*), journal_lines(*, account:accounts(*))`)
-      .eq('business_id', business_id)
-      .is('deleted_at', null)
-      .or('status.is.null,status.eq.posted')
-      .order('date', { ascending: false })
-      .limit(3000),
-  ]);
+  let financialContext = '';
 
-  const financialContext = buildFinancialContext(
-    business?.business_name ?? 'Bisnis',
-    business?.business_sector ?? '',
-    (transactions ?? []) as unknown as Transaction[],
-    (accounts ?? []) as unknown as Account[],
-    new Date()
-  );
+  if (route.isFinancial) {
+    // Fetch business context (paralel)
+    const [{ data: business }, { data: accounts }, { data: transactions }] = await Promise.all([
+      supabase.from('businesses').select('business_name, business_sector').eq('id', business_id).single(),
+      supabase.from('accounts').select('*').eq('business_id', business_id),
+      supabase
+        .from('transactions')
+        .select(`*, debit_account:accounts!transactions_debit_account_id_fkey(*), credit_account:accounts!transactions_credit_account_id_fkey(*), journal_lines(*, account:accounts(*))`)
+        .eq('business_id', business_id)
+        .is('deleted_at', null)
+        .or('status.is.null,status.eq.posted')
+        .order('date', { ascending: false })
+        .limit(3000),
+    ]);
+
+    financialContext = buildFinancialContext(
+      business?.business_name ?? 'Bisnis',
+      business?.business_sector ?? '',
+      (transactions ?? []) as unknown as Transaction[],
+      (accounts ?? []) as unknown as Account[],
+      new Date()
+    );
+  }
 
   const auth = await getVertexTokenAndProject();
   if (!auth) {
@@ -185,27 +215,34 @@ export async function POST(req: NextRequest) {
     })),
     {
       role: 'user' as const,
-      parts: [{ text: `${financialContext}\n\n${message}` }],
+      parts: [{ text: route.isFinancial ? `${financialContext}\n\n${message}` : message }],
     },
   ];
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
+        controller.enqueue(sseEvent({ kind: 'route', persona: route.persona, isFinancial: route.isFinancial }));
+
         let navigateAction: NavigateAction | null = null;
 
-        for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
-          const reqBody = {
+        for (let iteration = 0; iteration < (route.isFinancial ? MAX_TOOL_ITERATIONS : 1); iteration++) {
+          const reqBody: any = {
             system_instruction: { parts: [{ text: systemPrompt }] },
             contents,
-            tools: [{ function_declarations: TOOL_DEFINITIONS }],
-            tool_config: { function_calling_config: { mode: 'AUTO' } },
             generationConfig: {
               temperature: 1,
               maxOutputTokens: 8192,
               thinkingConfig: { includeThoughts: true },
             },
           };
+
+          if (route.isFinancial) {
+            reqBody.tools = [{ function_declarations: TOOL_DEFINITIONS }];
+            reqBody.tool_config = { function_calling_config: { mode: 'AUTO' } };
+          } else {
+            reqBody.tools = [{ googleSearch: {} }];
+          }
 
           const { functionCalls, collectedParts, answerChunks } = await streamGeminiIteration(
             baseEndpoint,
