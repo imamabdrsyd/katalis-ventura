@@ -48,7 +48,13 @@ function formatPrice(price: number): string {
  * semua kosong → section "INFORMASI BISNIS" di-skip.
  */
 function formatBusinessKnowledge(
-  fields: { hours?: string; location?: string; policies?: string; faq?: string } | null,
+  fields: {
+    hours?: string;
+    location?: string;
+    policies?: string;
+    faq?: string;
+    images?: { url: string; title: string }[];
+  } | null,
   content: string | null
 ): string | null {
   const lines: string[] = [];
@@ -56,6 +62,12 @@ function formatBusinessKnowledge(
   if (fields?.location?.trim()) lines.push(`Lokasi: ${fields.location.trim()}`);
   if (fields?.policies?.trim()) lines.push(`Kebijakan: ${fields.policies.trim()}`);
   if (fields?.faq?.trim()) lines.push(`FAQ: ${fields.faq.trim()}`);
+  if (fields?.images && fields.images.length > 0) {
+    lines.push('Gambar/Foto Bisnis pendukung:');
+    fields.images.forEach((img) => {
+      lines.push(`- ${img.title}: ${img.url}`);
+    });
+  }
   if (content?.trim()) lines.push(content.trim());
   return lines.length > 0 ? lines.join('\n') : null;
 }

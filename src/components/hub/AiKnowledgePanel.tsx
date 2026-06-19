@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import Image from 'next/image';
-import { Loader2, Lock, Pencil, X } from 'lucide-react';
+import { Loader2, Lock, Pencil, X, Trash2 } from 'lucide-react';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { isManagerRole } from '@/lib/roles';
 import { getBusinessAiKnowledge, saveBusinessAiKnowledge } from '@/lib/api/aiKnowledge';
 import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
+import { validateFile } from '@/lib/storage/attachments';
 import type { AiKnowledgeFields } from '@/types';
 
 const MAX_LEN = 4000;
@@ -39,6 +40,11 @@ export function AiKnowledgePanel() {
   // Modal edit field terstruktur
   const [showFields, setShowFields] = useState(false);
   const [draft, setDraft] = useState<AiKnowledgeFields>(EMPTY_FIELDS);
+
+  // State untuk upload gambar pendukung baru
+  const [newImageFile, setNewImageFile] = useState<File | null>(null);
+  const [newImageTitle, setNewImageTitle] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,6 +108,15 @@ export function AiKnowledgePanel() {
     if (draft.location?.trim()) cleaned.location = draft.location.trim();
     if (draft.policies?.trim()) cleaned.policies = draft.policies.trim();
     if (draft.faq?.trim()) cleaned.faq = draft.faq.trim();
+    if (draft.images && draft.images.length > 0) {
+      cleaned.images = draft.images
+        .map((img) => ({
+          url: img.url,
+          path: img.path,
+          title: img.title.trim(),
+        }))
+        .filter((img) => img.url && img.title);
+    }
     setShowFields(false);
     await persist(content, cleaned);
   }
@@ -147,7 +162,7 @@ export function AiKnowledgePanel() {
       )}
 
       {/* Ringkasan field terstruktur (kalau ada) — di atas textarea */}
-      {filledFields.length > 0 && (
+      {(filledFields.length > 0 || (fields.images && fields.images.length > 0)) && (
         <div className="mb-4 space-y-2.5 rounded-lg bg-gray-50 dark:bg-gray-700/40 border border-gray-100 dark:border-gray-700 p-3">
           {filledFields.map((f) => (
             <div key={f.key}>
@@ -155,6 +170,30 @@ export function AiKnowledgePanel() {
               <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap mt-0.5">{f.value}</p>
             </div>
           ))}
+
+          {fields.images && fields.images.length > 0 && (
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1.5">{th.fieldImages}</p>
+              <div className="grid grid-cols-3 gap-2 mt-1">
+                {fields.images.map((img, idx) => (
+                  <a
+                    key={idx}
+                    href={img.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="relative group rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 aspect-square bg-gray-100 dark:bg-gray-800"
+                    title={img.title}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={img.url} alt={img.title} className="w-full h-full object-cover" />
+                    <div className="absolute inset-x-0 bottom-0 bg-black/60 p-1 text-[10px] text-white truncate text-center group-hover:bg-black/80 transition-colors">
+                      {img.title}
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -239,8 +278,175 @@ export function AiKnowledgePanel() {
                 onChange={(e) => setDraft((d) => ({ ...d, faq: e.target.value }))}
                 rows={4}
                 placeholder={th.fieldFaqPlaceholder}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-y"
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-880 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-y"
               />
+            </div>
+
+            {/* Bagian Upload Gambar Pendukung */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {th.fieldImages} ({(draft.images ?? []).length}/3)
+              </label>
+
+              {/* List Gambar Pendukung */}
+              <div className="space-y-3 mb-3">
+                {(draft.images ?? []).map((img, index) => (
+                  <div key={index} className="flex gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40">
+                    <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border border-gray-300 dark:border-gray-600">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={img.url} alt={img.title} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        {th.fieldImageTitle} *
+                      </label>
+                      <input
+                        type="text"
+                        value={img.title}
+                        onChange={(e) => {
+                          const newImages = [...(draft.images ?? [])];
+                          newImages[index] = { ...img, title: e.target.value };
+                          setDraft((d) => ({ ...d, images: newImages }));
+                        }}
+                        placeholder={th.fieldImageTitle}
+                        className="w-full px-2 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newImages = (draft.images ?? []).filter((_, i) => i !== index);
+                        setDraft((d) => ({ ...d, images: newImages }));
+                      }}
+                      className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 flex-shrink-0 self-center transition-colors"
+                      title={t.catalog.delete}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Upload Input - Hanya tampil jika jumlah gambar < 3 */}
+              {(draft.images ?? []).length < 3 && (
+                <div className="p-3 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800/20">
+                  <div className="flex flex-col gap-2.5">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const err = validateFile(file);
+                          if (err) {
+                            toast.error(err);
+                            return;
+                          }
+                          setNewImageFile(file);
+                        }}
+                        className="hidden"
+                        id="new-ai-image-upload"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => document.getElementById('new-ai-image-upload')?.click()}
+                        className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-xs font-medium rounded-lg text-gray-700 dark:text-gray-200 transition-colors"
+                      >
+                        {th.fieldImageSelect}
+                      </button>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[200px]">
+                        {newImageFile ? newImageFile.name : th.fieldNoImageSelected}
+                      </span>
+                    </div>
+
+                    {newImageFile && (
+                      <div className="space-y-2">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                            {th.fieldImageTitle} *
+                          </label>
+                          <input
+                            type="text"
+                            value={newImageTitle}
+                            onChange={(e) => setNewImageTitle(e.target.value)}
+                            placeholder="Cth. Menu Makanan Utama, Brosur Kamar..."
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500"
+                          />
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!newImageFile) return;
+                              if (!newImageTitle.trim()) {
+                                toast.error(th.errorImageTitleRequired);
+                                return;
+                              }
+
+                              setUploadingImage(true);
+                              try {
+                                const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
+                                const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!;
+
+                                const formData = new FormData();
+                                formData.append('file', newImageFile);
+                                formData.append('upload_preset', uploadPreset);
+                                formData.append('folder', `axion/ai-knowledge/${businessId}`);
+
+                                const cloudRes = await fetch(
+                                  `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+                                  { method: 'POST', body: formData }
+                                );
+                                if (!cloudRes.ok) {
+                                  const err = await cloudRes.json();
+                                  throw new Error(err.error?.message || 'Gagal upload ke Cloudinary');
+                                }
+                                const { secure_url, public_id } = await cloudRes.json();
+                                const displayUrl = secure_url.replace(/\/upload\//, '/upload/f_jpg/');
+
+                                setDraft((d) => ({
+                                  ...d,
+                                  images: [
+                                    ...(d.images ?? []),
+                                    { url: displayUrl, path: public_id, title: newImageTitle.trim() },
+                                  ],
+                                }));
+
+                                setNewImageFile(null);
+                                setNewImageTitle('');
+                                toast.success('Gambar berhasil diunggah');
+                              } catch (err: any) {
+                                toast.error(err.message || 'Gagal upload gambar');
+                              } finally {
+                                setUploadingImage(false);
+                              }
+                            }}
+                            disabled={uploadingImage}
+                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
+                          >
+                            {uploadingImage && <Loader2 className="w-3 h-3 animate-spin" />}
+                            {th.fieldImageUpload}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewImageFile(null);
+                              setNewImageTitle('');
+                            }}
+                            disabled={uploadingImage}
+                            className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50 text-xs font-medium rounded-lg text-gray-700 dark:text-gray-200 transition-colors"
+                          >
+                            {th.fieldsCancel}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

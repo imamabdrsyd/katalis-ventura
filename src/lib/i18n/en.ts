@@ -376,6 +376,13 @@ export const en: Translations = {
     saved: 'AI info saved',
     saveFailed: 'Failed to save',
     loadFailed: 'Failed to load AI info',
+    fieldImages: 'Supporting Photos / Images',
+    fieldImageTitle: 'Image Title',
+    fieldImageSelect: 'Select Image...',
+    fieldImageUpload: 'Upload Image',
+    fieldNoImageSelected: 'No file selected',
+    errorImageTitleRequired: 'Image title is required',
+    errorMaxImages: 'Maximum 3 supporting images',
   },
 
   businesses: {

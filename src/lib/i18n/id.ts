@@ -380,6 +380,13 @@ export const id: Translations = {
     saved: 'Info AI tersimpan',
     saveFailed: 'Gagal menyimpan',
     loadFailed: 'Gagal memuat info AI',
+    fieldImages: 'Foto / Gambar Pendukung',
+    fieldImageTitle: 'Judul Gambar',
+    fieldImageSelect: 'Pilih Gambar...',
+    fieldImageUpload: 'Upload Gambar',
+    fieldNoImageSelected: 'Belum ada file dipilih',
+    errorImageTitleRequired: 'Judul gambar harus diisi',
+    errorMaxImages: 'Maksimal 3 gambar pendukung',
   },
 
   businesses: {

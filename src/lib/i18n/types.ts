@@ -387,6 +387,13 @@ export interface Translations {
     saved: string;
     saveFailed: string;
     loadFailed: string;
+    fieldImages: string;
+    fieldImageTitle: string;
+    fieldImageSelect: string;
+    fieldImageUpload: string;
+    fieldNoImageSelected: string;
+    errorImageTitleRequired: string;
+    errorMaxImages: string;
   };
 
   // Businesses Page

@@ -156,6 +156,12 @@ export interface CatalogItem {
   revenue_account?: Account | null;
 }
 
+export interface AiKnowledgeImage {
+  url: string;
+  path: string;       // Cloudinary public_id
+  title: string;      // judul gambar
+}
+
 /**
  * Field terstruktur fakta bisnis yang sering ditanya calon pelanggan. Diedit di
  * editor terpisah, ditampilkan sebagai ringkasan di atas catatan bebas. Semua opsional.
@@ -165,6 +171,7 @@ export interface AiKnowledgeFields {
   location?: string;  // lokasi
   policies?: string;  // kebijakan
   faq?: string;       // FAQ
+  images?: AiKnowledgeImage[]; // daftar gambar pendukung (maks 3)
 }
 
 /**
