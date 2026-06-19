@@ -109,6 +109,8 @@ export default function AgentPage() {
   const [input, setInput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [isChatting, setIsChatting] = useState(false);
+  const [isMemoryVaultOpen, setIsMemoryVaultOpen] = useState(false);
+  const [vaultMemories, setVaultMemories] = useState<any[]>([]);
 
   const userName = (user?.user_metadata?.full_name as string | undefined)?.split(' ')[0]
     ?? user?.email?.split('@')[0]
@@ -140,6 +142,102 @@ export default function AgentPage() {
   const hasNavigatedRef = useRef(false);
   const stepIdRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
+
+  // --- Session Management (Persistent Memory) ---
+  const sessionKey = `axion_agent_session_${activeBusinessId}`;
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
+  // Initialize session ID
+  useEffect(() => {
+    if (!activeBusinessId) return;
+    let sid = localStorage.getItem(sessionKey);
+    if (!sid) {
+      sid = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `sess_${Date.now()}`;
+      localStorage.setItem(sessionKey, sid);
+    }
+    setSessionId(sid);
+  }, [activeBusinessId, sessionKey]);
+
+  // Load history on mount
+  useEffect(() => {
+    if (!activeBusinessId || !sessionId) return;
+    const loadHistory = async () => {
+      try {
+        const res = await fetch(`/api/ai/memory?businessId=${activeBusinessId}&sessionId=${sessionId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.messages && data.messages.length > 0) {
+          // Hanya load pesan text dari user dan answer dari assistant (buang intro lama, ganti dengan riwayat)
+          const loadedMessages: ChatMessage[] = data.messages.map((m: any, i: number) => {
+            if (m.role === 'user') {
+              return { id: nextId(), role: 'user', kind: 'text', text: m.content };
+            } else {
+              // Jika role === 'system' (manual memory dari FAB), kita bisa menampilkannya secara berbeda atau sebagai text biasa
+              return { id: nextId(), role: 'assistant', kind: 'answer', text: m.content, streaming: false };
+            }
+          });
+          
+          if (loadedMessages.length > 0) {
+            setMessages(loadedMessages);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load agent memory:', err);
+      }
+    };
+    loadHistory();
+  }, [activeBusinessId, sessionId]);
+
+  // Load Memory Vault
+  const loadVault = useCallback(async () => {
+    if (!activeBusinessId) return;
+    try {
+      const res = await fetch(`/api/ai/memory/vault?businessId=${activeBusinessId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setVaultMemories(data.memories || []);
+      }
+    } catch (err) {
+      console.error('Failed to load memory vault:', err);
+    }
+  }, [activeBusinessId]);
+
+  useEffect(() => {
+    if (isMemoryVaultOpen) {
+      loadVault();
+    }
+  }, [isMemoryVaultOpen, loadVault]);
+
+  // Auto-save history (debounced via effect when messages change)
+  useEffect(() => {
+    if (!activeBusinessId || !sessionId || messages.length <= 1) return;
+    
+    // Hanya simpan pesan yang relevan (text & completed answers)
+    const messagesToSave = messages
+      .filter((m): m is Extract<ChatMessage, { kind: 'text' | 'answer' }> => m.kind === 'text' || m.kind === 'answer')
+      .filter(m => (m.kind === 'answer' ? !m.streaming && !!m.text : true))
+      .map(m => ({
+        role: m.role,
+        content: m.text,
+      }));
+
+    if (messagesToSave.length === 0) return;
+
+    const timeoutId = setTimeout(() => {
+      fetch('/api/ai/memory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessId: activeBusinessId,
+          sessionId,
+          messages: messagesToSave
+        }),
+      }).catch(err => console.error('Failed to auto-save agent memory:', err));
+    }, 2000); // Debounce 2s
+
+    return () => clearTimeout(timeoutId);
+  }, [messages, activeBusinessId, sessionId]);
+  // ----------------------------------------------
 
   const channel = SUPPORTED_CHANNELS.find(c => c.value === selectedChannel) ?? availableChannels[0] ?? SUPPORTED_CHANNELS[0];
 
@@ -512,6 +610,13 @@ export default function AgentPage() {
                 </span>
               ))}
             </div>
+            <button
+              onClick={() => setIsMemoryVaultOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors border border-indigo-200/50 dark:border-indigo-800/50 shrink-0"
+            >
+              <Brain className="w-3.5 h-3.5" />
+              <span>Memory Vault</span>
+            </button>
             <AgentCapabilitiesBadge />
           </div>
         </div>
@@ -593,6 +698,73 @@ export default function AgentPage() {
           {importWidget}
         </aside>
       </div>
+
+      {/* Memory Vault Modal */}
+      <AnimatePresence>
+        {isMemoryVaultOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMemoryVaultOpen(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[85vh]"
+            >
+              <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-lg">
+                    <Brain className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Memory Vault</h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Ingatan yang Anda simpan dari percakapan.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsMemoryVaultOpen(false)}
+                  className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {vaultMemories.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Brain className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-3" />
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Belum ada memori tersimpan</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-500 mt-1 max-w-xs">Gunakan tombol Memorize di panel obrolan kanan bawah untuk menyimpan konteks penting.</p>
+                  </div>
+                ) : (
+                  vaultMemories.map((mem, i) => (
+                    <div key={i} className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] uppercase tracking-wider font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">
+                            {mem.metadata?.source || 'System'}
+                          </span>
+                        </div>
+                        <span className="text-xs text-slate-400 dark:text-slate-500">
+                          {new Date(mem.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                        {mem.content}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

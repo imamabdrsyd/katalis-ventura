@@ -18,6 +18,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { CATEGORY_BADGE_CLASSES, CATEGORY_LABELS } from '@/lib/categoryColors';
 import { MODEL_LABELS } from '@/lib/ai/provider';
+import { toast } from 'sonner';
 
 type ChatMode = 'ask' | 'record';
 
@@ -338,6 +339,8 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
   const stashedMessagesRef = useRef<Record<ChatMode, Message[]>>({ ask: [], record: [] });
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isOCRProcessing, setIsOCRProcessing] = useState(false);
+  const [isMemorizing, setIsMemorizing] = useState(false);
   // Mobile web (<640px, breakpoint `sm`) default ke tab Entry (catat transaksi);
   // desktop tetap Ask. SSR-safe: window dicek lewat lazy initializer.
   const [mode, setMode] = useState<ChatMode>(() =>
@@ -1298,6 +1301,32 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
       .catch(() => setActiveModel(null));
   };
 
+  const handleMemorize = async () => {
+    if (messages.length === 0) return;
+    setIsMemorizing(true);
+    try {
+      const res = await fetch('/api/ai/memorize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessId,
+          messages: messages.map(m => ({
+            role: m.role,
+            text: m.content
+          })).filter(m => m.text)
+        })
+      });
+      
+      if (!res.ok) throw new Error('Gagal menyimpan ingatan');
+      toast.success('Ingatan berhasil disimpan ke Orchestrator!');
+    } catch (err) {
+      toast.error('Gagal menyimpan ingatan');
+      console.error(err);
+    } finally {
+      setIsMemorizing(false);
+    }
+  };
+
   // Identitas agent yang sedang standby: Bianca di tab Entry, Stanley/Sri Mulyani di Ask.
   const askPersonas = buildAskPersonas(t);
   const activePersona = mode === 'record' ? buildEntryPersona(t) : askPersonas[persona];
@@ -1349,13 +1378,23 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {messages.length > 0 && (
-                  <button
-                    onClick={handleReset}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                    title="Reset percakapan"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                  </button>
+                  <>
+                    <button
+                      onClick={handleMemorize}
+                      disabled={isMemorizing}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
+                      title="Ingat percakapan ini (kirim ke Orchestrator)"
+                    >
+                      {isMemorizing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Brain className="w-3.5 h-3.5" />}
+                    </button>
+                    <button
+                      onClick={handleReset}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                      title="Reset percakapan"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                    </button>
+                  </>
                 )}
                 <button
                   onClick={onClose}
