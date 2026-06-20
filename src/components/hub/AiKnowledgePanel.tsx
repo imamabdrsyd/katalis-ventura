@@ -10,7 +10,7 @@ import { isManagerRole } from '@/lib/roles';
 import { getBusinessAiKnowledge, saveBusinessAiKnowledge } from '@/lib/api/aiKnowledge';
 import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
 import { validateFile } from '@/lib/storage/attachments';
-import type { AiKnowledgeFields } from '@/types';
+import type { AiKnowledgeFields, AiKnowledgeImage } from '@/types';
 
 const MAX_LEN = 4000;
 const EMPTY_FIELDS: AiKnowledgeFields = {};
@@ -45,6 +45,9 @@ export function AiKnowledgePanel() {
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [newImageTitle, setNewImageTitle] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
+
+  // State untuk modal image viewer
+  const [selectedImage, setSelectedImage] = useState<AiKnowledgeImage | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -176,12 +179,11 @@ export function AiKnowledgePanel() {
               <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1.5">{th.fieldImages}</p>
               <div className="grid grid-cols-3 gap-2 mt-1">
                 {fields.images.map((img, idx) => (
-                  <a
+                  <button
                     key={idx}
-                    href={img.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="relative group rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 aspect-square bg-gray-100 dark:bg-gray-800"
+                    type="button"
+                    onClick={() => setSelectedImage(img)}
+                    className="relative group rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 aspect-square bg-gray-100 dark:bg-gray-800 text-left"
                     title={img.title}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -189,7 +191,7 @@ export function AiKnowledgePanel() {
                     <div className="absolute inset-x-0 bottom-0 bg-black/60 p-1 text-[10px] text-white truncate text-center group-hover:bg-black/80 transition-colors">
                       {img.title}
                     </div>
-                  </a>
+                  </button>
                 ))}
               </div>
             </div>
@@ -315,9 +317,14 @@ export function AiKnowledgePanel() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         const newImages = (draft.images ?? []).filter((_, i) => i !== index);
                         setDraft((d) => ({ ...d, images: newImages }));
+
+                        // Auto-save delete ke database
+                        const nextFields: AiKnowledgeFields = { ...fields, images: newImages };
+                        await saveBusinessAiKnowledge(businessId!, content.trim(), nextFields, user!.id);
+                        setFields(nextFields);
                       }}
                       className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 flex-shrink-0 self-center transition-colors"
                       title={t.catalog.delete}
@@ -407,13 +414,20 @@ export function AiKnowledgePanel() {
                                 const { secure_url, public_id } = await cloudRes.json();
                                 const displayUrl = secure_url.replace(/\/upload\//, '/upload/f_jpg/');
 
+                                const newImages = [
+                                  ...(draft.images ?? []),
+                                  { url: displayUrl, path: public_id, title: newImageTitle.trim() },
+                                ];
+
                                 setDraft((d) => ({
                                   ...d,
-                                  images: [
-                                    ...(d.images ?? []),
-                                    { url: displayUrl, path: public_id, title: newImageTitle.trim() },
-                                  ],
+                                  images: newImages,
                                 }));
+
+                                // Auto-save ke database agar tidak hilang jika modal ditutup (UX Omnichannel)
+                                const nextFields: AiKnowledgeFields = { ...fields, images: newImages };
+                                await saveBusinessAiKnowledge(businessId!, content.trim(), nextFields, user!.id);
+                                setFields(nextFields);
 
                                 setNewImageFile(null);
                                 setNewImageTitle('');
@@ -460,6 +474,35 @@ export function AiKnowledgePanel() {
             </button>
           </div>
         </div>
+      </AnimatedDialog>
+
+      {/* Image Viewer Modal */}
+      <AnimatedDialog
+        isOpen={!!selectedImage}
+        onClose={() => setSelectedImage(null)}
+        panelClassName="bg-transparent shadow-none max-w-4xl w-full flex items-center justify-center p-4"
+        backdropClassName="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center"
+      >
+        {selectedImage && (
+          <div className="relative flex flex-col items-center max-w-full">
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors z-10"
+              title={th.close ?? 'Tutup'}
+            >
+              <X className="w-6 h-6" />
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={selectedImage.url}
+              alt={selectedImage.title}
+              className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+            />
+            <div className="mt-4 text-center">
+              <p className="text-white font-medium">{selectedImage.title}</p>
+            </div>
+          </div>
+        )}
       </AnimatedDialog>
     </div>
   );

@@ -67,6 +67,51 @@ export async function sendWhatsAppMessage(
   }
 }
 
+export async function sendWhatsAppImage(
+  to: string,
+  imageUrl: string,
+  creds?: WhatsAppCredentials
+): Promise<SendMessageResult> {
+  const phoneNumberId = creds?.phoneNumberId ?? process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const accessToken = creds?.accessToken ?? process.env.WHATSAPP_ACCESS_TOKEN;
+
+  if (!phoneNumberId || !accessToken) {
+    return { ok: false, error: 'WhatsApp credentials not configured' };
+  }
+
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to,
+          type: 'image',
+          image: { link: imageUrl },
+        }),
+      }
+    );
+
+    if (!res.ok) {
+      const detail = await res.text();
+      console.warn('[whatsapp/api] send image failed:', res.status, detail);
+      return { ok: false, error: `Graph API ${res.status}` };
+    }
+
+    const json = (await res.json()) as { messages?: Array<{ id: string }> };
+    return { ok: true, messageId: json.messages?.[0]?.id };
+  } catch (err) {
+    console.warn('[whatsapp/api] send image error:', err);
+    return { ok: false, error: 'Network error' };
+  }
+}
+
 /**
  * Verifikasi kredensial dengan memanggil Graph API metadata nomor.
  * Return info nomor kalau valid, null kalau token/nomor salah.

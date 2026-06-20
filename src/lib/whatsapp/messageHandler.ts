@@ -24,7 +24,7 @@ import { generateLeadReply } from '@/lib/ai/leadAssistant';
 import { generateConciergeReply } from '@/lib/ai/concierge';
 import { getAiTier } from '@/lib/ai/concierge/tier';
 import { getDecryptedToken } from '@/lib/integrations/config';
-import { sendWhatsAppMessage, type WhatsAppCredentials } from './api';
+import { sendWhatsAppMessage, sendWhatsAppImage, type WhatsAppCredentials } from './api';
 import type { WhatsAppWebhookValue } from './types';
 import type { ChannelIntegration } from '@/types';
 
@@ -106,20 +106,48 @@ export async function handleWhatsAppMessage(value: WhatsAppWebhookValue): Promis
         if (integration.ai_mode === 'auto') {
           // Token per-bisnis dari config; undefined → fallback env global
           const creds = getWhatsAppCredentials(integration);
-          const sent = await sendWhatsAppMessage(msg.from, result.reply, creds);
-          if (sent.ok) {
+
+          let finalReply = result.reply;
+          const imageUrls = finalReply.match(/https:\/\/res\.cloudinary\.com\/[^\s)\]"']+/g) || [];
+          const cleanUrls = imageUrls.map(url => url.replace(/[.,!?]+$/, ''));
+
+          // Bersihkan URL dari teks
+          for (const rawUrl of imageUrls) {
+            finalReply = finalReply.replace(rawUrl, '').trim();
+          }
+
+          // Kirim attachment gambar satu per satu (kalau ada)
+          for (const url of cleanUrls) {
+            await sendWhatsAppImage(msg.from, url, creds);
+          }
+
+          if (finalReply) {
+            const sent = await sendWhatsAppMessage(msg.from, finalReply, creds);
+            if (sent.ok) {
+              await insertLeadMessage(supabase, {
+                leadId: lead.id,
+                businessId: integration.business_id,
+                direction: 'outbound',
+                sender: 'ai',
+                content: result.reply, // Tetap simpan konten asli di history
+                externalMessageId: sent.messageId ?? null,
+                meta: { provider: result.provider, model: result.model },
+              });
+              continue;
+            }
+            console.warn('[whatsapp/handler] kirim balasan gagal:', sent.error);
+          } else {
+            // Kalau reply hanya berisi gambar, tetap simpan history
             await insertLeadMessage(supabase, {
               leadId: lead.id,
               businessId: integration.business_id,
               direction: 'outbound',
               sender: 'ai',
               content: result.reply,
-              externalMessageId: sent.messageId ?? null,
               meta: { provider: result.provider, model: result.model },
             });
             continue;
           }
-          console.warn('[whatsapp/handler] kirim balasan gagal:', sent.error);
         }
 
         // ai_mode='draft' ATAU auto yang gagal kirim → simpan sebagai draft

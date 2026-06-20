@@ -24,7 +24,7 @@ import { generateLeadReply } from '@/lib/ai/leadAssistant';
 import { generateConciergeReply } from '@/lib/ai/concierge';
 import { getAiTier } from '@/lib/ai/concierge/tier';
 import { getDecryptedToken } from '@/lib/integrations/config';
-import { sendInstagramMessage, getInstagramSenderName } from './api';
+import { sendInstagramMessage, sendInstagramImage, getInstagramSenderName } from './api';
 import type { InstagramWebhookEntry, InstagramMessaging } from './types';
 import type { ChannelIntegration } from '@/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -109,20 +109,47 @@ async function processEvent(
     if (!token) {
       console.warn('[instagram/handler] token bisnis tidak tersedia — simpan draft');
     } else {
-      const sent = await sendInstagramMessage(token, senderId, result.reply);
-      if (sent.ok) {
+      let finalReply = result.reply;
+      const imageUrls = finalReply.match(/https:\/\/res\.cloudinary\.com\/[^\s)\]"']+/g) || [];
+      const cleanUrls = imageUrls.map(url => url.replace(/[.,!?]+$/, ''));
+
+      // Bersihkan URL dari teks
+      for (const rawUrl of imageUrls) {
+        finalReply = finalReply.replace(rawUrl, '').trim();
+      }
+
+      // Kirim attachment gambar satu per satu (kalau ada)
+      for (const url of cleanUrls) {
+        await sendInstagramImage(token, senderId, url);
+      }
+
+      if (finalReply) {
+        const sent = await sendInstagramMessage(token, senderId, finalReply);
+        if (sent.ok) {
+          await insertLeadMessage(supabase, {
+            leadId: lead.id,
+            businessId,
+            direction: 'outbound',
+            sender: 'ai',
+            content: result.reply, // Tetap simpan konten asli di history
+            externalMessageId: sent.messageId ?? null,
+            meta: { provider: result.provider, model: result.model },
+          });
+          return;
+        }
+        console.warn('[instagram/handler] kirim balasan gagal:', sent.error);
+      } else {
+        // Kalau reply hanya berisi gambar, tetap simpan history
         await insertLeadMessage(supabase, {
           leadId: lead.id,
           businessId,
           direction: 'outbound',
           sender: 'ai',
           content: result.reply,
-          externalMessageId: sent.messageId ?? null,
           meta: { provider: result.provider, model: result.model },
         });
         return;
       }
-      console.warn('[instagram/handler] kirim balasan gagal:', sent.error);
     }
   }
 

@@ -74,3 +74,44 @@ export async function sendInstagramMessage(
     return { ok: false, error: 'Network error' };
   }
 }
+
+export async function sendInstagramImage(
+  accessToken: string,
+  recipientId: string,
+  imageUrl: string
+): Promise<SendMessageResult> {
+  if (!accessToken) {
+    return { ok: false, error: 'Instagram access token kosong' };
+  }
+
+  try {
+    const res = await fetch(`https://graph.instagram.com/${IG_GRAPH_VERSION}/me/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        recipient: { id: recipientId },
+        message: {
+          attachment: {
+            type: 'image',
+            payload: { url: imageUrl },
+          },
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      const detail = await res.text();
+      console.warn('[instagram/api] send image failed:', res.status, detail);
+      return { ok: false, error: `Graph API ${res.status}` };
+    }
+
+    const json = (await res.json()) as { message_id?: string };
+    return { ok: true, messageId: json.message_id };
+  } catch (err) {
+    console.warn('[instagram/api] send image error:', err);
+    return { ok: false, error: 'Network error' };
+  }
+}
