@@ -89,6 +89,7 @@ function buildSystemPrompt(
     '- Jawab hanya berdasarkan informasi yang kamu punya. Kalau tidak tahu, bilang akan dicek dulu oleh tim dan jangan mengarang.',
     '- Jangan menjanjikan harga/diskon/ketersediaan di luar daftar produk di bawah.',
     '- Jangan menyebut bahwa kamu AI kecuali ditanya langsung.',
+    '- JIKA pelanggan meminta gambar, foto, brosur, atau ratecard, kamu WAJIB menyertakan link gambar pendukung (https://res.cloudinary.com/...) dari informasi di bawah ke dalam teks balasanmu.',
   ];
 
   if (catalogItems.length > 0) {
