@@ -159,8 +159,8 @@ export async function generateConciergeReply(
     return null;
   }
 
-  const reply = parseReply(result.text);
-  if (!reply) return null;
+  const parsed = parseReply(result.text);
+  if (!parsed) return null;
 
-  return { reply, provider: result.provider, model: result.model };
+  return { reply: parsed.reply, images: parsed.images, provider: result.provider, model: result.model };
 }

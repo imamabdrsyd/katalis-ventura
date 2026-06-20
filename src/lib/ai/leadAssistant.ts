@@ -17,6 +17,7 @@ import type { ChannelIntegration, Lead } from '@/types';
 
 export interface LeadReplyResult {
   reply: string;
+  images?: string[];
   provider: string;
   model: string;
 }
@@ -111,24 +112,27 @@ function buildSystemPrompt(
 
   lines.push(
     '',
-    'WAJIB: balas HANYA dengan JSON valid berformat {"reply": "isi balasanmu"} tanpa teks lain.'
+    'WAJIB: balas HANYA dengan JSON valid berformat {"reply": "isi balasanmu", "images": ["link1", "link2"]} tanpa teks lain. Jika ingin memberikan gambar/brosur pendukung, masukkan linknya ke array "images".'
   );
 
   return lines.join('\n');
 }
 
-/** Parse output model: JSON {"reply": ...} dengan fallback ke raw text. */
-function parseReply(raw: string): string | null {
+/** Parse output model: JSON {"reply": ..., "images": [...]} dengan fallback ke raw text. */
+export function parseReply(raw: string): { reply: string; images?: string[] } | null {
   const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
   try {
-    const parsed = JSON.parse(cleaned) as { reply?: unknown };
+    const parsed = JSON.parse(cleaned) as { reply?: unknown; images?: unknown };
     if (typeof parsed.reply === 'string' && parsed.reply.trim()) {
-      return parsed.reply.trim();
+      return {
+        reply: parsed.reply.trim(),
+        images: Array.isArray(parsed.images) ? parsed.images.filter(i => typeof i === 'string') : undefined,
+      };
     }
   } catch {
     // bukan JSON — pakai raw text apa adanya
   }
-  return cleaned || null;
+  return cleaned ? { reply: cleaned } : null;
 }
 
 /**
@@ -186,8 +190,8 @@ export async function generateLeadReply(
     return null;
   }
 
-  const reply = parseReply(result.text);
-  if (!reply) return null;
+  const parsed = parseReply(result.text);
+  if (!parsed) return null;
 
-  return { reply, provider: result.provider, model: result.model };
+  return { reply: parsed.reply, images: parsed.images, provider: result.provider, model: result.model };
 }

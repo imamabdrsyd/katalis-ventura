@@ -108,13 +108,17 @@ export async function handleWhatsAppMessage(value: WhatsAppWebhookValue): Promis
           const creds = getWhatsAppCredentials(integration);
 
           let finalReply = result.reply;
-          const imageUrls = finalReply.match(/https:\/\/res\.cloudinary\.com\/[^\s)\]"']+/g) || [];
-          const cleanUrls = imageUrls.map(url => url.replace(/[.,!?]+$/, ''));
+          const inlineUrls = finalReply.match(/https:\/\/res\.cloudinary\.com\/[^\s)\]"']+/g) || [];
 
-          // Bersihkan URL dari teks
-          for (const rawUrl of imageUrls) {
+          // Bersihkan URL inline dari teks
+          for (const rawUrl of inlineUrls) {
             finalReply = finalReply.replace(rawUrl, '').trim();
           }
+
+          const rawImageUrls = [...(result.images || []), ...inlineUrls];
+          // Hapus duplikat dan bersihkan tanda baca di akhir
+          const uniqueImageUrls = [...new Set(rawImageUrls)];
+          const cleanUrls = uniqueImageUrls.map(url => url.replace(/[.,!?]+$/, ''));
 
           // Kirim attachment gambar satu per satu (kalau ada)
           for (const url of cleanUrls) {

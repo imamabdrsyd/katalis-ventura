@@ -174,7 +174,7 @@ export function buildConciergeSystemPrompt(params: {
 
   lines.push(
     '',
-    'FORMAT OUTPUT — WAJIB: balas HANYA dengan JSON valid {"reply": "isi balasanmu"} tanpa teks lain, tanpa markdown.'
+    'FORMAT OUTPUT — WAJIB: balas HANYA dengan JSON valid {"reply": "isi balasanmu", "images": ["link1", "link2"]} tanpa teks lain, tanpa markdown. Masukkan link gambar ke array "images" jika diperlukan.'
   );
 
   return lines.join('\n');
