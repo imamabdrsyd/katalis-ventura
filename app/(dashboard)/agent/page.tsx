@@ -454,7 +454,7 @@ export default function AgentPage() {
     const history = messages
       .filter((m): m is Extract<ChatMessage, { kind: 'text' | 'answer' }> => m.kind === 'text' || m.kind === 'answer')
       .filter(m => (m.kind === 'answer' ? !m.streaming && !!m.text : true))
-      .slice(-12)
+      .slice(-30)
       .map(m => ({ role: m.role, content: m.text }));
 
     setMessages(prev => [
@@ -488,8 +488,13 @@ export default function AgentPage() {
       });
 
       if (!res.ok || !res.body) {
-        const err = await res.json().catch(() => ({ error: 'Gagal menghubungi AI' }));
-        throw new Error((err as { error?: string }).error ?? 'Gagal menghubungi AI');
+        let errData: any = {};
+        try { errData = await res.json(); } catch { /* ignore */ }
+        let errMsg = errData.error || `HTTP ${res.status}: Gagal menghubungi AI`;
+        if (errData.details) {
+          errMsg += `\nDetail: ${JSON.stringify(errData.details)}`;
+        }
+        throw new Error(errMsg);
       }
 
       const model = res.headers.get('X-AI-Model') || undefined;

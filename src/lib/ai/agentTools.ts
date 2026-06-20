@@ -19,6 +19,8 @@ import {
   filterTransactionsByDateRange,
 } from '@/lib/calculations';
 import { formatIDR } from '@/lib/ai/financialContext';
+import { getVertexTokenAndProject } from '@/lib/ai/vertexAuth';
+import { searchKnowledgeBase } from '@/lib/ai/knowledge';
 import type { Transaction } from '@/types';
 
 // ─── Tool Definitions (JSON Schema untuk Gemini function calling) ─────────────
@@ -182,6 +184,23 @@ export const TOOL_DEFINITIONS = [
         },
       },
       required: ['page', 'message'],
+    },
+  },
+  {
+    name: 'search_knowledge_base',
+    description:
+      'Cari informasi pada dokumen, file CSV, TXT, atau PDF yang pernah diunggah oleh pengguna ke sistem (RAG). ' +
+      'Gunakan tool ini ketika pengguna bertanya tentang konteks dokumen atau kebijakan, misalnya ' +
+      '"Apa syarat retur dari dokumen PDF yang tadi saya upload?", atau "Coba cari di file pengetahuan tentang kebijakan cuti".',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Kata kunci pencarian semantik (contoh: "kebijakan cuti karyawan" atau "syarat retur").',
+        },
+      },
+      required: ['query'],
     },
   },
 ];
@@ -641,6 +660,55 @@ async function handleGetBusinessInfo(businessId: string): Promise<unknown> {
   };
 }
 
+async function handleSearchKnowledgeBase(businessId: string, args: ToolCallArgs): Promise<unknown> {
+  const query = args.query as string;
+  if (!query) throw new Error("Query pencarian tidak valid");
+
+  const auth = await getVertexTokenAndProject();
+  if (!auth) throw new Error("Vertex AI tidak dikonfigurasi untuk embedding");
+
+  const endpoint = `https://aiplatform.googleapis.com/v1/projects/${auth.projectId}/locations/global/publishers/google/models/text-embedding-004:predict`;
+  
+  const payload = {
+    instances: [{ content: query }],
+  };
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${auth.token}`
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!res.ok) {
+    throw new Error('Gagal memproses query embedding');
+  }
+
+  const data = await res.json();
+  const queryEmbedding = data.predictions[0].embeddings.values;
+
+  const results = await searchKnowledgeBase(businessId, queryEmbedding, 5, 0.7);
+
+  if (!results || results.length === 0) {
+    return {
+      query,
+      results: [],
+      _note: "Tidak ditemukan informasi relevan pada dokumen/file yang diunggah untuk query ini."
+    };
+  }
+
+  return {
+    query,
+    results: results.map((r: any) => ({
+      source: r.source_type,
+      content: r.chunk_content,
+      similarity: r.similarity
+    }))
+  };
+}
+
 // ─── Dispatch ─────────────────────────────────────────────────────────────────
 
 export async function executeTool(
@@ -666,6 +734,8 @@ export async function executeTool(
         filters: args.filters ?? {},
         message: args.message,
       } as NavigateAction;
+    } else if (toolName === 'search_knowledge_base') {
+      data = await handleSearchKnowledgeBase(businessId, args);
     } else {
       return { tool: toolName, data: null, error: `Tool tidak dikenal: ${toolName}` };
     }

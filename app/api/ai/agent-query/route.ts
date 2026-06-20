@@ -29,7 +29,7 @@ const bodySchema = z.object({
   message: z.string().min(1).max(2000),
   history: z
     .array(z.object({ role: z.enum(['user', 'assistant']), content: z.string() }))
-    .max(10)
+    .max(40)
     .optional()
     .default([]),
   persona: z.enum(['auto', 'pembukuan', 'analis_fpna', 'pajak', 'general']).optional().default('auto'),

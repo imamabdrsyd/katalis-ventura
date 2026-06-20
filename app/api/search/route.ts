@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase-server';
 import { businessIdSchema } from '@/lib/validations';
 import { withRouteTiming } from '@/lib/api/server/timing';
+import { getVertexTokenAndProject } from '@/lib/ai/vertexAuth';
+import { searchKnowledgeBase } from '@/lib/ai/knowledge';
 
 type SearchSource =
   | 'business'
@@ -12,7 +14,8 @@ type SearchSource =
   | 'budget'
   | 'recurring'
   | 'template'
-  | 'import_batch';
+  | 'import_batch'
+  | 'knowledge';
 
 type SearchResult = {
   id: string;
@@ -470,6 +473,43 @@ export async function GET(request: NextRequest) {
       ]);
     }
 
+    // Semantic Vector Search for Knowledge Documents
+    let knowledgeResults: SearchResult[] = [];
+    if (businessId && rawQuery.length > 3) {
+      try {
+        const auth = await getVertexTokenAndProject();
+        if (auth) {
+          const endpoint = `https://aiplatform.googleapis.com/v1/projects/${auth.projectId}/locations/global/publishers/google/models/text-embedding-004:predict`;
+          const payload = { instances: [{ content: rawQuery }] };
+          const embedRes = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${auth.token}`
+            },
+            body: JSON.stringify(payload)
+          });
+          if (embedRes.ok) {
+            const embedData = await embedRes.json();
+            const queryEmbedding = embedData.predictions[0].embeddings.values;
+            const vectorHits = await searchKnowledgeBase(businessId, queryEmbedding, 3, 0.6);
+            
+            knowledgeResults = vectorHits.map((row: any) => ({
+              id: row.id,
+              source: 'knowledge' as const,
+              title: row.source_type || 'Dokumen Pengetahuan',
+              subtitle: row.chunk_content ? (row.chunk_content.substring(0, 100) + '...') : '',
+              href: '/agent',
+              badge: 'Knowledge',
+              score: 50 + (row.similarity * 50) // Scale score to ensure it ranks high if similarity is good
+            }));
+          }
+        }
+      } catch (err) {
+        console.error('[search] Vector search error:', err);
+      }
+    }
+
     const results: SearchResult[] = [
       ...businesses.map((row) => ({
         id: row.id,
@@ -580,6 +620,7 @@ export async function GET(request: NextRequest) {
         date: row.imported_at,
         score: scoreText([row.file_name, row.mime_type, row.import_mode, row.status, row.notes], rawQuery, terms),
       })),
+      ...knowledgeResults,
     ];
 
       return NextResponse.json({ data: dedupeAndSort(results, limit) });

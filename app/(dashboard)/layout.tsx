@@ -156,7 +156,8 @@ type DataSearchSource =
   | 'budget'
   | 'recurring'
   | 'template'
-  | 'import_batch';
+  | 'import_batch'
+  | 'knowledge';
 
 type ApiSearchResult = {
   id: string;
@@ -179,6 +180,7 @@ const DATA_SOURCE_LABELS: Record<DataSearchSource, string> = {
   recurring: 'Recurring',
   template: 'Template',
   import_batch: 'Import',
+  knowledge: 'Knowledge',
 };
 
 const DATA_SOURCE_ICONS: Record<DataSearchSource, LucideIcon> = {
@@ -191,6 +193,7 @@ const DATA_SOURCE_ICONS: Record<DataSearchSource, LucideIcon> = {
   recurring: RefreshCw,
   template: ClipboardCheck,
   import_batch: Upload,
+  knowledge: BookOpen,
 };
 
 function getSearchTokens(query: string): string[] {
