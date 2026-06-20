@@ -26,12 +26,9 @@ import {
   type GenerateResult,
 } from '../provider';
 import { buildConciergeSystemPrompt, type ConciergeCatalogItem } from './personas';
+import { parseReply, type LeadReplyResult } from '../leadAssistant';
 
-export interface LeadReplyResult {
-  reply: string;
-  provider: string;
-  model: string;
-}
+
 
 /**
  * Gabungkan field terstruktur + catatan bebas jadi satu blok teks berlabel ID.
@@ -62,19 +59,7 @@ function formatBusinessKnowledge(
   return lines.length > 0 ? lines.join('\n') : null;
 }
 
-/** Parse output model: JSON {"reply": ...} dengan fallback ke raw text. */
-function parseReply(raw: string): string | null {
-  const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
-  try {
-    const parsed = JSON.parse(cleaned) as { reply?: unknown };
-    if (typeof parsed.reply === 'string' && parsed.reply.trim()) {
-      return parsed.reply.trim();
-    }
-  } catch {
-    // bukan JSON — pakai raw text apa adanya
-  }
-  return cleaned || null;
-}
+
 
 /**
  * Tenaga Concierge-Pro: Vertex primary + fallback chain gratis.
