@@ -39,20 +39,20 @@ const BUSINESS_INFO_KEYWORDS = [
 // Keywords Spesifik per Persona
 const PAJAK_KEYWORDS = [
   'pajak', 'pph', 'ppn', 'pbb', 'djp', 'npwp', 'spt', 'tarif pajak', 
-  'kewajiban pajak', 'lapor pajak', 'estimasi pajak'
+  'kewajiban pajak', 'lapor pajak', 'estimasi pajak', 'sri mulyani', 'sri'
 ];
 
 const PEMBUKUAN_KEYWORDS = [
   'audit', 'periksa', 'cek laporan', 'cek neraca', 'selisih', 'janggal', 
   'anomali', 'salah catat', 'jurnal', 'klasifikasi', 'kode akun', 
-  'double entry', 'pembukuan', 'buku besar', 'transaksi yang salah'
+  'double entry', 'pembukuan', 'buku besar', 'transaksi yang salah', 'bianca'
 ];
 
 const FPNA_KEYWORDS = [
   'revenue', 'pendapatan', 'laba', 'rugi', 'margin', 'roi', 'burn rate', 
   'runway', 'proyeksi', 'forecast', 'cash flow', 'arus kas', 'omzet', 'omset', 
   'pengeluaran', 'pemasukan', 'biaya', 'beban', 'capex', 'opex', 'hpp', 
-  'modal', 'piutang', 'hutang', 'kas', 'bank', 'saldo'
+  'modal', 'piutang', 'hutang', 'kas', 'bank', 'saldo', 'stanley', 'analis'
 ];
 
 export interface RouteDecision {

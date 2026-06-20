@@ -1,4 +1,4 @@
-import { gcpSql } from '@/lib/gcp';
+import { createServerClient } from '@/lib/supabase-server';
 
 export interface AgentMemory {
   id?: string;
@@ -20,7 +20,7 @@ export interface SessionMeta {
 }
 
 /**
- * Menyimpan pesan-pesan (chat history) ke dalam tabel agent_memories di GCP Cloud SQL.
+ * Menyimpan pesan-pesan (chat history) ke dalam tabel agent_memories di Supabase.
  */
 export async function saveMessages(
   businessId: string,
@@ -30,8 +30,7 @@ export async function saveMessages(
 ) {
   if (!messages.length) return;
   
-  // Karena `agent_memories` memiliki struktur sederhana, kita insert langsung.
-  // Untuk fase 1, kita sisipkan tanpa vector embedding (itu di Fase 2).
+  const supabase = await createServerClient();
   
   const values = messages.map(msg => ({
     user_id: userId,
@@ -44,18 +43,16 @@ export async function saveMessages(
 
   try {
     // Hapus history lama untuk session ini agar tidak duplikat, lalu insert ulang state terbaru
-    await gcpSql`
-      DELETE FROM agent_memories 
-      WHERE business_id = ${businessId} 
-        AND user_id = ${userId} 
-        AND session_id = ${sessionId}
-    `;
+    await supabase.from('agent_memories')
+      .delete()
+      .eq('business_id', businessId)
+      .eq('user_id', userId)
+      .eq('session_id', sessionId);
 
-    await gcpSql`
-      INSERT INTO agent_memories ${gcpSql(values, 'user_id', 'business_id', 'session_id', 'role', 'content', 'metadata')}
-    `;
+    const { error } = await supabase.from('agent_memories').insert(values);
+    if (error) throw error;
   } catch (err) {
-    console.error('[memory.ts] Error saving messages to GCP:', err);
+    console.error('[memory.ts] Error saving messages to Supabase:', err);
     throw err;
   }
 }
@@ -65,17 +62,18 @@ export async function saveMessages(
  */
 export async function loadSession(businessId: string, userId: string, sessionId: string) {
   try {
-    const messages = await gcpSql<AgentMemory[]>`
-      SELECT * FROM agent_memories
-      WHERE business_id = ${businessId}
-        AND user_id = ${userId}
-        AND session_id = ${sessionId}
-      ORDER BY created_at ASC
-    `;
-    
-    return messages;
+    const supabase = await createServerClient();
+    const { data, error } = await supabase.from('agent_memories')
+      .select('*')
+      .eq('business_id', businessId)
+      .eq('user_id', userId)
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: true });
+      
+    if (error) throw error;
+    return data || [];
   } catch (err) {
-    console.error('[memory.ts] Error loading session from GCP:', err);
+    console.error('[memory.ts] Error loading session from Supabase:', err);
     return [];
   }
 }
@@ -91,15 +89,19 @@ export async function saveManualMemory(
   metadata?: any
 ) {
   try {
-    await gcpSql`
-      INSERT INTO agent_memories (
-        user_id, business_id, session_id, role, content, metadata
-      ) VALUES (
-        ${userId}, ${businessId}, 'manual-memory', 'system', ${summary}, ${metadata || { source: 'aichatpanel' }}
-      )
-    `;
+    const supabase = await createServerClient();
+    const { error } = await supabase.from('agent_memories').insert({
+      user_id: userId,
+      business_id: businessId,
+      session_id: 'manual-memory',
+      role: 'system',
+      content: summary,
+      metadata: metadata || { source: 'aichatpanel' }
+    });
+    
+    if (error) throw error;
   } catch (err) {
-    console.error('[memory.ts] Error saving manual memory to GCP:', err);
+    console.error('[memory.ts] Error saving manual memory to Supabase:', err);
     throw err;
   }
 }
@@ -109,16 +111,54 @@ export async function saveManualMemory(
  */
 export async function getMemoryVault(businessId: string, userId: string) {
   try {
-    const memories = await gcpSql<AgentMemory[]>`
-      SELECT * FROM agent_memories
-      WHERE business_id = ${businessId}
-        AND user_id = ${userId}
-        AND session_id = 'manual-memory'
-      ORDER BY created_at DESC
-    `;
-    return memories;
+    const supabase = await createServerClient();
+    const { data, error } = await supabase.from('agent_memories')
+      .select('*')
+      .eq('business_id', businessId)
+      .eq('user_id', userId)
+      .eq('session_id', 'manual-memory')
+      .order('created_at', { ascending: false });
+      
+    if (error) throw error;
+    return data || [];
   } catch (err) {
-    console.error('[memory.ts] Error loading memory vault from GCP:', err);
+    console.error('[memory.ts] Error loading memory vault from Supabase:', err);
+    return [];
+  }
+}
+
+/**
+ * Memuat semua sesi (history) yang tersimpan
+ */
+export async function getSessions(businessId: string, userId: string) {
+  try {
+    const supabase = await createServerClient();
+    const { data, error } = await supabase.from('agent_memories')
+      .select('session_id, created_at, content, role')
+      .eq('business_id', businessId)
+      .eq('user_id', userId)
+      .neq('session_id', 'manual-memory')
+      .order('created_at', { ascending: true });
+      
+    if (error) throw error;
+    
+    const sessionsMap = new Map<string, { session_id: string; created_at: string; content: string }>();
+    for (const row of data || []) {
+      if (!sessionsMap.has(row.session_id)) {
+        sessionsMap.set(row.session_id, {
+          session_id: row.session_id,
+          created_at: row.created_at,
+          content: row.role === 'user' ? row.content : 'Percakapan Kosong',
+        });
+      } else if (row.role === 'user' && sessionsMap.get(row.session_id)!.content === 'Percakapan Kosong') {
+        // Just in case the first message wasn't user
+        sessionsMap.get(row.session_id)!.content = row.content;
+      }
+    }
+    
+    return Array.from(sessionsMap.values()).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  } catch (err) {
+    console.error('[memory.ts] Error loading sessions from Supabase:', err);
     return [];
   }
 }

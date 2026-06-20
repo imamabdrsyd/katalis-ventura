@@ -19,8 +19,9 @@ import type { SalesChannel } from '@/types';
 import { isManagerRole } from '@/lib/roles';
 import {
   Bot, AlertCircle, Send, ArrowUp, Sparkles, CheckCircle, XCircle, Loader2, Paperclip, Brain, ChevronRight, Globe,
-  X, Network,
+  X, Network, Briefcase, MessagesSquare, Plus, Clock, MessageCircle
 } from 'lucide-react';
+import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 
 const SUPPORTED_CHANNELS = [
   { value: 'airbnb', label: 'Airbnb', badges: ['airbnb'], description: 'CSV dari Airbnb Host dashboard', available: true, businessTypes: ['jasa'] },
@@ -111,6 +112,8 @@ export default function AgentPage() {
   const [isChatting, setIsChatting] = useState(false);
   const [isMemoryVaultOpen, setIsMemoryVaultOpen] = useState(false);
   const [vaultMemories, setVaultMemories] = useState<any[]>([]);
+  const [chatMode, setChatMode] = useState<'general' | 'business'>('business');
+  const [ragFile, setRagFile] = useState<File | null>(null);
 
   const userName = (user?.user_metadata?.full_name as string | undefined)?.split(' ')[0]
     ?? user?.email?.split('@')[0]
@@ -144,19 +147,28 @@ export default function AgentPage() {
   const abortRef = useRef<AbortController | null>(null);
 
   // --- Session Management (Persistent Memory) ---
-  const sessionKey = `axion_agent_session_${activeBusinessId}`;
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [pastSessions, setPastSessions] = useState<{ session_id: string; created_at: string; content: string }[]>([]);
 
-  // Initialize session ID
+  const fetchSessions = useCallback(async () => {
+    if (!activeBusinessId) return;
+    try {
+      const res = await fetch(`/api/ai/memory/sessions?businessId=${activeBusinessId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setPastSessions(data.sessions || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, [activeBusinessId]);
+
+  // Initialize new session ID on mount
   useEffect(() => {
     if (!activeBusinessId) return;
-    let sid = localStorage.getItem(sessionKey);
-    if (!sid) {
-      sid = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `sess_${Date.now()}`;
-      localStorage.setItem(sessionKey, sid);
-    }
-    setSessionId(sid);
-  }, [activeBusinessId, sessionKey]);
+    setSessionId(typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `sess_${Date.now()}`);
+    fetchSessions();
+  }, [activeBusinessId, fetchSessions]);
 
   // Load history on mount
   useEffect(() => {
@@ -173,20 +185,36 @@ export default function AgentPage() {
               return { id: nextId(), role: 'user', kind: 'text', text: m.content };
             } else {
               // Jika role === 'system' (manual memory dari FAB), kita bisa menampilkannya secara berbeda atau sebagai text biasa
-              return { id: nextId(), role: 'assistant', kind: 'answer', text: m.content, streaming: false };
+              return { 
+                id: nextId(), 
+                role: 'assistant', 
+                kind: 'answer', 
+                text: m.content, 
+                streaming: false,
+                agentAvatar: m.metadata?.agentAvatar
+              };
             }
           });
           
           if (loadedMessages.length > 0) {
             setMessages(loadedMessages);
           }
+        } else {
+          // Reset ke intro jika kosong
+          setMessages([{
+            id: nextId(),
+            role: 'assistant',
+            kind: 'intro',
+            text: '',
+            userName: userName
+          }]);
         }
       } catch (err) {
         console.error('Failed to load agent memory:', err);
       }
     };
     loadHistory();
-  }, [activeBusinessId, sessionId]);
+  }, [activeBusinessId, sessionId, userName]);
 
   // Load Memory Vault
   const loadVault = useCallback(async () => {
@@ -219,6 +247,7 @@ export default function AgentPage() {
       .map(m => ({
         role: m.role,
         content: m.text,
+        metadata: m.kind === 'answer' && m.agentAvatar ? { agentAvatar: m.agentAvatar } : undefined
       }));
 
     if (messagesToSave.length === 0) return;
@@ -232,11 +261,11 @@ export default function AgentPage() {
           sessionId,
           messages: messagesToSave
         }),
-      }).catch(err => console.error('Failed to auto-save agent memory:', err));
+      }).then(() => fetchSessions()).catch(err => console.error('Failed to auto-save agent memory:', err));
     }, 2000); // Debounce 2s
 
     return () => clearTimeout(timeoutId);
-  }, [messages, activeBusinessId, sessionId]);
+  }, [messages, activeBusinessId, sessionId, fetchSessions]);
   // ----------------------------------------------
 
   const channel = SUPPORTED_CHANNELS.find(c => c.value === selectedChannel) ?? availableChannels[0] ?? SUPPORTED_CHANNELS[0];
@@ -453,7 +482,8 @@ export default function AgentPage() {
           business_id: activeBusinessId,
           message: trimmed,
           history: history,
-          persona: 'auto'
+          persona: chatMode === 'general' ? 'general' : 'auto',
+          chatMode: chatMode
         }),
       });
 
@@ -525,10 +555,36 @@ export default function AgentPage() {
   }, [messages, isChatting, isRunning, activeBusinessId]);
 
   // Router submit: ada file → jalankan agent import; tanpa file → chat LLM general.
-  const handleSubmit = useCallback(() => {
-    if (selectedFile) handleCallAgent();
-    else sendChatMessage(input);
-  }, [selectedFile, handleCallAgent, sendChatMessage, input]);
+  const handleSubmit = useCallback(async () => {
+    if (selectedFile) {
+      handleCallAgent();
+      return;
+    }
+    
+    // RAG file upload
+    if (ragFile) {
+      setIsChatting(true);
+      const formData = new FormData();
+      formData.append('file', ragFile);
+      formData.append('businessId', activeBusinessId);
+      
+      try {
+        const res = await fetch('/api/ai/upload-knowledge', {
+          method: 'POST',
+          body: formData
+        });
+        if (!res.ok) throw new Error('Upload gagal');
+        setRagFile(null); // Clear after upload
+      } catch (err) {
+        setIsChatting(false);
+        alert('Gagal mengunggah dokumen');
+        return;
+      }
+      setIsChatting(false);
+    }
+    
+    sendChatMessage(input);
+  }, [selectedFile, handleCallAgent, sendChatMessage, input, ragFile, activeBusinessId]);
 
   if (!canManage) {
     return (
@@ -643,12 +699,36 @@ export default function AgentPage() {
 
           {/* Composer */}
           <div className="px-3 md:px-6 py-3 border-t border-gray-200 dark:border-gray-800 shrink-0">
-            <div className="flex items-center gap-2 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 pl-4 pr-1.5 py-1.5 focus-within:border-primary-400 dark:focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20 transition-all">
+            <div className="mb-3 flex justify-center">
+              <SegmentedToggle
+                options={[
+                  { value: 'business', label: 'Konteks Bisnis', icon: <Briefcase className="w-3.5 h-3.5" /> },
+                  { value: 'general', label: 'Topik Umum', icon: <MessagesSquare className="w-3.5 h-3.5" /> },
+                ]}
+                value={chatMode}
+                onChange={setChatMode}
+              />
+            </div>
+            <div className="flex items-center gap-2 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 pl-2 pr-1.5 py-1.5 focus-within:border-primary-400 dark:focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20 transition-all">
+              {/* Attachment Kertas RAG */}
+              <label className="cursor-pointer p-2 text-gray-400 hover:text-indigo-500 transition-colors shrink-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+                <Paperclip className="w-4 h-4" />
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  accept=".pdf,.txt,.csv"
+                  onChange={e => setRagFile(e.target.files?.[0] || null)}
+                />
+              </label>
+
               {/* Indikator file terpilih */}
-              {selectedFile && (
-                <span className="inline-flex items-center gap-1 shrink-0 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 max-w-[120px]">
+              {(selectedFile || ragFile) && (
+                <span className="inline-flex items-center gap-1 shrink-0 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 max-w-[120px] bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-full">
                   <Paperclip className="w-3 h-3 shrink-0" />
-                  <span className="truncate">{selectedFile.name}</span>
+                  <span className="truncate">{(selectedFile || ragFile)?.name}</span>
+                  <button onClick={() => selectedFile ? setSelectedFile(null) : setRagFile(null)} className="ml-1 hover:text-emerald-800 dark:hover:text-emerald-200">
+                    <X className="w-3 h-3" />
+                  </button>
                 </span>
               )}
               <input
@@ -662,7 +742,9 @@ export default function AgentPage() {
                     ? !channel.available
                       ? 'Channel belum didukung — pilih channel lain'
                       : `Instruksi (opsional): ${instructionPlaceholder(selectedChannel)}`
-                    : 'Tanya apa saja, atau unggah CSV di panel untuk impor…'
+                    : chatMode === 'business'
+                      ? 'Tanya seputar keuangan bisnis, laporan, atau unggah dokumen…'
+                      : 'Tanya apa saja layaknya asisten umum…'
                 }
                 className="flex-1 min-w-0 bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-[13px] leading-[1.5] focus:outline-none disabled:opacity-50"
               />
@@ -694,8 +776,56 @@ export default function AgentPage() {
         </div>
 
         {/* Panel widget impor — desktop (sticky, tidak tenggelam di chat) */}
-        <aside className="hidden lg:block w-[360px] xl:w-[400px] shrink-0 border-l border-gray-200 dark:border-gray-800 overflow-y-auto p-5 bg-gray-50/50 dark:bg-gray-900/30">
-          {importWidget}
+        <aside className="hidden lg:flex flex-col w-[360px] xl:w-[400px] shrink-0 border-l border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30">
+          <div className="p-5 border-b border-gray-200 dark:border-gray-800 shrink-0">
+            {importWidget}
+          </div>
+          
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="p-4 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 font-semibold text-sm">
+                <Clock className="w-4 h-4" />
+                <h3>Riwayat Sesi</h3>
+              </div>
+              <button 
+                onClick={() => {
+                  setSessionId(typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `sess_${Date.now()}`);
+                }}
+                className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+                title="Sesi Baru"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto px-2 pb-4 space-y-1">
+              {pastSessions.length === 0 ? (
+                <div className="text-center py-6 px-4">
+                  <MessageCircle className="w-8 h-8 text-gray-300 dark:text-gray-700 mx-auto mb-2" />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Belum ada riwayat percakapan.</p>
+                </div>
+              ) : (
+                pastSessions.map((s) => (
+                  <button
+                    key={s.session_id}
+                    onClick={() => setSessionId(s.session_id)}
+                    className={`w-full text-left px-3 py-2.5 rounded-xl transition-all flex flex-col gap-1 border border-transparent ${
+                      sessionId === s.session_id 
+                        ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm' 
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    <span className="text-[13px] font-medium text-gray-800 dark:text-gray-200 truncate w-full">
+                      {s.content ? s.content : 'Percakapan Kosong'}
+                    </span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-500">
+                      {new Date(s.created_at).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
         </aside>
       </div>
 
