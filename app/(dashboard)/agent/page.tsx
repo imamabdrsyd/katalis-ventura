@@ -566,7 +566,7 @@ export default function AgentPage() {
       setIsChatting(true);
       const formData = new FormData();
       formData.append('file', ragFile);
-      formData.append('businessId', activeBusinessId);
+      formData.append('businessId', activeBusinessId || '');
       
       try {
         const res = await fetch('/api/ai/upload-knowledge', {

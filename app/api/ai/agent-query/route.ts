@@ -18,7 +18,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { createServerClient, getAuthenticatedUser, getBusinessRoleForUser } from '@/lib/supabase-server';
 import { buildFinancialContext } from '@/lib/ai/financialContext';
-import { buildAgentSystemPrompt } from '@/lib/ai/financialPersonas';
+import { buildAgentSystemPrompt, type FinancialPersona } from '@/lib/ai/financialPersonas';
 import { routeIntent } from '@/lib/ai/intent';
 import { TOOL_DEFINITIONS, executeTool, type NavigateAction } from '@/lib/ai/agentTools';
 import { getVertexTokenAndProject } from '@/lib/ai/vertexAuth';
@@ -32,7 +32,8 @@ const bodySchema = z.object({
     .max(10)
     .optional()
     .default([]),
-  persona: z.enum(['auto', 'pembukuan', 'analis_fpna', 'pajak']).optional().default('auto'),
+  persona: z.enum(['auto', 'pembukuan', 'analis_fpna', 'pajak', 'general']).optional().default('auto'),
+  chatMode: z.enum(['general', 'business']).optional().default('business'),
 });
 
 // Gemini 3.5 Flash: generasi terbaru (3.5), near-Pro level, thinking model.
@@ -160,14 +161,21 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Invalid request', details: parsed.error.flatten() }), { status: 400 });
   }
 
-  const { business_id, message, history, persona } = parsed.data;
+  const { business_id, message, history, persona, chatMode } = parsed.data;
   
-  const route = (persona === 'auto')
-    ? routeIntent(message)
-    : { persona: persona as any, needsReasoning: false, needsBusinessInfo: false, isFinancial: true };
+  let route: { persona?: string | null, isFinancial: boolean };
+  
+  if (chatMode === 'general' || persona === 'general') {
+    route = { persona: 'general', isFinancial: false };
+  } else if (persona === 'auto') {
+    const intent = routeIntent(message);
+    route = { persona: intent.persona, isFinancial: true }; // Force isFinancial to true if in business mode
+  } else {
+    route = { persona: persona as any, isFinancial: true };
+  }
 
   const systemPrompt = route.isFinancial
-    ? buildAgentSystemPrompt(route.persona ?? null)
+    ? buildAgentSystemPrompt((route.persona as FinancialPersona) ?? null)
     : `Kamu adalah AXION Agent, asisten AI serbaguna yang membantu pengguna dengan topik apa pun. Jawab dengan jelas, akurat, dan ringkas. Gunakan Bahasa Indonesia kecuali pengguna menggunakan bahasa lain.`;
 
   const supabase = await createServerClient();
