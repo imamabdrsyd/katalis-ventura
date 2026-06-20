@@ -488,7 +488,7 @@ export function AiKnowledgePanel() {
             <button
               onClick={() => setSelectedImage(null)}
               className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors z-10"
-              title={th.close ?? 'Tutup'}
+              title="Tutup"
             >
               <X className="w-6 h-6" />
             </button>
