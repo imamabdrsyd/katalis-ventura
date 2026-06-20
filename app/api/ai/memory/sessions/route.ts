@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase-server';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 
-import { getMemoryVault } from '@/lib/ai/memory';
+import { getSessions } from '@/lib/ai/memory';
 
 export async function GET(req: Request) {
   try {
@@ -26,10 +26,10 @@ export async function GET(req: Request) {
       .single();
     if (!roleData) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const memories = await getMemoryVault(businessId, user.id);
-    return NextResponse.json({ memories });
+    const sessions = await getSessions(businessId, user.id);
+    return NextResponse.json({ sessions });
   } catch (err) {
-    console.error('[API] /api/ai/memory/vault GET error:', err);
+    console.error('[API] /api/ai/memory/sessions GET error:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
