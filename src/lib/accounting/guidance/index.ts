@@ -24,7 +24,7 @@ export {
   isDividendAccount,
   isDividendDeclaration,
   isDividendSettled,
-  getDividendOutstanding,
+  getDividendOutstandingAmount,
   getDividendPartialSettlementIds,
   buildDividendSettlementPrefill,
   buildDividendPartialSettlementPrefill,

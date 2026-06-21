@@ -11,12 +11,19 @@ import * as contactsApi from '@/lib/api/contacts';
 import { getAccounts } from '@/lib/api/accounts';
 import { showTransactionSavedToast } from '@/lib/transactionToast';
 import { findCogsAccount } from '@/lib/utils/inventoryHelper';
-import { buildSettlementPrefill, buildPartialSettlementPrefill, getOutstandingAmount } from '@/lib/accounting/guidance/receivableSettlement';
+import { buildSettlementPrefill, buildPartialSettlementPrefill, getOutstandingAmount, getPartialSettlementIds } from '@/lib/accounting/guidance/receivableSettlement';
 import {
   buildDividendSettlementPrefill,
   buildDividendPartialSettlementPrefill,
-  getDividendOutstanding,
+  getDividendOutstandingAmount,
+  getDividendPartialSettlementIds,
 } from '@/lib/accounting/guidance/dividendSettlement';
+import {
+  getPayableOutstandingAmount,
+  getPayablePartialSettlementIds,
+  buildPayableSettlementPrefill,
+  buildPayablePartialSettlementPrefill,
+} from '@/lib/accounting/guidance/payableSettlement';
 import type { Transaction, TransactionCategory, TransactionStatus, Account, Contact } from '@/types';
 import type { TransactionFormData } from '@/components/transactions/TransactionForm';
 import type { MultiLineFormData } from '@/components/transactions/MultiLineJournalForm';
@@ -567,8 +574,10 @@ export function useTransactions() {
     if (!businessId || !user) return;
     setSaving(true);
     try {
-      const outstanding = getOutstandingAmount(original);
-      const prefill = buildSettlementPrefill(original, accounts);
+      const partialIds = getPartialSettlementIds(original);
+      const paymentTxns = allTransactions.filter(t => partialIds.includes(t.id));
+      const outstanding = getOutstandingAmount(original, paymentTxns);
+      const prefill = buildSettlementPrefill(original, accounts, paymentTxns);
       const { updated_meta } = await transactionsApi.settleTransaction({
         originalTransactionId: original.id,
         settlementData: prefill,
@@ -587,20 +596,23 @@ export function useTransactions() {
     } finally {
       setSaving(false);
     }
-  }, [businessId, user, accounts, invalidateTransactions]);
+  }, [businessId, user, accounts, invalidateTransactions, allTransactions]);
 
   const handlePartialSettleReceivable = useCallback(async (
     original: Transaction,
     partialAmount: number
   ) => {
     if (!businessId || !user) return;
-    const outstanding = getOutstandingAmount(original);
+    const partialIds = getPartialSettlementIds(original);
+    const paymentTxns = allTransactions.filter(t => partialIds.includes(t.id));
+    const outstanding = getOutstandingAmount(original, paymentTxns);
     if (partialAmount <= 0 || partialAmount >= outstanding) {
       throw new Error('Jumlah tidak valid untuk pelunasan sebagian');
     }
+    
     setSaving(true);
     try {
-      const prefill = buildPartialSettlementPrefill(original, partialAmount, accounts);
+      const prefill = buildPartialSettlementPrefill(original, partialAmount, accounts, paymentTxns);
       const { updated_meta } = await transactionsApi.settleTransaction({
         originalTransactionId: original.id,
         settlementData: prefill,
@@ -620,7 +632,71 @@ export function useTransactions() {
     } finally {
       setSaving(false);
     }
-  }, [businessId, user, accounts, invalidateTransactions]);
+  }, [businessId, user, accounts, invalidateTransactions, allTransactions]);
+
+  // === Payable settlement ===
+  const handleSettlePayable = useCallback(async (original: Transaction) => {
+    if (!businessId || !user) return;
+    setSaving(true);
+    try {
+      const partialIds = getPayablePartialSettlementIds(original);
+      const paymentTxns = allTransactions.filter(t => partialIds.includes(t.id));
+      const outstanding = getPayableOutstandingAmount(original, paymentTxns);
+      const prefill = buildPayableSettlementPrefill(original, accounts, paymentTxns);
+      const { updated_meta } = await transactionsApi.settleTransaction({
+        originalTransactionId: original.id,
+        settlementData: prefill,
+        outstandingAmount: outstanding,
+      });
+
+      setDetailTransaction({
+        ...original,
+        meta: updated_meta,
+      });
+
+      invalidateTransactions();
+      toast.success('Hutang berhasil dilunasi');
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal melunasi hutang');
+    } finally {
+      setSaving(false);
+    }
+  }, [businessId, user, accounts, invalidateTransactions, allTransactions]);
+
+  const handlePartialSettlePayable = useCallback(async (
+    original: Transaction,
+    partialAmount: number
+  ) => {
+    if (!businessId || !user) return;
+    const partialIds = getPayablePartialSettlementIds(original);
+    const paymentTxns = allTransactions.filter(t => partialIds.includes(t.id));
+    const outstanding = getPayableOutstandingAmount(original, paymentTxns);
+    if (partialAmount <= 0 || partialAmount >= outstanding) {
+      throw new Error('Jumlah tidak valid untuk pelunasan sebagian');
+    }
+    setSaving(true);
+    try {
+      const prefill = buildPayablePartialSettlementPrefill(original, partialAmount, accounts, paymentTxns);
+      const { updated_meta } = await transactionsApi.settleTransaction({
+        originalTransactionId: original.id,
+        settlementData: prefill,
+        partialAmount,
+        outstandingAmount: outstanding,
+      });
+
+      setDetailTransaction({
+        ...original,
+        meta: updated_meta,
+      });
+
+      invalidateTransactions();
+      toast.success('Pelunasan sebagian hutang berhasil dicatat');
+    } catch (err: any) {
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  }, [businessId, user, accounts, invalidateTransactions, allTransactions]);
 
   // === Dividend settlement (mirror of receivable settlement) ===
   // Lunasi dividen yang sudah di-declare: Dr Hutang Dividen / Cr Kas/Bank,
@@ -629,8 +705,10 @@ export function useTransactions() {
     if (!businessId || !user) return;
     setSaving(true);
     try {
-      const outstanding = getDividendOutstanding(original);
-      const prefill = buildDividendSettlementPrefill(original, accounts);
+      const partialIds = getDividendPartialSettlementIds(original);
+      const paymentTxns = allTransactions.filter(t => partialIds.includes(t.id));
+      const outstanding = getDividendOutstandingAmount(original, paymentTxns);
+      const prefill = buildDividendSettlementPrefill(original, accounts, paymentTxns);
       const { updated_meta } = await transactionsApi.settleTransaction({
         originalTransactionId: original.id,
         settlementData: prefill,
@@ -649,17 +727,20 @@ export function useTransactions() {
     } finally {
       setSaving(false);
     }
-  }, [businessId, user, accounts, invalidateTransactions]);
+  }, [businessId, user, accounts, invalidateTransactions, allTransactions]);
 
   const handlePartialSettleDividend = useCallback(async (
     original: Transaction,
     partialAmount: number
   ) => {
     if (!businessId || !user) return;
-    const outstanding = getDividendOutstanding(original);
+    const partialIds = getDividendPartialSettlementIds(original);
+    const paymentTxns = allTransactions.filter(t => partialIds.includes(t.id));
+    const outstanding = getDividendOutstandingAmount(original, paymentTxns);
     if (partialAmount <= 0 || partialAmount >= outstanding) {
       throw new Error('Jumlah tidak valid untuk pelunasan sebagian');
     }
+    
     setSaving(true);
     try {
       const prefill = buildDividendPartialSettlementPrefill(original, partialAmount, accounts);
@@ -682,7 +763,7 @@ export function useTransactions() {
     } finally {
       setSaving(false);
     }
-  }, [businessId, user, accounts, invalidateTransactions]);
+  }, [businessId, user, accounts, invalidateTransactions, allTransactions]);
 
   return {
     // Data

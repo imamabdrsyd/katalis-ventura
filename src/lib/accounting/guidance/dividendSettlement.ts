@@ -62,14 +62,41 @@ export function isDividendSettled(transaction: Transaction): boolean {
 }
 
 /**
+ * Helper untuk ambil amount dividen (bisa dari original_amount jika multi-currency)
+ */
+export function getDividendLineAmount(transaction: Transaction): number {
+  return transaction.original_amount ?? transaction.amount;
+}
+
+/**
+ * Helper untuk ambil id payable account
+ */
+export function getDividendPayableAccountId(transaction: Transaction): string {
+  return transaction.credit_account_id ?? '';
+}
+
+/**
  * Outstanding (sisa) dividen yang belum dibayar.
  */
-export function getDividendOutstanding(transaction: Transaction): number {
+export function getDividendOutstandingAmount(transaction: Transaction, paymentTxns?: Transaction[]): number {
   if (isDividendSettled(transaction)) return 0;
   if (transaction.meta?.remaining_amount !== undefined) {
     return Math.max(0, transaction.meta.remaining_amount);
   }
-  return transaction.amount;
+  
+  const originalAmount = getDividendLineAmount(transaction);
+  
+  // Fallback for legacy partial settlements missing `remaining_amount` in DB
+  if (paymentTxns && paymentTxns.length > 0) {
+    const partialIds = getDividendPartialSettlementIds(transaction);
+    const relatedPayments = paymentTxns.filter(t => partialIds.includes(t.id));
+    if (relatedPayments.length > 0) {
+      const totalPaid = relatedPayments.reduce((sum, t) => sum + (t.original_amount ?? t.amount), 0);
+      return Math.max(0, originalAmount - totalPaid);
+    }
+  }
+
+  return originalAmount;
 }
 
 /**
@@ -108,11 +135,12 @@ export interface DividendSettlementPrefill {
  */
 export function buildDividendSettlementPrefill(
   original: Transaction,
-  accounts: Account[]
+  accounts: Account[],
+  paymentTxns?: Transaction[]
 ): DividendSettlementPrefill {
-  const outstanding = getDividendOutstanding(original);
+  const outstanding = getDividendOutstandingAmount(original, paymentTxns);
   const cashAccount = findDefaultCashAccount(accounts);
-  const payableAccountId = original.credit_account_id!;
+  const payableAccountId = getDividendPayableAccountId(original);
 
   return {
     debit_account_id: payableAccountId,

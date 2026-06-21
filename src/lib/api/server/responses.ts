@@ -31,6 +31,12 @@ export function validationError(error: ZodError) {
 }
 
 export function serverError(error: unknown, fallback = 'Internal server error') {
-  const message = error instanceof Error ? error.message : fallback;
+  console.error('[SERVER ERROR]', error);
+  let message = fallback;
+  if (error instanceof Error) {
+    message = error.message;
+  } else if (typeof error === 'object' && error !== null && 'message' in error) {
+    message = (error as any).message;
+  }
   return NextResponse.json({ error: message }, { status: 500 });
 }

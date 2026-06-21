@@ -21,7 +21,7 @@ import {
   getPartialSettlementIds,
   isDividendDeclaration,
   isDividendSettled,
-  getDividendOutstanding,
+  getDividendOutstandingAmount,
   getDividendPartialSettlementIds,
 } from '@/lib/accounting/guidance';
 import { useInvoiceFromTransactions } from '@/hooks/useInvoiceFromTransactions';
@@ -866,7 +866,6 @@ export function TransactionDetailModal({
 
         {/* Receivable Settlement Section */}
         {isReceivableTransaction(transaction) && onSettleReceivable && (() => {
-          const outstanding = getOutstandingAmount(transaction);
           const partialIds = getPartialSettlementIds(transaction);
           const settled = isSettled(transaction);
           const finalSettlementId = transaction.meta?.settled_by_transaction_id;
@@ -875,6 +874,7 @@ export function TransactionDetailModal({
             : partialIds;
           const paymentTxns = allTransactions?.filter(t => paymentIds.includes(t.id)) ?? [];
           const hasPayments = paymentTxns.length > 0;
+          const outstanding = getOutstandingAmount(transaction, paymentTxns);
 
           return (
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
@@ -1100,7 +1100,6 @@ export function TransactionDetailModal({
 
         {/* Dividend Settlement Section — mirror of receivable settlement */}
         {isDividendDeclaration(transaction) && onSettleDividend && (() => {
-          const outstanding = getDividendOutstanding(transaction);
           const partialIds = getDividendPartialSettlementIds(transaction);
           const settled = isDividendSettled(transaction);
           const finalSettlementId = transaction.meta?.settled_by_transaction_id;
@@ -1108,6 +1107,7 @@ export function TransactionDetailModal({
             ? [...partialIds, finalSettlementId]
             : partialIds;
           const paymentTxns = allTransactions?.filter(t => paymentIds.includes(t.id)) ?? [];
+          const outstanding = getDividendOutstandingAmount(transaction, paymentTxns);
           const hasPayments = paymentTxns.length > 0;
 
           return (

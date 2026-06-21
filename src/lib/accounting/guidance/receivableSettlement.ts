@@ -100,12 +100,37 @@ export function getReceivableLineAmount(transaction: Transaction): number {
  * If partially settled → remaining_amount from meta (or falls back to receivable line amount).
  * Otherwise → receivable line amount (net, bukan gross header amount).
  */
-export function getOutstandingAmount(transaction: Transaction): number {
+export function getOutstandingAmount(transaction: Transaction, paymentTxns?: Transaction[]): number {
   if (isSettled(transaction)) return 0;
   if (transaction.meta?.remaining_amount !== undefined) {
+    console.log('--- getOutstandingAmount EXIT EARLY ---');
+    console.log('remaining_amount found:', transaction.meta.remaining_amount);
     return Math.max(0, transaction.meta.remaining_amount);
   }
-  return getReceivableLineAmount(transaction);
+  
+  const originalAmount = getReceivableLineAmount(transaction);
+  
+  console.log('--- getOutstandingAmount ENTRY ---');
+  console.log('originalAmount:', originalAmount);
+  console.log('paymentTxns length:', paymentTxns?.length);
+  console.log('partialIds:', getPartialSettlementIds(transaction));
+  
+  // Fallback for legacy partial settlements missing `remaining_amount` in DB
+  if (paymentTxns && paymentTxns.length > 0) {
+    const partialIds = getPartialSettlementIds(transaction);
+    const relatedPayments = paymentTxns.filter(t => partialIds.includes(t.id));
+    console.log('relatedPayments length:', relatedPayments.length);
+    if (relatedPayments.length > 0) {
+      const totalPaid = relatedPayments.reduce((sum, t) => sum + t.amount, 0);
+      console.log('--- getOutstandingAmount DEBUG ---');
+      console.log('originalAmount:', originalAmount);
+      console.log('totalPaid:', totalPaid);
+      console.log('returning:', Math.max(0, originalAmount - totalPaid));
+      return Math.max(0, originalAmount - totalPaid);
+    }
+  }
+
+  return originalAmount;
 }
 
 /**
@@ -183,8 +208,12 @@ function getSettlementCategory(original: Transaction): TransactionCategory {
  * Piutang usaha:  Dr Kas/Bank (1200/1100)  |  Cr Piutang Usaha   (category: EARN)
  * Piutang talangan: Dr Kas/Bank            |  Cr Piutang Talangan (category: FIN)
  */
-export function buildSettlementPrefill(original: Transaction, accounts: Account[]): SettlementPrefill {
-  const outstanding = getOutstandingAmount(original);
+export function buildSettlementPrefill(
+  original: Transaction, 
+  accounts: Account[], 
+  paymentTxns?: Transaction[]
+): SettlementPrefill {
+  const outstanding = getOutstandingAmount(original, paymentTxns);
   const cashAccount = findDefaultCashAccount(accounts);
   const receivableAccountId = getReceivableAccountId(original);
   const category = getSettlementCategory(original);
@@ -227,7 +256,8 @@ export interface PartialSettlementPrefill extends SettlementPrefill {
 export function buildPartialSettlementPrefill(
   original: Transaction,
   partialAmount: number,
-  accounts: Account[]
+  accounts: Account[],
+  paymentTxns?: Transaction[]
 ): PartialSettlementPrefill {
   const cashAccount = findDefaultCashAccount(accounts);
   const receivableAccountId = getReceivableAccountId(original);

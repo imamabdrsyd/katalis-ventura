@@ -76,12 +76,25 @@ export function getPayableLineAmount(transaction: Transaction): number {
  * If partially settled → remaining_amount from meta (or falls back to payable line amount).
  * Otherwise → payable line amount (net, bukan gross header amount).
  */
-export function getPayableOutstandingAmount(transaction: Transaction): number {
+export function getPayableOutstandingAmount(transaction: Transaction, paymentTxns?: Transaction[]): number {
   if (isPayableSettled(transaction)) return 0;
   if (transaction.meta?.remaining_amount !== undefined) {
     return Math.max(0, transaction.meta.remaining_amount);
   }
-  return getPayableLineAmount(transaction);
+  
+  const originalAmount = getPayableLineAmount(transaction);
+  
+  // Fallback for legacy partial settlements missing `remaining_amount` in DB
+  if (paymentTxns && paymentTxns.length > 0) {
+    const partialIds = getPayablePartialSettlementIds(transaction);
+    const relatedPayments = paymentTxns.filter(t => partialIds.includes(t.id));
+    if (relatedPayments.length > 0) {
+      const totalPaid = relatedPayments.reduce((sum, t) => sum + t.amount, 0);
+      return Math.max(0, originalAmount - totalPaid);
+    }
+  }
+
+  return originalAmount;
 }
 
 export interface PayableSettlementPrefill {
@@ -123,10 +136,14 @@ function getPayableAccountId(original: Transaction): string {
  * Correct journal: Dr Hutang (LIABILITY)  |  Cr Kas/Bank (1200/1100)
  * NOT a swap of the original entry.
  */
-export function buildPayableSettlementPrefill(original: Transaction, accounts: Account[]): PayableSettlementPrefill {
+export function buildPayableSettlementPrefill(
+  original: Transaction, 
+  accounts: Account[],
+  paymentTxns?: Transaction[]
+): PayableSettlementPrefill {
   const cashAccount = findDefaultCashAccount(accounts);
   const payableAccountId = getPayableAccountId(original);
-  const outstanding = getPayableOutstandingAmount(original);
+  const outstanding = getPayableOutstandingAmount(original, paymentTxns);
 
   return {
     debit_account_id: payableAccountId,
@@ -147,4 +164,19 @@ export function buildPayableSettlementPrefill(original: Transaction, accounts: A
       settlement_of_transaction_id: original.id,
     },
   };
+}
+export function getPayablePartialSettlementIds(transaction: Transaction): string[] {
+  return transaction.meta?.partial_settlements ?? [];
+}
+
+export function buildPayablePartialSettlementPrefill(
+  original: Transaction,
+  partialAmount: number,
+  accounts: Account[],
+  paymentTxns?: Transaction[]
+): PayableSettlementPrefill {
+  const prefill = buildPayableSettlementPrefill(original, accounts, paymentTxns);
+  prefill.amount = partialAmount;
+  prefill.original_amount = partialAmount;
+  return prefill;
 }
