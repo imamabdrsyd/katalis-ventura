@@ -61,41 +61,45 @@ async function processEvent(
   event: InstagramMessaging
 ): Promise<void> {
   const message = event.message;
-  // Skip echo (pesan kita sendiri) & event non-pesan (read/reaction/dll)
-  if (!message || message.is_echo) return;
+  if (!message) return; // bukan event pesan (read/reaction/dll)
 
-  const senderId = event.sender?.id;
-  if (!senderId) return;
+  const isEcho = message.is_echo === true;
+  // Jika echo (pesan admin), customer ada di recipient. Jika biasa (inbound), customer ada di sender.
+  const customerId = isEcho ? event.recipient?.id : event.sender?.id;
+  if (!customerId) return;
 
-  // Coba lookup nama/username via Graph API — gagal → fallback @senderId.
+  // Coba lookup nama/username via Graph API — gagal → fallback @customerId.
   const businessToken = getDecryptedToken(integration);
   const senderName =
-    (businessToken ? await getInstagramSenderName(businessToken, senderId) : null) ??
-    `@${senderId}`;
+    (businessToken ? await getInstagramSenderName(businessToken, customerId) : null) ??
+    `@${customerId}`;
 
   // 1. Upsert lead
   const lead = await upsertLead(supabase, {
     businessId,
     channel: 'instagram',
-    externalId: senderId,
-    name: senderName,
+    externalId: customerId,
+    name: senderName, // selalu simpan nama customer
     lastMessageAt: new Date(event.timestamp || Date.now()).toISOString(),
   });
   if (!lead) return;
 
-  // 2. Simpan inbound (dedup by mid). Pesan non-teks → placeholder.
+  // 2. Simpan pesan (dedup by mid). Pesan non-teks → placeholder.
   const content = message.text ?? '[pesan instagram]';
   const saved = await insertLeadMessage(supabase, {
     leadId: lead.id,
     businessId,
-    direction: 'inbound',
-    sender: 'customer',
+    direction: isEcho ? 'outbound' : 'inbound',
+    sender: isEcho ? 'human' : 'customer', // Asumsikan echo adalah pesan manual admin (echo balasan AI akan di-dedup)
     content,
     externalMessageId: message.mid,
   });
   if (!saved) return;
 
-  // 3. AI — hanya untuk pesan teks
+  // JIKA ECHO, BERHENTI DI SINI. Jangan biarkan AI merespons pesannya sendiri/pesan admin.
+  if (isEcho) return;
+
+  // 3. AI — hanya untuk pesan teks INBOUND
   if (!integration.ai_enabled || !message.text) return;
 
   const history = await fetchLeadHistoryForAI(supabase, lead.id);
@@ -124,11 +128,11 @@ async function processEvent(
 
       // Kirim attachment gambar satu per satu (kalau ada)
       for (const url of cleanUrls) {
-        await sendInstagramImage(token, senderId, url);
+        await sendInstagramImage(token, customerId, url);
       }
 
       if (finalReply) {
-        const sent = await sendInstagramMessage(token, senderId, finalReply);
+        const sent = await sendInstagramMessage(token, customerId, finalReply);
         if (sent.ok) {
           await insertLeadMessage(supabase, {
             leadId: lead.id,
