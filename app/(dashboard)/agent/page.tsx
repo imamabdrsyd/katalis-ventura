@@ -566,6 +566,8 @@ export default function AgentPage() {
       return;
     }
     
+    let finalInput = input;
+
     // RAG file upload
     if (ragFile) {
       setIsChatting(true);
@@ -582,7 +584,12 @@ export default function AgentPage() {
           const errData = await res.json().catch(() => ({}));
           throw new Error(errData.error || 'Upload gagal');
         }
+        
+        const fileName = ragFile.name;
         setRagFile(null); // Clear after upload
+        
+        const attachmentNote = `\n\n📎 File terlampir: ${fileName}\n(Sistem: Saya baru saja mengunggah file ini. Tolong gunakan tool search_knowledge_base untuk membaca file ini jika relevan dengan pertanyaan saya.)`;
+        finalInput = finalInput.trim() ? finalInput + attachmentNote : `Tolong pelajari file ini: ${fileName}${attachmentNote}`;
       } catch (err) {
         setIsChatting(false);
         alert(`Gagal mengunggah dokumen: ${err instanceof Error ? err.message : 'Terjadi kesalahan'}`);
@@ -591,7 +598,7 @@ export default function AgentPage() {
       setIsChatting(false);
     }
     
-    sendChatMessage(input);
+    sendChatMessage(finalInput);
   }, [selectedFile, handleCallAgent, sendChatMessage, input, ragFile, activeBusinessId]);
 
   if (!canManage) {
