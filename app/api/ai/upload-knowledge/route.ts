@@ -4,7 +4,7 @@ import { getVertexTokenAndProject } from '@/lib/ai/vertexAuth';
 import { insertKnowledgeChunk } from '@/lib/ai/knowledge';
 
 // Vertex AI models
-const GEMINI_MODEL = 'gemini-1.5-flash';
+const GEMINI_MODEL = 'gemini-3.5-flash';
 const EMBEDDING_MODEL = 'text-embedding-004';
 
 // Helper for chunking text
@@ -63,7 +63,12 @@ async function extractTextWithGemini(
   if (!res.ok) {
     const errorBody = await res.text();
     console.error('Gemini extraction error:', errorBody);
-    throw new Error('Gagal mengekstrak teks dengan Gemini');
+    let errMsg = errorBody;
+    try {
+      const parsed = JSON.parse(errorBody);
+      if (parsed.error && parsed.error.message) errMsg = parsed.error.message;
+    } catch { /* ignore */ }
+    throw new Error(`Gagal mengekstrak teks dengan Gemini: ${errMsg}`);
   }
 
   const data = await res.json();
@@ -96,7 +101,12 @@ async function getEmbeddings(
   if (!res.ok) {
     const errorBody = await res.text();
     console.error('Embedding error:', errorBody);
-    throw new Error('Gagal melakukan embedding teks');
+    let errMsg = errorBody;
+    try {
+      const parsed = JSON.parse(errorBody);
+      if (parsed.error && parsed.error.message) errMsg = parsed.error.message;
+    } catch { /* ignore */ }
+    throw new Error(`Gagal melakukan embedding teks: ${errMsg}`);
   }
 
   const data = await res.json();

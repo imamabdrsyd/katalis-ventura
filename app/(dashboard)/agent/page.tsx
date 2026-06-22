@@ -19,7 +19,7 @@ import type { SalesChannel } from '@/types';
 import { isManagerRole } from '@/lib/roles';
 import {
   Bot, AlertCircle, Send, ArrowUp, Sparkles, CheckCircle, XCircle, Loader2, Paperclip, Brain, ChevronRight, Globe,
-  X, Network, Briefcase, MessagesSquare, Plus, Clock, MessageCircle
+  X, Network, Briefcase, MessagesSquare, Plus, Clock, MessageCircle, FileText, FileSpreadsheet, File
 } from 'lucide-react';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 
@@ -578,11 +578,14 @@ export default function AgentPage() {
           method: 'POST',
           body: formData
         });
-        if (!res.ok) throw new Error('Upload gagal');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Upload gagal');
+        }
         setRagFile(null); // Clear after upload
       } catch (err) {
         setIsChatting(false);
-        alert('Gagal mengunggah dokumen');
+        alert(`Gagal mengunggah dokumen: ${err instanceof Error ? err.message : 'Terjadi kesalahan'}`);
         return;
       }
       setIsChatting(false);
@@ -728,11 +731,17 @@ export default function AgentPage() {
 
               {/* Indikator file terpilih */}
               {(selectedFile || ragFile) && (
-                <span className="inline-flex items-center gap-1 shrink-0 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 max-w-[120px] bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-full">
-                  <Paperclip className="w-3 h-3 shrink-0" />
+                <span className="inline-flex items-center gap-1.5 shrink-0 text-[11px] font-medium text-gray-700 dark:text-gray-300 max-w-[150px] bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2.5 py-1 rounded-full">
+                  {((selectedFile || ragFile)?.name.toLowerCase().endsWith('.pdf')) ? (
+                    <FileText className="w-3.5 h-3.5 shrink-0" />
+                  ) : ((selectedFile || ragFile)?.name.toLowerCase().endsWith('.csv')) ? (
+                    <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" />
+                  ) : (
+                    <File className="w-3.5 h-3.5 shrink-0" />
+                  )}
                   <span className="truncate">{(selectedFile || ragFile)?.name}</span>
-                  <button onClick={() => selectedFile ? setSelectedFile(null) : setRagFile(null)} className="ml-1 hover:text-emerald-800 dark:hover:text-emerald-200">
-                    <X className="w-3 h-3" />
+                  <button onClick={() => selectedFile ? setSelectedFile(null) : setRagFile(null)} className="ml-1 hover:text-gray-900 dark:hover:text-white transition-colors">
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 </span>
               )}
