@@ -34,7 +34,9 @@ export const TOOL_DEFINITIONS = [
       'Hasil berupa array transaksi terfilter yang bisa dianalisis. PENTING: tiap transaksi punya ' +
       'flag is_settlement — jika true berarti PELUNASAN PIUTANG (Dr Kas/Bank / Cr Piutang), BUKAN ' +
       'pendapatan baru. Untuk menjumlahkan pendapatan/revenue gunakan field total_excluding_settlements, ' +
-      'JANGAN total_amount, agar tidak double-count piutang dengan pelunasannya.',
+      'JANGAN total_amount, agar tidak double-count piutang dengan pelunasannya. ' +
+      'SANGAT PENTING: JANGAN memanggil tool ini berulang kali secara berurutan untuk tiap baris/transaksi individual. ' +
+      'Jika Anda perlu mencocokkan banyak transaksi sekaligus, panggil tool ini SATU KALI dengan rentang tanggal (start_date dan end_date) yang luas (limit 100), lalu verifikasi semuanya sekaligus dalam pikiran Anda.',
     parameters: {
       type: 'object',
       properties: {

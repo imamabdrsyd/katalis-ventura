@@ -31,14 +31,14 @@ export async function insertKnowledgeChunk(chunk: KnowledgeChunk) {
 export async function searchKnowledgeBase(
   businessId: string, 
   queryEmbedding: number[], 
-  limit: number = 5,
-  similarityThreshold: number = 0.7
+  limit: number = 10,
+  similarityThreshold: number = 0.0
 ) {
   const embeddingString = `[${queryEmbedding.join(',')}]`;
 
   // `<=>` adalah operator cosine distance di pgvector. 
   // Similarity = 1 - cosine_distance. Semakin kecil distance, semakin mirip.
-  // Threshold 0.7 similarity berarti distance <= 0.3
+  // Threshold 0.0 similarity berarti distance <= 1.0
   const maxDistance = 1 - similarityThreshold;
 
   const results = await gcpSql`
