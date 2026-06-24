@@ -1,9 +1,10 @@
 export const dynamic = 'force-dynamic';
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { createServerClient } from '@/lib/supabase-server';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 
 import { loadSession, saveMessages } from '@/lib/ai/memory';
+import { ingestSessionSummary } from '@/lib/ai/semanticMemory';
 
 export async function GET(req: Request) {
   try {
@@ -64,6 +65,10 @@ export async function POST(req: Request) {
     }));
 
     await saveMessages(businessId, user.id, sessionId, validMessages);
+
+    // Ringkas + embed sesi ke GCP untuk recall semantik (non-blocking, best-effort, debounced).
+    after(() => ingestSessionSummary(businessId, user.id, sessionId, validMessages));
+
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('[API] /api/ai/memory POST error:', err);

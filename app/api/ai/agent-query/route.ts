@@ -273,7 +273,7 @@ export async function POST(req: NextRequest) {
           // Eksekusi semua tool calls
           const toolResponseParts: FunctionResponsePart[] = [];
           for (const fc of functionCalls) {
-            const result = await executeTool(fc.name, fc.args, business_id);
+            const result = await executeTool(fc.name, fc.args, business_id, user.id);
 
             if (fc.name === 'navigate_to' && result.data) {
               navigateAction = result.data as NavigateAction;

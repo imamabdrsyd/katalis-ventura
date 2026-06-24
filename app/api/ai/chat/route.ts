@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
       .order('date', { ascending: false })
       .limit(3000),
     route.needsBusinessInfo
-      ? executeTool('get_business_info', {}, business_id)
+      ? executeTool('get_business_info', {}, business_id, user.id)
       : Promise.resolve(null),
   ]);
 

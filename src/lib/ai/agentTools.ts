@@ -8,7 +8,8 @@
  * 4. Gemini formulasi jawaban natural language berdasar data nyata
  *
  * Tools: query_transactions, get_financial_summary, get_contacts,
- * get_business_info, navigate_to, search_knowledge_base, run_olap_analytics
+ * get_business_info, navigate_to, search_knowledge_base, run_olap_analytics,
+ * recall_memory
  */
 
 import { createServerClient } from '@/lib/supabase-server';
@@ -22,6 +23,7 @@ import {
 import { formatIDR } from '@/lib/ai/financialContext';
 import { getVertexTokenAndProject } from '@/lib/ai/vertexAuth';
 import { searchKnowledgeBase } from '@/lib/ai/knowledge';
+import { embedText, searchMemories } from '@/lib/ai/semanticMemory';
 import type { Transaction } from '@/types';
 
 // ─── Tool Definitions (JSON Schema untuk Gemini function calling) ─────────────
@@ -259,6 +261,26 @@ export const TOOL_DEFINITIONS = [
         },
       },
       required: ['group_by'],
+    },
+  },
+  {
+    name: 'recall_memory',
+    description:
+      'Ingat kembali percakapan atau catatan LAMPAU dari sesi/chat sebelumnya (memori jangka panjang). ' +
+      'Berbeda dari search_knowledge_base (yang mencari di dokumen/file yang diunggah), tool ini mencari ' +
+      'di memori percakapan: ringkasan sesi chat sebelumnya dan catatan yang sengaja disimpan user (Memory Vault). ' +
+      'Gunakan ketika user merujuk ke sesuatu dari masa lalu, misalnya "kemarin kita bahas apa soal pricing?", ' +
+      '"lanjutkan analisis yang waktu itu", "apa yang sudah kita putuskan tentang ekspansi?", atau ketika ' +
+      'konteks percakapan sekarang terasa merujuk hal yang belum ada di histori turn ini.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Kata kunci/topik yang ingin diingat kembali (pencarian semantik). Contoh: "strategi pricing" atau "rencana ekspansi cabang".',
+        },
+      },
+      required: ['query'],
     },
   },
 ];
@@ -767,6 +789,39 @@ async function handleSearchKnowledgeBase(businessId: string, args: ToolCallArgs)
   };
 }
 
+async function handleRecallMemory(
+  businessId: string,
+  userId: string,
+  args: ToolCallArgs,
+): Promise<unknown> {
+  const query = args.query as string;
+  if (!query) throw new Error('Query recall tidak valid');
+
+  const auth = await getVertexTokenAndProject();
+  if (!auth) throw new Error('Vertex AI tidak dikonfigurasi untuk embedding');
+
+  const queryEmbedding = await embedText(auth.token, auth.projectId, query);
+  const results = await searchMemories(businessId, userId, queryEmbedding, 5, 0.6);
+
+  if (!results || results.length === 0) {
+    return {
+      query,
+      results: [],
+      _note: 'Tidak ada memori percakapan lampau yang relevan dengan query ini.',
+    };
+  }
+
+  return {
+    query,
+    results: (results as Array<Record<string, unknown>>).map((r) => ({
+      source: (r.metadata as { source?: string } | null)?.source ?? 'memory',
+      content: r.content,
+      remembered_at: r.created_at,
+      similarity: r.similarity,
+    })),
+  };
+}
+
 // ─── OLAP Analytics (GCP Cloud SQL) ───────────────────────────────────────────
 
 // Whitelist ekspresi SQL untuk dimensi & measure. Hanya konstanta yang kita kontrol
@@ -912,7 +967,8 @@ async function handleRunOlapAnalytics(businessId: string, args: ToolCallArgs): P
 export async function executeTool(
   toolName: string,
   args: ToolCallArgs,
-  businessId: string
+  businessId: string,
+  userId: string
 ): Promise<ToolResult> {
   try {
     let data: unknown;
@@ -936,6 +992,8 @@ export async function executeTool(
       data = await handleSearchKnowledgeBase(businessId, args);
     } else if (toolName === 'run_olap_analytics') {
       data = await handleRunOlapAnalytics(businessId, args);
+    } else if (toolName === 'recall_memory') {
+      data = await handleRecallMemory(businessId, userId, args);
     } else {
       return { tool: toolName, data: null, error: `Tool tidak dikenal: ${toolName}` };
     }
