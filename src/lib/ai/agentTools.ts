@@ -8,10 +8,11 @@
  * 4. Gemini formulasi jawaban natural language berdasar data nyata
  *
  * Tools: query_transactions, get_financial_summary, get_contacts,
- * get_business_info, navigate_to
+ * get_business_info, navigate_to, search_knowledge_base, run_olap_analytics
  */
 
 import { createServerClient } from '@/lib/supabase-server';
+import gcpSql from '@/lib/gcp';
 import {
   calculateCapTable,
   calculateFinancialSummary,
@@ -203,6 +204,61 @@ export const TOOL_DEFINITIONS = [
         },
       },
       required: ['query'],
+    },
+  },
+  {
+    name: 'run_olap_analytics',
+    description:
+      'Jalankan query AGREGASI (GROUP BY) pada gudang data analitik (OLAP) untuk tren waktu, ranking, ' +
+      'dan pivot atas SELURUH histori transaksi — jauh lebih efisien daripada menarik ribuan baris mentah ' +
+      'dengan query_transactions. Gunakan untuk pertanyaan seperti "tren revenue per bulan tahun ini", ' +
+      '"total pengeluaran per kategori", "penjualan per channel", "10 customer dengan transaksi terbesar", ' +
+      '"perbandingan beban tiap kuartal". Bisa kelompokkan per 1 atau 2 dimensi sekaligus (mis. bulan × kategori). ' +
+      'PENTING: data OLAP adalah replika yang disinkronkan secara MANUAL, jadi bisa sedikit tertinggal dari data ' +
+      'live; untuk angka yang harus presisi real-time (mis. saldo hari ini) pakai get_financial_summary. ' +
+      'Untuk analisis revenue, set exclude_settlements=true agar pelunasan piutang tidak terhitung sebagai pendapatan baru.',
+    parameters: {
+      type: 'object',
+      properties: {
+        group_by: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: ['month', 'quarter', 'year', 'category', 'sales_channel', 'name'],
+          },
+          description:
+            'Dimensi pengelompokan, 1–2 item. "month"/"quarter"/"year" = bucket waktu, "category" = 6 kategori, ' +
+            '"sales_channel" = channel penjualan, "name" = nama customer/vendor. Contoh: ["month"] untuk tren bulanan, ' +
+            '["month","category"] untuk pivot bulan × kategori, ["name"] untuk ranking kontak.',
+        },
+        measure: {
+          type: 'string',
+          enum: ['sum', 'count', 'avg', 'min', 'max'],
+          description: 'Agregasi atas nominal (amount). Default "sum". "count" = jumlah transaksi.',
+        },
+        start_date: { type: 'string', description: 'Filter tanggal mulai YYYY-MM-DD. Opsional.' },
+        end_date: { type: 'string', description: 'Filter tanggal akhir YYYY-MM-DD. Opsional.' },
+        category: {
+          type: 'string',
+          enum: ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'],
+          description: 'Filter satu kategori transaksi. Opsional.',
+        },
+        sales_channel: { type: 'string', description: 'Filter satu sales channel. Opsional.' },
+        exclude_settlements: {
+          type: 'boolean',
+          description: 'Jika true, kecualikan pelunasan piutang dari agregasi (wajib true untuk analisis revenue). Default false.',
+        },
+        sort: {
+          type: 'string',
+          enum: ['value_desc', 'value_asc', 'group_asc', 'group_desc'],
+          description: 'Urutan hasil. Default: kronologis (group_asc) untuk dimensi waktu, selain itu value_desc.',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maksimum baris hasil. Default 50, maksimum 200.',
+        },
+      },
+      required: ['group_by'],
     },
   },
 ];
@@ -711,6 +767,146 @@ async function handleSearchKnowledgeBase(businessId: string, args: ToolCallArgs)
   };
 }
 
+// ─── OLAP Analytics (GCP Cloud SQL) ───────────────────────────────────────────
+
+// Whitelist ekspresi SQL untuk dimensi & measure. Hanya konstanta yang kita kontrol
+// yang masuk ke string query; SEMUA nilai user dilewatkan sebagai parameter ($n) →
+// tidak ada celah SQL injection meski memakai gcpSql.unsafe().
+const OLAP_DIMENSIONS: Record<string, string> = {
+  month: `to_char(date_trunc('month', t.date), 'YYYY-MM')`,
+  quarter: `to_char(t.date, 'YYYY') || '-Q' || to_char(t.date, 'Q')`,
+  year: `to_char(date_trunc('year', t.date), 'YYYY')`,
+  category: `t.category`,
+  sales_channel: `COALESCE(NULLIF(t.sales_channel, ''), '(tanpa channel)')`,
+  name: `COALESCE(NULLIF(t.name, ''), '(tanpa nama)')`,
+};
+
+const OLAP_MEASURES: Record<string, string> = {
+  sum: `SUM(t.amount)`,
+  count: `COUNT(*)`,
+  avg: `AVG(t.amount)`,
+  min: `MIN(t.amount)`,
+  max: `MAX(t.amount)`,
+};
+
+async function handleRunOlapAnalytics(businessId: string, args: ToolCallArgs): Promise<unknown> {
+  const rawDims = Array.isArray(args.group_by)
+    ? args.group_by
+    : args.group_by != null
+    ? [args.group_by]
+    : [];
+  const dims = (rawDims as unknown[])
+    .map((d) => String(d))
+    .filter((d) => d in OLAP_DIMENSIONS)
+    .slice(0, 2);
+
+  if (dims.length === 0) {
+    throw new Error('group_by wajib berisi minimal satu dimensi valid (month/quarter/year/category/sales_channel/name).');
+  }
+
+  const measureKey =
+    typeof args.measure === 'string' && args.measure in OLAP_MEASURES ? args.measure : 'sum';
+  const measureExpr = OLAP_MEASURES[measureKey];
+
+  const params: unknown[] = [businessId];
+  const where: string[] = [
+    `t.business_id = $1`,
+    `t.deleted_at IS NULL`,
+    `(t.status IS NULL OR t.status = 'posted')`,
+  ];
+
+  if (typeof args.start_date === 'string' && args.start_date) {
+    params.push(args.start_date);
+    where.push(`t.date >= $${params.length}`);
+  }
+  if (typeof args.end_date === 'string' && args.end_date) {
+    params.push(args.end_date);
+    where.push(`t.date <= $${params.length}`);
+  }
+  if (typeof args.category === 'string' && args.category) {
+    params.push(args.category);
+    where.push(`t.category = $${params.length}`);
+  }
+  if (typeof args.sales_channel === 'string' && args.sales_channel) {
+    params.push(args.sales_channel);
+    where.push(`t.sales_channel = $${params.length}`);
+  }
+  if (args.exclude_settlements === true) {
+    where.push(`(t.meta->>'settlement_of_transaction_id') IS NULL`);
+  }
+
+  const selectDims = dims.map((d, i) => `${OLAP_DIMENSIONS[d]} AS g${i}`);
+  const selectCols = [...selectDims, `${measureExpr} AS value`, `COUNT(*) AS tx_count`];
+  const groupByClause = `GROUP BY ${dims.map((_, i) => i + 1).join(', ')}`;
+
+  const hasTimeDim = dims.some((d) => d === 'month' || d === 'quarter' || d === 'year');
+  const sort = typeof args.sort === 'string' ? args.sort : hasTimeDim ? 'group_asc' : 'value_desc';
+  let orderBy: string;
+  if (sort === 'group_asc') orderBy = `ORDER BY g0 ASC`;
+  else if (sort === 'group_desc') orderBy = `ORDER BY g0 DESC`;
+  else if (sort === 'value_asc') orderBy = `ORDER BY value ASC`;
+  else orderBy = `ORDER BY value DESC`;
+
+  let limit = typeof args.limit === 'number' ? Math.floor(args.limit) : 50;
+  if (limit < 1) limit = 1;
+  if (limit > 200) limit = 200;
+  params.push(limit);
+  const limitClause = `LIMIT $${params.length}`;
+
+  const query = `
+    SELECT ${selectCols.join(', ')}
+    FROM olap_transactions t
+    WHERE ${where.join(' AND ')}
+    ${groupByClause}
+    ${orderBy}
+    ${limitClause}
+  `;
+
+  let rows: Array<Record<string, unknown>>;
+  try {
+    rows = (await gcpSql.unsafe(query, params as never[])) as unknown as Array<Record<string, unknown>>;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'OLAP query error';
+    throw new Error(`Gagal menjalankan query OLAP: ${msg}`);
+  }
+
+  if (!rows || rows.length === 0) {
+    // Bedakan "belum disync" dari "filter tidak match" agar agent bisa memandu user.
+    const countRows = (await gcpSql.unsafe(
+      `SELECT COUNT(*)::int AS total FROM olap_transactions WHERE business_id = $1`,
+      [businessId] as never[],
+    )) as unknown as Array<{ total: number }>;
+    const total = countRows?.[0]?.total ?? 0;
+    if (total === 0) {
+      return {
+        results: [],
+        _note:
+          'Data OLAP untuk bisnis ini masih kosong / belum disinkronkan. Sarankan user membuka Settings → ' +
+          'Analytics dan klik "Sinkronisasi", atau gunakan get_financial_summary / query_transactions yang membaca data live.',
+      };
+    }
+    return { results: [], _note: 'Tidak ada baris yang cocok dengan filter pada data OLAP.' };
+  }
+
+  const results = rows.map((r) => {
+    const out: Record<string, unknown> = {};
+    dims.forEach((d, i) => {
+      out[d] = r[`g${i}`];
+    });
+    out.value = r.value != null ? Number(r.value) : 0;
+    out.tx_count = r.tx_count != null ? Number(r.tx_count) : 0;
+    return out;
+  });
+
+  return {
+    source: 'OLAP (replika GCP Cloud SQL, sinkronisasi manual — bisa sedikit tertinggal dari data live)',
+    measure: measureKey,
+    group_by: dims,
+    row_count: results.length,
+    results,
+  };
+}
+
 // ─── Dispatch ─────────────────────────────────────────────────────────────────
 
 export async function executeTool(
@@ -738,6 +934,8 @@ export async function executeTool(
       } as NavigateAction;
     } else if (toolName === 'search_knowledge_base') {
       data = await handleSearchKnowledgeBase(businessId, args);
+    } else if (toolName === 'run_olap_analytics') {
+      data = await handleRunOlapAnalytics(businessId, args);
     } else {
       return { tool: toolName, data: null, error: `Tool tidak dikenal: ${toolName}` };
     }

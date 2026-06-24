@@ -85,7 +85,7 @@ Dokumentasi sistem multi-persona sub-agent AXION. Semua persona beroperasi di at
 
 **Perilaku:**
 - Mengubah data jadi insight strategis: tren, margin, burn rate, perbandingan periode
-- Punya akses 5 tools: `query_transactions`, `get_financial_summary`, `get_contacts`, `get_business_info`, `navigate_to`
+- Punya akses 7 tools: `query_transactions`, `get_financial_summary`, `get_contacts`, `get_business_info`, `navigate_to`, `search_knowledge_base` (RAG dok upload), `run_olap_analytics` (agregasi GROUP BY ke replika OLAP GCP)
 - Selalu sertakan angka spesifik dari data — tidak mengarang
 - Akhiri dengan 1 insight utama + maks 1 rekomendasi actionable
 
@@ -98,7 +98,7 @@ Dokumentasi sistem multi-persona sub-agent AXION. Semua persona beroperasi di at
 **File terkait:**
 - `src/lib/ai/financialPersonas.ts` — overlay persona `analis_fpna`
 - `app/api/ai/agent-query/route.ts`
-- `src/lib/ai/agentTools.ts` — definisi & eksekusi 5 tools
+- `src/lib/ai/agentTools.ts` — definisi & eksekusi 7 tools
 
 ---
 
