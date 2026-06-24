@@ -51,7 +51,6 @@ import {
   RotateCcw,
   Repeat,
   FileText,
-  ScanSearch,
   HandCoins,
   Receipt,
   ChevronDown,
@@ -1063,7 +1062,7 @@ export default function JournalEntryPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
               title="Rekonsiliasi Bank"
             >
-              <ScanSearch className="w-4 h-4" />
+              <Landmark className="w-4 h-4" />
               Rekonsiliasi Bank
             </button>
           </nav>

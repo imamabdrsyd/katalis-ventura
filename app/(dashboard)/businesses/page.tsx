@@ -10,7 +10,7 @@ import { BusinessCard } from '@/components/business/BusinessCard';
 import { BusinessForm, type BusinessFormData } from '@/components/business/BusinessForm';
 import { InviteCodeManager } from '@/components/business/InviteCodeManager';
 import { PeriodLockManager } from '@/components/business/PeriodLockManager';
-import { Building2, Archive, Lock } from 'lucide-react';
+import { Building2, Archive, Lock, Users, Contact, Globe, Blocks } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { Tabs } from '@/components/ui/Tabs';
 import * as businessesApi from '@/lib/api/businesses';
@@ -241,11 +241,39 @@ export default function BusinessesPage() {
             {isInvestor ? `Bisnis yang di invest ${firstName}` : `Bisnis yang dikelola ${firstName}`}
           </p> */}
         </div>
-        {canManage && (
-          <button onClick={() => setIsFormOpen(true)} className="btn-primary-glow">
-            + {t.businesses.addBusiness}
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {/* Jalan pintas ke tab config bisnis aktif */}
+          {activeBusiness && (
+            <nav className="flex items-center">
+              {[
+                { value: 'members', label: t.businessConfig.tabMembers, Icon: Users, show: true },
+                { value: 'contacts', label: t.businessConfig.tabContacts, Icon: Contact, show: true },
+                { value: 'omni-channel', label: t.businessConfig.tabOmnichannel, Icon: Globe, show: !isInvestor },
+                { value: 'integrations', label: t.businessConfig.tabIntegrations, Icon: Blocks, show: !isInvestor },
+              ]
+                .filter((s) => s.show)
+                .map(({ value, label, Icon }, idx) => (
+                  <div key={value} className="flex items-center">
+                    {idx > 0 && <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 mx-0.5" />}
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/businesses/${activeBusiness.id}/config?tab=${value}`)}
+                      title={label}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                    >
+                      <Icon className="w-4 h-4" />
+                      {label}
+                    </button>
+                  </div>
+                ))}
+            </nav>
+          )}
+          {canManage && (
+            <button onClick={() => setIsFormOpen(true)} className="btn-primary-glow">
+              + {t.businesses.addBusiness}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
