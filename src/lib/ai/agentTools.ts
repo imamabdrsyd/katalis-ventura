@@ -196,13 +196,20 @@ export const TOOL_DEFINITIONS = [
     description:
       'Cari informasi pada dokumen, file CSV, TXT, atau PDF yang pernah diunggah oleh pengguna ke sistem (RAG). ' +
       'Gunakan tool ini ketika pengguna bertanya tentang konteks dokumen atau kebijakan, misalnya ' +
-      '"Apa syarat retur dari dokumen PDF yang tadi saya upload?", atau "Coba cari di file pengetahuan tentang kebijakan cuti".',
+      '"Apa syarat retur dari dokumen PDF yang tadi saya upload?", atau "Coba cari di file pengetahuan tentang kebijakan cuti". ' +
+      'PENTING untuk tugas yang butuh BANYAK baris sekaligus (mis. rekonsiliasi/cocokkan seluruh isi file CSV ' +
+      'dengan transaksi): JANGAN memanggil tool ini berulang kali dengan query berbeda. Cukup panggil SEKALI ' +
+      'dengan limit besar (mis. 30) untuk menarik sebanyak mungkin baris dalam satu langkah, lalu analisis semuanya.',
     parameters: {
       type: 'object',
       properties: {
         query: {
           type: 'string',
           description: 'Kata kunci pencarian semantik (contoh: "kebijakan cuti karyawan" atau "syarat retur").',
+        },
+        limit: {
+          type: 'number',
+          description: 'Jumlah potongan dokumen yang diambil. Default 6. Naikkan (mis. 30, maksimum 50) untuk rekonsiliasi/menarik seluruh isi file.',
         },
       },
       required: ['query'],
@@ -773,7 +780,10 @@ async function handleSearchKnowledgeBase(businessId: string, args: ToolCallArgs)
   // (mis. "Date,Type,Booking date,...") yang cosine-similarity-nya rendah terhadap
   // query natural language, sehingga floor tinggi (0.7) membuang chunk yang valid.
   // Handler mengembalikan skor similarity ke model agar model menilai relevansi sendiri.
-  const results = await searchKnowledgeBase(businessId, queryEmbedding, 6, 0.4);
+  // limit bisa dinaikkan model (mis. rekonsiliasi seluruh CSV) hingga maksimum 50.
+  const rawLimit = typeof args.limit === 'number' ? Math.floor(args.limit) : 6;
+  const limit = Math.min(Math.max(rawLimit, 1), 50);
+  const results = await searchKnowledgeBase(businessId, queryEmbedding, limit, 0.4);
 
   if (!results || results.length === 0) {
     return {

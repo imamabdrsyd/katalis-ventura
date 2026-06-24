@@ -39,7 +39,7 @@ const bodySchema = z.object({
 // Gemini 3.5 Flash: generasi terbaru (3.5), near-Pro level, thinking model.
 // Lebih canggih dari 2.5 Pro untuk reasoning analitik, lebih cepat dari 3.1 Pro Preview.
 const GEMINI_VERTEX_MODEL = 'gemini-3.5-flash';
-const MAX_TOOL_ITERATIONS = 7;
+const MAX_TOOL_ITERATIONS = 10;
 
 type GeminiPart = { text: string; thought?: boolean };
 type GeminiContent = { role: 'user' | 'model'; parts: GeminiPart[] };
