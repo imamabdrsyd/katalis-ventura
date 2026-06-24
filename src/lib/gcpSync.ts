@@ -1,19 +1,24 @@
-import { createServerClient } from './supabase-server';
+import { createAdminClient } from './supabase-server';
 import gcpSql from './gcp';
 import { Database } from '@/types';
 
 /**
- * Performs a manual synchronization of core business data from Supabase to GCP SQL.
+ * Performs a synchronization of core business data from Supabase to GCP SQL.
  * Specifically copies:
  * - businesses -> olap_businesses
  * - accounts -> olap_accounts
  * - transactions -> olap_transactions
  * - journal_lines -> olap_journal_lines
+ *
+ * Membaca data sumber via admin client (bypass RLS). Otorisasi siapa yang boleh
+ * memicu sync di-gate di level route/caller (route manual cek role manager; cron
+ * cek CRON_SECRET). Ini juga membuat sync bisa jalan di konteks cron yang tidak
+ * punya cookie user — di mana createServerClient akan terkena RLS dan balik kosong.
  */
 export async function syncBusinessDataToGCP(businessId: string) {
   console.log(`Starting GCP sync for business_id: ${businessId}`);
-  
-  const supabase = await createServerClient();
+
+  const supabase = createAdminClient();
 
   // 1. Fetch data from Supabase
   const [{ data: businesses }, { data: accounts }, { data: transactions }, { data: journalLines }] = await Promise.all([

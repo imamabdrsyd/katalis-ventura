@@ -5,5 +5,11 @@
       "regions": ["hnd1"],
       "maxDuration": 30
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/sync-olap",
+      "schedule": "0 19 * * *"
+    }
+  ]
 }
