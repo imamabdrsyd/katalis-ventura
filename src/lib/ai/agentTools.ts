@@ -769,7 +769,11 @@ async function handleSearchKnowledgeBase(businessId: string, args: ToolCallArgs)
   const data = await res.json();
   const queryEmbedding = data.predictions[0].embeddings.values;
 
-  const results = await searchKnowledgeBase(businessId, queryEmbedding, 5, 0.7);
+  // Threshold rendah (0.4): konten yang diunggah sering berupa data tabular/CSV
+  // (mis. "Date,Type,Booking date,...") yang cosine-similarity-nya rendah terhadap
+  // query natural language, sehingga floor tinggi (0.7) membuang chunk yang valid.
+  // Handler mengembalikan skor similarity ke model agar model menilai relevansi sendiri.
+  const results = await searchKnowledgeBase(businessId, queryEmbedding, 6, 0.4);
 
   if (!results || results.length === 0) {
     return {

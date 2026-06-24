@@ -492,7 +492,9 @@ export async function GET(request: NextRequest) {
           if (embedRes.ok) {
             const embedData = await embedRes.json();
             const queryEmbedding = embedData.predictions[0].embeddings.values;
-            const vectorHits = await searchKnowledgeBase(businessId, queryEmbedding, 3, 0.6);
+            // Floor rendah (0.45): konten tabular/CSV yang diunggah cocok lemah dengan
+            // query NL; floor terlalu tinggi membuang hasil valid. Lihat agentTools.ts.
+            const vectorHits = await searchKnowledgeBase(businessId, queryEmbedding, 3, 0.45);
             
             knowledgeResults = vectorHits.map((row: any) => ({
               id: row.id,
