@@ -793,11 +793,19 @@ async function handleSearchKnowledgeBase(businessId: string, args: ToolCallArgs)
     };
   }
 
+  // Cap panjang tiap chunk sebelum dikirim balik ke Gemini — chunk lama (sebelum
+  // perbaikan chunking di upload-knowledge/route.ts) bisa berisi ribuan baris CSV
+  // mentah dalam satu chunk, yang bisa membesarkan payload functionResponse hingga
+  // memicu finishReason non-STOP (MAX_TOKENS) atau timeout di route.ts.
+  const MAX_CHUNK_CHARS = 2000;
+  const truncate = (s: string) =>
+    s.length > MAX_CHUNK_CHARS ? `${s.slice(0, MAX_CHUNK_CHARS)}\n…(dipotong, chunk terlalu panjang)` : s;
+
   return {
     query,
     results: results.map((r: any) => ({
       source: r.source_type,
-      content: r.chunk_content,
+      content: truncate(r.chunk_content),
       similarity: r.similarity
     }))
   };

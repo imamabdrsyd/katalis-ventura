@@ -7,9 +7,29 @@ import { insertKnowledgeChunk } from '@/lib/ai/knowledge';
 const GEMINI_MODEL = 'gemini-3.5-flash';
 const EMBEDDING_MODEL = 'text-embedding-004';
 
-// Helper for chunking text
+// Helper for chunking text. Paragraf yang sendirian sudah melebihi maxChars
+// (mis. CSV tanpa baris kosong jadi satu "paragraf" raksasa) dipotong lagi
+// per baris agar tidak ada chunk yang jauh melebihi maxChars.
+function splitOversizedParagraph(p: string, maxChars: number): string[] {
+  if (p.length <= maxChars) return [p];
+
+  const lines = p.split('\n');
+  const subChunks: string[] = [];
+  let current = '';
+  for (const line of lines) {
+    if (current.length + line.length + 1 > maxChars) {
+      if (current) subChunks.push(current);
+      current = line;
+    } else {
+      current += (current ? '\n' : '') + line;
+    }
+  }
+  if (current) subChunks.push(current);
+  return subChunks;
+}
+
 function chunkText(text: string, maxChars: number = 1000): string[] {
-  const paragraphs = text.split(/\n\s*\n/);
+  const paragraphs = text.split(/\n\s*\n/).flatMap(p => splitOversizedParagraph(p, maxChars));
   const chunks: string[] = [];
   let currentChunk = '';
 

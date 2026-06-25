@@ -61,7 +61,7 @@ async function streamGeminiIteration(
   token: string,
   reqBody: unknown,
   controller: ReadableStreamDefaultController,
-): Promise<{ functionCalls: Array<{ name: string; args: Record<string, unknown> }>; collectedParts: Array<GeminiPart | FunctionCallPart>; answerChunks: string[] }> {
+): Promise<{ functionCalls: Array<{ name: string; args: Record<string, unknown> }>; collectedParts: Array<GeminiPart | FunctionCallPart>; answerChunks: string[]; finishReason: string | null }> {
   const streamEndpoint = endpoint.replace(':generateContent', ':streamGenerateContent?alt=sse');
 
   const geminiRes = await fetch(streamEndpoint, {
@@ -82,6 +82,7 @@ async function streamGeminiIteration(
   const functionCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
   const collectedParts: Array<GeminiPart | FunctionCallPart> = [];
   const answerChunks: string[] = [];
+  let finishReason: string | null = null;
 
   let buffer = '';
 
@@ -101,8 +102,9 @@ async function streamGeminiIteration(
       let parsed: unknown;
       try { parsed = JSON.parse(raw); } catch { continue; }
 
-      const candidate = (parsed as { candidates?: Array<{ content?: { parts?: Array<GeminiPart | FunctionCallPart> } }> })
+      const candidate = (parsed as { candidates?: Array<{ content?: { parts?: Array<GeminiPart | FunctionCallPart> }; finishReason?: string }> })
         ?.candidates?.[0];
+      if (candidate?.finishReason) finishReason = candidate.finishReason;
       if (!candidate?.content?.parts) continue;
 
       for (const part of candidate.content.parts) {
@@ -144,7 +146,7 @@ async function streamGeminiIteration(
     }
   }
 
-  return { functionCalls, collectedParts, answerChunks };
+  return { functionCalls, collectedParts, answerChunks, finishReason };
 }
 
 export async function POST(req: NextRequest) {
@@ -252,7 +254,7 @@ export async function POST(req: NextRequest) {
             reqBody.tools = [{ googleSearch: {} }];
           }
 
-          const { functionCalls, collectedParts, answerChunks } = await streamGeminiIteration(
+          const { functionCalls, collectedParts, answerChunks, finishReason } = await streamGeminiIteration(
             baseEndpoint,
             token,
             reqBody,
@@ -260,6 +262,18 @@ export async function POST(req: NextRequest) {
           );
 
           if (functionCalls.length === 0) {
+            // Tidak ada tool call. Kalau juga tidak ada answer chunk, kemungkinan
+            // Gemini berhenti karena finishReason non-STOP (mis. MAX_TOKENS akibat
+            // payload tool result yang terlalu besar, atau SAFETY) — beri tahu user
+            // secara eksplisit lewat event error daripada diam-diam selesai tanpa jawaban.
+            if (answerChunks.length === 0 && finishReason && finishReason !== 'STOP') {
+              console.error('[agent-query] iterasi berhenti tanpa jawaban, finishReason:', finishReason);
+              controller.enqueue(sseEvent({
+                kind: 'error',
+                text: `Model berhenti merespons (alasan: ${finishReason}). Coba pertanyaan dengan ruang lingkup lebih kecil, mis. periode/jumlah baris yang lebih sedikit.`,
+              }));
+              break;
+            }
             // Tidak ada tool call → jawaban final. Emit answer chunks yang sudah di-buffer.
             for (const chunk of answerChunks) {
               controller.enqueue(sseEvent({ kind: 'answer', text: chunk }));

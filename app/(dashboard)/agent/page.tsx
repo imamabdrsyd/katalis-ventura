@@ -534,6 +534,9 @@ export default function AgentPage() {
               patchAnswer({ sources: [...sources] });
             } else if (json.kind === 'model') {
               if (json.text) patchAnswer({ model: json.text });
+            } else if (json.kind === 'error') {
+              accumulated += `${accumulated ? '\n\n' : ''}⚠️ ${json.text || 'Terjadi kesalahan'}`;
+              patchAnswer({ text: accumulated, thinking: thinking || undefined });
             } else if (json.text) {
               if (json.kind === 'thinking') thinking += json.text;
               else accumulated += json.text;
