@@ -41,6 +41,17 @@ const bodySchema = z.object({
 const GEMINI_VERTEX_MODEL = 'gemini-3.5-flash';
 const MAX_TOOL_ITERATIONS = 10;
 
+// Directive untuk forced synthesis step. gemini-3.5-flash kadang "selesai" di dalam
+// thinking pada tugas berat (mis. rekonsiliasi seluruh CSV) tanpa pernah menuliskan
+// jawaban final untuk user → "(tidak ada respons)". Saat loop berakhir tanpa jawaban,
+// kita panggil sekali lagi TANPA tools dengan instruksi ini agar model wajib menulis.
+const SYNTHESIS_DIRECTIVE =
+  'Berdasarkan SEMUA data yang sudah kamu kumpulkan dari pemanggilan tool di atas, ' +
+  'tuliskan jawaban final untuk pertanyaan pengguna SEKARANG dalam Bahasa Indonesia. ' +
+  'Jangan memanggil tool apa pun lagi. Langsung berikan kesimpulan/analisisnya. ' +
+  'Jika ada data yang belum sempat kamu tarik, sampaikan kesimpulan dari data yang ADA ' +
+  'dan sebutkan keterbatasannya secara singkat — jangan diam tanpa jawaban.';
+
 type GeminiPart = { text: string; thought?: boolean };
 type GeminiContent = { role: 'user' | 'model'; parts: GeminiPart[] };
 type FunctionCallPart = { functionCall: { name: string; args: Record<string, unknown> } };
@@ -235,6 +246,8 @@ export async function POST(req: NextRequest) {
         controller.enqueue(sseEvent({ kind: 'route', persona: route.persona, isFinancial: route.isFinancial }));
 
         let navigateAction: NavigateAction | null = null;
+        let emittedAnswer = false;
+        let lastFinishReason: string | null = null;
 
         for (let iteration = 0; iteration < (route.isFinancial ? MAX_TOOL_ITERATIONS : 1); iteration++) {
           const reqBody: any = {
@@ -265,24 +278,16 @@ export async function POST(req: NextRequest) {
             reqBody,
             controller,
           );
+          lastFinishReason = finishReason;
 
           if (functionCalls.length === 0) {
-            // Tidak ada tool call. Kalau juga tidak ada answer chunk, kemungkinan
-            // Gemini berhenti karena finishReason non-STOP (mis. MAX_TOKENS akibat
-            // payload tool result yang terlalu besar, atau SAFETY) — beri tahu user
-            // secara eksplisit lewat event error daripada diam-diam selesai tanpa jawaban.
-            if (answerChunks.length === 0 && finishReason && finishReason !== 'STOP') {
-              console.error('[agent-query] iterasi berhenti tanpa jawaban, finishReason:', finishReason);
-              controller.enqueue(sseEvent({
-                kind: 'error',
-                text: `Model berhenti merespons (alasan: ${finishReason}). Coba pertanyaan dengan ruang lingkup lebih kecil, mis. periode/jumlah baris yang lebih sedikit.`,
-              }));
-              break;
-            }
-            // Tidak ada tool call → jawaban final. Emit answer chunks yang sudah di-buffer.
+            // Tidak ada tool call → loop selesai. Kalau ada answer chunk, emit.
+            // Kalau kosong (model cuma menghasilkan thinking lalu berhenti), JANGAN
+            // diam — synthesis step di bawah yang akan memaksa jawaban final.
             for (const chunk of answerChunks) {
               controller.enqueue(sseEvent({ kind: 'answer', text: chunk }));
             }
+            if (answerChunks.length > 0) emittedAnswer = true;
             break;
           }
 
@@ -307,11 +312,48 @@ export async function POST(req: NextRequest) {
           }
 
           contents.push({ role: 'user', parts: toolResponseParts as unknown as GeminiPart[] });
+        }
 
-          // Fallback jika mencapai limit maksimum iterasi tapi masih memanggil tool
-          if (iteration === (route.isFinancial ? MAX_TOOL_ITERATIONS : 1) - 1) {
-            controller.enqueue(sseEvent({ kind: 'answer', text: '\n\n*(Peringatan: Analisis dihentikan karena mencapai batas maksimal langkah. Sebagian analisis mungkin tidak lengkap.)*' }));
+        // Forced synthesis step: loop berakhir tanpa jawaban (model cuma thinking, atau
+        // kehabisan iterasi sambil masih memanggil tool). Paksa SATU panggilan terakhir
+        // TANPA tools agar model wajib menuliskan jawaban final dari data yang sudah ada.
+        // thinkingBudget kecil supaya mayoritas token dipakai untuk menulis jawaban.
+        if (route.isFinancial && !emittedAnswer && !navigateAction) {
+          try {
+            // Directive ditaruh di system_instruction (bukan turn baru di contents)
+            // agar tidak melanggar aturan alternating-role Gemini — contents bisa
+            // berakhir dengan functionResponse (role user), menambah turn user lagi
+            // akan invalid. Tanpa tools, model dipaksa menjawab dari konteks yang ada.
+            const synthBody = {
+              system_instruction: { parts: [{ text: `${systemPrompt}\n\n${SYNTHESIS_DIRECTIVE}` }] },
+              contents,
+              generationConfig: {
+                temperature: 1,
+                maxOutputTokens: 16384,
+                thinkingConfig: { includeThoughts: true, thinkingBudget: 2048 },
+              },
+            };
+            const synth = await streamGeminiIteration(baseEndpoint, token, synthBody, controller);
+            for (const chunk of synth.answerChunks) {
+              controller.enqueue(sseEvent({ kind: 'answer', text: chunk }));
+            }
+            if (synth.answerChunks.length > 0) emittedAnswer = true;
+            else lastFinishReason = synth.finishReason ?? lastFinishReason;
+          } catch (synthErr) {
+            console.error('[agent-query] synthesis step error:', synthErr);
           }
+        }
+
+        // Kalau setelah semua upaya tetap tidak ada jawaban (mis. diblokir safety),
+        // beri tahu user secara eksplisit daripada diam-diam "(tidak ada respons)".
+        if (route.isFinancial && !emittedAnswer && !navigateAction) {
+          controller.enqueue(sseEvent({
+            kind: 'error',
+            text:
+              `Maaf, saya belum berhasil menyusun jawaban untuk permintaan ini` +
+              `${lastFinishReason ? ` (alasan: ${lastFinishReason})` : ''}. ` +
+              `Coba persempit ruang lingkupnya — misalnya cocokkan per bulan atau per beberapa baris dulu.`,
+          }));
         }
 
         // Emit navigate action kalau ada
