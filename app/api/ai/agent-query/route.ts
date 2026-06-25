@@ -242,8 +242,13 @@ export async function POST(req: NextRequest) {
             contents,
             generationConfig: {
               temperature: 1,
-              maxOutputTokens: 8192,
-              thinkingConfig: { includeThoughts: true },
+              // maxOutputTokens mencakup thinking + jawaban. gemini-3.5-flash adalah
+              // thinking model yang reasoning-nya bisa menghabiskan seluruh budget,
+              // menyisakan 0 token untuk jawaban → finishReason MAX_TOKENS dengan
+              // answerChunks kosong ("tidak ada respons"). Naikkan plafon total dan
+              // batasi thinkingBudget agar selalu ada ruang untuk jawaban final.
+              maxOutputTokens: 16384,
+              thinkingConfig: { includeThoughts: true, thinkingBudget: 8192 },
             },
           };
 
