@@ -9,7 +9,7 @@ import { InviteCodeManager } from '@/components/business/InviteCodeManager';
 import { JoinRequestList } from '@/components/business/JoinRequestList';
 import { getBusinessMembers, type BusinessMember } from '@/lib/api/members';
 import Image from 'next/image';
-import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut, Blocks, Contact, CalendarDays, Rocket, Pencil, Check, X, Info, FileText, Landmark, MapPinned, MoreVertical, Loader2 } from 'lucide-react';
+import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut, Blocks, Contact, CalendarDays, Rocket, Pencil, Check, X, Info, FileText, Landmark, MapPinned, MoreVertical, Loader2, Plus } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { Tabs } from '@/components/ui/Tabs';
@@ -17,7 +17,7 @@ import { OmniChannelManager } from '@/components/business/OmniChannelManager';
 import * as businessesApi from '@/lib/api/businesses';
 import { EcommerceIntegration } from '@/components/ecommerce/EcommerceIntegration';
 import { ChannelIntegration } from '@/components/integrations/ChannelIntegration';
-import { ContactList } from '@/components/business/ContactList';
+import { ContactList, type ContactListHandle } from '@/components/business/ContactList';
 import { useLanguage } from '@/context/LanguageContext';
 import { isManagerRole } from '@/lib/roles';
 import type { Business } from '@/types';
@@ -495,6 +495,7 @@ export default function BusinessMembersPage() {
     business?.business_type === 'produk' || business?.business_type === 'dagang';
   const expectedIntegrationReady = showEcommerce ? 2 : 1;
   const integrationLoading = integrationReadyCount < expectedIntegrationReady;
+  const contactListRef = useRef<ContactListHandle>(null);
 
   const fetchMembers = useCallback(async () => {
     if (!businessId) return;
@@ -600,6 +601,16 @@ export default function BusinessMembersPage() {
             {t.businessConfig.inviteMember}
           </button>
         )}
+
+        {activeTab === 'contacts' && canManage && (
+          <button
+            onClick={() => contactListRef.current?.openAddForm()}
+            className="btn-primary-glow flex items-center justify-center gap-2 flex-shrink-0"
+          >
+            <Plus className="h-4 w-4" />
+            Tambah
+          </button>
+        )}
       </div>
 
       {/* Tab Content */}
@@ -642,6 +653,7 @@ export default function BusinessMembersPage() {
       )}
       {activeTab === 'contacts' && user && business && (
         <ContactList
+          ref={contactListRef}
           businessId={business.id}
           userId={user.id}
           canManage={canManage}

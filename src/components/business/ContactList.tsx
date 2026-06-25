@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Contact, Phone, Mail, Plus, Search, Pencil, Trash2, User, Building, Users2, Handshake, UserCog, TrendingUp, ArrowDownLeft, ArrowUpRight, Loader2, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
@@ -90,6 +90,10 @@ interface ContactListProps {
   canManage: boolean;
 }
 
+export interface ContactListHandle {
+  openAddForm: () => void;
+}
+
 /**
  * Preview KTP kontak. Lampiran Cloudinary kini ber-`type: authenticated` sehingga
  * URL mentahnya 401 — harus di-resolve jadi signed URL lewat server dulu. Klik =
@@ -146,7 +150,7 @@ function IdCardImage({ attachment, contactName }: { attachment: TransactionAttac
   );
 }
 
-export function ContactList({ businessId, userId, canManage }: ContactListProps) {
+export const ContactList = forwardRef<ContactListHandle, ContactListProps>(function ContactList({ businessId, userId, canManage }, ref) {
   const searchParams = useSearchParams();
   const contactParam = searchParams.get('contact');
   const contactSearchParam = searchParams.get('search') ?? '';
@@ -311,6 +315,8 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
     setFormError('');
     setShowForm(true);
   };
+
+  useImperativeHandle(ref, () => ({ openAddForm }));
 
   const openEditForm = (contact: ContactType) => {
     setEditingContact(contact);
@@ -499,30 +505,19 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
               </button>
             )}
           </div>
-          <div className="flex gap-2">
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value as ContactTypeEnum | 'all')}
-              className="input-search"
-            >
-              <option value="all">Semua Tipe</option>
-              <option value="customer">Customer</option>
-              <option value="vendor">Vendor</option>
-              <option value="partner">Partner</option>
-              <option value="staff">Staff</option>
-              <option value="investor">Investor</option>
-              <option value="other">Lainnya</option>
-            </select>
-            {canManage && (
-              <button
-                onClick={openAddForm}
-                className="btn-primary flex items-center gap-2 whitespace-nowrap"
-              >
-                <Plus className="w-4 h-4" />
-                Tambah
-              </button>
-            )}
-          </div>
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value as ContactTypeEnum | 'all')}
+            className="input-search sm:w-auto"
+          >
+            <option value="all">Semua Tipe</option>
+            <option value="customer">Customer</option>
+            <option value="vendor">Vendor</option>
+            <option value="partner">Partner</option>
+            <option value="staff">Staff</option>
+            <option value="investor">Investor</option>
+            <option value="other">Lainnya</option>
+          </select>
         </div>
 
         {/* Contact count */}
@@ -1003,4 +998,4 @@ export function ContactList({ businessId, userId, canManage }: ContactListProps)
       </Modal>
     );
   }
-}
+});
