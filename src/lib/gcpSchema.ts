@@ -24,6 +24,14 @@ export async function initGcpSchema() {
   await gcpSql`CREATE INDEX IF NOT EXISTS idx_agent_memories_business ON agent_memories(business_id);`;
   await gcpSql`CREATE INDEX IF NOT EXISTS idx_agent_memories_session ON agent_memories(session_id);`;
 
+  // ANN index untuk pencarian cosine (operator <=>) yang dipakai recall_memory.
+  // Tanpa ini, tiap recall = sequential scan eksak yang melambat linear seiring memori
+  // bertambah. HNSW butuh pgvector >= 0.5 (tersedia di Cloud SQL Postgres terkini).
+  await gcpSql`
+    CREATE INDEX IF NOT EXISTS idx_agent_memories_embedding
+    ON agent_memories USING hnsw (embedding vector_cosine_ops);
+  `;
+
   // 2. Business Knowledge Embeddings
   await gcpSql`
     CREATE TABLE IF NOT EXISTS business_knowledge_embeddings (
@@ -38,6 +46,12 @@ export async function initGcpSchema() {
   `;
 
   await gcpSql`CREATE INDEX IF NOT EXISTS idx_knowledge_business ON business_knowledge_embeddings(business_id);`;
+
+  // ANN index cosine untuk RAG search_knowledge_base (lihat catatan HNSW di atas).
+  await gcpSql`
+    CREATE INDEX IF NOT EXISTS idx_knowledge_embedding
+    ON business_knowledge_embeddings USING hnsw (embedding vector_cosine_ops);
+  `;
 
   // 3. OLAP Businesses
   await gcpSql`

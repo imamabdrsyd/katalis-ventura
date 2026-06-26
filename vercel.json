@@ -3,7 +3,7 @@
   "functions": {
     "app/api/**": {
       "regions": ["hnd1"],
-      "maxDuration": 30
+      "maxDuration": 60
     }
   },
   "crons": [

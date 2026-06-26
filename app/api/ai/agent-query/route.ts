@@ -39,7 +39,11 @@ const bodySchema = z.object({
 // Gemini 3.5 Flash: generasi terbaru (3.5), near-Pro level, thinking model.
 // Lebih canggih dari 2.5 Pro untuk reasoning analitik, lebih cepat dari 3.1 Pro Preview.
 const GEMINI_VERTEX_MODEL = 'gemini-3.5-flash';
-const MAX_TOOL_ITERATIONS = 10;
+// Vercel Hobby membatasi fungsi serverless ke 60 detik (lihat vercel.json). Tiap iterasi
+// = 1 stream Gemini (thinking model) + eksekusi tool, bisa beberapa detik. 6 iterasi +
+// forced-synthesis masih nyaman di bawah 60s; 10 berisiko kena hard-kill tanpa jawaban.
+// Kalau plan naik ke Pro (maxDuration s/d 300s), nilai ini boleh dinaikkan lagi.
+const MAX_TOOL_ITERATIONS = 6;
 
 // Directive untuk forced synthesis step. gemini-3.5-flash kadang "selesai" di dalam
 // thinking pada tugas berat (mis. rekonsiliasi seluruh CSV) tanpa pernah menuliskan
