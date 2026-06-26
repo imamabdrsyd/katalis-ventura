@@ -34,7 +34,8 @@ export const SALES_CHANNEL_CONFIG: Record<SalesChannel, SalesChannelConfig> = {
     svgFill: '#ffffff',
     svgPath: null,
     imagePath: '/sales channel/tiktok.svg',
-    businessTypes: ['produk', 'dagang'],
+    // Channel sosial/konten — relevan untuk semua tipe bisnis (jasa juga jualan
+    // via TikTok), sama seperti Instagram. Jangan dibatasi produk/dagang saja.
   },
   tokopedia: {
     label: 'Tokopedia',
