@@ -236,36 +236,86 @@ export default function AgentPage() {
     }
   }, [isMemoryVaultOpen, loadVault]);
 
+  // Snapshot terakhir yang BELUM tersimpan ke server — dipakai untuk flush saat
+  // halaman ditinggalkan sebelum debounce sempat jalan (lihat efek flush di bawah).
+  const pendingSaveRef = useRef<{
+    businessId: string;
+    sessionId: string;
+    messages: { role: string; content: string; metadata?: { agentAvatar?: string } }[];
+  } | null>(null);
+
   // Auto-save history (debounced via effect when messages change)
   useEffect(() => {
     if (!activeBusinessId || !sessionId || messages.length <= 1) return;
     
-    // Hanya simpan pesan yang relevan (text & completed answers)
+    // Hanya simpan pesan yang relevan: teks user + jawaban yang SUDAH selesai dan
+    // punya isi nyata. Placeholder "(tidak ada respons)" sengaja TIDAK disimpan agar
+    // tidak menimpa history dengan jawaban palsu saat respons model kosong/gagal.
     const messagesToSave = messages
       .filter((m): m is Extract<ChatMessage, { kind: 'text' | 'answer' }> => m.kind === 'text' || m.kind === 'answer')
-      .filter(m => (m.kind === 'answer' ? !m.streaming && !!m.text : true))
+      .filter(m => (m.kind === 'answer' ? !m.streaming && !!m.text && m.text !== '_(tidak ada respons)_' : true))
       .map(m => ({
         role: m.role,
         content: m.text,
         metadata: m.kind === 'answer' && m.agentAvatar ? { agentAvatar: m.agentAvatar } : undefined
       }));
 
-    if (messagesToSave.length === 0) return;
+    if (messagesToSave.length === 0) { pendingSaveRef.current = null; return; }
+
+    // Catat snapshot terbaru ke ref agar bisa di-flush kalau user pindah halaman
+    // sebelum debounce 2s sempat jalan.
+    const payload = { businessId: activeBusinessId, sessionId, messages: messagesToSave };
+    pendingSaveRef.current = payload;
 
     const timeoutId = setTimeout(() => {
       fetch('/api/ai/memory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          businessId: activeBusinessId,
-          sessionId,
-          messages: messagesToSave
-        }),
-      }).then(() => fetchSessions()).catch(err => console.error('Failed to auto-save agent memory:', err));
+        body: JSON.stringify(payload),
+      })
+        .then(() => {
+          // Hanya bersihkan kalau belum ada snapshot lebih baru yang menunggu.
+          if (pendingSaveRef.current === payload) pendingSaveRef.current = null;
+          fetchSessions();
+        })
+        .catch(err => console.error('Failed to auto-save agent memory:', err));
     }, 2000); // Debounce 2s
 
     return () => clearTimeout(timeoutId);
   }, [messages, activeBusinessId, sessionId, fetchSessions]);
+
+  // Flush simpanan terakhir ke server sebelum halaman benar-benar ditinggalkan.
+  // Tanpa ini, jawaban yang BARU selesai sering hilang tanpa jejak: debounce 2s keburu
+  // dibatalkan sehingga yang tersimpan justru snapshot lama tanpa jawaban tsb.
+  // Tiga jalur keluar di-cover supaya tidak ada yang lolos:
+  //   - unmount (cleanup)        → navigasi antar-halaman SPA (Next router)
+  //   - pagehide                 → reload browser (F5), tutup tab, bfcache iOS
+  //   - visibilitychange→hidden  → tab di-background (mobile) sebelum pagehide
+  // keepalive membuat request tetap terkirim walau dokumen sedang dibongkar.
+  useEffect(() => {
+    const flush = () => {
+      const pending = pendingSaveRef.current;
+      if (!pending) return;
+      pendingSaveRef.current = null;
+      try {
+        fetch('/api/ai/memory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          keepalive: true,
+          body: JSON.stringify(pending),
+        });
+      } catch { /* best-effort — jangan ganggu navigasi */ }
+    };
+    const onPageHide = () => flush();
+    const onVisibility = () => { if (document.visibilityState === 'hidden') flush(); };
+    window.addEventListener('pagehide', onPageHide);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', onPageHide);
+      document.removeEventListener('visibilitychange', onVisibility);
+      flush();
+    };
+  }, []);
   // ----------------------------------------------
 
   const channel = SUPPORTED_CHANNELS.find(c => c.value === selectedChannel) ?? availableChannels[0] ?? SUPPORTED_CHANNELS[0];
