@@ -244,6 +244,15 @@ ATURAN PENTING:
 
   const baseEndpoint = `https://aiplatform.googleapis.com/v1/projects/${projectId}/locations/global/publishers/google/models/${GEMINI_VERTEX_MODEL}:generateContent`;
 
+  // Mode general: directive ditaruh di giliran user TERAKHIR (sinyal terkuat untuk
+  // Gemini) supaya tidak meniru persona/angka keuangan dari history giliran bisnis.
+  const GENERAL_TURN_DIRECTIVE =
+    '[Instruksi sistem untuk jawaban ini: Kamu adalah AXION Agent. Abaikan persona (Stanley/Bianca/Sri Mulyani) dan data keuangan dari percakapan sebelumnya. JANGAN memperkenalkan diri, JANGAN menyebut nama persona, dan JANGAN mengaitkan jawaban ke keuangan AXION Ventura. Jawab pertanyaan berikut apa adanya.]\n\n';
+
+  const finalUserText = route.isFinancial
+    ? `${financialContext}\n\n${message}`
+    : `${GENERAL_TURN_DIRECTIVE}${message}`;
+
   const contents: GeminiContent[] = [
     ...history.map(m => ({
       role: (m.role === 'assistant' ? 'model' : 'user') as 'user' | 'model',
@@ -251,7 +260,7 @@ ATURAN PENTING:
     })),
     {
       role: 'user' as const,
-      parts: [{ text: route.isFinancial ? `${financialContext}\n\n${message}` : message }],
+      parts: [{ text: finalUserText }],
     },
   ];
 

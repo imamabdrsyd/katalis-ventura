@@ -19,7 +19,7 @@ import type { SalesChannel } from '@/types';
 import { isManagerRole } from '@/lib/roles';
 import {
   Bot, AlertCircle, Send, ArrowUp, Sparkles, CheckCircle, XCircle, Loader2, Paperclip, Brain, ChevronRight, Globe,
-  X, Network, Briefcase, MessagesSquare, Plus, Clock, MessageCircle, FileText, FileSpreadsheet, File
+  X, Network, Briefcase, MessagesSquare, Plus, Clock, MessageCircle, FileText, FileSpreadsheet, File, Trash2
 } from 'lucide-react';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 
@@ -192,6 +192,30 @@ export default function AgentPage() {
       console.error(err);
     }
   }, [activeBusinessId]);
+
+  // Hapus satu riwayat sesi (dengan konfirmasi). Kalau sesi yang dihapus sedang
+  // dibuka, reset ke sesi baru kosong.
+  const handleDeleteSession = useCallback(async (sid: string) => {
+    if (!activeBusinessId) return;
+    if (!window.confirm('Hapus riwayat percakapan ini? Tindakan ini tidak bisa dibatalkan.')) return;
+    // Optimistic: buang dari daftar dulu.
+    setPastSessions(prev => prev.filter(s => s.session_id !== sid));
+    try {
+      const res = await fetch(
+        `/api/ai/memory/sessions?businessId=${activeBusinessId}&sessionId=${encodeURIComponent(sid)}`,
+        { method: 'DELETE' }
+      );
+      if (!res.ok) throw new Error('gagal');
+      if (sid === sessionId) {
+        setSessionId(typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `sess_${Date.now()}`);
+        setMessages([{ id: nextId(), role: 'assistant', kind: 'intro', text: '', userName }]);
+      }
+    } catch {
+      // Rollback kalau gagal.
+      fetchSessions();
+      alert('Gagal menghapus riwayat sesi.');
+    }
+  }, [activeBusinessId, sessionId, userName, fetchSessions]);
 
   // Initialize new session ID on mount
   useEffect(() => {
@@ -966,22 +990,31 @@ export default function AgentPage() {
                 </div>
               ) : (
                 pastSessions.map((s) => (
-                  <button
+                  <div
                     key={s.session_id}
                     onClick={() => setSessionId(s.session_id)}
-                    className={`w-full text-left px-3 py-2.5 rounded-xl transition-all flex flex-col gap-1 border border-transparent ${
-                      sessionId === s.session_id 
-                        ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm' 
+                    className={`group relative w-full text-left px-3 py-2.5 rounded-xl transition-all flex flex-col gap-1 border border-transparent cursor-pointer ${
+                      sessionId === s.session_id
+                        ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm'
                         : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
                   >
-                    <span className="text-[13px] font-medium text-gray-800 dark:text-gray-200 truncate w-full">
+                    <span className="text-[13px] font-medium text-gray-800 dark:text-gray-200 truncate w-full pr-6">
                       {s.content ? s.content : 'Percakapan Kosong'}
                     </span>
                     <span className="text-[10px] text-gray-500 dark:text-gray-500">
                       {new Date(s.created_at).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}
                     </span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.session_id); }}
+                      title="Hapus riwayat"
+                      aria-label="Hapus riwayat"
+                      className="absolute top-2 right-2 p-1.5 rounded-lg text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 ))
               )}
             </div>

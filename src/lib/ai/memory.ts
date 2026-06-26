@@ -162,3 +162,24 @@ export async function getSessions(businessId: string, userId: string) {
     return [];
   }
 }
+
+/**
+ * Hapus satu sesi percakapan (semua baris dengan session_id ini) milik user.
+ * Tidak menyentuh 'manual-memory' (Memory Vault) sebagai pengaman tambahan.
+ */
+export async function deleteSession(businessId: string, userId: string, sessionId: string) {
+  if (sessionId === 'manual-memory') return false;
+  try {
+    const supabase = await createServerClient();
+    const { error } = await supabase.from('agent_memories')
+      .delete()
+      .eq('business_id', businessId)
+      .eq('user_id', userId)
+      .eq('session_id', sessionId);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error('[memory.ts] Error deleting session from Supabase:', err);
+    return false;
+  }
+}
