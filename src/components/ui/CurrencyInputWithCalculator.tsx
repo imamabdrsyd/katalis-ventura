@@ -570,7 +570,7 @@ export function CurrencyInputWithCalculator({
             <button
               type="button"
               onClick={useResult}
-              className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-500 text-white text-sm font-semibold transition-colors"
+              className="btn-primary-glow w-full"
             >
               Gunakan Hasil
             </button>
