@@ -34,6 +34,9 @@ const bodySchema = z.object({
     .default([]),
   persona: z.enum(['auto', 'pembukuan', 'analis_fpna', 'pajak', 'general']).optional().default('auto'),
   chatMode: z.enum(['general', 'business']).optional().default('business'),
+  // Persona yang menjawab di giliran sebelumnya — fallback agar follow-up
+  // vague tetap dipegang persona yang sama (sticky persona).
+  lastPersona: z.enum(['pembukuan', 'analis_fpna', 'pajak']).nullish(),
 });
 
 // Gemini 3.5 Flash: generasi terbaru (3.5), near-Pro level, thinking model.
@@ -178,15 +181,19 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Invalid request', details: parsed.error.flatten() }), { status: 400 });
   }
 
-  const { business_id, message, history, persona, chatMode } = parsed.data;
-  
+  const { business_id, message, history, persona, chatMode, lastPersona } = parsed.data;
+
   let route: { persona?: string | null, isFinancial: boolean };
-  
+
   if (chatMode === 'general' || persona === 'general') {
     route = { persona: 'general', isFinancial: false };
   } else if (persona === 'auto') {
     const intent = routeIntent(message);
-    route = { persona: intent.persona, isFinancial: true }; // Force isFinancial to true if in business mode
+    // Sticky persona: kalau keyword tidak memilih persona spesifik (follow-up
+    // vague), pertahankan persona yang menjawab di giliran sebelumnya. Default
+    // terakhir tetap analis_fpna kalau belum pernah ada persona sebelumnya.
+    const resolvedPersona = intent.persona ?? lastPersona ?? 'analis_fpna';
+    route = { persona: resolvedPersona, isFinancial: true }; // Force isFinancial to true if in business mode
   } else {
     route = { persona: persona as any, isFinancial: true };
   }

@@ -537,6 +537,17 @@ export default function AgentPage() {
       .slice(-30)
       .map(m => ({ role: m.role, content: m.text }));
 
+    // Persona terakhir yang menjawab — dipakai server sebagai fallback agar
+    // follow-up vague ("boleh coba liat") tetap dipegang persona yang sama,
+    // bukan kembali ke orchestrator/null.
+    const lastPersona = (() => {
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const m = messages[i];
+        if (m.kind === 'answer' && m.agentAvatar) return personaFromAvatar(m.agentAvatar);
+      }
+      return null;
+    })();
+
     setMessages(prev => [
       ...prev,
       { id: nextId(), role: 'user', kind: 'text', text: trimmed },
@@ -558,12 +569,13 @@ export default function AgentPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: abortRef.current.signal,
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           business_id: activeBusinessId,
           message: trimmed,
           history: history,
           persona: chatMode === 'general' ? 'general' : 'auto',
-          chatMode: chatMode
+          chatMode: chatMode,
+          lastPersona: lastPersona,
         }),
       });
 
@@ -1079,20 +1091,20 @@ function ChatRow({ message }: { message: ChatMessage }) {
 
   // assistant rows — avatar orchestrator atau spesialis jika ada agentAvatar
   const avatarSrc = message.kind === 'answer' && message.agentAvatar ? message.agentAvatar : ORCHESTRATOR_AVATAR;
-  const agentName = agentNameFromAvatar(avatarSrc);
+  const agentIdentity = agentIdentityFromAvatar(avatarSrc);
 
   return (
     <div className="flex gap-2.5">
       <Image
         src={avatarSrc}
-        alt={agentName}
+        alt={agentIdentity.name}
         width={28}
         height={28}
         className="w-7 h-7 rounded-full object-cover p-0.5 shrink-0 mt-0.5 ring-2 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-100"
       />
       <div className="min-w-0 flex-1">
 
-        {message.kind === 'answer' && <AnswerBubble message={message} agentName={agentName} />}
+        {message.kind === 'answer' && <AnswerBubble message={message} agentIdentity={agentIdentity} />}
 
         {message.kind === 'run' && <RunBubble run={message} />}
       </div>
@@ -1119,12 +1131,15 @@ function renderInline(text: string): ReactNode[] {
   });
 }
 
-function AnswerBubble({ message, agentName }: { message: Extract<ChatMessage, { kind: 'answer' }>; agentName: string }) {
+function AnswerBubble({ message, agentIdentity }: { message: Extract<ChatMessage, { kind: 'answer' }>; agentIdentity: { name: string; role: string } }) {
   // Hanya tampilkan dot-typing kalau benar-benar belum ada apa-apa (teks & thinking).
   const isEmpty = message.streaming && !message.text && !message.thinking;
   return (
     <div className="w-full text-gray-800 dark:text-gray-100 py-1 text-[15px] leading-relaxed">
-      <div className="text-[13px] font-semibold text-gray-900 dark:text-gray-100 mb-1">{agentName}</div>
+      <div className="flex items-baseline gap-1.5 mb-1">
+        <span className="text-[13px] font-semibold text-primary-600 dark:text-primary-400">{agentIdentity.name}</span>
+        <span className="text-[12px] text-gray-400 dark:text-gray-500">· {agentIdentity.role}</span>
+      </div>
       {isEmpty ? (
         <span className="inline-flex gap-1 items-center h-4">
           <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -1230,16 +1245,26 @@ const SUB_AGENT_AVATARS = [
   '/persona/concierge.png',
 ];
 
-// Nama agen yang ditampilkan di atas balasan, dipetakan dari avatar persona.
-const AGENT_NAME_BY_AVATAR: Record<string, string> = {
-  '/persona/agent.png': 'AXION Agent',
-  '/persona/bianca.png': 'Bianca',
-  '/persona/sri-mulyani.png': 'Sri Mulyani',
-  '/persona/stanley.png': 'Stanley',
-  '/persona/concierge.png': 'Concierge',
+// Nama + role agen yang ditampilkan di atas balasan, dipetakan dari avatar persona.
+const AGENT_IDENTITY_BY_AVATAR: Record<string, { name: string; role: string }> = {
+  '/persona/agent.png': { name: 'AXION Agent', role: 'Orchestrator' },
+  '/persona/bianca.png': { name: 'Bianca', role: 'Bookkeeper' },
+  '/persona/sri-mulyani.png': { name: 'Sri Mulyani', role: 'Tax Advisor' },
+  '/persona/stanley.png': { name: 'Stanley', role: 'Financial Analyst' },
+  '/persona/concierge.png': { name: 'Concierge', role: 'Customer Concierge' },
 };
-function agentNameFromAvatar(src: string): string {
-  return AGENT_NAME_BY_AVATAR[src] ?? 'AXION Agent';
+function agentIdentityFromAvatar(src: string): { name: string; role: string } {
+  return AGENT_IDENTITY_BY_AVATAR[src] ?? AGENT_IDENTITY_BY_AVATAR['/persona/agent.png'];
+}
+
+// Avatar persona → kode persona route (kebalikan dari mapping di handler 'route').
+const PERSONA_BY_AVATAR: Record<string, string> = {
+  '/persona/sri-mulyani.png': 'pajak',
+  '/persona/bianca.png': 'pembukuan',
+  '/persona/stanley.png': 'analis_fpna',
+};
+function personaFromAvatar(src: string): string | null {
+  return PERSONA_BY_AVATAR[src] ?? null;
 }
 
 type AgentPageT = ReturnType<typeof useLanguage>['t']['aiChat']['agentPage'];
