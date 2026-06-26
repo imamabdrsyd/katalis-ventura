@@ -45,6 +45,24 @@ function instructionPlaceholder(channel: string): string {
     : '"hanya TikTok bulan Mei" · "masukkan ke piutang dulu" · "jadikan draft"';
 }
 
+// Ekstrak judul-judul tahap dari proses berpikir (mis. "**Confirming Settlements**").
+// Reasoning model Gemini menulis subjudul tahap berpikir sebagai baris **Bold**.
+// Dipakai untuk menggantikan sementara nama tool di header chip saat AI berpikir.
+function extractThinkingHeadings(thinking: string): string[] {
+  if (!thinking) return [];
+  const headings: string[] = [];
+  for (const raw of thinking.split('\n')) {
+    const line = raw.trim();
+    // Baris yang seluruhnya bold: **Judul Tahap** (tanpa teks lain di sekitarnya).
+    const m = line.match(/^\*\*(.+?)\*\*[:.]?$/);
+    if (m) {
+      const title = m[1].trim();
+      if (title && headings[headings.length - 1] !== title) headings.push(title);
+    }
+  }
+  return headings;
+}
+
 interface ImportResult {
   inserted: number;
   failed: number;
@@ -128,6 +146,18 @@ export default function AgentPage() {
       userName: '',
     },
   ]);
+
+  // Judul tahap berpikir yang sedang aktif (mis. "Confirming Settlements").
+  // Saat AI sedang berpikir & belum mulai menjawab, judul tahap ini menggantikan
+  // sementara nama tool di chip header — supaya terlihat "AI sedang apa".
+  const activeThinkingHeading = useMemo(() => {
+    const streamingAnswer = messages.find(
+      m => m.kind === 'answer' && m.streaming && !m.text && m.thinking,
+    ) as Extract<ChatMessage, { kind: 'answer' }> | undefined;
+    if (!streamingAnswer?.thinking) return null;
+    const headings = extractThinkingHeadings(streamingAnswer.thinking);
+    return headings.length ? headings[headings.length - 1] : null;
+  }, [messages]);
 
   // Patch nama user ke intro bubble setelah user context termuat
   useEffect(() => {
@@ -722,17 +752,61 @@ export default function AgentPage() {
             </div>
           </div>
           <div className="flex items-center gap-4 min-w-0 flex-1 justify-end">
-            {/* Chip nama tools — berjejer di header (sembunyi di layar kecil) */}
-            <div className="hidden lg:flex items-center gap-1.5 overflow-x-auto scrollbar-hide min-w-0 py-1 px-2 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 rounded-full max-w-[500px] xl:max-w-[800px] 2xl:max-w-[1000px]">
-              {headerTools.map(tool => (
-                <span
-                  key={tool.fn}
-                  title={tool.label}
-                  className="px-2.5 py-1 rounded-full text-[10px] font-mono text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700 shadow-sm whitespace-nowrap shrink-0"
-                >
-                  {tool.fn}
-                </span>
-              ))}
+            {/* Chip nama tools — berjejer di header (sembunyi di layar kecil).
+                Saat AI sedang berpikir, nama tool digantikan sementara oleh judul
+                tahap berpikir yang sedang aktif (mis. "Confirming Settlements"). */}
+            <div className="hidden lg:flex items-center gap-1.5 overflow-x-auto scrollbar-hide flex-1 min-w-0 py-1 px-2 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 rounded-full max-w-[500px] xl:max-w-[800px] 2xl:max-w-[1000px]">
+              <AnimatePresence mode="wait" initial={false}>
+                {activeThinkingHeading ? (
+                  <motion.div
+                    key="thinking"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="flex items-center gap-1.5 flex-1 min-w-0"
+                  >
+                    <AnimatePresence mode="wait" initial={false}>
+                      <motion.span
+                        key={activeThinkingHeading}
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.18 }}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-900/30 border border-primary-200/70 dark:border-primary-800/60 shadow-sm whitespace-nowrap shrink-0"
+                      >
+                        <Brain className="w-3 h-3 shrink-0 animate-pulse" />
+                        {activeThinkingHeading}
+                      </motion.span>
+                    </AnimatePresence>
+                    {/* Titik-titik animasi di ujung kanan wrapper */}
+                    <span className="ml-auto inline-flex gap-0.5 pr-1 shrink-0">
+                      <span className="w-1 h-1 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-1 h-1 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-1 h-1 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </span>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="tools"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="flex items-center gap-1.5"
+                  >
+                    {headerTools.map(tool => (
+                      <span
+                        key={tool.fn}
+                        title={tool.label}
+                        className="px-2.5 py-1 rounded-full text-[10px] font-mono text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700 shadow-sm whitespace-nowrap shrink-0"
+                      >
+                        {tool.fn}
+                      </span>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
             <button
               onClick={() => setIsMemoryVaultOpen(true)}
@@ -996,7 +1070,7 @@ function ChatRow({ message }: { message: ChatMessage }) {
   if (message.role === 'user') {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[82%] rounded-2xl rounded-tr-sm bg-stone-800 dark:bg-gray-100 text-white dark:text-gray-900 px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap">
+        <div className="max-w-[82%] rounded-2xl rounded-tr-sm bg-stone-800 dark:bg-gray-100 text-white dark:text-gray-900 px-3.5 py-2.5 text-[15px] leading-relaxed whitespace-pre-wrap">
           {message.text}
         </div>
       </div>
@@ -1005,19 +1079,20 @@ function ChatRow({ message }: { message: ChatMessage }) {
 
   // assistant rows — avatar orchestrator atau spesialis jika ada agentAvatar
   const avatarSrc = message.kind === 'answer' && message.agentAvatar ? message.agentAvatar : ORCHESTRATOR_AVATAR;
+  const agentName = agentNameFromAvatar(avatarSrc);
 
   return (
     <div className="flex gap-2.5">
       <Image
         src={avatarSrc}
-        alt="Agent"
+        alt={agentName}
         width={28}
         height={28}
         className="w-7 h-7 rounded-full object-cover p-0.5 shrink-0 mt-0.5 ring-2 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-100"
       />
       <div className="min-w-0 flex-1">
 
-        {message.kind === 'answer' && <AnswerBubble message={message} />}
+        {message.kind === 'answer' && <AnswerBubble message={message} agentName={agentName} />}
 
         {message.kind === 'run' && <RunBubble run={message} />}
       </div>
@@ -1035,7 +1110,7 @@ function renderInline(text: string): ReactNode[] {
       return <strong key={j} className="text-gray-900 dark:text-gray-50">{tok.slice(2, -2)}</strong>;
     }
     if (tok.startsWith('`') && tok.endsWith('`')) {
-      return <code key={j} className="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-[12px] font-mono">{tok.slice(1, -1)}</code>;
+      return <code key={j} className="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-[13.5px] font-mono">{tok.slice(1, -1)}</code>;
     }
     if (tok.startsWith('*') && tok.endsWith('*') && tok.length > 2) {
       return <em key={j}>{tok.slice(1, -1)}</em>;
@@ -1044,11 +1119,12 @@ function renderInline(text: string): ReactNode[] {
   });
 }
 
-function AnswerBubble({ message }: { message: Extract<ChatMessage, { kind: 'answer' }> }) {
+function AnswerBubble({ message, agentName }: { message: Extract<ChatMessage, { kind: 'answer' }>; agentName: string }) {
   // Hanya tampilkan dot-typing kalau benar-benar belum ada apa-apa (teks & thinking).
   const isEmpty = message.streaming && !message.text && !message.thinking;
   return (
-    <div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 shadow-sm px-3.5 py-2.5 text-[13px] leading-relaxed">
+    <div className="w-full text-gray-800 dark:text-gray-100 py-1 text-[15px] leading-relaxed">
+      <div className="text-[13px] font-semibold text-gray-900 dark:text-gray-100 mb-1">{agentName}</div>
       {isEmpty ? (
         <span className="inline-flex gap-1 items-center h-4">
           <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -1077,7 +1153,7 @@ function AnswerBubble({ message }: { message: Extract<ChatMessage, { kind: 'answ
                 const heading = line.match(/^(#{1,6})\s+(.*)$/);
                 if (heading) {
                   const level = heading[1].length;
-                  const sizeCls = level <= 2 ? 'text-[14px]' : 'text-[13px]';
+                  const sizeCls = level <= 2 ? 'text-[16px]' : 'text-[15px]';
                   return (
                     <div key={i} className={`font-semibold text-gray-900 dark:text-gray-50 ${sizeCls} mt-1.5`}>
                       {renderInline(heading[2])}
@@ -1153,6 +1229,18 @@ const SUB_AGENT_AVATARS = [
   '/persona/bianca.png',
   '/persona/concierge.png',
 ];
+
+// Nama agen yang ditampilkan di atas balasan, dipetakan dari avatar persona.
+const AGENT_NAME_BY_AVATAR: Record<string, string> = {
+  '/persona/agent.png': 'AXION Agent',
+  '/persona/bianca.png': 'Bianca',
+  '/persona/sri-mulyani.png': 'Sri Mulyani',
+  '/persona/stanley.png': 'Stanley',
+  '/persona/concierge.png': 'Concierge',
+};
+function agentNameFromAvatar(src: string): string {
+  return AGENT_NAME_BY_AVATAR[src] ?? 'AXION Agent';
+}
 
 type AgentPageT = ReturnType<typeof useLanguage>['t']['aiChat']['agentPage'];
 
