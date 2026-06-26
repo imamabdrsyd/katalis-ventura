@@ -575,7 +575,7 @@ export default function AgentPage() {
           history: history,
           persona: chatMode === 'general' ? 'general' : 'auto',
           chatMode: chatMode,
-          lastPersona: lastPersona,
+          lastPersona: chatMode === 'general' ? null : lastPersona,
         }),
       });
 

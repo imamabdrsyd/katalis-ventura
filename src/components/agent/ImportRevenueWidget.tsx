@@ -205,7 +205,7 @@ export function ImportRevenueWidget({
             <>
               <Upload className="h-7 w-7 text-gray-400 dark:text-gray-500 mx-auto mb-2.5" />
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                {dragOver ? 'Lepas file di sini' : 'Drop file CSV di sini atau klik untuk pilih file'}
+                {dragOver ? 'Lepas file di sini' : 'Drop file CSV di sini'}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Format: .csv (max 5MB)
