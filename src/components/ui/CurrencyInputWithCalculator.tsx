@@ -561,7 +561,7 @@ export function CurrencyInputWithCalculator({
             <button type="button" onClick={() => pressDigit('3')} className={btnDigit}>3</button>
             <button type="button" onClick={pressEquals} style={{ gridRow: 'span 2' }} className={`${btnBase} bg-indigo-500 hover:bg-indigo-500 text-white text-lg`}>=</button>
 
-            <button type="button" onClick={() => { pressDigit('0'); pressDigit('0'); pressDigit('0'); }} style={{ gridColumn: 'span 2' }} className={btnDigit}>000</button>
+            <button type="button" onClick={() => pressDigit('000')} style={{ gridColumn: 'span 2' }} className={btnDigit}>000</button>
             <button type="button" onClick={() => pressDigit('0')} className={btnDigit}>0</button>
           </div>
 
