@@ -503,7 +503,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
 
 function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: () => void; onQuickAddClick: () => void; isCollapsed: boolean }) {
   const router = useRouter();
-  const { user, businesses, activeBusiness, userRole, displayRole, leadCounts } = useBusinessContext();
+  const { user, businesses, activeBusiness, activeBusinessId, setActiveBusiness, userRole, displayRole, leadCounts } = useBusinessContext();
   const { roleLabels, t } = useNavData();
   const { locale, setLocale } = useLanguage();
   const supabase = createClient();
@@ -606,7 +606,10 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
         {canManage && (
           <NotificationBell
             count={pendingCount}
-            leadCount={leadCounts.total}
+            leadCountsByBusiness={leadCounts.byBusiness}
+            businesses={businesses}
+            activeBusinessId={activeBusinessId}
+            onSwitchBusiness={setActiveBusiness}
             href="/businesses"
             userId={user?.id || ''}
             onChange={refreshNotifications}

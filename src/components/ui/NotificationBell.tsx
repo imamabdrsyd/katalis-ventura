@@ -24,16 +24,36 @@ interface JoinRequest {
   };
 }
 
+interface LeadBusinessSummary {
+  id: string;
+  name: string;
+  count: number;
+}
+
 interface NotificationBellProps {
   count: number;
   href: string;
   userId: string;
-  /** Jumlah lead baru (status='new') di semua bisnis user. */
-  leadCount?: number;
+  /** Map business_id → jumlah lead unread, untuk dipecah per bisnis. */
+  leadCountsByBusiness?: Record<string, number>;
+  /** Daftar bisnis user (id + nama) untuk resolve nama di notifikasi lead. */
+  businesses?: { id: string; business_name: string }[];
+  /** Bisnis yang sedang aktif — untuk menentukan perlu switch atau tidak. */
+  activeBusinessId?: string | null;
+  /** Switch bisnis aktif sebelum membuka halaman lead. */
+  onSwitchBusiness?: (businessId: string) => void;
   onChange?: () => void;
 }
 
-export function NotificationBell({ count, userId, leadCount = 0, onChange }: NotificationBellProps) {
+export function NotificationBell({
+  count,
+  userId,
+  leadCountsByBusiness = {},
+  businesses = [],
+  activeBusinessId,
+  onSwitchBusiness,
+  onChange,
+}: NotificationBellProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [requests, setRequests] = useState<JoinRequest[]>([]);
@@ -143,6 +163,28 @@ export function NotificationBell({ count, userId, leadCount = 0, onChange }: Not
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Pecah lead unread per bisnis, sertakan nama bisnis untuk ditampilkan eksplisit.
+  const leadBusinesses: LeadBusinessSummary[] = Object.entries(leadCountsByBusiness)
+    .filter(([, n]) => n > 0)
+    .map(([id, n]) => ({
+      id,
+      name: businesses.find((b) => b.id === id)?.business_name || 'Bisnis',
+      count: n,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const leadCount = leadBusinesses.reduce((s, b) => s + b.count, 0);
+
+  // Buka halaman lead di bisnis tempat lead itu berada: switch dulu bila beda.
+  const handleOpenLeads = (businessId: string) => {
+    setIsOpen(false);
+    if (businessId !== activeBusinessId) {
+      onSwitchBusiness?.(businessId);
+    }
+    router.push('/leads');
+    router.refresh();
+  };
+
   const totalBadge = count + leadCount;
 
   const bellTitle = (() => {
@@ -169,13 +211,12 @@ export function NotificationBell({ count, userId, leadCount = 0, onChange }: Not
 
       {isOpen && (
         <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50">
-          {/* Leads baru — masuk dari WhatsApp, Instagram, dll */}
-          {leadCount > 0 && (
+          {/* Leads baru — masuk dari WhatsApp, Instagram, dll. Satu baris per
+              bisnis: klik akan switch ke bisnis itu lalu buka halaman lead-nya. */}
+          {leadBusinesses.map((biz) => (
             <button
-              onClick={() => {
-                setIsOpen(false);
-                router.push('/leads');
-              }}
+              key={biz.id}
+              onClick={() => handleOpenLeads(biz.id)}
               className="w-full flex items-center gap-3 p-4 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors text-left"
             >
               <div className="w-9 h-9 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
@@ -183,17 +224,20 @@ export function NotificationBell({ count, userId, leadCount = 0, onChange }: Not
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 dark:text-white">
-                  {leadCount} lead baru
+                  {biz.count} lead baru &middot;{' '}
+                  <span className="font-semibold">{biz.name}</span>
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Pesan masuk menunggu ditindaklanjuti
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  {biz.id === activeBusinessId
+                    ? 'Pesan masuk menunggu ditindaklanjuti'
+                    : `Buka ${biz.name} untuk menindaklanjuti`}
                 </p>
               </div>
               <span className="min-w-[20px] h-5 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 flex-shrink-0">
-                {leadCount > 99 ? '99+' : leadCount}
+                {biz.count > 99 ? '99+' : biz.count}
               </span>
             </button>
-          )}
+          ))}
 
           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <h3 className="font-semibold text-gray-900 dark:text-white">Permintaan Bergabung</h3>
