@@ -51,6 +51,7 @@ const upsertSchema = z.object({
   default_price: z.number().nonnegative().nullable().optional(),
   price_unit: z.string().max(50).nullable().optional(),
   featured_product: featuredProductSchema,
+  featured_item_ids: z.array(z.string().uuid()).optional(),
   button_color: z.string().max(20).nullable().optional(),
   banner_position: z.string().max(50).nullable().optional(),
 });

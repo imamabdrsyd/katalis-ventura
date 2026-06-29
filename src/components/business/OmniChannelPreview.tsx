@@ -143,7 +143,6 @@ function buildPublicBusiness(channel: BusinessOmniChannel | null, business: Busi
       : null,
     price_unit: showPricing ? channel.price_unit ?? null : null,
     pricing_rules: pricingRules,
-    featured_product: channel.featured_product ?? null,
     button_color: channel.button_color ?? null,
     banner_position: channel.banner_position ?? 'center',
   };

@@ -11,6 +11,7 @@ import type {
   PublicLayoutMode,
   PublicLink,
   PublicPricingRule,
+  PublicFeaturedProduct,
 } from '@/components/omnichannel/types';
 
 export const revalidate = 300;
@@ -86,7 +87,7 @@ export default async function PublicSlugPage({ params }: Props) {
       gallery_images, showcase_images, layout_mode, button_color, banner_position,
       show_gallery, show_showcase, show_widget, show_links,
       widget_date_mode, widget_labels,
-      show_pricing, default_price, price_unit, featured_product,
+      show_pricing, default_price, price_unit, featured_item_ids,
       links:business_omni_channel_links ( id, channel_type, label, subtitle, url, is_active, is_primary, sort_order, custom_icon_url, lucide_icon, display_mode ),
       pricing_rules:business_pricing_rules ( id, date_from, date_to, price, label )
     `)
@@ -105,6 +106,37 @@ export default async function PublicSlugPage({ params }: Props) {
 
   const oc = ocData as any;
   const biz = bizData as any;
+
+  // Produk Unggulan = item katalog yang dipilih (urut sesuai featured_item_ids).
+  const featuredIds: string[] = Array.isArray(oc.featured_item_ids) ? oc.featured_item_ids : [];
+  let featuredProducts: PublicFeaturedProduct[] = [];
+  if (featuredIds.length > 0) {
+    const { data: catData } = await supabase
+      .from('catalog_items')
+      .select('id, name, description, default_price, unit, image_url, image_fit, image_position_x, image_position_y, link_url, link_label')
+      .in('id', featuredIds)
+      .eq('business_id', oc.business_id)
+      .eq('is_active', true)
+      .is('deleted_at', null);
+
+    const byId = new Map<string, any>((catData ?? []).map((c: any) => [c.id, c]));
+    featuredProducts = featuredIds
+      .map((id) => byId.get(id))
+      .filter(Boolean)
+      .map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        description: c.description ?? null,
+        price: typeof c.default_price === 'string' ? parseFloat(c.default_price) : (c.default_price ?? 0),
+        unit: c.unit ?? null,
+        image_url: c.image_url ?? null,
+        image_fit: c.image_fit ?? null,
+        image_position_x: c.image_position_x ?? null,
+        image_position_y: c.image_position_y ?? null,
+        link_url: c.link_url ?? null,
+        link_label: c.link_label ?? null,
+      }));
+  }
 
   const channel = ocData as unknown as BusinessOmniChannel;
   const activeLinks = ((oc.links ?? []) as OmniChannelLink[])
@@ -163,7 +195,7 @@ export default async function PublicSlugPage({ params }: Props) {
     price_unit: showPricing ? oc.price_unit ?? null : null,
     pricing_rules: pricingRules,
     banner_url: oc.banner_url ?? null,
-    featured_product: oc.featured_product ?? null,
+    featured_products: featuredProducts,
     button_color: oc.button_color ?? null,
     banner_position: oc.banner_position ?? 'center',
   };

@@ -10,6 +10,12 @@ export interface CatalogItemInsert {
   unit?: string | null;
   revenue_account_id?: string | null;
   sku?: string | null;
+  image_url?: string | null;
+  image_fit?: 'cover' | 'contain' | null;
+  image_position_x?: number | null;
+  image_position_y?: number | null;
+  link_url?: string | null;
+  link_label?: string | null;
   is_active?: boolean;
   sort_order?: number;
   created_by: string;
@@ -23,6 +29,12 @@ export interface CatalogItemUpdate {
   unit?: string | null;
   revenue_account_id?: string | null;
   sku?: string | null;
+  image_url?: string | null;
+  image_fit?: 'cover' | 'contain' | null;
+  image_position_x?: number | null;
+  image_position_y?: number | null;
+  link_url?: string | null;
+  link_label?: string | null;
   is_active?: boolean;
   sort_order?: number;
 }

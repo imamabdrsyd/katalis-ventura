@@ -255,8 +255,12 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-                    <SectorIcon className="w-4 h-4" />
+                  <div className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                    {item.image_url ? (
+                      <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <SectorIcon className="w-4 h-4" />
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{item.name}</p>
@@ -310,8 +314,12 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
                     : 'border-gray-200/60 dark:border-gray-700/60 bg-gray-50 dark:bg-gray-800/40 opacity-70'
                 }`}
               >
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-                  <SectorIcon className="w-4 h-4" />
+                <div className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                  {item.image_url ? (
+                    <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <SectorIcon className="w-4 h-4" />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -379,6 +387,7 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
             </button>
           </div>
           <CatalogItemForm
+            businessId={businessId!}
             item={editItem}
             revenueAccounts={revenueAccounts}
             existingNames={existingNames}

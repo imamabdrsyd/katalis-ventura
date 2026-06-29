@@ -23,17 +23,23 @@ export interface PublicLink {
   display_mode?: 'default' | 'icon_only';
 }
 
+/**
+ * Produk unggulan di halaman publik — kini berasal dari item katalog yang dipilih
+ * (bukan lagi satu produk manual). `price`/`unit` dari katalog; `link_url` opsional
+ * (kalau kosong, klik → chat WhatsApp dgn pesan menyebut nama produk).
+ */
 export interface PublicFeaturedProduct {
-  show: boolean;
+  id: string;
   name: string;
-  description?: string;
-  image_url?: string;
-  image_fit?: 'cover' | 'contain';
-  image_position_x?: number;
-  image_position_y?: number;
-  price_label?: string;
-  link_url?: string;
-  link_label?: string;
+  description?: string | null;
+  price: number;
+  unit?: string | null;
+  image_url?: string | null;
+  image_fit?: 'cover' | 'contain' | null;
+  image_position_x?: number | null;
+  image_position_y?: number | null;
+  link_url?: string | null;
+  link_label?: string | null;
 }
 
 export interface PublicWidgetLabels {
@@ -80,7 +86,7 @@ export interface PublicBusiness {
   default_price?: number | null;
   price_unit?: string | null;
   pricing_rules?: PublicPricingRule[];
-  featured_product?: PublicFeaturedProduct | null;
+  featured_products?: PublicFeaturedProduct[];
   button_color?: string | null;
   banner_position?: string | null;
 }

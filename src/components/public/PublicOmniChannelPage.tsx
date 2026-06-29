@@ -18,7 +18,8 @@ export function PublicOmniChannelPage({ channel, business }: Props) {
   const isJasa = (business.business_type ?? 'jasa') === 'jasa';
   const hasGallery = business.show_gallery && business.gallery.length > 0;
   const hasShowcase = business.show_showcase && business.showcase.length > 0;
-  const hasFeaturedProduct = !!(business.featured_product?.show && business.featured_product?.name);
+  const featuredProducts = business.featured_products ?? [];
+  const hasFeaturedProduct = featuredProducts.length > 0;
   const showWidget = business.show_widget;
   const showLinks = business.show_links && business.links.length > 0;
   const layout = business.layout_mode;
@@ -120,7 +121,11 @@ export function PublicOmniChannelPage({ channel, business }: Props) {
             <div>
               <OmnichannelGalleryCarousel images={business.gallery} alt={channel.title} />
               {hasFeaturedProduct && (
-                <OmnichannelFeaturedProduct product={business.featured_product!} />
+                <OmnichannelFeaturedProduct
+                  products={featuredProducts}
+                  whatsappNumber={business.whatsapp_number}
+                  businessName={business.business_name}
+                />
               )}
             </div>
           )}
@@ -136,7 +141,11 @@ export function PublicOmniChannelPage({ channel, business }: Props) {
         {/* Featured product — full width jika tidak ada gallery */}
         {hasFeaturedProduct && !hasGallery && (
           <div className="max-w-md mx-auto w-full mt-0">
-            <OmnichannelFeaturedProduct product={business.featured_product!} />
+            <OmnichannelFeaturedProduct
+              products={featuredProducts}
+              whatsappNumber={business.whatsapp_number}
+              businessName={business.business_name}
+            />
           </div>
         )}
 

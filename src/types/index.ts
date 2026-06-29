@@ -145,6 +145,13 @@ export interface CatalogItem {
   unit?: string | null;                  // satuan: pcs, jam, malam, dll
   revenue_account_id?: string | null;    // akun pendapatan default (credit saat dijual)
   sku?: string | null;                   // disiapkan untuk fase matching import (belum dipakai)
+  // Rich display config — dipakai saat item difitur di omni-channel "Produk Unggulan"
+  image_url?: string | null;
+  image_fit?: 'cover' | 'contain' | null;
+  image_position_x?: number | null;      // focal point % (mode cover)
+  image_position_y?: number | null;
+  link_url?: string | null;              // CTA opsional (Shopee/Tokopedia); kosong → fallback WA
+  link_label?: string | null;
   is_active: boolean;
   sort_order: number;
   created_by?: string | null;
@@ -599,6 +606,11 @@ export interface UpsertPricingRuleData {
   label?: string | null;
 }
 
+/**
+ * @deprecated Produk Unggulan kini wire dari katalog (lihat `featured_item_ids`).
+ * Tipe ini & kolom JSONB `featured_product` dipertahankan hanya untuk back-compat
+ * data lama; tidak ditulis/dibaca lagi oleh kode baru.
+ */
 export interface FeaturedProduct {
   show: boolean;
   name: string;
@@ -636,6 +648,8 @@ export interface BusinessOmniChannel {
   price_unit?: string | null;
   public_url_mode?: 'slug-only' | 'axion-only' | 'both';
   featured_product?: FeaturedProduct | null;
+  /** Item katalog yang difitur di widget "Produk Unggulan" (urut sesuai array). */
+  featured_item_ids?: string[];
   button_color?: string | null;
   banner_position?: string | null;
   created_at: string;
@@ -666,6 +680,7 @@ export interface UpsertOmniChannelData {
   price_unit?: string | null;
   public_url_mode?: 'slug-only' | 'axion-only' | 'both';
   featured_product?: FeaturedProduct | null;
+  featured_item_ids?: string[];
   button_color?: string | null;
   banner_position?: string | null;
 }
