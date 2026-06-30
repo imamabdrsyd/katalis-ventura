@@ -28,6 +28,7 @@ import type { Account, CatalogItem } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
+import { saveContactFromTransaction } from '@/lib/api/contacts';
 import { useCashier } from '@/hooks/useCashier';
 import { PaymentModal } from './PaymentModal';
 
@@ -126,10 +127,17 @@ export function CashierScreen({
         <button
           type="button"
           onClick={onClose}
-          className="btn-icon"
+          className="group relative w-9 h-9 rounded-xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           aria-label="Tutup mode kasir"
+          title="Tutup mode kasir"
         >
-          <X className="w-5 h-5" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/favicon-48.png"
+            alt="AXION"
+            className="w-6 h-6 rounded-md group-hover:opacity-0 transition-opacity"
+          />
+          <X className="w-5 h-5 text-gray-500 dark:text-gray-400 absolute opacity-0 group-hover:opacity-100 transition-opacity" />
         </button>
       </div>
 
@@ -193,12 +201,20 @@ export function CashierScreen({
         <div className="w-full lg:w-[380px] shrink-0 flex flex-col min-h-0 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
           {/* Customer */}
           <div className="p-4 border-b border-gray-100 dark:border-gray-800">
-            <label className="label">Customer (opsional)</label>
+            <label className="label">Add Customer</label>
             <ContactAutocomplete
               businessId={businessId}
               value={cashier.customerName}
               onChange={cashier.setCustomerName}
               onSelectContact={(c) => cashier.setCustomerName(c.name)}
+              onSaveAsContact={async (name) => {
+                try {
+                  await saveContactFromTransaction(businessId, name, 'customer', userId);
+                  toast.success(`Kontak "${name}" disimpan`);
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : 'Gagal simpan kontak');
+                }
+              }}
               placeholder="Nama pelanggan"
             />
           </div>
