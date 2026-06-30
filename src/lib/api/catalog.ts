@@ -16,6 +16,8 @@ export interface CatalogItemInsert {
   image_position_y?: number | null;
   link_url?: string | null;
   link_label?: string | null;
+  track_stock?: boolean;
+  stock_qty?: number;
   is_active?: boolean;
   sort_order?: number;
   created_by: string;
@@ -35,6 +37,8 @@ export interface CatalogItemUpdate {
   image_position_y?: number | null;
   link_url?: string | null;
   link_label?: string | null;
+  track_stock?: boolean;
+  stock_qty?: number;
   is_active?: boolean;
   sort_order?: number;
 }
@@ -110,4 +114,27 @@ export async function deleteCatalogItem(itemId: string): Promise<void> {
     .eq('id', itemId);
 
   if (error) throw new Error(error.message);
+}
+
+/**
+ * Kurangi stok item katalog setelah penjualan POS (RPC decrement_catalog_stock,
+ * Migration 112). RPC hanya mengurangi item dengan track_stock=true milik bisnis
+ * user; item tanpa track_stock diabaikan diam-diam (return null). Best-effort:
+ * kegagalan stok TIDAK membatalkan transaksi yang sudah tercatat — caller
+ * cukup log error.
+ *
+ * @returns sisa stok baru, atau null bila item tidak dilacak stoknya.
+ */
+export async function decrementStock(
+  itemId: string,
+  qty: number
+): Promise<number | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('decrement_catalog_stock', {
+    p_item_id: itemId,
+    p_qty: qty,
+  });
+
+  if (error) throw new Error(error.message);
+  return (data as number | null) ?? null;
 }

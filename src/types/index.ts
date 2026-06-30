@@ -145,6 +145,9 @@ export interface CatalogItem {
   unit?: string | null;                  // satuan: pcs, jam, malam, dll
   revenue_account_id?: string | null;    // akun pendapatan default (credit saat dijual)
   sku?: string | null;                   // disiapkan untuk fase matching import (belum dipakai)
+  // Stok sederhana POS (opt-in). Hanya item track_stock=true yang dikurangi saat checkout.
+  track_stock?: boolean;
+  stock_qty?: number;
   // Rich display config — dipakai saat item difitur di omni-channel "Produk Unggulan"
   image_url?: string | null;
   image_fit?: 'cover' | 'contain' | null;
@@ -247,6 +250,7 @@ export interface Business {
   property_details?: Record<string, any>;
   logo_url?: string;
   logo_fit?: 'cover' | 'contain' | null;
+  qris_image_url?: string | null; // Foto QRIS statis untuk pembayaran POS (Cloudinary)
   invoice_settings?: InvoiceSettings | null;
   is_archived: boolean;
   // Omnichannel widget (landing page)

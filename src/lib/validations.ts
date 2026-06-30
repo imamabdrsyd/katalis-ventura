@@ -361,6 +361,7 @@ export const updateBusinessSchema = z.object({
   property_address: z.string().max(500).optional().nullable(),
   logo_url: z.string().optional().nullable(),
   logo_fit: z.enum(['cover', 'contain']).optional().nullable(),
+  qris_image_url: z.string().optional().nullable(),
   city: z.string().max(100).optional().nullable(),
   whatsapp_number: z.string().max(30).optional().nullable(),
   widget_action_label: z.string().max(100).optional().nullable(),
