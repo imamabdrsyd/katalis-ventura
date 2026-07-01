@@ -356,8 +356,6 @@ export const id: Translations = {
     tabKalender: 'Kalender',
     kasirComingSoon: 'Kasir — segera hadir',
     kasirComingSoonDesc: 'Checkout cepat untuk bisnis produk/dagang akan ada di sini.',
-    kalenderComingSoon: 'Kalender — segera hadir',
-    kalenderComingSoonDesc: 'Penjadwalan dan ketersediaan untuk bisnis jasa akan ada di sini.',
     aiInfoTitle: 'Concierge Agent',
     aiInfoDesc: 'Beri tahu concierge-mu, info ini dipakai untuk membalas calon pelanggan di semua channel (WhatsApp, Instagram, dll.)',
     aiInfoPlaceholder: 'Hal lain yang perlu AI tahu — promo, metode pembayaran, cara pesan…',

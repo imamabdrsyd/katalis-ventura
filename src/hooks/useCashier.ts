@@ -18,8 +18,14 @@ import type { Account, CatalogItem } from '@/types';
 import { createMultiLineTransaction } from '@/lib/api/transactions';
 import { decrementStock } from '@/lib/api/catalog';
 import { saveContactFromTransaction } from '@/lib/api/contacts';
+import {
+  resolveCashAccount,
+  resolveDefaultRevenueAccount,
+  type PaymentMethod,
+} from '@/lib/accounting/salesCheckout';
 
-export type PaymentMethod = 'cash' | 'qris';
+// Re-export agar konsumen lama (PaymentModal) tetap import dari '@/hooks/useCashier'.
+export type { PaymentMethod };
 
 export interface CartLine {
   item: CatalogItem;
@@ -30,32 +36,6 @@ interface CheckoutContext {
   businessId: string;
   userId: string;
   accounts: Account[];
-}
-
-/** Akun kas/bank counter sesuai metode: Tunai→kode 1100, QRIS→kode 1200. */
-function resolveCashAccount(accounts: Account[], method: PaymentMethod): Account | null {
-  const preferredCode = method === 'cash' ? '1100' : '1200';
-  const fallbackCode = method === 'cash' ? '1200' : '1100';
-  const isCashEq = (a: Account) =>
-    a.is_active &&
-    a.account_type === 'ASSET' &&
-    (a.is_cash_equivalent === true || a.account_code === '1100' || a.account_code === '1200');
-
-  const pool = accounts.filter(isCashEq);
-  return (
-    pool.find((a) => a.account_code === preferredCode) ??
-    pool.find((a) => a.account_code === fallbackCode) ??
-    pool[0] ??
-    null
-  );
-}
-
-/** Akun pendapatan default bila item tak punya revenue_account_id (prefer 4100). */
-function resolveDefaultRevenueAccount(accounts: Account[]): Account | null {
-  const revenue = accounts.filter(
-    (a) => a.is_active && a.account_type === 'REVENUE' && a.parent_account_id != null
-  );
-  return revenue.find((a) => a.account_code === '4100') ?? revenue[0] ?? null;
 }
 
 export function useCashier({ businessId, userId, accounts }: CheckoutContext) {

@@ -70,6 +70,8 @@ export interface TransactionMeta {
   };
   /** Free-text tags for categorization and filtering */
   tags?: string[];
+  /** ID booking (hub /calendar) yang men-generate transaksi EARN ini */
+  booking_id?: string;
   /** ID transaksi pelunasan penuh yang menyelesaikan piutang ini */
   settled_by_transaction_id?: string;
   /** ID transaksi piutang asli yang di-settle oleh entry ini */
@@ -148,6 +150,8 @@ export interface CatalogItem {
   // Stok sederhana POS (opt-in). Hanya item track_stock=true yang dikurangi saat checkout.
   track_stock?: boolean;
   stock_qty?: number;
+  // Calendar: URL feed .ics OTA (Airbnb/Booking.com) untuk impor blok ketersediaan unit ini.
+  ical_import_url?: string | null;
   // Rich display config — dipakai saat item difitur di omni-channel "Produk Unggulan"
   image_url?: string | null;
   image_fit?: 'cover' | 'contain' | null;
@@ -251,6 +255,7 @@ export interface Business {
   logo_url?: string;
   logo_fit?: 'cover' | 'contain' | null;
   qris_image_url?: string | null; // Foto QRIS statis untuk pembayaran POS (Cloudinary)
+  ical_feed_token?: string | null; // Token feed .ics ekspor booking (dipasang di OTA sbg import calendar)
   invoice_settings?: InvoiceSettings | null;
   is_archived: boolean;
   // Omnichannel widget (landing page)
@@ -968,6 +973,85 @@ export interface Contact {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// ==================== BOOKINGS (Calendar) ====================
+
+export type BookingStatus =
+  | 'tentative'
+  | 'confirmed'
+  | 'checked_in'
+  | 'completed'
+  | 'cancelled';
+export type BookingPaymentStatus = 'unpaid' | 'paid';
+export type BookingChannel = 'manual' | 'airbnb' | 'booking_com' | 'other';
+
+// Booking menginap (nightly stays) untuk hub /calendar. Tiap booking menaut ke
+// satu unit (catalog_items) + tamu (business_contacts). Saat ditandai lunas,
+// dibuatkan transaksi EARN dan ditautkan lewat transaction_id.
+export interface Booking {
+  id: string;
+  business_id: string;
+  catalog_item_id: string | null;
+  contact_id: string | null;
+  transaction_id: string | null;
+  check_in: string;   // ISO date (YYYY-MM-DD)
+  check_out: string;  // ISO date (YYYY-MM-DD)
+  nights: number;     // GENERATED di DB
+  price_per_night: number;
+  total_amount: number;
+  guest_name: string | null;
+  guest_count: number | null;
+  status: BookingStatus;
+  payment_status: BookingPaymentStatus;
+  channel: BookingChannel;
+  is_external: boolean; // true = blok impor iCal OTA (read-only, tak di-EARN)
+  ical_uid: string | null;
+  notes: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  // Hydrated saat join
+  catalog_item?: CatalogItem | null;
+  contact?: Contact | null;
+}
+
+export interface BookingInsert {
+  business_id: string;
+  catalog_item_id?: string | null;
+  contact_id?: string | null;
+  transaction_id?: string | null;
+  check_in: string;
+  check_out: string;
+  price_per_night: number;
+  total_amount: number;
+  guest_name?: string | null;
+  guest_count?: number | null;
+  status?: BookingStatus;
+  payment_status?: BookingPaymentStatus;
+  channel?: BookingChannel;
+  is_external?: boolean;
+  ical_uid?: string | null;
+  notes?: string | null;
+  created_by: string;
+}
+
+export interface BookingUpdate {
+  catalog_item_id?: string | null;
+  contact_id?: string | null;
+  transaction_id?: string | null;
+  check_in?: string;
+  check_out?: string;
+  price_per_night?: number;
+  total_amount?: number;
+  guest_name?: string | null;
+  guest_count?: number | null;
+  status?: BookingStatus;
+  payment_status?: BookingPaymentStatus;
+  channel?: BookingChannel;
+  notes?: string | null;
 }
 
 // ==================== LEADS HUB ====================

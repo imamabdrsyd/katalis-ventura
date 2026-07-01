@@ -1,5 +1,6 @@
 
 import type {
+  Booking,
   Transaction,
   TransactionCategory,
   FinancialSummary,
@@ -2289,4 +2290,95 @@ export function projectBudgetTrend(
 
     return { month, budgeted, actual, projected };
   });
+}
+
+// ============================================================
+// BOOKING / HOSPITALITY METRICS (hub /calendar)
+// ============================================================
+
+export interface BookingMetrics {
+  /** Malam terjual dalam periode (dikliping ke bulan; exclude cancelled & external). */
+  bookedNights: number;
+  /** Malam tersedia = jumlah unit × jumlah hari dalam periode. */
+  availableNights: number;
+  /** Occupancy % = bookedNights / availableNights × 100. */
+  occupancyPct: number;
+  /** ADR (Average Daily Rate) = pendapatan kamar periode / bookedNights. */
+  adr: number;
+  /** RevPAR = pendapatan kamar periode / availableNights (= ADR × occupancy). */
+  revPar: number;
+  /** Pendapatan kamar periode (nights terkliping × harga/malam). */
+  roomRevenue: number;
+  /** Jumlah booking yang menyentuh periode (exclude cancelled & external). */
+  bookingsCount: number;
+  /** Rata-rata nilai per booking (total_amount penuh / jumlah booking). */
+  revenuePerBooking: number;
+}
+
+/**
+ * Hitung metrik hospitality untuk satu bulan kalender.
+ *
+ * Malam & pendapatan dikliping ke [monthStart, monthEnd] agar booking yang
+ * melintasi batas bulan hanya dihitung porsinya. Occupancy memakai availableNights
+ * = unitsCount × jumlah hari bulan. Booking `cancelled` dan `is_external` (blok
+ * impor OTA) diabaikan dari revenue/occupancy.
+ *
+ * ADR = roomRevenue / bookedNights, RevPAR = roomRevenue / availableNights.
+ * Keduanya menjawab "rata-rata harga per malam" dan produktivitas per unit.
+ */
+export function calculateBookingMetrics(
+  bookings: Booking[],
+  monthCursor: Date,
+  unitsCount: number
+): BookingMetrics {
+  const year = monthCursor.getFullYear();
+  const month = monthCursor.getMonth();
+  const monthStart = new Date(year, month, 1);
+  const monthEndExclusive = new Date(year, month + 1, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+  const toDate = (iso: string) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  };
+
+  let bookedNights = 0;
+  let roomRevenue = 0;
+  let bookingsCount = 0;
+  let contractedRevenue = 0;
+
+  for (const b of bookings) {
+    if (b.is_external || b.status === 'cancelled') continue;
+
+    const inDate = toDate(b.check_in);
+    const outDate = toDate(b.check_out);
+    // Kliping ke bulan berjalan
+    const clipStart = inDate < monthStart ? monthStart : inDate;
+    const clipEnd = outDate > monthEndExclusive ? monthEndExclusive : outDate;
+    const clippedNights = Math.round((clipEnd.getTime() - clipStart.getTime()) / MS_PER_DAY);
+    if (clippedNights <= 0) continue;
+
+    bookedNights += clippedNights;
+    roomRevenue += clippedNights * b.price_per_night;
+    bookingsCount += 1;
+    contractedRevenue += b.total_amount;
+  }
+
+  const availableNights = Math.max(0, unitsCount) * daysInMonth;
+  const occupancyPct = availableNights > 0 ? (bookedNights / availableNights) * 100 : 0;
+  const adr = bookedNights > 0 ? roomRevenue / bookedNights : 0;
+  const revPar = availableNights > 0 ? roomRevenue / availableNights : 0;
+  const revenuePerBooking = bookingsCount > 0 ? contractedRevenue / bookingsCount : 0;
+
+  return {
+    bookedNights,
+    availableNights,
+    occupancyPct,
+    adr,
+    revPar,
+    roomRevenue,
+    bookingsCount,
+    revenuePerBooking,
+  };
 }

@@ -7,7 +7,7 @@ import { Tabs } from '@/components/ui/Tabs';
 import { CatalogPanel } from './CatalogPanel';
 import { AiKnowledgePanel } from './AiKnowledgePanel';
 import { CashierLauncher } from './cashier/CashierLauncher';
-import { KalenderStub } from './KalenderStub';
+import { CalendarLauncher } from './calendar/CalendarLauncher';
 
 type HubTab = 'catalog' | 'operational';
 type HubVariant = 'pos' | 'calendar';
@@ -62,7 +62,7 @@ export function HubPage({ variant }: { variant: HubVariant }) {
       {/* Tab Katalog: toolbar full-width di atas; grid (kiri) + Info AI (kanan) */}
       {tab === 'catalog' && <CatalogPanel aside={<AiKnowledgePanel />} />}
 
-      {tab === 'operational' && (isPos ? <CashierLauncher /> : <KalenderStub />)}
+      {tab === 'operational' && (isPos ? <CashierLauncher /> : <CalendarLauncher />)}
     </div>
   );
 }

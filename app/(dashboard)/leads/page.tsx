@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { format, addDays } from 'date-fns';
 import { toast } from 'sonner';
 import { useLeads } from '@/hooks/useLeads';
 import { useBusinessContext } from '@/context/BusinessContext';
@@ -13,11 +14,30 @@ import {
 } from '@/lib/leadColors';
 import { SalesChannelBadge } from '@/components/transactions/SalesChannelBadge';
 import type { ChannelStatus } from '@/lib/api/leads';
-import type { Lead, LeadChannel, LeadMessage, LeadStatus } from '@/types';
+import type { Account, BookingChannel, CatalogItem, Lead, LeadChannel, LeadMessage, LeadStatus } from '@/types';
+import { getCatalogItems } from '@/lib/api/catalog';
+import { getAccounts } from '@/lib/api/accounts';
+import {
+  createBooking,
+  updateBooking,
+  cancelBooking,
+  deleteBooking,
+  markBookingPaid,
+  findOverlappingBookings,
+} from '@/lib/api/bookings';
+import { BookingModal } from '@/components/hub/calendar/BookingModal';
 import {
   MessagesSquare, RefreshCw, Send, Copy, Check, Trash2, ArrowLeft,
   Inbox, Bot, User, UserRound, Sparkles, ChevronDown, Plug, Blocks, Paperclip, Info,
+  CalendarPlus, Loader2,
 } from 'lucide-react';
+
+/** Map channel lead → channel booking (untuk konversi lead → booking). */
+function leadChannelToBookingChannel(channel: LeadChannel): BookingChannel {
+  if (channel === 'airbnb') return 'airbnb';
+  if (channel === 'booking_com') return 'booking_com';
+  return 'other';
+}
 
 const ALL_CHANNELS = Object.keys(CHANNEL_LABELS) as LeadChannel[];
 const ALL_STATUSES = Object.keys(LEAD_STATUS_LABELS) as LeadStatus[];
@@ -222,7 +242,36 @@ export default function LeadsPage() {
   } = useLeads();
 
   const router = useRouter();
-  const { activeBusinessId, activeBusiness } = useBusinessContext();
+  const { activeBusinessId, activeBusiness, user } = useBusinessContext();
+
+  // Konversi lead → booking (hanya bisnis jasa akomodasi)
+  const isJasa = activeBusiness?.business_type === 'jasa';
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [bookingUnits, setBookingUnits] = useState<CatalogItem[]>([]);
+  const [bookingAccounts, setBookingAccounts] = useState<Account[]>([]);
+  const [loadingBooking, setLoadingBooking] = useState(false);
+
+  const openBooking = useCallback(async () => {
+    if (!activeBusinessId) return;
+    setLoadingBooking(true);
+    try {
+      const [catalog, accs] = await Promise.all([
+        getCatalogItems(activeBusinessId, { activeOnly: true }),
+        getAccounts(activeBusinessId),
+      ]);
+      if (catalog.length === 0) {
+        toast.error('Belum ada unit. Tambahkan unit di menu Kalender › Katalog dulu.');
+        return;
+      }
+      setBookingUnits(catalog);
+      setBookingAccounts(accs);
+      setBookingOpen(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Gagal memuat data booking');
+    } finally {
+      setLoadingBooking(false);
+    }
+  }, [activeBusinessId]);
 
   // Subtitle menyesuaikan tipe bisnis — sebut channel yang relevan saja
   const leadsSubtitle = (() => {
@@ -430,6 +479,22 @@ export default function LeadsPage() {
                     )}
                   </div>
                 </div>
+                {canManage && isJasa && (
+                  <button
+                    type="button"
+                    onClick={openBooking}
+                    disabled={loadingBooking}
+                    className="btn-ghost text-xs px-3 py-1.5 inline-flex items-center gap-1.5 disabled:opacity-50"
+                    title="Buat booking dari lead ini"
+                  >
+                    {loadingBooking ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <CalendarPlus className="w-3.5 h-3.5" />
+                    )}
+                    Booking
+                  </button>
+                )}
                 {canManage ? (
                   <div className="relative">
                     <select
@@ -513,6 +578,42 @@ export default function LeadsPage() {
           )}
         </div>
       </div>
+
+      {selectedLead && (
+        <BookingModal
+          isOpen={bookingOpen}
+          onClose={() => setBookingOpen(false)}
+          businessId={activeBusinessId ?? ''}
+          units={bookingUnits}
+          accounts={bookingAccounts}
+          booking={null}
+          prefill={{
+            check_in: format(new Date(), 'yyyy-MM-dd'),
+            check_out: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
+            guest_name: selectedLead.name ?? undefined,
+            channel: leadChannelToBookingChannel(selectedLead.channel),
+          }}
+          onCreate={async (insert) => {
+            await createBooking({
+              ...insert,
+              business_id: activeBusinessId ?? '',
+              created_by: user?.id ?? '',
+            });
+            if (selectedLead.status !== 'converted') {
+              await handleSetStatus(selectedLead, 'converted');
+            }
+          }}
+          onUpdate={(bookingId, updates) => updateBooking(bookingId, updates)}
+          onMarkPaid={(b, method) =>
+            markBookingPaid(b, { method, accounts: bookingAccounts, userId: user?.id ?? '' })
+          }
+          onCancel={(bookingId) => cancelBooking(bookingId)}
+          onDelete={(bookingId) => deleteBooking(bookingId)}
+          checkOverlap={(unitId, ci, co, ex) =>
+            findOverlappingBookings(activeBusinessId ?? '', unitId, ci, co, ex)
+          }
+        />
+      )}
     </div>
   );
 }

@@ -363,8 +363,6 @@ export interface Translations {
     tabKalender: string;
     kasirComingSoon: string;
     kasirComingSoonDesc: string;
-    kalenderComingSoon: string;
-    kalenderComingSoonDesc: string;
     aiInfoTitle: string;
     aiInfoDesc: string;
     aiInfoPlaceholder: string;

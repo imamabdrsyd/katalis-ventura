@@ -352,8 +352,6 @@ export const en: Translations = {
     tabKalender: 'Calendar',
     kasirComingSoon: 'Cashier — coming soon',
     kasirComingSoonDesc: 'Fast checkout for product/trade businesses will live here.',
-    kalenderComingSoon: 'Calendar — coming soon',
-    kalenderComingSoonDesc: 'Scheduling and availability for service businesses will live here.',
     aiInfoTitle: 'Concierge Agent',
     aiInfoDesc: 'Brief your concierge, it uses this to reply to prospects across all channels (WhatsApp, Instagram, etc.)',
     aiInfoPlaceholder: 'Anything else the AI should know — promos, payment methods, how to order…',

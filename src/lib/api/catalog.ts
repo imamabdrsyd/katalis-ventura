@@ -39,6 +39,7 @@ export interface CatalogItemUpdate {
   link_label?: string | null;
   track_stock?: boolean;
   stock_qty?: number;
+  ical_import_url?: string | null;
   is_active?: boolean;
   sort_order?: number;
 }

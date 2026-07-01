@@ -73,13 +73,41 @@ function formatBusinessKnowledge(
   return lines.length > 0 ? lines.join('\n') : null;
 }
 
+interface BookingAvailabilityRow {
+  check_in: string;
+  check_out: string;
+  catalog_item: { name: string | null } | { name: string | null }[] | null;
+}
+
+/**
+ * Rangkum tanggal menginap yang SUDAH TERISI (booking non-cancelled ke depan)
+ * agar concierge bisa menjawab pertanyaan ketersediaan ("kosong ga tgl X?").
+ * Return null bila tak ada booking mendatang.
+ */
+function formatAvailability(rows: BookingAvailabilityRow[] | null): string | null {
+  if (!rows || rows.length === 0) return null;
+  const lines: string[] = [
+    'KETERSEDIAAN MENGINAP — tanggal berikut SUDAH TERISI (di luar ini kemungkinan masih kosong):',
+  ];
+  for (const r of rows) {
+    const item = Array.isArray(r.catalog_item) ? r.catalog_item[0] : r.catalog_item;
+    const unit = item?.name ? `${item.name}: ` : '';
+    lines.push(`- ${unit}${r.check_in} s/d ${r.check_out} (check-out ${r.check_out} sudah kosong lagi)`);
+  }
+  lines.push(
+    'Jika pelanggan menanyakan tanggal yang tidak tercantum di atas, tawarkan bahwa kemungkinan tersedia dan minta konfirmasi. Jangan menjanjikan tanggal yang sudah terisi.'
+  );
+  return lines.join('\n');
+}
+
 function buildSystemPrompt(
   businessName: string,
   businessSector: string | null,
   channel: string,
   aiPersona: string | null,
   catalogItems: CatalogItemSummary[],
-  businessKnowledge: string | null
+  businessKnowledge: string | null,
+  availability: string | null
 ): string {
   const lines: string[] = [
     `Kamu adalah customer service untuk bisnis "${businessName}"${businessSector ? ` (sektor: ${businessSector})` : ''}.`,
@@ -104,6 +132,10 @@ function buildSystemPrompt(
 
   if (businessKnowledge && businessKnowledge.trim()) {
     lines.push('', 'INFORMASI BISNIS (dari pemilik — pakai sebagai fakta saat menjawab):', businessKnowledge.trim());
+  }
+
+  if (availability && availability.trim()) {
+    lines.push('', availability.trim());
   }
 
   if (aiPersona && aiPersona.trim()) {
@@ -150,26 +182,38 @@ export async function generateLeadReply(
 ): Promise<LeadReplyResult | null> {
   if (history.length === 0) return null;
 
-  const [{ data: business }, { data: catalog }, { data: knowledge }] = await Promise.all([
-    supabase
-      .from('businesses')
-      .select('business_name, business_sector')
-      .eq('id', integration.business_id)
-      .maybeSingle(),
-    supabase
-      .from('catalog_items')
-      .select('name, default_price, unit, description')
-      .eq('business_id', integration.business_id)
-      .eq('is_active', true)
-      .is('deleted_at', null)
-      .order('sort_order', { ascending: true })
-      .limit(30),
-    supabase
-      .from('business_ai_knowledge')
-      .select('content, fields')
-      .eq('business_id', integration.business_id)
-      .maybeSingle(),
-  ]);
+  const today = new Date().toISOString().slice(0, 10);
+  const [{ data: business }, { data: catalog }, { data: knowledge }, { data: bookings }] =
+    await Promise.all([
+      supabase
+        .from('businesses')
+        .select('business_name, business_sector')
+        .eq('id', integration.business_id)
+        .maybeSingle(),
+      supabase
+        .from('catalog_items')
+        .select('name, default_price, unit, description')
+        .eq('business_id', integration.business_id)
+        .eq('is_active', true)
+        .is('deleted_at', null)
+        .order('sort_order', { ascending: true })
+        .limit(30),
+      supabase
+        .from('business_ai_knowledge')
+        .select('content, fields')
+        .eq('business_id', integration.business_id)
+        .maybeSingle(),
+      // Booking mendatang untuk fitur "AI availability" — hanya yang belum lewat & aktif.
+      supabase
+        .from('bookings')
+        .select('check_in, check_out, catalog_item:catalog_items(name)')
+        .eq('business_id', integration.business_id)
+        .is('deleted_at', null)
+        .neq('status', 'cancelled')
+        .gte('check_out', today)
+        .order('check_in', { ascending: true })
+        .limit(40),
+    ]);
 
   const systemPrompt = buildSystemPrompt(
     business?.business_name ?? 'bisnis kami',
@@ -177,7 +221,8 @@ export async function generateLeadReply(
     lead.channel,
     integration.ai_persona ?? null,
     (catalog ?? []) as CatalogItemSummary[],
-    formatBusinessKnowledge(knowledge?.fields ?? null, knowledge?.content ?? null)
+    formatBusinessKnowledge(knowledge?.fields ?? null, knowledge?.content ?? null),
+    formatAvailability((bookings ?? []) as BookingAvailabilityRow[])
   );
 
   const result = await generateText(systemPrompt, history, {
