@@ -1006,6 +1006,7 @@ export interface Booking {
   payment_status: BookingPaymentStatus;
   channel: BookingChannel;
   is_external: boolean; // true = blok impor iCal OTA (read-only, tak di-EARN)
+  date_estimated: boolean; // true = check-in perkiraan (backfill), perlu konfirmasi
   ical_uid: string | null;
   notes: string | null;
   created_by: string | null;
@@ -1033,6 +1034,7 @@ export interface BookingInsert {
   payment_status?: BookingPaymentStatus;
   channel?: BookingChannel;
   is_external?: boolean;
+  date_estimated?: boolean;
   ical_uid?: string | null;
   notes?: string | null;
   created_by: string;
@@ -1051,6 +1053,7 @@ export interface BookingUpdate {
   status?: BookingStatus;
   payment_status?: BookingPaymentStatus;
   channel?: BookingChannel;
+  date_estimated?: boolean;
   notes?: string | null;
 }
 

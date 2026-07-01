@@ -15,6 +15,7 @@ import {
 import { SalesChannelBadge } from '@/components/transactions/SalesChannelBadge';
 import type { ChannelStatus } from '@/lib/api/leads';
 import type { Account, BookingChannel, CatalogItem, Lead, LeadChannel, LeadMessage, LeadStatus } from '@/types';
+import { isAccommodationSector } from '@/lib/businessSectors';
 import { getCatalogItems } from '@/lib/api/catalog';
 import { getAccounts } from '@/lib/api/accounts';
 import {
@@ -244,8 +245,8 @@ export default function LeadsPage() {
   const router = useRouter();
   const { activeBusinessId, activeBusiness, user } = useBusinessContext();
 
-  // Konversi lead → booking (hanya bisnis jasa akomodasi)
-  const isJasa = activeBusiness?.business_type === 'jasa';
+  // Konversi lead → booking (hanya bisnis sektor akomodasi)
+  const isAccommodation = isAccommodationSector(activeBusiness?.business_sector);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [bookingUnits, setBookingUnits] = useState<CatalogItem[]>([]);
   const [bookingAccounts, setBookingAccounts] = useState<Account[]>([]);
@@ -479,7 +480,7 @@ export default function LeadsPage() {
                     )}
                   </div>
                 </div>
-                {canManage && isJasa && (
+                {canManage && isAccommodation && (
                   <button
                     type="button"
                     onClick={openBooking}

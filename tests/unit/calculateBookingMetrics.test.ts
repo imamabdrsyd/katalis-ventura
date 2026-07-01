@@ -20,6 +20,7 @@ function mkBooking(overrides: Partial<Booking>): Booking {
     payment_status: 'unpaid',
     channel: 'manual',
     is_external: false,
+    date_estimated: false,
     ical_uid: null,
     notes: null,
     created_by: null,

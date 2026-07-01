@@ -57,6 +57,26 @@ export async function getUpcomingBookings(
   return data as Booking[];
 }
 
+/**
+ * Hitung transaksi EARN "stay" yang belum tertaut ke booking (punya meta.nights,
+ * belum punya meta.booking_id, bukan settlement) — untuk banner "Tarik ke kalender".
+ */
+export async function countUnlinkedStayTransactions(businessId: string): Promise<number> {
+  const supabase = createClient();
+  const { count, error } = await supabase
+    .from('transactions')
+    .select('id', { count: 'exact', head: true })
+    .eq('business_id', businessId)
+    .eq('category', 'EARN')
+    .is('deleted_at', null)
+    .not('meta->nights', 'is', null)
+    .is('meta->booking_id', null)
+    .is('meta->settlement_of_transaction_id', null);
+
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
 export async function getBookingById(id: string): Promise<Booking | null> {
   const supabase = createClient();
   const { data, error } = await supabase

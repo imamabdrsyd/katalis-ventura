@@ -9,12 +9,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { addDays, parseISO, format } from 'date-fns';
-import { CalendarDays, Lock, Loader2 } from 'lucide-react';
+import { CalendarDays, Lock, Loader2, Sparkles, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { isManagerRole } from '@/lib/roles';
+import { isAccommodationSector } from '@/lib/businessSectors';
 import { getCatalogItems } from '@/lib/api/catalog';
 import { getAccounts } from '@/lib/api/accounts';
+import { countUnlinkedStayTransactions } from '@/lib/api/bookings';
 import type { Account, Booking, CatalogItem } from '@/types';
 import { useCalendar } from '@/hooks/useCalendar';
 import { CalendarBoard } from './CalendarBoard';
@@ -23,8 +25,9 @@ import { BookingModal, type BookingPrefill } from './BookingModal';
 import { IcalSyncModal } from './IcalSyncModal';
 
 export function CalendarLauncher() {
-  const { activeBusinessId, user, userRole } = useBusinessContext();
+  const { activeBusinessId, activeBusiness, user, userRole } = useBusinessContext();
   const canManage = isManagerRole(userRole);
+  const isAccommodation = isAccommodationSector(activeBusiness?.business_sector);
 
   const [units, setUnits] = useState<CatalogItem[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -34,6 +37,18 @@ export function CalendarLauncher() {
   const [editing, setEditing] = useState<Booking | null>(null);
   const [prefill, setPrefill] = useState<BookingPrefill | null>(null);
   const [syncOpen, setSyncOpen] = useState(false);
+
+  const [unlinkedCount, setUnlinkedCount] = useState(0);
+  const [reconciling, setReconciling] = useState(false);
+
+  const refreshUnlinked = useCallback(async () => {
+    if (!activeBusinessId || !isAccommodation) return;
+    try {
+      setUnlinkedCount(await countUnlinkedStayTransactions(activeBusinessId));
+    } catch {
+      /* non-kritis */
+    }
+  }, [activeBusinessId, isAccommodation]);
 
   const loadData = useCallback(async () => {
     if (!activeBusinessId) return;
@@ -45,16 +60,18 @@ export function CalendarLauncher() {
       ]);
       setUnits(catalog);
       setAccounts(accs);
+      refreshUnlinked();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Gagal memuat data kalender');
     } finally {
       setLoadingData(false);
     }
-  }, [activeBusinessId]);
+  }, [activeBusinessId, refreshUnlinked]);
 
   useEffect(() => {
-    if (canManage) loadData();
-  }, [canManage, loadData]);
+    if (canManage && isAccommodation) loadData();
+    else setLoadingData(false);
+  }, [canManage, isAccommodation, loadData]);
 
   const calendar = useCalendar({
     businessId: activeBusinessId ?? '',
@@ -79,6 +96,29 @@ export function CalendarLauncher() {
     setModalOpen(true);
   }, []);
 
+  const handleReconcile = useCallback(async () => {
+    if (!activeBusinessId) return;
+    setReconciling(true);
+    try {
+      const res = await fetch('/api/calendar/backfill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ businessId: activeBusinessId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? 'Gagal menarik revenue');
+      toast.success(
+        `${data.linked} booking dibuat dari revenue${data.estimated > 0 ? ` (${data.estimated} tanggal perkiraan — cek di kalender)` : ''}`
+      );
+      await Promise.all([calendar.reload(), refreshUnlinked()]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Gagal menarik revenue');
+    } finally {
+      setReconciling(false);
+    }
+  }, [activeBusinessId, calendar, refreshUnlinked]);
+
   if (!canManage) {
     return (
       <div className="text-center py-16">
@@ -88,6 +128,23 @@ export function CalendarLauncher() {
         <p className="font-semibold text-gray-700 dark:text-gray-200">Akses terbatas</p>
         <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
           Hanya manager bisnis yang dapat mengelola kalender booking.
+        </p>
+      </div>
+    );
+  }
+
+  if (!isAccommodation) {
+    return (
+      <div className="text-center py-16">
+        <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-4">
+          <CalendarDays className="w-6 h-6 text-gray-400 dark:text-gray-500" />
+        </div>
+        <p className="font-semibold text-gray-700 dark:text-gray-200">
+          Kalender booking khusus sektor akomodasi
+        </p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1 max-w-sm mx-auto">
+          Kalender booking kamar (per malam) tersedia untuk bisnis akomodasi &amp; sewa jangka
+          pendek. Penjadwalan berbasis janji temu untuk jasa lain menyusul.
         </p>
       </div>
     );
@@ -118,6 +175,30 @@ export function CalendarLauncher() {
 
   return (
     <div className="space-y-4">
+      {unlinkedCount > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-primary-100 dark:border-primary-900/40 bg-primary-50 dark:bg-primary-900/20 px-4 py-3">
+          <Sparkles className="w-5 h-5 text-primary-500 dark:text-primary-400 shrink-0" />
+          <p className="text-sm text-gray-700 dark:text-gray-200 flex-1">
+            <b>{unlinkedCount}</b> transaksi revenue menginap belum ada di kalender. Tarik supaya
+            ADR/occupancy terhitung — yang tanpa tanggal pasti ditaruh di tanggal transaksi
+            (bisa dikoreksi).
+          </p>
+          <button
+            type="button"
+            onClick={handleReconcile}
+            disabled={reconciling}
+            className="btn-primary inline-flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+          >
+            {reconciling ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <ArrowRight className="w-4 h-4" />
+            )}
+            Tarik ke kalender
+          </button>
+        </div>
+      )}
+
       <CalendarKpiStrip
         bookings={calendar.bookings}
         monthCursor={calendar.monthCursor}

@@ -225,8 +225,9 @@ export function CalendarBoard({
                         BOOKING_BAR_CLASSES[state]
                       } ${isRealStart ? 'rounded-l-md ml-0.5' : ''} ${
                         isRealEnd ? 'rounded-r-md mr-0.5' : ''
-                      } ${!isRealStart && !isRealEnd ? '' : ''}`}
+                      } ${b.date_estimated ? 'ring-1 ring-inset ring-amber-400 dark:ring-amber-300' : ''}`}
                     >
+                      {b.date_estimated ? '~' : ''}
                       {label}
                     </button>
                   );

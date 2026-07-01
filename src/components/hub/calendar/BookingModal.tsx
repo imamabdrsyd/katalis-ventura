@@ -188,6 +188,8 @@ export function BookingModal({
     guest_count: guestCount ? Number(guestCount) : null,
     channel,
     status,
+    // Menyimpan booking = mengkonfirmasi tanggal → buang flag perkiraan.
+    date_estimated: false,
     notes: notes.trim() || null,
   });
 
@@ -326,6 +328,17 @@ export function BookingModal({
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Blok ini diimpor dari kalender {BOOKING_CHANNEL_LABELS[channel]} (iCal) sebagai
               penanda ketersediaan. Tidak bisa diedit atau ditandai lunas dari sini.
+            </p>
+          </div>
+        )}
+
+        {/* Tanggal perkiraan (hasil backfill) */}
+        {booking?.date_estimated && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl p-3 flex items-start gap-2.5">
+            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+            <p className="text-sm text-amber-800 dark:text-amber-300">
+              Tanggal ini <b>perkiraan</b> (dari tanggal transaksi). Sesuaikan check-in/check-out
+              yang benar lalu <b>Simpan perubahan</b>.
             </p>
           </div>
         )}
