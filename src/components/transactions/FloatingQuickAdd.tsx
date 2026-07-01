@@ -82,6 +82,29 @@ export function FloatingQuickAdd({
     [businessId, router, setIsOpen, user]
   );
 
+  const handleSaveDraft = useCallback(
+    async (data: TransactionFormData) => {
+      if (!businessId || !user) return;
+      setSaving(true);
+      try {
+        await transactionsApi.createTransaction({
+          ...data,
+          business_id: businessId,
+          created_by: user.id,
+          status: 'draft',
+        });
+        setIsOpen(false);
+        window.dispatchEvent(new CustomEvent('transaction-saved'));
+        toast.success('Draft tersimpan — lanjutkan & lengkapi sebelum posting');
+      } catch (err: any) {
+        toast.error(err.message || 'Gagal menyimpan draft');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [businessId, setIsOpen, user]
+  );
+
   const handleSubmitMultiLine = useCallback(
     async (data: MultiLineFormData) => {
       if (!businessId || !user) return;
@@ -178,6 +201,7 @@ export function FloatingQuickAdd({
         ) : (
           <QuickTransactionForm
             onSubmit={handleSubmit}
+            onSaveDraft={handleSaveDraft}
             onCancel={() => setIsOpen(false)}
             loading={saving}
             businessId={businessId}

@@ -547,11 +547,14 @@ export function useTransactions() {
         toast.warning('Tidak ada transaksi draft yang dipilih');
         return;
       }
-      const posted = await transactionsApi.postTransactionsBulk(draftIds);
+      const { posted, skipped } = await transactionsApi.postTransactionsBulk(draftIds);
       setSelectedIds(new Set());
       setSelectMode(false);
       invalidateTransactions();
       toast.success(`${posted} transaksi berhasil diposting`);
+      if (skipped > 0) {
+        toast.warning(`${skipped} draft dilewati karena belum lengkap (akun/jumlah kosong)`);
+      }
     } catch (err: any) {
       toast.error(err.message || 'Gagal memposting transaksi');
     } finally {

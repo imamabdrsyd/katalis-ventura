@@ -40,6 +40,12 @@ import type { Transaction, UnitBreakdown } from '@/types';
 
 interface QuickTransactionFormProps {
   onSubmit: (data: TransactionFormData) => Promise<void>;
+  /**
+   * Simpan sebagai draft tanpa memaksa field mandatory (akun boleh kosong).
+   * Draft yang belum lengkap TIDAK bisa di-post sampai semua field wajib diisi.
+   * Kalau tidak di-provide, tombol "Save Draft" tidak ditampilkan.
+   */
+  onSaveDraft?: (data: TransactionFormData) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
   businessId?: string;
@@ -80,6 +86,7 @@ type SupplementaryTab = 'note' | 'attachment';
 
 export function QuickTransactionForm({
   onSubmit,
+  onSaveDraft,
   onCancel,
   loading = false,
   businessId: businessIdProp,
@@ -446,7 +453,41 @@ export function QuickTransactionForm({
     return Object.keys(newErrors).length === 0;
   };
 
-  // Submit
+  // Upload lampiran pending ke Cloudinary HANYA saat submit (defer upload).
+  // Cancel sebelum ini = tidak ada file yang pernah naik ke Cloudinary.
+  // Return null bila upload gagal (error sudah di-set ke state).
+  const resolveFinalAttachments = async (): Promise<TransactionAttachment[] | null> => {
+    if (businessId && attachments.some(isPendingAttachment)) {
+      setUploadingAttachments(true);
+      try {
+        const uploaded = await uploadPendingAttachments(businessId, attachments);
+        setAttachments(uploaded);
+        setUploadingAttachments(false);
+        return uploaded;
+      } catch (err: any) {
+        setUploadingAttachments(false);
+        setErrors({ submit: err?.message || 'Gagal mengupload lampiran' });
+        return null;
+      }
+    }
+    return attachments;
+  };
+
+  const buildMeta = (finalAttachments: TransactionAttachment[]) => ({
+    ...(selectedStockIds.length > 0 ? { sold_stock_ids: selectedStockIds } : {}),
+    unit_breakdown: unitBreakdown && unitBreakdown.unit ? unitBreakdown : undefined,
+    attachments: finalAttachments.length > 0 ? finalAttachments : undefined,
+  });
+
+  const applyCurrencyFields = (formData: TransactionFormData, baseAmount: number) => {
+    formData.amount = baseAmount;
+    formData.original_amount = amount;
+    formData.currency_code = currencyCode;
+    formData.fx_rate = currencyCode === BASE_CURRENCY ? 1 : fxRate;
+    formData.fx_rate_date = date;
+  };
+
+  // Submit — jalur "Save Transaction": validasi penuh + double-entry lengkap.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
@@ -481,37 +522,79 @@ export function QuickTransactionForm({
       }
     }
 
-    // Upload lampiran pending ke Cloudinary HANYA saat submit (defer upload).
-    // Cancel sebelum ini = tidak ada file yang pernah naik ke Cloudinary.
-    let finalAttachments = attachments;
-    if (businessId && attachments.some(isPendingAttachment)) {
-      setUploadingAttachments(true);
-      try {
-        finalAttachments = await uploadPendingAttachments(businessId, attachments);
-        setAttachments(finalAttachments);
-      } catch (err: any) {
-        setUploadingAttachments(false);
-        setErrors({ submit: err?.message || 'Gagal mengupload lampiran' });
-        return;
-      }
-      setUploadingAttachments(false);
-    }
+    const finalAttachments = await resolveFinalAttachments();
+    if (finalAttachments === null) return;
 
-    // Attach meta: sold_stock_ids + unit_breakdown + attachment
     const formData = result as TransactionFormData;
-    formData.meta = {
-      ...(selectedStockIds.length > 0 ? { sold_stock_ids: selectedStockIds } : {}),
-      unit_breakdown: unitBreakdown && unitBreakdown.unit ? unitBreakdown : undefined,
-      attachments: finalAttachments.length > 0 ? finalAttachments : undefined,
-    };
-    formData.amount = baseAmount;
-    formData.original_amount = amount;
-    formData.currency_code = currencyCode;
-    formData.fx_rate = currencyCode === BASE_CURRENCY ? 1 : fxRate;
-    formData.fx_rate_date = date;
+    formData.meta = buildMeta(finalAttachments);
+    applyCurrencyFields(formData, baseAmount);
 
     await onSubmit(formData);
   };
+
+  // Save Draft — simpan apa yang sudah diisi tanpa memaksa field mandatory
+  // (akun boleh kosong). Kalau akun sudah dipilih & valid, tetap resolve jadi
+  // double-entry lengkap; kalau belum, simpan draft single-sided yang BELUM
+  // bisa di-post sampai field wajib dilengkapi.
+  const handleSaveDraft = async () => {
+    if (!onSaveDraft) return;
+
+    // Minimal tetap butuh amount > 0 (batas bawah DB & tujuan "sudah diisi").
+    if (amount <= 0) {
+      setErrors({ amount: 'Amount must be greater than 0' });
+      return;
+    }
+    if (currencyCode !== BASE_CURRENCY && (!fxRate || fxRate <= 0)) {
+      setErrors({ fxRate: 'Exchange rate must be greater than 0' });
+      return;
+    }
+
+    const baseAmount = currencyCode === BASE_CURRENCY ? amount : calculateBaseAmount(amount, fxRate);
+    const resolvedName = name.trim() || selectedAccount?.description || selectedAccount?.account_name || '';
+
+    // Bila akun sudah dipilih, coba resolve jadi double-entry lengkap. Kalau
+    // gagal (mis. belum ada kas/bank), fallback ke draft single-sided.
+    let formData: TransactionFormData;
+    if (selectedAccountId && !(selectedAccount && isDividendChoiceAccount(selectedAccount) && !dividendEntryMode)) {
+      const result = resolveQuickTransaction(
+        {
+          amount: baseAmount,
+          selectedAccountId,
+          name: resolvedName,
+          date,
+          notes,
+          dividendEntryMode: dividendEntryMode ?? undefined,
+        },
+        accounts
+      );
+      formData = 'error' in result
+        ? buildIncompleteDraft(baseAmount, resolvedName)
+        : (result as TransactionFormData);
+    } else {
+      formData = buildIncompleteDraft(baseAmount, resolvedName);
+    }
+
+    const finalAttachments = await resolveFinalAttachments();
+    if (finalAttachments === null) return;
+
+    formData.meta = buildMeta(finalAttachments);
+    applyCurrencyFields(formData, baseAmount);
+
+    await onSaveDraft(formData);
+  };
+
+  // Draft single-sided: belum ada pasangan akun, jadi is_double_entry=false.
+  // Kategori default OPEX hanya placeholder sampai user melengkapi & mem-posting.
+  const buildIncompleteDraft = (baseAmount: number, resolvedName: string): TransactionFormData => ({
+    date,
+    category: 'OPEX',
+    // name wajib min 1 di server — fallback ke placeholder saat semua kosong.
+    name: resolvedName || 'Draft transaksi',
+    description: notes || selectedAccount?.description || selectedAccount?.account_name || '',
+    amount: baseAmount,
+    account: '',
+    is_double_entry: false,
+  });
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -934,7 +1017,8 @@ export function QuickTransactionForm({
         )}
       </div>
 
-      {/* Action Buttons — Save primary, Cancel ghost text link */}
+      {/* Action Buttons — Save primary, Save Draft secondary (lanjut nanti).
+          Cancel/tutup form via tombol X di header modal. */}
       <div className="flex items-center gap-4 pt-1">
         <button
           type="submit"
@@ -952,14 +1036,26 @@ export function QuickTransactionForm({
             </>
           )}
         </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={loading || uploadingAttachments}
-          className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium transition-colors disabled:opacity-50"
-        >
-          Cancel
-        </button>
+        {onSaveDraft ? (
+          <button
+            type="button"
+            onClick={handleSaveDraft}
+            disabled={loading || uploadingAttachments}
+            title="Simpan yang sudah diisi sebagai draft — lanjutkan nanti sebelum di-posting"
+            className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium transition-colors disabled:opacity-50"
+          >
+            Save Draft
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={loading || uploadingAttachments}
+            className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+        )}
       </div>
     </form>
   );

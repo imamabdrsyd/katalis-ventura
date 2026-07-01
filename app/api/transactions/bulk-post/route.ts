@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { canManageBusiness, createServerClient, getAuthenticatedUser } from '@/lib/supabase-server';
 import { bulkPostTransactionsSchema } from '@/lib/validations';
 import { badRequest, forbidden, serverError, unauthorized, validationError } from '@/lib/api/server/responses';
+import { isPostableDraft } from '@/lib/api/server/postableDraft';
 
 /**
  * POST /api/transactions/bulk-post
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
     // Verify all transactions belong to a single business that the user manages.
     const { data: txns, error: fetchErr } = await supabase
       .from('transactions')
-      .select('id, business_id, status, deleted_at')
+      .select('id, business_id, status, deleted_at, amount, debit_account_id, credit_account_id')
       .in('id', parsed.data.ids);
 
     if (fetchErr) return serverError(fetchErr);
@@ -39,6 +40,19 @@ export async function POST(request: NextRequest) {
       return forbidden('Hanya manager bisnis yang dapat mem-posting transaksi');
     }
 
+    // Hanya draft yang lengkap yang boleh di-posting. Draft belum lengkap
+    // (mis. dari "Save Draft" tanpa akun) di-skip, bukan digagalkan sepenuhnya.
+    const postableIds = txns
+      .filter((t) => t.status === 'draft' && !t.deleted_at && isPostableDraft(t))
+      .map((t) => t.id);
+    const skipped = parsed.data.ids.length - postableIds.length;
+
+    if (postableIds.length === 0) {
+      return badRequest(
+        'Tidak ada draft yang bisa di-posting. Lengkapi akun debit & kredit dan jumlah terlebih dahulu.'
+      );
+    }
+
     const { data, error } = await supabase
       .from('transactions')
       .update({
@@ -46,13 +60,13 @@ export async function POST(request: NextRequest) {
         posted_at: new Date().toISOString(),
         updated_by: user.id,
       })
-      .in('id', parsed.data.ids)
+      .in('id', postableIds)
       .eq('status', 'draft')
       .is('deleted_at', null)
       .select('id');
 
     if (error) return serverError(error);
-    return NextResponse.json({ data: { posted: data?.length ?? 0 } });
+    return NextResponse.json({ data: { posted: data?.length ?? 0, skipped } });
   } catch (err) {
     return serverError(err);
   }

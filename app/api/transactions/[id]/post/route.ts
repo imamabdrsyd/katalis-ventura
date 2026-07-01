@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { canManageBusiness, createServerClient, getAuthenticatedUser } from '@/lib/supabase-server';
 import { transactionIdSchema } from '@/lib/validations';
 import { badRequest, forbidden, notFound, serverError, unauthorized } from '@/lib/api/server/responses';
+import { isPostableDraft } from '@/lib/api/server/postableDraft';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -24,7 +25,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
 
     const { data: existing, error: fetchErr } = await supabase
       .from('transactions')
-      .select('id, business_id, status')
+      .select('id, business_id, status, amount, debit_account_id, credit_account_id')
       .eq('id', parsedId.data)
       .is('deleted_at', null)
       .maybeSingle();
@@ -35,6 +36,11 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
     }
     if (existing.status !== 'draft') {
       return badRequest('Hanya transaksi draft yang bisa di-posting');
+    }
+    if (!isPostableDraft(existing)) {
+      return badRequest(
+        'Draft belum lengkap. Lengkapi akun debit & kredit dan jumlah sebelum mem-posting.'
+      );
     }
 
     const { data, error } = await supabase

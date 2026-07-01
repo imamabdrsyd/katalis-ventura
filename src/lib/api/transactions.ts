@@ -352,13 +352,16 @@ export async function postTransaction(id: string): Promise<Transaction> {
   return apiFetch<Transaction>(`/api/transactions/${id}/post`, { method: 'POST' });
 }
 
-// Bulk post multiple draft transactions
-export async function postTransactionsBulk(ids: string[]): Promise<number> {
-  const data = await apiFetch<{ posted: number }>('/api/transactions/bulk-post', {
+// Bulk post multiple draft transactions.
+// `skipped` = draft yang dilewati karena belum lengkap (akun/jumlah kosong).
+export async function postTransactionsBulk(
+  ids: string[]
+): Promise<{ posted: number; skipped: number }> {
+  const data = await apiFetch<{ posted: number; skipped?: number }>('/api/transactions/bulk-post', {
     method: 'POST',
     body: { ids },
   });
-  return data.posted;
+  return { posted: data.posted, skipped: data.skipped ?? 0 };
 }
 
 // Bulk import transactions (routes through POST /api/transactions/bulk).
