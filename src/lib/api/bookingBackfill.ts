@@ -63,12 +63,14 @@ export async function reconcileStayTransactions(
     return { ...result, eligible: false };
   }
 
-  // Unit default hanya bila persis satu unit aktif (multi-unit → biarkan null).
+  // Unit default hanya bila persis satu unit kamar aktif (multi-unit → biarkan
+  // null). Rate plan/add-on (is_bookable_unit=false, migr 115) tidak dihitung.
   const { data: units } = await admin
     .from('catalog_items')
     .select('id')
     .eq('business_id', businessId)
     .eq('is_active', true)
+    .eq('is_bookable_unit', true)
     .is('deleted_at', null);
   const defaultUnitId = units && units.length === 1 ? (units[0].id as string) : null;
 

@@ -152,6 +152,9 @@ export interface CatalogItem {
   stock_qty?: number;
   // Calendar: URL feed .ics OTA (Airbnb/Booking.com) untuk impor blok ketersediaan unit ini.
   ical_import_url?: string | null;
+  // Calendar: dihitung sebagai unit kamar (dropdown unit + denominator occupancy).
+  // FALSE untuk rate plan/add-on (mis. cleaning fee). Default TRUE (migr 115).
+  is_bookable_unit?: boolean;
   // Rich display config — dipakai saat item difitur di omni-channel "Produk Unggulan"
   image_url?: string | null;
   image_fit?: 'cover' | 'contain' | null;

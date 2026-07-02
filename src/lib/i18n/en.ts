@@ -306,6 +306,8 @@ export const en: Translations = {
     priceLabel: 'Default Price',
     unitLabel: 'Unit',
     unitPlaceholder: 'pcs / hour / night',
+    bookableUnitLabel: 'Bookable unit on calendar',
+    bookableUnitHint: 'Counted in occupancy & shown in the booking unit dropdown. Turn off for rate plans/add-ons (e.g. cleaning fee, monthly rent).',
     revenueAccountLabel: 'Revenue Account',
     revenueAccountPlaceholder: '— Choose later at entry —',
     revenueAccountHint: 'Account credited when this item is sold. Can be left empty.',

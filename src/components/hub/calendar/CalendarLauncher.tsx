@@ -58,7 +58,9 @@ export function CalendarLauncher() {
         getCatalogItems(activeBusinessId, { activeOnly: true }),
         getAccounts(activeBusinessId),
       ]);
-      setUnits(catalog);
+      // Hanya unit kamar (flag migr 115) — rate plan/add-on (cleaning fee, sewa
+      // bulanan) tidak masuk dropdown unit & denominator occupancy/RevPAR.
+      setUnits(catalog.filter((c) => c.is_bookable_unit !== false));
       setAccounts(accs);
       refreshUnlinked();
     } catch (err) {

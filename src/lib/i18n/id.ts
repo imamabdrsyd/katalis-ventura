@@ -307,6 +307,8 @@ export const id: Translations = {
     priceLabel: 'Harga Default',
     unitLabel: 'Satuan',
     unitPlaceholder: 'pcs / jam / malam',
+    bookableUnitLabel: 'Unit yang bisa dibooking di kalender',
+    bookableUnitHint: 'Dihitung di occupancy & muncul di dropdown unit booking. Matikan untuk rate plan/add-on (mis. cleaning fee, sewa bulanan).',
     revenueAccountLabel: 'Akun Pendapatan',
     revenueAccountPlaceholder: '— Pilih nanti saat entry —',
     revenueAccountHint: 'Akun yang dikredit saat item ini dijual. Bisa dikosongkan.',

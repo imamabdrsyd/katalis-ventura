@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase';
 import type { Account, Booking, BookingInsert, BookingUpdate } from '@/types';
-import { createMultiLineTransaction } from '@/lib/api/transactions';
+import { createMultiLineTransaction, deleteTransaction } from '@/lib/api/transactions';
 import { saveContactFromTransaction } from '@/lib/api/contacts';
 import {
   resolveCashAccount,
@@ -13,6 +13,18 @@ const SELECT_WITH_RELATIONS = `
   catalog_item:catalog_items!bookings_catalog_item_id_fkey(*),
   contact:business_contacts!bookings_contact_id_fkey(*)
 `;
+
+/**
+ * Petakan error Postgres ke pesan ramah. 23P01 = exclusion constraint
+ * `bookings_no_double_booking` (migr 115) — backstop server-side untuk race
+ * yang lolos cek overlap client (findOverlappingBookings, debounced).
+ */
+function toFriendlyBookingError(error: { code?: string; message: string }): Error {
+  if (error.code === '23P01' || error.message.includes('bookings_no_double_booking')) {
+    return new Error('Tanggal bentrok dengan booking lain untuk unit ini (double-booking dicegah).');
+  }
+  return new Error(error.message);
+}
 
 /**
  * Ambil booking yang beririsan dengan rentang [from, to) (inklusif from, eksklusif to).
@@ -98,7 +110,7 @@ export async function createBooking(insert: BookingInsert): Promise<Booking> {
     .select(SELECT_WITH_RELATIONS)
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) throw toFriendlyBookingError(error);
   return data as Booking;
 }
 
@@ -111,7 +123,7 @@ export async function updateBooking(id: string, updates: BookingUpdate): Promise
     .select(SELECT_WITH_RELATIONS)
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) throw toFriendlyBookingError(error);
   return data as Booking;
 }
 
@@ -167,6 +179,10 @@ export async function findOverlappingBookings(
  * dengan POS `useCashier.checkout()`. Mengembalikan booking terbaru.
  *
  * Melempar bila booking eksternal/sudah lunas, atau akun kas/pendapatan tak ada.
+ * Tidak atomik (2 langkah HTTP) — dimitigasi: state booking di-re-fetch dulu
+ * (tolak yang sudah lunas dari sesi lain), dan bila penautan gagal transaksi
+ * EARN yang telanjur dibuat di-soft-delete (kompensasi) agar retry tidak
+ * menggandakan pendapatan.
  */
 export async function markBookingPaid(
   booking: Booking,
@@ -174,8 +190,13 @@ export async function markBookingPaid(
 ): Promise<Booking> {
   const { method, accounts, userId } = opts;
 
-  if (booking.is_external) throw new Error('Booking impor OTA tidak bisa ditandai lunas.');
-  if (booking.payment_status === 'paid' && booking.transaction_id) {
+  // Re-fetch state terbaru — hindari stale client (dua tab / sudah dilunasi
+  // sesi lain / sudah dihapus) sebelum menulis ke ledger.
+  const fresh = await getBookingById(booking.id);
+  if (!fresh) throw new Error('Booking tidak ditemukan (mungkin sudah dihapus).');
+
+  if (fresh.is_external) throw new Error('Booking impor OTA tidak bisa ditandai lunas.');
+  if (fresh.payment_status === 'paid' && fresh.transaction_id) {
     throw new Error('Booking sudah lunas.');
   }
 
@@ -185,32 +206,32 @@ export async function markBookingPaid(
   }
 
   const revenueAccountId =
-    booking.catalog_item?.revenue_account_id ?? resolveDefaultRevenueAccount(accounts)?.id ?? null;
+    fresh.catalog_item?.revenue_account_id ?? resolveDefaultRevenueAccount(accounts)?.id ?? null;
   if (!revenueAccountId) {
     throw new Error('Akun pendapatan tidak ditemukan. Set akun pendapatan pada unit atau CoA.');
   }
 
-  const total = booking.total_amount;
-  const unitName = booking.catalog_item?.name ?? 'Unit';
-  const guestName = booking.guest_name?.trim() || booking.contact?.name || 'Tamu';
-  const stayLabel = `${booking.check_in} s/d ${booking.check_out}`;
+  const total = fresh.total_amount;
+  const unitName = fresh.catalog_item?.name ?? 'Unit';
+  const guestName = fresh.guest_name?.trim() || fresh.contact?.name || 'Tamu';
+  const stayLabel = `${fresh.check_in} s/d ${fresh.check_out}`;
 
   const created = await createMultiLineTransaction({
-    business_id: booking.business_id,
+    business_id: fresh.business_id,
     created_by: userId,
     date: new Date().toISOString().slice(0, 10),
     category: 'EARN',
     name: guestName,
-    description: `Booking ${unitName} — ${booking.nights} malam (${stayLabel})`,
+    description: `Booking ${unitName} — ${fresh.nights} malam (${stayLabel})`,
     status: 'posted',
-    sales_channel: mapChannelToSalesChannel(booking.channel),
+    sales_channel: mapChannelToSalesChannel(fresh.channel),
     meta: {
       source: 'calendar_booking',
-      booking_id: booking.id,
+      booking_id: fresh.id,
       payment_method: method,
       unit_breakdown: {
-        price_per_unit: booking.price_per_night,
-        quantity: booking.nights,
+        price_per_unit: fresh.price_per_night,
+        quantity: fresh.nights,
         unit: 'malam',
       },
     },
@@ -232,17 +253,35 @@ export async function markBookingPaid(
     ],
   });
 
-  const updated = await updateBooking(booking.id, {
-    transaction_id: created.id,
-    payment_status: 'paid',
-    // Booking yang sudah dibayar minimal berstatus confirmed.
-    status: booking.status === 'tentative' ? 'confirmed' : booking.status,
-  });
+  let updated: Booking;
+  try {
+    updated = await updateBooking(fresh.id, {
+      transaction_id: created.id,
+      payment_status: 'paid',
+      // Booking yang sudah dibayar minimal berstatus confirmed.
+      status: fresh.status === 'tentative' ? 'confirmed' : fresh.status,
+    });
+  } catch (err) {
+    // Kompensasi: transaksi EARN sudah tercatat tapi gagal ditautkan ke booking
+    // — batalkan (soft-delete) supaya retry tidak menggandakan pendapatan.
+    const reason = err instanceof Error ? err.message : 'unknown';
+    try {
+      await deleteTransaction(created.id);
+    } catch (cleanupErr) {
+      console.error('Gagal membatalkan transaksi orphan:', cleanupErr);
+      throw new Error(
+        `Gagal menautkan pembayaran ke booking dan transaksi yang telanjur tercatat belum terbatalkan — cek halaman Transaksi (cari "${guestName}") sebelum mencoba lagi. (${reason})`
+      );
+    }
+    throw new Error(
+      `Gagal menautkan pembayaran ke booking — transaksi dibatalkan otomatis, silakan coba lagi. (${reason})`
+    );
+  }
 
   // Simpan tamu sebagai kontak (best-effort — tak membatalkan pembayaran tercatat).
-  if (booking.guest_name?.trim()) {
+  if (fresh.guest_name?.trim()) {
     try {
-      await saveContactFromTransaction(booking.business_id, booking.guest_name.trim(), 'customer', userId);
+      await saveContactFromTransaction(fresh.business_id, fresh.guest_name.trim(), 'customer', userId);
     } catch (err) {
       console.error('Gagal simpan kontak tamu:', err);
     }

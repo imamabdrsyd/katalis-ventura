@@ -260,11 +260,13 @@ export default function LeadsPage() {
         getCatalogItems(activeBusinessId, { activeOnly: true }),
         getAccounts(activeBusinessId),
       ]);
-      if (catalog.length === 0) {
+      // Hanya unit kamar (is_bookable_unit, migr 115) yang bisa dibooking.
+      const units = catalog.filter((c) => c.is_bookable_unit !== false);
+      if (units.length === 0) {
         toast.error('Belum ada unit. Tambahkan unit di menu Kalender › Katalog dulu.');
         return;
       }
-      setBookingUnits(catalog);
+      setBookingUnits(units);
       setBookingAccounts(accs);
       setBookingOpen(true);
     } catch (err) {

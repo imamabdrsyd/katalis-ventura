@@ -5,6 +5,8 @@ import type { CatalogItem, CatalogItemType, Account } from '@/types';
 import { AlertCircle, Package, Wrench, Camera, Crop, ImageIcon, Loader2, Maximize2, X } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { useLanguage } from '@/context/LanguageContext';
+import { useBusinessContext } from '@/context/BusinessContext';
+import { isAccommodationSector } from '@/lib/businessSectors';
 
 export interface CatalogItemFormData {
   name: string;
@@ -14,6 +16,9 @@ export interface CatalogItemFormData {
   unit?: string | null;
   revenue_account_id?: string | null;
   is_active: boolean;
+  // Kalender (sektor akomodasi): dihitung sebagai unit kamar (dropdown +
+  // denominator occupancy). FALSE untuk rate plan/add-on (mis. cleaning fee).
+  is_bookable_unit?: boolean;
   image_url?: string | null;
   image_fit?: 'cover' | 'contain' | null;
   image_position_x?: number | null;
@@ -48,6 +53,9 @@ export function CatalogItemForm({
 }: CatalogItemFormProps) {
   const { t } = useLanguage();
   const tc = t.catalog;
+  const { activeBusiness } = useBusinessContext();
+  // Toggle "unit bookable" hanya relevan untuk bisnis akomodasi (hub /calendar).
+  const showBookableToggle = isAccommodationSector(activeBusiness?.business_sector ?? null);
   const isEditMode = !!item;
 
   const [formData, setFormData] = useState<CatalogItemFormData>({
@@ -58,6 +66,7 @@ export function CatalogItemForm({
     unit: item?.unit ?? '',
     revenue_account_id: item?.revenue_account_id ?? null,
     is_active: item?.is_active ?? true,
+    is_bookable_unit: item?.is_bookable_unit ?? true,
     image_url: item?.image_url ?? '',
     image_fit: item?.image_fit ?? 'cover',
     image_position_x: item?.image_position_x ?? 50,
@@ -93,6 +102,7 @@ export function CatalogItemForm({
       unit: item?.unit ?? '',
       revenue_account_id: item?.revenue_account_id ?? null,
       is_active: item?.is_active ?? true,
+      is_bookable_unit: item?.is_bookable_unit ?? true,
       image_url: item?.image_url ?? '',
       image_fit: item?.image_fit ?? 'cover',
       image_position_x: item?.image_position_x ?? 50,
@@ -434,6 +444,26 @@ export function CatalogItemForm({
       <p className="-mt-3 text-xs text-gray-400 dark:text-gray-500">
         Kosongkan link untuk arahkan pembeli ke WhatsApp bisnis dengan pesan otomatis.
       </p>
+
+      {/* Unit bookable di kalender (sektor akomodasi saja) */}
+      {showBookableToggle && (
+        <div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.is_bookable_unit ?? true}
+              onChange={(e) => setFormData(prev => ({ ...prev, is_bookable_unit: e.target.checked }))}
+              className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500"
+            />
+            <span className="text-sm text-gray-700 dark:text-gray-300">
+              {tc.bookableUnitLabel}
+            </span>
+          </label>
+          <p className="mt-1 ml-6 text-xs text-gray-400 dark:text-gray-500">
+            {tc.bookableUnitHint}
+          </p>
+        </div>
+      )}
 
       {/* Status aktif (edit only) */}
       {isEditMode && (

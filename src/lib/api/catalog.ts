@@ -18,6 +18,7 @@ export interface CatalogItemInsert {
   link_label?: string | null;
   track_stock?: boolean;
   stock_qty?: number;
+  is_bookable_unit?: boolean;
   is_active?: boolean;
   sort_order?: number;
   created_by: string;
@@ -40,6 +41,7 @@ export interface CatalogItemUpdate {
   track_stock?: boolean;
   stock_qty?: number;
   ical_import_url?: string | null;
+  is_bookable_unit?: boolean;
   is_active?: boolean;
   sort_order?: number;
 }
