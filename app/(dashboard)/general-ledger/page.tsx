@@ -436,34 +436,6 @@ function GeneralLedgerPageInner() {
 
               {/* Ledger Table */}
               <div className="p-4 md:p-6 pt-4">
-                {ledger.entries.length > 0 && (
-                  <div className="flex justify-end mb-2">
-                    <div className="flex bg-[#EEF0F2] dark:bg-gray-800 rounded-lg p-0.5">
-                      <button
-                        onClick={() => setSortOrder('desc')}
-                        className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                          sortOrder === 'desc'
-                            ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
-                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                        }`}
-                      >
-                        <ArrowDownNarrowWide className="w-3.5 h-3.5" />
-                        {t.generalLedger.sortNewest}
-                      </button>
-                      <button
-                        onClick={() => setSortOrder('asc')}
-                        className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                          sortOrder === 'asc'
-                            ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
-                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                        }`}
-                      >
-                        <ArrowUpNarrowWide className="w-3.5 h-3.5" />
-                        {t.generalLedger.sortOldest}
-                      </button>
-                    </div>
-                  </div>
-                )}
                 {ledger.entries.length === 0 ? (
                   <div className="text-center py-12">
                     <FileText className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
@@ -477,7 +449,20 @@ function GeneralLedgerPageInner() {
                       <thead>
                         <tr className="border-b-2 border-gray-200 dark:border-gray-600">
                           <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
-                            Tanggal
+                            <button
+                              type="button"
+                              onClick={() => setSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'))}
+                              title={sortOrder === 'asc' ? t.generalLedger.sortNewest : t.generalLedger.sortOldest}
+                              aria-label={sortOrder === 'asc' ? t.generalLedger.sortNewest : t.generalLedger.sortOldest}
+                              className="inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                            >
+                              Tanggal
+                              {sortOrder === 'asc' ? (
+                                <ArrowUpNarrowWide className="w-3 h-3" />
+                              ) : (
+                                <ArrowDownNarrowWide className="w-3 h-3" />
+                              )}
+                            </button>
                           </th>
                           <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             Keterangan
