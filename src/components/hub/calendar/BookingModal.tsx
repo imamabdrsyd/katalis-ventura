@@ -46,7 +46,8 @@ interface BookingModalProps {
   booking: Booking | null;
   prefill?: BookingPrefill | null;
   onCreate: (insert: Omit<BookingInsert, 'business_id' | 'created_by'>) => Promise<unknown>;
-  onUpdate: (id: string, updates: BookingUpdate) => Promise<unknown>;
+  /** Harus mengembalikan booking hasil update — dipakai handleMarkPaid agar ledger mencatat nilai form terbaru. */
+  onUpdate: (id: string, updates: BookingUpdate) => Promise<Booking>;
   onMarkPaid: (booking: Booking, method: PaymentMethod) => Promise<unknown>;
   onCancel: (id: string) => Promise<unknown>;
   onDelete: (id: string) => Promise<unknown>;
@@ -231,10 +232,16 @@ export function BookingModal({
 
   const handleMarkPaid = async () => {
     if (!booking) return;
+    if (!unitId) return toast.error('Pilih unit/kamar dulu.');
+    if (!datesValid) return toast.error('Tanggal check-out harus setelah check-in.');
+    if (hasConflict) return toast.error('Tanggal bentrok dengan booking lain untuk unit ini.');
     if (total <= 0) return toast.error('Total booking harus lebih dari 0.');
     setBusy(true);
     try {
-      await onMarkPaid(booking, paymentMethod);
+      // Simpan nilai form dulu (harga/tanggal/status) supaya ledger mencatat
+      // angka yang tampil di tombol — bukan snapshot booking sebelum diedit.
+      const saved = await onUpdate(booking.id, buildBase());
+      await onMarkPaid(saved, paymentMethod);
       toast.success('Booking ditandai lunas — transaksi tercatat di pembukuan');
       onClose();
     } catch (err) {
@@ -538,7 +545,7 @@ export function BookingModal({
             <button
               type="button"
               onClick={handleMarkPaid}
-              disabled={busy || total <= 0}
+              disabled={busy || total <= 0 || !datesValid || hasConflict}
               className="btn-primary-glow w-full mt-3 inline-flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}

@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     // Verify all transactions belong to a single business that the user manages.
     const { data: txns, error: fetchErr } = await supabase
       .from('transactions')
-      .select('id, business_id, status, deleted_at, amount, debit_account_id, credit_account_id')
+      .select('id, business_id, status, deleted_at, amount, is_multi_line, debit_account_id, credit_account_id')
       .in('id', parsed.data.ids);
 
     if (fetchErr) return serverError(fetchErr);

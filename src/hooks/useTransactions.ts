@@ -11,6 +11,7 @@ import * as contactsApi from '@/lib/api/contacts';
 import { getAccounts } from '@/lib/api/accounts';
 import { showTransactionSavedToast } from '@/lib/transactionToast';
 import { findCogsAccount } from '@/lib/utils/inventoryHelper';
+import { isPostableDraft } from '@/lib/api/server/postableDraft';
 import { buildSettlementPrefill, buildPartialSettlementPrefill, getOutstandingAmount, getPartialSettlementIds } from '@/lib/accounting/guidance/receivableSettlement';
 import {
   buildDividendSettlementPrefill,
@@ -426,6 +427,35 @@ export function useTransactions() {
     }
   }, [accounts]);
 
+  // "Save Draft" menunda konversi Persediaan→HPP (draft tidak boleh menyentuh
+  // ledger), jadi konversinya dijalankan saat draft diposting. Hanya draft yang
+  // lolos precheck posting yang diproses, dan hanya stok yang masih debit akun
+  // ASSET (belum terkonversi) yang diupdate — jalur submit penuh sudah konversi
+  // saat create, jadi ini idempoten.
+  const convertPendingSoldStock = useCallback(async (draftIds: string[]) => {
+    const drafts = allTransactions.filter(
+      (t) => draftIds.includes(t.id) && t.status === 'draft' && isPostableDraft(t)
+    );
+    const soldStockIds = new Set<string>();
+    for (const t of drafts) {
+      const ids = (t.meta as Record<string, unknown> | null)?.sold_stock_ids;
+      if (Array.isArray(ids)) {
+        for (const v of ids) if (typeof v === 'string') soldStockIds.add(v);
+      }
+    }
+    if (soldStockIds.size === 0) return;
+
+    const accountById = new Map(accounts.map((a) => [a.id, a]));
+    const pending = [...soldStockIds].filter((id) => {
+      const stockTx = allTransactions.find((t) => t.id === id);
+      if (!stockTx?.debit_account_id) return false;
+      const debitType =
+        stockTx.debit_account?.account_type ?? accountById.get(stockTx.debit_account_id)?.account_type;
+      return debitType === 'ASSET';
+    });
+    if (pending.length > 0) await handleConvertStockToCOGS(pending);
+  }, [allTransactions, accounts, handleConvertStockToCOGS]);
+
   // Toggle select for a single transaction
   const handleToggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -523,6 +553,10 @@ export function useTransactions() {
   const handlePostTransaction = useCallback(async (id: string) => {
     setSaving(true);
     try {
+      // Konversi Persediaan→HPP yang tertunda dari Save Draft — dijalankan
+      // SEBELUM status flip, meniru urutan jalur submit penuh (konversi gagal
+      // = posting batal, bukan penjualan tercatat tanpa HPP).
+      await convertPendingSoldStock([id]);
       await transactionsApi.postTransaction(id);
       setDetailTransaction(null);
       invalidateTransactions();
@@ -532,7 +566,7 @@ export function useTransactions() {
     } finally {
       setSaving(false);
     }
-  }, [invalidateTransactions]);
+  }, [convertPendingSoldStock, invalidateTransactions]);
 
   // Bulk post selected draft transactions
   const handleBulkPost = useCallback(async () => {
@@ -547,6 +581,9 @@ export function useTransactions() {
         toast.warning('Tidak ada transaksi draft yang dipilih');
         return;
       }
+      // Konversi Persediaan→HPP tertunda dari Save Draft (hanya draft yang
+      // lolos precheck posting) — sebelum status flip.
+      await convertPendingSoldStock(draftIds);
       const { posted, skipped } = await transactionsApi.postTransactionsBulk(draftIds);
       setSelectedIds(new Set());
       setSelectMode(false);
@@ -560,7 +597,7 @@ export function useTransactions() {
     } finally {
       setSaving(false);
     }
-  }, [selectedIds, transactions, invalidateTransactions]);
+  }, [selectedIds, transactions, convertPendingSoldStock, invalidateTransactions]);
 
   // Handle COGS follow-up: close detail modal and open TransactionForm with prefill
   const handleCreateFollowUp = useCallback((prefillData: Partial<TransactionFormData>) => {

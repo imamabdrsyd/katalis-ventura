@@ -25,7 +25,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
 
     const { data: existing, error: fetchErr } = await supabase
       .from('transactions')
-      .select('id, business_id, status, amount, debit_account_id, credit_account_id')
+      .select('id, business_id, status, amount, is_multi_line, debit_account_id, credit_account_id')
       .eq('id', parsedId.data)
       .is('deleted_at', null)
       .maybeSingle();
