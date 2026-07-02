@@ -591,6 +591,8 @@ export interface Translations {
     openingBalance: string;
     entries: string;
     legacyNotice: string;
+    sortNewest: string;
+    sortOldest: string;
   };
 
   // Trial Balance

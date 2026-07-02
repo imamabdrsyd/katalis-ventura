@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense, useId } from 'react';
 import { motion } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
-import { BookOpenCheck, AlertCircle, FileText, X, ChevronDown, ChevronRight, Calendar } from 'lucide-react';
+import { BookOpenCheck, AlertCircle, FileText, X, ChevronDown, ChevronRight, Calendar, ArrowDownNarrowWide, ArrowUpNarrowWide } from 'lucide-react';
 import { useGeneralLedger, type AccountTypeFilter } from '@/hooks/useGeneralLedger';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
@@ -48,6 +48,10 @@ function GeneralLedgerPageInner() {
   const [viewTransaction, setViewTransaction] = useState<Transaction | null>(null);
   const [legacyNoticeDismissed, setLegacyNoticeDismissed] = useState(false);
   const [legacyExpanded, setLegacyExpanded] = useState(false);
+  // Entries selalu dihitung ascending (perlu running balance kronologis) —
+  // 'desc' hanya membalik urutan TAMPILAN, saldo per baris tidak dihitung ulang.
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const displayedEntries = sortOrder === 'asc' ? ledger?.entries : [...(ledger?.entries ?? [])].reverse();
 
   const legacyTransactions = filteredTransactions.filter((t) => !t.is_double_entry && !t.is_multi_line);
 
@@ -67,10 +71,11 @@ function GeneralLedgerPageInner() {
     custom: t.generalLedger.custom,
   };
 
-  // Reset legacy notice when switching accounts
+  // Reset legacy notice + sort order when switching accounts
   useEffect(() => {
     setLegacyNoticeDismissed(false);
     setLegacyExpanded(false);
+    setSortOrder('asc');
   }, [selectedAccountId]);
 
   // "All Time" = custom period with no date bounds
@@ -431,6 +436,34 @@ function GeneralLedgerPageInner() {
 
               {/* Ledger Table */}
               <div className="p-4 md:p-6 pt-4">
+                {ledger.entries.length > 0 && (
+                  <div className="flex justify-end mb-2">
+                    <div className="flex bg-[#EEF0F2] dark:bg-gray-800 rounded-lg p-0.5">
+                      <button
+                        onClick={() => setSortOrder('desc')}
+                        className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                          sortOrder === 'desc'
+                            ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                        }`}
+                      >
+                        <ArrowDownNarrowWide className="w-3.5 h-3.5" />
+                        {t.generalLedger.sortNewest}
+                      </button>
+                      <button
+                        onClick={() => setSortOrder('asc')}
+                        className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                          sortOrder === 'asc'
+                            ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                        }`}
+                      >
+                        <ArrowUpNarrowWide className="w-3.5 h-3.5" />
+                        {t.generalLedger.sortOldest}
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {ledger.entries.length === 0 ? (
                   <div className="text-center py-12">
                     <FileText className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
@@ -464,17 +497,20 @@ function GeneralLedgerPageInner() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-                        {/* Opening Balance Row */}
-                        <tr className="bg-gray-50 dark:bg-gray-800/50">
-                          <td className="py-2 px-3 text-xs text-gray-400 dark:text-gray-500" colSpan={5}>
-                            {t.generalLedger.openingBalance}
-                          </td>
-                          <td className="py-2 px-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400">
-                            {formatCurrency(0)}
-                          </td>
-                        </tr>
+                        {/* Opening Balance Row — selalu di ujung kronologis paling awal
+                            (atas saat terlama-dulu, bawah saat terbaru-dulu) */}
+                        {sortOrder === 'asc' && (
+                          <tr className="bg-gray-50 dark:bg-gray-800/50">
+                            <td className="py-2 px-3 text-xs text-gray-400 dark:text-gray-500" colSpan={5}>
+                              {t.generalLedger.openingBalance}
+                            </td>
+                            <td className="py-2 px-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400">
+                              {formatCurrency(0)}
+                            </td>
+                          </tr>
+                        )}
 
-                        {ledger.entries.map((entry, idx) => (
+                        {(displayedEntries ?? []).map((entry, idx) => (
                           <tr
                             key={entry.transactionId + idx}
                             onClick={() => {
@@ -527,6 +563,17 @@ function GeneralLedgerPageInner() {
                             </td>
                           </tr>
                         ))}
+
+                        {sortOrder === 'desc' && (
+                          <tr className="bg-gray-50 dark:bg-gray-800/50">
+                            <td className="py-2 px-3 text-xs text-gray-400 dark:text-gray-500" colSpan={5}>
+                              {t.generalLedger.openingBalance}
+                            </td>
+                            <td className="py-2 px-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400">
+                              {formatCurrency(0)}
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
 
                       {/* Footer: Totals */}

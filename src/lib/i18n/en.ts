@@ -573,6 +573,8 @@ export const en: Translations = {
     openingBalance: 'Opening Period Balance',
     entries: '{n} entries',
     legacyNotice: '{n} legacy transactions are not displayed here because they don\'t use the double-entry system. These transactions are still included in financial reports.',
+    sortNewest: 'Newest',
+    sortOldest: 'Oldest',
   },
 
   trialBalance: {

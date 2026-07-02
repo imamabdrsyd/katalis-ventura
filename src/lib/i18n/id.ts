@@ -577,6 +577,8 @@ export const id: Translations = {
     openingBalance: 'Saldo Awal Periode',
     entries: '{n} entri',
     legacyNotice: '{n} transaksi lama tidak ditampilkan di sini karena tidak menggunakan sistem double-entry. Transaksi tersebut tetap dihitung di laporan keuangan.',
+    sortNewest: 'Terbaru',
+    sortOldest: 'Terlama',
   },
 
   trialBalance: {
