@@ -259,23 +259,9 @@ export function resolveQuickTransaction(
 /**
  * Filter accounts suitable for the quick-add "Kategori" dropdown.
  * Only shows sub-accounts (with parent_account_id), excluding main parent accounts.
- * Excludes Cash (1100) and Bank (1200) since they are used as the automatic counter-account.
+ * Excludes Cash/Bank (auto counter-account) dan Hutang Dividen (hanya via tombol "Bayar Dividen").
+ * Akun piutang/talangan tetap ditampilkan.
  */
-/**
- * Returns true if the account is a receivable/advance that should only be used
- * via Full Double-Entry or Multi-line Journal mode, never Quick Transaction.
- *
- * Matches:
- * - account_name containing piutang, receivable, talangan, or advance
- * - ASSET accounts with default_category === 'EARN' (trade receivable)
- */
-function isReceivableOrAdvanceAccount(acc: Account): boolean {
-  const name = acc.account_name.toLowerCase();
-  if (/piutang|receivable|talangan|advance/i.test(name)) return true;
-  if (acc.account_type === 'ASSET' && acc.default_category === 'EARN') return true;
-  return false;
-}
-
 export function getQuickAddAccounts(accounts: Account[]): Account[] {
   // Find the default cash/bank account to exclude it
   const defaultCash = findDefaultCashAccount(accounts);
@@ -288,8 +274,6 @@ export function getQuickAddAccounts(accounts: Account[]): Account[] {
     // Also exclude every other cash-equivalent ASSET — semuanya berperan sebagai
     // counter-account potensial; user transfer antar-kas pakai Full Double-Entry.
     if (isCashEquivalent(acc)) return false;
-    // Exclude receivable/advance accounts — must use Full Double-Entry or Multi-line Journal
-    if (isReceivableOrAdvanceAccount(acc)) return false;
     // Exclude Hutang Dividen — hanya boleh dipakai lewat tombol "Bayar Dividen"
     // di TransactionDetailModal, bukan di-pilih langsung sebagai kategori.
     if (acc.is_dividend_payable) return false;

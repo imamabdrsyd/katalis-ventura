@@ -763,7 +763,7 @@ export function TransactionList({
                 </td>
               )}
               <td className="py-3 px-2 md:py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                {onEnterSelectMode ? (
+                {onEnterSelectMode && !selectMode ? (
                   <>
                     <span className="group-hover/row:hidden">{rowOffset + index + 1}</span>
                     <button
