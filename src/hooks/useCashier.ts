@@ -142,6 +142,7 @@ export function useCashier({ businessId, userId, accounts }: CheckoutContext) {
         name,
         description: `Penjualan POS — ${itemsLabel}`,
         status: 'posted',
+        sales_channel: 'offline',
         meta: {
           source: 'pos_cashier',
           payment_method: paymentMethod,

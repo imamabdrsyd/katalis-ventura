@@ -50,28 +50,10 @@ export async function getBookingsForRange(
   return data as Booking[];
 }
 
-/** Ambil semua booking mendatang (check_out >= hari ini) — dipakai fitur AI availability & KPI. */
-export async function getUpcomingBookings(
-  businessId: string,
-  fromDate: string
-): Promise<Booking[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('bookings')
-    .select(SELECT_WITH_RELATIONS)
-    .eq('business_id', businessId)
-    .is('deleted_at', null)
-    .neq('status', 'cancelled')
-    .gte('check_out', fromDate)
-    .order('check_in', { ascending: true });
-
-  if (error) throw new Error(error.message);
-  return data as Booking[];
-}
-
 /**
- * Hitung transaksi EARN "stay" yang belum tertaut ke booking (punya meta.nights,
- * belum punya meta.booking_id, bukan settlement) — untuk banner "Tarik ke kalender".
+ * Hitung transaksi EARN "stay" yang belum tertaut ke booking — untuk banner
+ * "Tarik ke kalender". Kriteria disamakan dengan `reconcileStayTransactions`:
+ * punya meta.nights ATAU meta.check_in, belum punya meta.booking_id, bukan settlement.
  */
 export async function countUnlinkedStayTransactions(businessId: string): Promise<number> {
   const supabase = createClient();
@@ -81,9 +63,10 @@ export async function countUnlinkedStayTransactions(businessId: string): Promise
     .eq('business_id', businessId)
     .eq('category', 'EARN')
     .is('deleted_at', null)
-    .not('meta->nights', 'is', null)
+    .or('meta->nights.not.is.null,meta->check_in.not.is.null')
     .is('meta->booking_id', null)
-    .is('meta->settlement_of_transaction_id', null);
+    .is('meta->settlement_of_transaction_id', null)
+    .is('meta->settlement_amount', null);
 
   if (error) throw new Error(error.message);
   return count ?? 0;

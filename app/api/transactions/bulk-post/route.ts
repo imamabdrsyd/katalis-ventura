@@ -45,7 +45,11 @@ export async function POST(request: NextRequest) {
     const postableIds = txns
       .filter((t) => t.status === 'draft' && !t.deleted_at && isPostableDraft(t))
       .map((t) => t.id);
-    const skipped = parsed.data.ids.length - postableIds.length;
+    // skipped = hanya draft yang belum lengkap (sesuai label toast di client) —
+    // id yang tidak ketemu / bukan draft / terhapus tidak ikut dihitung.
+    const skipped = txns.filter(
+      (t) => t.status === 'draft' && !t.deleted_at && !isPostableDraft(t)
+    ).length;
 
     if (postableIds.length === 0) {
       return badRequest(

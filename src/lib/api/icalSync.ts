@@ -20,6 +20,27 @@ export interface IcalSyncResult {
   errors: string[];
 }
 
+/**
+ * Guard SSRF ringan untuk URL feed yang diisi user lalu di-fetch server-side:
+ * wajib https, tolak host lokal/privat yang jelas (loopback, RFC1918, link-local,
+ * .local/.internal, IP literal IPv6). Feed OTA resmi selalu https + domain publik.
+ */
+export function isSafeFeedUrl(raw: string): boolean {
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== 'https:') return false;
+  const host = u.hostname.toLowerCase();
+  if (host === 'localhost' || host.endsWith('.local') || host.endsWith('.internal')) return false;
+  if (/^(127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(host)) return false;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
+  if (host.includes(':') || host.startsWith('[')) return false; // IP literal IPv6
+  return true;
+}
+
 export async function syncBusinessIcalFeeds(
   admin: SupabaseClient,
   businessId: string
@@ -42,6 +63,11 @@ export async function syncBusinessIcalFeeds(
     const url = (unit.ical_import_url as string | null)?.trim();
     if (!url) continue;
     result.units += 1;
+
+    if (!isSafeFeedUrl(url)) {
+      result.errors.push(`${unit.name}: URL feed tidak valid (wajib https & bukan alamat internal)`);
+      continue;
+    }
 
     let text: string;
     try {

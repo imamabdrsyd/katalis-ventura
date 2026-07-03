@@ -148,6 +148,26 @@ async function summarizeMessages(
 }
 
 /**
+ * Hapus semua memori GCP milik satu sesi (ringkasan sesi + embedding-nya).
+ * Dipanggil saat user menghapus riwayat sesi — tanpa ini, percakapan yang sudah
+ * "dihapus" masih bisa muncul lagi lewat tool recall_memory (bug privasi).
+ * Kegagalan dilempar; pemanggil (deleteSession) memperlakukannya non-fatal + log.
+ */
+export async function deleteSessionMemories(
+  businessId: string,
+  userId: string,
+  sessionId: string,
+): Promise<void> {
+  if (sessionId === 'manual-memory') return; // Vault tidak ikut terhapus
+  await gcpSql`
+    DELETE FROM agent_memories
+    WHERE business_id = ${businessId}
+      AND user_id = ${userId}
+      AND session_id = ${sessionId}
+  `;
+}
+
+/**
  * Ingest ringkasan sesi chat. Satu baris ringkasan per sesi, di-replace saat sesi
  * tumbuh ≥4 pesan sejak ringkasan terakhir (debounce agar tidak summarize tiap save).
  * Best-effort: kegagalan tidak dilempar.
