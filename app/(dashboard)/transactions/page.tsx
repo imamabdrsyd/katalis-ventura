@@ -699,7 +699,7 @@ function TransactionsPageInner() {
                   <button
                     onClick={handleBulkPost}
                     disabled={saving}
-                    className="btn-secondary flex items-center gap-1.5"
+                    className="btn-primary-glow flex items-center gap-1.5"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     {t.transactions.posting}
