@@ -210,6 +210,7 @@ export const en: Translations = {
     difference: 'Difference:',
     addTransaction: 'Add Transaction',
     editTransaction: 'Edit Transaction',
+    duplicateTransaction: 'Duplicate Transaction',
     createCOGSEntry: 'Create COGS Entry',
     moneyIn: 'Money In',
     moneyOut: 'Money Out',
@@ -972,6 +973,7 @@ export const en: Translations = {
     postBtn: 'Post',
     editBtn: 'Edit',
     deleteBtn: 'Delete',
+    duplicateBtn: 'Duplicate',
   },
   businessConfig: {
     tabMembers: 'Members',

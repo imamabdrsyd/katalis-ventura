@@ -210,6 +210,7 @@ export const id: Translations = {
     difference: 'Selisih:',
     addTransaction: 'Tambah Transaksi',
     editTransaction: 'Edit Transaksi',
+    duplicateTransaction: 'Duplikat Transaksi',
     createCOGSEntry: 'Buat Entry COGS',
     moneyIn: 'Uang Masuk',
     moneyOut: 'Uang Keluar',
@@ -976,6 +977,7 @@ export const id: Translations = {
     postBtn: 'Posting',
     editBtn: 'Edit',
     deleteBtn: 'Hapus',
+    duplicateBtn: 'Duplikat',
   },
   businessConfig: {
     tabMembers: 'Anggota',

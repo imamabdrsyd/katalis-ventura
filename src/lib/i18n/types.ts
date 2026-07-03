@@ -216,6 +216,7 @@ export interface Translations {
     difference: string;
     addTransaction: string;
     editTransaction: string;
+    duplicateTransaction: string;
     createCOGSEntry: string;
     moneyIn: string;
     moneyOut: string;
@@ -1020,6 +1021,7 @@ export interface Translations {
     postBtn: string;
     editBtn: string;
     deleteBtn: string;
+    duplicateBtn: string;
   };
 
   // Business Config Page (tabs)

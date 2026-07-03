@@ -27,7 +27,7 @@ import {
 import { useInvoiceFromTransactions } from '@/hooks/useInvoiceFromTransactions';
 import { CreateInvoiceFromTransactionsModal } from '@/components/invoices/CreateInvoiceFromTransactionsModal';
 import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
-import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, RotateCcw, ZoomIn, ZoomOut, Receipt, CirclePlus, ChevronRight, Maximize2, Loader2 } from 'lucide-react';
+import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, RotateCcw, ZoomIn, ZoomOut, Receipt, CirclePlus, ChevronRight, Maximize2, Loader2, Copy } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { updateTransaction } from '@/lib/api/transactions';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
@@ -40,6 +40,7 @@ interface TransactionDetailModalProps {
   onClose: () => void;
   onEdit?: (transaction: Transaction) => void;
   onDelete?: (transaction: Transaction) => void;
+  onDuplicate?: (transaction: Transaction) => void;
   onPost?: (id: string) => void;
   accounts?: Account[];
   allTransactions?: Transaction[];
@@ -99,6 +100,7 @@ export function TransactionDetailModal({
   onClose,
   onEdit,
   onDelete,
+  onDuplicate,
   onPost,
   accounts,
   allTransactions,
@@ -378,7 +380,7 @@ export function TransactionDetailModal({
   if (!transaction) return null;
 
   const isDraft = transaction.status === 'draft';
-  const showActions = onEdit || onDelete || (onPost && isDraft);
+  const showActions = onEdit || onDelete || onDuplicate || (onPost && isDraft);
 
   const openAttachmentPreview = (attachment: TransactionAttachment) => {
     setPreviewAttachment(attachment);
@@ -423,7 +425,22 @@ export function TransactionDetailModal({
           {t.transactionDetail.editBtn}
         </button>
       )}
-      {onEdit && onDelete && (
+      {onEdit && onDuplicate && (
+        <span className="text-gray-300 dark:text-gray-600">·</span>
+      )}
+      {onDuplicate && (
+        <button
+          onClick={() => {
+            onClose();
+            setTimeout(() => onDuplicate(transaction), 200);
+          }}
+          className="flex items-center gap-1.5 px-2 py-1 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 font-medium transition-colors"
+        >
+          <Copy className="w-3.5 h-3.5" />
+          {t.transactionDetail.duplicateBtn}
+        </button>
+      )}
+      {(onEdit || onDuplicate) && onDelete && (
         <span className="text-gray-300 dark:text-gray-600">·</span>
       )}
       {onDelete && (

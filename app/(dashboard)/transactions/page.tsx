@@ -13,7 +13,7 @@ import { DeleteConfirmModal } from '@/components/transactions/DeleteConfirmModal
 import TransactionImportModal from '@/components/transactions/TransactionImportModal';
 import { CreateInvoiceFromTransactionsModal } from '@/components/invoices/CreateInvoiceFromTransactionsModal';
 import { useInvoiceFromTransactions } from '@/hooks/useInvoiceFromTransactions';
-import type { TransactionCategory } from '@/types';
+import type { TransactionCategory, Transaction } from '@/types';
 import { QuickTransactionForm } from '@/components/transactions/QuickTransactionForm';
 import { RecurringList } from '@/components/transactions/RecurringList';
 import { useRecurringTransactions } from '@/hooks/useRecurringTransactions';
@@ -144,6 +144,53 @@ function TransactionsPageInner() {
   // Multi-line prefill dari OCR scan — kalau ada, modal add render MultiLineJournalForm
   // bukan TransactionForm. Di-reset ke null saat modal ditutup.
   const [multiLineOcrPrefill, setMultiLineOcrPrefill] = useState<MultiLineFormData | null>(null);
+
+  // true saat multiLineOcrPrefill/followUpPrefill datang dari aksi "Duplikat" di detail modal,
+  // supaya judul modal Tambah bisa dibedakan dari alur OCR/COGS follow-up.
+  const [isDuplicateMode, setIsDuplicateMode] = useState(false);
+
+  // Duplikat transaksi: salin semua field transaksi (ID baru, tanggal default hari ini)
+  // lalu buka modal Tambah dengan form yang sesuai (single/double-entry atau multi-line).
+  const handleDuplicateTransaction = useCallback((transaction: Transaction) => {
+    const today = new Date().toISOString().split('T')[0];
+    setIsDuplicateMode(true);
+
+    if (transaction.is_multi_line && transaction.journal_lines && transaction.journal_lines.length > 0) {
+      setDetailTransaction(null);
+      setMultiLineOcrPrefill({
+        date: today,
+        category: transaction.category,
+        name: transaction.name,
+        description: transaction.description,
+        notes: transaction.notes ?? undefined,
+        sales_channel: transaction.sales_channel ?? null,
+        attachments: [],
+        journal_lines: transaction.journal_lines.map((l) => ({
+          account_id: l.account_id,
+          debit_amount: l.debit_amount,
+          credit_amount: l.credit_amount,
+          description: l.description ?? '',
+          sort_order: l.sort_order ?? 0,
+        })),
+      });
+      setShowAddModal(true);
+      return;
+    }
+
+    handleCreateFollowUp({
+      date: today,
+      category: transaction.category,
+      name: transaction.name,
+      description: transaction.description,
+      amount: transaction.amount,
+      account: transaction.account,
+      debit_account_id: transaction.debit_account_id,
+      credit_account_id: transaction.credit_account_id,
+      is_double_entry: transaction.is_double_entry,
+      contact_id: transaction.contact_id,
+      sales_channel: transaction.sales_channel ?? null,
+    });
+  }, [handleCreateFollowUp, setDetailTransaction, setMultiLineOcrPrefill, setShowAddModal]);
 
   // Konversi transaksi double-entry → multi-line: populate dua journal_lines dari
   // debit_account / credit_account yang sudah ada, lalu switch modal ke MultiLineJournalForm.
@@ -870,8 +917,9 @@ function TransactionsPageInner() {
       {/* Add Modal */}
       <Modal
         isOpen={showAddModal}
-        onClose={() => { setShowAddModal(false); setTransactionMode(null); setFollowUpPrefill(null); setMultiLineOcrPrefill(null); setOcrPreviewResult(null); setPendingOcrApply(null); }}
+        onClose={() => { setShowAddModal(false); setTransactionMode(null); setFollowUpPrefill(null); setMultiLineOcrPrefill(null); setOcrPreviewResult(null); setPendingOcrApply(null); setIsDuplicateMode(false); }}
         title={
+          isDuplicateMode ? t.transactions.duplicateTransaction :
           multiLineOcrPrefill ? 'Jurnal Multi-Item (dari Struk)' :
           followUpPrefill ? t.transactions.createCOGSEntry :
           transactionMode === 'in' ? t.transactions.moneyIn :
@@ -887,8 +935,9 @@ function TransactionsPageInner() {
             onSubmit={async (data) => {
               await handleAddMultiLineTransaction(data);
               setMultiLineOcrPrefill(null);
+              setIsDuplicateMode(false);
             }}
-            onCancel={() => { setShowAddModal(false); setTransactionMode(null); setMultiLineOcrPrefill(null); }}
+            onCancel={() => { setShowAddModal(false); setTransactionMode(null); setMultiLineOcrPrefill(null); setIsDuplicateMode(false); }}
             loading={saving}
             businessId={businessId || undefined}
             submitLabel="Simpan Jurnal"
@@ -900,8 +949,9 @@ function TransactionsPageInner() {
             onSubmit={async (data) => {
               await handleAddTransaction(data);
               setFollowUpPrefill(null);
+              setIsDuplicateMode(false);
             }}
-            onCancel={() => { setShowAddModal(false); setTransactionMode(null); setFollowUpPrefill(null); }}
+            onCancel={() => { setShowAddModal(false); setTransactionMode(null); setFollowUpPrefill(null); setIsDuplicateMode(false); }}
             loading={saving}
             businessId={businessId || undefined}
             onOcrResult={setOcrPreviewResult}
@@ -960,6 +1010,7 @@ function TransactionsPageInner() {
         onClose={handleCloseDetailModal}
         onEdit={canManageTransactions ? setEditTransaction : undefined}
         onDelete={canManageTransactions ? setDeleteTransaction : undefined}
+        onDuplicate={canManageTransactions ? handleDuplicateTransaction : undefined}
         onPost={canManageTransactions ? handlePostTransaction : undefined}
         accounts={accounts}
         allTransactions={allTransactions}
