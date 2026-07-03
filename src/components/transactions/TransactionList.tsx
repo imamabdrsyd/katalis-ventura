@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Lock, TextSearch, Search, X, CalendarSearch } from 'lucide-react';
+import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Lock, TextSearch, Search, X, CalendarSearch, Eye } from 'lucide-react';
 import { ContactTypeIcon, CONTACT_TYPE_LABELS } from '@/components/ui/ContactTypeIcon';
 import { useLanguage } from '@/context/LanguageContext';
 import type { Transaction, TransactionCategory, Contact } from '@/types';
@@ -232,7 +232,7 @@ export function TransactionList({
   };
   const showActions = (onEdit || onDelete || onEnterSelectMode) && !selectMode;
   const allSelected = selectMode && transactions.length > 0 && transactions.every((t) => selectedIds?.has(t.id));
-  const tableColumnCount = 7 + (selectMode ? 1 : 0) + (showActions ? 1 : 0);
+  const tableColumnCount = 7 + (selectMode ? 1 : 0);
   const activeDescriptionSearch = descriptionSearch.trim();
 
   // Category filter dropdown state
@@ -261,9 +261,36 @@ export function TransactionList({
   const [showDateDropdown, setShowDateDropdown] = useState(false);
   const dateDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Context menu (klik kanan pada baris) state
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; transaction: Transaction } | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Tutup context menu saat klik di luar, Escape, scroll, atau resize
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handlePointerDown = (e: MouseEvent) => {
+      if (contextMenuRef.current?.contains(e.target as Node)) return;
+      setContextMenu(null);
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setContextMenu(null);
+    };
+    const handleClose = () => setContextMenu(null);
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('scroll', handleClose, true);
+    window.addEventListener('resize', handleClose);
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('scroll', handleClose, true);
+      window.removeEventListener('resize', handleClose);
+    };
+  }, [contextMenu]);
 
   const updateCategoryDropdownPosition = useCallback(() => {
     if (!categoryDropdownRef.current) return;
@@ -451,7 +478,6 @@ export function TransactionList({
           <col className="w-24" />
           <col className="w-32" />
           <col className="w-32" />
-          {showActions && <col className="w-28" />}
         </colgroup>
         <thead className="sticky top-0 z-10 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm">
           <tr className="border-b-2 border-gray-300 dark:border-gray-500">
@@ -669,9 +695,6 @@ export function TransactionList({
 
             <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t.transactions.tableAmount}</th>
             <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t.transactions.tableCashFlow}</th>
-            {showActions && (
-              <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t.transactions.tableAction}</th>
-            )}
           </tr>
         </thead>
         <tbody>
@@ -708,7 +731,12 @@ export function TransactionList({
               <tr
                 key={transaction.id}
                 onClick={() => selectMode ? onToggleSelect?.(transaction.id) : onRowClick?.(transaction)}
-                className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
+                onContextMenu={(e) => {
+                  if (selectMode || (!onRowClick && !onEdit && !onDelete && !onEnterSelectMode)) return;
+                  e.preventDefault();
+                  setContextMenu({ x: e.clientX, y: e.clientY, transaction });
+                }}
+                className={`group/row border-b border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
                   isNewMonth ? 'border-t-2 border-t-gray-300 dark:border-t-gray-500' : ''
                 } ${
                   selectMode
@@ -778,8 +806,10 @@ export function TransactionList({
                       || findSubjectContact(getTransactionContactName(transaction), contacts);
                     if (!rowContact) return null;
                     return (
-                      <div className="relative group">
-                        <ContactTypeIcon type={rowContact.type} sizeClassName="w-4 h-4" />
+                      <div className="relative group flex-shrink-0">
+                        <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                          <ContactTypeIcon type={rowContact.type} sizeClassName="w-3.5 h-3.5" />
+                        </div>
                         <div className="absolute left-0 bottom-full mb-1 z-50 hidden group-hover:block whitespace-nowrap">
                           <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs rounded px-2 py-1 shadow-lg">
                             Kontak tersimpan · {CONTACT_TYPE_LABELS[rowContact.type]}
@@ -815,7 +845,7 @@ export function TransactionList({
                   )}
                 </div>
               </td>
-              <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-800 dark:text-gray-200 break-words">
+              <td className="relative py-3 px-2 md:py-4 md:px-4 text-sm text-gray-800 dark:text-gray-200 break-words">
                 {(() => {
                   // Multi-line journal: surface the cash account like double-entry
                   // does. Falls back to a generic label for pure-accrual or
@@ -873,10 +903,12 @@ export function TransactionList({
                     </div>
                   );
                 })()}
-              </td>
-              {showActions && (
-                <td className="py-3 px-2 md:py-4 md:px-4">
-                  <div className="flex items-center gap-1">
+                {/* Action buttons — muncul saat baris di-hover, menimpa ujung kanan baris */}
+                {showActions && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 px-1 rounded-lg bg-gray-100 dark:bg-gray-700 opacity-0 pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto transition-opacity"
+                  >
                     {(() => {
                       const isLocked = !!closedUntilDate && transaction.date <= closedUntilDate;
                       if (isLocked) {
@@ -924,20 +956,104 @@ export function TransactionList({
                           e.stopPropagation();
                           onEnterSelectMode();
                         }}
-                        className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                         title="Pilih"
                       >
                         <ListChecks className="w-4 h-4" />
                       </button>
                     )}
                   </div>
-                </td>
-              )}
+                )}
+              </td>
               </tr>
             );
           })}
         </tbody>
       </table>
+
+      {/* Context menu klik kanan pada baris transaksi */}
+      {mounted && contextMenu && createPortal(
+        (() => {
+          const menuTx = contextMenu.transaction;
+          const isLocked = !!closedUntilDate && menuTx.date <= closedUntilDate;
+          const closeMenu = () => setContextMenu(null);
+          const itemClass = 'w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left transition-colors';
+          const disabledClass = `${itemClass} text-gray-300 dark:text-gray-600 cursor-not-allowed`;
+          return (
+            <div
+              ref={contextMenuRef}
+              style={{
+                position: 'fixed',
+                top: Math.max(8, Math.min(contextMenu.y, window.innerHeight - 200)),
+                left: Math.max(8, Math.min(contextMenu.x, window.innerWidth - 200)),
+                zIndex: 99999,
+              }}
+              className="w-48 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl"
+            >
+              {onRowClick && (
+                <button
+                  type="button"
+                  onClick={() => { closeMenu(); onRowClick(menuTx); }}
+                  className={`${itemClass} text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50`}
+                >
+                  <Eye className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                  Lihat Detail
+                </button>
+              )}
+              {onEdit && !selectMode && (
+                isLocked ? (
+                  <span className={disabledClass} title={`Periode terkunci hingga ${closedUntilDate}`}>
+                    <Pencil className="w-4 h-4" />
+                    Edit
+                    <Lock className="w-3.5 h-3.5 ml-auto text-amber-400 dark:text-amber-500" />
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { closeMenu(); onEdit(menuTx); }}
+                    className={`${itemClass} text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50`}
+                  >
+                    <Pencil className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    Edit
+                  </button>
+                )
+              )}
+              {onDelete && !selectMode && (
+                isLocked ? (
+                  <span className={disabledClass} title={`Periode terkunci hingga ${closedUntilDate}`}>
+                    <Trash2 className="w-4 h-4" />
+                    Hapus
+                    <Lock className="w-3.5 h-3.5 ml-auto text-amber-400 dark:text-amber-500" />
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { closeMenu(); onDelete(menuTx); }}
+                    className={`${itemClass} text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Hapus
+                  </button>
+                )
+              )}
+              {onEnterSelectMode && !selectMode && (
+                <>
+                  <div className="my-1.5 border-t border-gray-100 dark:border-gray-700" />
+                  <button
+                    type="button"
+                    onClick={() => { closeMenu(); onEnterSelectMode(); }}
+                    className={`${itemClass} text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50`}
+                  >
+                    <ListChecks className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    Pilih Banyak
+                  </button>
+                </>
+              )}
+            </div>
+          );
+        })(),
+        document.body
+      )}
     </div>
   );
 }
