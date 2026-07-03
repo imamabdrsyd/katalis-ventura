@@ -229,6 +229,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // If linked to a contact, verify it belongs to this business
+    if (parsed.data.contact_id) {
+      const { data: contact } = await supabase
+        .from('business_contacts')
+        .select('id, business_id')
+        .eq('id', parsed.data.contact_id)
+        .maybeSingle();
+
+      if (!contact || contact.business_id !== parsed.data.business_id) {
+        return NextResponse.json(
+          { error: 'Contact not found in this business' },
+          { status: 400 }
+        );
+      }
+    }
+
     const fxFields = normalizeCurrencyFields({
       amount: parsed.data.amount,
       original_amount: parsed.data.original_amount ?? parsed.data.amount,

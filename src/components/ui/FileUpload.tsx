@@ -26,9 +26,16 @@ interface FileUploadProps {
    * tidak ada file yang pernah naik ke Cloudinary. Dipakai form transaksi.
    */
   deferUpload?: boolean;
+  /**
+   * Saat true: menghapus lampiran yang SUDAH terupload hanya membuangnya dari
+   * list — file Cloudinary tidak langsung di-destroy. Pemilik form wajib
+   * menghapus file yang dibuang saat save (diff lama vs baru), sehingga tombol
+   * Batal tidak meninggalkan record yang menunjuk file yang telanjur hancur.
+   */
+  deferDelete?: boolean;
 }
 
-export function FileUpload({ businessId, value, onChange, disabled = false, deferUpload = false }: FileUploadProps) {
+export function FileUpload({ businessId, value, onChange, disabled = false, deferUpload = false, deferDelete = false }: FileUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -112,7 +119,7 @@ export function FileUpload({ businessId, value, onChange, disabled = false, defe
       if (att.url.startsWith('blob:')) URL.revokeObjectURL(att.url);
       onChange(value.filter((a) => a !== att));
     } else {
-      deleteAttachment(att.path, businessId, att.resource_type ?? 'image');
+      if (!deferDelete) deleteAttachment(att.path, businessId, att.resource_type ?? 'image');
       onChange(value.filter((a) => a.path !== att.path));
     }
     setError(null);

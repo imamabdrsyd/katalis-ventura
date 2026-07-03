@@ -54,6 +54,9 @@ export interface TransactionFormData {
   credit_account_id?: string;
   is_double_entry?: boolean;
 
+  // Link ke business_contacts — diisi saat user memilih kontak dari autocomplete
+  contact_id?: string | null;
+
   // Sales channel (untuk EARN transactions)
   sales_channel?: SalesChannel | null;
 
@@ -194,6 +197,7 @@ export function TransactionForm({
     debit_account_id: transaction?.debit_account_id || initialValues?.debit_account_id,
     credit_account_id: transaction?.credit_account_id || initialValues?.credit_account_id,
     is_double_entry: transaction?.is_double_entry || initialValues?.is_double_entry || false,
+    contact_id: transaction?.contact_id ?? initialValues?.contact_id ?? null,
     sales_channel: transaction?.sales_channel || initialValues?.sales_channel || null,
     meta: transaction?.meta || initialValues?.meta || null,
   });
@@ -941,7 +945,8 @@ export function TransactionForm({
         <ContactAutocomplete
           businessId={businessId}
           value={formData.name}
-          onChange={(val) => setFormData((prev) => ({ ...prev, name: val }))}
+          onChange={(val) => setFormData((prev) => ({ ...prev, name: val, contact_id: null }))}
+          onSelectContact={(contact) => setFormData((prev) => ({ ...prev, contact_id: contact.id }))}
           placeholder={mode === 'in' ? 'Nama customer' : mode === 'out' ? 'Nama vendor/penerima' : 'Customer atau vendor terkait'}
           required
           onSaveAsContact={async (name) => {
@@ -952,7 +957,8 @@ export function TransactionForm({
                 : mode === 'out'
                   ? 'vendor'
                   : resolveContactTypeFromCategory(formData.category);
-              await saveContactFromTransaction(businessId, name, contactType, user.id);
+              const result = await saveContactFromTransaction(businessId, name, contactType, user.id);
+              setFormData((prev) => ({ ...prev, contact_id: result.contact.id }));
             } catch (err) {
               console.error('Failed to save contact:', err);
             }

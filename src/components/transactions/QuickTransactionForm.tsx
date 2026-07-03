@@ -107,6 +107,8 @@ export function QuickTransactionForm({
   const [fxRate, setFxRate] = useState(1);
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [name, setName] = useState('');
+  // Link ke business_contacts — terisi saat user memilih kontak dari autocomplete
+  const [contactId, setContactId] = useState<string | null>(null);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
   const [activeSupplementaryTab, setActiveSupplementaryTab] = useState<SupplementaryTab | null>(null);
@@ -527,6 +529,7 @@ export function QuickTransactionForm({
 
     const formData = result as TransactionFormData;
     formData.meta = buildMeta(finalAttachments);
+    formData.contact_id = contactId;
     applyCurrencyFields(formData, baseAmount);
 
     await onSubmit(formData);
@@ -578,6 +581,7 @@ export function QuickTransactionForm({
     if (finalAttachments === null) return;
 
     formData.meta = buildMeta(finalAttachments);
+    formData.contact_id = contactId;
     applyCurrencyFields(formData, baseAmount);
 
     await onSaveDraft(formData);
@@ -915,17 +919,19 @@ export function QuickTransactionForm({
           <ContactAutocomplete
             businessId={businessId}
             value={name}
-            onChange={setName}
+            onChange={(val) => { setName(val); setContactId(null); }}
+            onSelectContact={(contact) => setContactId(contact.id)}
             placeholder="Search contact..."
             onSaveAsContact={async (contactName) => {
               if (!businessId || !user) return;
               try {
-                await saveContactFromTransaction(
+                const result = await saveContactFromTransaction(
                   businessId,
                   contactName,
                   resolveContactTypeFromFlow(flowDirection),
                   user.id
                 );
+                setContactId(result.contact.id);
               } catch (err) {
                 console.error('Failed to save contact:', err);
               }

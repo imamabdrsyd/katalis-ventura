@@ -3,17 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { searchContacts, getContacts } from '@/lib/api/contacts';
-import { User, Building, Users2, Handshake, UserCog, TrendingUp, UserPlus, BookUser } from 'lucide-react';
+import { UserPlus, BookUser } from 'lucide-react';
+import { ContactTypeIcon } from '@/components/ui/ContactTypeIcon';
 import type { Contact, ContactType } from '@/types';
-
-const TYPE_ICON: Record<ContactType, React.ReactNode> = {
-  customer: <User className="w-3.5 h-3.5 text-green-600" />,
-  vendor: <Building className="w-3.5 h-3.5 text-blue-600" />,
-  partner: <Handshake className="w-3.5 h-3.5 text-indigo-600" />,
-  staff: <UserCog className="w-3.5 h-3.5 text-orange-600" />,
-  investor: <TrendingUp className="w-3.5 h-3.5 text-indigo-600" />,
-  other: <Users2 className="w-3.5 h-3.5 text-gray-400" />,
-};
 
 const TYPE_LABEL: Record<ContactType, string> = {
   customer: 'Customer',
@@ -159,9 +151,10 @@ export function ContactAutocomplete({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!showDropdown || suggestions.length === 0) return;
-
+    // totalItems ikut menghitung opsi "Simpan sebagai kontak" — saat suggestion
+    // kosong pun opsi itu tetap harus bisa dinavigasi keyboard.
     const totalItems = suggestions.length + (showSaveOption ? 1 : 0);
+    if (!showDropdown || totalItems === 0) return;
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -249,7 +242,7 @@ export function ContactAutocomplete({
                   }`}
                 >
                   <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                    {TYPE_ICON[contact.type]}
+                    <ContactTypeIcon type={contact.type} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{contact.name}</p>
@@ -276,7 +269,7 @@ export function ContactAutocomplete({
                   } ${idx === 0 ? 'rounded-t-xl' : ''} ${idx === suggestions.length - 1 && !showSaveOption ? 'rounded-b-xl' : ''}`}
                 >
                   <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                    {TYPE_ICON[contact.type]}
+                    <ContactTypeIcon type={contact.type} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{contact.name}</p>

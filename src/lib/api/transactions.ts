@@ -22,6 +22,7 @@ export interface TransactionInsert {
   debit_account_id?: string;
   credit_account_id?: string;
   is_double_entry?: boolean;
+  contact_id?: string | null;
   notes?: string;
   meta?: TransactionMeta | null;
 
@@ -67,6 +68,7 @@ export interface TransactionUpdate {
   debit_account_id?: string;
   credit_account_id?: string;
   is_double_entry?: boolean;
+  contact_id?: string | null;
   notes?: string;
   meta?: TransactionMeta | null;
 }

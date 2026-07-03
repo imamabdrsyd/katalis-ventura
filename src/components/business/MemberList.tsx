@@ -87,7 +87,7 @@ function KebabMenu({
         : 'partner';
 
       const result = await saveContactFromTransaction(businessId, name, contactType, user.id);
-      if (result === null) {
+      if (!result.created) {
         onContactResult(`${name} sudah ada di daftar kontak`);
       } else {
         onContactResult(`${name} berhasil ditambahkan ke kontak`);

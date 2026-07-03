@@ -124,6 +124,22 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
     }
 
+    // If linked to a contact, verify it belongs to this business
+    if (parsed.data.contact_id) {
+      const { data: contact } = await supabase
+        .from('business_contacts')
+        .select('id, business_id')
+        .eq('id', parsed.data.contact_id)
+        .maybeSingle();
+
+      if (!contact || contact.business_id !== existing.business_id) {
+        return NextResponse.json(
+          { error: 'Contact not found in this business' },
+          { status: 400 }
+        );
+      }
+    }
+
     // If posting, set posted_at timestamp
     const updateData = { ...parsed.data, updated_by: user.id } as Record<string, unknown>;
     const hasCurrencyUpdate = [

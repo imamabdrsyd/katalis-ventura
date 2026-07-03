@@ -23,6 +23,15 @@ export interface ContactUpdate {
   id_card_attachments?: TransactionAttachment[];
 }
 
+/**
+ * Escape karakter wildcard ILIKE (%, _, \) agar nama kontak dipakai sebagai
+ * literal, bukan pattern. Tanpa ini, kontak bernama "Promo 50%" akan match
+ * nama lain yang berawalan "Promo 50".
+ */
+function escapeIlike(value: string): string {
+  return value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+}
+
 export function resolveContactTypeFromCategory(category: TransactionCategory): ContactType {
   if (category === 'EARN') return 'customer';
   if (category === 'FIN') return 'partner';
@@ -55,7 +64,7 @@ export async function searchContacts(businessId: string, query: string): Promise
     .from('business_contacts')
     .select('*')
     .eq('business_id', businessId)
-    .ilike('name', `%${query}%`)
+    .ilike('name', `%${escapeIlike(query)}%`)
     .order('name', { ascending: true })
     .limit(10);
 
@@ -74,25 +83,6 @@ export async function createContact(contact: ContactInsert): Promise<Contact> {
 
   if (error) throw new Error(error.message);
   return data as Contact;
-}
-
-/**
- * Sync nama kontak ke transactions.name secara client-side.
- * Dipanggil setelah updateContact jika nama berubah — belt-and-suspenders
- * selain DB trigger 043_sync_contact_rename_to_transactions.
- */
-export async function syncContactNameInTransactions(
-  businessId: string,
-  oldName: string,
-  newName: string
-): Promise<void> {
-  const supabase = createClient();
-  await supabase
-    .from('transactions')
-    .update({ name: newName })
-    .eq('business_id', businessId)
-    .ilike('name', oldName)
-    .is('deleted_at', null);
 }
 
 /** Update kontak */
@@ -132,7 +122,7 @@ export async function getContactTransactions(businessId: string, contactName: st
       journal_lines(*, account:accounts(*))
     `)
     .eq('business_id', businessId)
-    .ilike('name', contactName)
+    .ilike('name', escapeIlike(contactName))
     .is('deleted_at', null)
     .order('date', { ascending: false })
     .limit(50);
@@ -141,24 +131,23 @@ export async function getContactTransactions(businessId: string, contactName: st
   return data as Transaction[];
 }
 
-/** Simpan nama dari transaksi sebagai kontak (jika belum ada) */
+export interface SaveContactResult {
+  contact: Contact;
+  created: boolean;
+}
+
+/**
+ * Simpan nama dari transaksi sebagai kontak. Insert-first: duplikat (termasuk
+ * race dua panggilan bersamaan) ditangkap lewat unique violation, lalu kontak
+ * yang sudah ada di-fetch dan dikembalikan dengan created=false.
+ */
 export async function saveContactFromTransaction(
   businessId: string,
   name: string,
   type: ContactType,
   userId: string
-): Promise<Contact | null> {
+): Promise<SaveContactResult> {
   const supabase = createClient();
-
-  // Cek apakah sudah ada kontak dengan nama ini
-  const { data: existing } = await supabase
-    .from('business_contacts')
-    .select('id')
-    .eq('business_id', businessId)
-    .ilike('name', name)
-    .limit(1);
-
-  if (existing && existing.length > 0) return null; // Sudah ada
 
   const { data, error } = await supabase
     .from('business_contacts')
@@ -171,6 +160,20 @@ export async function saveContactFromTransaction(
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
-  return data as Contact;
+  if (!error) return { contact: data as Contact, created: true };
+
+  // 23505 = unique violation pada idx_business_contacts_unique_name — kontak sudah ada
+  if (error.code === '23505') {
+    const { data: existing } = await supabase
+      .from('business_contacts')
+      .select('*')
+      .eq('business_id', businessId)
+      .ilike('name', escapeIlike(name))
+      .limit(1)
+      .single();
+
+    if (existing) return { contact: existing as Contact, created: false };
+  }
+
+  throw new Error(error.message);
 }

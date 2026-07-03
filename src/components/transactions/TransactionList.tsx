@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Lock, Contact as ContactIcon, TextSearch, Search, X, CalendarSearch } from 'lucide-react';
+import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Lock, TextSearch, Search, X, CalendarSearch } from 'lucide-react';
+import { ContactTypeIcon, CONTACT_TYPE_LABELS } from '@/components/ui/ContactTypeIcon';
 import { useLanguage } from '@/context/LanguageContext';
 import type { Transaction, TransactionCategory, Contact } from '@/types';
 import { SalesChannelBadge } from './SalesChannelBadge';
@@ -180,9 +181,9 @@ function getAccountDisplay(transaction: Transaction): { accountName: string; isI
   }
 }
 
-// Helper function to check if subject is a contact
-function isSubjectContact(subject: string, contacts: Contact[]): boolean {
-  return contacts.some(c => c.name.toLowerCase() === subject.toLowerCase());
+// Helper function to find the saved contact matching a subject name
+function findSubjectContact(subject: string, contacts: Contact[]): Contact | undefined {
+  return contacts.find(c => c.name.toLowerCase() === subject.toLowerCase());
 }
 
 // Helper function to get transaction contact name for contact matching
@@ -548,7 +549,7 @@ export function TransactionList({
                             onClick={() => { onContactFilterChange?.(c.name); setShowContactDropdown(false); setContactSearch(''); }}
                             className={`w-full text-left px-3 py-2 text-sm normal-case hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 ${contactFilter === c.name ? 'text-gray-900 dark:text-gray-100 font-semibold' : 'text-gray-700 dark:text-gray-300'}`}
                           >
-                            <ContactIcon className="w-3.5 h-3.5 flex-shrink-0 text-gray-400 dark:text-gray-500" />
+                            <ContactTypeIcon type={c.type} />
                             <span className="truncate">{c.name}</span>
                           </button>
                         ))}
@@ -772,16 +773,21 @@ export function TransactionList({
               </td>
               <td className="py-3 px-2 md:py-4 text-sm font-medium text-gray-800 dark:text-gray-200 break-words">
                 <div className="flex items-center gap-2">
-                  {isSubjectContact(getTransactionContactName(transaction), contacts) && (
-                    <div className="relative group">
-                      <ContactIcon className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-                      <div className="absolute left-0 bottom-full mb-1 z-50 hidden group-hover:block whitespace-nowrap">
-                        <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs rounded px-2 py-1 shadow-lg">
-                          Kontak tersimpan
+                  {(() => {
+                    const rowContact = (transaction.contact_id && contacts.find((c) => c.id === transaction.contact_id))
+                      || findSubjectContact(getTransactionContactName(transaction), contacts);
+                    if (!rowContact) return null;
+                    return (
+                      <div className="relative group">
+                        <ContactTypeIcon type={rowContact.type} sizeClassName="w-4 h-4" />
+                        <div className="absolute left-0 bottom-full mb-1 z-50 hidden group-hover:block whitespace-nowrap">
+                          <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs rounded px-2 py-1 shadow-lg">
+                            Kontak tersimpan · {CONTACT_TYPE_LABELS[rowContact.type]}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                   <span>{getRowSubject(transaction)}</span>
                 </div>
               </td>

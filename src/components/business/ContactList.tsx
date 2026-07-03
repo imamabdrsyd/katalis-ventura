@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Contact, Phone, Mail, Plus, Search, Pencil, Trash2, User, Building, Users2, Handshake, UserCog, TrendingUp, ArrowDownLeft, ArrowUpRight, Loader2, X } from 'lucide-react';
+import { Contact, Phone, Mail, Plus, Search, Pencil, Trash2, User, Building, Users2, Handshake, UserCog, TrendingUp, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Loader2, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { FileUpload } from '@/components/ui/FileUpload';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
@@ -10,7 +10,7 @@ import * as contactsApi from '@/lib/api/contacts';
 import { formatCurrency, formatDate, whatsappUrl } from '@/lib/utils';
 import { CATEGORY_LABELS } from '@/lib/calculations';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
-import { isImageType } from '@/lib/storage/attachments';
+import { isImageType, isPendingAttachment, uploadPendingAttachments, deleteAttachment } from '@/lib/storage/attachments';
 import { useDeliverableAttachmentUrl, triggerAttachmentDownload } from '@/lib/storage/signedUrl';
 import type { Contact as ContactType, ContactType as ContactTypeEnum, Transaction, TransactionAttachment } from '@/types';
 
@@ -156,6 +156,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
   const contactSearchParam = searchParams.get('search') ?? '';
   const [contacts, setContacts] = useState<ContactType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<ContactTypeEnum | 'all'>('all');
 
@@ -169,7 +170,6 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
   const [editingContact, setEditingContact] = useState<ContactType | null>(null);
   const [formData, setFormData] = useState<ContactFormData>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
-  const [savingStep, setSavingStep] = useState<'idle' | 'saving' | 'syncing'>('idle');
   const [formError, setFormError] = useState('');
 
   // Delete state
@@ -179,8 +179,8 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
   // Transaction detail modal
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
 
-  // Keyboard navigation
-  const [, setFocusedIndex] = useState<number>(-1);
+  // Keyboard navigation — posisi fokus disimpan di ref (tidak pernah dirender)
+  const focusedIndexRef = useRef<number>(-1);
   const listRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -199,11 +199,13 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
 
   const fetchContacts = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const data = await contactsApi.getContacts(businessId);
       setContacts(data);
     } catch (err) {
       console.error('Failed to fetch contacts:', err);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -276,7 +278,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
   useEffect(() => {
     if (!selectedContact) return;
     const idx = filteredContacts.findIndex(c => c.id === selectedContact.id);
-    setFocusedIndex(idx);
+    focusedIndexRef.current = idx;
     if (idx >= 0) {
       // rAF: tunggu list ter-render (mis. setelah search/filter di-reset deep-link).
       requestAnimationFrame(() => {
@@ -287,18 +289,16 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
 
   const navigateList = useCallback((direction: 'up' | 'down') => {
     if (filteredContacts.length === 0) return;
-    setFocusedIndex(prev => {
-      const next = direction === 'down'
-        ? Math.min(prev + 1, filteredContacts.length - 1)
-        : Math.max(prev - 1, 0);
-      const contact = filteredContacts[next];
-      if (contact) handleSelectContact(contact);
-      // Scroll item into view
-      setTimeout(() => {
-        itemRefs.current[next]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      }, 0);
-      return next;
-    });
+    const next = direction === 'down'
+      ? Math.min(focusedIndexRef.current + 1, filteredContacts.length - 1)
+      : Math.max(focusedIndexRef.current - 1, 0);
+    focusedIndexRef.current = next;
+    const contact = filteredContacts[next];
+    if (contact) handleSelectContact(contact);
+    // Scroll item into view
+    setTimeout(() => {
+      itemRefs.current[next]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, 0);
   }, [filteredContacts]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectContact = async (contact: ContactType) => {
@@ -340,14 +340,21 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
     }
 
     setSaving(true);
-    setSavingStep('saving');
     setFormError('');
     try {
+      // Upload file KTP yang masih pending (defer mode) sebelum persist
+      let finalAttachments = formData.id_card_attachments;
+      if (finalAttachments.some(isPendingAttachment)) {
+        finalAttachments = await uploadPendingAttachments(businessId, finalAttachments);
+      }
+
       if (editingContact) {
         const oldName = editingContact.name;
         const newName = formData.name.trim();
         const nameChanged = oldName.toLowerCase() !== newName.toLowerCase();
 
+        // Rename otomatis ter-propagate ke transactions & invoices oleh DB
+        // trigger (migrasi 043) di dalam UPDATE ini — tidak perlu sync manual.
         await contactsApi.updateContact(editingContact.id, {
           name: newName,
           type: formData.type,
@@ -355,14 +362,15 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
           email: formData.email.trim() || null,
           address: formData.address.trim() || null,
           notes: formData.notes.trim() || null,
-          id_card_attachments: formData.id_card_attachments,
+          id_card_attachments: finalAttachments,
         });
 
-        if (nameChanged) {
-          // Fase 2: sync nama ke transaksi
-          setSavingStep('syncing');
-          await contactsApi.syncContactNameInTransactions(businessId, oldName, newName);
-        }
+        // Deferred delete: file KTP yang dibuang user baru dihancurkan SETELAH
+        // save sukses — tombol Batal tidak meninggalkan referensi rusak.
+        const keptPaths = new Set(finalAttachments.map((a) => a.path));
+        (editingContact.id_card_attachments || [])
+          .filter((a) => a.path && !keptPaths.has(a.path))
+          .forEach((a) => deleteAttachment(a.path, businessId, a.resource_type ?? 'image'));
 
         // Update selectedContact state agar panel tidak stale
         if (selectedContact?.id === editingContact.id) {
@@ -374,7 +382,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
             email: formData.email.trim() || null,
             address: formData.address.trim() || null,
             notes: formData.notes.trim() || null,
-            id_card_attachments: formData.id_card_attachments,
+            id_card_attachments: finalAttachments,
           };
           setSelectedContact(updatedContact);
 
@@ -392,7 +400,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
           email: formData.email.trim() || undefined,
           address: formData.address.trim() || undefined,
           notes: formData.notes.trim() || undefined,
-          id_card_attachments: formData.id_card_attachments,
+          id_card_attachments: finalAttachments,
           created_by: userId,
         });
       }
@@ -406,7 +414,6 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
       }
     } finally {
       setSaving(false);
-      setSavingStep('idle');
     }
   };
 
@@ -415,6 +422,10 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
     setDeleting(true);
     try {
       await contactsApi.deleteContact(deleteTarget.id);
+      // Best-effort: hancurkan file KTP (PII) di Cloudinary agar tidak orphan
+      (deleteTarget.id_card_attachments || [])
+        .filter((a) => a.path)
+        .forEach((a) => deleteAttachment(a.path, businessId, a.resource_type ?? 'image'));
       setDeleteTarget(null);
       if (selectedContact?.id === deleteTarget.id) {
         setSelectedContact(null);
@@ -429,25 +440,43 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
     }
   };
 
-  // Determine cash direction: inflow if debit account is cash/bank
-  function isCashInflow(txn: Transaction): boolean {
-    if (txn.is_double_entry && txn.debit_account) {
-      const acc = txn.debit_account;
-      if (acc.is_cash_equivalent === true) return true;
-      // Legacy fallback untuk akun lama yang belum di-flag
-      return acc.account_code === '1100' || acc.account_code === '1200';
-    }
-    return txn.category === 'EARN';
+  function isCashAccount(acc?: { is_cash_equivalent?: boolean | null; account_code?: string } | null): boolean {
+    if (!acc) return false;
+    if (acc.is_cash_equivalent === true) return true;
+    // Legacy fallback untuk akun lama yang belum di-flag
+    return acc.account_code === '1100' || acc.account_code === '1200';
   }
 
-  // Compute transaction summary for selected contact
+  // Arah kas transaksi. Transaksi yang tidak menyentuh kas (mis. penjualan
+  // kredit Dr Piutang / Cr Pendapatan, atau beban akrual) = 'neutral' —
+  // jangan dihitung sebagai uang masuk/keluar ke kontak.
+  function getCashDirection(txn: Transaction): 'in' | 'out' | 'neutral' {
+    if (txn.journal_lines && txn.journal_lines.length > 0) {
+      let net = 0;
+      let touchesCash = false;
+      for (const line of txn.journal_lines) {
+        if (isCashAccount(line.account)) {
+          touchesCash = true;
+          net += line.debit_amount - line.credit_amount;
+        }
+      }
+      if (!touchesCash || net === 0) return 'neutral';
+      return net > 0 ? 'in' : 'out';
+    }
+    if (txn.is_double_entry && (txn.debit_account || txn.credit_account)) {
+      if (isCashAccount(txn.debit_account)) return 'in';
+      if (isCashAccount(txn.credit_account)) return 'out';
+      return 'neutral';
+    }
+    return txn.category === 'EARN' ? 'in' : 'out';
+  }
+
+  // Compute transaction summary for selected contact (hanya arus kas riil)
   const txnSummary = contactTransactions.reduce(
     (acc, txn) => {
-      if (isCashInflow(txn)) {
-        acc.totalIn += txn.amount;
-      } else {
-        acc.totalOut += txn.amount;
-      }
+      const direction = getCashDirection(txn);
+      if (direction === 'in') acc.totalIn += txn.amount;
+      else if (direction === 'out') acc.totalOut += txn.amount;
       acc.count += 1;
       return acc;
     },
@@ -468,6 +497,19 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
             </div>
           </div>
         ))}
+      </div>
+    );
+  }
+
+  // Error state — jangan tampilkan empty state yang menyesatkan saat fetch gagal
+  if (loadError) {
+    return (
+      <div className="text-center py-12">
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Gagal memuat kontak</h3>
+        <p className="text-gray-500 dark:text-gray-400 mb-4">Periksa koneksi internet Anda, lalu coba lagi.</p>
+        <button onClick={fetchContacts} className="btn-secondary">
+          Coba lagi
+        </button>
       </div>
     );
   }
@@ -738,6 +780,11 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
                   </div>
                 </div>
               )}
+              {!loadingTransactions && contactTransactions.length >= 50 && (
+                <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2">
+                  Ringkasan dihitung dari 50 transaksi terbaru
+                </p>
+              )}
             </div>
 
             {/* Transaction List */}
@@ -754,19 +801,23 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
               ) : (
                 <div className="divide-y divide-gray-100 dark:divide-gray-700">
                   {contactTransactions.map((txn) => {
-                    const isIncome = isCashInflow(txn);
+                    const direction = getCashDirection(txn);
                     return (
                       <div key={txn.id} onClick={() => setDetailTransaction(txn)} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors cursor-pointer">
                         {/* Direction icon */}
                         <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          isIncome
+                          direction === 'in'
                             ? 'bg-emerald-50 dark:bg-emerald-900/30'
-                            : 'bg-red-50 dark:bg-red-900/30'
+                            : direction === 'out'
+                            ? 'bg-red-50 dark:bg-red-900/30'
+                            : 'bg-gray-100 dark:bg-gray-700/60'
                         }`}>
-                          {isIncome ? (
+                          {direction === 'in' ? (
                             <ArrowDownLeft className="w-3.5 h-3.5 text-emerald-500" />
-                          ) : (
+                          ) : direction === 'out' ? (
                             <ArrowUpRight className="w-3.5 h-3.5 text-red-500" />
+                          ) : (
+                            <ArrowLeftRight className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
                           )}
                         </div>
 
@@ -792,11 +843,13 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
 
                         {/* Amount */}
                         <p className={`text-sm font-semibold tabular-nums flex-shrink-0 ${
-                          isIncome
+                          direction === 'in'
                             ? 'text-emerald-600 dark:text-emerald-400'
-                            : 'text-red-600 dark:text-red-400'
+                            : direction === 'out'
+                            ? 'text-red-600 dark:text-red-400'
+                            : 'text-gray-600 dark:text-gray-300'
                         }`}>
-                          {isIncome ? '+' : '-'}{formatCurrency(txn.amount)}
+                          {direction === 'in' ? '+' : direction === 'out' ? '-' : ''}{formatCurrency(txn.amount)}
                         </p>
                       </div>
                     );
@@ -906,6 +959,8 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
               value={formData.id_card_attachments}
               onChange={(atts) => setFormData((prev) => ({ ...prev, id_card_attachments: atts }))}
               disabled={saving}
+              deferUpload
+              deferDelete
             />
           </div>
 
@@ -928,18 +983,9 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
           {saving && (
             <div className="flex items-center gap-3 px-3 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
               <Loader2 className="w-4 h-4 text-indigo-500 animate-spin flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-indigo-700 dark:text-indigo-300">
-                  {savingStep === 'syncing'
-                    ? 'Menyinkronkan ke transaksi...'
-                    : 'Menyimpan kontak...'}
-                </p>
-                {savingStep === 'syncing' && (
-                  <p className="text-[10px] text-indigo-500 dark:text-indigo-400 mt-0.5">
-                    Memperbarui nama di semua transaksi terkait
-                  </p>
-                )}
-              </div>
+              <p className="text-xs font-medium text-indigo-700 dark:text-indigo-300">
+                Menyimpan kontak...
+              </p>
             </div>
           )}
 
@@ -957,9 +1003,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
               disabled={saving}
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-              {saving
-                ? savingStep === 'syncing' ? 'Menyinkronkan...' : 'Menyimpan...'
-                : editingContact ? 'Simpan' : 'Tambah'}
+              {saving ? 'Menyimpan...' : editingContact ? 'Simpan' : 'Tambah'}
             </button>
           </div>
         </div>
