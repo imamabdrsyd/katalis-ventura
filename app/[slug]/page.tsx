@@ -101,7 +101,7 @@ export default async function PublicSlugPage({ params }: Props) {
   // Fetch bisnis untuk data widget (business_type, city, dll)
   const { data: bizData } = await supabase
     .from('businesses')
-    .select('id, business_name, business_type, business_sector, city, whatsapp_number, widget_action_label, logo_url, calendar_rate_item_id')
+    .select('id, business_name, business_type, business_sector, city, whatsapp_number, widget_action_label, logo_url')
     .eq('id', (ocData as any).business_id)
     .single();
 
@@ -169,34 +169,43 @@ export default async function PublicSlugPage({ params }: Props) {
       }))
     : [];
 
-  // Kalender harga (migr 116): bila bisnis menunjuk item sumber harga, halaman
-  // publik memakai harga yang SAMA dengan kalender operasional — default_price
-  // item + override per tanggal (dikonversi ke pricing rules, menang atas rules
-  // manual karena priceForDate ambil match pertama). Set harga sekali di
-  // kalender → widget publik ikut.
+  // Kalender harga (migr 117): bila salah satu unit fisik bisnis punya sumber
+  // harga terpasang, halaman publik memakai harga yang SAMA dengan kalender
+  // operasional — default_price item + override per tanggal (dikonversi ke
+  // pricing rules, menang atas rules manual karena priceForDate ambil match
+  // pertama). Set harga sekali di kalender unit → widget publik ikut.
+  // MVP: multi-unit hanya menampilkan headline harga dari unit pertama
+  // (widget publik cuma dukung satu default_price/price_unit).
   let calendarDefaultPrice: number | null = null;
   let calendarPriceUnit: string | null = null;
-  if (showPricing && biz?.calendar_rate_item_id) {
-    const today = new Date().toISOString().slice(0, 10);
-    const horizon = new Date();
-    horizon.setDate(horizon.getDate() + 365);
-    const [{ data: rateItem }, { data: rateRows }] = await Promise.all([
-      supabase
-        .from('catalog_items')
-        .select('default_price, unit')
-        .eq('id', biz.calendar_rate_item_id)
-        .is('deleted_at', null)
-        .maybeSingle(),
-      supabase
+  if (showPricing) {
+    const { data: rateUnit } = await supabase
+      .from('business_units')
+      .select('id, rate_item:catalog_items!business_units_rate_item_id_fkey(default_price, unit)')
+      .eq('business_id', oc.business_id)
+      .eq('is_active', true)
+      .is('deleted_at', null)
+      .not('rate_item_id', 'is', null)
+      .order('sort_order', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    const rateItem = rateUnit
+      ? (Array.isArray((rateUnit as any).rate_item) ? (rateUnit as any).rate_item[0] : (rateUnit as any).rate_item)
+      : null;
+
+    if (rateUnit && rateItem) {
+      const today = new Date().toISOString().slice(0, 10);
+      const horizon = new Date();
+      horizon.setDate(horizon.getDate() + 365);
+      const { data: rateRows } = await supabase
         .from('unit_daily_rates')
         .select('date, price')
-        .eq('catalog_item_id', biz.calendar_rate_item_id)
+        .eq('unit_id', (rateUnit as any).id)
         .gte('date', today)
         .lte('date', horizon.toISOString().slice(0, 10))
-        .order('date', { ascending: true }),
-    ]);
+        .order('date', { ascending: true });
 
-    if (rateItem) {
       calendarDefaultPrice =
         typeof rateItem.default_price === 'string'
           ? parseFloat(rateItem.default_price)

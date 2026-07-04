@@ -150,11 +150,6 @@ export interface CatalogItem {
   // Stok sederhana POS (opt-in). Hanya item track_stock=true yang dikurangi saat checkout.
   track_stock?: boolean;
   stock_qty?: number;
-  // Calendar: URL feed .ics OTA (Airbnb/Booking.com) untuk impor blok ketersediaan unit ini.
-  ical_import_url?: string | null;
-  // Calendar: dihitung sebagai unit kamar (dropdown unit + denominator occupancy).
-  // FALSE untuk rate plan/add-on (mis. cleaning fee). Default TRUE (migr 115).
-  is_bookable_unit?: boolean;
   // Rich display config — dipakai saat item difitur di omni-channel "Produk Unggulan"
   image_url?: string | null;
   image_fit?: 'cover' | 'contain' | null;
@@ -259,7 +254,6 @@ export interface Business {
   logo_fit?: 'cover' | 'contain' | null;
   qris_image_url?: string | null; // Foto QRIS statis untuk pembayaran POS (Cloudinary)
   ical_feed_token?: string | null; // Token feed .ics ekspor booking (dipasang di OTA sbg import calendar)
-  calendar_rate_item_id?: string | null; // Item katalog sumber harga dasar kalender booking (akomodasi)
   invoice_settings?: InvoiceSettings | null;
   is_archived: boolean;
   // Omnichannel widget (landing page)
@@ -981,6 +975,49 @@ export interface Contact {
 
 // ==================== BOOKINGS (Calendar) ====================
 
+// Properti/kamar/villa fisik yang bisa dibooking (migr 117) — TERPISAH dari
+// catalog_items (layanan/rate plan, mis. "Weekday Daily Rent", "Cleaning
+// Service"). Tiap unit punya kalender, occupancy, & kalender harga sendiri.
+// rate_item_id menunjuk 1 catalog_item sebagai sumber harga dasar KHUSUS unit
+// ini (per-unit — unit lain boleh punya sumber harga berbeda).
+export interface BusinessUnit {
+  id: string;
+  business_id: string;
+  name: string;
+  description: string | null;
+  rate_item_id: string | null;
+  ical_import_url: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  // Hydrated saat join
+  rate_item?: CatalogItem | null;
+}
+
+export interface BusinessUnitInsert {
+  business_id: string;
+  name: string;
+  description?: string | null;
+  rate_item_id?: string | null;
+  ical_import_url?: string | null;
+  is_active?: boolean;
+  sort_order?: number;
+  created_by: string;
+}
+
+export interface BusinessUnitUpdate {
+  name?: string;
+  description?: string | null;
+  rate_item_id?: string | null;
+  ical_import_url?: string | null;
+  is_active?: boolean;
+  sort_order?: number;
+}
+
 export type BookingStatus =
   | 'tentative'
   | 'confirmed'
@@ -991,12 +1028,12 @@ export type BookingPaymentStatus = 'unpaid' | 'paid';
 export type BookingChannel = 'manual' | 'airbnb' | 'booking_com' | 'other';
 
 // Booking menginap (nightly stays) untuk hub /calendar. Tiap booking menaut ke
-// satu unit (catalog_items) + tamu (business_contacts). Saat ditandai lunas,
-// dibuatkan transaksi EARN dan ditautkan lewat transaction_id.
+// satu unit fisik (business_units) + tamu (business_contacts). Saat ditandai
+// lunas, dibuatkan transaksi EARN dan ditautkan lewat transaction_id.
 export interface Booking {
   id: string;
   business_id: string;
-  catalog_item_id: string | null;
+  unit_id: string | null;
   contact_id: string | null;
   transaction_id: string | null;
   check_in: string;   // ISO date (YYYY-MM-DD)
@@ -1019,13 +1056,13 @@ export interface Booking {
   updated_at: string;
   deleted_at: string | null;
   // Hydrated saat join
-  catalog_item?: CatalogItem | null;
+  unit?: BusinessUnit | null;
   contact?: Contact | null;
 }
 
 export interface BookingInsert {
   business_id: string;
-  catalog_item_id?: string | null;
+  unit_id?: string | null;
   contact_id?: string | null;
   transaction_id?: string | null;
   check_in: string;
@@ -1045,7 +1082,7 @@ export interface BookingInsert {
 }
 
 export interface BookingUpdate {
-  catalog_item_id?: string | null;
+  unit_id?: string | null;
   contact_id?: string | null;
   transaction_id?: string | null;
   check_in?: string;
@@ -1061,12 +1098,12 @@ export interface BookingUpdate {
   notes?: string | null;
 }
 
-// Override harga per malam per tanggal (kalender harga akomodasi, migr 116).
-// Tanpa baris = tanggal memakai default_price item sumber harga.
+// Override harga per malam per tanggal (kalender harga akomodasi, migr 116/117).
+// Tanpa baris = tanggal memakai default_price item sumber harga unit tsb.
 export interface UnitDailyRate {
   id: string;
   business_id: string;
-  catalog_item_id: string;
+  unit_id: string;
   date: string; // ISO YYYY-MM-DD
   price: number;
   created_by: string | null;

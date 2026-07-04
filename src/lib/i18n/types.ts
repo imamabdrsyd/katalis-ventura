@@ -317,8 +317,6 @@ export interface Translations {
     priceLabel: string;
     unitLabel: string;
     unitPlaceholder: string;
-    bookableUnitLabel: string;
-    bookableUnitHint: string;
     revenueAccountLabel: string;
     revenueAccountPlaceholder: string;
     revenueAccountHint: string;

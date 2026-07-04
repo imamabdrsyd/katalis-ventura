@@ -19,9 +19,8 @@ const DAY_CHIPS: { label: string; dow: number }[] = [
 ];
 
 interface RateEditorPanelProps {
+  /** Item sumber harga unit ini (business_units.rate_item_id, hydrated). */
   rateItem: CatalogItem;
-  rateItems: CatalogItem[];
-  onChangeRateItem: (itemId: string) => void;
   /** Rentang terpilih (anchor..end, inklusif) — panel yang memfilter per hari. */
   rangeStart: string;
   rangeEnd: string;
@@ -33,12 +32,11 @@ interface RateEditorPanelProps {
 /**
  * Panel set harga mode Harga (pola Airbnb): tampil saat ada rentang tanggal
  * terpilih. Set harga / reset ke default untuk rentang, dengan filter hari
- * (mis. hanya Jum+Sab dalam rentang panjang = pola harga weekend).
+ * (mis. hanya Jum+Sab dalam rentang panjang = pola harga weekend). Mengganti
+ * item sumber harga unit adalah aksi konfigurasi unit — ada di UnitManagerModal.
  */
 export function RateEditorPanel({
   rateItem,
-  rateItems,
-  onChangeRateItem,
   rangeStart,
   rangeEnd,
   onApply,
@@ -104,25 +102,9 @@ export function RateEditorPanel({
           Set harga · {rangeLabel}
           <span className="font-normal text-gray-500 dark:text-gray-400">({dates.length} malam)</span>
         </p>
-        <div className="flex items-center gap-2">
-          {rateItems.length > 1 && (
-            <select
-              className="input py-1.5 text-xs w-auto"
-              value={rateItem.id}
-              onChange={(e) => onChangeRateItem(e.target.value)}
-              title="Item sumber harga kalender"
-            >
-              {rateItems.map((i) => (
-                <option key={i.id} value={i.id}>
-                  {i.name}
-                </option>
-              ))}
-            </select>
-          )}
-          <button type="button" onClick={onClear} className="btn-icon" aria-label="Batal pilih" title="Batal pilih">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        <button type="button" onClick={onClear} className="btn-icon" aria-label="Batal pilih" title="Batal pilih">
+          <X className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Filter hari */}

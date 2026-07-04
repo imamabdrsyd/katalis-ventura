@@ -264,7 +264,7 @@ export function CalendarBoard({
                   const isRealEnd = format(lastNight, 'yyyy-MM-dd') === format(segEnd, 'yyyy-MM-dd');
                   const lane = laneOf.get(b.id) ?? 0;
                   const state = getBookingDisplayState(b);
-                  const label = b.guest_name || b.contact?.name || b.catalog_item?.name || 'Booking';
+                  const label = b.guest_name || b.contact?.name || 'Booking';
 
                   return (
                     <button

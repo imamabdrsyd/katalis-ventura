@@ -1,17 +1,16 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { differenceInCalendarDays, parseISO, format, addDays } from 'date-fns';
-import { AlertTriangle, Loader2, Trash2, Ban, CheckCircle2, ExternalLink } from 'lucide-react';
+import { AlertTriangle, Loader2, Trash2, Ban, CheckCircle2, ExternalLink, Home } from 'lucide-react';
 import { toast } from 'sonner';
 import type {
-  Account,
+  BusinessUnit,
   Booking,
   BookingChannel,
   BookingInsert,
   BookingStatus,
   BookingUpdate,
-  CatalogItem,
   Contact,
 } from '@/types';
 import type { PaymentMethod } from '@/lib/accounting/salesCheckout';
@@ -33,7 +32,6 @@ import {
 export interface BookingPrefill {
   check_in: string;
   check_out: string;
-  catalog_item_id?: string;
   guest_name?: string;
   channel?: BookingChannel;
 }
@@ -42,13 +40,11 @@ interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   businessId: string;
-  units: CatalogItem[];
-  accounts: Account[];
+  /** Unit fisik yang sedang dilihat kalendernya — booking selalu milik unit ini. */
+  unit: BusinessUnit;
   /** Booking yang diedit; null = mode buat baru. */
   booking: Booking | null;
   prefill?: BookingPrefill | null;
-  /** Item sumber harga kalender — bila unit terpilih = item ini, total dihitung Σ harga per malam. */
-  rateItemId?: string | null;
   onCreate: (insert: Omit<BookingInsert, 'business_id' | 'created_by'>) => Promise<unknown>;
   /** Harus mengembalikan booking hasil update — dipakai handleMarkPaid agar ledger mencatat nilai form terbaru. */
   onUpdate: (id: string, updates: BookingUpdate) => Promise<Booking>;
@@ -56,7 +52,7 @@ interface BookingModalProps {
   onCancel: (id: string) => Promise<unknown>;
   onDelete: (id: string) => Promise<unknown>;
   checkOverlap: (
-    catalogItemId: string,
+    unitId: string,
     checkIn: string,
     checkOut: string,
     excludeId?: string
@@ -69,11 +65,9 @@ export function BookingModal({
   isOpen,
   onClose,
   businessId,
-  units,
-  accounts,
+  unit,
   booking,
   prefill,
-  rateItemId,
   onCreate,
   onUpdate,
   onMarkPaid,
@@ -84,10 +78,9 @@ export function BookingModal({
   const isEdit = !!booking;
   const isExternal = !!booking?.is_external;
   const isPaid = booking?.payment_status === 'paid';
-  const locked = isExternal || isPaid; // unit/tanggal/harga tak bisa diubah
+  const locked = isExternal || isPaid; // tanggal/harga tak bisa diubah
 
   // ── Form state ────────────────────────────────────────────────────────────
-  const [unitId, setUnitId] = useState('');
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
   const [guestName, setGuestName] = useState('');
@@ -102,14 +95,13 @@ export function BookingModal({
   const [conflicts, setConflicts] = useState<Booking[]>([]);
   const [busy, setBusy] = useState(false);
   // Quote otomatis dari kalender harga (Σ harga per malam) — hanya saat unit
-  // terpilih = item sumber harga. Null = mode manual (harga flat × malam).
+  // ini punya rate_item terpasang. Null = mode manual (harga flat × malam).
   const [autoQuote, setAutoQuote] = useState<StayQuote | null>(null);
 
   // Reset form saat modal dibuka / target berubah
   useEffect(() => {
     if (!isOpen) return;
     if (booking) {
-      setUnitId(booking.catalog_item_id ?? '');
       setCheckIn(booking.check_in);
       setCheckOut(booking.check_out);
       setGuestName(booking.guest_name ?? booking.contact?.name ?? '');
@@ -120,34 +112,19 @@ export function BookingModal({
       setStatus(booking.status);
       setNotes(booking.notes ?? '');
     } else {
-      const firstUnit = prefill?.catalog_item_id ?? units[0]?.id ?? '';
-      setUnitId(firstUnit);
       setCheckIn(prefill?.check_in ?? format(new Date(), 'yyyy-MM-dd'));
       setCheckOut(prefill?.check_out ?? format(addDays(new Date(), 1), 'yyyy-MM-dd'));
       setGuestName(prefill?.guest_name ?? '');
       setContactId(null);
       setGuestCount('');
-      const price = units.find((u) => u.id === firstUnit)?.default_price ?? 0;
-      setPricePerNight(String(price));
+      setPricePerNight(String(unit.rate_item?.default_price ?? 0));
       setChannel(prefill?.channel ?? 'manual');
       setStatus('confirmed');
       setNotes('');
     }
     setPaymentMethod('cash');
     setConflicts([]);
-  }, [isOpen, booking, prefill, units]);
-
-  // Saat pilih unit di mode buat → auto-isi harga dari default_price unit
-  const handleUnitChange = useCallback(
-    (id: string) => {
-      setUnitId(id);
-      if (!isEdit) {
-        const price = units.find((u) => u.id === id)?.default_price ?? 0;
-        setPricePerNight(String(price));
-      }
-    },
-    [isEdit, units]
-  );
+  }, [isOpen, booking, prefill, unit]);
 
   const nights = useMemo(() => {
     if (!checkIn || !checkOut) return 0;
@@ -163,8 +140,8 @@ export function BookingModal({
   // Total: quote kalender harga bila aktif; selain itu flat harga × malam.
   const total = autoQuote ? autoQuote.total : nights * price;
 
-  // ── Auto-quote kalender harga (create mode, unit = item sumber harga) ─────
-  const rateQuoteActive = !isEdit && !locked && !!rateItemId && unitId === rateItemId;
+  // ── Auto-quote kalender harga (create mode, unit punya rate_item) ─────────
+  const rateQuoteActive = !isEdit && !locked && !!unit.rate_item_id;
   useEffect(() => {
     if (!rateQuoteActive || !datesValid) {
       setAutoQuote(null);
@@ -173,15 +150,13 @@ export function BookingModal({
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
-        const unit = units.find((u) => u.id === unitId);
-        if (!unit) return;
         const lastNight = format(addDays(parseISO(checkOut), -1), 'yyyy-MM-dd');
-        const overrides = await getDailyRates(unitId, checkIn, lastNight);
+        const overrides = await getDailyRates(unit.id, checkIn, lastNight);
         if (cancelled) return;
         const q = quoteStay(
           checkIn,
           checkOut,
-          Number(unit.default_price),
+          Number(unit.rate_item?.default_price ?? 0),
           overrides.map((o) => ({ date: o.date, price: Number(o.price) }))
         );
         setAutoQuote(q);
@@ -195,7 +170,7 @@ export function BookingModal({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [rateQuoteActive, datesValid, unitId, checkIn, checkOut, units]);
+  }, [rateQuoteActive, datesValid, unit.id, unit.rate_item?.default_price, checkIn, checkOut]);
 
   // Ringkasan breakdown per rentang harga ("2 mlm × 350rb + 1 mlm × 750rb").
   const quoteBreakdownLabel = useMemo(() => {
@@ -207,14 +182,14 @@ export function BookingModal({
 
   // ── Overlap guard (debounced) ──────────────────────────────────────────────
   useEffect(() => {
-    if (locked || !unitId || !datesValid) {
+    if (locked || !datesValid) {
       setConflicts([]);
       return;
     }
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
-        const res = await checkOverlap(unitId, checkIn, checkOut, booking?.id);
+        const res = await checkOverlap(unit.id, checkIn, checkOut, booking?.id);
         if (!cancelled) setConflicts(res);
       } catch {
         if (!cancelled) setConflicts([]);
@@ -224,13 +199,13 @@ export function BookingModal({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [locked, unitId, checkIn, checkOut, datesValid, checkOverlap, booking?.id]);
+  }, [locked, unit.id, checkIn, checkOut, datesValid, checkOverlap, booking?.id]);
 
   const hasConflict = conflicts.length > 0;
 
   // ── Actions ─────────────────────────────────────────────────────────────────
   const buildBase = () => ({
-    catalog_item_id: unitId || null,
+    unit_id: unit.id,
     contact_id: contactId,
     check_in: checkIn,
     check_out: checkOut,
@@ -246,7 +221,6 @@ export function BookingModal({
   });
 
   const handleSubmit = async () => {
-    if (!unitId) return toast.error('Pilih unit/kamar dulu.');
     if (!datesValid) return toast.error('Tanggal check-out harus setelah check-in.');
     if (hasConflict) return toast.error('Tanggal bentrok dengan booking lain untuk unit ini.');
     setBusy(true);
@@ -283,7 +257,6 @@ export function BookingModal({
 
   const handleMarkPaid = async () => {
     if (!booking) return;
-    if (!unitId) return toast.error('Pilih unit/kamar dulu.');
     if (!datesValid) return toast.error('Tanggal check-out harus setelah check-in.');
     if (hasConflict) return toast.error('Tanggal bentrok dengan booking lain untuk unit ini.');
     if (total <= 0) return toast.error('Total booking harus lebih dari 0.');
@@ -348,7 +321,7 @@ export function BookingModal({
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={busy || hasConflict || !datesValid || !unitId}
+          disabled={busy || hasConflict || !datesValid}
           className="btn-primary inline-flex items-center gap-2 disabled:opacity-50"
         >
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
@@ -361,6 +334,12 @@ export function BookingModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="lg" footer={footer}>
       <div className="space-y-4">
+        {/* Unit (fixed — kalender ini scoped ke satu unit) */}
+        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+          <Home className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+          Booking untuk unit: <span className="font-semibold text-gray-900 dark:text-gray-100">{unit.name}</span>
+        </div>
+
         {/* Status + channel badge (edit) */}
         {booking && displayState && (
           <div className="flex flex-wrap items-center gap-2">
@@ -400,25 +379,6 @@ export function BookingModal({
             </p>
           </div>
         )}
-
-        {/* Unit */}
-        <div>
-          <label className="label">Unit / kamar</label>
-          <select
-            className="input"
-            value={unitId}
-            onChange={(e) => handleUnitChange(e.target.value)}
-            disabled={locked}
-          >
-            <option value="">— pilih unit —</option>
-            {units.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-                {u.default_price ? ` — ${formatCurrency(u.default_price)}/${u.unit || 'malam'}` : ''}
-              </option>
-            ))}
-          </select>
-        </div>
 
         {/* Tanggal */}
         <div className="grid grid-cols-2 gap-3">

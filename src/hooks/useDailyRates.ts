@@ -1,31 +1,33 @@
 'use client';
 
 /**
- * Hook kalender harga: memuat override harga (unit_daily_rates) untuk rentang
- * grid yang tampak + menyediakan aksi set/reset harga per kumpulan tanggal.
- * Harga final per tanggal diresolve via lib murni `@/lib/rates`.
+ * Hook kalender harga untuk SATU unit fisik: memuat override harga
+ * (unit_daily_rates, key = unit_id) untuk rentang grid yang tampak +
+ * menyediakan aksi set/reset harga per kumpulan tanggal. Harga default berasal
+ * dari item sumber harga unit (business_units.rate_item_id, hydrated sbg
+ * unit.rate_item). Harga final per tanggal diresolve via lib murni `@/lib/rates`.
  */
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
-import type { CatalogItem, UnitDailyRate } from '@/types';
+import type { BusinessUnit, UnitDailyRate } from '@/types';
 import { getDailyRates, upsertDailyRates, deleteDailyRates } from '@/lib/api/dailyRates';
 import { buildOverrideMap, resolveNightPrice, type NightRate } from '@/lib/rates';
 
 interface UseDailyRatesArgs {
   businessId: string;
   userId: string;
-  rateItem: CatalogItem | null; // item sumber harga (calendar_rate_item_id)
+  unit: BusinessUnit | null; // unit fisik yang sedang dilihat kalendernya
   gridStart: Date;
   gridEnd: Date; // eksklusif
 }
 
-export function useDailyRates({ businessId, userId, rateItem, gridStart, gridEnd }: UseDailyRatesArgs) {
+export function useDailyRates({ businessId, userId, unit, gridStart, gridEnd }: UseDailyRatesArgs) {
   const [overrides, setOverrides] = useState<UnitDailyRate[]>([]);
   const [loading, setLoading] = useState(false);
 
   const reload = useCallback(async () => {
-    if (!rateItem) {
+    if (!unit) {
       setOverrides([]);
       return;
     }
@@ -33,13 +35,13 @@ export function useDailyRates({ businessId, userId, rateItem, gridStart, gridEnd
     try {
       const from = format(gridStart, 'yyyy-MM-dd');
       const to = format(gridEnd, 'yyyy-MM-dd');
-      setOverrides(await getDailyRates(rateItem.id, from, to));
+      setOverrides(await getDailyRates(unit.id, from, to));
     } catch {
       setOverrides([]);
     } finally {
       setLoading(false);
     }
-  }, [rateItem, gridStart, gridEnd]);
+  }, [unit, gridStart, gridEnd]);
 
   useEffect(() => {
     reload();
@@ -50,31 +52,31 @@ export function useDailyRates({ businessId, userId, rateItem, gridStart, gridEnd
     [overrides]
   );
 
-  /** Harga final untuk satu tanggal grid; null bila item sumber belum dipilih. */
+  /** Harga final untuk satu tanggal grid; null bila unit/item sumber belum ada. */
   const priceOf = useCallback(
     (dateISO: string): NightRate | null => {
-      if (!rateItem) return null;
-      return resolveNightPrice(dateISO, Number(rateItem.default_price), overrideMap);
+      if (!unit?.rate_item) return null;
+      return resolveNightPrice(dateISO, Number(unit.rate_item.default_price), overrideMap);
     },
-    [rateItem, overrideMap]
+    [unit, overrideMap]
   );
 
   const setPrices = useCallback(
     async (dates: string[], price: number) => {
-      if (!rateItem) throw new Error('Item sumber harga belum dipilih.');
-      await upsertDailyRates(businessId, rateItem.id, dates, price, userId);
+      if (!unit) throw new Error('Unit belum dipilih.');
+      await upsertDailyRates(businessId, unit.id, dates, price, userId);
       await reload();
     },
-    [businessId, rateItem, userId, reload]
+    [businessId, unit, userId, reload]
   );
 
   const resetPrices = useCallback(
     async (dates: string[]) => {
-      if (!rateItem) throw new Error('Item sumber harga belum dipilih.');
-      await deleteDailyRates(rateItem.id, dates);
+      if (!unit) throw new Error('Unit belum dipilih.');
+      await deleteDailyRates(unit.id, dates);
       await reload();
     },
-    [rateItem, reload]
+    [unit, reload]
   );
 
   return { overrides, overrideMap, priceOf, loading, reload, setPrices, resetPrices };

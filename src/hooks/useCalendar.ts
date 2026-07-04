@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * Hook state & logika kalender booking (hub /calendar, bisnis jasa akomodasi).
+ * Hook state & logika kalender booking, di-scope ke SATU unit fisik (tiap unit
+ * punya kalender & occupancy sendiri).
  *
  * Mengelola kursor bulan + memuat booking yang tampak di grid (full weeks),
  * lalu menyediakan aksi mutasi (buat/edit/batal/hapus, tandai lunas) dan cek
@@ -35,11 +36,12 @@ const WEEK_OPTS = { weekStartsOn: 1 as const }; // Senin sebagai awal minggu (ID
 
 interface UseCalendarArgs {
   businessId: string;
+  unitId: string;
   userId: string;
   accounts: Account[];
 }
 
-export function useCalendar({ businessId, userId, accounts }: UseCalendarArgs) {
+export function useCalendar({ businessId, unitId, userId, accounts }: UseCalendarArgs) {
   const [monthCursor, setMonthCursor] = useState<Date>(() => startOfMonth(new Date()));
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
@@ -56,19 +58,19 @@ export function useCalendar({ businessId, userId, accounts }: UseCalendarArgs) {
   );
 
   const reload = useCallback(async () => {
-    if (!businessId) return;
+    if (!businessId || !unitId) return;
     setLoading(true);
     setError(null);
     try {
       const from = format(gridStart, 'yyyy-MM-dd');
       const to = format(gridEnd, 'yyyy-MM-dd');
-      setBookings(await getBookingsForRange(businessId, from, to));
+      setBookings(await getBookingsForRange(businessId, unitId, from, to));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Gagal memuat booking');
     } finally {
       setLoading(false);
     }
-  }, [businessId, gridStart, gridEnd]);
+  }, [businessId, unitId, gridStart, gridEnd]);
 
   useEffect(() => {
     reload();
@@ -81,8 +83,8 @@ export function useCalendar({ businessId, userId, accounts }: UseCalendarArgs) {
 
   // ── Mutasi ──────────────────────────────────────────────────────────────────
   const checkOverlap = useCallback(
-    (catalogItemId: string, checkIn: string, checkOut: string, excludeId?: string) =>
-      findOverlappingBookings(businessId, catalogItemId, checkIn, checkOut, excludeId),
+    (targetUnitId: string, checkIn: string, checkOut: string, excludeId?: string) =>
+      findOverlappingBookings(businessId, targetUnitId, checkIn, checkOut, excludeId),
     [businessId]
   );
 

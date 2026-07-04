@@ -14,9 +14,9 @@ import {
 } from '@/lib/leadColors';
 import { SalesChannelBadge } from '@/components/transactions/SalesChannelBadge';
 import type { ChannelStatus } from '@/lib/api/leads';
-import type { Account, BookingChannel, CatalogItem, Lead, LeadChannel, LeadMessage, LeadStatus } from '@/types';
+import type { Account, BookingChannel, BusinessUnit, Lead, LeadChannel, LeadMessage, LeadStatus } from '@/types';
 import { isAccommodationSector } from '@/lib/businessSectors';
-import { getCatalogItems } from '@/lib/api/catalog';
+import { getUnits } from '@/lib/api/units';
 import { getAccounts } from '@/lib/api/accounts';
 import {
   createBooking,
@@ -248,7 +248,7 @@ export default function LeadsPage() {
   // Konversi lead → booking (hanya bisnis sektor akomodasi)
   const isAccommodation = isAccommodationSector(activeBusiness?.business_sector);
   const [bookingOpen, setBookingOpen] = useState(false);
-  const [bookingUnits, setBookingUnits] = useState<CatalogItem[]>([]);
+  const [bookingUnit, setBookingUnit] = useState<BusinessUnit | null>(null);
   const [bookingAccounts, setBookingAccounts] = useState<Account[]>([]);
   const [loadingBooking, setLoadingBooking] = useState(false);
 
@@ -256,17 +256,20 @@ export default function LeadsPage() {
     if (!activeBusinessId) return;
     setLoadingBooking(true);
     try {
-      const [catalog, accs] = await Promise.all([
-        getCatalogItems(activeBusinessId, { activeOnly: true }),
+      const [units, accs] = await Promise.all([
+        getUnits(activeBusinessId, { activeOnly: true }),
         getAccounts(activeBusinessId),
       ]);
-      // Hanya unit kamar (is_bookable_unit, migr 115) yang bisa dibooking.
-      const units = catalog.filter((c) => c.is_bookable_unit !== false);
       if (units.length === 0) {
-        toast.error('Belum ada unit. Tambahkan unit di menu Kalender › Katalog dulu.');
+        toast.error('Belum ada unit. Tambahkan unit di menu Kalender › Kelola unit dulu.');
         return;
       }
-      setBookingUnits(units);
+      // MVP: bisnis multi-unit dari Leads dibooking ke unit pertama — untuk pilih
+      // unit spesifik, buat booking langsung dari kalender unit tsb.
+      if (units.length > 1) {
+        toast(`Booking dibuat untuk unit "${units[0].name}" (unit pertama). Pakai Kalender untuk unit lain.`);
+      }
+      setBookingUnit(units[0]);
       setBookingAccounts(accs);
       setBookingOpen(true);
     } catch (err) {
@@ -582,13 +585,12 @@ export default function LeadsPage() {
         </div>
       </div>
 
-      {selectedLead && (
+      {selectedLead && bookingUnit && (
         <BookingModal
           isOpen={bookingOpen}
           onClose={() => setBookingOpen(false)}
           businessId={activeBusinessId ?? ''}
-          units={bookingUnits}
-          accounts={bookingAccounts}
+          unit={bookingUnit}
           booking={null}
           prefill={{
             check_in: format(new Date(), 'yyyy-MM-dd'),

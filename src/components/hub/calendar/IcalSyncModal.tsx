@@ -1,38 +1,34 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, Copy, Check, RefreshCw, Link2, Download, Upload } from 'lucide-react';
+import { Loader2, Copy, Check, RefreshCw, Link2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
-import type { CatalogItem } from '@/types';
+import type { BusinessUnit } from '@/types';
 import { Modal } from '@/components/ui/Modal';
 import { createClient } from '@/lib/supabase';
-import { updateCatalogItem } from '@/lib/api/catalog';
 
 interface IcalSyncModalProps {
   isOpen: boolean;
   onClose: () => void;
   businessId: string;
-  units: CatalogItem[];
+  units: BusinessUnit[];
   onSynced: () => void; // reload units + calendar
 }
 
 /**
- * Kelola sinkronisasi iCal per unit:
- *  - IMPOR: tempel URL feed .ics OTA (Airbnb/Booking.com) → blok tanggal terisi.
- *  - EKSPOR: salin URL feed .ics AXION → dipasang di OTA agar OTA blokir tanggal
- *    yang dibooking langsung.
+ * Sinkronisasi iCal per unit fisik:
+ *  - IMPOR (blok tanggal terisi OTA): atur URL feed di "Kelola Unit"
+ *    (business_units.ical_import_url) — modal ini hanya memicu sync-nya.
+ *  - EKSPOR: salin URL feed .ics AXION per unit → pasang di Airbnb/Booking.com
+ *    agar OTA memblokir tanggal yang kamu booking langsung.
  */
 export function IcalSyncModal({ isOpen, onClose, businessId, units, onSynced }: IcalSyncModalProps) {
   const [feedToken, setFeedToken] = useState<string | null>(null);
-  const [urls, setUrls] = useState<Record<string, string>>({});
-  const [savingId, setSavingId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
-    setUrls(Object.fromEntries(units.map((u) => [u.id, u.ical_import_url ?? ''])));
-    // Ambil token feed ekspor bisnis
     (async () => {
       const supabase = createClient();
       const { data } = await supabase
@@ -42,7 +38,7 @@ export function IcalSyncModal({ isOpen, onClose, businessId, units, onSynced }: 
         .maybeSingle();
       setFeedToken((data?.ical_feed_token as string | null) ?? null);
     })();
-  }, [isOpen, businessId, units]);
+  }, [isOpen, businessId]);
 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
@@ -51,18 +47,6 @@ export function IcalSyncModal({ isOpen, onClose, businessId, units, onSynced }: 
       feedToken ? `${origin}/api/calendar/feed/${feedToken}?unit=${unitId}` : '',
     [feedToken, origin]
   );
-
-  const handleSaveUrl = async (unit: CatalogItem) => {
-    setSavingId(unit.id);
-    try {
-      await updateCatalogItem(unit.id, { ical_import_url: urls[unit.id]?.trim() || null });
-      toast.success(`URL impor "${unit.name}" disimpan`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal menyimpan URL');
-    } finally {
-      setSavingId(null);
-    }
-  };
 
   const handleCopy = async (key: string, value: string) => {
     if (!value) return;
@@ -120,9 +104,10 @@ export function IcalSyncModal({ isOpen, onClose, businessId, units, onSynced }: 
         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 flex items-start gap-3">
           <Link2 className="w-4 h-4 text-primary-500 mt-0.5 shrink-0" />
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Hubungkan tiap unit dengan Airbnb & Booking.com lewat iCal. <b>Impor</b> memblokir
-            tanggal yang terisi di OTA; <b>Ekspor</b> memberi tahu OTA tanggal yang kamu booking
-            langsung. Sinkronisasi otomatis berjalan harian — atau tekan <b>Sync sekarang</b>.
+            Hubungkan tiap unit dengan Airbnb & Booking.com lewat iCal. URL <b>impor</b> (memblokir
+            tanggal terisi OTA) diatur di <b>Kelola Unit</b>. Salin URL <b>ekspor</b> di bawah ke
+            OTA agar mereka memblokir tanggal yang kamu booking langsung. Sinkronisasi otomatis
+            berjalan harian — atau tekan <b>Sync sekarang</b>.
           </p>
         </div>
 
@@ -133,31 +118,6 @@ export function IcalSyncModal({ isOpen, onClose, businessId, units, onSynced }: 
           >
             <p className="font-semibold text-gray-900 dark:text-gray-100">{unit.name}</p>
 
-            {/* Impor */}
-            <div>
-              <label className="label flex items-center gap-1.5">
-                <Download className="w-3.5 h-3.5 text-gray-400" /> URL impor dari OTA
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="url"
-                  className="input flex-1"
-                  placeholder="https://www.airbnb.com/calendar/ical/...ics"
-                  value={urls[unit.id] ?? ''}
-                  onChange={(e) => setUrls((p) => ({ ...p, [unit.id]: e.target.value }))}
-                />
-                <button
-                  type="button"
-                  onClick={() => handleSaveUrl(unit)}
-                  disabled={savingId === unit.id}
-                  className="btn-ghost shrink-0"
-                >
-                  {savingId === unit.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan'}
-                </button>
-              </div>
-            </div>
-
-            {/* Ekspor */}
             <div>
               <label className="label flex items-center gap-1.5">
                 <Upload className="w-3.5 h-3.5 text-gray-400" /> URL ekspor AXION (pasang di OTA)

@@ -1,8 +1,8 @@
 /**
  * Sinkronisasi impor iCal OTA → tabel `bookings` (server-only, admin client).
  *
- * Untuk tiap unit (`catalog_items.ical_import_url`), fetch feed .ics OTA, parse
- * VEVENT, lalu upsert booking `is_external=true` sebagai blok ketersediaan.
+ * Untuk tiap unit fisik (`business_units.ical_import_url`), fetch feed .ics OTA,
+ * parse VEVENT, lalu upsert booking `is_external=true` sebagai blok ketersediaan.
  * Blok eksternal yang tak lagi ada di feed di-soft-delete (dedup via `ical_uid`).
  *
  * Idempoten & best-effort per unit: kegagalan satu unit tidak menghentikan lainnya.
@@ -48,7 +48,7 @@ export async function syncBusinessIcalFeeds(
   const result: IcalSyncResult = { units: 0, imported: 0, updated: 0, removed: 0, errors: [] };
 
   const { data: units, error } = await admin
-    .from('catalog_items')
+    .from('business_units')
     .select('id, name, ical_import_url')
     .eq('business_id', businessId)
     .not('ical_import_url', 'is', null)
@@ -98,7 +98,7 @@ export async function syncBusinessIcalFeeds(
         .from('bookings')
         .select('id')
         .eq('business_id', businessId)
-        .eq('catalog_item_id', unit.id)
+        .eq('unit_id', unit.id)
         .eq('ical_uid', ev.uid)
         .is('deleted_at', null)
         .maybeSingle();
@@ -117,7 +117,7 @@ export async function syncBusinessIcalFeeds(
       } else {
         const { error: insErr } = await admin.from('bookings').insert({
           business_id: businessId,
-          catalog_item_id: unit.id,
+          unit_id: unit.id,
           ical_uid: ev.uid,
           is_external: true,
           status: 'confirmed',
@@ -136,7 +136,7 @@ export async function syncBusinessIcalFeeds(
       .from('bookings')
       .select('id, ical_uid')
       .eq('business_id', businessId)
-      .eq('catalog_item_id', unit.id)
+      .eq('unit_id', unit.id)
       .eq('is_external', true)
       .is('deleted_at', null);
 

@@ -1,10 +1,10 @@
 /**
- * GET /api/calendar/feed/[token]?unit=<catalogItemId>
+ * GET /api/calendar/feed/[token]?unit=<unitId>
  *
  * Feed .ics PUBLIK (bertoken) berisi booking langsung bisnis — dipasang user di
  * Airbnb/Booking.com ("Import calendar") agar OTA memblokir tanggal yang sudah
  * dibooking langsung. Token = `businesses.ical_feed_token`. Blok impor OTA
- * (`is_external`) TIDAK diekspor (cegah loop). Filter `unit` = per listing.
+ * (`is_external`) TIDAK diekspor (cegah loop). Filter `unit` = per unit fisik (listing).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     .eq('is_external', false)
     .neq('status', 'cancelled');
 
-  if (unitId) query = query.eq('catalog_item_id', unitId);
+  if (unitId) query = query.eq('unit_id', unitId);
 
   const { data: bookings } = await query;
 

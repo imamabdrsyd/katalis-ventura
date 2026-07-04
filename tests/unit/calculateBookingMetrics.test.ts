@@ -6,7 +6,7 @@ function mkBooking(overrides: Partial<Booking>): Booking {
   return {
     id: `b-${Math.random().toString(36).slice(2)}`,
     business_id: 'biz',
-    catalog_item_id: 'u1',
+    unit_id: 'u1',
     contact_id: null,
     transaction_id: null,
     check_in: '2026-07-10',

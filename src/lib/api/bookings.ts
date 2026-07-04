@@ -10,13 +10,13 @@ import {
 
 const SELECT_WITH_RELATIONS = `
   *,
-  catalog_item:catalog_items!bookings_catalog_item_id_fkey(*),
+  unit:business_units!bookings_unit_id_fkey(*, rate_item:catalog_items!business_units_rate_item_id_fkey(*)),
   contact:business_contacts!bookings_contact_id_fkey(*)
 `;
 
 /**
  * Petakan error Postgres ke pesan ramah. 23P01 = exclusion constraint
- * `bookings_no_double_booking` (migr 115) — backstop server-side untuk race
+ * `bookings_no_double_booking` (migr 117) — backstop server-side untuk race
  * yang lolos cek overlap client (findOverlappingBookings, debounced).
  */
 function toFriendlyBookingError(error: { code?: string; message: string }): Error {
@@ -27,12 +27,14 @@ function toFriendlyBookingError(error: { code?: string; message: string }): Erro
 }
 
 /**
- * Ambil booking yang beririsan dengan rentang [from, to) (inklusif from, eksklusif to).
- * Booking beririsan bila check_in < to AND check_out > from. Termasuk yang
+ * Ambil booking yang beririsan dengan rentang [from, to) (inklusif from, eksklusif to),
+ * di-scope ke satu unit fisik (tiap unit punya kalendernya sendiri). Booking
+ * beririsan bila check_in < to AND check_out > from. Termasuk yang
  * cancelled/external agar board bisa menampilkannya; caller yang memfilter.
  */
 export async function getBookingsForRange(
   businessId: string,
+  unitId: string,
   from: string,
   to: string
 ): Promise<Booking[]> {
@@ -41,6 +43,7 @@ export async function getBookingsForRange(
     .from('bookings')
     .select(SELECT_WITH_RELATIONS)
     .eq('business_id', businessId)
+    .eq('unit_id', unitId)
     .is('deleted_at', null)
     .lt('check_in', to)
     .gt('check_out', from)
@@ -127,13 +130,13 @@ export async function deleteBooking(id: string): Promise<void> {
 }
 
 /**
- * Cari booking yang beririsan tanggal untuk unit (catalog_item) yang sama —
- * proteksi double-booking. Mengabaikan booking cancelled & (opsional) diri sendiri.
+ * Cari booking yang beririsan tanggal untuk unit fisik yang sama — proteksi
+ * double-booking. Mengabaikan booking cancelled & (opsional) diri sendiri.
  * Dua rentang [aIn,aOut) & [bIn,bOut) beririsan jika aIn < bOut AND aOut > bIn.
  */
 export async function findOverlappingBookings(
   businessId: string,
-  catalogItemId: string,
+  unitId: string,
   checkIn: string,
   checkOut: string,
   excludeBookingId?: string
@@ -143,7 +146,7 @@ export async function findOverlappingBookings(
     .from('bookings')
     .select(SELECT_WITH_RELATIONS)
     .eq('business_id', businessId)
-    .eq('catalog_item_id', catalogItemId)
+    .eq('unit_id', unitId)
     .is('deleted_at', null)
     .neq('status', 'cancelled')
     .lt('check_in', checkOut)
@@ -189,13 +192,13 @@ export async function markBookingPaid(
   }
 
   const revenueAccountId =
-    fresh.catalog_item?.revenue_account_id ?? resolveDefaultRevenueAccount(accounts)?.id ?? null;
+    fresh.unit?.rate_item?.revenue_account_id ?? resolveDefaultRevenueAccount(accounts)?.id ?? null;
   if (!revenueAccountId) {
-    throw new Error('Akun pendapatan tidak ditemukan. Set akun pendapatan pada unit atau CoA.');
+    throw new Error('Akun pendapatan tidak ditemukan. Set sumber harga pada unit atau akun pendapatan default di CoA.');
   }
 
   const total = fresh.total_amount;
-  const unitName = fresh.catalog_item?.name ?? 'Unit';
+  const unitName = fresh.unit?.name ?? 'Unit';
   const guestName = fresh.guest_name?.trim() || fresh.contact?.name || 'Tamu';
   const stayLabel = `${fresh.check_in} s/d ${fresh.check_out}`;
 

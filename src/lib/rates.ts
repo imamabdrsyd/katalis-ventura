@@ -1,8 +1,9 @@
 /**
  * Resolver harga per malam (kalender harga akomodasi) — fungsi murni, tanpa IO.
  *
- * Model: harga dasar = default_price item sumber (businesses.calendar_rate_item_id),
- * di-override per tanggal oleh baris unit_daily_rates. Resolusi per tanggal:
+ * Model: harga dasar = default_price item sumber (business_units.rate_item_id —
+ * per unit fisik), di-override per tanggal oleh baris unit_daily_rates. Resolusi
+ * per tanggal:
  * override > default. Dipakai bersama oleh grid kalender (mode Harga), auto-total
  * BookingModal, quote AI concierge, dan kalender harga halaman publik.
  */

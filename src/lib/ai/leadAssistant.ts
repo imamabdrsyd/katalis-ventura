@@ -77,7 +77,7 @@ function formatBusinessKnowledge(
 interface BookingAvailabilityRow {
   check_in: string;
   check_out: string;
-  catalog_item: { name: string | null } | { name: string | null }[] | null;
+  unit: { name: string | null } | { name: string | null }[] | null;
 }
 
 /**
@@ -91,9 +91,9 @@ function formatAvailability(rows: BookingAvailabilityRow[] | null): string | nul
     'KETERSEDIAAN MENGINAP — tanggal berikut SUDAH TERISI (di luar ini kemungkinan masih kosong):',
   ];
   for (const r of rows) {
-    const item = Array.isArray(r.catalog_item) ? r.catalog_item[0] : r.catalog_item;
-    const unit = item?.name ? `${item.name}: ` : '';
-    lines.push(`- ${unit}${r.check_in} s/d ${r.check_out} (check-out ${r.check_out} sudah kosong lagi)`);
+    const u = Array.isArray(r.unit) ? r.unit[0] : r.unit;
+    const unitLabel = u?.name ? `${u.name}: ` : '';
+    lines.push(`- ${unitLabel}${r.check_in} s/d ${r.check_out} (check-out ${r.check_out} sudah kosong lagi)`);
   }
   lines.push(
     'Jika pelanggan menanyakan tanggal yang tidak tercantum di atas, tawarkan bahwa kemungkinan tersedia dan minta konfirmasi. Jangan menjanjikan tanggal yang sudah terisi.'
@@ -102,38 +102,48 @@ function formatAvailability(rows: BookingAvailabilityRow[] | null): string | nul
 }
 
 interface RateInfo {
+  unitName: string;
   itemName: string;
   defaultPrice: number;
   overrides: { date: string; price: number }[];
 }
 
 /**
- * Rangkum kalender harga (item sumber + override 60 hari ke depan) supaya
- * concierge bisa quote harga per tanggal yang benar — bukan cuma harga default.
- * Override berurutan berharga sama diringkas jadi rentang.
+ * Rangkum kalender harga PER UNIT (bisnis bisa punya >1 unit fisik, tiap unit
+ * kalender harganya sendiri) supaya concierge bisa quote harga per tanggal yang
+ * benar — bukan cuma harga default. Override berurutan berharga sama diringkas
+ * jadi rentang. Nama unit disertakan hanya bila bisnis punya >1 unit berharga.
  */
-function formatRates(info: RateInfo | null): string | null {
-  if (!info) return null;
-  const lines: string[] = [
-    `HARGA MENGINAP PER MALAM (${info.itemName}): normal ${formatPrice(info.defaultPrice)}.`,
-  ];
-  if (info.overrides.length > 0) {
-    const ranges = groupIntoRanges(
-      info.overrides.map((o) => ({ date: o.date, price: o.price, overridden: true }))
-    );
-    lines.push('Harga khusus tanggal tertentu:');
-    for (const r of ranges) {
-      lines.push(
-        r.start === r.end
-          ? `- ${r.start}: ${formatPrice(r.price)}`
-          : `- ${r.start} s/d ${r.end}: ${formatPrice(r.price)}/malam`
+function formatRates(infos: RateInfo[]): string | null {
+  if (infos.length === 0) return null;
+  const showUnitName = infos.length > 1;
+
+  const blocks = infos.map((info) => {
+    const lines: string[] = [
+      showUnitName
+        ? `HARGA MENGINAP PER MALAM — Unit ${info.unitName} (${info.itemName}): normal ${formatPrice(info.defaultPrice)}.`
+        : `HARGA MENGINAP PER MALAM (${info.itemName}): normal ${formatPrice(info.defaultPrice)}.`,
+    ];
+    if (info.overrides.length > 0) {
+      const ranges = groupIntoRanges(
+        info.overrides.map((o) => ({ date: o.date, price: o.price, overridden: true }))
       );
+      lines.push('Harga khusus tanggal tertentu:');
+      for (const r of ranges) {
+        lines.push(
+          r.start === r.end
+            ? `- ${r.start}: ${formatPrice(r.price)}`
+            : `- ${r.start} s/d ${r.end}: ${formatPrice(r.price)}/malam`
+        );
+      }
     }
-  }
-  lines.push(
+    return lines.join('\n');
+  });
+
+  blocks.push(
     'Total menginap = jumlah harga per malam sesuai tanggalnya (malam check-out tidak dihitung). Tanggal di luar daftar harga khusus memakai harga normal.'
   );
-  return lines.join('\n');
+  return blocks.join('\n\n');
 }
 
 function buildSystemPrompt(
@@ -224,11 +234,11 @@ export async function generateLeadReply(
   if (history.length === 0) return null;
 
   const today = new Date().toISOString().slice(0, 10);
-  const [{ data: business }, { data: catalog }, { data: knowledge }, { data: bookings }] =
+  const [{ data: business }, { data: catalog }, { data: knowledge }, { data: bookings }, { data: unitsWithRate }] =
     await Promise.all([
       supabase
         .from('businesses')
-        .select('business_name, business_sector, calendar_rate_item_id')
+        .select('business_name, business_sector')
         .eq('id', integration.business_id)
         .maybeSingle(),
       supabase
@@ -247,44 +257,46 @@ export async function generateLeadReply(
       // Booking mendatang untuk fitur "AI availability" — hanya yang belum lewat & aktif.
       supabase
         .from('bookings')
-        .select('check_in, check_out, catalog_item:catalog_items(name)')
+        .select('check_in, check_out, unit:business_units(name)')
         .eq('business_id', integration.business_id)
         .is('deleted_at', null)
         .neq('status', 'cancelled')
         .gte('check_out', today)
         .order('check_in', { ascending: true })
         .limit(40),
+      // Unit fisik aktif yang sudah punya sumber harga terpasang (bisa >1 unit).
+      supabase
+        .from('business_units')
+        .select('id, name, rate_item:catalog_items!business_units_rate_item_id_fkey(name, default_price)')
+        .eq('business_id', integration.business_id)
+        .eq('is_active', true)
+        .is('deleted_at', null)
+        .not('rate_item_id', 'is', null),
     ]);
 
-  // Kalender harga: item sumber + override 60 hari ke depan (bila dikonfigurasi).
-  let rateInfo: RateInfo | null = null;
-  const rateItemId = (business as { calendar_rate_item_id?: string | null } | null)
-    ?.calendar_rate_item_id;
-  if (rateItemId) {
-    const horizon = new Date();
-    horizon.setDate(horizon.getDate() + 60);
-    const [{ data: rateItem }, { data: rateRows }] = await Promise.all([
-      supabase
-        .from('catalog_items')
-        .select('name, default_price')
-        .eq('id', rateItemId)
-        .maybeSingle(),
-      supabase
+  // Kalender harga per unit: override 60 hari ke depan (bila dikonfigurasi).
+  const horizon = new Date();
+  horizon.setDate(horizon.getDate() + 60);
+  const horizonStr = horizon.toISOString().slice(0, 10);
+
+  const rateInfos: RateInfo[] = await Promise.all(
+    (unitsWithRate ?? []).map(async (u) => {
+      const rateItem = Array.isArray(u.rate_item) ? u.rate_item[0] : u.rate_item;
+      const { data: rateRows } = await supabase
         .from('unit_daily_rates')
         .select('date, price')
-        .eq('catalog_item_id', rateItemId)
+        .eq('unit_id', u.id)
         .gte('date', today)
-        .lte('date', horizon.toISOString().slice(0, 10))
-        .order('date', { ascending: true }),
-    ]);
-    if (rateItem) {
-      rateInfo = {
-        itemName: rateItem.name as string,
-        defaultPrice: Number(rateItem.default_price),
+        .lte('date', horizonStr)
+        .order('date', { ascending: true });
+      return {
+        unitName: u.name as string,
+        itemName: (rateItem?.name as string | undefined) ?? 'Tarif',
+        defaultPrice: Number(rateItem?.default_price ?? 0),
         overrides: (rateRows ?? []).map((r) => ({ date: r.date as string, price: Number(r.price) })),
       };
-    }
-  }
+    })
+  );
 
   const systemPrompt = buildSystemPrompt(
     business?.business_name ?? 'bisnis kami',
@@ -294,7 +306,7 @@ export async function generateLeadReply(
     (catalog ?? []) as CatalogItemSummary[],
     formatBusinessKnowledge(knowledge?.fields ?? null, knowledge?.content ?? null),
     formatAvailability((bookings ?? []) as BookingAvailabilityRow[]),
-    formatRates(rateInfo)
+    formatRates(rateInfos)
   );
 
   const result = await generateText(systemPrompt, history, {
