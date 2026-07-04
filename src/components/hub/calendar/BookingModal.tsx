@@ -19,6 +19,8 @@ import { Modal } from '@/components/ui/Modal';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
 import { formatCurrency } from '@/lib/utils';
+import { getDailyRates } from '@/lib/api/dailyRates';
+import { quoteStay, groupIntoRanges, type StayQuote } from '@/lib/rates';
 import {
   BOOKING_STATUS_LABELS,
   BOOKING_CHANNEL_LABELS,
@@ -45,6 +47,8 @@ interface BookingModalProps {
   /** Booking yang diedit; null = mode buat baru. */
   booking: Booking | null;
   prefill?: BookingPrefill | null;
+  /** Item sumber harga kalender — bila unit terpilih = item ini, total dihitung Σ harga per malam. */
+  rateItemId?: string | null;
   onCreate: (insert: Omit<BookingInsert, 'business_id' | 'created_by'>) => Promise<unknown>;
   /** Harus mengembalikan booking hasil update — dipakai handleMarkPaid agar ledger mencatat nilai form terbaru. */
   onUpdate: (id: string, updates: BookingUpdate) => Promise<Booking>;
@@ -69,6 +73,7 @@ export function BookingModal({
   accounts,
   booking,
   prefill,
+  rateItemId,
   onCreate,
   onUpdate,
   onMarkPaid,
@@ -96,6 +101,9 @@ export function BookingModal({
 
   const [conflicts, setConflicts] = useState<Booking[]>([]);
   const [busy, setBusy] = useState(false);
+  // Quote otomatis dari kalender harga (Σ harga per malam) — hanya saat unit
+  // terpilih = item sumber harga. Null = mode manual (harga flat × malam).
+  const [autoQuote, setAutoQuote] = useState<StayQuote | null>(null);
 
   // Reset form saat modal dibuka / target berubah
   useEffect(() => {
@@ -151,8 +159,51 @@ export function BookingModal({
   }, [checkIn, checkOut]);
 
   const price = Number(pricePerNight) || 0;
-  const total = nights * price;
   const datesValid = nights > 0;
+  // Total: quote kalender harga bila aktif; selain itu flat harga × malam.
+  const total = autoQuote ? autoQuote.total : nights * price;
+
+  // ── Auto-quote kalender harga (create mode, unit = item sumber harga) ─────
+  const rateQuoteActive = !isEdit && !locked && !!rateItemId && unitId === rateItemId;
+  useEffect(() => {
+    if (!rateQuoteActive || !datesValid) {
+      setAutoQuote(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const unit = units.find((u) => u.id === unitId);
+        if (!unit) return;
+        const lastNight = format(addDays(parseISO(checkOut), -1), 'yyyy-MM-dd');
+        const overrides = await getDailyRates(unitId, checkIn, lastNight);
+        if (cancelled) return;
+        const q = quoteStay(
+          checkIn,
+          checkOut,
+          Number(unit.default_price),
+          overrides.map((o) => ({ date: o.date, price: Number(o.price) }))
+        );
+        setAutoQuote(q);
+        // Sinkronkan field harga/malam sebagai rata-rata (informatif; total tetap Σ).
+        if (q.nights > 0) setPricePerNight(String(Math.round(q.total / q.nights)));
+      } catch {
+        if (!cancelled) setAutoQuote(null);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [rateQuoteActive, datesValid, unitId, checkIn, checkOut, units]);
+
+  // Ringkasan breakdown per rentang harga ("2 mlm × 350rb + 1 mlm × 750rb").
+  const quoteBreakdownLabel = useMemo(() => {
+    if (!autoQuote) return null;
+    return groupIntoRanges(autoQuote.breakdown)
+      .map((r) => `${r.nights} mlm × ${formatCurrency(r.price)}`)
+      .join(' + ');
+  }, [autoQuote]);
 
   // ── Overlap guard (debounced) ──────────────────────────────────────────────
   useEffect(() => {
@@ -447,13 +498,24 @@ export function BookingModal({
         {/* Harga & total */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="label">Harga / malam</label>
+            <label className="label">
+              Harga / malam
+              {autoQuote && (
+                <span className="ml-1.5 text-[10px] font-normal text-primary-600 dark:text-primary-400">
+                  rata-rata · otomatis
+                </span>
+              )}
+            </label>
             <input
               type="number"
               min={0}
               className="input"
               value={pricePerNight}
-              onChange={(e) => setPricePerNight(e.target.value)}
+              onChange={(e) => {
+                // Edit manual = keluar dari mode harga-kalender (total kembali flat × malam).
+                setAutoQuote(null);
+                setPricePerNight(e.target.value);
+              }}
               disabled={locked}
             />
           </div>
@@ -475,11 +537,16 @@ export function BookingModal({
         </div>
 
         {/* Ringkasan total */}
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 flex items-center justify-between">
-          <span className="text-sm text-gray-600 dark:text-gray-300">
-            {nights} malam × {formatCurrency(price)}
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 flex items-center justify-between gap-3">
+          <span className="text-sm text-gray-600 dark:text-gray-300 min-w-0">
+            {autoQuote && quoteBreakdownLabel ? quoteBreakdownLabel : `${nights} malam × ${formatCurrency(price)}`}
+            {autoQuote && (
+              <span className="block text-xs text-primary-600 dark:text-primary-400 mt-0.5">
+                harga otomatis dari kalender harga
+              </span>
+            )}
           </span>
-          <span className="text-lg font-bold text-gray-900 dark:text-gray-100 tabular-nums">
+          <span className="text-lg font-bold text-gray-900 dark:text-gray-100 tabular-nums shrink-0">
             {formatCurrency(total)}
           </span>
         </div>

@@ -259,6 +259,7 @@ export interface Business {
   logo_fit?: 'cover' | 'contain' | null;
   qris_image_url?: string | null; // Foto QRIS statis untuk pembayaran POS (Cloudinary)
   ical_feed_token?: string | null; // Token feed .ics ekspor booking (dipasang di OTA sbg import calendar)
+  calendar_rate_item_id?: string | null; // Item katalog sumber harga dasar kalender booking (akomodasi)
   invoice_settings?: InvoiceSettings | null;
   is_archived: boolean;
   // Omnichannel widget (landing page)
@@ -1058,6 +1059,20 @@ export interface BookingUpdate {
   channel?: BookingChannel;
   date_estimated?: boolean;
   notes?: string | null;
+}
+
+// Override harga per malam per tanggal (kalender harga akomodasi, migr 116).
+// Tanpa baris = tanggal memakai default_price item sumber harga.
+export interface UnitDailyRate {
+  id: string;
+  business_id: string;
+  catalog_item_id: string;
+  date: string; // ISO YYYY-MM-DD
+  price: number;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 // ==================== LEADS HUB ====================

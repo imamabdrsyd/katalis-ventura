@@ -13,6 +13,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { generateText, type AIMessage } from './provider';
+import { groupIntoRanges } from '@/lib/rates';
 import type { ChannelIntegration, Lead } from '@/types';
 
 export interface LeadReplyResult {
@@ -100,6 +101,41 @@ function formatAvailability(rows: BookingAvailabilityRow[] | null): string | nul
   return lines.join('\n');
 }
 
+interface RateInfo {
+  itemName: string;
+  defaultPrice: number;
+  overrides: { date: string; price: number }[];
+}
+
+/**
+ * Rangkum kalender harga (item sumber + override 60 hari ke depan) supaya
+ * concierge bisa quote harga per tanggal yang benar — bukan cuma harga default.
+ * Override berurutan berharga sama diringkas jadi rentang.
+ */
+function formatRates(info: RateInfo | null): string | null {
+  if (!info) return null;
+  const lines: string[] = [
+    `HARGA MENGINAP PER MALAM (${info.itemName}): normal ${formatPrice(info.defaultPrice)}.`,
+  ];
+  if (info.overrides.length > 0) {
+    const ranges = groupIntoRanges(
+      info.overrides.map((o) => ({ date: o.date, price: o.price, overridden: true }))
+    );
+    lines.push('Harga khusus tanggal tertentu:');
+    for (const r of ranges) {
+      lines.push(
+        r.start === r.end
+          ? `- ${r.start}: ${formatPrice(r.price)}`
+          : `- ${r.start} s/d ${r.end}: ${formatPrice(r.price)}/malam`
+      );
+    }
+  }
+  lines.push(
+    'Total menginap = jumlah harga per malam sesuai tanggalnya (malam check-out tidak dihitung). Tanggal di luar daftar harga khusus memakai harga normal.'
+  );
+  return lines.join('\n');
+}
+
 function buildSystemPrompt(
   businessName: string,
   businessSector: string | null,
@@ -107,7 +143,8 @@ function buildSystemPrompt(
   aiPersona: string | null,
   catalogItems: CatalogItemSummary[],
   businessKnowledge: string | null,
-  availability: string | null
+  availability: string | null,
+  rates: string | null
 ): string {
   const lines: string[] = [
     `Kamu adalah customer service untuk bisnis "${businessName}"${businessSector ? ` (sektor: ${businessSector})` : ''}.`,
@@ -136,6 +173,10 @@ function buildSystemPrompt(
 
   if (availability && availability.trim()) {
     lines.push('', availability.trim());
+  }
+
+  if (rates && rates.trim()) {
+    lines.push('', rates.trim());
   }
 
   if (aiPersona && aiPersona.trim()) {
@@ -187,7 +228,7 @@ export async function generateLeadReply(
     await Promise.all([
       supabase
         .from('businesses')
-        .select('business_name, business_sector')
+        .select('business_name, business_sector, calendar_rate_item_id')
         .eq('id', integration.business_id)
         .maybeSingle(),
       supabase
@@ -215,6 +256,36 @@ export async function generateLeadReply(
         .limit(40),
     ]);
 
+  // Kalender harga: item sumber + override 60 hari ke depan (bila dikonfigurasi).
+  let rateInfo: RateInfo | null = null;
+  const rateItemId = (business as { calendar_rate_item_id?: string | null } | null)
+    ?.calendar_rate_item_id;
+  if (rateItemId) {
+    const horizon = new Date();
+    horizon.setDate(horizon.getDate() + 60);
+    const [{ data: rateItem }, { data: rateRows }] = await Promise.all([
+      supabase
+        .from('catalog_items')
+        .select('name, default_price')
+        .eq('id', rateItemId)
+        .maybeSingle(),
+      supabase
+        .from('unit_daily_rates')
+        .select('date, price')
+        .eq('catalog_item_id', rateItemId)
+        .gte('date', today)
+        .lte('date', horizon.toISOString().slice(0, 10))
+        .order('date', { ascending: true }),
+    ]);
+    if (rateItem) {
+      rateInfo = {
+        itemName: rateItem.name as string,
+        defaultPrice: Number(rateItem.default_price),
+        overrides: (rateRows ?? []).map((r) => ({ date: r.date as string, price: Number(r.price) })),
+      };
+    }
+  }
+
   const systemPrompt = buildSystemPrompt(
     business?.business_name ?? 'bisnis kami',
     business?.business_sector ?? null,
@@ -222,7 +293,8 @@ export async function generateLeadReply(
     integration.ai_persona ?? null,
     (catalog ?? []) as CatalogItemSummary[],
     formatBusinessKnowledge(knowledge?.fields ?? null, knowledge?.content ?? null),
-    formatAvailability((bookings ?? []) as BookingAvailabilityRow[])
+    formatAvailability((bookings ?? []) as BookingAvailabilityRow[]),
+    formatRates(rateInfo)
   );
 
   const result = await generateText(systemPrompt, history, {

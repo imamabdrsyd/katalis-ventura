@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createAdminClient } from '@/lib/supabase-server';
 import { isReservedSlug } from '@/lib/utils/slugUtils';
+import { groupIntoRanges } from '@/lib/rates';
 import { PublicOmniChannelPage } from '@/components/public/PublicOmniChannelPage';
 import type { BusinessOmniChannel, OmniChannelLink } from '@/types';
 import type {
@@ -100,7 +101,7 @@ export default async function PublicSlugPage({ params }: Props) {
   // Fetch bisnis untuk data widget (business_type, city, dll)
   const { data: bizData } = await supabase
     .from('businesses')
-    .select('id, business_name, business_type, business_sector, city, whatsapp_number, widget_action_label, logo_url')
+    .select('id, business_name, business_type, business_sector, city, whatsapp_number, widget_action_label, logo_url, calendar_rate_item_id')
     .eq('id', (ocData as any).business_id)
     .single();
 
@@ -158,7 +159,7 @@ export default async function PublicSlugPage({ params }: Props) {
     display_mode: (l as any).display_mode ?? 'default',
   }));
 
-  const pricingRules: PublicPricingRule[] = showPricing
+  let pricingRules: PublicPricingRule[] = showPricing
     ? ((oc.pricing_rules ?? []) as Array<{ id: string; date_from: string; date_to: string; price: number | string; label: string | null }>).map((r) => ({
         id: r.id,
         date_from: r.date_from,
@@ -167,6 +168,58 @@ export default async function PublicSlugPage({ params }: Props) {
         label: r.label,
       }))
     : [];
+
+  // Kalender harga (migr 116): bila bisnis menunjuk item sumber harga, halaman
+  // publik memakai harga yang SAMA dengan kalender operasional — default_price
+  // item + override per tanggal (dikonversi ke pricing rules, menang atas rules
+  // manual karena priceForDate ambil match pertama). Set harga sekali di
+  // kalender → widget publik ikut.
+  let calendarDefaultPrice: number | null = null;
+  let calendarPriceUnit: string | null = null;
+  if (showPricing && biz?.calendar_rate_item_id) {
+    const today = new Date().toISOString().slice(0, 10);
+    const horizon = new Date();
+    horizon.setDate(horizon.getDate() + 365);
+    const [{ data: rateItem }, { data: rateRows }] = await Promise.all([
+      supabase
+        .from('catalog_items')
+        .select('default_price, unit')
+        .eq('id', biz.calendar_rate_item_id)
+        .is('deleted_at', null)
+        .maybeSingle(),
+      supabase
+        .from('unit_daily_rates')
+        .select('date, price')
+        .eq('catalog_item_id', biz.calendar_rate_item_id)
+        .gte('date', today)
+        .lte('date', horizon.toISOString().slice(0, 10))
+        .order('date', { ascending: true }),
+    ]);
+
+    if (rateItem) {
+      calendarDefaultPrice =
+        typeof rateItem.default_price === 'string'
+          ? parseFloat(rateItem.default_price)
+          : (rateItem.default_price ?? null);
+      calendarPriceUnit = (rateItem.unit as string | null) ?? 'malam';
+
+      const rateRanges = groupIntoRanges(
+        ((rateRows ?? []) as Array<{ date: string; price: number | string }>).map((r) => ({
+          date: r.date,
+          price: typeof r.price === 'string' ? parseFloat(r.price) : r.price,
+          overridden: true,
+        }))
+      ).map((r, i) => ({
+        id: `calendar-rate-${i}`,
+        date_from: r.start,
+        date_to: r.end,
+        price: r.price,
+        label: 'Harga khusus',
+      }));
+
+      pricingRules = [...rateRanges, ...pricingRules];
+    }
+  }
 
   const publicBusiness: PublicBusiness = {
     id: biz?.id ?? '',
@@ -189,10 +242,15 @@ export default async function PublicSlugPage({ params }: Props) {
     widget_date_mode: (oc.widget_date_mode as 'single' | 'double') ?? 'double',
     widget_labels: (oc.widget_labels ?? {}) as PublicBusiness['widget_labels'],
     show_pricing: showPricing,
-    default_price: showPricing && oc.default_price != null
-      ? (typeof oc.default_price === 'string' ? parseFloat(oc.default_price) : oc.default_price)
+    // Harga default & satuan: kalender harga (bila dikonfigurasi) menang atas
+    // setting manual omni-channel — satu sumber kebenaran dengan kalender.
+    default_price: showPricing
+      ? calendarDefaultPrice ??
+        (oc.default_price != null
+          ? (typeof oc.default_price === 'string' ? parseFloat(oc.default_price) : oc.default_price)
+          : null)
       : null,
-    price_unit: showPricing ? oc.price_unit ?? null : null,
+    price_unit: showPricing ? calendarPriceUnit ?? oc.price_unit ?? null : null,
     pricing_rules: pricingRules,
     banner_url: oc.banner_url ?? null,
     featured_products: featuredProducts,

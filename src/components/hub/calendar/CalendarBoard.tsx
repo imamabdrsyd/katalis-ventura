@@ -10,8 +10,10 @@ import {
   isToday,
 } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Plus, Link2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Link2, CalendarDays, Tag } from 'lucide-react';
 import type { Booking } from '@/types';
+import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
+import type { NightRate } from '@/lib/rates';
 import {
   getBookingDisplayState,
   BOOKING_BAR_CLASSES,
@@ -23,7 +25,19 @@ import {
 const WEEKDAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 const LEGEND: BookingDisplayState[] = ['confirmed', 'paid', 'tentative', 'completed', 'external'];
 const LANE_H = 24; // tinggi bar + gap
-const HEADER_H = 30; // ruang untuk angka tanggal
+const HEADER_H = 30; // ruang untuk angka tanggal + harga
+
+export type CalendarMode = 'booking' | 'rates';
+
+/** Format harga ringkas untuk sel kalender: 350000 → "350rb", 1500000 → "1,5jt". */
+function formatPriceShort(price: number): string {
+  if (price >= 1_000_000) {
+    const jt = price / 1_000_000;
+    return `${jt.toLocaleString('id-ID', { maximumFractionDigits: 1 })}jt`;
+  }
+  if (price >= 1_000) return `${Math.round(price / 1_000)}rb`;
+  return String(price);
+}
 
 interface CalendarBoardProps {
   monthCursor: Date;
@@ -38,6 +52,13 @@ interface CalendarBoardProps {
   onToday: () => void;
   onNew: () => void;
   onOpenSync: () => void;
+  /** Mode kalender: booking (default) atau edit harga per tanggal. */
+  mode: CalendarMode;
+  onModeChange: (mode: CalendarMode) => void;
+  /** Harga final per tanggal (null = kalender harga belum dikonfigurasi → kolom harga disembunyikan). */
+  priceOf?: (dateISO: string) => NightRate | null;
+  /** Tanggal terpilih di mode Harga (highlight sel). */
+  selectedDates?: Set<string>;
 }
 
 export function CalendarBoard({
@@ -53,6 +74,10 @@ export function CalendarBoard({
   onToday,
   onNew,
   onOpenSync,
+  mode,
+  onModeChange,
+  priceOf,
+  selectedDates,
 }: CalendarBoardProps) {
   const weeks = useMemo(() => {
     const days: Date[] = [];
@@ -90,6 +115,15 @@ export function CalendarBoard({
           </button>
         </div>
         <div className="flex items-center gap-2">
+          <SegmentedToggle<CalendarMode>
+            value={mode}
+            onChange={onModeChange}
+            options={[
+              { value: 'booking', label: 'Booking', icon: <CalendarDays className="w-3.5 h-3.5" /> },
+              { value: 'rates', label: 'Harga', icon: <Tag className="w-3.5 h-3.5" /> },
+            ]}
+            ariaLabel="Mode kalender"
+          />
           <button
             type="button"
             onClick={onOpenSync}
@@ -98,9 +132,11 @@ export function CalendarBoard({
           >
             <Link2 className="w-4 h-4" /> <span className="hidden sm:inline">iCal OTA</span>
           </button>
-          <button type="button" onClick={onNew} className="btn-primary inline-flex items-center gap-1.5">
-            <Plus className="w-4 h-4" /> Booking
-          </button>
+          {mode === 'booking' && (
+            <button type="button" onClick={onNew} className="btn-primary inline-flex items-center gap-1.5">
+              <Plus className="w-4 h-4" /> Booking
+            </button>
+          )}
         </div>
       </div>
 
@@ -157,31 +193,53 @@ export function CalendarBoard({
               key={wi}
               className="relative border-b border-gray-100 dark:border-gray-800 last:border-b-0"
             >
-              {/* Sel hari (base layer, click = buat booking) */}
+              {/* Sel hari (base layer; klik = buat booking / pilih tanggal di mode Harga) */}
               <div className="grid grid-cols-7" style={{ minHeight: cellMinH }}>
                 {week.map((day, di) => {
+                  const iso = format(day, 'yyyy-MM-dd');
                   const inMonth = isSameMonth(day, monthCursor);
                   const today = isToday(day);
+                  const rate = priceOf?.(iso) ?? null;
+                  const selected = mode === 'rates' && (selectedDates?.has(iso) ?? false);
                   return (
                     <button
                       key={di}
                       type="button"
-                      onClick={() => onDayClick(format(day, 'yyyy-MM-dd'))}
-                      className={`text-left px-2 py-1.5 border-r border-gray-100 dark:border-gray-800 last:border-r-0 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
-                        inMonth ? 'bg-transparent' : 'bg-gray-50/60 dark:bg-gray-900/30'
+                      onClick={() => onDayClick(iso)}
+                      className={`text-left px-2 py-1.5 border-r border-gray-100 dark:border-gray-800 last:border-r-0 transition-colors ${
+                        selected
+                          ? 'bg-primary-50 dark:bg-primary-900/30 ring-1 ring-inset ring-primary-300 dark:ring-primary-700'
+                          : `hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
+                              inMonth ? 'bg-transparent' : 'bg-gray-50/60 dark:bg-gray-900/30'
+                            }`
                       }`}
-                      title="Klik untuk buat booking"
+                      title={mode === 'rates' ? 'Klik untuk pilih tanggal (set harga)' : 'Klik untuk buat booking'}
                     >
-                      <span
-                        className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs ${
-                          today
-                            ? 'bg-primary-500 text-white font-bold'
-                            : inMonth
-                              ? 'text-gray-700 dark:text-gray-200'
-                              : 'text-gray-300 dark:text-gray-600'
-                        }`}
-                      >
-                        {day.getDate()}
+                      <span className="flex items-center justify-between gap-1">
+                        <span
+                          className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs ${
+                            today
+                              ? 'bg-primary-500 text-white font-bold'
+                              : inMonth
+                                ? 'text-gray-700 dark:text-gray-200'
+                                : 'text-gray-300 dark:text-gray-600'
+                          }`}
+                        >
+                          {day.getDate()}
+                        </span>
+                        {rate && (
+                          <span
+                            className={`text-[10px] tabular-nums truncate ${
+                              rate.overridden
+                                ? 'font-semibold text-primary-600 dark:text-primary-400'
+                                : inMonth
+                                  ? 'text-gray-400 dark:text-gray-500'
+                                  : 'text-gray-300 dark:text-gray-600'
+                            }`}
+                          >
+                            {formatPriceShort(rate.price)}
+                          </span>
+                        )}
                       </span>
                     </button>
                   );
@@ -246,6 +304,12 @@ export function CalendarBoard({
             {BOOKING_STATE_LABELS[s]}
           </span>
         ))}
+        {priceOf && (
+          <span className="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+            <span className="text-[10px] font-semibold text-primary-600 dark:text-primary-400">350rb</span>
+            harga khusus (override)
+          </span>
+        )}
       </div>
     </div>
   );
