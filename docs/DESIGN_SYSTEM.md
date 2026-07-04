@@ -320,6 +320,7 @@ Komponen: [`src/components/ui/Modal.tsx`](../src/components/ui/Modal.tsx). Selal
 - Max-width default: `sm:max-w-md`. Kalau butuh lebih lebar, override via props (perlu extend komponen — tambahkan prop `size` kalau belum ada).
 - Footer opsional. Tombol di footer: primary di kanan, secondary/cancel di kiri.
 - Backdrop: `bg-black/40 backdrop-blur-sm` (sudah built-in).
+- `headerAction` (opsional): elemen aksi di header, dirender tepat di kiri tombol close. `closeButtonClassName` (opsional): kelas tambahan untuk tombol close (mis. `sm:hidden`). Kombinasi keduanya dipakai mis. di TransactionDetailModal — di desktop tombol Duplicate menggantikan icon close (close diwakili klik di luar modal/Esc), di mobile tombol close tetap ada.
 
 ### 3.7 Input / Form Field
 

@@ -392,6 +392,25 @@ export function TransactionDetailModal({
     setPreviewScale(1);
   };
 
+  const handleDuplicate = () => {
+    onClose();
+    setTimeout(() => onDuplicate?.(transaction), 200);
+  };
+
+  // Di desktop, tombol Duplicate menggantikan icon close di header (close diwakili
+  // klik di luar modal / Esc). Di mobile, tombol close tetap ada & Duplicate muncul
+  // di footer.
+  const headerDuplicateAction = onDuplicate ? (
+    <button
+      onClick={handleDuplicate}
+      title={t.transactionDetail.duplicateBtn}
+      aria-label={t.transactionDetail.duplicateBtn}
+      className="hidden sm:flex p-2 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+    >
+      <Copy className="w-[18px] h-[18px]" />
+    </button>
+  ) : undefined;
+
   const actionButtons = showActions ? (
     <div className="flex items-center gap-3">
       {onPost && isDraft && (
@@ -425,21 +444,26 @@ export function TransactionDetailModal({
           {t.transactionDetail.editBtn}
         </button>
       )}
+      {/* Separator Edit→Delete di desktop (Duplicate disembunyikan di desktop) */}
+      {onEdit && onDelete && (
+        <span className="text-gray-300 dark:text-gray-600 hidden sm:inline">·</span>
+      )}
+      {/* Duplicate di footer — hanya mobile; di desktop tombol ini pindah ke header */}
+      {onEdit && onDuplicate && (
+        <span className="text-gray-300 dark:text-gray-600 sm:hidden">·</span>
+      )}
       {onDuplicate && (
         <button
-          onClick={() => {
-            onClose();
-            setTimeout(() => onDuplicate(transaction), 200);
-          }}
+          onClick={handleDuplicate}
           title={t.transactionDetail.duplicateBtn}
           aria-label={t.transactionDetail.duplicateBtn}
-          className="p-1 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+          className="sm:hidden p-1 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
         >
           <Copy className="w-3.5 h-3.5" />
         </button>
       )}
-      {(onEdit || onDuplicate) && onDelete && (
-        <span className="text-gray-300 dark:text-gray-600">·</span>
+      {onDuplicate && onDelete && (
+        <span className="text-gray-300 dark:text-gray-600 sm:hidden">·</span>
       )}
       {onDelete && (
         <button
@@ -480,6 +504,8 @@ export function TransactionDetailModal({
         </div>
       }
       footer={actionButtons}
+      headerAction={headerDuplicateAction}
+      closeButtonClassName={onDuplicate ? 'sm:hidden' : ''}
       sideNavPrev={onNavigatePrev ? { onClick: onNavigatePrev, disabled: !hasPrev, title: 'Transaksi sebelumnya (←)' } : undefined}
       sideNavNext={onNavigateNext ? { onClick: onNavigateNext, disabled: !hasNext, title: 'Transaksi berikutnya (→)' } : undefined}
     >

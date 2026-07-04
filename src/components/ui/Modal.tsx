@@ -16,6 +16,13 @@ interface ModalProps {
   sideNavPrev?: { onClick: () => void; disabled: boolean; title?: string };
   sideNavNext?: { onClick: () => void; disabled: boolean; title?: string };
   /**
+   * Elemen aksi opsional di header, dirender tepat di kiri tombol close.
+   * Caller bisa atur visibilitas responsifnya sendiri (mis. `hidden sm:flex`).
+   */
+  headerAction?: React.ReactNode;
+  /** Kelas tambahan untuk tombol close — mis. `sm:hidden` agar disembunyikan di desktop. */
+  closeButtonClassName?: string;
+  /**
    * Sub-panel yang nempel di kiri modal. Di-render dalam flex container yang sama
    * sehingga ikut animasi & posisi modal. Caller bebas isi konten apa saja
    * (mis. preview hasil OCR). Disembunyikan otomatis di layar <lg.
@@ -32,7 +39,7 @@ const SIZE_CLASSES: Record<ModalSize, string> = {
   '3xl': 'sm:max-w-3xl',
 };
 
-export function Modal({ isOpen, onClose, title, children, footer, size = 'md', sideNavPrev, sideNavNext, sidePanel }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, footer, size = 'md', sideNavPrev, sideNavNext, sidePanel, headerAction, closeButtonClassName = '' }: ModalProps) {
   const [mounted, setMounted] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -116,25 +123,28 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', s
             <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
               {title}
             </h2>
-            <button
-              onClick={onClose}
-              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-gray-500 dark:text-gray-400"
+            <div className="flex items-center gap-1">
+              {headerAction}
+              <button
+                onClick={onClose}
+                className={`p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${closeButtonClassName}`}
               >
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-gray-500 dark:text-gray-400"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
           </div>
           <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0">
             {children}
