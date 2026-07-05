@@ -86,6 +86,20 @@ export function OmnichannelWidget({ business, index, businesses = [], onSelectBu
   const ctaLabel = labels.cta_label || 'Kirim rencana via WhatsApp';
   const actionLabel = labels.action_label || business.widget_action_label || 'kunjungan';
 
+  // Sektor akomodasi + mode rentang → inquiry membuat booking TENTATIF di kalender
+  // owner (best-effort; tak memblokir alur WhatsApp bila gagal).
+  const isAccommodation = business?.business_sector === 'accommodation' || business?.business_sector === 'short_term_rental';
+
+  function recordInquiry() {
+    if (!business?.slug || !isAccommodation || dateMode === 'single' || !checkin || !checkout) return;
+    // Fire-and-forget — jangan tunda pembukaan WhatsApp.
+    fetch('/api/public/booking-inquiry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: business.slug, check_in: checkin, check_out: checkout, note: note.trim() || undefined }),
+    }).catch(() => { /* silent — cuma catatan lead utk owner */ });
+  }
+
   function handleSend() {
     if (!business) return;
 
@@ -107,6 +121,7 @@ export function OmnichannelWidget({ business, index, businesses = [], onSelectBu
     }
 
     setError('');
+    recordInquiry();
 
     let msg = `Halo, saya tertarik untuk *${actionLabel}* di *${business.business_name}*.`;
 

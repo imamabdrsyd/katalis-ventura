@@ -39,7 +39,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     .eq('business_id', business.id)
     .is('deleted_at', null)
     .eq('is_external', false)
-    .neq('status', 'cancelled');
+    .neq('status', 'cancelled')
+    .not('check_in', 'is', null); // booking di penampungan (tanpa tanggal) tak diekspor
 
   if (unitId) query = query.eq('unit_id', unitId);
 

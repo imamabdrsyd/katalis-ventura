@@ -24,7 +24,7 @@ import type { CatalogItem } from '@/types';
 import { UnitBreakdownSection } from './UnitBreakdownSection';
 import { FileUpload } from '@/components/ui/FileUpload';
 import { makePendingAttachment, isPendingAttachment, uploadPendingAttachments } from '@/lib/storage/attachments';
-import { ChevronDown, StickyNote, Paperclip, Zap, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { ChevronDown, StickyNote, Paperclip, Zap, ArrowDownLeft, ArrowUpRight, X } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { CurrencyPill } from '@/components/ui/CurrencyPill';
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
@@ -164,6 +164,8 @@ export function QuickTransactionForm({
 
   // Inventory selection state
   const [selectedStockIds, setSelectedStockIds] = useState<string[]>([]);
+  // Item katalog yang dipilih → disimpan sbg chip di meta (bukan digabung ke deskripsi ketikan).
+  const [pickedCatalogItem, setPickedCatalogItem] = useState<{ id: string; name: string } | null>(null);
 
   // Dividend entry mode state
   const [dividendEntryMode, setDividendEntryMode] = useState<DividendEntryMode | null>(null);
@@ -263,7 +265,9 @@ export function QuickTransactionForm({
   const handlePickCatalogItem = (item: CatalogItem) => {
     setAmount(item.default_price);
     setDisplayAmount(formatAmountForCurrency(item.default_price, currencyCode));
-    if (!name.trim()) setName(item.name);
+    // Nama item TIDAK lagi digabung ke field nama/deskripsi — disimpan sbg chip
+    // di meta.catalog_item (dibedakan dari deskripsi yang diketik manual).
+    setPickedCatalogItem({ id: item.id, name: item.name });
     if (item.revenue_account_id && item.revenue_account_id !== selectedAccountId) {
       setSelectedAccountId(item.revenue_account_id);
     }
@@ -477,6 +481,7 @@ export function QuickTransactionForm({
 
   const buildMeta = (finalAttachments: TransactionAttachment[]) => ({
     ...(selectedStockIds.length > 0 ? { sold_stock_ids: selectedStockIds } : {}),
+    ...(pickedCatalogItem ? { catalog_item: pickedCatalogItem } : {}),
     unit_breakdown: unitBreakdown && unitBreakdown.unit ? unitBreakdown : undefined,
     attachments: finalAttachments.length > 0 ? finalAttachments : undefined,
   });
@@ -884,6 +889,22 @@ export function QuickTransactionForm({
             mode="single"
             onPick={handlePickCatalogItem}
           />
+          {pickedCatalogItem && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] text-gray-400 dark:text-gray-500">Dipilih:</span>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
+                {pickedCatalogItem.name}
+                <button
+                  type="button"
+                  onClick={() => setPickedCatalogItem(null)}
+                  aria-label="Hapus item katalog"
+                  className="hover:text-indigo-900 dark:hover:text-indigo-100"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            </div>
+          )}
         </div>
       )}
 

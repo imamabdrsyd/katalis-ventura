@@ -70,5 +70,6 @@ export const BOOKING_CHANNEL_LABELS: Record<BookingChannel, string> = {
   manual: 'Langsung',
   airbnb: 'Airbnb',
   booking_com: 'Booking.com',
+  website: 'Website',
   other: 'Lainnya',
 };

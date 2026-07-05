@@ -2350,6 +2350,8 @@ export function calculateBookingMetrics(
 
   for (const b of bookings) {
     if (b.is_external || b.status === 'cancelled') continue;
+    // Booking di penampungan (tanggal belum diisi) tidak masuk metrik occupancy/ADR.
+    if (!b.check_in || !b.check_out) continue;
 
     const inDate = toDate(b.check_in);
     const outDate = toDate(b.check_out);

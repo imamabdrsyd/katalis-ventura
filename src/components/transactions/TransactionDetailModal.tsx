@@ -33,6 +33,7 @@ import { updateTransaction } from '@/lib/api/transactions';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { formatFileSize, isImageType } from '@/lib/storage/attachments';
 import { useDeliverableAttachmentUrl, triggerAttachmentDownload } from '@/lib/storage/signedUrl';
+import { AddToCalendarButton } from '@/components/transactions/AddToCalendarButton';
 
 interface TransactionDetailModalProps {
   transaction: Transaction | null;
@@ -632,12 +633,21 @@ export function TransactionDetailModal({
               )}
             </p>
           )}
+          {/* Flag ke kalender — booking mengalir dari transaksi (bukan input di kalender) */}
+          <div className="mt-3">
+            <AddToCalendarButton transaction={transaction} />
+          </div>
         </div>
 
         {/* Main Info — kompak, label kecil di kiri */}
         <div className="space-y-3">
           {/* Description sebagai judul utama */}
           <div>
+            {transaction.meta?.catalog_item?.name && (
+              <span className="inline-flex items-center gap-1 mb-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
+                {transaction.meta.catalog_item.name}
+              </span>
+            )}
             <p className="text-base font-semibold text-gray-900 dark:text-gray-100 leading-snug">
               {transaction.description}
             </p>

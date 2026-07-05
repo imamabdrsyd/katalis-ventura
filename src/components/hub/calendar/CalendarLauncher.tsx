@@ -10,7 +10,6 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { addDays, parseISO, format } from 'date-fns';
 import { CalendarDays, Lock, Loader2, Sparkles, ArrowRight, Tag, Settings2, Home } from 'lucide-react';
 import { toast } from 'sonner';
 import { useBusinessContext } from '@/context/BusinessContext';
@@ -19,7 +18,7 @@ import { isAccommodationSector } from '@/lib/businessSectors';
 import { getCatalogItems } from '@/lib/api/catalog';
 import { getAccounts } from '@/lib/api/accounts';
 import { getUnits } from '@/lib/api/units';
-import { countUnlinkedStayTransactions } from '@/lib/api/bookings';
+import { countUnlinkedStayTransactions, getPendingBookings } from '@/lib/api/bookings';
 import { listDatesInRange } from '@/lib/rates';
 import type { Account, Booking, BusinessUnit, CatalogItem } from '@/types';
 import { useCalendar } from '@/hooks/useCalendar';
@@ -27,10 +26,11 @@ import { useDailyRates } from '@/hooks/useDailyRates';
 import { Tabs } from '@/components/ui/Tabs';
 import { CalendarBoard, type CalendarMode } from './CalendarBoard';
 import { CalendarKpiStrip } from './CalendarKpiStrip';
-import { BookingModal, type BookingPrefill } from './BookingModal';
+import { BookingModal } from './BookingModal';
 import { IcalSyncModal } from './IcalSyncModal';
 import { RateEditorPanel } from './RateEditorPanel';
 import { UnitManagerModal } from './UnitManagerModal';
+import { HoldingPanel } from './HoldingPanel';
 
 export function CalendarLauncher() {
   const { activeBusinessId, activeBusiness, user, userRole } = useBusinessContext();
@@ -45,12 +45,12 @@ export function CalendarLauncher() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Booking | null>(null);
-  const [prefill, setPrefill] = useState<BookingPrefill | null>(null);
   const [syncOpen, setSyncOpen] = useState(false);
   const [unitManagerOpen, setUnitManagerOpen] = useState(false);
 
   const [unlinkedCount, setUnlinkedCount] = useState(0);
   const [reconciling, setReconciling] = useState(false);
+  const [pending, setPending] = useState<Booking[]>([]); // booking penampungan (unit terpilih)
 
   // ── Kalender harga (mode Harga) ──────────────────────────────────────────
   const [mode, setMode] = useState<CalendarMode>('booking');
@@ -118,6 +118,23 @@ export function CalendarLauncher() {
     gridEnd: calendar.gridEnd,
   });
 
+  // Penampungan: booking tanpa tanggal untuk unit terpilih ("Perlu tindak lanjut").
+  const refreshPending = useCallback(async () => {
+    if (!activeBusinessId || !selectedUnit) {
+      setPending([]);
+      return;
+    }
+    try {
+      setPending(await getPendingBookings(activeBusinessId, selectedUnit.id));
+    } catch {
+      setPending([]);
+    }
+  }, [activeBusinessId, selectedUnit]);
+
+  useEffect(() => {
+    refreshPending();
+  }, [refreshPending]);
+
   const selectedDates = useMemo(() => {
     if (!selStart) return new Set<string>();
     return new Set(listDatesInRange(selStart, selEnd ?? selStart));
@@ -146,22 +163,11 @@ export function CalendarLauncher() {
     [clearSelection]
   );
 
-  const openNew = useCallback((dateISO?: string) => {
-    const ci = dateISO ?? format(new Date(), 'yyyy-MM-dd');
-    const co = format(addDays(parseISO(ci), 1), 'yyyy-MM-dd');
-    setEditing(null);
-    setPrefill({ check_in: ci, check_out: co });
-    setModalOpen(true);
-  }, []);
-
-  // Klik sel: mode booking → buka form; mode harga → seleksi rentang
-  // (klik pertama = anchor, klik kedua = ujung rentang, klik ketiga = mulai baru).
+  // Klik sel HANYA aktif di mode Harga (kalender = read-only untuk booking; data
+  // booking mengalir dari transaksi/omnichannel, bukan diklik-buat di sini).
   const handleDayClick = useCallback(
     (dateISO: string) => {
-      if (mode === 'booking') {
-        openNew(dateISO);
-        return;
-      }
+      if (mode !== 'rates') return;
       if (!selStart || selEnd) {
         setSelStart(dateISO);
         setSelEnd(null);
@@ -169,12 +175,11 @@ export function CalendarLauncher() {
         setSelEnd(dateISO);
       }
     },
-    [mode, selStart, selEnd, openNew]
+    [mode, selStart, selEnd]
   );
 
   const openEdit = useCallback((b: Booking) => {
     setEditing(b);
-    setPrefill(null);
     setModalOpen(true);
   }, []);
 
@@ -191,14 +196,15 @@ export function CalendarLauncher() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? 'Gagal menarik revenue');
       toast.success(
-        `${data.linked} booking dibuat dari revenue${data.estimated > 0 ? ` (${data.estimated} tanggal perkiraan — cek di kalender)` : ''}`
+        `${data.linked} booking ditarik${data.pending > 0 ? ` (${data.pending} perlu diisi tanggalnya — cek "Perlu tindak lanjut")` : ''}`
       );
-      await Promise.all([calendar.reload(), refreshUnlinked()]);
+      await Promise.all([calendar.reload(), refreshUnlinked(), refreshPending()]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Gagal menarik revenue');
     } finally {
       setReconciling(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBusinessId, calendar, refreshUnlinked]);
 
   if (!canManage) {
@@ -326,6 +332,16 @@ export function CalendarLauncher() {
 
       <CalendarKpiStrip bookings={calendar.bookings} monthCursor={calendar.monthCursor} unitsCount={1} />
 
+      {/* Penampungan: booking dari transaksi yang belum ada tanggalnya */}
+      <HoldingPanel
+        bookings={pending}
+        onUpdate={calendar.update}
+        onReloaded={() => {
+          refreshPending();
+          calendar.reload();
+        }}
+      />
+
       {/* Mode Harga: unit belum punya sumber harga */}
       {mode === 'rates' && !selectedUnit.rate_item && (
         <div className="card-static p-4 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -376,7 +392,6 @@ export function CalendarLauncher() {
         onPrev={calendar.goPrevMonth}
         onNext={calendar.goNextMonth}
         onToday={calendar.goToday}
-        onNew={() => openNew()}
         onOpenSync={() => setSyncOpen(true)}
         mode={mode}
         onModeChange={handleModeChange}
@@ -390,8 +405,6 @@ export function CalendarLauncher() {
         businessId={activeBusinessId ?? ''}
         unit={selectedUnit}
         booking={editing}
-        prefill={prefill}
-        onCreate={calendar.create}
         onUpdate={calendar.update}
         onMarkPaid={calendar.markPaid}
         onCancel={calendar.cancel}

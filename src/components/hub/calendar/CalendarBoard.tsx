@@ -10,7 +10,7 @@ import {
   isToday,
 } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Plus, Link2, CalendarDays, Tag } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Link2, CalendarDays, Tag } from 'lucide-react';
 import type { Booking } from '@/types';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import type { NightRate } from '@/lib/rates';
@@ -50,7 +50,6 @@ interface CalendarBoardProps {
   onPrev: () => void;
   onNext: () => void;
   onToday: () => void;
-  onNew: () => void;
   onOpenSync: () => void;
   /** Mode kalender: booking (default) atau edit harga per tanggal. */
   mode: CalendarMode;
@@ -72,13 +71,15 @@ export function CalendarBoard({
   onPrev,
   onNext,
   onToday,
-  onNew,
   onOpenSync,
   mode,
   onModeChange,
   priceOf,
   selectedDates,
 }: CalendarBoardProps) {
+  // Di mode Booking kalender = read-only (booking mengalir dari transaksi /
+  // omnichannel, bukan diklik-buat di sini). Klik sel hanya aktif di mode Harga.
+  const cellClickable = mode === 'rates';
   const weeks = useMemo(() => {
     const days: Date[] = [];
     let d = gridStart;
@@ -132,11 +133,6 @@ export function CalendarBoard({
           >
             <Link2 className="w-4 h-4" /> <span className="hidden sm:inline">iCal OTA</span>
           </button>
-          {mode === 'booking' && (
-            <button type="button" onClick={onNew} className="btn-primary inline-flex items-center gap-1.5">
-              <Plus className="w-4 h-4" /> Booking
-            </button>
-          )}
         </div>
       </div>
 
@@ -159,13 +155,18 @@ export function CalendarBoard({
           const weekEndExclusiveStr = format(addDays(weekStart, 7), 'yyyy-MM-dd');
           const weekStartStr = format(weekStart, 'yyyy-MM-dd');
 
-          // Booking yang beririsan minggu ini
+          // Booking yang beririsan minggu ini (yang di penampungan / tanpa tanggal
+          // tidak digambar di grid — muncul di panel "Perlu tindak lanjut").
           const weekBookings = bookings
-            .filter((b) => b.check_in < weekEndExclusiveStr && b.check_out > weekStartStr)
-            .sort((a, b) => a.check_in.localeCompare(b.check_in) || b.nights - a.nights);
+            .filter(
+              (b): b is Booking & { check_in: string; check_out: string } =>
+                b.check_in != null && b.check_out != null &&
+                b.check_in < weekEndExclusiveStr && b.check_out > weekStartStr
+            )
+            .sort((a, b) => a.check_in.localeCompare(b.check_in) || (b.nights ?? 0) - (a.nights ?? 0));
 
           // Lane assignment (greedy) agar bar tidak bertumpuk
-          const lanes: Booking[][] = [];
+          const lanes: (Booking & { check_in: string; check_out: string })[][] = [];
           const laneOf = new Map<string, number>();
           for (const b of weekBookings) {
             let placed = false;
@@ -205,15 +206,16 @@ export function CalendarBoard({
                     <button
                       key={di}
                       type="button"
-                      onClick={() => onDayClick(iso)}
+                      onClick={cellClickable ? () => onDayClick(iso) : undefined}
+                      tabIndex={cellClickable ? 0 : -1}
                       className={`text-left px-2 py-1.5 border-r border-gray-100 dark:border-gray-800 last:border-r-0 transition-colors ${
                         selected
                           ? 'bg-primary-50 dark:bg-primary-900/30 ring-1 ring-inset ring-primary-300 dark:ring-primary-700'
-                          : `hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
+                          : `${cellClickable ? 'hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer' : 'cursor-default'} ${
                               inMonth ? 'bg-transparent' : 'bg-gray-50/60 dark:bg-gray-900/30'
                             }`
                       }`}
-                      title={mode === 'rates' ? 'Klik untuk pilih tanggal (set harga)' : 'Klik untuk buat booking'}
+                      title={cellClickable ? 'Klik untuk pilih tanggal (set harga)' : undefined}
                     >
                       <span className="flex items-center justify-between gap-1">
                         <span

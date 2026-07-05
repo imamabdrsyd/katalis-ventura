@@ -18,7 +18,7 @@ import { isAccommodationSector } from '@/lib/businessSectors';
 
 export interface ReconcileResult {
   linked: number;
-  estimated: number;
+  pending: number; // masuk penampungan (belum ada tanggal — perlu tindak lanjut)
   skipped: number;
   eligible: boolean; // false bila bisnis bukan sektor akomodasi
 }
@@ -30,12 +30,6 @@ interface TxnRow {
   amount: number | string;
   sales_channel: string | null;
   meta: Record<string, unknown> | null;
-}
-
-function addDaysISO(iso: string, days: number): string {
-  const [y, m, d] = iso.split('-').map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d + days));
-  return dt.toISOString().slice(0, 10);
 }
 
 function resolveChannel(salesChannel: string | null, platform: unknown): BookingChannel {
@@ -51,7 +45,7 @@ export async function reconcileStayTransactions(
   admin: SupabaseClient,
   businessId: string
 ): Promise<ReconcileResult> {
-  const result: ReconcileResult = { linked: 0, estimated: 0, skipped: 0, eligible: true };
+  const result: ReconcileResult = { linked: 0, pending: 0, skipped: 0, eligible: true };
 
   // Guard sektor — kalender booking hanya untuk akomodasi.
   const { data: biz } = await admin
@@ -104,30 +98,35 @@ export async function reconcileStayTransactions(
     const checkInMeta = typeof meta.check_in === 'string' ? (meta.check_in as string) : null;
     const checkOutMeta = typeof meta.check_out === 'string' ? (meta.check_out as string) : null;
     const nightsMeta = typeof meta.nights === 'number' ? (meta.nights as number) : null;
+    const amount = Number(t.amount) || 0;
 
-    // Butuh minimal nights atau rentang tanggal untuk bisa ditaruh di kalender.
+    // Bulk backfill hanya menarik transaksi yang JELAS stay (punya nights/tanggal
+    // di meta) — add-on seperti "late checkout"/"early check-in" (tak punya
+    // keduanya) dilewati agar tak mengotori penampungan. Flag manual per-transaksi
+    // (createBookingFromTransaction) tak dibatasi ini — user yang memutuskan.
     if (!checkInMeta && !nightsMeta) {
       result.skipped += 1;
       continue;
     }
 
-    const checkIn = checkInMeta ?? t.date;
-    let nights = nightsMeta ?? 0;
-    if (!nights && checkInMeta && checkOutMeta) {
-      nights = Math.max(
-        0,
-        Math.round(
-          (Date.parse(checkOutMeta) - Date.parse(checkInMeta)) / (24 * 60 * 60 * 1000)
-        )
+    // Presisi: transaksi punya rentang tanggal lengkap → booking langsung tampil.
+    // Selain itu → PENAMPUNGAN (check_in/check_out NULL, migr 118): revenue sudah
+    // tercatat (LUNAS) tapi tanggal menginap belum diketahui — owner lengkapi di
+    // panel "Perlu tindak lanjut". Tidak lagi menebak tanggal (date_estimated dropped).
+    let checkIn: string | null = null;
+    let checkOut: string | null = null;
+    let nights = 0;
+    if (checkInMeta && checkOutMeta) {
+      const diff = Math.round(
+        (Date.parse(checkOutMeta) - Date.parse(checkInMeta)) / (24 * 60 * 60 * 1000)
       );
+      if (diff >= 1) {
+        checkIn = checkInMeta;
+        checkOut = checkOutMeta;
+        nights = nightsMeta && nightsMeta > 0 ? nightsMeta : diff;
+      }
     }
-    if (nights < 1) {
-      result.skipped += 1;
-      continue;
-    }
-    const checkOut = checkOutMeta ?? addDaysISO(checkIn, nights);
-    const estimated = !checkInMeta;
-    const amount = Number(t.amount) || 0;
+    const hasDates = !!checkIn;
 
     const { data: booking, error: insErr } = await admin
       .from('bookings')
@@ -137,15 +136,15 @@ export async function reconcileStayTransactions(
         transaction_id: t.id,
         check_in: checkIn,
         check_out: checkOut,
-        price_per_night: nights > 0 ? Math.round(amount / nights) : amount,
+        price_per_night: hasDates && nights > 0 ? Math.round(amount / nights) : amount,
         total_amount: amount,
         guest_name: t.name || 'Tamu',
         status: 'confirmed',
         payment_status: 'paid',
         channel: resolveChannel(t.sales_channel, meta.platform),
         is_external: false,
-        date_estimated: estimated,
-        notes: estimated ? 'Tanggal perkiraan dari tanggal transaksi — mohon konfirmasi.' : null,
+        date_estimated: false,
+        notes: hasDates ? null : 'Perlu isi tanggal check-in/out.',
       })
       .select('id')
       .single();
@@ -162,7 +161,7 @@ export async function reconcileStayTransactions(
       .eq('id', t.id);
 
     result.linked += 1;
-    if (estimated) result.estimated += 1;
+    if (!hasDates) result.pending += 1;
   }
 
   return result;

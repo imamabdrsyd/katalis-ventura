@@ -72,6 +72,8 @@ export interface TransactionMeta {
   tags?: string[];
   /** ID booking (hub /calendar) yang men-generate transaksi EARN ini */
   booking_id?: string;
+  /** Item katalog yang dipilih saat entry (chip di kolom deskripsi, terpisah dari teks manual) */
+  catalog_item?: { id: string; name: string };
   /** ID transaksi pelunasan penuh yang menyelesaikan piutang ini */
   settled_by_transaction_id?: string;
   /** ID transaksi piutang asli yang di-settle oleh entry ini */
@@ -1025,20 +1027,24 @@ export type BookingStatus =
   | 'completed'
   | 'cancelled';
 export type BookingPaymentStatus = 'unpaid' | 'paid';
-export type BookingChannel = 'manual' | 'airbnb' | 'booking_com' | 'other';
+export type BookingChannel = 'manual' | 'airbnb' | 'booking_com' | 'website' | 'other';
 
-// Booking menginap (nightly stays) untuk hub /calendar. Tiap booking menaut ke
-// satu unit fisik (business_units) + tamu (business_contacts). Saat ditandai
-// lunas, dibuatkan transaksi EARN dan ditautkan lewat transaction_id.
+// Booking menginap (nightly stays) untuk hub /calendar — READ-MODEL yang diisi
+// dari dua sumber (bukan input manual di kalender): (1) transaksi EARN yang
+// di-flag "Masukkan ke kalender" → payment_status='paid', tanpa tanggal →
+// PENAMPUNGAN (check_in/check_out NULL, migr 118) sampai owner mengisi tanggal;
+// (2) inquiry widget omnichannel → status='tentative', channel='website',
+// tanggal dari widget. Tiap booking menaut ke satu unit fisik (business_units)
+// + tamu (business_contacts).
 export interface Booking {
   id: string;
   business_id: string;
   unit_id: string | null;
   contact_id: string | null;
   transaction_id: string | null;
-  check_in: string;   // ISO date (YYYY-MM-DD)
-  check_out: string;  // ISO date (YYYY-MM-DD)
-  nights: number;     // GENERATED di DB
+  check_in: string | null;   // ISO date; NULL = di penampungan (belum ada tanggal)
+  check_out: string | null;  // ISO date; NULL berpasangan dengan check_in
+  nights: number | null;     // GENERATED di DB (NULL bila tanggal belum diisi)
   price_per_night: number;
   total_amount: number;
   guest_name: string | null;
@@ -1065,8 +1071,8 @@ export interface BookingInsert {
   unit_id?: string | null;
   contact_id?: string | null;
   transaction_id?: string | null;
-  check_in: string;
-  check_out: string;
+  check_in?: string | null;
+  check_out?: string | null;
   price_per_night: number;
   total_amount: number;
   guest_name?: string | null;

@@ -8,7 +8,6 @@ import type {
   BusinessUnit,
   Booking,
   BookingChannel,
-  BookingInsert,
   BookingStatus,
   BookingUpdate,
   Contact,
@@ -42,10 +41,9 @@ interface BookingModalProps {
   businessId: string;
   /** Unit fisik yang sedang dilihat kalendernya — booking selalu milik unit ini. */
   unit: BusinessUnit;
-  /** Booking yang diedit; null = mode buat baru. */
+  /** Booking yang dilihat/diedit. Modal ini EDIT-ONLY (booking mengalir dari
+   *  transaksi/omnichannel — tak ada create di kalender). */
   booking: Booking | null;
-  prefill?: BookingPrefill | null;
-  onCreate: (insert: Omit<BookingInsert, 'business_id' | 'created_by'>) => Promise<unknown>;
   /** Harus mengembalikan booking hasil update — dipakai handleMarkPaid agar ledger mencatat nilai form terbaru. */
   onUpdate: (id: string, updates: BookingUpdate) => Promise<Booking>;
   onMarkPaid: (booking: Booking, method: PaymentMethod) => Promise<unknown>;
@@ -67,18 +65,18 @@ export function BookingModal({
   businessId,
   unit,
   booking,
-  prefill,
-  onCreate,
   onUpdate,
   onMarkPaid,
   onCancel,
   onDelete,
   checkOverlap,
 }: BookingModalProps) {
-  const isEdit = !!booking;
   const isExternal = !!booking?.is_external;
   const isPaid = booking?.payment_status === 'paid';
-  const locked = isExternal || isPaid; // tanggal/harga tak bisa diubah
+  // Booking LUNAS = revenue sudah terkunci di ledger → harga/total tak boleh
+  // diubah. Tapi TANGGAL tetap boleh diedit (koreksi) selama non-eksternal.
+  const priceLocked = isExternal || isPaid;
+  const datesLocked = isExternal;
 
   // ── Form state ────────────────────────────────────────────────────────────
   const [checkIn, setCheckIn] = useState('');
@@ -98,33 +96,22 @@ export function BookingModal({
   // ini punya rate_item terpasang. Null = mode manual (harga flat × malam).
   const [autoQuote, setAutoQuote] = useState<StayQuote | null>(null);
 
-  // Reset form saat modal dibuka / target berubah
+  // Reset form saat modal dibuka / target berubah. Modal ini EDIT-ONLY —
+  // booking selalu ada (dari transaksi/omnichannel).
   useEffect(() => {
-    if (!isOpen) return;
-    if (booking) {
-      setCheckIn(booking.check_in);
-      setCheckOut(booking.check_out);
-      setGuestName(booking.guest_name ?? booking.contact?.name ?? '');
-      setContactId(booking.contact_id ?? null);
-      setGuestCount(booking.guest_count != null ? String(booking.guest_count) : '');
-      setPricePerNight(String(booking.price_per_night));
-      setChannel(booking.channel);
-      setStatus(booking.status);
-      setNotes(booking.notes ?? '');
-    } else {
-      setCheckIn(prefill?.check_in ?? format(new Date(), 'yyyy-MM-dd'));
-      setCheckOut(prefill?.check_out ?? format(addDays(new Date(), 1), 'yyyy-MM-dd'));
-      setGuestName(prefill?.guest_name ?? '');
-      setContactId(null);
-      setGuestCount('');
-      setPricePerNight(String(unit.rate_item?.default_price ?? 0));
-      setChannel(prefill?.channel ?? 'manual');
-      setStatus('confirmed');
-      setNotes('');
-    }
+    if (!isOpen || !booking) return;
+    setCheckIn(booking.check_in ?? '');
+    setCheckOut(booking.check_out ?? '');
+    setGuestName(booking.guest_name ?? booking.contact?.name ?? '');
+    setContactId(booking.contact_id ?? null);
+    setGuestCount(booking.guest_count != null ? String(booking.guest_count) : '');
+    setPricePerNight(String(booking.price_per_night));
+    setChannel(booking.channel);
+    setStatus(booking.status);
+    setNotes(booking.notes ?? '');
     setPaymentMethod('cash');
     setConflicts([]);
-  }, [isOpen, booking, prefill, unit]);
+  }, [isOpen, booking]);
 
   const nights = useMemo(() => {
     if (!checkIn || !checkOut) return 0;
@@ -140,8 +127,9 @@ export function BookingModal({
   // Total: quote kalender harga bila aktif; selain itu flat harga × malam.
   const total = autoQuote ? autoQuote.total : nights * price;
 
-  // ── Auto-quote kalender harga (create mode, unit punya rate_item) ─────────
-  const rateQuoteActive = !isEdit && !locked && !!unit.rate_item_id;
+  // ── Auto-quote kalender harga — hanya untuk booking BELUM lunas (mis. tentatif
+  // dari website) yang harganya masih boleh dihitung ulang dari kalender harga.
+  const rateQuoteActive = !priceLocked && !!unit.rate_item_id;
   useEffect(() => {
     if (!rateQuoteActive || !datesValid) {
       setAutoQuote(null);
@@ -182,7 +170,7 @@ export function BookingModal({
 
   // ── Overlap guard (debounced) ──────────────────────────────────────────────
   useEffect(() => {
-    if (locked || !datesValid) {
+    if (datesLocked || !datesValid) {
       setConflicts([]);
       return;
     }
@@ -199,39 +187,40 @@ export function BookingModal({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [locked, unit.id, checkIn, checkOut, datesValid, checkOverlap, booking?.id]);
+  }, [datesLocked, unit.id, checkIn, checkOut, datesValid, checkOverlap, booking?.id]);
 
   const hasConflict = conflicts.length > 0;
 
   // ── Actions ─────────────────────────────────────────────────────────────────
-  const buildBase = () => ({
-    unit_id: unit.id,
-    contact_id: contactId,
-    check_in: checkIn,
-    check_out: checkOut,
-    price_per_night: price,
-    total_amount: total,
-    guest_name: guestName.trim() || null,
-    guest_count: guestCount ? Number(guestCount) : null,
-    channel,
-    status,
-    // Menyimpan booking = mengkonfirmasi tanggal → buang flag perkiraan.
-    date_estimated: false,
-    notes: notes.trim() || null,
-  });
+  const buildBase = (): BookingUpdate => {
+    const base: BookingUpdate = {
+      unit_id: unit.id,
+      contact_id: contactId,
+      check_in: checkIn,
+      check_out: checkOut,
+      guest_name: guestName.trim() || null,
+      guest_count: guestCount ? Number(guestCount) : null,
+      status,
+      notes: notes.trim() || null,
+    };
+    // Harga/total & channel hanya boleh diubah bila belum lunas (revenue terkunci
+    // ke transaksi EARN untuk booking lunas).
+    if (!priceLocked) {
+      base.price_per_night = price;
+      base.total_amount = total;
+      base.channel = channel;
+    }
+    return base;
+  };
 
   const handleSubmit = async () => {
+    if (!booking) return;
     if (!datesValid) return toast.error('Tanggal check-out harus setelah check-in.');
     if (hasConflict) return toast.error('Tanggal bentrok dengan booking lain untuk unit ini.');
     setBusy(true);
     try {
-      if (isEdit && booking) {
-        await onUpdate(booking.id, buildBase());
-        toast.success('Booking diperbarui');
-      } else {
-        await onCreate(buildBase());
-        toast.success('Booking dibuat');
-      }
+      await onUpdate(booking.id, buildBase());
+      toast.success('Booking diperbarui');
       onClose();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Gagal menyimpan booking');
@@ -306,18 +295,14 @@ export function BookingModal({
   // ── Render ────────────────────────────────────────────────────────────────
   const displayState = booking ? getBookingDisplayState(booking) : null;
 
-  const title = isExternal
-    ? 'Blok ketersediaan (OTA)'
-    : isEdit
-      ? 'Detail booking'
-      : 'Booking baru';
+  const title = isExternal ? 'Blok ketersediaan (OTA)' : 'Detail booking';
 
   const footer = (
     <div className="flex items-center justify-between gap-3">
       <button type="button" onClick={onClose} className="btn-ghost">
         Tutup
       </button>
-      {!locked && (
+      {!isExternal && (
         <button
           type="button"
           onClick={handleSubmit}
@@ -325,7 +310,7 @@ export function BookingModal({
           className="btn-primary inline-flex items-center gap-2 disabled:opacity-50"
         >
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-          {isEdit ? 'Simpan perubahan' : 'Simpan booking'}
+          Simpan perubahan
         </button>
       )}
     </div>
@@ -369,13 +354,13 @@ export function BookingModal({
           </div>
         )}
 
-        {/* Tanggal perkiraan (hasil backfill) */}
-        {booking?.date_estimated && (
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl p-3 flex items-start gap-2.5">
-            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-            <p className="text-sm text-amber-800 dark:text-amber-300">
-              Tanggal ini <b>perkiraan</b> (dari tanggal transaksi). Sesuaikan check-in/check-out
-              yang benar lalu <b>Simpan perubahan</b>.
+        {/* Booking lunas dari transaksi (revenue terkunci) */}
+        {isPaid && (
+          <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-3 flex items-start gap-2.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+            <p className="text-sm text-emerald-800 dark:text-emerald-300">
+              Booking ini <b>sudah lunas</b> — nilainya terkunci ke transaksi di pembukuan. Kamu
+              masih bisa menyesuaikan tanggal, tamu, dan catatan.
             </p>
           </div>
         )}
@@ -389,7 +374,7 @@ export function BookingModal({
               className="input"
               value={checkIn}
               onChange={(e) => setCheckIn(e.target.value)}
-              disabled={locked}
+              disabled={datesLocked}
             />
           </div>
           <div>
@@ -400,7 +385,7 @@ export function BookingModal({
               value={checkOut}
               min={checkIn ? format(addDays(parseISO(checkIn), 1), 'yyyy-MM-dd') : undefined}
               onChange={(e) => setCheckOut(e.target.value)}
-              disabled={locked}
+              disabled={datesLocked}
             />
           </div>
         </div>
@@ -438,7 +423,7 @@ export function BookingModal({
                 setContactId(c.id);
               }}
               placeholder="Nama tamu"
-              className={locked ? 'input opacity-60 pointer-events-none' : 'input'}
+              className={isExternal ? 'input opacity-60 pointer-events-none' : 'input'}
             />
           </div>
           <div className="w-24">
@@ -476,7 +461,7 @@ export function BookingModal({
                 setAutoQuote(null);
                 setPricePerNight(e.target.value);
               }}
-              disabled={locked}
+              disabled={priceLocked}
             />
           </div>
           <div>
@@ -485,7 +470,7 @@ export function BookingModal({
               className="input"
               value={channel}
               onChange={(e) => setChannel(e.target.value as BookingChannel)}
-              disabled={locked}
+              disabled={priceLocked}
             >
               {(Object.keys(BOOKING_CHANNEL_LABELS) as BookingChannel[]).map((c) => (
                 <option key={c} value={c}>
@@ -512,7 +497,7 @@ export function BookingModal({
         </div>
 
         {/* Status editable (existing) */}
-        {isEdit && !isExternal && (
+        {booking && !isExternal && (
           <div>
             <label className="label">Status</label>
             <select
@@ -548,7 +533,7 @@ export function BookingModal({
         )}
 
         {/* Pembayaran (existing, unpaid, non-external) */}
-        {isEdit && !isExternal && !isPaid && (
+        {booking && !isExternal && !isPaid && (
           <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
@@ -582,7 +567,7 @@ export function BookingModal({
         )}
 
         {/* Aksi hapus / batalkan (existing) */}
-        {isEdit && booking && (
+        {booking && (
           <div className="flex items-center gap-4 pt-1">
             {!isExternal && booking.status !== 'cancelled' && (
               <button
