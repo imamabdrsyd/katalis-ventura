@@ -104,6 +104,28 @@ export function CalendarBoard({
     return out;
   }, [gridStart, gridEnd]);
 
+  // Harga per-malam dari booking yg meng-cover tiap tanggal (menggantikan harga
+  // katalog default di sel). Malam yg dibooking = check_in .. check_out-1.
+  // Bila beberapa booking overlap (harusnya tak terjadi krn anti double-booking),
+  // yg terakhir menang. Blok OTA / cancelled diabaikan.
+  const bookedPriceByDate = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const b of bookings) {
+      if (!b.check_in || !b.check_out) continue;
+      if (b.is_external || b.status === 'cancelled') continue;
+      if (!(b.price_per_night > 0)) continue;
+      let cur = parseISO(b.check_in);
+      const end = parseISO(b.check_out); // eksklusif (malam terakhir = check_out-1)
+      let guard = 0;
+      while (cur < end && guard < 400) {
+        map.set(format(cur, 'yyyy-MM-dd'), b.price_per_night);
+        cur = addDays(cur, 1);
+        guard += 1;
+      }
+    }
+    return map;
+  }, [bookings]);
+
   return (
     <div className="card-static p-0 overflow-hidden">
       {/* Toolbar bulan */}
@@ -233,6 +255,10 @@ export function CalendarBoard({
                   const inMonth = isSameMonth(day, monthCursor);
                   const today = isToday(day);
                   const rate = priceOf?.(iso) ?? null;
+                  // Bila tanggal ini dibooking, tampilkan harga/malam booking tsb
+                  // (bukan harga katalog default). Menang atas override rate calendar.
+                  const bookedPrice = bookedPriceByDate.get(iso) ?? null;
+                  const displayPrice = bookedPrice ?? rate?.price ?? null;
                   const selected = mode === 'rates' && (selectedDates?.has(iso) ?? false);
                   return (
                     <button
@@ -261,17 +287,20 @@ export function CalendarBoard({
                         >
                           {day.getDate()}
                         </span>
-                        {rate && (
+                        {displayPrice != null && (
                           <span
                             className={`text-[10px] tabular-nums truncate ${
-                              rate.overridden
-                                ? 'font-semibold text-primary-600 dark:text-primary-400'
-                                : inMonth
-                                  ? 'text-gray-400 dark:text-gray-500'
-                                  : 'text-gray-300 dark:text-gray-600'
+                              bookedPrice != null
+                                ? 'font-semibold text-emerald-600 dark:text-emerald-400'
+                                : rate?.overridden
+                                  ? 'font-semibold text-primary-600 dark:text-primary-400'
+                                  : inMonth
+                                    ? 'text-gray-400 dark:text-gray-500'
+                                    : 'text-gray-300 dark:text-gray-600'
                             }`}
+                            title={bookedPrice != null ? 'Harga booking tanggal ini' : undefined}
                           >
-                            {formatPriceShort(rate.price)}
+                            {formatPriceShort(displayPrice)}
                           </span>
                         )}
                       </span>
