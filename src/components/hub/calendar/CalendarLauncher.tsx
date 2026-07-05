@@ -307,27 +307,37 @@ export function CalendarLauncher() {
         </div>
       )}
 
-      {/* Pemilih unit (tiap unit = kalender terpisah) + kelola unit */}
+      {/* Pemilih unit (tiap unit = kalender terpisah). Label nama unit = tombol
+          Kelola unit (ikon Settings2 + nama), 1 komponen — buka UnitManagerModal.
+          Multi-unit pakai Tabs selector + tombol Kelola unit terpisah di kanan. */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         {activeUnits.length > 1 ? (
-          <Tabs
-            value={selectedUnit.id}
-            onChange={handleUnitChange}
-            scrollable
-            tabs={activeUnits.map((u) => ({ value: u.id, label: u.name }))}
-          />
+          <>
+            <Tabs
+              value={selectedUnit.id}
+              onChange={handleUnitChange}
+              scrollable
+              tabs={activeUnits.map((u) => ({ value: u.id, label: u.name }))}
+            />
+            <button
+              type="button"
+              onClick={() => setUnitManagerOpen(true)}
+              className="btn-ghost inline-flex items-center gap-1.5 sm:ml-auto"
+            >
+              <Settings2 className="w-4 h-4" /> Kelola unit
+            </button>
+          </>
         ) : (
-          <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-800 dark:text-gray-100">
-            <Home className="w-4 h-4 text-gray-400" /> {selectedUnit.name}
-          </span>
+          <button
+            type="button"
+            onClick={() => setUnitManagerOpen(true)}
+            className="btn-ghost inline-flex items-center gap-1.5"
+            title="Kelola unit"
+          >
+            <Settings2 className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+            <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{selectedUnit.name}</span>
+          </button>
         )}
-        <button
-          type="button"
-          onClick={() => setUnitManagerOpen(true)}
-          className="btn-ghost inline-flex items-center gap-1.5 sm:ml-auto"
-        >
-          <Settings2 className="w-4 h-4" /> Kelola unit
-        </button>
       </div>
 
       <CalendarKpiStrip bookings={calendar.bookings} monthCursor={calendar.monthCursor} unitsCount={1} />
