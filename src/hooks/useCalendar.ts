@@ -80,6 +80,10 @@ export function useCalendar({ businessId, unitId, userId, accounts }: UseCalenda
   const goPrevMonth = useCallback(() => setMonthCursor((m) => startOfMonth(addMonths(m, -1))), []);
   const goNextMonth = useCallback(() => setMonthCursor((m) => startOfMonth(addMonths(m, 1))), []);
   const goToday = useCallback(() => setMonthCursor(startOfMonth(new Date())), []);
+  const goToMonth = useCallback(
+    (year: number, month: number) => setMonthCursor(startOfMonth(new Date(year, month, 1))),
+    []
+  );
 
   // ── Mutasi ──────────────────────────────────────────────────────────────────
   const checkOverlap = useCallback(
@@ -141,6 +145,7 @@ export function useCalendar({ businessId, unitId, userId, accounts }: UseCalenda
     goPrevMonth,
     goNextMonth,
     goToday,
+    goToMonth,
     reload,
     checkOverlap,
     create,

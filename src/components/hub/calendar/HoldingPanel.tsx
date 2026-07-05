@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { differenceInCalendarDays, parseISO, format, addDays } from 'date-fns';
-import { Inbox, Loader2, CheckCircle2 } from 'lucide-react';
+import { Inbox, Loader2, CheckCircle2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Booking, BookingUpdate } from '@/types';
 import { formatCurrency } from '@/lib/utils';
@@ -24,6 +24,15 @@ interface HoldingPanelProps {
 export function HoldingPanel({ bookings, onUpdate, onReloaded }: HoldingPanelProps) {
   const [drafts, setDrafts] = useState<Record<string, { checkIn: string; checkOut: string }>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return bookings;
+    return bookings.filter((b) =>
+      (b.guest_name || b.contact?.name || '').toLowerCase().includes(q)
+    );
+  }, [bookings, query]);
 
   if (bookings.length === 0) return null;
 
@@ -67,8 +76,28 @@ export function HoldingPanel({ bookings, onUpdate, onReloaded }: HoldingPanelPro
         Booking ini masuk dari transaksi (sudah lunas) tapi belum ada tanggal menginap. Lengkapi
         check-in/out agar tampil di kalender & terhitung di occupancy.
       </p>
+
+      {/* Search — panel bisa panjang, cari cepat by nama tamu */}
+      {bookings.length > 5 && (
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Cari nama tamu…"
+            className="input pl-9"
+          />
+        </div>
+      )}
+
+      {filtered.length === 0 ? (
+        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+          Tidak ada tamu cocok dengan &quot;{query}&quot;.
+        </p>
+      ) : (
       <ul className="space-y-2">
-        {bookings.map((b) => {
+        {filtered.map((b) => {
           const d = drafts[b.id] ?? { checkIn: '', checkOut: '' };
           return (
             <li
@@ -118,6 +147,7 @@ export function HoldingPanel({ bookings, onUpdate, onReloaded }: HoldingPanelPro
           );
         })}
       </ul>
+      )}
     </div>
   );
 }

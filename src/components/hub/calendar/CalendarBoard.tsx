@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import {
   addDays,
   parseISO,
@@ -10,7 +10,7 @@ import {
   isToday,
 } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Link2, CalendarDays, Tag } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Link2, CalendarDays, Tag } from 'lucide-react';
 import type { Booking } from '@/types';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import type { NightRate } from '@/lib/rates';
@@ -25,7 +25,7 @@ import {
 const WEEKDAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 const LEGEND: BookingDisplayState[] = ['confirmed', 'paid', 'tentative', 'completed', 'external'];
 const LANE_H = 24; // tinggi bar + gap
-const HEADER_H = 30; // ruang untuk angka tanggal + harga
+const HEADER_H = 42; // ruang untuk baris angka tanggal + harga (bar mulai di bawahnya)
 
 export type CalendarMode = 'booking' | 'rates';
 
@@ -50,6 +50,7 @@ interface CalendarBoardProps {
   onPrev: () => void;
   onNext: () => void;
   onToday: () => void;
+  onJump: (year: number, month: number) => void;
   onOpenSync: () => void;
   /** Mode kalender: booking (default) atau edit harga per tanggal. */
   mode: CalendarMode;
@@ -71,12 +72,23 @@ export function CalendarBoard({
   onPrev,
   onNext,
   onToday,
+  onJump,
   onOpenSync,
   mode,
   onModeChange,
   priceOf,
   selectedDates,
 }: CalendarBoardProps) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) setPickerOpen(false);
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [pickerOpen]);
   // Di mode Booking kalender = read-only (booking mengalir dari transaksi /
   // omnichannel, bukan diklik-buat di sini). Klik sel hanya aktif di mode Harga.
   const cellClickable = mode === 'rates';
@@ -105,9 +117,30 @@ export function CalendarBoard({
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 min-w-[9rem] text-center capitalize">
-            {format(monthCursor, 'MMMM yyyy', { locale: idLocale })}
-          </h2>
+          <div className="relative" ref={pickerRef}>
+            <button
+              type="button"
+              onClick={() => setPickerOpen((v) => !v)}
+              className="flex items-center gap-1 min-w-[9rem] justify-center px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              aria-haspopup="true"
+              aria-expanded={pickerOpen}
+              title="Pilih bulan & tahun"
+            >
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 capitalize">
+                {format(monthCursor, 'MMMM yyyy', { locale: idLocale })}
+              </h2>
+              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${pickerOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {pickerOpen && (
+              <MonthYearPicker
+                monthCursor={monthCursor}
+                onPick={(y, m) => {
+                  onJump(y, m);
+                  setPickerOpen(false);
+                }}
+              />
+            )}
+          </div>
           <button type="button" onClick={onNext} aria-label="Bulan berikutnya" className="btn-icon">
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -312,6 +345,73 @@ export function CalendarBoard({
             harga khusus (override)
           </span>
         )}
+      </div>
+    </div>
+  );
+}
+
+const MONTH_LABELS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+  'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
+];
+
+/** Dropdown pilih bulan (grid 3×4) + navigasi tahun. */
+function MonthYearPicker({
+  monthCursor,
+  onPick,
+}: {
+  monthCursor: Date;
+  onPick: (year: number, month: number) => void;
+}) {
+  const [year, setYear] = useState(monthCursor.getFullYear());
+  const curM = monthCursor.getMonth();
+  const curY = monthCursor.getFullYear();
+  const now = new Date();
+
+  return (
+    <div className="absolute z-30 top-full left-1/2 -translate-x-1/2 mt-1 w-64 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl p-3">
+      {/* Navigasi tahun */}
+      <div className="flex items-center justify-between mb-2">
+        <button
+          type="button"
+          onClick={() => setYear((y) => y - 1)}
+          className="btn-icon"
+          aria-label="Tahun sebelumnya"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <span className="text-sm font-bold text-gray-800 dark:text-gray-100 tabular-nums">{year}</span>
+        <button
+          type="button"
+          onClick={() => setYear((y) => y + 1)}
+          className="btn-icon"
+          aria-label="Tahun berikutnya"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+      {/* Grid bulan */}
+      <div className="grid grid-cols-3 gap-1.5">
+        {MONTH_LABELS.map((label, m) => {
+          const isCurrent = m === curM && year === curY;
+          const isThisMonth = m === now.getMonth() && year === now.getFullYear();
+          return (
+            <button
+              key={m}
+              type="button"
+              onClick={() => onPick(year, m)}
+              className={`py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                isCurrent
+                  ? 'bg-primary-500 text-white'
+                  : isThisMonth
+                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
+                    : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

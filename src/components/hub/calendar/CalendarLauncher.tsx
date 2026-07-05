@@ -392,6 +392,7 @@ export function CalendarLauncher() {
         onPrev={calendar.goPrevMonth}
         onNext={calendar.goNextMonth}
         onToday={calendar.goToday}
+        onJump={calendar.goToMonth}
         onOpenSync={() => setSyncOpen(true)}
         mode={mode}
         onModeChange={handleModeChange}
