@@ -241,7 +241,7 @@ export function CalendarBoard({
                       type="button"
                       onClick={cellClickable ? () => onDayClick(iso) : undefined}
                       tabIndex={cellClickable ? 0 : -1}
-                      className={`text-left px-2 py-1.5 border-r border-gray-100 dark:border-gray-800 last:border-r-0 transition-colors ${
+                      className={`flex flex-col items-stretch text-left px-2 py-1.5 border-r border-gray-100 dark:border-gray-800 last:border-r-0 transition-colors ${
                         selected
                           ? 'bg-primary-50 dark:bg-primary-900/30 ring-1 ring-inset ring-primary-300 dark:ring-primary-700'
                           : `${cellClickable ? 'hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer' : 'cursor-default'} ${
@@ -314,10 +314,10 @@ export function CalendarBoard({
                         gridColumn: `${startIdx + 1} / span ${span}`,
                         gridRow: lane + 1,
                       }}
-                      className={`pointer-events-auto min-w-0 truncate px-2 text-[11px] leading-[18px] font-medium transition-opacity hover:opacity-90 ${
+                      className={`pointer-events-auto min-w-0 truncate px-2.5 text-[11px] leading-[18px] font-medium transition-opacity hover:opacity-90 ${
                         BOOKING_BAR_CLASSES[state]
-                      } ${isRealStart ? 'rounded-l-md ml-0.5' : ''} ${
-                        isRealEnd ? 'rounded-r-md mr-0.5' : ''
+                      } ${isRealStart ? 'rounded-l-full ml-0.5' : ''} ${
+                        isRealEnd ? 'rounded-r-full mr-0.5' : ''
                       } ${b.date_estimated ? 'ring-1 ring-inset ring-amber-400 dark:ring-amber-300' : ''}`}
                     >
                       {b.date_estimated ? '~' : ''}
