@@ -2,26 +2,29 @@
 
 import { useState, useMemo } from 'react';
 import { differenceInCalendarDays, parseISO, format, addDays } from 'date-fns';
-import { Inbox, Loader2, CheckCircle2, Search } from 'lucide-react';
+import { Loader2, CheckCircle2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Booking, BookingUpdate } from '@/types';
+import { Modal } from '@/components/ui/Modal';
 import { formatCurrency } from '@/lib/utils';
 import { BOOKING_CHANNEL_LABELS } from '@/lib/bookingStatus';
 
 interface HoldingPanelProps {
+  isOpen: boolean;
+  onClose: () => void;
   bookings: Booking[]; // booking tanpa tanggal (penampungan) untuk unit terpilih
   onUpdate: (id: string, updates: BookingUpdate) => Promise<Booking>;
   onReloaded: () => void;
 }
 
 /**
- * Panel "Perlu tindak lanjut" — booking di penampungan (hasil flag transaksi
+ * Modal "Perlu tindak lanjut" — booking di penampungan (hasil flag transaksi
  * EARN yang belum punya tanggal menginap). Owner mengisi check-in/out di sini;
  * setelah lengkap, booking pindah ke grid kalender. Harga tidak diubah (sudah
- * terkunci ke transaksi EARN); total di-recompute dari nights × harga bila mau,
- * tapi di sini kita PERTAHANKAN total_amount asli transaksi (revenue tak berubah).
+ * terkunci ke transaksi EARN); total_amount asli transaksi DIPERTAHANKAN
+ * (revenue tak berubah), price_per_night di-recompute dari total/nights.
  */
-export function HoldingPanel({ bookings, onUpdate, onReloaded }: HoldingPanelProps) {
+export function HoldingPanel({ isOpen, onClose, bookings, onUpdate, onReloaded }: HoldingPanelProps) {
   const [drafts, setDrafts] = useState<Record<string, { checkIn: string; checkOut: string }>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -33,8 +36,6 @@ export function HoldingPanel({ bookings, onUpdate, onReloaded }: HoldingPanelPro
       (b.guest_name || b.contact?.name || '').toLowerCase().includes(q)
     );
   }, [bookings, query]);
-
-  if (bookings.length === 0) return null;
 
   const setDraft = (id: string, patch: Partial<{ checkIn: string; checkOut: string }>) =>
     setDrafts((p) => ({ ...p, [id]: { checkIn: p[id]?.checkIn ?? '', checkOut: p[id]?.checkOut ?? '', ...patch } }));
@@ -62,16 +63,17 @@ export function HoldingPanel({ bookings, onUpdate, onReloaded }: HoldingPanelPro
   };
 
   return (
-    <div className="card-static p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <Inbox className="w-4 h-4 text-amber-500 dark:text-amber-400" />
-        <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="2xl"
+      title={
+        <span className="flex items-center gap-2">
           Perlu tindak lanjut
-          <span className="ml-1.5 font-normal text-gray-500 dark:text-gray-400">
-            ({bookings.length})
-          </span>
-        </h3>
-      </div>
+          <span className="font-normal text-gray-500 dark:text-gray-400">({bookings.length})</span>
+        </span>
+      }
+    >
       <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
         Booking ini masuk dari transaksi (sudah lunas) tapi belum ada tanggal menginap. Lengkapi
         check-in/out agar tampil di kalender & terhitung di occupancy.
@@ -91,7 +93,11 @@ export function HoldingPanel({ bookings, onUpdate, onReloaded }: HoldingPanelPro
         </div>
       )}
 
-      {filtered.length === 0 ? (
+      {bookings.length === 0 ? (
+        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">
+          Tidak ada booking yang perlu ditindaklanjuti. 🎉
+        </p>
+      ) : filtered.length === 0 ? (
         <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
           Tidak ada tamu cocok dengan &quot;{query}&quot;.
         </p>
@@ -148,6 +154,6 @@ export function HoldingPanel({ bookings, onUpdate, onReloaded }: HoldingPanelPro
         })}
       </ul>
       )}
-    </div>
+    </Modal>
   );
 }

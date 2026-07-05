@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { CalendarDays, Lock, Loader2, Sparkles, ArrowRight, Tag, Settings2, Home } from 'lucide-react';
+import { CalendarDays, Lock, Loader2, Sparkles, ArrowRight, Tag, Settings2, Home, Inbox } from 'lucide-react';
 import { toast } from 'sonner';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { isManagerRole } from '@/lib/roles';
@@ -47,6 +47,7 @@ export function CalendarLauncher() {
   const [editing, setEditing] = useState<Booking | null>(null);
   const [syncOpen, setSyncOpen] = useState(false);
   const [unitManagerOpen, setUnitManagerOpen] = useState(false);
+  const [holdingOpen, setHoldingOpen] = useState(false);
 
   const [unlinkedCount, setUnlinkedCount] = useState(0);
   const [reconciling, setReconciling] = useState(false);
@@ -309,24 +310,16 @@ export function CalendarLauncher() {
 
       {/* Pemilih unit (tiap unit = kalender terpisah). Label nama unit = tombol
           Kelola unit (ikon Settings2 + nama), 1 komponen — buka UnitManagerModal.
-          Multi-unit pakai Tabs selector + tombol Kelola unit terpisah di kanan. */}
+          Multi-unit pakai Tabs selector + tombol Kelola unit terpisah di kanan.
+          Tombol "Perlu tindak lanjut" (penampungan) bersebelahan dgn Kelola unit. */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         {activeUnits.length > 1 ? (
-          <>
-            <Tabs
-              value={selectedUnit.id}
-              onChange={handleUnitChange}
-              scrollable
-              tabs={activeUnits.map((u) => ({ value: u.id, label: u.name }))}
-            />
-            <button
-              type="button"
-              onClick={() => setUnitManagerOpen(true)}
-              className="btn-ghost inline-flex items-center gap-1.5 sm:ml-auto"
-            >
-              <Settings2 className="w-4 h-4" /> Kelola unit
-            </button>
-          </>
+          <Tabs
+            value={selectedUnit.id}
+            onChange={handleUnitChange}
+            scrollable
+            tabs={activeUnits.map((u) => ({ value: u.id, label: u.name }))}
+          />
         ) : (
           <button
             type="button"
@@ -338,12 +331,40 @@ export function CalendarLauncher() {
             <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{selectedUnit.name}</span>
           </button>
         )}
+
+        <div className="flex items-center gap-2 sm:ml-auto">
+          {pending.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setHoldingOpen(true)}
+              className="btn-ghost inline-flex items-center gap-1.5"
+              title="Booking dari transaksi yang belum ada tanggalnya"
+            >
+              <Inbox className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+              Perlu tindak lanjut
+              <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full text-[11px] font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+                {pending.length}
+              </span>
+            </button>
+          )}
+          {activeUnits.length > 1 && (
+            <button
+              type="button"
+              onClick={() => setUnitManagerOpen(true)}
+              className="btn-ghost inline-flex items-center gap-1.5"
+            >
+              <Settings2 className="w-4 h-4" /> Kelola unit
+            </button>
+          )}
+        </div>
       </div>
 
       <CalendarKpiStrip bookings={calendar.bookings} monthCursor={calendar.monthCursor} unitsCount={1} />
 
-      {/* Penampungan: booking dari transaksi yang belum ada tanggalnya */}
+      {/* Penampungan sebagai modal — dibuka dari tombol "Perlu tindak lanjut" */}
       <HoldingPanel
+        isOpen={holdingOpen}
+        onClose={() => setHoldingOpen(false)}
         bookings={pending}
         onUpdate={calendar.update}
         onReloaded={() => {
