@@ -10,7 +10,7 @@ import {
   isToday,
 } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, ChevronDown, Link2, CalendarDays, Tag } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Link2, CalendarDays, Tag } from 'lucide-react';
 import type { Booking } from '@/types';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import type { NightRate } from '@/lib/rates';
@@ -129,7 +129,6 @@ export function CalendarBoard({
               <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 capitalize">
                 {format(monthCursor, 'MMMM yyyy', { locale: idLocale })}
               </h2>
-              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${pickerOpen ? 'rotate-180' : ''}`} />
             </button>
             {pickerOpen && (
               <MonthYearPicker

@@ -25,7 +25,8 @@ type HubVariant = 'pos' | 'calendar';
 export function HubPage({ variant }: { variant: HubVariant }) {
   const { t } = useLanguage();
   const th = t.hub;
-  const [tab, setTab] = useState<HubTab>('catalog');
+  // Kalender tampil duluan (tab operasional) — Katalog tetap default utk POS.
+  const [tab, setTab] = useState<HubTab>(variant === 'calendar' ? 'operational' : 'catalog');
 
   const isPos = variant === 'pos';
   const subtitle = isPos ? th.posSubtitle : th.calendarSubtitle;
@@ -37,9 +38,14 @@ export function HubPage({ variant }: { variant: HubVariant }) {
   const HeaderIcon = isCatalog ? Box : OperationalIcon;
   const title = isCatalog ? th.tabCatalog : operationalLabel;
 
+  // Slot header untuk kontrol kalender (pemilih unit + "Perlu tindak lanjut") —
+  // di-portal dari CalendarLauncher supaya sejajar dgn judul & tab, bukan baris terpisah.
+  const [calendarHeaderEl, setCalendarHeaderEl] = useState<HTMLDivElement | null>(null);
+  const showCalendarHeaderSlot = variant === 'calendar' && tab === 'operational';
+
   return (
     <div className="p-4 md:p-6">
-      {/* Header: judul kiri, tab kanan atas (pola AR/AP) */}
+      {/* Header: judul kiri, kontrol kalender + tab kanan atas (pola AR/AP) */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
@@ -49,20 +55,23 @@ export function HubPage({ variant }: { variant: HubVariant }) {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
         </div>
 
-        <Tabs<HubTab>
-          value={tab}
-          onChange={setTab}
-          tabs={[
-            { value: 'catalog', label: th.tabCatalog, icon: <Box className="w-4 h-4" /> },
-            { value: 'operational', label: operationalLabel, icon: <OperationalIcon className="w-4 h-4" /> },
-          ]}
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          {showCalendarHeaderSlot && <div ref={setCalendarHeaderEl} className="flex flex-wrap items-center gap-2" />}
+          <Tabs<HubTab>
+            value={tab}
+            onChange={setTab}
+            tabs={[
+              { value: 'catalog', label: th.tabCatalog, icon: <Box className="w-4 h-4" /> },
+              { value: 'operational', label: operationalLabel, icon: <OperationalIcon className="w-4 h-4" /> },
+            ]}
+          />
+        </div>
       </div>
 
       {/* Tab Katalog: toolbar full-width di atas; grid (kiri) + Info AI (kanan) */}
       {tab === 'catalog' && <CatalogPanel aside={<AiKnowledgePanel />} />}
 
-      {tab === 'operational' && (isPos ? <CashierLauncher /> : <CalendarLauncher />)}
+      {tab === 'operational' && (isPos ? <CashierLauncher /> : <CalendarLauncher headerSlot={calendarHeaderEl} />)}
     </div>
   );
 }

@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { CalendarDays, Lock, Loader2, Sparkles, ArrowRight, Tag, Settings2, Home, Inbox } from 'lucide-react';
 import { toast } from 'sonner';
 import { useBusinessContext } from '@/context/BusinessContext';
@@ -32,7 +33,13 @@ import { RateEditorPanel } from './RateEditorPanel';
 import { UnitManagerModal } from './UnitManagerModal';
 import { HoldingPanel } from './HoldingPanel';
 
-export function CalendarLauncher() {
+interface CalendarLauncherProps {
+  /** Node header HubPage (di-passing dari atas) — pemilih unit + "Perlu tindak
+   *  lanjut" di-portal ke sini agar sejajar dgn judul & tab, bukan baris terpisah. */
+  headerSlot?: HTMLDivElement | null;
+}
+
+export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
   const { activeBusinessId, activeBusiness, user, userRole } = useBusinessContext();
   const canManage = isManagerRole(userRole);
   const isAccommodation = isAccommodationSector(activeBusiness?.business_sector);
@@ -282,6 +289,57 @@ export function CalendarLauncher() {
 
   if (!selectedUnit) return null; // tak akan terjadi — dijaga guard di atas
 
+  // Pemilih unit + "Perlu tindak lanjut". Label nama unit = tombol Kelola unit
+  // (ikon Settings2 + nama), 1 komponen — buka UnitManagerModal. Multi-unit
+  // pakai Tabs selector + tombol Kelola unit terpisah. Tombol "Perlu tindak
+  // lanjut" (penampungan) selalu bersebelahan.
+  const unitToolbar = (
+    <div className="flex flex-wrap items-center gap-2">
+      {activeUnits.length > 1 ? (
+        <Tabs
+          value={selectedUnit.id}
+          onChange={handleUnitChange}
+          scrollable
+          tabs={activeUnits.map((u) => ({ value: u.id, label: u.name }))}
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setUnitManagerOpen(true)}
+          className="btn-ghost inline-flex items-center gap-1.5"
+          title="Kelola unit"
+        >
+          <Settings2 className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+          <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{selectedUnit.name}</span>
+        </button>
+      )}
+
+      {pending.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setHoldingOpen(true)}
+          className="btn-ghost inline-flex items-center gap-1.5"
+          title="Booking dari transaksi yang belum ada tanggalnya"
+        >
+          <Inbox className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+          Perlu tindak lanjut
+          <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full text-[11px] font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+            {pending.length}
+          </span>
+        </button>
+      )}
+      {activeUnits.length > 1 && (
+        <button
+          type="button"
+          onClick={() => setUnitManagerOpen(true)}
+          className="btn-ghost inline-flex items-center gap-1.5"
+        >
+          <Settings2 className="w-4 h-4" /> Kelola unit
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       {unlinkedCount > 0 && (
@@ -308,56 +366,10 @@ export function CalendarLauncher() {
         </div>
       )}
 
-      {/* Pemilih unit (tiap unit = kalender terpisah). Label nama unit = tombol
-          Kelola unit (ikon Settings2 + nama), 1 komponen — buka UnitManagerModal.
-          Multi-unit pakai Tabs selector + tombol Kelola unit terpisah di kanan.
-          Tombol "Perlu tindak lanjut" (penampungan) bersebelahan dgn Kelola unit. */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        {activeUnits.length > 1 ? (
-          <Tabs
-            value={selectedUnit.id}
-            onChange={handleUnitChange}
-            scrollable
-            tabs={activeUnits.map((u) => ({ value: u.id, label: u.name }))}
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => setUnitManagerOpen(true)}
-            className="btn-ghost inline-flex items-center gap-1.5"
-            title="Kelola unit"
-          >
-            <Settings2 className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-            <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{selectedUnit.name}</span>
-          </button>
-        )}
-
-        <div className="flex items-center gap-2 sm:ml-auto">
-          {pending.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setHoldingOpen(true)}
-              className="btn-ghost inline-flex items-center gap-1.5"
-              title="Booking dari transaksi yang belum ada tanggalnya"
-            >
-              <Inbox className="w-4 h-4 text-amber-500 dark:text-amber-400" />
-              Perlu tindak lanjut
-              <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full text-[11px] font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
-                {pending.length}
-              </span>
-            </button>
-          )}
-          {activeUnits.length > 1 && (
-            <button
-              type="button"
-              onClick={() => setUnitManagerOpen(true)}
-              className="btn-ghost inline-flex items-center gap-1.5"
-            >
-              <Settings2 className="w-4 h-4" /> Kelola unit
-            </button>
-          )}
-        </div>
-      </div>
+      {/* Pemilih unit (tiap unit = kalender terpisah) + "Perlu tindak lanjut" —
+          di-portal ke header HubPage (sejajar judul & tab) bila slot tersedia,
+          jatuh balik render inline di sini kalau belum (mis. sebelum mount). */}
+      {headerSlot ? createPortal(unitToolbar, headerSlot) : unitToolbar}
 
       <CalendarKpiStrip bookings={calendar.bookings} monthCursor={calendar.monthCursor} unitsCount={1} />
 
