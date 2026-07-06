@@ -25,7 +25,7 @@ import type { Account, Booking, BusinessUnit, CatalogItem } from '@/types';
 import { useCalendar } from '@/hooks/useCalendar';
 import { useDailyRates } from '@/hooks/useDailyRates';
 import { Tabs } from '@/components/ui/Tabs';
-import { CalendarBoard, type CalendarMode } from './CalendarBoard';
+import { CalendarBoard } from './CalendarBoard';
 import { CalendarKpiStrip } from './CalendarKpiStrip';
 import { BookingModal } from './BookingModal';
 import { IcalSyncModal } from './IcalSyncModal';
@@ -60,9 +60,8 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
   const [reconciling, setReconciling] = useState(false);
   const [pending, setPending] = useState<Booking[]>([]); // booking penampungan (unit terpilih)
 
-  // ── Kalender harga (mode Harga) ──────────────────────────────────────────
-  const [mode, setMode] = useState<CalendarMode>('booking');
-  // Seleksi rentang tanggal di mode Harga (anchor → end, inklusif).
+  // ── Set harga inline (tanpa mode terpisah) ────────────────────────────────
+  // Seleksi rentang tanggal utk set harga (anchor → end, inklusif).
   const [selStart, setSelStart] = useState<string | null>(null);
   const [selEnd, setSelEnd] = useState<string | null>(null);
 
@@ -148,19 +147,22 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
     return new Set(listDatesInRange(selStart, selEnd ?? selStart));
   }, [selStart, selEnd]);
 
+  // Tanggal yang sudah dibooking (aktif) — dikecualikan dari set harga rentang.
+  const bookedDates = useMemo(() => {
+    const set = new Set<string>();
+    for (const b of calendar.bookings) {
+      if (!b.check_in || !b.check_out || b.status === 'cancelled') continue;
+      const dates = listDatesInRange(b.check_in, b.check_out);
+      // check_out eksklusif → buang malam terakhir (tanggal checkout)
+      dates.slice(0, -1).forEach((d) => set.add(d));
+    }
+    return set;
+  }, [calendar.bookings]);
+
   const clearSelection = useCallback(() => {
     setSelStart(null);
     setSelEnd(null);
   }, []);
-
-  // Ganti mode → bersihkan seleksi supaya tak ada highlight nyangkut.
-  const handleModeChange = useCallback(
-    (m: CalendarMode) => {
-      setMode(m);
-      clearSelection();
-    },
-    [clearSelection]
-  );
 
   // Ganti unit → seleksi harga tak relevan lagi untuk unit baru.
   const handleUnitChange = useCallback(
@@ -171,11 +173,10 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
     [clearSelection]
   );
 
-  // Klik sel HANYA aktif di mode Harga (kalender = read-only untuk booking; data
-  // booking mengalir dari transaksi/omnichannel, bukan diklik-buat di sini).
+  // Klik sel (hanya sel kosong & future — dijaga CalendarBoard) → pilih tanggal
+  // utk set harga: klik pertama = anchor, kedua = ujung rentang, ketiga = mulai baru.
   const handleDayClick = useCallback(
     (dateISO: string) => {
-      if (mode !== 'rates') return;
       if (!selStart || selEnd) {
         setSelStart(dateISO);
         setSelEnd(null);
@@ -183,7 +184,7 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
         setSelEnd(dateISO);
       }
     },
-    [mode, selStart, selEnd]
+    [selStart, selEnd]
   );
 
   const openEdit = useCallback((b: Booking) => {
@@ -385,13 +386,13 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
         }}
       />
 
-      {/* Mode Harga: unit belum punya sumber harga */}
-      {mode === 'rates' && !selectedUnit.rate_item && (
+      {/* Unit belum punya sumber harga → set harga tak bisa; ajak ke Kelola Unit */}
+      {!selectedUnit.rate_item && (
         <div className="card-static p-4 flex flex-col sm:flex-row sm:items-center gap-3">
           <Tag className="w-5 h-5 text-primary-500 dark:text-primary-400 shrink-0" />
           <p className="text-sm text-gray-700 dark:text-gray-200 flex-1">
             Unit <b>{selectedUnit.name}</b> belum punya item sumber harga. Pilih di <b>Kelola Unit</b>
-            {' '}agar harga tampil di tiap tanggal & bisa di-override.
+            {' '}agar harga tampil di tiap tanggal & bisa di-set per tanggal.
           </p>
           <button
             type="button"
@@ -403,22 +404,23 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
         </div>
       )}
 
-      {/* Mode Harga: panel set harga saat ada tanggal terpilih */}
-      {mode === 'rates' && selectedUnit.rate_item && selStart && (
+      {/* Panel set harga — muncul saat ada tanggal terpilih (klik sel kosong future) */}
+      {selectedUnit.rate_item && selStart && (
         <RateEditorPanel
           rateItem={selectedUnit.rate_item}
           rangeStart={selStart <= (selEnd ?? selStart) ? selStart : (selEnd ?? selStart)}
           rangeEnd={selStart <= (selEnd ?? selStart) ? (selEnd ?? selStart) : selStart}
+          excludeDates={bookedDates}
           onApply={rates.setPrices}
           onReset={rates.resetPrices}
           onClear={clearSelection}
         />
       )}
 
-      {/* Mode Harga: hint saat belum ada seleksi */}
-      {mode === 'rates' && selectedUnit.rate_item && !selStart && (
+      {/* Hint set harga — saat ada sumber harga tapi belum memilih tanggal */}
+      {selectedUnit.rate_item && !selStart && (
         <p className="text-xs text-gray-400 dark:text-gray-500 px-1">
-          Klik satu tanggal lalu klik tanggal lain untuk memilih rentang — panel harga akan muncul.
+          Klik tanggal kosong (hari ini ke depan) untuk set harga; klik tanggal lain untuk rentang.
           Sumber harga: <b>{selectedUnit.rate_item.name}</b> (default{' '}
           {Number(selectedUnit.rate_item.default_price).toLocaleString('id-ID')}).
         </p>
@@ -437,8 +439,7 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
         onToday={calendar.goToday}
         onJump={calendar.goToMonth}
         onOpenSync={() => setSyncOpen(true)}
-        mode={mode}
-        onModeChange={handleModeChange}
+        pricingEnabled={!!selectedUnit.rate_item}
         priceOf={selectedUnit.rate_item ? rates.priceOf : undefined}
         selectedDates={selectedDates}
       />

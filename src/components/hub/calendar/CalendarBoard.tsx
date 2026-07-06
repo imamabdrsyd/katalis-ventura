@@ -10,9 +10,8 @@ import {
   isToday,
 } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Link2, CalendarDays, Tag } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Link2 } from 'lucide-react';
 import type { Booking } from '@/types';
-import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import type { NightRate } from '@/lib/rates';
 import {
   getBookingDisplayState,
@@ -26,8 +25,6 @@ const WEEKDAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 const LEGEND: BookingDisplayState[] = ['confirmed', 'paid', 'tentative', 'completed', 'external'];
 const LANE_H = 24; // tinggi bar + gap
 const HEADER_H = 42; // ruang untuk baris angka tanggal + harga (bar mulai di bawahnya)
-
-export type CalendarMode = 'booking' | 'rates';
 
 /** Format harga ringkas untuk sel kalender: 350000 → "350rb", 1500000 → "1,5jt". */
 function formatPriceShort(price: number): string {
@@ -52,12 +49,12 @@ interface CalendarBoardProps {
   onToday: () => void;
   onJump: (year: number, month: number) => void;
   onOpenSync: () => void;
-  /** Mode kalender: booking (default) atau edit harga per tanggal. */
-  mode: CalendarMode;
-  onModeChange: (mode: CalendarMode) => void;
+  /** Set harga inline aktif (unit punya sumber harga). Sel KOSONG & hari-ini-ke-depan
+   *  bisa diklik utk pilih tanggal & set harga; booking tetap read-only. */
+  pricingEnabled?: boolean;
   /** Harga final per tanggal (null = kalender harga belum dikonfigurasi → kolom harga disembunyikan). */
   priceOf?: (dateISO: string) => NightRate | null;
-  /** Tanggal terpilih di mode Harga (highlight sel). */
+  /** Tanggal terpilih utk set harga (highlight sel). */
   selectedDates?: Set<string>;
 }
 
@@ -74,8 +71,7 @@ export function CalendarBoard({
   onToday,
   onJump,
   onOpenSync,
-  mode,
-  onModeChange,
+  pricingEnabled = false,
   priceOf,
   selectedDates,
 }: CalendarBoardProps) {
@@ -89,9 +85,8 @@ export function CalendarBoard({
     document.addEventListener('mousedown', onClickOutside);
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, [pickerOpen]);
-  // Di mode Booking kalender = read-only (booking mengalir dari transaksi /
-  // omnichannel, bukan diklik-buat di sini). Klik sel hanya aktif di mode Harga.
-  const cellClickable = mode === 'rates';
+
+  const todayISO = format(new Date(), 'yyyy-MM-dd');
   const weeks = useMemo(() => {
     const days: Date[] = [];
     let d = gridStart;
@@ -105,25 +100,27 @@ export function CalendarBoard({
   }, [gridStart, gridEnd]);
 
   // Harga per-malam dari booking yg meng-cover tiap tanggal (menggantikan harga
-  // katalog default di sel). Malam yg dibooking = check_in .. check_out-1.
-  // Bila beberapa booking overlap (harusnya tak terjadi krn anti double-booking),
-  // yg terakhir menang. Blok OTA / cancelled diabaikan.
-  const bookedPriceByDate = useMemo(() => {
-    const map = new Map<string, number>();
+  // katalog default di sel) + set tanggal yang sudah dibooking (utk cegah set
+  // harga di tanggal terisi). Malam yg dibooking = check_in .. check_out-1.
+  // Blok OTA (is_external) tetap dihitung "terisi" tapi tak punya harga tampil.
+  const { bookedPriceByDate, bookedDates } = useMemo(() => {
+    const priceMap = new Map<string, number>();
+    const dateSet = new Set<string>();
     for (const b of bookings) {
       if (!b.check_in || !b.check_out) continue;
-      if (b.is_external || b.status === 'cancelled') continue;
-      if (!(b.price_per_night > 0)) continue;
+      if (b.status === 'cancelled') continue;
       let cur = parseISO(b.check_in);
       const end = parseISO(b.check_out); // eksklusif (malam terakhir = check_out-1)
       let guard = 0;
       while (cur < end && guard < 400) {
-        map.set(format(cur, 'yyyy-MM-dd'), b.price_per_night);
+        const iso = format(cur, 'yyyy-MM-dd');
+        dateSet.add(iso);
+        if (!b.is_external && b.price_per_night > 0) priceMap.set(iso, b.price_per_night);
         cur = addDays(cur, 1);
         guard += 1;
       }
     }
-    return map;
+    return { bookedPriceByDate: priceMap, bookedDates: dateSet };
   }, [bookings]);
 
   return (
@@ -169,25 +166,14 @@ export function CalendarBoard({
             Hari ini
           </button>
         </div>
-        <div className="flex items-center gap-2">
-          <SegmentedToggle<CalendarMode>
-            value={mode}
-            onChange={onModeChange}
-            options={[
-              { value: 'booking', label: 'Booking', icon: <CalendarDays className="w-3.5 h-3.5" /> },
-              { value: 'rates', label: 'Harga', icon: <Tag className="w-3.5 h-3.5" /> },
-            ]}
-            ariaLabel="Mode kalender"
-          />
-          <button
-            type="button"
-            onClick={onOpenSync}
-            className="btn-ghost inline-flex items-center gap-1.5"
-            title="Sinkronisasi kalender Airbnb / Booking.com"
-          >
-            <Link2 className="w-4 h-4" /> <span className="hidden sm:inline">iCal OTA</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onOpenSync}
+          className="btn-ghost inline-flex items-center gap-1.5"
+          title="Sinkronisasi kalender Airbnb / Booking.com"
+        >
+          <Link2 className="w-4 h-4" /> <span className="hidden sm:inline">iCal OTA</span>
+        </button>
       </div>
 
       {/* Header hari */}
@@ -248,7 +234,9 @@ export function CalendarBoard({
               key={wi}
               className="relative border-b border-gray-100 dark:border-gray-800 last:border-b-0"
             >
-              {/* Sel hari (base layer; klik = buat booking / pilih tanggal di mode Harga) */}
+              {/* Sel hari (base layer). Klik = pilih tanggal utk set harga — HANYA
+                  sel kosong (belum dibooking) & hari-ini-ke-depan. Booking di-klik
+                  lewat bar overlay (buka detail). */}
               <div className="grid grid-cols-7" style={{ minHeight: cellMinH }}>
                 {week.map((day, di) => {
                   const iso = format(day, 'yyyy-MM-dd');
@@ -259,21 +247,23 @@ export function CalendarBoard({
                   // (bukan harga katalog default). Menang atas override rate calendar.
                   const bookedPrice = bookedPriceByDate.get(iso) ?? null;
                   const displayPrice = bookedPrice ?? rate?.price ?? null;
-                  const selected = mode === 'rates' && (selectedDates?.has(iso) ?? false);
+                  // Set harga hanya di tanggal KOSONG & hari-ini-ke-depan.
+                  const clickable = pricingEnabled && !bookedDates.has(iso) && iso >= todayISO;
+                  const selected = selectedDates?.has(iso) ?? false;
                   return (
                     <button
                       key={di}
                       type="button"
-                      onClick={cellClickable ? () => onDayClick(iso) : undefined}
-                      tabIndex={cellClickable ? 0 : -1}
+                      onClick={clickable ? () => onDayClick(iso) : undefined}
+                      tabIndex={clickable ? 0 : -1}
                       className={`flex flex-col items-stretch text-left px-2 py-1.5 border-r border-gray-100 dark:border-gray-800 last:border-r-0 transition-colors ${
                         selected
                           ? 'bg-primary-50 dark:bg-primary-900/30 ring-1 ring-inset ring-primary-300 dark:ring-primary-700'
-                          : `${cellClickable ? 'hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer' : 'cursor-default'} ${
+                          : `${clickable ? 'hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer' : 'cursor-default'} ${
                               inMonth ? 'bg-transparent' : 'bg-gray-50/60 dark:bg-gray-900/30'
                             }`
                       }`}
-                      title={cellClickable ? 'Klik untuk pilih tanggal (set harga)' : undefined}
+                      title={clickable ? 'Klik untuk set harga tanggal ini' : undefined}
                     >
                       <span className="flex items-center justify-between gap-1">
                         <span

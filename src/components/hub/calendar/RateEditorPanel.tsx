@@ -24,21 +24,24 @@ interface RateEditorPanelProps {
   /** Rentang terpilih (anchor..end, inklusif) — panel yang memfilter per hari. */
   rangeStart: string;
   rangeEnd: string;
+  /** Tanggal yang TAK boleh di-set harga (sudah dibooking) — dikecualikan dari rentang. */
+  excludeDates?: Set<string>;
   onApply: (dates: string[], price: number) => Promise<void>;
   onReset: (dates: string[]) => Promise<void>;
   onClear: () => void;
 }
 
 /**
- * Panel set harga mode Harga (pola Airbnb): tampil saat ada rentang tanggal
- * terpilih. Set harga / reset ke default untuk rentang, dengan filter hari
- * (mis. hanya Jum+Sab dalam rentang panjang = pola harga weekend). Mengganti
- * item sumber harga unit adalah aksi konfigurasi unit — ada di UnitManagerModal.
+ * Panel set harga (pola Airbnb): tampil saat ada rentang tanggal terpilih. Set
+ * harga / reset ke default untuk rentang, dengan filter hari (mis. hanya Jum+Sab
+ * dalam rentang panjang = pola harga weekend). Tanggal yang sudah dibooking
+ * (excludeDates) otomatis dilewati. Mengganti item sumber harga = di UnitManagerModal.
  */
 export function RateEditorPanel({
   rateItem,
   rangeStart,
   rangeEnd,
+  excludeDates,
   onApply,
   onReset,
   onClear,
@@ -54,8 +57,11 @@ export function RateEditorPanel({
   }, [rangeStart, rangeEnd]);
 
   const dates = useMemo(
-    () => listDatesInRange(rangeStart, rangeEnd, activeDows),
-    [rangeStart, rangeEnd, activeDows]
+    () =>
+      listDatesInRange(rangeStart, rangeEnd, activeDows).filter(
+        (d) => !excludeDates?.has(d)
+      ),
+    [rangeStart, rangeEnd, activeDows, excludeDates]
   );
 
   const toggleDow = (dow: number) => {
