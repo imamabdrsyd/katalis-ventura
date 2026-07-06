@@ -10,7 +10,7 @@ import {
   isToday,
 } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Link2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Link } from 'lucide-react';
 import type { Booking } from '@/types';
 import type { NightRate } from '@/lib/rates';
 import {
@@ -170,9 +170,9 @@ export function CalendarBoard({
           type="button"
           onClick={onOpenSync}
           className="btn-ghost inline-flex items-center gap-1.5"
-          title="Sinkronisasi kalender Airbnb / Booking.com"
+          title="Hubungkan kalender Airbnb / Booking.com (iCal)"
         >
-          <Link2 className="w-4 h-4" /> <span className="hidden sm:inline">iCal OTA</span>
+          <Link className="w-4 h-4" /> <span className="hidden sm:inline">Connect to another website</span>
         </button>
       </div>
 
