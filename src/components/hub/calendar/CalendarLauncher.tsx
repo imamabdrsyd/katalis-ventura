@@ -417,15 +417,6 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
         />
       )}
 
-      {/* Hint set harga — saat ada sumber harga tapi belum memilih tanggal */}
-      {selectedUnit.rate_item && !selStart && (
-        <p className="text-xs text-gray-400 dark:text-gray-500 px-1">
-          Klik tanggal kosong (hari ini ke depan) untuk set harga; klik tanggal lain untuk rentang.
-          Sumber harga: <b>{selectedUnit.rate_item.name}</b> (default{' '}
-          {Number(selectedUnit.rate_item.default_price).toLocaleString('id-ID')}).
-        </p>
-      )}
-
       <CalendarBoard
         monthCursor={calendar.monthCursor}
         gridStart={calendar.gridStart}

@@ -2361,8 +2361,16 @@ export function calculateBookingMetrics(
     const clippedNights = Math.round((clipEnd.getTime() - clipStart.getTime()) / MS_PER_DAY);
     if (clippedNights <= 0) continue;
 
+    // Pendapatan kamar = prorata dari total_amount ASLI (bukan price_per_night
+    // yang sudah dibulatkan) → booking penuh-dalam-bulan menyumbang total_amount
+    // eksak, tak ada sisa pembulatan (mis. "Rp 4.400.010"). Booking lintas bulan
+    // dibagi proporsional per malam.
+    const totalNights = Math.round((outDate.getTime() - inDate.getTime()) / MS_PER_DAY);
+    const revenueForPeriod =
+      totalNights > 0 ? (b.total_amount * clippedNights) / totalNights : b.total_amount;
+
     bookedNights += clippedNights;
-    roomRevenue += clippedNights * b.price_per_night;
+    roomRevenue += revenueForPeriod;
     bookingsCount += 1;
     contractedRevenue += b.total_amount;
   }

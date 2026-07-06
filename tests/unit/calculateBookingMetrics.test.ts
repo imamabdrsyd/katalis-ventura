@@ -64,13 +64,40 @@ describe('calculateBookingMetrics', () => {
 
   it('mengkliping malam & pendapatan ke bulan berjalan (booking lintas bulan)', () => {
     // 29 Jun → 2 Jul = 3 malam total, tapi hanya 1 malam (1 Jul) jatuh di Juli.
+    // Pendapatan dibagi prorata dari total_amount asli: 1.2jt × 1/3 = 400rb.
     const m = calculateBookingMetrics(
-      [mkBooking({ check_in: '2026-06-29', check_out: '2026-07-02', price_per_night: 400_000 })],
+      [
+        mkBooking({
+          check_in: '2026-06-29',
+          check_out: '2026-07-02',
+          price_per_night: 400_000,
+          total_amount: 1_200_000,
+        }),
+      ],
       JULY_2026,
       1
     );
     expect(m.bookedNights).toBe(1);
     expect(m.roomRevenue).toBe(400_000);
+  });
+
+  it('pendapatan kamar = total_amount eksak (tanpa sisa pembulatan price_per_night)', () => {
+    // Sewa bulanan 4.4jt / 30 malam → price_per_night dibulatkan 146.667.
+    // roomRevenue harus 4.400.000 (dari total_amount), BUKAN 30×146.667 = 4.400.010.
+    const m = calculateBookingMetrics(
+      [
+        mkBooking({
+          check_in: '2026-07-01',
+          check_out: '2026-07-31',
+          price_per_night: 146_667,
+          total_amount: 4_400_000,
+        }),
+      ],
+      JULY_2026,
+      1
+    );
+    expect(m.bookedNights).toBe(30);
+    expect(m.roomRevenue).toBe(4_400_000);
   });
 
   it('availableNights = jumlah unit × hari dalam bulan', () => {
