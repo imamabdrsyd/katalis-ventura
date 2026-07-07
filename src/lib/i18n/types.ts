@@ -393,6 +393,66 @@ export interface Translations {
     fieldNoImageSelected: string;
     errorImageTitleRequired: string;
     errorMaxImages: string;
+    // Services tab (calendar/accommodation hub — POS keeps "Catalog")
+    tabServices: string;
+    servicesSubtitle: string;
+  };
+
+  // Calendar / booking hub (accommodation) — VISIBLE PAGE ONLY (modals belum di-i18n)
+  calendar: {
+    // KPI strip
+    kpiAdr: string;
+    kpiAdrHint: string; // {n} malam terjual
+    kpiOccupancy: string;
+    kpiOccupancyHint: string; // {booked}/{available} malam
+    kpiRevpar: string;
+    kpiRevparHint: string;
+    kpiBookings: string;
+    kpiBookingsHintPer: string; // {amount} / booking
+    kpiBookingsHintNone: string;
+    kpiRoomRevenue: string;
+    // Toolbar / board
+    today: string;
+    prevMonth: string;
+    nextMonth: string;
+    pickMonthYear: string;
+    prevYear: string;
+    nextYear: string;
+    connectWebsite: string;
+    connectWebsiteTitle: string;
+    bookingPriceTitle: string;
+    setPriceCellTitle: string;
+    basePrice: string; // legend
+    weekdays: string[]; // Mon..Sun
+    monthsShort: string[]; // Jan..Dec (picker)
+    // Booking bar states (legend + bar)
+    stateConfirmed: string;
+    statePaid: string;
+    stateInquiry: string; // was Tentatif → Inquiry/Pertanyaan
+    stateExternal: string;
+    defaultBooking: string;
+    // Unit toolbar
+    manageUnit: string;
+    needsFollowUp: string;
+    needsFollowUpTitle: string;
+    // Guards / states
+    accessRestricted: string;
+    accessRestrictedDesc: string;
+    accommodationOnly: string;
+    accommodationOnlyDesc: string;
+    noUnits: string;
+    noUnitsDesc: string;
+    addFirstUnit: string;
+    // Reconcile banner
+    reconcileBanner: string; // {n}
+    pullToCalendar: string;
+    reconcileFailed: string;
+    reconcileSuccess: string; // {n}
+    reconcilePendingSuffix: string; // {n}
+    loadFailed: string;
+    // No rate source card
+    noRateSource: string; // {unit}
+    manageUnitCta: string;
   };
 
   // Businesses Page

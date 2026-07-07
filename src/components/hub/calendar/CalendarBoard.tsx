@@ -17,11 +17,10 @@ import {
   getBookingDisplayState,
   BOOKING_BAR_CLASSES,
   BOOKING_DOT_CLASSES,
-  BOOKING_STATE_LABELS,
   type BookingDisplayState,
 } from '@/lib/bookingStatus';
+import { useLanguage } from '@/context/LanguageContext';
 
-const WEEKDAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 const LEGEND: BookingDisplayState[] = ['confirmed', 'paid', 'tentative', 'external'];
 const LANE_H = 24; // tinggi bar + gap
 const HEADER_H = 42; // ruang untuk baris angka tanggal + harga (bar mulai di bawahnya)
@@ -75,6 +74,18 @@ export function CalendarBoard({
   priceOf,
   selectedDates,
 }: CalendarBoardProps) {
+  const { t, locale } = useLanguage();
+  const c = t.calendar;
+  const dfnsLocale = locale === 'id' ? idLocale : undefined;
+  // Label state booking (legenda + tooltip). Selaras urutan getBookingDisplayState.
+  const stateLabel: Record<BookingDisplayState, string> = {
+    confirmed: c.stateConfirmed,
+    paid: c.statePaid,
+    checked_in: c.stateConfirmed,
+    tentative: c.stateInquiry,
+    cancelled: c.stateConfirmed,
+    external: c.stateExternal,
+  };
   const [pickerOpen, setPickerOpen] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -131,7 +142,7 @@ export function CalendarBoard({
           <button
             type="button"
             onClick={onPrev}
-            aria-label="Bulan sebelumnya"
+            aria-label={c.prevMonth}
             className="btn-icon"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -143,15 +154,18 @@ export function CalendarBoard({
               className="flex items-center gap-1 min-w-[9rem] justify-center px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               aria-haspopup="true"
               aria-expanded={pickerOpen}
-              title="Pilih bulan & tahun"
+              title={c.pickMonthYear}
             >
               <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 capitalize">
-                {format(monthCursor, 'MMMM yyyy', { locale: idLocale })}
+                {format(monthCursor, 'MMMM yyyy', { locale: dfnsLocale })}
               </h2>
             </button>
             {pickerOpen && (
               <MonthYearPicker
                 monthCursor={monthCursor}
+                monthLabels={c.monthsShort}
+                prevYearLabel={c.prevYear}
+                nextYearLabel={c.nextYear}
                 onPick={(y, m) => {
                   onJump(y, m);
                   setPickerOpen(false);
@@ -159,26 +173,26 @@ export function CalendarBoard({
               />
             )}
           </div>
-          <button type="button" onClick={onNext} aria-label="Bulan berikutnya" className="btn-icon">
+          <button type="button" onClick={onNext} aria-label={c.nextMonth} className="btn-icon">
             <ChevronRight className="w-4 h-4" />
           </button>
           <button type="button" onClick={onToday} className="btn-ghost ml-1 px-3 py-1.5 text-xs">
-            Hari ini
+            {c.today}
           </button>
         </div>
         <button
           type="button"
           onClick={onOpenSync}
           className="btn-ghost inline-flex items-center gap-1.5"
-          title="Hubungkan kalender Airbnb / Booking.com (iCal)"
+          title={c.connectWebsiteTitle}
         >
-          <Link className="w-4 h-4" /> <span className="hidden sm:inline">Connect to another website</span>
+          <Link className="w-4 h-4" /> <span className="hidden sm:inline">{c.connectWebsite}</span>
         </button>
       </div>
 
       {/* Header hari */}
       <div className="grid grid-cols-7 border-b border-gray-100 dark:border-gray-700">
-        {WEEKDAYS.map((w) => (
+        {c.weekdays.map((w) => (
           <div
             key={w}
             className="px-2 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 text-center"
@@ -263,7 +277,7 @@ export function CalendarBoard({
                               inMonth ? 'bg-transparent' : 'bg-gray-50/60 dark:bg-gray-900/30'
                             }`
                       }`}
-                      title={clickable ? 'Klik untuk set harga tanggal ini' : undefined}
+                      title={clickable ? c.setPriceCellTitle : undefined}
                     >
                       <span className="flex items-center justify-between gap-1">
                         <span
@@ -288,7 +302,7 @@ export function CalendarBoard({
                                     ? 'text-gray-400 dark:text-gray-500'
                                     : 'text-gray-300 dark:text-gray-600'
                             }`}
-                            title={bookedPrice != null ? 'Harga booking tanggal ini' : undefined}
+                            title={bookedPrice != null ? c.bookingPriceTitle : undefined}
                           >
                             {formatPriceShort(displayPrice)}
                           </span>
@@ -317,7 +331,7 @@ export function CalendarBoard({
                   const isRealEnd = format(lastNight, 'yyyy-MM-dd') === format(segEnd, 'yyyy-MM-dd');
                   const lane = laneOf.get(b.id) ?? 0;
                   const state = getBookingDisplayState(b);
-                  const label = b.guest_name || b.contact?.name || 'Booking';
+                  const label = b.guest_name || b.contact?.name || c.defaultBooking;
 
                   return (
                     <button
@@ -354,13 +368,13 @@ export function CalendarBoard({
         {LEGEND.map((s) => (
           <span key={s} className="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
             <span className={`w-2.5 h-2.5 rounded-sm ${BOOKING_DOT_CLASSES[s]}`} />
-            {BOOKING_STATE_LABELS[s]}
+            {stateLabel[s]}
           </span>
         ))}
         {priceOf && (
           <span className="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
             <span className="text-[10px] font-semibold text-primary-600 dark:text-primary-400">350rb</span>
-            harga khusus (override)
+            {c.basePrice}
           </span>
         )}
       </div>
@@ -368,17 +382,18 @@ export function CalendarBoard({
   );
 }
 
-const MONTH_LABELS = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-  'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
-];
-
 /** Dropdown pilih bulan (grid 3×4) + navigasi tahun. */
 function MonthYearPicker({
   monthCursor,
+  monthLabels,
+  prevYearLabel,
+  nextYearLabel,
   onPick,
 }: {
   monthCursor: Date;
+  monthLabels: string[];
+  prevYearLabel: string;
+  nextYearLabel: string;
   onPick: (year: number, month: number) => void;
 }) {
   const [year, setYear] = useState(monthCursor.getFullYear());
@@ -394,7 +409,7 @@ function MonthYearPicker({
           type="button"
           onClick={() => setYear((y) => y - 1)}
           className="btn-icon"
-          aria-label="Tahun sebelumnya"
+          aria-label={prevYearLabel}
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
@@ -403,14 +418,14 @@ function MonthYearPicker({
           type="button"
           onClick={() => setYear((y) => y + 1)}
           className="btn-icon"
-          aria-label="Tahun berikutnya"
+          aria-label={nextYearLabel}
         >
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
       {/* Grid bulan */}
       <div className="grid grid-cols-3 gap-1.5">
-        {MONTH_LABELS.map((label, m) => {
+        {monthLabels.map((label, m) => {
           const isCurrent = m === curM && year === curY;
           const isThisMonth = m === now.getMonth() && year === now.getFullYear();
           return (

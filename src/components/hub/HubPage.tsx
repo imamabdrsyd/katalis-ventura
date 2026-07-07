@@ -29,14 +29,17 @@ export function HubPage({ variant }: { variant: HubVariant }) {
   const [tab, setTab] = useState<HubTab>(variant === 'calendar' ? 'operational' : 'catalog');
 
   const isPos = variant === 'pos';
-  const subtitle = isPos ? th.posSubtitle : th.calendarSubtitle;
   const OperationalIcon = isPos ? ShoppingCart : CalendarDays;
   const operationalLabel = isPos ? th.tabKasir : th.tabKalender;
+  // Hub jasa (kalender): tab katalog di-brand "Layanan"/"Services". POS tetap "Katalog".
+  const catalogLabel = isPos ? th.tabCatalog : th.tabServices;
+  const catalogSubtitle = isPos ? th.posSubtitle : th.servicesSubtitle;
 
   // Judul + ikon header mengikuti tab aktif (identitas menu tetap di sidebar)
   const isCatalog = tab === 'catalog';
   const HeaderIcon = isCatalog ? Box : OperationalIcon;
-  const title = isCatalog ? th.tabCatalog : operationalLabel;
+  const title = isCatalog ? catalogLabel : operationalLabel;
+  const subtitle = isCatalog ? catalogSubtitle : (isPos ? th.posSubtitle : th.calendarSubtitle);
 
   // Slot header untuk kontrol kalender (pemilih unit + "Perlu tindak lanjut") —
   // di-portal dari CalendarLauncher supaya sejajar dgn judul & tab, bukan baris terpisah.
@@ -60,10 +63,16 @@ export function HubPage({ variant }: { variant: HubVariant }) {
           <Tabs<HubTab>
             value={tab}
             onChange={setTab}
-            tabs={[
-              { value: 'catalog', label: th.tabCatalog, icon: <Box className="w-4 h-4" /> },
-              { value: 'operational', label: operationalLabel, icon: <OperationalIcon className="w-4 h-4" /> },
-            ]}
+            tabs={(() => {
+              const catalogTab = { value: 'catalog' as HubTab, label: catalogLabel, icon: <Box className="w-4 h-4" /> };
+              const operationalTab = {
+                value: 'operational' as HubTab,
+                label: operationalLabel,
+                icon: <OperationalIcon className="w-4 h-4" />,
+              };
+              // Kalender: tab Kalender di kiri. POS: Katalog di kiri.
+              return isPos ? [catalogTab, operationalTab] : [operationalTab, catalogTab];
+            })()}
           />
         </div>
       </div>

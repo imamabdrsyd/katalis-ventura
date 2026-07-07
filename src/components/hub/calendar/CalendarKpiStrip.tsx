@@ -9,6 +9,7 @@ import type { Booking } from '@/types';
 import { calculateBookingMetrics } from '@/lib/calculations';
 import { formatCurrency } from '@/lib/utils';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface CalendarKpiStripProps {
   bookings: Booking[];
@@ -30,12 +31,14 @@ const fmtInteger = (v: number) => String(Math.round(v));
  * (`replayKey` = kursor bulan), selaras dgn KPI dashboard & sliding filter PNL.
  */
 export function CalendarKpiStrip({ bookings, monthCursor, unitsCount }: CalendarKpiStripProps) {
+  const { t, locale } = useLanguage();
+  const c = t.calendar;
   const m = useMemo(
     () => calculateBookingMetrics(bookings, monthCursor, unitsCount),
     [bookings, monthCursor, unitsCount]
   );
 
-  const monthLabel = format(monthCursor, 'MMMM yyyy', { locale: idLocale });
+  const monthLabel = format(monthCursor, 'MMMM yyyy', { locale: locale === 'id' ? idLocale : undefined });
   // Re-animasi count-up saat bulan berpindah (mirip sliding periode di PNL).
   const animationKey = format(monthCursor, 'yyyy-MM');
 
@@ -48,35 +51,38 @@ export function CalendarKpiStrip({ bookings, monthCursor, unitsCount }: Calendar
   }[] = [
     {
       icon: TrendingUp,
-      label: 'ADR (rata-rata/malam)',
+      label: c.kpiAdr,
       value: m.adr,
       formatter: fmtCurrency,
-      hint: `${m.bookedNights} malam terjual`,
+      hint: c.kpiAdrHint.replace('{n}', String(m.bookedNights)),
     },
     {
       icon: Percent,
-      label: 'Occupancy',
+      label: c.kpiOccupancy,
       value: m.occupancyPct,
       formatter: fmtPercent,
-      hint: `${m.bookedNights}/${m.availableNights} malam`,
+      hint: c.kpiOccupancyHint.replace('{booked}', String(m.bookedNights)).replace('{available}', String(m.availableNights)),
     },
     {
       icon: Gauge,
-      label: 'RevPAR',
+      label: c.kpiRevpar,
       value: m.revPar,
       formatter: fmtCurrency,
-      hint: 'Pendapatan / malam tersedia',
+      hint: c.kpiRevparHint,
     },
     {
       icon: CalendarCheck,
-      label: 'Booking',
+      label: c.kpiBookings,
       value: m.bookingsCount,
       formatter: fmtInteger,
-      hint: m.revenuePerBooking > 0 ? `${formatCurrency(m.revenuePerBooking)} / booking` : 'bulan ini',
+      hint:
+        m.revenuePerBooking > 0
+          ? c.kpiBookingsHintPer.replace('{amount}', formatCurrency(m.revenuePerBooking))
+          : c.kpiBookingsHintNone,
     },
     {
       icon: Wallet,
-      label: 'Pendapatan kamar',
+      label: c.kpiRoomRevenue,
       value: m.roomRevenue,
       formatter: fmtCurrency,
       hint: monthLabel,

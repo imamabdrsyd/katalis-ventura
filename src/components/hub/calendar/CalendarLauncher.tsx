@@ -14,6 +14,7 @@ import { createPortal } from 'react-dom';
 import { CalendarDays, Lock, Loader2, Sparkles, ArrowRight, Tag, Settings2, Home, Inbox } from 'lucide-react';
 import { toast } from 'sonner';
 import { useBusinessContext } from '@/context/BusinessContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { isManagerRole } from '@/lib/roles';
 import { isAccommodationSector } from '@/lib/businessSectors';
 import { getCatalogItems } from '@/lib/api/catalog';
@@ -41,6 +42,8 @@ interface CalendarLauncherProps {
 
 export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
   const { activeBusinessId, activeBusiness, user, userRole } = useBusinessContext();
+  const { t } = useLanguage();
+  const c = t.calendar;
   const canManage = isManagerRole(userRole);
   const isAccommodation = isAccommodationSector(activeBusiness?.business_sector);
 
@@ -92,10 +95,11 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
       });
       refreshUnlinked();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal memuat data kalender');
+      toast.error(err instanceof Error ? err.message : c.loadFailed);
     } finally {
       setLoadingData(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBusinessId, refreshUnlinked]);
 
   useEffect(() => {
@@ -203,13 +207,14 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
         body: JSON.stringify({ businessId: activeBusinessId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? 'Gagal menarik revenue');
-      toast.success(
-        `${data.linked} booking ditarik${data.pending > 0 ? ` (${data.pending} perlu diisi tanggalnya — cek "Perlu tindak lanjut")` : ''}`
-      );
+      if (!res.ok) throw new Error(data?.error ?? c.reconcileFailed);
+      const linkedMsg = c.reconcileSuccess.replace('{n}', String(data.linked));
+      const pendingMsg =
+        data.pending > 0 ? ` (${c.reconcilePendingSuffix.replace('{n}', String(data.pending))})` : '';
+      toast.success(`${linkedMsg}${pendingMsg}`);
       await Promise.all([calendar.reload(), refreshUnlinked(), refreshPending()]);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal menarik revenue');
+      toast.error(err instanceof Error ? err.message : c.reconcileFailed);
     } finally {
       setReconciling(false);
     }
@@ -222,9 +227,9 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
         <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-4">
           <Lock className="w-6 h-6 text-gray-400 dark:text-gray-500" />
         </div>
-        <p className="font-semibold text-gray-700 dark:text-gray-200">Akses terbatas</p>
+        <p className="font-semibold text-gray-700 dark:text-gray-200">{c.accessRestricted}</p>
         <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-          Hanya manager bisnis yang dapat mengelola kalender booking.
+          {c.accessRestrictedDesc}
         </p>
       </div>
     );
@@ -237,11 +242,10 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
           <CalendarDays className="w-6 h-6 text-gray-400 dark:text-gray-500" />
         </div>
         <p className="font-semibold text-gray-700 dark:text-gray-200">
-          Kalender booking khusus sektor akomodasi
+          {c.accommodationOnly}
         </p>
         <p className="text-sm text-gray-400 dark:text-gray-500 mt-1 max-w-sm mx-auto">
-          Kalender booking kamar (per malam) tersedia untuk bisnis akomodasi &amp; sewa jangka
-          pendek. Penjadwalan berbasis janji temu untuk jasa lain menyusul.
+          {c.accommodationOnlyDesc}
         </p>
       </div>
     );
@@ -262,17 +266,16 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
           <div className="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center mx-auto mb-5">
             <Home className="w-8 h-8 text-primary-500 dark:text-primary-400" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Belum ada unit</h3>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{c.noUnits}</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 max-w-sm mx-auto mb-4">
-            Tambahkan unit/kamar/villa yang bisa dibooking — tiap unit punya kalender & occupancy
-            sendiri.
+            {c.noUnitsDesc}
           </p>
           <button
             type="button"
             onClick={() => setUnitManagerOpen(true)}
             className="btn-primary-glow inline-flex items-center gap-2"
           >
-            <Home className="w-4 h-4" /> Tambah unit pertama
+            <Home className="w-4 h-4" /> {c.addFirstUnit}
           </button>
         </div>
         <UnitManagerModal
@@ -290,29 +293,34 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
 
   if (!selectedUnit) return null; // tak akan terjadi — dijaga guard di atas
 
-  // Pemilih unit + "Perlu tindak lanjut". Label nama unit = tombol Kelola unit
-  // (ikon Settings2 + nama), 1 komponen — buka UnitManagerModal. Multi-unit
-  // pakai Tabs selector + tombol Kelola unit terpisah. Tombol "Perlu tindak
-  // lanjut" (penampungan) selalu bersebelahan.
+  // Urutan (kiri→kanan): [pemilih unit multi / kosong] · "Perlu tindak lanjut" ·
+  // tombol "Kelola unit" (paling kanan). Single-unit: nama unit tampil sbg bagian
+  // dari tombol Kelola unit. Semua buka UnitManagerModal / HoldingPanel.
+  const manageUnitBtn = (
+    <button
+      type="button"
+      onClick={() => setUnitManagerOpen(true)}
+      className="btn-ghost inline-flex items-center gap-1.5"
+      title={c.manageUnit}
+    >
+      <Settings2 className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+      {activeUnits.length > 1 ? (
+        <span>{c.manageUnit}</span>
+      ) : (
+        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{selectedUnit.name}</span>
+      )}
+    </button>
+  );
+
   const unitToolbar = (
     <div className="flex flex-wrap items-center gap-2">
-      {activeUnits.length > 1 ? (
+      {activeUnits.length > 1 && (
         <Tabs
           value={selectedUnit.id}
           onChange={handleUnitChange}
           scrollable
           tabs={activeUnits.map((u) => ({ value: u.id, label: u.name }))}
         />
-      ) : (
-        <button
-          type="button"
-          onClick={() => setUnitManagerOpen(true)}
-          className="btn-ghost inline-flex items-center gap-1.5"
-          title="Kelola unit"
-        >
-          <Settings2 className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-          <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{selectedUnit.name}</span>
-        </button>
       )}
 
       {pending.length > 0 && (
@@ -320,24 +328,17 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
           type="button"
           onClick={() => setHoldingOpen(true)}
           className="btn-ghost inline-flex items-center gap-1.5"
-          title="Booking dari transaksi yang belum ada tanggalnya"
+          title={c.needsFollowUpTitle}
         >
           <Inbox className="w-4 h-4 text-amber-500 dark:text-amber-400" />
-          Perlu tindak lanjut
+          {c.needsFollowUp}
           <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full text-[11px] font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
             {pending.length}
           </span>
         </button>
       )}
-      {activeUnits.length > 1 && (
-        <button
-          type="button"
-          onClick={() => setUnitManagerOpen(true)}
-          className="btn-ghost inline-flex items-center gap-1.5"
-        >
-          <Settings2 className="w-4 h-4" /> Kelola unit
-        </button>
-      )}
+
+      {manageUnitBtn}
     </div>
   );
 
@@ -347,9 +348,9 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-primary-100 dark:border-primary-900/40 bg-primary-50 dark:bg-primary-900/20 px-4 py-3">
           <Sparkles className="w-5 h-5 text-primary-500 dark:text-primary-400 shrink-0" />
           <p className="text-sm text-gray-700 dark:text-gray-200 flex-1">
-            <b>{unlinkedCount}</b> transaksi revenue menginap belum ada di kalender. Tarik supaya
-            ADR/occupancy terhitung — yang tanpa tanggal pasti ditaruh di tanggal transaksi
-            (bisa dikoreksi).
+            {c.reconcileBanner.split('{n}').flatMap((seg, i) =>
+              i === 0 ? [seg] : [<b key={i}>{unlinkedCount}</b>, seg]
+            )}
           </p>
           <button
             type="button"
@@ -362,7 +363,7 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
             ) : (
               <ArrowRight className="w-4 h-4" />
             )}
-            Tarik ke kalender
+            {c.pullToCalendar}
           </button>
         </div>
       )}
@@ -391,15 +392,16 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
         <div className="card-static p-4 flex flex-col sm:flex-row sm:items-center gap-3">
           <Tag className="w-5 h-5 text-primary-500 dark:text-primary-400 shrink-0" />
           <p className="text-sm text-gray-700 dark:text-gray-200 flex-1">
-            Unit <b>{selectedUnit.name}</b> belum punya item sumber harga. Pilih di <b>Kelola Unit</b>
-            {' '}agar harga tampil di tiap tanggal & bisa di-set per tanggal.
+            {c.noRateSource.split('{unit}').flatMap((seg, i) =>
+              i === 0 ? [seg] : [<b key={i}>{selectedUnit.name}</b>, seg]
+            )}
           </p>
           <button
             type="button"
             onClick={() => setUnitManagerOpen(true)}
             className="btn-primary shrink-0"
           >
-            Kelola unit
+            {c.manageUnitCta}
           </button>
         </div>
       )}
