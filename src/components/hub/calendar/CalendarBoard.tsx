@@ -22,7 +22,7 @@ import {
 } from '@/lib/bookingStatus';
 
 const WEEKDAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-const LEGEND: BookingDisplayState[] = ['confirmed', 'paid', 'tentative', 'completed', 'external'];
+const LEGEND: BookingDisplayState[] = ['confirmed', 'paid', 'tentative', 'external'];
 const LANE_H = 24; // tinggi bar + gap
 const HEADER_H = 42; // ruang untuk baris angka tanggal + harga (bar mulai di bawahnya)
 

@@ -57,7 +57,7 @@ interface BookingModalProps {
   ) => Promise<Booking[]>;
 }
 
-const EDITABLE_STATUSES: BookingStatus[] = ['tentative', 'confirmed', 'checked_in', 'completed'];
+const EDITABLE_STATUSES: BookingStatus[] = ['tentative', 'confirmed', 'checked_in'];
 
 export function BookingModal({
   isOpen,
