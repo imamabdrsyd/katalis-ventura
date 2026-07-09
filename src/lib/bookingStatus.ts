@@ -32,13 +32,14 @@ export function getBookingDisplayState(b: Booking): BookingDisplayState {
 // Paid = chip HITAM (indikator hijau pindah ke NOMINAL harga di sel tanggal, lihat
 // CalendarBoard). Confirmed/checked_in = indigo (booking berjalan yg terkonfirmasi).
 // Inquiry (tentative) = kuning. Legenda/dot TIDAK ikut berubah — lihat BOOKING_DOT_CLASSES.
+// Warna hover ala Airbnb: default charcoal, HOVER LEBIH PEKAT (bukan memudar).
 export const BOOKING_BAR_CLASSES: Record<BookingDisplayState, string> = {
-  paid: 'bg-gray-900 text-white dark:bg-gray-900 dark:text-white',
-  confirmed: 'bg-primary-500 text-white dark:bg-primary-600 dark:text-white',
-  checked_in: 'bg-primary-600 text-white dark:bg-primary-500 dark:text-white',
-  tentative: 'bg-amber-400 text-amber-950 dark:bg-amber-500 dark:text-amber-950',
+  paid: 'bg-gray-800 text-white hover:bg-gray-900 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-950',
+  confirmed: 'bg-primary-500 text-white hover:bg-primary-600 dark:bg-primary-600 dark:text-white dark:hover:bg-primary-700',
+  checked_in: 'bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-500 dark:text-white dark:hover:bg-primary-600',
+  tentative: 'bg-amber-400 text-amber-950 hover:bg-amber-500 dark:bg-amber-500 dark:text-amber-950 dark:hover:bg-amber-600',
   cancelled: 'bg-gray-200 text-gray-500 line-through dark:bg-gray-700 dark:text-gray-400',
-  external: 'bg-gray-200 text-gray-600 border border-dashed border-gray-400 dark:bg-gray-700/60 dark:text-gray-300 dark:border-gray-500',
+  external: 'bg-gray-200 text-gray-600 border border-dashed border-gray-400 hover:bg-gray-300 dark:bg-gray-700/60 dark:text-gray-300 dark:border-gray-500 dark:hover:bg-gray-700',
 };
 
 // Titik/badge ringkas (mis. legenda, KPI).

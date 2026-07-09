@@ -353,7 +353,7 @@ export function CalendarBoard({
                         gridColumn: `${startIdx + 1} / span ${span}`,
                         gridRow: lane + 1,
                       }}
-                      className={`pointer-events-auto min-w-0 truncate px-2.5 text-[11px] leading-[18px] font-medium transition-opacity hover:opacity-90 ${
+                      className={`pointer-events-auto min-w-0 truncate px-2.5 text-[11px] leading-[18px] font-medium transition-colors ${
                         BOOKING_BAR_CLASSES[state]
                       } ${isRealStart ? 'rounded-l-full ml-0.5' : ''} ${
                         isRealEnd ? 'rounded-r-full mr-0.5' : ''
