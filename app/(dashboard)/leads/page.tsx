@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useLeads } from '@/hooks/useLeads';
@@ -236,7 +236,7 @@ function ChannelStatusChip({ status }: { status: ChannelStatus }) {
   );
 }
 
-export default function LeadsPage() {
+function LeadsPageInner() {
   const {
     canManage,
     channelFilter, setChannelFilter,
@@ -563,5 +563,14 @@ export default function LeadsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// useSearchParams() butuh Suspense boundary saat prerender (Next.js CSR bailout).
+export default function LeadsPage() {
+  return (
+    <Suspense fallback={null}>
+      <LeadsPageInner />
+    </Suspense>
   );
 }
