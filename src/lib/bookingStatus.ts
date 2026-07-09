@@ -28,9 +28,12 @@ export function getBookingDisplayState(b: Booking): BookingDisplayState {
   return 'confirmed';
 }
 
-// Bar di grid kalender (span menginap).
+// Bar di grid kalender (span menginap). Catatan penerapan warna (bukan legenda):
+// Paid = chip HITAM (indikator hijau pindah ke NOMINAL harga di sel tanggal, lihat
+// CalendarBoard). Confirmed/checked_in = indigo (booking berjalan yg terkonfirmasi).
+// Inquiry (tentative) = kuning. Legenda/dot TIDAK ikut berubah — lihat BOOKING_DOT_CLASSES.
 export const BOOKING_BAR_CLASSES: Record<BookingDisplayState, string> = {
-  paid: 'bg-emerald-500 text-white dark:bg-emerald-600 dark:text-white',
+  paid: 'bg-gray-900 text-white dark:bg-gray-900 dark:text-white',
   confirmed: 'bg-primary-500 text-white dark:bg-primary-600 dark:text-white',
   checked_in: 'bg-primary-600 text-white dark:bg-primary-500 dark:text-white',
   tentative: 'bg-amber-400 text-amber-950 dark:bg-amber-500 dark:text-amber-950',

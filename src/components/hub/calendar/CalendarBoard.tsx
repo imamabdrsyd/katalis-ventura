@@ -114,24 +114,31 @@ export function CalendarBoard({
   // katalog default di sel) + set tanggal yang sudah dibooking (utk cegah set
   // harga di tanggal terisi). Malam yg dibooking = check_in .. check_out-1.
   // Blok OTA (is_external) tetap dihitung "terisi" tapi tak punya harga tampil.
-  const { bookedPriceByDate, bookedDates } = useMemo(() => {
+  //
+  // Harga di sel jadi HIJAU hanya utk booking LUNAS (paid) — indikator "revenue
+  // terkunci di pembukuan". Confirmed/Inquiry tidak mewarnai harga (chip-nya yg
+  // membawa warna indigo/kuning; harga tetap default abu-abu). `paidPriceByDate`
+  // hanya diisi booking paid; `bookedDates` tetap semua booking aktif (blokir set
+  // harga di tanggal terisi apa pun statusnya).
+  const { paidPriceByDate, bookedDates } = useMemo(() => {
     const priceMap = new Map<string, number>();
     const dateSet = new Set<string>();
     for (const b of bookings) {
       if (!b.check_in || !b.check_out) continue;
       if (b.status === 'cancelled') continue;
+      const isPaid = !b.is_external && b.payment_status === 'paid' && b.price_per_night > 0;
       let cur = parseISO(b.check_in);
       const end = parseISO(b.check_out); // eksklusif (malam terakhir = check_out-1)
       let guard = 0;
       while (cur < end && guard < 400) {
         const iso = format(cur, 'yyyy-MM-dd');
         dateSet.add(iso);
-        if (!b.is_external && b.price_per_night > 0) priceMap.set(iso, b.price_per_night);
+        if (isPaid) priceMap.set(iso, b.price_per_night);
         cur = addDays(cur, 1);
         guard += 1;
       }
     }
-    return { bookedPriceByDate: priceMap, bookedDates: dateSet };
+    return { paidPriceByDate: priceMap, bookedDates: dateSet };
   }, [bookings]);
 
   return (
@@ -257,10 +264,10 @@ export function CalendarBoard({
                   const inMonth = isSameMonth(day, monthCursor);
                   const today = isToday(day);
                   const rate = priceOf?.(iso) ?? null;
-                  // Bila tanggal ini dibooking, tampilkan harga/malam booking tsb
-                  // (bukan harga katalog default). Menang atas override rate calendar.
-                  const bookedPrice = bookedPriceByDate.get(iso) ?? null;
-                  const displayPrice = bookedPrice ?? rate?.price ?? null;
+                  // Bila tanggal ini di-cover booking LUNAS, tampilkan harga/malam
+                  // booking tsb (hijau). Confirmed/Inquiry tidak → harga default.
+                  const paidPrice = paidPriceByDate.get(iso) ?? null;
+                  const displayPrice = paidPrice ?? rate?.price ?? null;
                   // Set harga hanya di tanggal KOSONG & hari-ini-ke-depan.
                   const clickable = pricingEnabled && !bookedDates.has(iso) && iso >= todayISO;
                   const selected = selectedDates?.has(iso) ?? false;
@@ -283,7 +290,7 @@ export function CalendarBoard({
                         <span
                           className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs ${
                             today
-                              ? 'bg-primary-500 text-white font-bold'
+                              ? 'bg-gray-900 text-white font-bold dark:bg-white dark:text-gray-900'
                               : inMonth
                                 ? 'text-gray-700 dark:text-gray-200'
                                 : 'text-gray-300 dark:text-gray-600'
@@ -294,7 +301,7 @@ export function CalendarBoard({
                         {displayPrice != null && (
                           <span
                             className={`text-[10px] tabular-nums truncate ${
-                              bookedPrice != null
+                              paidPrice != null
                                 ? 'font-semibold text-emerald-600 dark:text-emerald-400'
                                 : rate?.overridden
                                   ? 'font-semibold text-primary-600 dark:text-primary-400'
@@ -302,7 +309,7 @@ export function CalendarBoard({
                                     ? 'text-gray-400 dark:text-gray-500'
                                     : 'text-gray-300 dark:text-gray-600'
                             }`}
-                            title={bookedPrice != null ? c.bookingPriceTitle : undefined}
+                            title={paidPrice != null ? c.bookingPriceTitle : undefined}
                           >
                             {formatPriceShort(displayPrice)}
                           </span>
