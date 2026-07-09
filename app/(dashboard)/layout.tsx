@@ -898,10 +898,13 @@ function Sidebar({
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             const badge = item.href === '/leads' ? activeLeadCount : 0;
+            // Klik badge Leads (ada unread) → buka lead unread terlama otomatis.
+            const href =
+              item.href === '/leads' && badge > 0 ? '/leads?openUnread=1' : item.href;
             return (
               <div key={item.href} className="relative group">
                 <Link
-                  href={item.href}
+                  href={href}
                   onClick={onClose}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors
                     ${isActive

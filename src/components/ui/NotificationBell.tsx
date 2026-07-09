@@ -176,12 +176,13 @@ export function NotificationBell({
   const leadCount = leadBusinesses.reduce((s, b) => s + b.count, 0);
 
   // Buka halaman lead di bisnis tempat lead itu berada: switch dulu bila beda.
+  // openUnread=1 → halaman lead auto-pilih lead unread terlama.
   const handleOpenLeads = (businessId: string) => {
     setIsOpen(false);
     if (businessId !== activeBusinessId) {
       onSwitchBusiness?.(businessId);
     }
-    router.push('/leads');
+    router.push('/leads?openUnread=1');
     router.refresh();
   };
 

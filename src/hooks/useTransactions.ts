@@ -476,6 +476,12 @@ export function useTransactions() {
     });
   }, [visibleTransactions]);
 
+  // Enter select mode — optionally pre-select the row that triggered it
+  const handleEnterSelectMode = useCallback((id?: string) => {
+    setSelectMode(true);
+    if (id) setSelectedIds((prev) => new Set(prev).add(id));
+  }, []);
+
   // Exit select mode
   const handleExitSelectMode = useCallback(() => {
     setSelectMode(false);
@@ -879,6 +885,7 @@ export function useTransactions() {
     selectedIds,
     handleToggleSelect,
     handleSelectAll,
+    handleEnterSelectMode,
     handleExitSelectMode,
     handleBulkDelete,
     bulkDeleteProgress,

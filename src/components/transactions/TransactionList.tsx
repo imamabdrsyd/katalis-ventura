@@ -31,7 +31,7 @@ interface TransactionListProps {
   onDescriptionSearchChange?: (keyword: string) => void;
   dateRange?: { start: string; end: string };
   onDateRangeChange?: (range: { start: string; end: string }) => void;
-  onEnterSelectMode?: () => void;
+  onEnterSelectMode?: (id?: string) => void;
   closedUntilDate?: string | null;
   rowOffset?: number;
   contacts?: Contact[];
@@ -769,7 +769,7 @@ export function TransactionList({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onEnterSelectMode();
+                        onEnterSelectMode(transaction.id);
                       }}
                       className="hidden group-hover/row:inline-flex p-1 -m-1 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                       title="Pilih"
@@ -1045,7 +1045,7 @@ export function TransactionList({
                   <div className="my-1.5 border-t border-gray-100 dark:border-gray-700" />
                   <button
                     type="button"
-                    onClick={() => { closeMenu(); onEnterSelectMode(); }}
+                    onClick={() => { closeMenu(); onEnterSelectMode(menuTx.id); }}
                     className={`${itemClass} text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50`}
                   >
                     <ListChecks className="w-4 h-4 text-gray-400 dark:text-gray-500" />

@@ -90,10 +90,10 @@ function TransactionsPageInner() {
     handleConvertStockToCOGS,
     // Kebab menu & select mode
     selectMode,
-    setSelectMode,
     selectedIds,
     handleToggleSelect,
     handleSelectAll,
+    handleEnterSelectMode,
     handleExitSelectMode,
     handleBulkDelete,
     bulkDeleteProgress,
@@ -791,7 +791,7 @@ function TransactionsPageInner() {
             onDescriptionSearchChange={setDescriptionSearch}
             dateRange={dateRange}
             onDateRangeChange={setDateRange}
-            onEnterSelectMode={canManageTransactions ? () => setSelectMode(true) : undefined}
+            onEnterSelectMode={canManageTransactions ? handleEnterSelectMode : undefined}
             closedUntilDate={closedUntilDate}
             rowOffset={(currentPage - 1) * rowsPerPage}
             contacts={contacts}

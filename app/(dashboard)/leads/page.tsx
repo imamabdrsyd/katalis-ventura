@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useLeads } from '@/hooks/useLeads';
 import { useBusinessContext } from '@/context/BusinessContext';
@@ -37,6 +37,16 @@ function isDraft(message: LeadMessage): boolean {
 }
 
 /**
+ * Lead "unread" = ada pesan masuk (inbound) yang belum dilihat tim. Logika sama
+ * persis dengan useLeadCounts (sumber badge bell + sidebar) supaya konsisten:
+ * belum pernah dibuka (last_read_at NULL) atau last_read_at < last_inbound_at.
+ */
+function isLeadUnread(lead: Lead): boolean {
+  if (!lead.last_inbound_at) return false;
+  return !lead.last_read_at || new Date(lead.last_read_at) < new Date(lead.last_inbound_at);
+}
+
+/**
  * Pesan non-teks dari webhook disimpan sbg placeholder "[pesan <tipe>]"
  * (mis. "[pesan instagram]", "[pesan image]"). Deteksi di render-time supaya
  * data lama & baru sama-sama tampil ramah ("Lampiran"), bukan token mentah.
@@ -48,10 +58,12 @@ function isMediaPlaceholder(content: string): boolean {
 function LeadListItem({
   lead,
   active,
+  unread,
   onClick,
 }: {
   lead: Lead;
   active: boolean;
+  unread: boolean;
   onClick: () => void;
 }) {
   return (
@@ -60,13 +72,29 @@ function LeadListItem({
       className={`w-full text-left px-3 py-3 border-l-2 transition-colors ${
         active
           ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-500 dark:border-indigo-400'
-          : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-700/50'
+          : unread
+            ? 'border-transparent bg-indigo-50/40 dark:bg-indigo-900/10 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+            : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-700/50'
       }`}
     >
       <div className="flex items-center justify-between gap-2 mb-1">
-        <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
-          {lead.name || lead.external_id}
-        </p>
+        <div className="flex items-center gap-1.5 min-w-0">
+          {unread && (
+            <span
+              className="w-2 h-2 rounded-full bg-indigo-500 dark:bg-indigo-400 flex-shrink-0"
+              aria-label="Belum dibaca"
+            />
+          )}
+          <p
+            className={`text-sm truncate ${
+              unread
+                ? 'font-bold text-gray-900 dark:text-white'
+                : 'font-semibold text-gray-900 dark:text-gray-100'
+            }`}
+          >
+            {lead.name || lead.external_id}
+          </p>
+        </div>
         {lead.last_message_at && (
           <span className="text-[11px] text-gray-400 dark:text-gray-500 whitespace-nowrap flex-shrink-0">
             {formatMessageTime(lead.last_message_at)}
@@ -222,7 +250,27 @@ export default function LeadsPage() {
   } = useLeads();
 
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { activeBusinessId, activeBusiness } = useBusinessContext();
+
+  // Dibuka dari badge notif (bell/sidebar) dengan ?openUnread=1 → auto-pilih lead
+  // unread TERLAMA begitu list termuat, lalu bersihkan param agar tak berulang.
+  const handledOpenUnreadRef = useRef(false);
+  useEffect(() => {
+    if (searchParams.get('openUnread') !== '1') {
+      handledOpenUnreadRef.current = false;
+      return;
+    }
+    if (handledOpenUnreadRef.current || loadingLeads) return;
+
+    const oldestUnread = [...leads]
+      .filter(isLeadUnread)
+      .sort((a, b) => (a.last_inbound_at ?? '').localeCompare(b.last_inbound_at ?? ''))[0];
+    if (oldestUnread) selectLead(oldestUnread.id);
+
+    handledOpenUnreadRef.current = true;
+    router.replace('/leads');
+  }, [searchParams, loadingLeads, leads, selectLead, router]);
 
   // Subtitle menyesuaikan tipe bisnis — sebut channel yang relevan saja
   const leadsSubtitle = (() => {
@@ -389,6 +437,7 @@ export default function LeadsPage() {
                   key={lead.id}
                   lead={lead}
                   active={selectedLead?.id === lead.id}
+                  unread={selectedLead?.id !== lead.id && isLeadUnread(lead)}
                   onClick={() => selectLead(lead.id)}
                 />
               ))
