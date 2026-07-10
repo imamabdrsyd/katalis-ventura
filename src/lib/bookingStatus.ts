@@ -34,7 +34,9 @@ export function getBookingDisplayState(b: Booking): BookingDisplayState {
 // Inquiry (tentative) = kuning. Legenda/dot TIDAK ikut berubah — lihat BOOKING_DOT_CLASSES.
 // Warna hover ala Airbnb: default charcoal, HOVER LEBIH PEKAT (bukan memudar).
 export const BOOKING_BAR_CLASSES: Record<BookingDisplayState, string> = {
-  paid: 'bg-gray-800 text-white hover:bg-gray-900 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-950',
+  // Dark mode di-invert (chip terang + teks gelap) — chip gray-800 tenggelam di
+  // background gelap; sama seperti circle "hari ini" di CalendarBoard.
+  paid: 'bg-gray-800 text-white hover:bg-gray-900 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white',
   confirmed: 'bg-primary-500 text-white hover:bg-primary-600 dark:bg-primary-600 dark:text-white dark:hover:bg-primary-700',
   checked_in: 'bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-500 dark:text-white dark:hover:bg-primary-600',
   tentative: 'bg-amber-400 text-amber-950 hover:bg-amber-500 dark:bg-amber-500 dark:text-amber-950 dark:hover:bg-amber-600',

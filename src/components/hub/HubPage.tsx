@@ -8,6 +8,7 @@ import { CatalogPanel } from './CatalogPanel';
 import { AiKnowledgePanel } from './AiKnowledgePanel';
 import { CashierLauncher } from './cashier/CashierLauncher';
 import { CalendarLauncher } from './calendar/CalendarLauncher';
+import { UnitManagerButton } from './calendar/UnitManagerButton';
 
 type HubTab = 'catalog' | 'operational';
 type HubVariant = 'pos' | 'calendar';
@@ -59,6 +60,8 @@ export function HubPage({ variant }: { variant: HubVariant }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {/* Tab Layanan: tombol Kelola unit tetap tampil (unit ↔ rate plan dikelola dari sini) */}
+          {variant === 'calendar' && tab === 'catalog' && <UnitManagerButton />}
           {showCalendarHeaderSlot && <div ref={setCalendarHeaderEl} className="flex flex-wrap items-center gap-2" />}
           <Tabs<HubTab>
             value={tab}
