@@ -185,14 +185,14 @@ export function UnitManagerModal({
             return (
               <div
                 key={unit.id}
-                className={`border border-gray-100 dark:border-gray-700 rounded-xl p-4 space-y-3 ${
+                className={`bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 rounded-xl p-4 space-y-3 ${
                   !unit.is_active ? 'opacity-60' : ''
                 }`}
               >
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
-                    className="input flex-1 font-semibold bg-gray-50 dark:bg-gray-700"
+                    className="input flex-1 font-semibold"
                     value={draft.name}
                     onChange={(e) =>
                       setLocalDrafts((p) => ({ ...p, [unit.id]: { ...draft, name: e.target.value } }))
@@ -227,7 +227,7 @@ export function UnitManagerModal({
                     <Tag className="w-3.5 h-3.5 text-gray-400" /> Sumber harga (kalender Harga)
                   </label>
                   <select
-                    className="input bg-gray-50 dark:bg-gray-700"
+                    className="input"
                     value={unit.rate_item_id ?? ''}
                     onChange={(e) => handleRateItemChange(unit, e.target.value)}
                     disabled={busy}
@@ -247,7 +247,7 @@ export function UnitManagerModal({
                   </label>
                   <input
                     type="url"
-                    className="input bg-gray-50 dark:bg-gray-700"
+                    className="input"
                     placeholder="https://www.airbnb.com/calendar/ical/...ics"
                     value={draft.icalUrl}
                     onChange={(e) =>
