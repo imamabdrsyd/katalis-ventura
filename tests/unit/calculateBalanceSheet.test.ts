@@ -41,15 +41,30 @@ describe('calculateBalanceSheet', () => {
       expectBalanced(bs);
     });
 
-    it('owner withdrawal: Dr Prive / Cr Kas — reduces retained earnings & cash', () => {
+    it('dividen/prive withdrawal: Dr Prive (is_dividend) / Cr Kas — reduces retained earnings & cash', () => {
       const bs = calculateBalanceSheet([
         doubleEntryTxn({ category: 'FIN', amount: 100_000_000, debit: ACC.kas, credit: ACC.equity }),
         doubleEntryTxn({ category: 'FIN', amount: 5_000_000, debit: ACC.prive, credit: ACC.kas }),
       ], 0);
       expect(bs.assets.cash).toBe(95_000_000);
       expect(bs.equity.capital).toBe(100_000_000);
-      expect(bs.equity.retainedEarnings).toBe(-5_000_000); // drawings folded into retained earnings
+      expect(bs.equity.retainedEarnings).toBe(-5_000_000); // dividen/prive folded into retained earnings
       expect(bs.equity.totalEquity).toBe(95_000_000); // 100M - 5M (no profit)
+      expectBalanced(bs);
+    });
+
+    it('capital withdrawal (tarik modal): Dr Modal (is_stock) / Cr Kas — reduces CAPITAL, not retained earnings', () => {
+      // Regression: penarikan modal dari akun is_stock harus mengurangi CAPITAL agar
+      // konsisten dgn cap table (SCE). Sebelumnya salah masuk ke retained earnings →
+      // Statement of Changes in Equity tidak tie-out (dikurangi dua kali).
+      const bs = calculateBalanceSheet([
+        doubleEntryTxn({ category: 'FIN', amount: 100_000_000, debit: ACC.kas, credit: ACC.equity }),
+        doubleEntryTxn({ category: 'FIN', amount: 2_000_000, debit: ACC.equity, credit: ACC.bank, description: 'Tarik modal' }),
+      ], 0);
+      expect(bs.assets.cash).toBe(98_000_000);
+      expect(bs.equity.capital).toBe(98_000_000);        // 100M setoran - 2M tarik modal (NET)
+      expect(bs.equity.retainedEarnings).toBe(0);        // TIDAK berkurang oleh tarik modal
+      expect(bs.equity.totalEquity).toBe(98_000_000);
       expectBalanced(bs);
     });
 

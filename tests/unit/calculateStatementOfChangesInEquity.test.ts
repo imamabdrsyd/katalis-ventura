@@ -200,4 +200,25 @@ describe('calculateStatementOfChangesInEquity', () => {
     const sce = calculateStatementOfChangesInEquity(txns, periodStart, periodEnd, 0, ACCOUNTS);
     expect(sce.isReconciled).toBe(true);
   });
+
+  it('ties out when an owner withdraws CAPITAL from a stock account (tarik modal)', () => {
+    // Regression Hillside Studio: Dr Modal Papah (is_stock) / Cr Bank "Tarik modal".
+    // Sebelum fix, penarikan modal dikurangi DUA kali (kolom Capital + retained earnings
+    // via Balance Sheet) sehingga isReconciled=false dan netIncome tercemar. Setelah fix,
+    // tarik modal hanya mengurangi Capital pemilik; RE = laba operasi murni.
+    const txns = [
+      doubleEntryTxn({ category: 'FIN', amount: 100_000_000, debit: ACC.kas, credit: PAPAH, date: '2025-12-01' }),
+      doubleEntryTxn({ category: 'EARN', amount: 15_000_000, debit: ACC.kas, credit: ACC.revenue, date: '2026-05-01' }),
+      // Tarik modal dari akun stock (Papah) dalam periode
+      doubleEntryTxn({ category: 'FIN', amount: 2_000_000, debit: PAPAH, credit: ACC.bank, date: '2026-08-01', description: 'Tarik modal' }),
+    ];
+    const sce = calculateStatementOfChangesInEquity(txns, periodStart, periodEnd, 0, ACCOUNTS);
+
+    const papah = sce.owners.find((o) => o.stockAccountId === PAPAH.id)!;
+    expect(papah.capitalWithdrawals).toBe(2_000_000);
+    expect(papah.capitalClosing).toBe(98_000_000);   // 100M - 2M tarik modal
+    expect(sce.netIncome).toBe(15_000_000);          // laba operasi murni, tidak berkurang tarik modal
+    expect(sce.retainedClosing).toBe(15_000_000);    // RE tidak tercemar tarik modal
+    expect(sce.isReconciled).toBe(true);             // guard: was false before the fix
+  });
 });

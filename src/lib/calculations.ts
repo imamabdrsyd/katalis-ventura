@@ -1280,7 +1280,11 @@ export function calculateBalanceSheet(
   let totalFixedAssets = 0;
   let totalLiabilities = 0;
   let totalEquityCredit = 0; // Credits to EQUITY = suntik modal masuk
-  let totalEquityDebit = 0;  // Debits to EQUITY = prive/dividen keluar
+  // Debit ke akun EQUITY dipecah dua bucket agar konsisten dengan cap table (SCE):
+  // - debit akun is_stock (tarik modal owner) → mengurangi CAPITAL (netEquityMovements)
+  // - debit akun is_dividend / equity biasa (prive/dividen) → mengurangi RETAINED EARNINGS
+  let totalStockDebit = 0;          // Debits to is_stock EQUITY = tarik modal
+  let totalNonStockEquityDebit = 0; // Debits to is_dividend + equity biasa = prive/dividen
   let totalRevenue = 0;
   let totalExpenses = 0;
 
@@ -1320,7 +1324,8 @@ export function calculateBalanceSheet(
             totalLiabilities -= amt;
             break;
           case 'EQUITY':
-            totalEquityDebit += amt;
+            if (isStockAccount(acc)) totalStockDebit += amt;
+            else totalNonStockEquityDebit += amt;
             break;
           case 'EXPENSE':
             totalExpenses += amt;
@@ -1372,8 +1377,10 @@ export function calculateBalanceSheet(
           totalLiabilities -= amount;
           break;
         case 'EQUITY':
-          // Debit to EQUITY = prive / dividen / owner withdrawal
-          totalEquityDebit += amount;
+          // Debit to EQUITY = prive / dividen / owner withdrawal.
+          // Tarik modal (akun is_stock) kurangi CAPITAL; prive/dividen kurangi RE.
+          if (isStockAccount(debitAccount)) totalStockDebit += amount;
+          else totalNonStockEquityDebit += amount;
           break;
         case 'EXPENSE':
           totalExpenses += amount;
@@ -1453,7 +1460,8 @@ export function calculateBalanceSheet(
     // ekuitas akan overstated sebesar modal awal (double-count). Aturan ini
     // konsisten dengan fallback di bawah yang juga menahan injeksi capital
     // ketika ekuitas sudah terekam dari double-entry/multi-line.
-    const capitalAlreadyBooked = totalEquityCredit > 0 || totalEquityDebit > 0;
+    const capitalAlreadyBooked =
+      totalEquityCredit > 0 || totalStockDebit > 0 || totalNonStockEquityDebit > 0;
     const legacyCapital = capitalAlreadyBooked ? 0 : capital;
 
     const netFinCash = legacyFinEquityIn + legacyFinLiability - legacyFinCashOut;
@@ -1467,14 +1475,17 @@ export function calculateBalanceSheet(
     totalRevenue += summary.totalEarn;
     totalExpenses += summary.totalOpex + summary.totalVar + summary.totalTax;
 
-    // Legacy equity: capital (bila belum dibukukan) + injeksi terdeteksi - penarikan
+    // Legacy equity: capital (bila belum dibukukan) + injeksi terdeteksi - penarikan.
+    // Legacy FIN keyword-detected → tak pernah akun is_stock, jadi masuk bucket non-stock
+    // (tetap mengurangi RE seperti sebelumnya).
     totalEquityCredit += legacyCapital + legacyFinEquityIn;
-    totalEquityDebit += legacyFinEquityOut;
+    totalNonStockEquityDebit += legacyFinEquityOut;
   }
 
   // If no equity was recorded from double-entry or multi-line transactions,
   // fall back to capital parameter (from businesses.capital_investment)
-  if (totalEquityCredit === 0 && totalEquityDebit === 0 && capital > 0 &&
+  if (totalEquityCredit === 0 && totalStockDebit === 0 && totalNonStockEquityDebit === 0 &&
+      capital > 0 &&
       legacyTransactions.length === 0 && multiLineTransactions.length === 0) {
     totalEquityCredit = capital;
     totalCash += capital;
@@ -1516,12 +1527,15 @@ export function calculateBalanceSheet(
     accumulatedDepreciation = depSummary.totalAccumulatedDepreciation;
   }
 
-  // Retained earnings = net income - owner withdrawals/dividends (PSAK/IFRS)
+  // Retained earnings = net income - prive/dividen (PSAK/IFRS).
+  // Hanya debit akun non-stock (is_dividend / equity biasa) yang mengurangi RE.
+  // Tarik modal (debit akun is_stock) TIDAK mengurangi RE — itu pengembalian modal,
+  // dikurangkan dari CAPITAL di netEquityMovements (konsisten dgn cap table & SCE).
   const netIncome = totalRevenue - totalExpenses - accumulatedDepreciation;
-  const retainedEarnings = netIncome - totalEquityDebit;
+  const retainedEarnings = netIncome - totalNonStockEquityDebit;
 
-  // Net equity from movements: capital injections only (withdrawals folded into retained earnings)
-  const netEquityMovements = totalEquityCredit;
+  // Net equity from movements: setoran modal (credit) - tarik modal akun stock (debit).
+  const netEquityMovements = totalEquityCredit - totalStockDebit;
 
   const totalCurrentAssets = totalCash + totalInventory + totalReceivables + totalOtherCurrentAssets;
 
@@ -1556,8 +1570,8 @@ export function calculateBalanceSheet(
       totalLiabilities: totalLiabilities,
     },
     equity: {
-      capital: totalEquityCredit,           // Total modal disetor (suntik modal)
-      drawings: totalEquityDebit,           // Total prive/dividen (ambil dana)
+      capital: totalEquityCredit - totalStockDebit,           // Modal disetor NET (setoran - tarik modal)
+      drawings: totalStockDebit + totalNonStockEquityDebit,   // Total semua debit ekuitas (prive/dividen/tarik modal)
       retainedEarnings: retainedEarnings,
       totalEquity: netEquityMovements + retainedEarnings,
     },
