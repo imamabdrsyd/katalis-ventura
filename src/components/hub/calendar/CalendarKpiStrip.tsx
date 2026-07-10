@@ -92,7 +92,7 @@ export function CalendarKpiStrip({ bookings, monthCursor, unitsCount }: Calendar
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
       {cards.map(({ icon: Icon, label, value, formatter, hint }) => (
-        <div key={label} className="card-static p-4">
+        <div key={label} className="card-static p-4 transition-all duration-200 hover:shadow-card-hover dark:hover:border-gray-600 hover:-translate-y-1">
           <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
             <Icon className="w-4 h-4 text-primary-500 dark:text-primary-400" />
             <span className="text-xs font-medium truncate">{label}</span>

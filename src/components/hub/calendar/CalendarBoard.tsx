@@ -144,7 +144,7 @@ export function CalendarBoard({
   return (
     <div className="card-static p-0 overflow-hidden">
       {/* Toolbar bulan */}
-      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-1">
           <button
             type="button"
@@ -198,7 +198,7 @@ export function CalendarBoard({
       </div>
 
       {/* Header hari */}
-      <div className="grid grid-cols-7 border-b border-gray-100 dark:border-gray-700">
+      <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
         {c.weekdays.map((w) => (
           <div
             key={w}
@@ -253,7 +253,7 @@ export function CalendarBoard({
           return (
             <div
               key={wi}
-              className="relative border-b border-gray-100 dark:border-gray-800 last:border-b-0"
+              className="relative border-b border-gray-200 dark:border-gray-700 last:border-b-0"
             >
               {/* Sel hari (base layer). Klik = pilih tanggal utk set harga — HANYA
                   sel kosong (belum dibooking) & hari-ini-ke-depan. Booking di-klik
@@ -277,7 +277,7 @@ export function CalendarBoard({
                       type="button"
                       onClick={clickable ? () => onDayClick(iso) : undefined}
                       tabIndex={clickable ? 0 : -1}
-                      className={`flex flex-col items-stretch text-left px-2 py-1.5 border-r border-gray-100 dark:border-gray-800 last:border-r-0 transition-colors ${
+                      className={`flex flex-col items-stretch text-left px-2 py-1.5 border-r border-gray-200 dark:border-gray-700 last:border-r-0 transition-colors ${
                         selected
                           ? 'bg-primary-50 dark:bg-primary-900/30 ring-1 ring-inset ring-primary-300 dark:ring-primary-700'
                           : `${clickable ? 'hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer' : 'cursor-default'} ${
@@ -371,7 +371,7 @@ export function CalendarBoard({
       </div>
 
       {/* Legenda */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
         {LEGEND.map((s) => (
           <span key={s} className="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
             <span className={`w-2.5 h-2.5 rounded-sm ${BOOKING_DOT_CLASSES[s]}`} />
