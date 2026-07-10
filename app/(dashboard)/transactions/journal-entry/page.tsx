@@ -1019,7 +1019,7 @@ export default function JournalEntryPage() {
   // ─── render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex h-screen flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen-dvh flex-col bg-gray-50 dark:bg-gray-900">
       {/* Header */}
       <div className="flex items-center gap-3 px-8 py-6 flex-shrink-0">
         {/* Back button */}

@@ -149,7 +149,7 @@ export function InviteCodeManager({
       onClick={onClose}
     >
       <div
-        className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-[calc(100vw-2rem)] sm:max-w-lg lg:max-w-2xl max-h-[90vh] overflow-y-auto transition-all duration-200 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}
+        className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-[calc(100vw-2rem)] sm:max-w-lg lg:max-w-2xl max-h-modal overflow-y-auto transition-all duration-200 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

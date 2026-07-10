@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
@@ -85,6 +85,21 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  // Gambar sampai ke tepi layar ber-notch (webview/PWA) — padding diatur
+  // via env(safe-area-inset-*) di layout, bukan dibiarkan browser meletterbox.
+  viewportFit: 'cover',
+  // Keyboard muncul → layout viewport ikut mengecil, sehingga input/panel
+  // fixed-bottom (mis. chat AI) tetap terlihat di atas keyboard Android.
+  interactiveWidget: 'resizes-content',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#F7F8FA' },
+    { media: '(prefers-color-scheme: dark)', color: '#111827' },
+  ],
+};
+
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -143,6 +158,7 @@ export default function RootLayout({
               <Toaster
                 position="top-center"
                 closeButton
+                mobileOffset={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
                 icons={{
                   success: <CheckCircle2 className="h-5 w-5 text-emerald-500" aria-hidden="true" />,
                   error: <CircleX className="h-5 w-5 text-red-500" aria-hidden="true" />,

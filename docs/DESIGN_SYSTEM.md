@@ -184,8 +184,15 @@ Preferensikan utility class sebelum menulis classes Tailwind panjang. Yang terse
 | `.input` | Input/select/textarea standar |
 | `.label` | Label form standar |
 | `.badge` + `.badge-{kategori}` | Badge kategori transaksi |
+| `.h-screen-dvh` | Tinggi layar penuh dengan `100dvh` + fallback `100vh` — pakai ini, bukan `h-screen`, untuk elemen full-height (URL bar mobile) |
+| `.max-h-modal` | `max-height: 90dvh` + fallback `90vh` — untuk container modal |
 
 **Kalau butuh variant baru** (misal `.btn-ghost`, `.badge-status`) — tambahkan di `globals.css`, jangan inline.
+
+**Mobile/webview (sudah global — jangan duplikasi di call-site):**
+- CSS var `--safe-area-top` / `--safe-area-bottom` (`env(safe-area-inset-*)`) — dipakai elemen `fixed` yang nempel tepi layar: `pt-[var(--safe-area-top)]`, `bottom-[calc(1.25rem+var(--safe-area-bottom))]`, dll. Viewport di-set `viewport-fit=cover` di `app/layout.tsx`.
+- Form control otomatis min 16px di layar <768px (anti auto-zoom iOS) — jangan lawan dengan `!text-*` kecil di mobile.
+- `-webkit-tap-highlight-color` sudah transparent global — feedback sentuh datang dari `active:scale` di utility button.
 
 ---
 

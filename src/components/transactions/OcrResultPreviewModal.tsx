@@ -101,7 +101,7 @@ export function OcrResultPreviewModal({
   // Collapsed rail
   if (collapsed) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl ring-1 ring-gray-200/70 dark:ring-gray-700/70 flex flex-col items-center py-3 px-2 gap-3 w-11 max-h-[90vh]">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl ring-1 ring-gray-200/70 dark:ring-gray-700/70 flex flex-col items-center py-3 px-2 gap-3 w-11 max-h-modal">
         <button
           type="button"
           onClick={() => setCollapsed(false)}
@@ -135,7 +135,7 @@ export function OcrResultPreviewModal({
   const hasAnyDetail = items.length > 0 || charges.length > 0;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl ring-1 ring-gray-200/70 dark:ring-gray-700/70 flex flex-col w-[320px] max-h-[90vh] overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl ring-1 ring-gray-200/70 dark:ring-gray-700/70 flex flex-col w-[320px] max-h-modal overflow-hidden">
       {/* Header */}
       <div className="relative flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700/60 shrink-0 bg-gradient-to-r from-indigo-50 via-white to-indigo-50/30 dark:from-indigo-950/40 dark:via-gray-800 dark:to-indigo-950/20">
         <div className="flex items-center gap-2 min-w-0">

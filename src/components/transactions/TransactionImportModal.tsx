@@ -693,7 +693,7 @@ export default function TransactionImportModal({
       onClick={onClose}
     >
       <div
-        className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col transition-all duration-300 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}
+        className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-5xl w-full max-h-modal overflow-hidden flex flex-col transition-all duration-300 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

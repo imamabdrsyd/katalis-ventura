@@ -105,9 +105,8 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', s
         </button>
       )}
       <div
-        className={`relative flex items-stretch gap-3 max-w-[calc(100vw-2rem)] transition-all duration-200 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}
+        className={`relative flex items-stretch gap-3 max-w-[calc(100vw-2rem)] max-h-modal transition-all duration-200 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}
         onClick={(e) => e.stopPropagation()}
-        style={{ maxHeight: '90vh' }}
       >
         {/* Side panel — nempel di kiri modal */}
         {sidePanel && (
@@ -117,7 +116,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', s
         )}
 
         <div
-          className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-[calc(100vw-2rem)] ${SIZE_CLASSES[size]} max-h-[90vh] overflow-hidden flex flex-col`}
+          className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-[calc(100vw-2rem)] ${SIZE_CLASSES[size]} max-h-modal overflow-hidden flex flex-col`}
         >
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700 shrink-0">
             <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">

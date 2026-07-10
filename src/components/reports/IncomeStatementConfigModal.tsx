@@ -192,7 +192,7 @@ export function IncomeStatementConfigModal({ isOpen, onClose, accounts, business
       onClick={() => !saving && onClose()}
     >
       <div
-        className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col transition-all duration-200 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}
+        className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-5xl max-h-modal overflow-hidden flex flex-col transition-all duration-200 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

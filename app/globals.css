@@ -9,6 +9,9 @@
     --card: 255 255 255;
     --card-border: 243 244 246;
     --muted: 107 114 128;
+    /* Notch/home-indicator (viewport-fit=cover) — 0px di browser biasa */
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .dark {
@@ -19,8 +22,24 @@
     --muted: 156 163 175;
   }
 
+  html {
+    /* Hilangkan flash abu-abu saat tap di Android webview — feedback sentuh
+       sudah ditangani active:scale/hover state sendiri */
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
     @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100;
+  }
+
+  /* iOS/webview auto-zoom saat fokus ke form control ber-font <16px.
+     !important diperlukan untuk menang atas utility .text-sm di call-site. */
+  @media (max-width: 767px) {
+    input,
+    select,
+    textarea {
+      font-size: max(16px, 1em) !important;
+    }
   }
 }
 
@@ -302,4 +321,19 @@
 
 @media (prefers-reduced-motion: reduce) {
   [style*="axion-ssot-"] { animation: none !important; }
+}
+
+/* ─── Mobile viewport utilities ───
+   dvh = tinggi viewport dinamis (mengikuti URL bar mobile yang muncul/hilang).
+   Deklarasi vh di baris pertama = fallback untuk browser lama. */
+@layer utilities {
+  .h-screen-dvh {
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  .max-h-modal {
+    max-height: 90vh;
+    max-height: 90dvh;
+  }
 }

@@ -1353,8 +1353,8 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.98 }}
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed bottom-20 right-4 z-50 w-[calc(100vw-2rem)] max-w-[400px] flex flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-[0_8px_40px_-8px_rgba(0,0,0,0.22),0_2px_12px_-2px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_-8px_rgba(0,0,0,0.7),0_2px_12px_-2px_rgba(0,0,0,0.5)]"
-            style={{ height: 'min(560px, calc(100dvh - 120px))', transformOrigin: 'bottom right' }}
+            className="fixed bottom-[calc(5rem+var(--safe-area-bottom))] right-4 z-50 w-[calc(100vw-2rem)] max-w-[400px] flex flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-[0_8px_40px_-8px_rgba(0,0,0,0.22),0_2px_12px_-2px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_-8px_rgba(0,0,0,0.7),0_2px_12px_-2px_rgba(0,0,0,0.5)]"
+            style={{ height: 'min(560px, calc(100dvh - 120px - var(--safe-area-bottom, 0px)))', transformOrigin: 'bottom right' }}
           >
             {/* Header — identitas agent aktif (Bianca di Entry, Stanley/Sri Mulyani di Ask) */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 shrink-0">

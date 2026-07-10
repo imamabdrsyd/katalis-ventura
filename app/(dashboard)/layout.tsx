@@ -555,11 +555,12 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
 
   return (
     <>
-      <header className={`fixed top-0 left-0 right-0 h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-30 flex items-center justify-between px-4 md:px-6 transition-[left] duration-300 ease-in-out ${isCollapsed ? 'md:left-16' : 'md:left-56'}`}>
+      <header className={`fixed top-0 left-0 right-0 h-[calc(4rem+var(--safe-area-top))] pt-[var(--safe-area-top)] bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-30 flex items-center justify-between px-4 md:px-6 transition-[left] duration-300 ease-in-out ${isCollapsed ? 'md:left-16' : 'md:left-56'}`}>
       {/* Mobile Menu Button */}
       <button
         onClick={onMenuClick}
-        className="md:hidden p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-600 dark:text-gray-400"
+        aria-label="Buka menu"
+        className="md:hidden min-w-[44px] min-h-[44px] -ml-2 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-600 dark:text-gray-400"
       >
         <Menu className="w-6 h-6" />
       </button>
@@ -782,7 +783,7 @@ function Sidebar({
       )}
 
       <aside
-        className={`fixed top-0 left-0 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-[inset_-4px_0_12px_rgba(0,0,0,0.04)] dark:shadow-[inset_-4px_0_12px_rgba(0,0,0,0.2)] flex flex-col z-50 transform transition-all duration-300 ease-in-out ${isCollapsed ? 'overflow-visible' : 'overflow-hidden'}
+        className={`fixed top-0 left-0 h-screen-dvh pt-[var(--safe-area-top)] bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-[inset_-4px_0_12px_rgba(0,0,0,0.04)] dark:shadow-[inset_-4px_0_12px_rgba(0,0,0,0.2)] flex flex-col z-50 transform transition-all duration-300 ease-in-out ${isCollapsed ? 'overflow-visible' : 'overflow-hidden'}
           ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
           ${isCollapsed ? 'w-16' : 'w-56'}`}
       >
@@ -832,7 +833,8 @@ function Sidebar({
           {/* Mobile close button */}
           <button
             onClick={onClose}
-            className="ml-auto p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 md:hidden"
+            aria-label="Tutup menu"
+            className="ml-auto min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 md:hidden"
           >
             <X className="w-5 h-5" />
           </button>
@@ -1033,7 +1035,7 @@ function Sidebar({
         </div>
 
         {/* Footer */}
-        <div className="pt-4 pb-4 px-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="pt-4 pb-[calc(1rem+var(--safe-area-bottom))] px-4 border-t border-gray-200 dark:border-gray-700">
           <p className={`text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
             Engine by Imam Abdurasyid
           </p>
@@ -1128,7 +1130,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       />
 
       {/* Main Content - with margins for sidebar and header */}
-      <main className={`ml-0 pt-16 min-h-screen overflow-auto transition-[margin] duration-300 ease-in-out ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-56'}`}>
+      <main className={`ml-0 pt-[calc(4rem+var(--safe-area-top))] min-h-screen overflow-auto transition-[margin] duration-300 ease-in-out ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-56'}`}>
         {/*
           Page transition: enter-only animation, NO AnimatePresence, NO exit prop.
           Key={pathname} memaksa re-mount tiap navigasi — animasi enter selalu fresh dari opacity:0 → 1.
