@@ -44,12 +44,14 @@
 }
 
 @layer components {
+  /* Card ala Airbnb: borderless di light mode, separasi murni dari shadow diffuse.
+     Dark mode tetap pakai border — shadow tidak terlihat di background gelap. */
   .card {
-    @apply bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-all duration-200 hover:shadow-md hover:border-gray-200 dark:hover:border-gray-600 hover:-translate-y-1;
+    @apply bg-white dark:bg-gray-800 rounded-2xl shadow-card border border-transparent dark:border-gray-700 p-6 transition-all duration-200 hover:shadow-card-hover dark:hover:border-gray-600 hover:-translate-y-1;
   }
 
   .card-static {
-    @apply bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6;
+    @apply bg-white dark:bg-gray-800 rounded-2xl shadow-card border border-transparent dark:border-gray-700 p-6;
   }
 
   .btn-primary {

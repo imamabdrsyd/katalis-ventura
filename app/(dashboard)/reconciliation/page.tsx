@@ -222,7 +222,7 @@ function ReconciliationPageInner() {
       </div>
 
       {/* Actions Bar */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm mb-4 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-transparent dark:border-gray-700 shadow-card mb-4 overflow-hidden">
         <div className="flex items-center justify-between gap-3 p-4 border-b border-gray-100 dark:border-gray-700">
           {/* Left: tab toggle + select all */}
           <div className="flex items-center gap-3">

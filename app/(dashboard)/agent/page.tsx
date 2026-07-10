@@ -1485,7 +1485,7 @@ function RunBubble({ run }: { run: Extract<ChatMessage, { kind: 'run' }> }) {
   const lastIsError = run.steps[run.steps.length - 1]?.type === 'error';
 
   return (
-    <div className="max-w-[440px] rounded-2xl rounded-tl-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+    <div className="max-w-[440px] rounded-2xl rounded-tl-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-card overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-gray-100 dark:border-gray-700">
         {run.isRunning ? (

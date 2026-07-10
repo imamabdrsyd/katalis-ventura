@@ -291,7 +291,7 @@ export default function AccountsPage() {
       </div>
 
       {/* Toolbar */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-card border border-transparent dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
@@ -455,7 +455,7 @@ function ParentAccountCard({
   const displayChildren = showInactive ? parent.children : activeChildren;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-card border border-transparent dark:border-gray-700 overflow-hidden">
       {/* Parent Header */}
       <button
         onClick={onToggle}

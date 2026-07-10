@@ -323,7 +323,7 @@ function LeadsPageInner() {
       </div>
 
       {/* Toolbar filter */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-card border border-transparent dark:border-gray-700 p-4 mb-6">
         <div className="flex flex-wrap gap-3 items-center">
           <div className="relative">
             <select
@@ -381,7 +381,7 @@ function LeadsPageInner() {
       <div className="grid md:grid-cols-[320px,1fr] gap-4 md:h-[calc(100vh-280px)] md:min-h-[420px]">
         {/* Panel kiri: list leads — di mobile disembunyikan saat thread terbuka */}
         <div
-          className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col min-h-0 ${
+          className={`bg-white dark:bg-gray-800 rounded-xl shadow-card border border-transparent dark:border-gray-700 flex flex-col min-h-0 ${
             selectedLead ? 'hidden md:flex' : 'flex'
           }`}
         >
@@ -447,7 +447,7 @@ function LeadsPageInner() {
 
         {/* Panel kanan: thread */}
         <div
-          className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex-col min-h-0 min-h-[420px] ${
+          className={`bg-white dark:bg-gray-800 rounded-xl shadow-card border border-transparent dark:border-gray-700 flex-col min-h-0 min-h-[420px] ${
             selectedLead ? 'flex' : 'hidden md:flex'
           }`}
         >

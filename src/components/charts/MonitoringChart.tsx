@@ -224,7 +224,7 @@ export default function MonitoringChart({ transactions, loading = false, selecte
   }
 
   return (
-    <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+    <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-card border border-transparent dark:border-gray-700 p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Monitoring Overview</h3>
         <div className="flex items-center gap-2">

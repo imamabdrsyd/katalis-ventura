@@ -160,7 +160,7 @@ function PreviewFrame({
 }) {
   const meta = SURFACE_BY_ID[surface];
   return (
-    <div className="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm bg-white dark:bg-gray-800">
+    <div className="rounded-2xl border border-transparent dark:border-gray-700 overflow-hidden shadow-card bg-white dark:bg-gray-800">
       {/* Browser chrome */}
       <div className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
         <span className="w-2.5 h-2.5 rounded-full bg-red-400/70" />

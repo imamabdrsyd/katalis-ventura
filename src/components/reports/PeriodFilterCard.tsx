@@ -150,7 +150,7 @@ export function PeriodFilterCard({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-transparent dark:border-gray-700 p-5 shadow-card">
       <div className="space-y-4">
         {/* Period Label + Buttons + Month Dropdown — all in one row, wraps */}
         <div>

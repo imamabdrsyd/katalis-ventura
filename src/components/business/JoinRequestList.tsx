@@ -171,7 +171,7 @@ function RequestCard({
   return (
     <div className={`relative flex items-center gap-3.5 p-4 rounded-2xl border transition-all duration-200 ${
       isPending
-        ? 'bg-white dark:bg-gray-800 border-amber-200 dark:border-amber-800/50 hover:shadow-sm hover:-translate-y-px'
+        ? 'bg-white dark:bg-gray-800 border-amber-200 dark:border-amber-800/50 hover:shadow-card hover:-translate-y-px'
         : 'bg-gray-50/60 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700'
     }`}>
       {isPending && (

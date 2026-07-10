@@ -163,7 +163,7 @@ export default function ExpenseBreakdownChart({
   const hasMore = allExpenseData.length > TOP_N;
 
   return (
-    <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 flex flex-col h-full">
+    <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-card border border-transparent dark:border-gray-700 p-6 flex flex-col h-full">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Expense Breakdown</h3>
         <div className="flex items-center gap-2">

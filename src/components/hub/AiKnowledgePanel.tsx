@@ -125,7 +125,7 @@ export function AiKnowledgePanel() {
   }
 
   return (
-    <div className="group relative bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 w-full">
+    <div className="group relative bg-white dark:bg-gray-800 rounded-xl shadow-card border border-transparent dark:border-gray-700 p-5 w-full">
       {/* Edit icon — muncul saat hover, pojok kanan atas */}
       {canManage && (
         <button

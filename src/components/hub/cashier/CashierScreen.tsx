@@ -384,7 +384,7 @@ function ProductCard({
       type="button"
       onClick={onAdd}
       disabled={soldOut}
-      className="group relative text-left rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 overflow-hidden hover:border-primary-200 dark:hover:border-primary-800 hover:shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+      className="group relative text-left rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 overflow-hidden hover:border-primary-200 dark:hover:border-primary-800 hover:shadow-card transition disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <div className="aspect-square bg-gray-50 dark:bg-gray-900 relative">
         {item.image_url ? (

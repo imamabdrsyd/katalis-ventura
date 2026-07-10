@@ -124,12 +124,17 @@ Disimpan di komponen ContactList & memory:
 
 ### 1.8 Shadow
 
-| Token | Pakai untuk |
-|-------|-------------|
-| `shadow-sm` | Card default, active toggle button |
-| `shadow-md` | Card hover, dropdown |
-| `shadow-2xl` | Modal |
-| `shadow-none` | Flat panel, nested surface |
+Gaya shadow card mengikuti Airbnb: **lembut, diffuse, tanpa border di light mode** — separasi card dari background datang murni dari shadow. Token custom didefinisikan di `tailwind.config.js` (`theme.extend.boxShadow`).
+
+| Token | Nilai | Pakai untuk |
+|-------|-------|-------------|
+| `shadow-card` | `0 1px 2px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.05)` | Card resting (semua card/panel di atas `bg-gray-50`) |
+| `shadow-card-hover` | `0 6px 16px rgba(0,0,0,.12)` | Card hover/elevated (dipakai `.card` saat hover) |
+| `shadow-sm` | Tailwind default | Active toggle button, tab indicator, kontrol kecil — **bukan card** |
+| `shadow-2xl` | Tailwind default | Modal |
+| `shadow-none` | — | Flat panel, nested surface |
+
+**Aturan border card:** light mode `border-transparent` (borderless, Airbnb-style); dark mode tetap `dark:border-gray-700` karena shadow tidak terlihat di background gelap. Border dipertahankan hanya bila elemen butuh definisi saat overlap konten (contoh: sticky toolbar, chat bubble, sub-card di atas parent putih).
 
 ### 1.9 Typography
 
@@ -320,8 +325,10 @@ inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-{colo
 
 Pakai `.card` (dengan hover) atau `.card-static` (tanpa hover).
 
-- **`.card`** — clickable card, list item yang bisa di-klik (Business card, invoice row)
+- **`.card`** — clickable card, list item yang bisa di-klik (Business card, invoice row). Hover: `shadow-card-hover` + lift `-translate-y-1`
 - **`.card-static`** — KPI card, chart wrapper, info panel di halaman detail
+
+Anatomi (Airbnb-style, lihat §1.8): `bg-white dark:bg-gray-800 rounded-2xl shadow-card border border-transparent dark:border-gray-700 p-6` — **tanpa border terlihat di light mode**, separasi dari shadow diffuse.
 
 **Jangan** tumpuk `.card` di dalam `.card` — pakai nested panel biasa: `bg-gray-50 dark:bg-gray-800 rounded-xl p-4`.
 

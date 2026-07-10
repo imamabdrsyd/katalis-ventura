@@ -703,7 +703,7 @@ function TransactionsPageInner() {
         {activeView === 'transactions' && <>
         {/* Select Mode Action Bar */}
         {selectMode && (
-          <div className="sticky top-0 z-20 flex items-center justify-between mb-4 px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
+          <div className="sticky top-0 z-20 flex items-center justify-between mb-4 px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-card">
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
                 {t.transactions.selected.replace('{n}', String(selectedIds.size))}

@@ -1019,7 +1019,7 @@ export function QuickTransactionForm({
           <div
             id={`quick-transaction-${activeSupplementaryTab}-panel`}
             role="tabpanel"
-            className="rounded-2xl border border-gray-100 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-900"
+            className="rounded-2xl border border-gray-100 bg-white p-3 shadow-card dark:border-gray-700 dark:bg-gray-900"
           >
             {activeSupplementaryTab === 'note' ? (
               <textarea
