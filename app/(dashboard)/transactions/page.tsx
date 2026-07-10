@@ -19,7 +19,11 @@ import { RecurringList } from '@/components/transactions/RecurringList';
 import { useRecurringTransactions } from '@/hooks/useRecurringTransactions';
 import { Upload, Plus, X, Trash2, CreditCard, CheckCircle2, Calculator, RefreshCw, Printer, Loader2, Contact as ContactIcon, Receipt } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
+import { useState, useEffect, useCallback, Suspense, useMemo, useId } from 'react';
+import { motion } from 'framer-motion';
+import { isReceivableTransaction, isSettled, isSettlementEntry } from '@/lib/accounting/guidance/receivableSettlement';
+import { isPayableTransaction, isPayableSettled, isPayableSettlementEntry } from '@/lib/accounting/guidance/payableSettlement';
+import { isDividendDeclaration, isDividendSettled } from '@/lib/accounting/guidance/dividendSettlement';
 import { useLanguage } from '@/context/LanguageContext';
 import { AgentProgressToast, type AgentStep } from '@/components/agent/AgentProgressToast';
 import { AGENT_IMPORT_SESSION_EVENT, isAgentImportSessionRunning, readAgentImportSession } from '@/lib/agent/importSession';
@@ -141,7 +145,8 @@ function TransactionsPageInner() {
   } = useRecurringTransactions();
 
   // Main view tab: 'transactions' or 'recurring'
-  const [activeView, setActiveView] = useState<'transactions' | 'recurring'>('transactions');
+  const [activeView, setActiveView] = useState<'transactions' | 'unsettled' | 'recurring'>('transactions');
+  const tabLayoutId = useId();
 
   // Multi-line prefill dari OCR scan — kalau ada, modal add render MultiLineJournalForm
   // bukan TransactionForm. Di-reset ke null saat modal ditutup.
@@ -287,6 +292,35 @@ function TransactionsPageInner() {
       activeTagFilters.every((tag) => t.meta?.tags?.includes(tag))
     );
   }, [visibleTransactions, activeTagFilters]);
+
+  // Unsettled = piutang/hutang yang belum lunas + dividen yang masih status
+  // "declared" (belum dibayar). Dihitung client-side dari dataset penuh
+  // (allTransactions) karena "belum lunas" bukan kolom status di DB.
+  // Settlement entry itu sendiri (pembayaran) dikecualikan — bukan outstanding.
+  const unsettledTransactions = useMemo(() => {
+    return allTransactions.filter((t) => {
+      if (isReceivableTransaction(t)) {
+        return !isSettled(t) && !isSettlementEntry(t);
+      }
+      if (isPayableTransaction(t)) {
+        return !isPayableSettled(t) && !isPayableSettlementEntry(t);
+      }
+      if (isDividendDeclaration(t)) {
+        return !isDividendSettled(t);
+      }
+      return false;
+    });
+  }, [allTransactions]);
+
+  const unsettledCount = unsettledTransactions.length;
+
+  // Apply tag filter juga di view unsettled agar konsisten dengan tab lain
+  const tagFilteredUnsettled = useMemo(() => {
+    if (activeTagFilters.length === 0) return unsettledTransactions;
+    return unsettledTransactions.filter((t) =>
+      activeTagFilters.every((tag) => t.meta?.tags?.includes(tag))
+    );
+  }, [unsettledTransactions, activeTagFilters]);
 
 
   // Compute summary for selected transactions (across all pages)
@@ -603,57 +637,78 @@ function TransactionsPageInner() {
         {/* Status Filter Tabs + Tag Filter */}
         <div className="flex items-center mb-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-1 flex-1">
-            <button
-              onClick={resetTransactionFilters}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                activeView === 'transactions' && statusFilter === 'all'
-                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              {t.transactions.allTab}
-            </button>
-            <button
-              onClick={() => { setActiveView('transactions'); setStatusFilter('draft'); }}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
-                activeView === 'transactions' && statusFilter === 'draft'
-                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              {t.transactions.draft}
-              {draftCount > 0 && (
-                <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300">
-                  {draftCount}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => { setActiveView('transactions'); setStatusFilter('posted'); }}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                activeView === 'transactions' && statusFilter === 'posted'
-                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              {t.transactions.posted}
-            </button>
-            <button
-              onClick={() => setActiveView('recurring')}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
-                activeView === 'recurring'
-                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              {t.transactions.recurring}
-              {recurringActiveCount > 0 && (
-                <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300">
-                  {recurringActiveCount}
-                </span>
-              )}
-            </button>
+            {(() => {
+              const isAll = activeView === 'transactions' && statusFilter === 'all';
+              const isDraft = activeView === 'transactions' && statusFilter === 'draft';
+              const isPosted = activeView === 'transactions' && statusFilter === 'posted';
+              const isUnsettled = activeView === 'unsettled';
+              const isRecurring = activeView === 'recurring';
+              const tabClass = (active: boolean) =>
+                `relative px-4 py-2.5 text-sm font-medium border-b-2 border-transparent transition-colors flex items-center gap-2 ${
+                  active
+                    ? 'text-indigo-600 dark:text-indigo-400'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`;
+              const underline = (
+                <motion.span
+                  layoutId={tabLayoutId}
+                  className="absolute bottom-[-1px] left-0 right-0 h-0.5 bg-indigo-500 dark:bg-indigo-400"
+                  transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+                />
+              );
+              return (
+                <>
+                  <button onClick={resetTransactionFilters} className={tabClass(isAll)}>
+                    {t.transactions.allTab}
+                    {isAll && underline}
+                  </button>
+                  <button
+                    onClick={() => { setActiveView('transactions'); setStatusFilter('draft'); }}
+                    className={tabClass(isDraft)}
+                  >
+                    {t.transactions.draft}
+                    {draftCount > 0 && (
+                      <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300">
+                        {draftCount}
+                      </span>
+                    )}
+                    {isDraft && underline}
+                  </button>
+                  <button
+                    onClick={() => { setActiveView('transactions'); setStatusFilter('posted'); }}
+                    className={tabClass(isPosted)}
+                  >
+                    {t.transactions.posted}
+                    {isPosted && underline}
+                  </button>
+                  <button
+                    onClick={() => setActiveView('unsettled')}
+                    className={tabClass(isUnsettled)}
+                  >
+                    {t.transactions.unsettled}
+                    {unsettledCount > 0 && (
+                      <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300">
+                        {unsettledCount}
+                      </span>
+                    )}
+                    {isUnsettled && underline}
+                  </button>
+                  <button
+                    onClick={() => setActiveView('recurring')}
+                    className={tabClass(isRecurring)}
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    {t.transactions.recurring}
+                    {recurringActiveCount > 0 && (
+                      <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300">
+                        {recurringActiveCount}
+                      </span>
+                    )}
+                    {isRecurring && underline}
+                  </button>
+                </>
+              );
+            })()}
           </div>
 
           {/* Tag Filter — scrollable chips ujung kanan */}
@@ -697,6 +752,25 @@ function TransactionsPageInner() {
             onStop={handleRecurringStop}
             onDelete={handleRecurringDelete}
           />
+        )}
+
+        {/* Unsettled View — piutang/hutang belum lunas + dividen declared.
+            Klik baris membuka detail modal (tempat aksi pelunasan berada). */}
+        {activeView === 'unsettled' && (
+          <div className="overflow-auto max-h-[70vh]">
+            <TransactionList
+              transactions={tagFilteredUnsettled}
+              loading={loading}
+              onRowClick={setDetailTransaction}
+              onEdit={canManageTransactions ? setEditTransaction : undefined}
+              onDelete={canManageTransactions ? setDeleteTransaction : undefined}
+              highlightAfter={highlightAfter}
+              highlightIds={highlightIds}
+              savedHighlightIds={savedHighlightIds}
+              closedUntilDate={closedUntilDate}
+              contacts={contacts}
+            />
+          </div>
         )}
 
         {/* Transaction List View */}

@@ -201,6 +201,7 @@ export const en: Translations = {
     allTab: 'All',
     draft: 'Draft',
     posted: 'Posted',
+    unsettled: 'Unsettled',
     recurring: 'Recurring',
     selected: '{n} transactions selected',
     posting: 'Posting',

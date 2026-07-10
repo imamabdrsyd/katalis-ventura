@@ -201,6 +201,7 @@ export const id: Translations = {
     allTab: 'Semua',
     draft: 'Draft',
     posted: 'Posted',
+    unsettled: 'Belum Lunas',
     recurring: 'Berulang',
     selected: '{n} transaksi dipilih',
     posting: 'Posting',

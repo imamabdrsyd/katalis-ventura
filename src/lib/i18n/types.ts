@@ -207,6 +207,7 @@ export interface Translations {
     allTab: string;
     draft: string;
     posted: string;
+    unsettled: string;
     recurring: string;
     selected: string;
     posting: string;

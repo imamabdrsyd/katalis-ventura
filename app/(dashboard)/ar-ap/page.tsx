@@ -182,14 +182,14 @@ function RepaymentTable({ summary }: { summary: RepaymentSummary }) {
       <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 text-sm flex-wrap">
         <span className="text-gray-500 dark:text-gray-400">{t.arAp.totalPaid}</span>
         <div className="flex items-center gap-2">
-          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400">
+          <span className="px-2 py-0.5 rounded-full text-xs font-semibold border border-rose-200 dark:border-rose-800/60 text-rose-600 dark:text-rose-400">
             {t.arAp.payDebt}
           </span>
           <span className="font-semibold text-gray-800 dark:text-gray-100">{formatCurrency(summary.totalApRepaid)}</span>
         </div>
         <span className="text-gray-300 dark:text-gray-600">|</span>
         <div className="flex items-center gap-2">
-          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
+          <span className="px-2 py-0.5 rounded-full text-xs font-semibold border border-emerald-200 dark:border-emerald-800/60 text-emerald-600 dark:text-emerald-400">
             {t.arAp.receivePayment}
           </span>
           <span className="font-semibold text-gray-800 dark:text-gray-100">{formatCurrency(summary.totalArCollected)}</span>
@@ -222,10 +222,10 @@ function RepaymentTable({ summary }: { summary: RepaymentSummary }) {
               </td>
               <td className="py-3 px-4 text-gray-600 dark:text-gray-400 max-w-[300px] truncate">{row.description}</td>
               <td className="py-3 px-4">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
                   row.type === 'ap'
-                    ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400'
-                    : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                    ? 'border-rose-200 dark:border-rose-800/60 text-rose-600 dark:text-rose-400'
+                    : 'border-emerald-200 dark:border-emerald-800/60 text-emerald-600 dark:text-emerald-400'
                 }`}>
                   {row.type === 'ap' ? t.arAp.payDebt : t.arAp.receivePayment}
                 </span>

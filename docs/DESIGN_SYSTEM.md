@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 10 Juli 2026
+> Terakhir diupdate: 10 Juli 2026 (shadow card Airbnb, ghost badge, underline tab bar animasi Framer)
 
 ---
 
@@ -272,6 +272,18 @@ Props: `tabs` (dengan `icon?`, `badge?`, `hidden?`), `value`, `onChange`, `scrol
 - **2 opsi binary, switch sangat cepat** → `<SegmentedToggle>` (pill full-rounded)
 - **2+ opsi, navigasi view/section** → `<Tabs>` (rounded-xl container)
 
+**Underline tab bar (standalone, bukan komponen `<Tabs>`)** — dipakai untuk tab tingkat-halaman di dalam card besar (AR/AP: AR/AP/Payment History; Transactions: All/Draft/Posted/Unsettled/Recurring). Bukan pill — deretan tombol di atas garis `border-b`, dengan indikator underline animasi. **Semua tab underline seperti ini wajib pakai animasi Framer**, bukan `border-b-2` statis:
+- Container: `flex` di atas `border-b border-gray-200 dark:border-gray-700`
+- Child: `relative px-4 py-2.5 text-sm font-medium border-b-2 border-transparent transition-colors` (border child selalu transparan — underline datang dari `motion.span`)
+- Active text: `text-indigo-600 dark:text-indigo-400` — inactive `text-gray-500 dark:text-gray-400` + hover `text-gray-700 dark:text-gray-300`
+- Indikator: `motion.span` dengan `layoutId` yang di-share (via `useId()`), dirender hanya di tab aktif:
+  ```tsx
+  <motion.span layoutId={tabLayoutId}
+    className="absolute bottom-[-1px] left-0 right-0 h-0.5 bg-indigo-500 dark:bg-indigo-400"
+    transition={{ type: 'spring', stiffness: 500, damping: 40 }} />
+  ```
+- Count badge: pill kecil `min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold`, warna ikut konteks (indigo default, amber untuk "belum lunas")
+
 **Jangan:**
 - ❌ Tulis inline — selalu pakai `<Tabs>`
 - ❌ Pakai `variant="underline"` — sudah tidak digunakan, `pill` adalah satu-satunya canonical variant
@@ -320,6 +332,11 @@ inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-{colo
 - Default badge kategori: `px-3 py-1 text-xs`
 - Badge chip kecil (di list padat): `px-2 py-0.5 text-[10px]` atau `text-xs`
 - Badge prominent (di header detail): `px-3 py-1.5 text-sm`
+
+**Varian ghost** (badge outline tanpa fill) — dipakai untuk chip status yang tidak perlu menonjol berat (mis. Pay Debt / Receive Payment di halaman AR/AP). Warna semantik ada di border + teks, tanpa background:
+```
+px-2 py-0.5 rounded-full text-xs font-semibold border border-{color}-200 dark:border-{color}-800/60 text-{color}-600 dark:text-{color}-400
+```
 
 ### 3.5 Card
 
