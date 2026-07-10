@@ -83,6 +83,8 @@ function TransactionsPageInner() {
     accounts,
     // Contacts (for contact icon in transaction list)
     contacts,
+    // Highlight baris yang baru disimpan/diedit
+    savedHighlightIds,
     // Follow-up prefill (for COGS entry)
     followUpPrefill,
     setFollowUpPrefill,
@@ -783,6 +785,7 @@ function TransactionsPageInner() {
             onSelectAll={handleSelectAll}
             highlightAfter={highlightAfter}
             highlightIds={highlightIds}
+            savedHighlightIds={savedHighlightIds}
             categoryFilter={categoryFilter}
             onCategoryFilterChange={setCategoryFilter}
             contactFilter={contactFilter}

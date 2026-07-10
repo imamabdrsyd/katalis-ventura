@@ -34,7 +34,10 @@
   }
 
   .btn-primary {
-    @apply px-4 py-2 text-sm bg-primary-500 text-white rounded-xl font-semibold hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 text-sm bg-primary-500 text-white rounded-xl font-semibold hover:bg-primary-600
+           transition-all duration-150 active:scale-[0.98] motion-reduce:transform-none
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900
+           disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   /* Glow variant — gradien + shadow indigo untuk CTA primer yang perlu menonjol */
@@ -42,9 +45,10 @@
     @apply px-4 py-2 text-sm font-semibold text-white rounded-xl
            bg-gradient-to-b from-indigo-500 to-indigo-600
            hover:from-indigo-600 hover:to-indigo-700
-           active:from-indigo-700 active:to-indigo-800
+           active:from-indigo-700 active:to-indigo-800 active:scale-[0.98] motion-reduce:transform-none
            shadow-sm shadow-indigo-500/20 hover:shadow-md hover:shadow-indigo-500/30
            transition-all duration-150
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900
            disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:shadow-none;
   }
 
@@ -53,30 +57,46 @@
     @apply px-4 py-2 text-sm font-semibold text-white rounded-xl
            bg-gradient-to-b from-emerald-500 to-emerald-600
            hover:from-emerald-600 hover:to-emerald-700
-           active:from-emerald-700 active:to-emerald-800
+           active:from-emerald-700 active:to-emerald-800 active:scale-[0.98] motion-reduce:transform-none
            shadow-sm shadow-emerald-500/20 hover:shadow-md hover:shadow-emerald-500/30
            transition-all duration-150
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900
            disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:shadow-none;
   }
 
   .btn-secondary {
-    @apply px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-600
+           transition-all duration-150 active:scale-[0.98] motion-reduce:transform-none
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900
+           disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-ghost {
-    @apply px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700
+           transition-all duration-150 active:scale-[0.98] motion-reduce:transform-none
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900
+           disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-outline {
-    @apply px-4 py-2 text-sm border-2 border-primary-500 text-primary-500 dark:text-primary-400 rounded-xl font-semibold hover:bg-primary-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 text-sm border-2 border-primary-500 text-primary-500 dark:text-primary-400 rounded-xl font-semibold hover:bg-primary-50 dark:hover:bg-gray-700
+           transition-all duration-150 active:scale-[0.98] motion-reduce:transform-none
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900
+           disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-icon {
-    @apply p-2 text-gray-500 dark:text-gray-400 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply p-2 text-gray-500 dark:text-gray-400 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700
+           transition-all duration-150 active:scale-95 motion-reduce:transform-none
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900
+           disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-danger {
-    @apply px-4 py-2 text-sm bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 text-sm bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600
+           transition-all duration-150 active:scale-[0.98] motion-reduce:transform-none
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900
+           disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   /* Glow variant merah — untuk aksi destruktif yang perlu visual warning kuat */
@@ -84,9 +104,10 @@
     @apply px-4 py-2 text-sm font-semibold text-white rounded-xl
            bg-gradient-to-b from-red-500 to-red-600
            hover:from-red-600 hover:to-red-700
-           active:from-red-700 active:to-red-800
+           active:from-red-700 active:to-red-800 active:scale-[0.98] motion-reduce:transform-none
            shadow-sm shadow-red-500/20 hover:shadow-md hover:shadow-red-500/30
            transition-all duration-150
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900
            disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:shadow-none;
   }
 

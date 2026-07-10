@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 01 Juni 2026
+> Terakhir diupdate: 10 Juli 2026
 
 ---
 
@@ -289,6 +289,11 @@ Semua variant sudah di `globals.css`. Aturan:
 - Icon di dalam: append `flex items-center gap-2` + icon `w-4 h-4`
 - Full-width: append `w-full` atau `flex-1`
 - Icon-only: `p-2` square + min `44x44` untuk tap target mobile (pola berbeda, bukan pakai `.btn-primary`)
+
+**Interaction states (sudah ter-include di semua varian — jangan tambahkan lagi di call-site):**
+- Press feedback: `active:scale-[0.98]` (`.btn-icon` pakai `active:scale-95` karena kecil) + `motion-reduce:transform-none`
+- Keyboard focus: `focus-visible:ring-2` warna primary (varian danger/emerald pakai warna semantiknya) + `ring-offset-2` + `dark:focus-visible:ring-offset-gray-900`
+- Transisi: `transition-all duration-150` (bukan `transition-colors` — scale ikut dianimasikan)
 
 **Jangan** tulis `px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600` inline — pakai `.btn-primary`. Kalau butuh beda ukuran/warna di luar varian yang ada, **tambah varian baru di `globals.css`** (misal `.btn-primary-lg`), jangan improvisasi di call-site.
 

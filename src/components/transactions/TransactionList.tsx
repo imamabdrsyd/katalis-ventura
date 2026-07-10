@@ -23,6 +23,8 @@ interface TransactionListProps {
   invoicedTransactionIds?: Set<string>;
   highlightAfter?: string | null;
   highlightIds?: Set<string>;
+  /** IDs transaksi yang baru disimpan/diedit — baris di-highlight animasi + scroll into view. */
+  savedHighlightIds?: Set<string>;
   categoryFilter?: '' | TransactionCategory | 'SETTLE';
   onCategoryFilterChange?: (category: '' | TransactionCategory | 'SETTLE') => void;
   contactFilter?: string;
@@ -205,6 +207,7 @@ export function TransactionList({
   onSelectAll,
   highlightAfter,
   highlightIds,
+  savedHighlightIds,
   categoryFilter,
   onCategoryFilterChange,
   contactFilter,
@@ -234,6 +237,16 @@ export function TransactionList({
   const allSelected = selectMode && transactions.length > 0 && transactions.every((t) => selectedIds?.has(t.id));
   const tableColumnCount = 7 + (selectMode ? 1 : 0);
   const activeDescriptionSearch = descriptionSearch.trim();
+
+  // Scroll ke baris yang baru disimpan begitu barisnya muncul di list
+  // (refetch async — tunggu transactions ter-update, bukan hanya savedHighlightIds).
+  useEffect(() => {
+    if (!savedHighlightIds || savedHighlightIds.size === 0) return;
+    const targetId = transactions.find((tx) => savedHighlightIds.has(tx.id))?.id;
+    if (!targetId) return;
+    const row = document.querySelector(`tr[data-tx-id="${targetId}"]`);
+    row?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [savedHighlightIds, transactions]);
 
   // Category filter dropdown state
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
@@ -725,11 +738,13 @@ export function TransactionList({
             </tr>
           ) : transactions.map((transaction, index) => {
             const isNewMonth = index > 0 && getMonthKey(transaction.date) !== getMonthKey(transactions[index - 1].date);
-            const isHighlighted = highlightAfter && transaction.created_at && transaction.created_at >= highlightAfter;
+            const isHighlighted = (highlightAfter && transaction.created_at && transaction.created_at >= highlightAfter)
+              || savedHighlightIds?.has(transaction.id);
             const isIdHighlighted = highlightIds?.has(transaction.id);
             return (
               <tr
                 key={transaction.id}
+                data-tx-id={transaction.id}
                 onClick={() => selectMode ? onToggleSelect?.(transaction.id) : onRowClick?.(transaction)}
                 onContextMenu={(e) => {
                   if (selectMode || (!onRowClick && !onEdit && !onDelete && !onEnterSelectMode)) return;

@@ -9,7 +9,7 @@ import * as transactionsApi from '@/lib/api/transactions';
 import * as recurringApi from '@/lib/api/recurring';
 import * as contactsApi from '@/lib/api/contacts';
 import { getAccounts } from '@/lib/api/accounts';
-import { showTransactionSavedToast } from '@/lib/transactionToast';
+import { showTransactionSavedToast, showTransactionDeletedToast } from '@/lib/transactionToast';
 import { findCogsAccount } from '@/lib/utils/inventoryHelper';
 import { isPostableDraft } from '@/lib/api/server/postableDraft';
 import { buildSettlementPrefill, buildPartialSettlementPrefill, getOutstandingAmount, getPartialSettlementIds } from '@/lib/accounting/guidance/receivableSettlement';
@@ -80,6 +80,20 @@ export function useTransactions() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [bulkDeleteProgress, setBulkDeleteProgress] = useState<BulkDeleteProgressState | null>(null);
+
+  // Highlight baris yang baru disimpan/diedit — konfirmasi visual di TransactionList
+  const [savedHighlightIds, setSavedHighlightIds] = useState<Set<string>>(new Set());
+
+  const markSavedHighlight = useCallback((id: string) => {
+    setSavedHighlightIds(new Set([id]));
+  }, []);
+
+  // Auto-clear agar animasi bisa dipicu ulang pada save berikutnya
+  useEffect(() => {
+    if (savedHighlightIds.size === 0) return;
+    const timer = setTimeout(() => setSavedHighlightIds(new Set()), 8000);
+    return () => clearTimeout(timer);
+  }, [savedHighlightIds]);
 
   // Build filters object for server-side query
   const filters: TransactionFilters = useMemo(() => ({
@@ -226,6 +240,7 @@ export function useTransactions() {
       setTransactionMode(null);
       invalidateTransactions();
       queryClient.invalidateQueries({ queryKey: ['recurring-transactions', businessId] });
+      markSavedHighlight(createdTransaction.id);
       showTransactionSavedToast({
         message: 'Transaksi berhasil disimpan',
         createdAt: createdTransaction.created_at,
@@ -236,7 +251,7 @@ export function useTransactions() {
     } finally {
       setSaving(false);
     }
-  }, [businessId, user, invalidateTransactions, queryClient, openCreatedTransactionDetail]);
+  }, [businessId, user, invalidateTransactions, queryClient, openCreatedTransactionDetail, markSavedHighlight]);
 
   const handleAddMultiLineTransaction = useCallback(async (data: MultiLineFormData) => {
     if (!businessId || !user) return;
@@ -257,6 +272,7 @@ export function useTransactions() {
       setShowAddModal(false);
       setTransactionMode(null);
       invalidateTransactions();
+      markSavedHighlight(createdTransaction.id);
       showTransactionSavedToast({
         message: 'Jurnal multi-line berhasil disimpan',
         createdAt: createdTransaction.created_at,
@@ -267,7 +283,7 @@ export function useTransactions() {
     } finally {
       setSaving(false);
     }
-  }, [businessId, user, invalidateTransactions, openCreatedTransactionDetail]);
+  }, [businessId, user, invalidateTransactions, openCreatedTransactionDetail, markSavedHighlight]);
 
   const handleEditMultiLineTransaction = useCallback(async (data: MultiLineFormData) => {
     if (!editTransaction || !businessId) return;
@@ -288,13 +304,14 @@ export function useTransactions() {
       });
       setEditTransaction(null);
       invalidateTransactions();
+      markSavedHighlight(editTransaction.id);
       toast.success('Jurnal multi-line berhasil diperbarui');
     } catch (err: any) {
       toast.error(err.message || 'Gagal mengupdate transaksi');
     } finally {
       setSaving(false);
     }
-  }, [editTransaction, businessId, invalidateTransactions]);
+  }, [editTransaction, businessId, invalidateTransactions, markSavedHighlight]);
 
   const handleEditTransaction = useCallback(async (data: TransactionFormData) => {
     if (!editTransaction || !businessId || !user) return;
@@ -346,28 +363,42 @@ export function useTransactions() {
       setEditTransaction(null);
       invalidateTransactions();
       queryClient.invalidateQueries({ queryKey: ['recurring-transactions', businessId] });
+      markSavedHighlight(editTransaction.id);
       toast.success('Transaksi berhasil diperbarui');
     } catch (err: any) {
       toast.error(err.message || 'Gagal mengupdate transaksi');
     } finally {
       setSaving(false);
     }
-  }, [editTransaction, businessId, user, invalidateTransactions, queryClient]);
+  }, [editTransaction, businessId, user, invalidateTransactions, queryClient, markSavedHighlight]);
 
   const handleDeleteTransaction = useCallback(async () => {
     if (!deleteTransaction) return;
+    const deletedId = deleteTransaction.id;
     setSaving(true);
     try {
-      await transactionsApi.deleteTransaction(deleteTransaction.id);
+      await transactionsApi.deleteTransaction(deletedId);
       setDeleteTransaction(null);
       invalidateTransactions();
-      toast.success('Transaksi berhasil dihapus');
+      showTransactionDeletedToast({
+        message: 'Transaksi berhasil dihapus',
+        onUndo: async () => {
+          try {
+            await transactionsApi.restoreTransaction(deletedId);
+            invalidateTransactions();
+            markSavedHighlight(deletedId);
+            toast.success('Transaksi dipulihkan');
+          } catch (err: any) {
+            toast.error(err.message || 'Gagal memulihkan transaksi');
+          }
+        },
+      });
     } catch (err: any) {
       toast.error(err.message || 'Gagal menghapus transaksi');
     } finally {
       setSaving(false);
     }
-  }, [deleteTransaction, invalidateTransactions]);
+  }, [deleteTransaction, invalidateTransactions, markSavedHighlight]);
 
   const handlePrint = useCallback(() => {
     window.print();
@@ -399,6 +430,7 @@ export function useTransactions() {
       });
       setShowQuickAddModal(false);
       invalidateTransactions();
+      markSavedHighlight(createdTransaction.id);
       showTransactionSavedToast({
         message: 'Transaksi berhasil disimpan',
         createdAt: createdTransaction.created_at,
@@ -409,7 +441,7 @@ export function useTransactions() {
     } finally {
       setSaving(false);
     }
-  }, [businessId, user, invalidateTransactions, openCreatedTransactionDetail]);
+  }, [businessId, user, invalidateTransactions, openCreatedTransactionDetail, markSavedHighlight]);
 
   // Convert stock transactions to COGS: change debit from Inventory to COGS account
   const handleConvertStockToCOGS = useCallback(async (transactionIds: string[]) => {
@@ -531,8 +563,27 @@ export function useTransactions() {
 
       if (result.failed > 0) {
         toast.warning(`${result.deleted} transaksi dihapus, ${result.failed} gagal`);
-      } else {
-        toast.success(`${result.deleted} transaksi berhasil dihapus`);
+      }
+      if (result.deleted > 0) {
+        showTransactionDeletedToast({
+          message: `${result.deleted} transaksi berhasil dihapus`,
+          onUndo: async () => {
+            // Restore semua id yang tadi dihapus; id yang gagal dihapus akan
+            // ditolak server (badRequest) dan dihitung sebagai gagal restore.
+            const results = await Promise.allSettled(
+              ids.map((id) => transactionsApi.restoreTransaction(id))
+            );
+            const restored = results.filter((r) => r.status === 'fulfilled').length;
+            invalidateTransactions();
+            if (restored === 0) {
+              toast.error('Gagal memulihkan transaksi');
+            } else if (restored < result.deleted) {
+              toast.warning(`${restored} dari ${result.deleted} transaksi dipulihkan`);
+            } else {
+              toast.success(`${restored} transaksi dipulihkan`);
+            }
+          },
+        });
       }
     } catch (err: any) {
       const message = err.message || 'Gagal menghapus transaksi';
@@ -868,6 +919,8 @@ export function useTransactions() {
     accounts,
     // Contacts (for contact icon in transaction list)
     contacts,
+    // Highlight baris yang baru disimpan/diedit
+    savedHighlightIds,
     // Follow-up prefill (for COGS entry)
     followUpPrefill,
     setFollowUpPrefill,
