@@ -225,11 +225,12 @@ export function TransactionForm({
         : ''
   );
 
-  // Unit breakdown state
-  const [unitBreakdown, setUnitBreakdown] = useState<UnitBreakdown | null>(
-    transaction?.meta?.unit_breakdown || null
-  );
-  const [showBreakdown, setShowBreakdown] = useState(!!transaction?.meta?.unit_breakdown);
+  // Unit breakdown state — pakai `transaction` (mode edit) atau `initialValues` (mode
+  // duplikat/prefill) supaya breakdown ikut ter-copy saat menduplikasi transaksi.
+  const initialUnitBreakdown =
+    transaction?.meta?.unit_breakdown ?? initialValues?.meta?.unit_breakdown ?? null;
+  const [unitBreakdown, setUnitBreakdown] = useState<UnitBreakdown | null>(initialUnitBreakdown);
+  const [showBreakdown, setShowBreakdown] = useState(!!initialUnitBreakdown);
 
   // Attachment state
   const [attachments, setAttachments] = useState<TransactionAttachment[]>(

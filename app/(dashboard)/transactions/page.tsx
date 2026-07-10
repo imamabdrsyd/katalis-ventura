@@ -179,6 +179,17 @@ function TransactionsPageInner() {
       return;
     }
 
+    // Hanya bawa field meta yang aman untuk salinan baru (breakdown unit + tags).
+    // Field identitas/keterkaitan (attachments, booking_id, sold_stock_ids, link
+    // pelunasan, recurring/ocr, dll) sengaja TIDAK dibawa — itu milik transaksi asli.
+    const duplicatedMeta =
+      transaction.meta?.unit_breakdown || transaction.meta?.tags
+        ? {
+            ...(transaction.meta.unit_breakdown ? { unit_breakdown: transaction.meta.unit_breakdown } : {}),
+            ...(transaction.meta.tags ? { tags: transaction.meta.tags } : {}),
+          }
+        : null;
+
     handleCreateFollowUp({
       date: today,
       category: transaction.category,
@@ -191,6 +202,7 @@ function TransactionsPageInner() {
       is_double_entry: transaction.is_double_entry,
       contact_id: transaction.contact_id,
       sales_channel: transaction.sales_channel ?? null,
+      meta: duplicatedMeta,
     });
   }, [handleCreateFollowUp, setDetailTransaction, setMultiLineOcrPrefill, setShowAddModal]);
 
