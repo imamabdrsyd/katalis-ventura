@@ -314,13 +314,42 @@ function TransactionsPageInner() {
 
   const unsettledCount = unsettledTransactions.length;
 
-  // Apply tag filter juga di view unsettled agar konsisten dengan tab lain
-  const tagFilteredUnsettled = useMemo(() => {
-    if (activeTagFilters.length === 0) return unsettledTransactions;
-    return unsettledTransactions.filter((t) =>
-      activeTagFilters.every((tag) => t.meta?.tags?.includes(tag))
-    );
-  }, [unsettledTransactions, activeTagFilters]);
+  // Filter khusus view Unsettled — client-side, terpisah dari filter server-side
+  // (statusFilter/categoryFilter dst) yang dipakai tab All/Draft/Posted.
+  // "Belum lunas" bukan kolom status DB, jadi tidak bisa lewat query paginasi;
+  // semua penyaringan dilakukan di memori atas subset unsettledTransactions.
+  const [unsettledCategoryFilter, setUnsettledCategoryFilter] = useState<'' | TransactionCategory | 'SETTLE'>('');
+  const [unsettledContactFilter, setUnsettledContactFilter] = useState<string>('');
+  const [unsettledDescriptionSearch, setUnsettledDescriptionSearch] = useState<string>('');
+  const [unsettledDateRange, setUnsettledDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
+
+  const filteredUnsettled = useMemo(() => {
+    const kw = unsettledDescriptionSearch.trim().toLowerCase();
+    return unsettledTransactions.filter((t) => {
+      if (unsettledCategoryFilter && unsettledCategoryFilter !== 'SETTLE' && t.category !== unsettledCategoryFilter) return false;
+      if (unsettledContactFilter && t.name !== unsettledContactFilter) return false;
+      if (kw && !(t.description ?? '').toLowerCase().includes(kw)) return false;
+      if (unsettledDateRange.start && t.date < unsettledDateRange.start) return false;
+      if (unsettledDateRange.end && t.date > unsettledDateRange.end) return false;
+      if (activeTagFilters.length > 0 && !activeTagFilters.every((tag) => t.meta?.tags?.includes(tag))) return false;
+      return true;
+    });
+  }, [unsettledTransactions, unsettledCategoryFilter, unsettledContactFilter, unsettledDescriptionSearch, unsettledDateRange, activeTagFilters]);
+
+  const hasActiveUnsettledFilters = Boolean(unsettledCategoryFilter)
+    || Boolean(unsettledContactFilter)
+    || Boolean(unsettledDescriptionSearch)
+    || Boolean(unsettledDateRange.start)
+    || Boolean(unsettledDateRange.end)
+    || activeTagFilters.length > 0;
+
+  const resetUnsettledFilters = useCallback(() => {
+    setUnsettledCategoryFilter('');
+    setUnsettledContactFilter('');
+    setUnsettledDescriptionSearch('');
+    setUnsettledDateRange({ start: '', end: '' });
+    setActiveTagFilters([]);
+  }, []);
 
 
   // Compute summary for selected transactions (across all pages)
@@ -687,7 +716,7 @@ function TransactionsPageInner() {
                   >
                     {t.transactions.unsettled}
                     {unsettledCount > 0 && (
-                      <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300">
+                      <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300">
                         {unsettledCount}
                       </span>
                     )}
@@ -755,11 +784,13 @@ function TransactionsPageInner() {
         )}
 
         {/* Unsettled View — piutang/hutang belum lunas + dividen declared.
-            Klik baris membuka detail modal (tempat aksi pelunasan berada). */}
+            Klik baris membuka detail modal (tempat aksi pelunasan berada).
+            Filter (Category/Contact/Description/Date) bekerja client-side
+            atas subset unsettled — dropdown-nya fungsional, bukan read-only. */}
         {activeView === 'unsettled' && (
           <div className="overflow-auto max-h-[70vh]">
             <TransactionList
-              transactions={tagFilteredUnsettled}
+              transactions={filteredUnsettled}
               loading={loading}
               onRowClick={setDetailTransaction}
               onEdit={canManageTransactions ? setEditTransaction : undefined}
@@ -769,6 +800,16 @@ function TransactionsPageInner() {
               savedHighlightIds={savedHighlightIds}
               closedUntilDate={closedUntilDate}
               contacts={contacts}
+              categoryFilter={unsettledCategoryFilter}
+              onCategoryFilterChange={setUnsettledCategoryFilter}
+              contactFilter={unsettledContactFilter}
+              onContactFilterChange={setUnsettledContactFilter}
+              descriptionSearch={unsettledDescriptionSearch}
+              onDescriptionSearchChange={setUnsettledDescriptionSearch}
+              dateRange={unsettledDateRange}
+              onDateRangeChange={setUnsettledDateRange}
+              hasActiveFilters={hasActiveUnsettledFilters}
+              onResetFilters={resetUnsettledFilters}
             />
           </div>
         )}
