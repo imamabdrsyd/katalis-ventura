@@ -7,6 +7,7 @@ import { ContactTypeIcon, CONTACT_TYPE_LABELS } from '@/components/ui/ContactTyp
 import { useLanguage } from '@/context/LanguageContext';
 import type { Transaction, TransactionCategory, Contact } from '@/types';
 import { SalesChannelBadge } from './SalesChannelBadge';
+import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
 
 interface TransactionListProps {
@@ -53,17 +54,9 @@ const CATEGORY_DOT: Record<string, string> = {
   SETTLE: 'bg-gray-400 dark:bg-gray-500',
 };
 
-const BADGE_CLASSES: Record<TransactionCategory, string> = {
-  EARN: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
-  OPEX: 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400',
-  VAR: 'bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400',
-  CAPEX: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
-  TAX: 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400',
-  FIN: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
-};
-
-
-const SETTLE_BADGE_CLASS = 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400';
+// Warna badge kategori dari source of truth (src/lib/categoryColors.ts) —
+// jangan definisikan ulang di sini agar tidak drift & tetap lolos kontras WCAG.
+const SETTLE_BADGE_CLASS = CATEGORY_BADGE_CLASSES.SETTLE;
 
 const STOCK_BADGE_CLASS = 'bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400';
 
@@ -810,7 +803,7 @@ export function TransactionList({
                     <SalesChannelBadge channel={transaction.sales_channel} size="sm" />
                   ) : (
                     <span
-                      className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${BADGE_CLASSES[transaction.category]}`}
+                      className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${CATEGORY_BADGE_CLASSES[transaction.category]}`}
                     >
                       {transaction.category}
                     </span>

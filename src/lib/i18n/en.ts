@@ -90,6 +90,7 @@ export const en: Translations = {
     collapseSidebar: 'Collapse sidebar',
     searchingTransactions: 'Searching transactions...',
     searchingData: 'Searching data...',
+    searchResultsCount: (n: number) => `${n} result${n === 1 ? '' : 's'} found`,
   },
 
   roles: {

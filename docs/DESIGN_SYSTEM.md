@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 11 Juli 2026 (`<EmptyState>` §4.2 di 13 halaman; skeleton kanonik §4.3 — spinner page-load → Report/TableSkeleton di 6 halaman laporan)
+> Terakhir diupdate: 12 Juli 2026 (a11y: aria-live hasil ⌘K §6; kontras badge kategori diverifikasi WCAG AA §1.3 — OPEX/VAR -600→-700; TransactionList tak lagi drift warna)
 
 ---
 
@@ -61,16 +61,17 @@ primary: {
 **Source of truth: [`src/lib/categoryColors.ts`](../src/lib/categoryColors.ts)** — `CATEGORY_BADGE_CLASSES` dan `CATEGORY_TEXT_CLASSES`.
 Gunakan `<CategoryBadge category={...} />` atau import langsung dari `categoryColors.ts`.
 
-| Kategori | Color | Text class |
-|----------|-------|------------|
-| EARN | emerald | `text-emerald-700 dark:text-emerald-400` |
-| OPEX | red | `text-red-700 dark:text-red-400` |
-| VAR | pink | `text-pink-700 dark:text-pink-400` |
-| CAPEX | blue | `text-blue-700 dark:text-blue-400` |
-| TAX | yellow | `text-yellow-700 dark:text-yellow-400` |
-| FIN | indigo | `text-indigo-700 dark:text-indigo-400` |
+| Kategori | Color | Text class | Kontras light (teks di `bg-*-50`) |
+|----------|-------|------------|-----------------------------------|
+| EARN | emerald | `text-emerald-700 dark:text-emerald-300` | 5.21 ✓ |
+| OPEX | rose | `text-rose-700 dark:text-rose-300` | 5.72 ✓ |
+| VAR | pink | `text-pink-700 dark:text-pink-300` | 5.53 ✓ |
+| CAPEX | blue | `text-blue-600 dark:text-blue-300` | 4.75 ✓ |
+| TAX | amber | `text-amber-700 dark:text-amber-300` | 4.84 ✓ |
+| FIN | indigo | `text-indigo-600 dark:text-indigo-300` | 5.62 ✓ |
+| SETTLE | gray | `text-gray-600 dark:text-gray-400` | 6.87 ✓ |
 
-> **Light mode pakai shade `-700`, bukan `-600`.** Badge tinted (`bg-{color}-50` + teks `-{color}-700`) menjamin kontras ≥4.5:1 (WCAG AA). Dengan `-600`, EARN/OPEX/VAR/TAX gagal threshold di atas `bg-*-50`. Dark mode tetap `-400`.
+> **Semua pasangan badge lolos WCAG AA (≥4.5:1) untuk teks normal**, terverifikasi hitung (light + dark). OPEX & VAR sempat pakai `-600` (4.28 & 4.21 — gagal AA) → dinaikkan ke `-700`. CAPEX/FIN aman di `-600` karena hue lebih gelap. Saat menambah/mengubah warna kategori, **hitung ulang kontras** sebelum commit.
 
 > `globals.css` punya `.badge-*` classes — **jangan dipakai**, isinya outdated dan tidak sinkron. Selalu pakai `categoryColors.ts`.
 
@@ -480,6 +481,8 @@ if (loading) return <ReportSkeleton />;
 - **Disabled state:** `disabled:opacity-50 disabled:cursor-not-allowed`
 - **Alt text:** semua `<img>` wajib ada alt. Icon decoratif di dalam button yang sudah ada label text tidak perlu alt.
 - **Aria label:** button icon-only wajib `aria-label`
+- **Umpan balik dinamis:** konten yang berubah tanpa navigasi (jumlah hasil pencarian, progress) wajib diumumkan ke screen reader. Toast pakai `sonner` — sudah punya live region internal. Untuk region kustom (mis. hasil ⌘K), bungkus status dengan `<div className="sr-only" role="status" aria-live="polite">`.
+- **Kontras teks:** minimum WCAG AA 4.5:1 untuk teks normal. Warna kategori sudah diverifikasi (§1.3) — hitung ulang saat menambah warna baru.
 
 ---
 

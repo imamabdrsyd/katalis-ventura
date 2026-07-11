@@ -92,6 +92,8 @@ export interface Translations {
     collapseSidebar: string;
     searchingTransactions: string;
     searchingData: string;
+    /** Pengumuman jumlah hasil untuk screen reader (aria-live). */
+    searchResultsCount: (n: number) => string;
   };
 
   // Roles

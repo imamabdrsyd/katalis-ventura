@@ -406,6 +406,13 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
           </kbd>
         </div>
 
+        {/* Screen-reader live status: umumkan jumlah hasil / status pencarian.
+            Visual pengumuman ini disembunyikan (sr-only) — UI visual sudah jelas,
+            tapi pengguna screen reader butuh diberi tahu hasil berubah. */}
+        <div className="sr-only" role="status" aria-live="polite">
+          {searching ? t.nav.searchingData : t.nav.searchResultsCount(allResults.length)}
+        </div>
+
         {/* Results */}
         <div className="max-h-80 overflow-y-auto">
           {allResults.length === 0 && !searching ? (

@@ -90,6 +90,7 @@ export const id: Translations = {
     collapseSidebar: 'Kecilkan sidebar',
     searchingTransactions: 'Mencari transaksi...',
     searchingData: 'Mencari data...',
+    searchResultsCount: (n: number) => `${n} hasil ditemukan`,
   },
 
   roles: {
