@@ -3,6 +3,7 @@
 import { Suspense } from 'react';
 import { Target, Plus, Trash2, Pencil, Loader2 } from 'lucide-react';
 import { useBudget, type BudgetTab } from '@/hooks/useBudget';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { BudgetSelector } from '@/components/budget/BudgetSelector';
 import { BudgetFormModal } from '@/components/budget/BudgetFormModal';
 import { BudgetStatusActions } from '@/components/budget/BudgetStatusActions';
@@ -110,22 +111,22 @@ function BudgetForecastPageInner() {
 
       {/* No budgets state */}
       {budgets.length === 0 && (
-        <div className="text-center py-20">
-          <Target className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">{t.budget.noBudget}</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-            Buat budget pertama untuk mulai merencanakan keuangan bisnis.
-          </p>
-          {canManage && (
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="btn-primary inline-flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              {t.budget.createBudget} Pertama
-            </button>
-          )}
-        </div>
+        <EmptyState
+          icon={Target}
+          title={t.budget.noBudget}
+          description="Buat budget pertama untuk mulai merencanakan keuangan bisnis."
+          action={
+            canManage ? (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="btn-primary inline-flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                {t.budget.createBudget} Pertama
+              </button>
+            ) : undefined
+          }
+        />
       )}
 
       {/* Budget selected */}
@@ -274,11 +275,12 @@ function BudgetForecastPageInner() {
                 )}
 
                 {varianceRows.length === 0 && (
-                  <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
-                    <p className="text-gray-400 dark:text-gray-500">
-                      Belum ada data budget. Masukkan target di tab &quot;{t.budget.inputBudget}&quot;.
-                    </p>
-                  </div>
+                  <EmptyState
+                    size="sm"
+                    icon={Target}
+                    title={`Belum ada data budget. Masukkan target di tab "${t.budget.inputBudget}".`}
+                    className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700"
+                  />
                 )}
               </div>
             )}

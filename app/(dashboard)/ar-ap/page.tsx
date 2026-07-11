@@ -4,6 +4,7 @@ import { Suspense, useState, useId } from 'react';
 import { motion } from 'framer-motion';
 import { Users, Calendar, AlertTriangle, TrendingUp, TrendingDown, ArrowRightLeft } from 'lucide-react';
 import { Tabs } from '@/components/ui/Tabs';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useArApAging } from '@/hooks/useArApAging';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
@@ -18,11 +19,11 @@ function AgingTable({ summary, type }: { summary: ArApSummary; type: 'ar' | 'ap'
 
   if (summary.rows.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-        <Users className="w-12 h-12 mx-auto mb-3 opacity-40" />
-        <p className="font-medium">{t.arAp.noOutstanding.replace('{label}', label.toLowerCase())}</p>
-        <p className="text-sm mt-1">{t.arAp.allSettled.replace('{label}', label.toLowerCase())}</p>
-      </div>
+      <EmptyState
+        icon={Users}
+        title={t.arAp.noOutstanding.replace('{label}', label.toLowerCase())}
+        description={t.arAp.allSettled.replace('{label}', label.toLowerCase())}
+      />
     );
   }
 
@@ -168,11 +169,11 @@ function RepaymentTable({ summary }: { summary: RepaymentSummary }) {
 
   if (summary.rows.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-        <ArrowRightLeft className="w-12 h-12 mx-auto mb-3 opacity-40" />
-        <p className="font-medium">{t.arAp.noPaymentHistory}</p>
-        <p className="text-sm mt-1">{t.arAp.paymentHistoryHint}</p>
-      </div>
+      <EmptyState
+        icon={ArrowRightLeft}
+        title={t.arAp.noPaymentHistory}
+        description={t.arAp.paymentHistoryHint}
+      />
     );
   }
 

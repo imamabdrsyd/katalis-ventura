@@ -13,6 +13,7 @@ import { PeriodLockManager } from '@/components/business/PeriodLockManager';
 import { Building2, Archive, Lock, Users, Contact, Globe, Blocks } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { Tabs } from '@/components/ui/Tabs';
+import { EmptyState } from '@/components/ui/EmptyState';
 import * as businessesApi from '@/lib/api/businesses';
 import { createClient } from '@/lib/supabase';
 import { isManagerRole } from '@/lib/roles';
@@ -296,24 +297,25 @@ export default function BusinessesPage() {
           </div>
         </div>
       ) : displayedBusinesses.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-xl">
-          <div className="flex justify-center mb-4">
-            {activeTab === 'active' ? <Building2 className="w-10 h-10 text-gray-400" /> : <Archive className="w-10 h-10 text-gray-400" />}
-          </div>
-          <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">
-            {activeTab === 'active' ? t.businesses.noActiveBusiness : t.businesses.noArchivedBusiness}
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-4">
-            {activeTab === 'active'
-              ? (isInvestor ? t.businesses.noBusinessJoined : t.businesses.startByAdding)
-              : t.businesses.archivedAppearHere}
-          </p>
-          {activeTab === 'active' && canManage && (
-            <button onClick={() => setIsFormOpen(true)} className="btn-primary">
-              + {t.businesses.addBusiness}
-            </button>
-          )}
-        </div>
+        <EmptyState
+          className="bg-gray-50 dark:bg-gray-800 rounded-xl"
+          icon={activeTab === 'active' ? Building2 : Archive}
+          title={activeTab === 'active' ? t.businesses.noActiveBusiness : t.businesses.noArchivedBusiness}
+          description={
+            activeTab === 'active'
+              ? isInvestor
+                ? t.businesses.noBusinessJoined
+                : t.businesses.startByAdding
+              : t.businesses.archivedAppearHere
+          }
+          action={
+            activeTab === 'active' && canManage ? (
+              <button onClick={() => setIsFormOpen(true)} className="btn-primary">
+                + {t.businesses.addBusiness}
+              </button>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayedBusinesses.map((business) => (

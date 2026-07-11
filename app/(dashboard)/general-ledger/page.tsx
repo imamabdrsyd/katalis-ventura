@@ -10,6 +10,7 @@ import { formatCurrency, formatDateShort } from '@/lib/utils';
 import type { Period } from '@/hooks/useReportData';
 import type { AccountType, Transaction } from '@/types';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 // Account type labels are now dynamic via useLanguage - see component body
 
@@ -107,12 +108,11 @@ function GeneralLedgerPageInner() {
   if (!activeBusiness && !loading) {
     return (
       <div className="p-4 md:p-6">
-        <div className="card-static text-center py-12">
-          <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">
-            Pilih bisnis terlebih dahulu untuk melihat General Ledger.
-          </p>
-        </div>
+        <EmptyState
+          className="card-static"
+          icon={AlertCircle}
+          title="Pilih bisnis terlebih dahulu untuk melihat General Ledger."
+        />
       </div>
     );
   }
@@ -321,12 +321,11 @@ function GeneralLedgerPageInner() {
         {/* RIGHT PANEL: Ledger Detail */}
         <div className="flex-1 min-w-0">
           {!selectedAccount || !ledger ? (
-            <div className="card-static flex flex-col items-center justify-center py-16 text-center">
-              <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
-              <p className="text-gray-500 dark:text-gray-400">
-                {t.generalLedger.selectAccountHint}
-              </p>
-            </div>
+            <EmptyState
+              className="card-static"
+              icon={FileText}
+              title={t.generalLedger.selectAccountHint}
+            />
           ) : (
             <div className="card-static p-0 overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 160px)' }}>
               {/* Ledger Header — sticky */}
@@ -437,12 +436,11 @@ function GeneralLedgerPageInner() {
               {/* Ledger Table */}
               <div className="p-4 md:p-6 pt-4">
                 {ledger.entries.length === 0 ? (
-                  <div className="text-center py-12">
-                    <FileText className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">
-                      Tidak ada transaksi untuk akun ini pada periode yang dipilih
-                    </p>
-                  </div>
+                  <EmptyState
+                    size="sm"
+                    icon={FileText}
+                    title="Tidak ada transaksi untuk akun ini pada periode yang dipilih"
+                  />
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[640px]">

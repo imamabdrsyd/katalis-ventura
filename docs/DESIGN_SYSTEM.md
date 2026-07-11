@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 11 Juli 2026 (komponen kanonik `<EmptyState>` — §4.2)
+> Terakhir diupdate: 11 Juli 2026 (komponen kanonik `<EmptyState>` §4.2 — dirollout ke 13 halaman)
 
 ---
 

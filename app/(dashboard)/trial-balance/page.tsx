@@ -5,6 +5,7 @@ import { ClipboardCheck, Calendar, CheckCircle, AlertCircle } from 'lucide-react
 import { useTrialBalance } from '@/hooks/useTrialBalance';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { Period } from '@/hooks/useReportData';
 import type { AccountType } from '@/types';
 
@@ -60,10 +61,7 @@ function TrialBalancePageInner() {
   if (!activeBusiness) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <ClipboardCheck className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">{t.common.selectBusinessFirst}</p>
-        </div>
+        <EmptyState icon={ClipboardCheck} title={t.common.selectBusinessFirst} />
       </div>
     );
   }

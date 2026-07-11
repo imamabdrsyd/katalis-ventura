@@ -12,6 +12,7 @@ import type { AccountLineItem } from '@/lib/calculations';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import { IncomeStatementConfigModal } from '@/components/reports/IncomeStatementConfigModal';
 import { PeriodFilterCard } from '@/components/reports/PeriodFilterCard';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 
 function formatTransactionCount(count: number, locale: string): string {
@@ -569,15 +570,12 @@ function IncomeStatementPageInner() {
   if (!activeBusiness) {
     return (
       <div className="p-8">
-        <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-xl">
-          <div className="flex justify-center mb-4"><Building2 className="w-10 h-10 text-gray-400" /></div>
-          <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">
-            Tidak ada bisnis aktif
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400">
-            Pilih atau buat bisnis terlebih dahulu
-          </p>
-        </div>
+        <EmptyState
+          icon={Building2}
+          title="Tidak ada bisnis aktif"
+          description="Pilih atau buat bisnis terlebih dahulu"
+          className="bg-gray-50 dark:bg-gray-800 rounded-xl"
+        />
       </div>
     );
   }

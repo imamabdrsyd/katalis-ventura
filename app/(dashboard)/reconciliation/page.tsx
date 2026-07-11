@@ -19,6 +19,7 @@ import { formatCurrency } from '@/lib/utils';
 import { useLanguage } from '@/context/LanguageContext';
 import type { Transaction } from '@/types';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { BankStatementImportModal } from '@/components/reconciliation/BankStatementImportModal';
 import { SideBySideMatcher } from '@/components/reconciliation/SideBySideMatcher';
 import { Tabs } from '@/components/ui/Tabs';
@@ -343,14 +344,10 @@ function ReconciliationPageInner() {
         {/* Transaction List */}
         <div className="divide-y divide-gray-100 dark:divide-gray-700/60">
           {displayedTransactions.length === 0 ? (
-            <div className="text-center py-16 px-4">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-700/50 text-gray-400 mb-4">
-                {showReconciled ? <Landmark className="w-7 h-7" /> : <CheckCircle2 className="w-7 h-7" />}
-              </div>
-              <p className="font-semibold text-gray-700 dark:text-gray-200">
-                {showReconciled ? t.reconciliation.noReconciled : t.reconciliation.allReconciled}
-              </p>
-            </div>
+            <EmptyState
+              icon={showReconciled ? Landmark : CheckCircle2}
+              title={showReconciled ? t.reconciliation.noReconciled : t.reconciliation.allReconciled}
+            />
           ) : (
             <>
 {displayedTransactions.map((tx) => (

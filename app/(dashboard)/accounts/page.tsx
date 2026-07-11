@@ -11,6 +11,7 @@ import { isManagerRole } from '@/lib/roles';
 import { AccountForm, type AccountFormData } from '@/components/accounts/AccountForm';
 import { AccountDeleteModal } from '@/components/accounts/AccountDeleteModal';
 import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Plus, Search, ChevronDown, ChevronRight, Lock, CheckCircle2, BookOpen as BookOpenIcon, MoreVertical, Building2, BadgeDollarSign } from 'lucide-react';
 
 const TYPE_STRIP_CLASSES: Record<AccountType, string> = {
@@ -257,9 +258,7 @@ export default function AccountsPage() {
   if (!businessId) {
     return (
       <div className="p-6">
-        <div className="text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400">{t.common.selectBusinessFirst}</p>
-        </div>
+        <EmptyState icon={Building2} title={t.common.selectBusinessFirst} />
       </div>
     );
   }

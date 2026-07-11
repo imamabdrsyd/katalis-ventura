@@ -6,6 +6,7 @@ import { useStatementOfChangesInEquity } from '@/hooks/useStatementOfChangesInEq
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
 import { PeriodFilterCard } from '@/components/reports/PeriodFilterCard';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 function SignedCurrency({ value, parens = false }: { value: number; parens?: boolean }) {
   if (value === 0) return <span className="text-gray-400 dark:text-gray-500">-</span>;
@@ -69,11 +70,12 @@ function SCEPageInner() {
   if (!activeBusiness) {
     return (
       <div className="p-8">
-        <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-xl">
-          <div className="flex justify-center mb-4"><Building2 className="w-10 h-10 text-gray-400" /></div>
-          <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">{text.noActiveBusiness}</h3>
-          <p className="text-gray-500 dark:text-gray-400">{text.selectBusinessFirst}</p>
-        </div>
+        <EmptyState
+          icon={Building2}
+          title={text.noActiveBusiness}
+          description={text.selectBusinessFirst}
+          className="bg-gray-50 dark:bg-gray-800 rounded-xl"
+        />
       </div>
     );
   }
