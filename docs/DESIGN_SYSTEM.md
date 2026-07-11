@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 11 Juli 2026 (komponen kanonik `<EmptyState>` §4.2 — dirollout ke 13 halaman)
+> Terakhir diupdate: 11 Juli 2026 (`<EmptyState>` §4.2 di 13 halaman; skeleton kanonik §4.3 — spinner page-load → Report/TableSkeleton di 6 halaman laporan)
 
 ---
 
@@ -434,11 +434,24 @@ Dua varian:
 
 ### 4.3 Loading Skeleton
 
+**Untuk initial page-load, pakai skeleton berbentuk konten — bukan spinner terpusat.** Skeleton menahan layout agar tidak "melompat" saat data masuk (KB §5 konsistensi internal). Tiga bentuk kanonik di [`src/components/ui/PageSkeleton.tsx`](../src/components/ui/PageSkeleton.tsx):
+
+| Komponen | Untuk halaman |
+|----------|---------------|
+| `<PageSkeleton>` | dashboard-style (header + KPI cards + chart + list) |
+| `<ReportSkeleton>` | laporan (cash-flow, income-statement, balance-sheet, scenario-modeling) — 2 chart + summary |
+| `<TableSkeleton>` | tabular (trial-balance, ar-ap) — header + baris tabel |
+
 ```tsx
-<div className="animate-pulse">
-  <div className="h-96 bg-gray-200 dark:bg-gray-700 rounded-2xl" />
-</div>
+// Page-load state & Suspense fallback pakai skeleton yang sama
+if (loading) return <ReportSkeleton />;
+// ...
+<Suspense fallback={<ReportSkeleton />}>
+  <ReportPageInner />
+</Suspense>
 ```
+
+**Spinner (`animate-spin`) tetap benar untuk aksi inline** — tombol Save/Submit yang sedang proses, bukan untuk memuat seluruh halaman.
 
 ### 4.4 Nested Panel (info box)
 

@@ -4,6 +4,7 @@ import { useState, Suspense } from 'react';
 import { Calendar, TrendingUp, TrendingDown, Minus, FlaskConical, BarChart3, SlidersHorizontal, LineChart, Building2 } from 'lucide-react';
 import { useScenarioModeling, type ScenarioResult } from '@/hooks/useScenarioModeling';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ReportSkeleton } from '@/components/ui/PageSkeleton';
 import { formatCurrency } from '@/lib/utils';
 import { useLanguage } from '@/context/LanguageContext';
 import type { Period } from '@/hooks/useReportData';
@@ -257,14 +258,7 @@ function ScenarioModelingPageInner() {
   const [activeTab, setActiveTab] = useState<'comparison' | 'custom'>('comparison');
 
   if (loading) {
-    return (
-      <div className="p-8 flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500 dark:text-gray-400">Loading...</p>
-        </div>
-      </div>
-    );
+    return <ReportSkeleton />;
   }
 
   if (!activeBusiness) {
@@ -636,7 +630,7 @@ function ScenarioModelingPageInner() {
 
 export default function ScenarioModelingPage() {
   return (
-    <Suspense fallback={<div className="p-8 flex items-center justify-center min-h-[50vh]"><div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+    <Suspense fallback={<ReportSkeleton />}>
       <ScenarioModelingPageInner />
     </Suspense>
   );
