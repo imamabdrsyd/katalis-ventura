@@ -84,6 +84,25 @@ app/
 3. Update baris `Terakhir diupdate:` di header dokumen (format: DD Bulan YYYY)
 4. Jika ada bug fix pada logic, tambahkan atau update entry di **Section 19 (Audit Findings & Known Issues)**
 
+## UX Knowledge Base
+
+Saat mengerjakan UI/UX (desain, layout, komponen, alur), baca dulu file relevan di:
+`~/Library/CloudStorage/OneDrive-Personal/PT IMAM KATALIS VENTURA/AGENT Cowork/UX Design/Knowledge Base/`
+
+Mulai dari `00-INDEX.md` untuk peta isinya. 7 bagian (disintesis dari 80 PDF UX — NN/g, UXPin, InVision, IxDF, dll):
+
+| # | Bagian | File |
+|---|--------|------|
+| 1 | UX Research | `01-ux-research.md` |
+| 2 | Usability Testing | `02-usability-testing.md` |
+| 3 | UX Process & Strategy | `03-ux-process-strategy.md` |
+| 4 | UX Design Fundamentals | `04-ux-design-fundamentals.md` |
+| 5 | UI Design & Visual Design | `05-ui-design-visual.md` |
+| 6 | Prototyping & Wireframing | `06-prototyping-wireframing.md` |
+| 7 | Product Management | `07-product-management.md` |
+
+Folder ini di luar repo tapi terjangkau lewat Read/Bash (sandbox mencakup home directory) — tidak perlu `--add-dir`.
+
 ## Middleware
 
 - `middleware.ts` di root wajib ada — me-refresh session cookies `@supabase/ssr` di setiap request
