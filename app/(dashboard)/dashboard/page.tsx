@@ -13,6 +13,7 @@ import { formatCurrency, formatPercentage, formatDateShort } from '@/lib/utils';
 import { CategoryBadge } from '@/components/ui/CategoryBadge';
 import { Sparkline } from '@/components/ui/Sparkline';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { FxMiniWidget } from '@/components/market/FxMiniWidget';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import { isTradeReceivableTransaction, isSettled, isSettlementEntry, getOutstandingAmount } from '@/lib/accounting/guidance/receivableSettlement';
@@ -965,23 +966,24 @@ export default function DashboardPage() {
 
       {/* Empty State */}
       {!transactionsLoading && transactions.length === 0 && (
-        <div className="mt-8 p-6 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-xl text-center">
-          <div className="flex justify-center mb-4"><ClipboardList className="w-10 h-10 text-indigo-400" /></div>
-          <h3 className="font-semibold text-indigo-900 dark:text-indigo-300 mb-2">{t.dashboard.noTransactions}</h3>
-          <p className="text-sm text-indigo-500 dark:text-indigo-400 mb-4">
-            {canManageTransactions
+        <EmptyState
+          className="mt-8"
+          variant="accent"
+          icon={ClipboardList}
+          title={t.dashboard.noTransactions}
+          description={
+            canManageTransactions
               ? t.dashboard.noTransactionsDesc
-              : t.dashboard.noTransactionsForBusiness}
-          </p>
-          {canManageTransactions && (
-            <button
-              onClick={() => router.push('/transactions')}
-              className="btn-primary"
-            >
-              {t.dashboard.addFirstTransaction}
-            </button>
-          )}
-        </div>
+              : t.dashboard.noTransactionsForBusiness
+          }
+          action={
+            canManageTransactions ? (
+              <button onClick={() => router.push('/transactions')} className="btn-primary">
+                {t.dashboard.addFirstTransaction}
+              </button>
+            ) : undefined
+          }
+        />
       )}
 
       <TransactionDetailModal

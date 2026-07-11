@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 10 Juli 2026 (shadow card Airbnb, ghost badge, underline tab bar animasi Framer)
+> Terakhir diupdate: 11 Juli 2026 (komponen kanonik `<EmptyState>` — §4.2)
 
 ---
 
@@ -410,12 +410,26 @@ Struktur standar:
 
 ### 4.2 Empty State
 
+**Selalu pakai komponen `<EmptyState>`** — jangan tulis inline. Terekstraksi di [`src/components/ui/EmptyState.tsx`](../src/components/ui/EmptyState.tsx). Menyeragamkan state kosong lintas halaman daftar (sebelumnya ad-hoc: `Inbox` + `<p>` abu-abu, kartu indigo, dll).
+
+Dua varian:
+- **`neutral`** (default) — ikon abu-abu, untuk daftar yang kebetulan kosong (mis. "belum ada lead pada filter ini", "tidak ada bisnis aktif").
+- **`accent`** — kartu indigo bernada ajakan, untuk momen first-use / "aha" (mis. dashboard tanpa transaksi → dorong aksi pertama).
+
+`size="sm"` untuk panel/kolom sempit (padding lebih kecil), `md` default. `action` menerima node bebas (pakai `.btn-primary` / `.btn-ghost`).
+
 ```tsx
-<div className="text-center py-12">
-  <Icon className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-  <p className="text-gray-600 dark:text-gray-400 mb-4">Belum ada data</p>
-  <button className="btn-primary">Tambah pertama</button>
-</div>
+// First-use (momen aha) — dashboard kosong
+<EmptyState
+  variant="accent"
+  icon={ClipboardList}
+  title={t.dashboard.noTransactions}
+  description={t.dashboard.noTransactionsDesc}
+  action={<button onClick={...} className="btn-primary">{t.dashboard.addFirstTransaction}</button>}
+/>
+
+// Daftar kosong biasa (netral, panel sempit)
+<EmptyState size="sm" icon={Inbox} title="Belum ada lead." />
 ```
 
 ### 4.3 Loading Skeleton

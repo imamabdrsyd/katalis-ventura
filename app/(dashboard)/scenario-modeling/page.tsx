@@ -3,6 +3,7 @@
 import { useState, Suspense } from 'react';
 import { Calendar, TrendingUp, TrendingDown, Minus, FlaskConical, BarChart3, SlidersHorizontal, LineChart, Building2 } from 'lucide-react';
 import { useScenarioModeling, type ScenarioResult } from '@/hooks/useScenarioModeling';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { formatCurrency } from '@/lib/utils';
 import { useLanguage } from '@/context/LanguageContext';
 import type { Period } from '@/hooks/useReportData';
@@ -179,10 +180,7 @@ function MarginBadge({ label, value }: { label: string; value: number }) {
 function ProjectionBar({ projections }: { projections: { month: string; revenue: number; netIncome: number; cumulativeNetIncome: number }[] }) {
   if (projections.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-400 dark:text-gray-500">
-        <LineChart className="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p>Belum ada data transaksi untuk proyeksi</p>
-      </div>
+      <EmptyState size="sm" icon={LineChart} title="Belum ada data transaksi untuk proyeksi" />
     );
   }
 
@@ -272,15 +270,12 @@ function ScenarioModelingPageInner() {
   if (!activeBusiness) {
     return (
       <div className="p-8">
-        <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-xl">
-          <div className="flex justify-center mb-4"><Building2 className="w-10 h-10 text-gray-400" /></div>
-          <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">
-            Tidak ada bisnis aktif
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400">
-            Pilih atau buat bisnis terlebih dahulu
-          </p>
-        </div>
+        <EmptyState
+          icon={Building2}
+          title="Tidak ada bisnis aktif"
+          description="Pilih atau buat bisnis terlebih dahulu"
+          className="bg-gray-50 dark:bg-gray-800 rounded-xl"
+        />
       </div>
     );
   }

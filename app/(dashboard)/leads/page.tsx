@@ -12,6 +12,7 @@ import {
   LEAD_STATUS_LABELS,
 } from '@/lib/leadColors';
 import { SalesChannelBadge } from '@/components/transactions/SalesChannelBadge';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { ChannelStatus } from '@/lib/api/leads';
 import type { Lead, LeadChannel, LeadMessage, LeadStatus } from '@/types';
 import {
@@ -389,46 +390,38 @@ function LeadsPageInner() {
             {loadingLeads ? (
               <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-500 text-sm">Memuat leads…</div>
             ) : leads.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center px-4">
+              <div className="flex items-center justify-center h-full">
                 {loadingChannels ? (
-                  <>
-                    <Inbox className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Belum ada lead.
-                    </p>
-                  </>
+                  <EmptyState size="sm" icon={Inbox} title="Belum ada lead." />
                 ) : connectedChannels.length === 0 ? (
-                  <>
-                    <Inbox className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                      Belum ada channel terhubung
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      Hubungkan WhatsApp atau Instagram dulu agar pesan masuk muncul di sini.
-                    </p>
-                    {canManage && activeBusinessId && (
-                      <button
-                        onClick={() =>
-                          router.push(`/businesses/${activeBusinessId}/config?tab=integrations`)
-                        }
-                        className="btn-ghost inline-flex items-center gap-2 mt-4"
-                      >
-                        <Plug className="w-4 h-4" />
-                        Hubungkan channel
-                      </button>
-                    )}
-                  </>
+                  <EmptyState
+                    size="sm"
+                    icon={Inbox}
+                    title="Belum ada channel terhubung"
+                    description="Hubungkan WhatsApp atau Instagram dulu agar pesan masuk muncul di sini."
+                    action={
+                      canManage && activeBusinessId ? (
+                        <button
+                          onClick={() =>
+                            router.push(`/businesses/${activeBusinessId}/config?tab=integrations`)
+                          }
+                          className="btn-ghost inline-flex items-center gap-2"
+                        >
+                          <Plug className="w-4 h-4" />
+                          Hubungkan channel
+                        </button>
+                      ) : undefined
+                    }
+                  />
                 ) : (
-                  <>
-                    <Inbox className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                      Menunggu pesan masuk
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      {connectedChannels.map((c) => CHANNEL_LABELS[c.channel]).join(' & ')} sudah
-                      terhubung. Lead baru akan otomatis muncul di sini.
-                    </p>
-                  </>
+                  <EmptyState
+                    size="sm"
+                    icon={Inbox}
+                    title="Menunggu pesan masuk"
+                    description={`${connectedChannels
+                      .map((c) => CHANNEL_LABELS[c.channel])
+                      .join(' & ')} sudah terhubung. Lead baru akan otomatis muncul di sini.`}
+                  />
                 )}
               </div>
             ) : (
