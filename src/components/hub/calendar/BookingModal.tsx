@@ -418,18 +418,16 @@ export function BookingModal({
                 setContactId(c.id);
               }}
               placeholder="Nama tamu"
-              className={isExternal ? 'input opacity-60 pointer-events-none' : 'input'}
+              className={isExternal ? 'input-underline opacity-60 pointer-events-none' : 'input-underline'}
             />
           </div>
           <div className="w-24">
-            <label className="label">Tamu (org)</label>
-            <input
+            <FloatingField
+              label="Tamu (org)"
               type="number"
               min={1}
-              className="input"
               value={guestCount}
               onChange={(e) => setGuestCount(e.target.value)}
-              placeholder="—"
               disabled={isExternal}
             />
           </div>

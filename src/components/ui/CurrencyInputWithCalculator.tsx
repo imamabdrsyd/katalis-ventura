@@ -287,11 +287,11 @@ export function CurrencyInputWithCalculator({
   };
 
   const borderColorClass =
-    colorVariant === 'green' ? 'border-emerald-500 dark:border-emerald-400 focus:ring-emerald-500'
-    : colorVariant === 'red' ? 'border-red-500 dark:border-red-400 focus:ring-red-500'
-    : colorVariant === 'amber' ? 'border-amber-500 dark:border-amber-400 focus:ring-amber-500'
-    : colorVariant === 'purple' ? 'border-purple-500 dark:border-purple-400 focus:ring-purple-500'
-    : colorVariant === 'primary' ? 'border-indigo-500 dark:border-indigo-400 focus:ring-indigo-500'
+    colorVariant === 'green' ? 'border-emerald-500 dark:border-emerald-400 focus:border-emerald-500'
+    : colorVariant === 'red' ? 'border-red-500 dark:border-red-400 focus:border-red-500'
+    : colorVariant === 'amber' ? 'border-amber-500 dark:border-amber-400 focus:border-amber-500'
+    : colorVariant === 'purple' ? 'border-purple-500 dark:border-purple-400 focus:border-purple-500'
+    : colorVariant === 'primary' ? 'border-indigo-500 dark:border-indigo-400 focus:border-indigo-500'
     : '';
 
   // ── Calc actions ──
@@ -394,7 +394,7 @@ export function CurrencyInputWithCalculator({
           type="text"
           value={displayValue}
           onChange={handleInputChange}
-          className={`input ${calcButtonVariant === 'boxed' ? 'pr-14' : 'pr-12'} ${borderColorClass} ${inputClassName}`}
+          className={`input-underline ${calcButtonVariant === 'boxed' ? 'pr-12' : 'pr-10'} ${borderColorClass} ${inputClassName}`}
           placeholder={placeholder}
           inputMode={amountAllowsDecimal ? 'decimal' : 'numeric'}
           autoFocus={autoFocus}
@@ -417,7 +417,7 @@ export function CurrencyInputWithCalculator({
           <button
             type="button"
             onClick={() => setShowCalc(!showCalc)}
-            className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md transition-colors ${showCalc ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300'}`}
+            className={`absolute right-0 top-1/2 -translate-y-1/2 p-1 rounded-md transition-colors ${showCalc ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300'}`}
             tabIndex={-1}
             title="Open calculator"
           >

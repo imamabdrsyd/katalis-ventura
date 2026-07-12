@@ -188,33 +188,72 @@ export function AccountDropdown({
     setSearchTerm('');
   };
 
+  // Dua varian render:
+  // - label terisi  → field form gaya Material underline + floating label
+  //   (label duduk di dalam field saat kosong, mengambang saat terpilih/terbuka)
+  // - label ""      → cell tabel kompak, tetap boxed `.input` (dense journal editor)
+  const isCompact = !label;
+  const floated = !!selectedAccount || isOpen;
+
   return (
     <div className="relative">
-      <label className="label">
-        {label} {required && '*'}
-      </label>
-
       {/* Selected value or placeholder */}
-      <div ref={triggerRef}>
-        <button
-          type="button"
-          onClick={() => isOpen ? setIsOpen(false) : openDropdown()}
-          className={`input w-full text-left flex justify-between items-center ${error ? 'border-red-500 dark:border-red-400' : ''}`}
-        >
-          <span className={selectedAccount ? '' : 'text-gray-400 dark:text-gray-500'}>
-            {selectedAccount
-              ? `${selectedAccount.account_code} - ${selectedAccount.account_name}`
-              : placeholder}
-          </span>
-          <svg
-            className={`w-5 h-5 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+      <div ref={triggerRef} className="relative">
+        {isCompact ? (
+          <button
+            type="button"
+            onClick={() => isOpen ? setIsOpen(false) : openDropdown()}
+            className={`input w-full text-left flex justify-between items-center ${error ? 'border-red-500 dark:border-red-400' : ''}`}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
+            <span className={selectedAccount ? '' : 'text-gray-400 dark:text-gray-500'}>
+              {selectedAccount
+                ? `${selectedAccount.account_code} - ${selectedAccount.account_name}`
+                : placeholder}
+            </span>
+            <svg
+              className={`w-5 h-5 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => isOpen ? setIsOpen(false) : openDropdown()}
+              className={`input-underline pt-5 text-left flex justify-between items-center ${
+                isOpen ? '!border-primary-500' : ''
+              } ${error ? '!border-red-500 dark:!border-red-400' : ''}`}
+            >
+              {/* &nbsp; menjaga tinggi baris saat belum ada pilihan */}
+              <span className="truncate">
+                {selectedAccount
+                  ? `${selectedAccount.account_code} - ${selectedAccount.account_name}`
+                  : ' '}
+              </span>
+              <svg
+                className={`w-4 h-4 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180 text-primary-500' : 'text-gray-400 dark:text-gray-500'}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <span
+              className={`pointer-events-none absolute left-0 origin-[0] transition-all duration-200 ${
+                floated
+                  ? `top-0 scale-75 ${isOpen ? 'text-primary-500' : 'text-gray-500 dark:text-gray-400'}`
+                  : 'top-5 scale-100 text-gray-400 dark:text-gray-500'
+              }`}
+            >
+              {label} {required && '*'}
+            </span>
+          </>
+        )}
       </div>
 
       {/* Suggestion hint */}

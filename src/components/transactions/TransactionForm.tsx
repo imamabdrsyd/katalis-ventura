@@ -945,6 +945,7 @@ export function TransactionForm({
           value={formData.name}
           onChange={(val) => setFormData((prev) => ({ ...prev, name: val, contact_id: null }))}
           onSelectContact={(contact) => setFormData((prev) => ({ ...prev, contact_id: contact.id }))}
+          className="input-underline"
           placeholder={mode === 'in' ? 'Nama customer' : mode === 'out' ? 'Nama vendor/penerima' : 'Customer atau vendor terkait'}
           required
           onSaveAsContact={async (name) => {

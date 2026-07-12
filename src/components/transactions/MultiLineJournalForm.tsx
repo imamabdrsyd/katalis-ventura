@@ -318,6 +318,7 @@ export function MultiLineJournalForm({
           businessId={businessId}
           value={formData.name}
           onChange={(val) => setFormData((p) => ({ ...p, name: val }))}
+          className="input-underline"
           placeholder="cth: Bayar Gaji Karyawan Maret 2026"
           required
           onSaveAsContact={async (name) => {

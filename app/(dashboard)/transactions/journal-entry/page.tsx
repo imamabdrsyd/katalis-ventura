@@ -1563,6 +1563,7 @@ export default function JournalEntryPage() {
                     setName(v);
                     if (errors.name) setErrors(p => { const n = { ...p }; delete n.name; return n; });
                   }}
+                  className="input-underline"
                   placeholder={selectedEntryType!.namePlaceholder}
                   onSaveAsContact={async (contactName) => {
                     if (!businessId || !user) return;

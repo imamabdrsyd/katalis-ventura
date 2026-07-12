@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 12 Juli 2026 (§3.7 Form Field → pola floating-label Google/Material "underline" via `<FloatingField>`/`<FloatingSelect>`; rollout ke form auth/onboarding/settings/bisnis/transaksi/booking)
+> Terakhir diupdate: 12 Juli 2026 (§3.7 Form Field → floating-label underline via `<FloatingField>`/`<FloatingSelect>`; field komposit ikut underline: `.input-underline` untuk CurrencyInput/ContactAutocomplete, `AccountDropdown` floating saat berlabel)
 
 ---
 
@@ -401,14 +401,22 @@ import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 - **`label` menerima `ReactNode`** (boleh string atau JSX kecil), tapi hindari JSX kompleks
   (ikut mengecil saat floating) — taruh hint tambahan di `<p>` bawah field.
 
-**Yang TETAP `.input` (boxed), bukan floating:**
-- **Amount/Currency** → `<CurrencyInputWithCalculator>` (komponen custom, jangan diubah)
+**Field komposit — pakai `.input-underline` (label eksternal di atas):**
+Untuk komponen yang tak bisa jadi `<FloatingField>` (punya tombol/pill/autocomplete internal),
+`globals.css` menyediakan `.input-underline` (garis bawah, `px-0`, fokus indigo):
+- **Amount/Currency** → `<CurrencyInputWithCalculator>` — input underline, label + CurrencyPill
+  tetap di baris atas; `colorVariant` mewarnai garis bawah
+- **`<ContactAutocomplete>`** → pass `className="input-underline"` di form standar
+  (TransactionForm, MultiLineJournalForm, journal-entry, BookingModal); default `input`
+  tetap untuk widget kompak (QuickTransactionForm, CashierScreen)
+- **`<AccountDropdown>`** → otomatis: `label` terisi = floating underline (label mengambang
+  saat terpilih/terbuka); `label=""` = cell tabel kompak boxed (dense journal editor)
+
+**Yang TETAP `.input` (boxed), bukan floating/underline:**
 - **`<textarea>`** → tetap `.input` boxed
-- **Combobox/autocomplete** → `<AccountDropdown>`, `<ContactAutocomplete>`, Category-combobox
-  di `QuickTransactionForm` (pola pencarian tersendiri)
 - **Search bar** (`.input-search`) & **filter dropdown inline** di halaman laporan
-- **Cell tabel per-baris** di journal editor (dense, `text-sm py-1`)
-- **Widget kompak** `QuickTransactionForm` (micro-label khusus)
+- **Cell tabel per-baris** di journal editor (dense, `text-sm py-1`, `AccountDropdown label=""`)
+- **Widget kompak** `QuickTransactionForm` / `CashierScreen` (micro-label khusus)
 
 `.input` / `.label` di `globals.css` masih ada untuk kasus di atas + backward-compat.
 
