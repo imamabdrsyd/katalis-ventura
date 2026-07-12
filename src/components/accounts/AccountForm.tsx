@@ -5,6 +5,7 @@ import type { Account, AccountType, NormalBalance, TransactionCategory, Contact 
 import { AlertCircle, Check } from 'lucide-react';
 import * as accountsApi from '@/lib/api/accounts';
 import * as contactsApi from '@/lib/api/contacts';
+import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 
 export interface AccountFormData {
   account_code: string;
@@ -279,7 +280,7 @@ export function AccountForm({
 
 
   return (
-    <form onSubmit={handleSubmit} className="p-6 space-y-4">
+    <form onSubmit={handleSubmit} className="p-6 space-y-7">
       <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
         {isEditMode ? 'Edit Akun' : 'Tambah Sub-Akun Baru'}
       </h2>
@@ -299,22 +300,21 @@ export function AccountForm({
       {/* Parent Account Selector (create mode only) */}
       {!isEditMode && (
         <div>
-          <label className="label">Kategori Induk *</label>
-          <select
+          <FloatingSelect
+            label="Kategori Induk *"
             name="parent_account_id"
             value={formData.parent_account_id}
             onChange={handleChange}
-            className={`input ${parentAccountId ? 'bg-gray-50 dark:bg-gray-700' : ''}`}
             disabled={loading || !!parentAccountId}
             required
           >
-            <option value="">Pilih kategori...</option>
+            <option value="" disabled hidden />
             {parentAccounts.map(parent => (
               <option key={parent.id} value={parent.id}>
                 {parent.account_code} - {parent.account_name}
               </option>
             ))}
-          </select>
+          </FloatingSelect>
           {parentAccountId && selectedParent && (
             <p className="text-xs text-emerald-500 dark:text-emerald-400 mt-1">
               ✓ Sub-akun akan ditambahkan ke: {selectedParent.account_name}
@@ -358,37 +358,33 @@ export function AccountForm({
       {/* Account Code — editable in create mode, read-only in edit mode */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="label">Kode Akun</label>
-          <div className="relative">
-            <input
-              type="text"
-              name="account_code"
-              value={loadingCode ? '' : formData.account_code}
-              onChange={handleCodeChange}
-              placeholder={loadingCode ? 'Generating...' : suggestedCode || 'Kode akun'}
-              className={`input ${isEditMode ? 'bg-gray-50 dark:bg-gray-700' : ''} ${
-                !isEditMode && codeValidation
-                  ? codeValidation.valid
-                    ? 'border-emerald-400 dark:border-emerald-500 focus:ring-emerald-300'
-                    : 'border-red-400 dark:border-red-500 focus:ring-red-300'
-                  : ''
-              } pr-9`}
-              disabled={loading || loadingCode || isEditMode}
-              readOnly={isEditMode}
-              inputMode="numeric"
-              maxLength={4}
-            />
-            {/* Validation indicator */}
-            {!isEditMode && !loadingCode && formData.account_code && codeValidation && (
-              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
-                {codeValidation.valid ? (
+          <FloatingField
+            label="Kode Akun"
+            name="account_code"
+            value={loadingCode ? '' : formData.account_code}
+            onChange={handleCodeChange}
+            placeholder={loadingCode ? 'Generating...' : suggestedCode || undefined}
+            className={`${
+              !isEditMode && codeValidation
+                ? codeValidation.valid
+                  ? '!border-emerald-400 dark:!border-emerald-500'
+                  : '!border-red-400 dark:!border-red-500'
+                : ''
+            }`}
+            disabled={loading || loadingCode || isEditMode}
+            readOnly={isEditMode}
+            inputMode="numeric"
+            maxLength={4}
+            trailing={
+              !isEditMode && !loadingCode && formData.account_code && codeValidation ? (
+                codeValidation.valid ? (
                   <Check className="w-4 h-4 text-emerald-500" />
                 ) : (
                   <AlertCircle className="w-4 h-4 text-red-500" />
-                )}
-              </span>
-            )}
-          </div>
+                )
+              ) : undefined
+            }
+          />
           {/* Validation message */}
           {!isEditMode && !loadingCode && codeValidation && (
             <p className={`text-xs mt-1 ${codeValidation.valid ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
@@ -410,11 +406,9 @@ export function AccountForm({
 
         {/* Account Type (auto from parent, read-only) */}
         <div>
-          <label className="label">Tipe Akun</label>
-          <input
-            type="text"
+          <FloatingField
+            label="Tipe Akun"
             value={formData.account_type}
-            className="input bg-gray-50 dark:bg-gray-700"
             disabled
             readOnly
           />
@@ -428,13 +422,11 @@ export function AccountForm({
 
       {/* Account Name */}
       <div>
-        <label className="label">Nama Akun *</label>
-        <input
-          type="text"
+        <FloatingField
+          label="Nama Akun *"
           name="account_name"
           value={formData.account_name}
           onChange={handleChange}
-          className="input"
           placeholder="Contoh: Bank BCA, Listrik, Gaji Karyawan"
           maxLength={100}
           disabled={loading}

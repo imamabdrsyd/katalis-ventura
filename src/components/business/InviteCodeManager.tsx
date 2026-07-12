@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Copy, Check, X, UserPlus, Clock, Users, Ban, Trash2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import type { InviteCode } from '@/types';
 import * as inviteCodesApi from '@/lib/api/inviteCodes';
+import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 
 interface InviteCodeManagerProps {
   businessId: string;
@@ -207,41 +208,32 @@ export function InviteCodeManager({
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-              <div>
-                <label className="label">Role</label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as 'business_manager' | 'investor')}
-                  className="input"
-                >
-                  <option value="investor">Investor</option>
-                  <option value="business_manager">Business Manager</option>
-                </select>
-              </div>
+              <FloatingSelect
+                label="Role"
+                value={role}
+                onChange={(e) => setRole(e.target.value as 'business_manager' | 'investor')}
+              >
+                <option value="investor">Investor</option>
+                <option value="business_manager">Business Manager</option>
+              </FloatingSelect>
 
-              <div>
-                <label className="label">Maks Penggunaan</label>
-                <input
-                  type="number"
-                  value={maxUses}
-                  onChange={(e) => setMaxUses(Number(e.target.value))}
-                  min="1"
-                  max="100"
-                  className="input"
-                />
-              </div>
+              <FloatingField
+                label="Maks Penggunaan"
+                type="number"
+                value={maxUses}
+                onChange={(e) => setMaxUses(Number(e.target.value))}
+                min="1"
+                max="100"
+              />
 
-              <div>
-                <label className="label">Berlaku (hari)</label>
-                <input
-                  type="number"
-                  value={expiresIn}
-                  onChange={(e) => setExpiresIn(Number(e.target.value))}
-                  min="1"
-                  max="365"
-                  className="input"
-                />
-              </div>
+              <FloatingField
+                label="Berlaku (hari)"
+                type="number"
+                value={expiresIn}
+                onChange={(e) => setExpiresIn(Number(e.target.value))}
+                min="1"
+                max="365"
+              />
             </div>
 
             <button

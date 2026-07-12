@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Contact, Phone, Mail, Plus, Search, Pencil, Trash2, User, Building, Users2, Handshake, UserCog, TrendingUp, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Loader2, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { FileUpload } from '@/components/ui/FileUpload';
+import FloatingField from '@/components/ui/FloatingField';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import * as contactsApi from '@/lib/api/contacts';
 import { formatCurrency, formatDate, whatsappUrl } from '@/lib/utils';
@@ -881,18 +882,15 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
         onClose={() => setShowForm(false)}
         title={editingContact ? 'Edit Kontak' : 'Tambah Kontak'}
       >
-        <div className="space-y-4">
-          <div>
-            <label className="label">Nama *</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-              className="input"
-              placeholder="Nama customer/vendor"
-              autoFocus
-            />
-          </div>
+        <div className="space-y-5">
+          <FloatingField
+            label="Nama *"
+            type="text"
+            value={formData.name}
+            onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+            placeholder="Nama customer/vendor"
+            autoFocus
+          />
 
           <div>
             <label className="label">Tipe</label>
@@ -919,27 +917,21 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
             </div>
           </div>
 
-          <div>
-            <label className="label">Telepon</label>
-            <input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
-              className="input"
-              placeholder="08xxxxxxxxxx"
-            />
-          </div>
+          <FloatingField
+            label="Telepon"
+            type="tel"
+            value={formData.phone}
+            onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+            placeholder="08xxxxxxxxxx"
+          />
 
-          <div>
-            <label className="label">Email</label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-              className="input"
-              placeholder="email@example.com"
-            />
-          </div>
+          <FloatingField
+            label="Email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+            placeholder="email@example.com"
+          />
 
           <div>
             <label className="label">Alamat</label>

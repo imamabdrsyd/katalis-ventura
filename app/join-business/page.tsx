@@ -11,6 +11,7 @@ import * as joinRequestsApi from '@/lib/api/joinRequests';
 import { formatCurrency } from '@/lib/utils';
 import type { Business } from '@/types';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
+import FloatingField from '@/components/ui/FloatingField';
 
 type RequestStatus = 'pending' | 'approved' | 'rejected' | null;
 
@@ -249,13 +250,13 @@ export default function JoinBusinessPage() {
         {joinMode === 'code' && (
           <div>
             <div className="mb-6">
-              <label className="label">Masukkan Kode Undangan</label>
-              <input
+              <FloatingField
+                label="Masukkan Kode Undangan"
                 type="text"
                 placeholder="Contoh: ABC12345"
                 value={inviteCode}
                 onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                className="input text-center text-lg tracking-widest font-mono"
+                className="text-center text-lg tracking-widest font-mono"
                 maxLength={8}
               />
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">

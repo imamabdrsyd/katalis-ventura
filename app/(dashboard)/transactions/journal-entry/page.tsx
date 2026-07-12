@@ -64,6 +64,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
+import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 import { UnitBreakdownSection } from '@/components/transactions/UnitBreakdownSection';
 import { FileUpload } from '@/components/ui/FileUpload';
 
@@ -1266,15 +1267,14 @@ export default function JournalEntryPage() {
                   </div>
 
                   <div>
-                    <label className="label text-base font-semibold">Tanggal</label>
-                    <input
+                    <FloatingField
+                      label="Tanggal"
                       type="date"
                       value={date}
                       onChange={(e) => {
                         setDate(e.target.value);
                         if (errors.date) setErrors(p => { const n = { ...p }; delete n.date; return n; });
                       }}
-                      className="input"
                     />
                     {errors.date && (
                       <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.date}</p>
@@ -1372,15 +1372,14 @@ export default function JournalEntryPage() {
               <>
                 {/* Date field in multi-line mode */}
                 <div className="max-w-xs">
-                  <label className="label text-base font-semibold">Tanggal</label>
-                  <input
+                  <FloatingField
+                    label="Tanggal"
                     type="date"
                     value={date}
                     onChange={(e) => {
                       setDate(e.target.value);
                       if (errors.date) setErrors(p => { const n = { ...p }; delete n.date; return n; });
                     }}
-                    className="input"
                   />
                   {errors.date && (
                     <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.date}</p>
@@ -1585,16 +1584,10 @@ export default function JournalEntryPage() {
               </div>
 
               <div>
-                <label className="label text-base font-semibold">
-                  Kategori
-                  <span className="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500">
-                    {selectedEntryType!.lockCategory ? '(terkunci)' : '(otomatis terdeteksi)'}
-                  </span>
-                </label>
-                <select
+                <FloatingSelect
+                  label="Kategori"
                   value={category}
                   onChange={(e) => setCategory(e.target.value as TransactionCategory)}
-                  className={`input ${selectedEntryType!.lockCategory ? 'bg-gray-50 dark:bg-gray-700' : ''}`}
                   disabled={selectedEntryType!.lockCategory}
                 >
                   {ALL_CATEGORIES.map((cat) => (
@@ -1602,7 +1595,10 @@ export default function JournalEntryPage() {
                       {CATEGORY_LABELS[cat]}
                     </option>
                   ))}
-                </select>
+                </FloatingSelect>
+                <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                  {selectedEntryType!.lockCategory ? 'Kategori terkunci' : 'Kategori otomatis terdeteksi'}
+                </p>
               </div>
             </div>
 

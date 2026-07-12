@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { Camera, X, Loader2 } from 'lucide-react';
 import type { Business } from '@/types';
+import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 
 export interface BusinessFormData {
   business_name: string;
@@ -227,13 +228,12 @@ export function BusinessForm({
 
       {/* Nama Bisnis */}
       <div>
-        <label className="label">Nama Bisnis *</label>
-        <input
+        <FloatingField
+          label="Nama Bisnis *"
           type="text"
           name="business_name"
           value={formData.business_name}
           onChange={handleChange}
-          className="input"
           placeholder="cth: Katalis Studio"
           required
         />
@@ -244,49 +244,49 @@ export function BusinessForm({
 
       {/* Tipe Bisnis */}
       <div>
-        <label className="label">Tipe Bisnis</label>
-        <select
+        <FloatingSelect
+          label="Tipe Bisnis"
           name="business_type"
           value={formData.business_type}
           onChange={handleChange}
-          className="input"
         >
           {BUSINESS_CATEGORIES.map((cat) => (
             <option key={cat.value} value={cat.value}>
               {cat.label}
             </option>
           ))}
-        </select>
+        </FloatingSelect>
       </div>
 
       {/* Sektor */}
       <div>
-        <label className="label">Sektor</label>
-        <select
+        <FloatingSelect
+          label="Sektor"
           name="business_sector"
           value={formData.business_sector}
           onChange={handleChange}
-          className="input"
         >
           {BUSINESS_SECTORS.map((sector) => (
             <option key={sector.value} value={sector.value}>
               {sector.label}
             </option>
           ))}
-        </select>
+        </FloatingSelect>
         {formData.business_sector === 'other' && (
-          <input
-            type="text"
-            value={customSector}
-            onChange={(e) => {
-              setCustomSector(e.target.value);
-              if (errors.business_sector) {
-                setErrors((prev) => ({ ...prev, business_sector: undefined }));
-              }
-            }}
-            className="input mt-3"
-            placeholder="Masukkan sektor bisnis"
-          />
+          <div className="mt-3">
+            <FloatingField
+              label="Sektor Bisnis Custom"
+              type="text"
+              value={customSector}
+              onChange={(e) => {
+                setCustomSector(e.target.value);
+                if (errors.business_sector) {
+                  setErrors((prev) => ({ ...prev, business_sector: undefined }));
+                }
+              }}
+              placeholder="Masukkan sektor bisnis"
+            />
+          </div>
         )}
         {errors.business_sector && (
           <p className="text-sm text-red-500 mt-1">{errors.business_sector}</p>
@@ -308,8 +308,8 @@ export function BusinessForm({
 
       {/* Modal Investasi / Capital Investment */}
       <div>
-        <label className="label">Modal Investasi (Rp)</label>
-        <input
+        <FloatingField
+          label="Modal Investasi (Rp)"
           type="number"
           name="capital_investment"
           value={formData.capital_investment || ''}
@@ -320,7 +320,6 @@ export function BusinessForm({
               capital_investment: value,
             }));
           }}
-          className="input"
           placeholder="cth: 350000000"
           min="0"
         />
@@ -365,13 +364,12 @@ export function BusinessForm({
 
         {/* Kota */}
         <div>
-          <label className="label">Kota</label>
-          <input
+          <FloatingField
+            label="Kota"
             type="text"
             name="city"
             value={formData.city || ''}
             onChange={handleChange}
-            className="input"
             placeholder="cth: Bandung"
           />
         </div>

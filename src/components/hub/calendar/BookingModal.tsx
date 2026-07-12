@@ -15,6 +15,7 @@ import type {
 import type { PaymentMethod } from '@/lib/accounting/salesCheckout';
 import { Modal } from '@/components/ui/Modal';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
+import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
 import { formatCurrency } from '@/lib/utils';
 import { getDailyRates } from '@/lib/api/dailyRates';
@@ -318,7 +319,7 @@ export function BookingModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="lg" footer={footer}>
-      <div className="space-y-4">
+      <div className="space-y-5">
         {/* Unit (fixed — kalender ini scoped ke satu unit) */}
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
           <Home className="w-4 h-4 text-gray-400 dark:text-gray-500" />
@@ -367,27 +368,21 @@ export function BookingModal({
 
         {/* Tanggal */}
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="label">Check-in</label>
-            <input
-              type="date"
-              className="input"
-              value={checkIn}
-              onChange={(e) => setCheckIn(e.target.value)}
-              disabled={datesLocked}
-            />
-          </div>
-          <div>
-            <label className="label">Check-out</label>
-            <input
-              type="date"
-              className="input"
-              value={checkOut}
-              min={checkIn ? format(addDays(parseISO(checkIn), 1), 'yyyy-MM-dd') : undefined}
-              onChange={(e) => setCheckOut(e.target.value)}
-              disabled={datesLocked}
-            />
-          </div>
+          <FloatingField
+            label="Check-in"
+            type="date"
+            value={checkIn}
+            onChange={(e) => setCheckIn(e.target.value)}
+            disabled={datesLocked}
+          />
+          <FloatingField
+            label="Check-out"
+            type="date"
+            value={checkOut}
+            min={checkIn ? format(addDays(parseISO(checkIn), 1), 'yyyy-MM-dd') : undefined}
+            onChange={(e) => setCheckOut(e.target.value)}
+            disabled={datesLocked}
+          />
         </div>
 
         {/* Overlap warning */}
@@ -443,18 +438,10 @@ export function BookingModal({
         {/* Harga & total */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="label">
-              Harga / malam
-              {autoQuote && (
-                <span className="ml-1.5 text-[10px] font-normal text-primary-600 dark:text-primary-400">
-                  rata-rata · otomatis
-                </span>
-              )}
-            </label>
-            <input
+            <FloatingField
+              label="Harga / malam"
               type="number"
               min={0}
-              className="input"
               value={pricePerNight}
               onChange={(e) => {
                 // Edit manual = keluar dari mode harga-kalender (total kembali flat × malam).
@@ -463,22 +450,24 @@ export function BookingModal({
               }}
               disabled={priceLocked}
             />
+            {autoQuote && (
+              <p className="mt-1 text-[10px] text-primary-600 dark:text-primary-400">
+                rata-rata · otomatis
+              </p>
+            )}
           </div>
-          <div>
-            <label className="label">Channel</label>
-            <select
-              className="input"
-              value={channel}
-              onChange={(e) => setChannel(e.target.value as BookingChannel)}
-              disabled={priceLocked}
-            >
-              {(Object.keys(BOOKING_CHANNEL_LABELS) as BookingChannel[]).map((c) => (
-                <option key={c} value={c}>
-                  {BOOKING_CHANNEL_LABELS[c]}
-                </option>
-              ))}
-            </select>
-          </div>
+          <FloatingSelect
+            label="Channel"
+            value={channel}
+            onChange={(e) => setChannel(e.target.value as BookingChannel)}
+            disabled={priceLocked}
+          >
+            {(Object.keys(BOOKING_CHANNEL_LABELS) as BookingChannel[]).map((c) => (
+              <option key={c} value={c}>
+                {BOOKING_CHANNEL_LABELS[c]}
+              </option>
+            ))}
+          </FloatingSelect>
         </div>
 
         {/* Ringkasan total */}
@@ -498,24 +487,21 @@ export function BookingModal({
 
         {/* Status editable (existing) */}
         {booking && !isExternal && (
-          <div>
-            <label className="label">Status</label>
-            <select
-              className="input"
-              value={status}
-              onChange={(e) =>
-                isPaid
-                  ? handleStatusUpdate(e.target.value as BookingStatus)
-                  : setStatus(e.target.value as BookingStatus)
-              }
-            >
-              {EDITABLE_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {BOOKING_STATUS_LABELS[s]}
-                </option>
-              ))}
-            </select>
-          </div>
+          <FloatingSelect
+            label="Status"
+            value={status}
+            onChange={(e) =>
+              isPaid
+                ? handleStatusUpdate(e.target.value as BookingStatus)
+                : setStatus(e.target.value as BookingStatus)
+            }
+          >
+            {EDITABLE_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {BOOKING_STATUS_LABELS[s]}
+              </option>
+            ))}
+          </FloatingSelect>
         )}
 
         {/* Notes */}

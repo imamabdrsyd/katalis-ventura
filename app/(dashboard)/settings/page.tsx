@@ -17,6 +17,7 @@ function TelegramIcon({ className }: { className?: string }) {
 }
 import Image from 'next/image';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
+import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 import { isManagerRole } from '@/lib/roles';
 import type { UserRole } from '@/types';
 import { toast } from 'sonner';
@@ -393,56 +394,45 @@ export default function SettingsPage() {
             </div>
 
             {/* Form Fields */}
-            <div className="space-y-5">
-              <div>
-                <label className="label flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  {t.settings.fullName}
-                </label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="input"
-                  placeholder={t.settings.fullNamePlaceholder}
-                />
-              </div>
+            <div className="space-y-6">
+              <FloatingField
+                label={t.settings.fullName}
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                icon={<User className="w-4 h-4" />}
+                placeholder={t.settings.fullNamePlaceholder}
+              />
 
               <div>
-                <label className="label flex items-center gap-2">
-                  <Mail className="w-4 h-4" />
-                  {t.settings.email}
-                </label>
-                <input
+                <FloatingField
+                  label={t.settings.email}
                   type="email"
                   value={email}
                   disabled
-                  className="input bg-gray-50 dark:bg-gray-700 cursor-not-allowed"
+                  icon={<Mail className="w-4 h-4" />}
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t.settings.emailReadonly}</p>
               </div>
 
               <div>
-                <label className="label flex items-center gap-2">
-                  <Briefcase className="w-4 h-4" />
-                  {t.settings.role}
-                </label>
                 {isSuperadmin ? (
-                  <select
+                  <FloatingSelect
+                    label={t.settings.role}
                     value={selectedDisplayRole}
                     onChange={(event) => setSelectedDisplayRole(event.target.value as UserRole)}
-                    className="input"
                   >
                     <option value="business_manager">{roleLabels.business_manager}</option>
                     <option value="investor">{roleLabels.investor}</option>
                     <option value="superadmin">{roleLabels.superadmin}</option>
-                  </select>
+                  </FloatingSelect>
                 ) : (
-                  <input
+                  <FloatingField
+                    label={t.settings.role}
                     type="text"
                     value={userRole ? roleLabels[userRole] : '-'}
                     disabled
-                    className="input bg-gray-50 dark:bg-gray-700 cursor-not-allowed"
+                    icon={<Briefcase className="w-4 h-4" />}
                   />
                 )}
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">

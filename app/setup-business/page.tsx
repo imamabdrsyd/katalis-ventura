@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import { Building2 } from 'lucide-react';
 import { createBusiness } from '@/lib/api/businesses';
+import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 
 const BUSINESS_TYPES = [
   { value: 'agribusiness', label: 'Agribusiness' },
@@ -118,40 +119,38 @@ export default function SetupBusinessPage() {
         )}
 
         <form onSubmit={handleSetup} className="space-y-6">
-          <div>
-            <label className="label">Business Name *</label>
-            <input
-              type="text"
-              value={businessName}
-              onChange={(e) => setBusinessName(e.target.value)}
-              placeholder="e.g., Katalis Studio"
-              className="input"
-              required
-            />
-          </div>
+          <FloatingField
+            label="Business Name *"
+            type="text"
+            value={businessName}
+            onChange={(e) => setBusinessName(e.target.value)}
+            placeholder="e.g., Katalis Studio"
+            required
+          />
 
           <div>
-            <label className="label">Tipe Bisnis</label>
-            <select
+            <FloatingSelect
+              label="Tipe Bisnis"
               value={businessType}
               onChange={(e) => setBusinessType(e.target.value)}
-              className="input"
             >
               {BUSINESS_TYPES.map((type) => (
                 <option key={type.value} value={type.value}>
                   {type.label}
                 </option>
               ))}
-            </select>
+            </FloatingSelect>
             {businessType === 'other' && (
-              <input
-                type="text"
-                value={customType}
-                onChange={(e) => setCustomType(e.target.value)}
-                className="input mt-2"
-                placeholder="Masukkan tipe bisnis custom"
-                required
-              />
+              <div className="mt-3">
+                <FloatingField
+                  label="Tipe Bisnis Custom"
+                  type="text"
+                  value={customType}
+                  onChange={(e) => setCustomType(e.target.value)}
+                  placeholder="Masukkan tipe bisnis custom"
+                  required
+                />
+              </div>
             )}
           </div>
 
@@ -167,13 +166,12 @@ export default function SetupBusinessPage() {
           </div>
 
           <div>
-            <label className="label">Modal Investasi Awal (Rp)</label>
-            <input
+            <FloatingField
+              label="Modal Investasi Awal (Rp)"
               type="number"
               value={capitalInvestment || ''}
               onChange={(e) => setCapitalInvestment(e.target.value ? parseInt(e.target.value) : 0)}
               placeholder="cth: 350000000"
-              className="input"
               min="0"
             />
             <p className="text-xs text-gray-500 mt-1">

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
+import FloatingField from '@/components/ui/FloatingField';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -84,44 +85,34 @@ export default function LoginPage() {
         </div>
       )}
 
-      <form onSubmit={handleLogin} className="space-y-4">
-        <div>
-          <label className="label">Email</label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="input pl-10"
-              placeholder="you@example.com"
-              required
-            />
-          </div>
-        </div>
+      <form onSubmit={handleLogin} className="space-y-5">
+        <FloatingField
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          icon={<Mail className="w-4 h-4" />}
+          required
+        />
 
-        <div>
-          <label className="label">Password</label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input pl-10 pr-10"
-              placeholder="••••••••"
-              required
-            />
+        <FloatingField
+          label="Password"
+          type={showPassword ? 'text' : 'password'}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          icon={<Lock className="w-4 h-4" />}
+          required
+          trailing={
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               tabIndex={-1}
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
-          </div>
-        </div>
+          }
+        />
 
         <div className="flex items-center justify-between">
           <label className="flex items-center">

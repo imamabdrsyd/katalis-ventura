@@ -10,6 +10,7 @@ import { detectCategory } from '@/lib/utils/transactionHelpers';
 import { useAccountingGuidance } from '@/hooks/useAccountingGuidance';
 import { AlertCircle, Lightbulb, AlertTriangle, BookTemplate, ChevronDown, Trash2, X, RefreshCw } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
+import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 import { UnitBreakdownSection } from '@/components/transactions/UnitBreakdownSection';
 import { FileUpload } from '@/components/ui/FileUpload';
 import { makePendingAttachment, isPendingAttachment, uploadPendingAttachments } from '@/lib/storage/attachments';
@@ -751,7 +752,7 @@ export function TransactionForm({
 
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {/* OCR SCAN — only when creating new transaction */}
       {!transaction && businessId && (
         <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20">
@@ -848,12 +849,11 @@ export function TransactionForm({
       {/* 1. KATEGORI — full mode only */}
       {mode === 'full' && (
         <div>
-          <label className="label">Kategori *</label>
-          <select
+          <FloatingSelect
+            label="Kategori *"
             name="category"
             value={formData.category}
             onChange={handleChange}
-            className="input"
             required
           >
             {categories.map((cat) => (
@@ -861,7 +861,7 @@ export function TransactionForm({
                 {CATEGORY_LABELS[cat]}
               </option>
             ))}
-          </select>
+          </FloatingSelect>
           {suggestedAccounts && (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               <Lightbulb className="w-3.5 h-3.5 inline-block mr-1 -mt-0.5" />{suggestedAccounts.description}
@@ -872,21 +872,19 @@ export function TransactionForm({
 
       {/* 1b. SALES CHANNEL — hanya untuk EARN (semua mode) */}
       {formData.category === 'EARN' && (
-        <div>
-          <label className="label">Channel Penjualan</label>
-          <select
-            name="sales_channel"
-            value={formData.sales_channel ?? ''}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                sales_channel: (e.target.value as SalesChannel) || null,
-              }))
-            }
-            className="input"
-          >
-            <option value="">— Pilih channel (opsional) —</option>
-            {(() => {
+        <FloatingSelect
+          label="Channel Penjualan"
+          name="sales_channel"
+          value={formData.sales_channel ?? ''}
+          onChange={(e) =>
+            setFormData((prev) => ({
+              ...prev,
+              sales_channel: (e.target.value as SalesChannel) || null,
+            }))
+          }
+        >
+          <option value="">— Tanpa channel —</option>
+          {(() => {
               // Pastikan channel yang sudah tersimpan tetap tampil walau tak relevan
               // dengan tipe bisnis (mis. data lama), agar value tidak terlihat kosong.
               const saved = formData.sales_channel;
@@ -903,8 +901,7 @@ export function TransactionForm({
                 {opt.label}
               </option>
             ))}
-          </select>
-        </div>
+        </FloatingSelect>
       )}
 
       {/* 2. AMOUNT — normal size for full mode */}
@@ -1005,13 +1002,12 @@ export function TransactionForm({
 
       {/* 6. TANGGAL */}
       <div>
-        <label className="label">Tanggal *</label>
-        <input
+        <FloatingField
+          label="Tanggal *"
           type="date"
           name="date"
           value={formData.date}
           onChange={handleChange}
-          className="input"
           required
         />
         {errors.date && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.date}</p>}
@@ -1238,13 +1234,12 @@ export function TransactionForm({
       {/* Legacy Account field (only for full mode when not using double-entry) */}
       {mode === 'full' && !isDoubleEntry && (
         <div>
-          <label className="label">Akun</label>
-          <input
+          <FloatingField
+            label="Akun"
             type="text"
             name="account"
             value={formData.account}
             onChange={handleChange}
-            className="input"
             placeholder="cth: BCA, Cash, OVO, GoPay"
             required={!isDoubleEntry}
           />

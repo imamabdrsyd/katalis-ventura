@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { PlusCircle, Trash2, AlertCircle, PackageOpen } from 'lucide-react';
 import { AccountDropdown } from './AccountDropdown';
 import { ContactAutocomplete } from './ContactAutocomplete';
+import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 import { getAccounts } from '@/lib/api/accounts';
 import { resolveContactTypeFromCategory, saveContactFromTransaction } from '@/lib/api/contacts';
 import { useParams } from 'next/navigation';
@@ -256,50 +257,44 @@ export function MultiLineJournalForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {/* Header fields */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="label">Tanggal *</label>
-          <input
+          <FloatingField
+            label="Tanggal *"
             type="date"
             value={formData.date}
             onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
-            className="input"
             required
           />
           {errors.date && <p className="text-sm text-red-500 mt-1">{errors.date}</p>}
         </div>
-        <div>
-          <label className="label">Kategori *</label>
-          <select
-            value={formData.category}
-            onChange={(e) => setFormData((p) => ({ ...p, category: e.target.value as TransactionCategory }))}
-            className="input"
-          >
-            {ALL_CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
-            ))}
-          </select>
-        </div>
+        <FloatingSelect
+          label="Kategori *"
+          value={formData.category}
+          onChange={(e) => setFormData((p) => ({ ...p, category: e.target.value as TransactionCategory }))}
+        >
+          {ALL_CATEGORIES.map((cat) => (
+            <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
+          ))}
+        </FloatingSelect>
       </div>
 
       {/* Sales channel — hanya untuk EARN */}
       {formData.category === 'EARN' && (
-        <div>
-          <label className="label">Channel Penjualan</label>
-          <select
-            value={formData.sales_channel ?? ''}
-            onChange={(e) =>
-              setFormData((p) => ({
-                ...p,
-                sales_channel: (e.target.value as SalesChannel) || null,
-              }))
-            }
-            className="input"
-          >
-            <option value="">— Pilih channel (opsional) —</option>
-            {(() => {
+        <FloatingSelect
+          label="Channel Penjualan"
+          value={formData.sales_channel ?? ''}
+          onChange={(e) =>
+            setFormData((p) => ({
+              ...p,
+              sales_channel: (e.target.value as SalesChannel) || null,
+            }))
+          }
+        >
+          <option value="">— Tanpa channel —</option>
+          {(() => {
               const saved = formData.sales_channel;
               const opts =
                 saved && !baseChannelOptions.some((o) => o.value === saved)
@@ -314,8 +309,7 @@ export function MultiLineJournalForm({
                 {opt.label}
               </option>
             ))}
-          </select>
-        </div>
+        </FloatingSelect>
       )}
 
       <div>

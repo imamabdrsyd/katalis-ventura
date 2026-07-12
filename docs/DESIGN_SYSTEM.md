@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 12 Juli 2026 (a11y: aria-live hasil ⌘K §6; kontras badge kategori diverifikasi WCAG AA §1.3 — OPEX/VAR -600→-700; TransactionList tak lagi drift warna)
+> Terakhir diupdate: 12 Juli 2026 (§3.7 Form Field → pola floating-label Google/Material "underline" via `<FloatingField>`/`<FloatingSelect>`; rollout ke form auth/onboarding/settings/bisnis/transaksi/booking)
 
 ---
 
@@ -359,20 +359,58 @@ Komponen: [`src/components/ui/Modal.tsx`](../src/components/ui/Modal.tsx). Selal
 - Backdrop: `bg-black/40 backdrop-blur-sm` (sudah built-in).
 - `headerAction` (opsional): elemen aksi di header, dirender tepat di kiri tombol close. `closeButtonClassName` (opsional): kelas tambahan untuk tombol close (mis. `sm:hidden`). Kombinasi keduanya dipakai mis. di TransactionDetailModal — di desktop tombol Duplicate menggantikan icon close (close diwakili klik di luar modal/Esc), di mobile tombol close tetap ada.
 
-### 3.7 Input / Form Field
+### 3.7 Input / Form Field — Floating Label (Google/Material "underline")
 
-Pakai `.input` untuk `<input>`, `<select>`, `<textarea>`. Pakai `.label` untuk label.
+**Pola default field berlabel** = komponen `<FloatingField>` / `<FloatingSelect>` di
+[`src/components/ui/FloatingField.tsx`](../src/components/ui/FloatingField.tsx). Varian Material
+**"standard / underline"**: tanpa kotak, hanya garis bawah; label ada sejajar teks saat kosong,
+lalu **mengambang** ke atas + mengecil saat difokus/terisi. Garis bawah & label jadi indigo saat aktif.
 
-**Pattern field lengkap:**
 ```tsx
-<div>
-  <label className="label">Nama bisnis</label>
-  <input type="text" className="input" />
-  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Helper text</p>
-</div>
+import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
+
+// Input teks / number / date / email — ikon & trailing opsional
+<FloatingField
+  label="Nama Bisnis *"
+  type="text"
+  value={value}
+  onChange={onChange}
+  placeholder="cth: Katalis Studio"   // HANYA bila hint asli (bukan mengulang label)
+  icon={<Mail className="w-4 h-4" />}  // opsional (leading)
+  trailing={<button…/>}               // opsional (mis. show/hide password)
+/>
+
+// Dropdown — chevron otomatis; label jadi placeholder saat kosong
+<FloatingSelect label="Kategori *" value={value} onChange={onChange} required>
+  <option value="" disabled hidden />   {/* placeholder WAJIB kosong+disabled+hidden */}
+  {opts.map(o => <option key={o} value={o}>{label}</option>)}
+</FloatingSelect>
 ```
 
-Error state: tambahkan `border-red-400 focus:ring-red-500` + pesan error `text-sm text-red-600 mt-1`.
+**Aturan penting:**
+- **Placeholder ≠ label.** Beri `placeholder` HANYA kalau itu hint informatif (mis.
+  "Contoh: Bank BCA, Listrik"). Jangan mengulang label ("Kode Akun" → placeholder "Kode akun")
+  → itu bikin double saat fokus. Tanpa placeholder, label sendiri berperan sebagai hint saat kosong.
+- **Hint muncul hanya saat fokus** (transparent → gray), jadi tak pernah tabrakan dengan label.
+- **`FloatingSelect` placeholder option** harus `<option value="" disabled hidden />` (teks kosong) —
+  supaya label jadi placeholder & tak muncul baris kosong tercentang di dropdown. Untuk select
+  opsional yang boleh dikosongkan lagi, pakai `<option value="">— Tanpa … —</option>` (selectable).
+- **Spacing form**: pakai `space-y-5` (form padat) s/d `space-y-7` (modal lega) — field floating
+  lebih tinggi (`pt-5`), butuh napas antar-field.
+- **Tanpa notch/background patch** → aman di atas latar warna apa pun (beda dari varian outlined).
+- **`label` menerima `ReactNode`** (boleh string atau JSX kecil), tapi hindari JSX kompleks
+  (ikut mengecil saat floating) — taruh hint tambahan di `<p>` bawah field.
+
+**Yang TETAP `.input` (boxed), bukan floating:**
+- **Amount/Currency** → `<CurrencyInputWithCalculator>` (komponen custom, jangan diubah)
+- **`<textarea>`** → tetap `.input` boxed
+- **Combobox/autocomplete** → `<AccountDropdown>`, `<ContactAutocomplete>`, Category-combobox
+  di `QuickTransactionForm` (pola pencarian tersendiri)
+- **Search bar** (`.input-search`) & **filter dropdown inline** di halaman laporan
+- **Cell tabel per-baris** di journal editor (dense, `text-sm py-1`)
+- **Widget kompak** `QuickTransactionForm` (micro-label khusus)
+
+`.input` / `.label` di `globals.css` masih ada untuk kasus di atas + backward-compat.
 
 ### 3.8 Chart
 
