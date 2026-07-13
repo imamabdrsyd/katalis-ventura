@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { differenceInCalendarDays, parseISO, format, addDays } from 'date-fns';
-import { AlertTriangle, Loader2, Trash2, Ban, CheckCircle2, ExternalLink, Home } from 'lucide-react';
+import { AlertTriangle, Loader2, Trash2, Ban, CheckCircle2, ExternalLink, Home, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import type {
   BusinessUnit,
@@ -17,7 +17,7 @@ import { Modal } from '@/components/ui/Modal';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatNumber } from '@/lib/utils';
 import { getDailyRates } from '@/lib/api/dailyRates';
 import { quoteStay, groupIntoRanges, type StayQuote } from '@/lib/rates';
 import {
@@ -93,6 +93,9 @@ export function BookingModal({
 
   const [conflicts, setConflicts] = useState<Booking[]>([]);
   const [busy, setBusy] = useState(false);
+  // Modal buka dalam mode VIEW dulu (read-only); klik "Edit" untuk mengubah.
+  // Blok OTA eksternal tak bisa diedit → paksa tetap view.
+  const [isEditing, setIsEditing] = useState(false);
   // Quote otomatis dari kalender harga (Σ harga per malam) — hanya saat unit
   // ini punya rate_item terpasang. Null = mode manual (harga flat × malam).
   const [autoQuote, setAutoQuote] = useState<StayQuote | null>(null);
@@ -112,6 +115,7 @@ export function BookingModal({
     setNotes(booking.notes ?? '');
     setPaymentMethod('cash');
     setConflicts([]);
+    setIsEditing(false); // selalu buka di mode view
   }, [isOpen, booking]);
 
   const nights = useMemo(() => {
@@ -303,17 +307,26 @@ export function BookingModal({
       <button type="button" onClick={onClose} className="btn-ghost">
         Tutup
       </button>
-      {!isExternal && (
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={busy || hasConflict || !datesValid}
-          className="btn-primary inline-flex items-center gap-2 disabled:opacity-50"
-        >
-          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-          Simpan perubahan
-        </button>
-      )}
+      {!isExternal &&
+        (isEditing ? (
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={busy || hasConflict || !datesValid}
+            className="btn-primary inline-flex items-center gap-2 disabled:opacity-50"
+          >
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            Simpan perubahan
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setIsEditing(true)}
+            className="btn-primary inline-flex items-center gap-2"
+          >
+            <Pencil className="w-4 h-4" /> Edit
+          </button>
+        ))}
     </div>
   );
 
@@ -366,6 +379,37 @@ export function BookingModal({
           </div>
         )}
 
+        {/* ── MODE VIEW (read-only) ─────────────────────────────────────────── */}
+        {!isEditing && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <ViewRow label="Check-in" value={checkIn ? format(parseISO(checkIn), 'dd MMM yyyy') : '—'} />
+              <ViewRow label="Check-out" value={checkOut ? format(parseISO(checkOut), 'dd MMM yyyy') : '—'} />
+              <ViewRow label="Tamu" value={guestName || '—'} />
+              <ViewRow label="Tamu (org)" value={guestCount ? `${guestCount} org` : '—'} />
+              <ViewRow label="Harga / malam" value={formatCurrency(price)} />
+              <ViewRow label="Channel" value={BOOKING_CHANNEL_LABELS[channel]} />
+              {!isExternal && (
+                <ViewRow label="Status" value={BOOKING_STATUS_LABELS[status]} />
+              )}
+            </div>
+            {notes && <ViewRow label="Catatan" value={notes} />}
+
+            {/* Ringkasan total (view) */}
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 flex items-center justify-between gap-3">
+              <span className="text-sm text-gray-600 dark:text-gray-300 min-w-0">
+                {nights} malam × {formatCurrency(price)}
+              </span>
+              <span className="text-lg font-bold text-gray-900 dark:text-gray-100 tabular-nums shrink-0">
+                {formatCurrency(total)}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* ── MODE EDIT ──────────────────────────────────────────────────────── */}
+        {isEditing && (
+        <>
         {/* Tanggal */}
         <div className="grid grid-cols-2 gap-3">
           <FloatingField
@@ -402,10 +446,10 @@ export function BookingModal({
           </div>
         )}
 
-        {/* Tamu */}
-        <div className="grid grid-cols-[1fr_auto] gap-3">
-          <div>
-            <label className="label">Tamu</label>
+        {/* Tamu — dua field disejajarkan baseline underline-nya (items-end) */}
+        <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
+          <div className="relative">
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Tamu</label>
             <ContactAutocomplete
               businessId={businessId}
               value={guestName}
@@ -422,13 +466,15 @@ export function BookingModal({
             />
           </div>
           <div className="w-24">
-            <FloatingField
-              label="Tamu (org)"
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Tamu (org)</label>
+            <input
               type="number"
               min={1}
               value={guestCount}
               onChange={(e) => setGuestCount(e.target.value)}
               disabled={isExternal}
+              placeholder="—"
+              className="input-underline"
             />
           </div>
         </div>
@@ -438,13 +484,14 @@ export function BookingModal({
           <div>
             <FloatingField
               label="Harga / malam"
-              type="number"
-              min={0}
-              value={pricePerNight}
+              type="text"
+              inputMode="numeric"
+              value={pricePerNight ? formatNumber(Number(pricePerNight)) : ''}
               onChange={(e) => {
                 // Edit manual = keluar dari mode harga-kalender (total kembali flat × malam).
                 setAutoQuote(null);
-                setPricePerNight(e.target.value);
+                // Simpan angka mentah; tampilkan dengan pemisah ribuan.
+                setPricePerNight(e.target.value.replace(/\D/g, ''));
               }}
               disabled={priceLocked}
             />
@@ -515,8 +562,11 @@ export function BookingModal({
             />
           </div>
         )}
+        </>
+        )}
 
-        {/* Pembayaran (existing, unpaid, non-external) */}
+        {/* Pembayaran (existing, unpaid, non-external) — muncul di view & edit
+            karena ini AKSI (menandai lunas), bukan field yg diedit. */}
         {booking && !isExternal && !isPaid && (
           <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
             <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -575,5 +625,15 @@ export function BookingModal({
         )}
       </div>
     </Modal>
+  );
+}
+
+/** Baris read-only (mode view): label kecil di atas, nilai di bawah. */
+function ViewRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
+      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 break-words">{value}</p>
+    </div>
   );
 }
