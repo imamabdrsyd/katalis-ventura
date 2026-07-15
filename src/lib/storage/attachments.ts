@@ -27,6 +27,35 @@ export function validateFile(file: File): string | null {
   return null;
 }
 
+/**
+ * Deteksi PDF terkunci password (terenkripsi). Cloudinary menolak PDF terenkripsi
+ * saat upload, sehingga transaksi gagal disimpan tanpa keterangan jelas. Kita cegat
+ * lebih awal saat file dipilih.
+ *
+ * Cara deteksi tanpa library: PDF terenkripsi punya entry `/Encrypt` di trailer
+ * dictionary, selalu berupa referensi objek — mis. `/Encrypt 5 0 R`. Kita cari
+ * pola `/Encrypt` yang diikuti spasi lalu angka (referensi objek), bukan sekadar
+ * string `/Encrypt` (yang secara teoretis bisa muncul di dalam stream terkompres).
+ * Ini menekan false-positive; konsekuensi kalaupun lolos hanya ditangani lagi
+ * oleh pesan error saat upload.
+ */
+export async function isPdfEncrypted(file: File): Promise<boolean> {
+  const isPdf =
+    file.type === 'application/pdf' || getExtension(file.name) === 'pdf';
+  if (!isPdf) return false;
+  try {
+    const buf = new Uint8Array(await file.arrayBuffer());
+    // Decode sebagai latin1 (byte 1:1) supaya aman untuk konten biner PDF.
+    let text = '';
+    for (let i = 0; i < buf.length; i++) text += String.fromCharCode(buf[i]);
+    // `/Encrypt` diikuti whitespace lalu digit = referensi objek di trailer.
+    return /\/Encrypt\s+\d/.test(text);
+  } catch {
+    // Gagal baca file → jangan blokir; biarkan upload yang memutuskan.
+    return false;
+  }
+}
+
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -142,8 +171,16 @@ export async function uploadAttachment(
     { method: 'POST', body: formData }
   );
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error?.message || 'Gagal upload ke Cloudinary');
+    const err = await res.json().catch(() => null);
+    const msg: string = err?.error?.message || '';
+    // PDF terkunci password: Cloudinary menolak ("password", "encrypted").
+    // Beri pesan yang jelas & actionable, bukan pesan mentah Cloudinary.
+    if (/password|encrypt/i.test(msg)) {
+      throw new Error(
+        `"${file.name}" terkunci password. Buka proteksi PDF-nya dulu, lalu unggah ulang.`
+      );
+    }
+    throw new Error(msg || 'Gagal upload ke Cloudinary');
   }
   const { secure_url, public_id, resource_type } = await res.json();
 

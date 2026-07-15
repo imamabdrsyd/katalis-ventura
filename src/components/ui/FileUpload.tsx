@@ -9,6 +9,7 @@ import {
   makePendingAttachment,
   isPendingAttachment,
   validateFile,
+  isPdfEncrypted,
   formatFileSize,
   isImageType,
   MAX_FILES,
@@ -72,6 +73,14 @@ export function FileUpload({ businessId, value, onChange, disabled = false, defe
     for (const file of toUpload) {
       const err = validateFile(file);
       if (err) { setError(err); return; }
+    }
+
+    // PDF terkunci password ditolak Cloudinary → cegat lebih awal dengan pesan jelas.
+    for (const file of toUpload) {
+      if (await isPdfEncrypted(file)) {
+        setError(`"${file.name}" terkunci password. Buka proteksi PDF-nya dulu, lalu unggah ulang.`);
+        return;
+      }
     }
 
     // Mode defer: tahan sebagai pending (preview lokal), upload saat submit.
