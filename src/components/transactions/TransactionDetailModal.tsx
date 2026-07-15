@@ -27,7 +27,7 @@ import {
 import { useInvoiceFromTransactions } from '@/hooks/useInvoiceFromTransactions';
 import { CreateInvoiceFromTransactionsModal } from '@/components/invoices/CreateInvoiceFromTransactionsModal';
 import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
-import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, RotateCcw, ZoomIn, ZoomOut, Receipt, CirclePlus, ChevronRight, Maximize2, Loader2, Copy } from 'lucide-react';
+import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, RotateCcw, ZoomIn, ZoomOut, Receipt, CirclePlus, ChevronLeft, ChevronRight, Maximize2, Loader2, Copy } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { updateTransaction } from '@/lib/api/transactions';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
@@ -220,6 +220,32 @@ export function TransactionDetailModal({
       : baseHref;
   }, [matchedContact, transaction]);
 
+  // Semua attachment sumber dokumen (untuk navigasi next/prev di lightbox)
+  const attachments = useMemo<TransactionAttachment[]>(() => {
+    return (
+      transaction?.meta?.attachments ??
+      (transaction?.meta?.attachment ? [transaction.meta.attachment] : [])
+    );
+  }, [transaction?.meta?.attachments, transaction?.meta?.attachment]);
+
+  const previewIndex = useMemo(() => {
+    if (!previewAttachment) return -1;
+    return attachments.findIndex((att) => att.path === previewAttachment.path);
+  }, [attachments, previewAttachment]);
+
+  const hasMultipleAttachments = attachments.length > 1;
+
+  const goToAttachment = useCallback(
+    (delta: number) => {
+      if (previewIndex < 0 || attachments.length === 0) return;
+      const nextIndex =
+        (previewIndex + delta + attachments.length) % attachments.length;
+      setPreviewAttachment(attachments[nextIndex]);
+      setPreviewScale(1);
+    },
+    [attachments, previewIndex]
+  );
+
   // Sync tags from transaction meta
   useEffect(() => {
     setTags(transaction?.meta?.tags ?? []);
@@ -241,11 +267,19 @@ export function TransactionDetailModal({
         e.stopPropagation();
         setPreviewAttachment(null);
         setPreviewScale(1);
+      } else if (e.key === 'ArrowRight' && hasMultipleAttachments) {
+        e.preventDefault();
+        e.stopPropagation();
+        goToAttachment(1);
+      } else if (e.key === 'ArrowLeft' && hasMultipleAttachments) {
+        e.preventDefault();
+        e.stopPropagation();
+        goToAttachment(-1);
       }
     };
     document.addEventListener('keydown', handlePreviewKey, true);
     return () => document.removeEventListener('keydown', handlePreviewKey, true);
-  }, [previewAttachment]);
+  }, [previewAttachment, hasMultipleAttachments, goToAttachment]);
 
   const saveTags = async (newTags: string[], prevTags: string[]) => {
     if (!transaction) return;
@@ -850,28 +884,22 @@ export function TransactionDetailModal({
         </div>
 
         {/* Attachment / Dokumen Sumber */}
-        {(() => {
-          const atts =
-            transaction.meta?.attachments ??
-            (transaction.meta?.attachment ? [transaction.meta.attachment] : []);
-          if (atts.length === 0) return null;
-          return (
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                {t.transactionDetail.attachment}
-              </h4>
-              <div className="space-y-2">
-                {atts.map((att) => (
-                  <AttachmentPreviewItem
-                    key={att.path}
-                    attachment={att}
-                    onOpenPreview={openAttachmentPreview}
-                  />
-                ))}
-              </div>
+        {attachments.length > 0 && (
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+              {t.transactionDetail.attachment}
+            </h4>
+            <div className="space-y-2">
+              {attachments.map((att) => (
+                <AttachmentPreviewItem
+                  key={att.path}
+                  attachment={att}
+                  onOpenPreview={openAttachmentPreview}
+                />
+              ))}
             </div>
-          );
-        })()}
+          </div>
+        )}
 
         {/* Sold Stock Info */}
         {soldStockTransactions.length > 0 && (
@@ -1624,7 +1652,14 @@ export function TransactionDetailModal({
         >
           <div className="min-w-0">
             <p className="text-sm font-semibold truncate">{previewAttachment.filename}</p>
-            <p className="text-xs text-white/60">{formatFileSize(previewAttachment.size)}</p>
+            <p className="text-xs text-white/60">
+              {formatFileSize(previewAttachment.size)}
+              {hasMultipleAttachments && previewIndex >= 0 && (
+                <span className="ml-2 text-white/50">
+                  · {previewIndex + 1}/{attachments.length}
+                </span>
+              )}
+            </p>
           </div>
           <div className="flex items-center gap-1">
             {!isPdfAttachment(previewAttachment) && (
@@ -1690,9 +1725,37 @@ export function TransactionDetailModal({
         </div>
 
         <div
-          className={`flex-1 min-h-0 px-4 pb-4 ${isPdfAttachment(previewAttachment) ? '' : 'overflow-auto'}`}
+          className={`relative flex-1 min-h-0 px-4 pb-4 ${isPdfAttachment(previewAttachment) ? '' : 'overflow-auto'}`}
           onClick={(e) => e.stopPropagation()}
         >
+          {hasMultipleAttachments && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToAttachment(-1);
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-white/90 backdrop-blur-sm hover:bg-black/70 hover:text-white transition-colors"
+                title="Sebelumnya"
+                aria-label="Attachment sebelumnya"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToAttachment(1);
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-white/90 backdrop-blur-sm hover:bg-black/70 hover:text-white transition-colors"
+                title="Berikutnya"
+                aria-label="Attachment berikutnya"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            </>
+          )}
           {isPdfAttachment(previewAttachment) ? (
             <div className="h-full min-h-[60vh] overflow-hidden rounded-lg bg-white shadow-2xl">
               <SignedAttachmentPdf
