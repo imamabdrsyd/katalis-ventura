@@ -494,7 +494,8 @@ export function TransactionList({
           <col className="w-10" />
           <col className="w-28" />
           <col className="w-36" />
-          <col className="w-48" />
+          {/* Description menyerap sisa ruang; Date menyempit mepet ke Amount */}
+          <col className="w-auto" />
           <col className="w-24" />
           <col className="w-32" />
           <col className="w-32" />
@@ -675,7 +676,7 @@ export function TransactionList({
             </th>
 
             {/* Tanggal header with date filter dropdown */}
-            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <th className="text-left py-3 pl-1 pr-2 md:py-4 md:pl-1 md:pr-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <div className="relative" ref={dateDropdownRef}>
                 <button
                   onClick={() => setShowDateDropdown(!showDateDropdown)}
@@ -859,14 +860,14 @@ export function TransactionList({
                   <span>{getRowSubject(transaction)}</span>
                 </div>
               </td>
-              <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 max-w-[200px]">
+              <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300">
                 <DescriptionCell
                   text={transaction.description || ''}
                   catalogName={transaction.meta?.catalog_item?.name}
                   hasAttachment={!!(transaction.meta?.attachments?.length || transaction.meta?.attachment)}
                 />
               </td>
-              <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
+              <td className="py-3 pl-1 pr-2 md:py-4 md:pl-1 md:pr-4 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
                 {formatDateShort(transaction.date)}
               </td>
               <td className={`py-3 px-2 md:py-4 md:px-4 text-sm font-medium whitespace-nowrap ${
