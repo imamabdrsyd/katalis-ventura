@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Lock, TextSearch, Search, X, CalendarSearch, Eye } from 'lucide-react';
+import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Lock, TextSearch, Search, X, CalendarSearch, Eye, FileText } from 'lucide-react';
 import { ContactTypeIcon, CONTACT_TYPE_LABELS } from '@/components/ui/ContactTypeIcon';
 import { useLanguage } from '@/context/LanguageContext';
 import type { Transaction, TransactionCategory, Contact } from '@/types';
@@ -81,18 +81,39 @@ function getRowSubject(transaction: Transaction): string {
   return transaction.name;
 }
 
-function DescriptionCell({ text }: { text: string }) {
+function DescriptionCell({
+  text,
+  catalogName,
+  hasAttachment,
+}: {
+  text: string;
+  /** Nama item katalog yang ter-link (meta.catalog_item) — tampil sebagai chip */
+  catalogName?: string;
+  /** Transaksi punya lampiran dokumen sumber → tampilkan icon dokumen */
+  hasAttachment?: boolean;
+}) {
   const ref = useRef<HTMLSpanElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (el) setIsOverflowing(el.scrollHeight > el.clientHeight + 1);
-  }, [text]);
+  }, [text, catalogName, hasAttachment]);
 
   return (
     <div className="relative group">
       <span ref={ref} className="line-clamp-2 cursor-default">
+        {catalogName && (
+          <span className="inline-flex items-center max-w-full px-2 py-0.5 mr-1.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 align-middle">
+            <span className="truncate">{catalogName}</span>
+          </span>
+        )}
+        {hasAttachment && (
+          <FileText
+            className="inline-block w-3.5 h-3.5 mr-1.5 text-gray-400 dark:text-gray-500 align-middle flex-shrink-0"
+            aria-label="Ada lampiran dokumen"
+          />
+        )}
         {text}
       </span>
       {isOverflowing && (
@@ -846,7 +867,11 @@ export function TransactionList({
                 </div>
               </td>
               <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 max-w-[200px]">
-                <DescriptionCell text={transaction.description || ''} />
+                <DescriptionCell
+                  text={transaction.description || ''}
+                  catalogName={transaction.meta?.catalog_item?.name}
+                  hasAttachment={!!(transaction.meta?.attachments?.length || transaction.meta?.attachment)}
+                />
               </td>
               <td className="py-3 px-2 md:py-4 md:px-4 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
                 {formatDateShort(transaction.date)}

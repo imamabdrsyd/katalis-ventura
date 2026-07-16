@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import type { CatalogItem } from '@/types';
-import { getCatalogItems } from '@/lib/api/catalog';
+import { getCatalogItems, createCatalogItem } from '@/lib/api/catalog';
 import { formatCurrency } from '@/lib/utils';
 import { useLanguage } from '@/context/LanguageContext';
 import { useBusinessContext } from '@/context/BusinessContext';
@@ -26,6 +26,12 @@ interface CatalogItemPickerProps {
   /** Mode single: dipanggil langsung saat user klik satu item. */
   onPick?: (item: CatalogItem) => void;
   onClose?: () => void;
+  /**
+   * Izinkan buat item katalog baru langsung dari picker (dari teks pencarian).
+   * Dipakai di alur VAR→stok agar transaksi bisa langsung terhubung ke catalog
+   * tanpa keluar form. Item baru dibuat sebagai 'product' dengan harga 0.
+   */
+  allowCreate?: boolean;
 }
 
 export function CatalogItemPicker({
@@ -34,9 +40,10 @@ export function CatalogItemPicker({
   onApply,
   onPick,
   onClose,
+  allowCreate = false,
 }: CatalogItemPickerProps) {
   const { t } = useLanguage();
-  const { activeBusiness } = useBusinessContext();
+  const { activeBusiness, user } = useBusinessContext();
   const tc = t.catalog;
   // Hub katalog kini swap by tipe bisnis (jasa → /calendar, lainnya → /point-of-sales)
   const catalogHref = activeBusiness?.business_type === 'jasa' ? '/calendar' : '/point-of-sales';
@@ -45,6 +52,8 @@ export function CatalogItemPicker({
   const [search, setSearch] = useState('');
   // qty per item id (mode multi). 0 / absent = belum dipilih.
   const [cart, setCart] = useState<Record<string, number>>({});
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,11 +112,41 @@ export function CatalogItemPicker({
     setQty(item.id, (cart[item.id] ?? 0) + 1);
   }
 
+  // Nama pencarian yang belum ada di katalog → tawarkan tombol buat baru
+  const trimmedSearch = search.trim();
+  const hasExactMatch = items.some(
+    (i) => i.name.toLowerCase() === trimmedSearch.toLowerCase()
+  );
+  const canCreate = allowCreate && !!trimmedSearch && !hasExactMatch && !!user;
+
+  async function handleCreateItem() {
+    if (!canCreate || creating || !user) return;
+    setCreating(true);
+    setCreateError(null);
+    try {
+      const newItem = await createCatalogItem({
+        business_id: businessId,
+        name: trimmedSearch,
+        item_type: 'product',
+        default_price: 0,
+        created_by: user.id,
+      });
+      setItems((prev) => [...prev, newItem]);
+      setSearch('');
+      handleItemClick(newItem);
+    } catch (err) {
+      console.error('Failed to create catalog item:', err);
+      setCreateError(tc.pickerCreateFailed);
+    } finally {
+      setCreating(false);
+    }
+  }
+
   if (loading) {
     return <div className="py-8 text-center text-sm text-gray-400">{tc.pickerLoading}</div>;
   }
 
-  if (items.length === 0) {
+  if (items.length === 0 && !allowCreate) {
     return (
       <div className="py-8 text-center">
         <Package className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
@@ -171,10 +210,24 @@ export function CatalogItemPicker({
             </button>
           );
         })}
-        {filtered.length === 0 && (
+        {filtered.length === 0 && !canCreate && (
           <p className="col-span-full py-6 text-center text-sm text-gray-400">{tc.pickerNoMatch}</p>
         )}
+        {canCreate && (
+          <button
+            type="button"
+            onClick={handleCreateItem}
+            disabled={creating}
+            className="col-span-full flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-indigo-300 dark:border-indigo-700 p-3 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 disabled:opacity-50"
+          >
+            <Plus className="w-4 h-4" />
+            {creating ? tc.pickerCreating : tc.pickerCreateNew.replace('{name}', trimmedSearch)}
+          </button>
+        )}
       </div>
+      {createError && (
+        <p className="text-xs text-red-500 dark:text-red-400">{createError}</p>
+      )}
 
       {/* Keranjang (mode multi) */}
       {mode === 'multi' && cartLines.length > 0 && (

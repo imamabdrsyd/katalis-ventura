@@ -344,7 +344,11 @@ export const id: Translations = {
     pickerSelectedItems: 'Item terpilih',
     pickerTotal: 'Total',
     pickerApply: 'Terapkan',
+    pickerCreateNew: 'Buat item "{name}"',
+    pickerCreating: 'Membuat…',
+    pickerCreateFailed: 'Gagal membuat item katalog',
     quickPickerLabel: 'Pilih dari Katalog',
+    stockPickerLabel: 'Hubungkan ke Katalog',
     addFromCatalog: 'Tambah dari Katalog',
   },
 

@@ -12,6 +12,8 @@ import { AlertCircle, Lightbulb, AlertTriangle, BookTemplate, ChevronDown, Trash
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 import { UnitBreakdownSection } from '@/components/transactions/UnitBreakdownSection';
+import { CatalogItemPicker } from '@/components/catalog/CatalogItemPicker';
+import { isInventoryAccount } from '@/lib/utils/inventoryHelper';
 import { FileUpload } from '@/components/ui/FileUpload';
 import { makePendingAttachment, isPendingAttachment, uploadPendingAttachments } from '@/lib/storage/attachments';
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
@@ -233,6 +235,12 @@ export function TransactionForm({
   const [unitBreakdown, setUnitBreakdown] = useState<UnitBreakdown | null>(initialUnitBreakdown);
   const [showBreakdown, setShowBreakdown] = useState(!!initialUnitBreakdown);
 
+  // Link ke item katalog (chip di kolom deskripsi list) — dipilih saat debit = akun
+  // persediaan (VAR→stok); ikut ter-copy saat edit/duplikat transaksi.
+  const [pickedCatalogItem, setPickedCatalogItem] = useState<{ id: string; name: string } | null>(
+    transaction?.meta?.catalog_item ?? initialValues?.meta?.catalog_item ?? null
+  );
+
   // Attachment state
   const [attachments, setAttachments] = useState<TransactionAttachment[]>(
     transaction?.meta?.attachments ??
@@ -301,6 +309,12 @@ export function TransactionForm({
 
   // Check if using double-entry format (always true for 'in' and 'out' modes)
   const isDoubleEntry = mode !== 'full' || !!(formData.debit_account_id || formData.credit_account_id);
+
+  // Debit = akun persediaan → transaksi VAR→stok, tawarkan link ke katalog
+  const debitInventorySelected = useMemo(() => {
+    const acc = accounts.find((a) => a.id === formData.debit_account_id);
+    return !!acc && isInventoryAccount(acc);
+  }, [accounts, formData.debit_account_id]);
   const selectedCurrency = normalizeCurrencyCode(formData.currency_code);
   const isForeignCurrency = selectedCurrency !== BASE_CURRENCY;
   const originalAmount = formData.original_amount ?? formData.amount;
@@ -437,6 +451,7 @@ export function TransactionForm({
           ...formData.meta,
           unit_breakdown: unitBreakdown && unitBreakdown.unit ? unitBreakdown : undefined,
           attachments: finalAttachments.length > 0 ? finalAttachments : undefined,
+          catalog_item: pickedCatalogItem ?? undefined,
         },
       };
 
@@ -1230,6 +1245,38 @@ export function TransactionForm({
             </>
           )}
         </>
+      )}
+
+      {/* Link ke Katalog — debit akun persediaan (VAR→stok): pilih/buat item katalog,
+          namanya tampil sebagai chip di kolom deskripsi list transaksi */}
+      {debitInventorySelected && businessId && (
+        <div className="rounded-xl border border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/40 dark:bg-indigo-900/10 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-500 dark:text-indigo-400 mb-2">
+            Hubungkan ke Katalog
+          </p>
+          {pickedCatalogItem ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
+                {pickedCatalogItem.name}
+                <button
+                  type="button"
+                  onClick={() => setPickedCatalogItem(null)}
+                  aria-label="Hapus item katalog"
+                  className="hover:text-indigo-900 dark:hover:text-indigo-100"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            </div>
+          ) : (
+            <CatalogItemPicker
+              businessId={businessId}
+              mode="single"
+              onPick={(item) => setPickedCatalogItem({ id: item.id, name: item.name })}
+              allowCreate
+            />
+          )}
+        </div>
       )}
 
       {/* Legacy Account field (only for full mode when not using double-entry) */}

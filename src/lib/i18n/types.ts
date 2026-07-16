@@ -351,7 +351,11 @@ export interface Translations {
     pickerSelectedItems: string;
     pickerTotal: string;
     pickerApply: string;
+    pickerCreateNew: string;
+    pickerCreating: string;
+    pickerCreateFailed: string;
     quickPickerLabel: string;
+    stockPickerLabel: string;
     addFromCatalog: string;
   };
 

@@ -340,7 +340,11 @@ export const en: Translations = {
     pickerSelectedItems: 'Selected items',
     pickerTotal: 'Total',
     pickerApply: 'Apply',
+    pickerCreateNew: 'Create item "{name}"',
+    pickerCreating: 'Creating…',
+    pickerCreateFailed: 'Failed to create catalog item',
     quickPickerLabel: 'Pick from Catalog',
+    stockPickerLabel: 'Link to Catalog',
     addFromCatalog: 'Add from Catalog',
   },
 

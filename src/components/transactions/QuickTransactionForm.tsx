@@ -17,7 +17,7 @@ import {
 } from '@/lib/utils/quickTransactionHelper';
 import { DividendEntryModeModal } from './DividendEntryModeModal';
 import { findDividendPayableAccount } from '@/lib/accounting/guidance/dividendSettlement';
-import { getStockTransactions } from '@/lib/utils/inventoryHelper';
+import { getStockTransactions, isInventoryAccount } from '@/lib/utils/inventoryHelper';
 import { InventoryPicker } from './InventoryPicker';
 import { CatalogItemPicker } from '@/components/catalog/CatalogItemPicker';
 import type { CatalogItem } from '@/types';
@@ -246,6 +246,8 @@ export function QuickTransactionForm({
 
   // Detect if this is a revenue/sales transaction and show inventory picker
   const isRevenueSelected = selectedAccount?.account_type === 'REVENUE';
+  // Akun persediaan dipilih (VAR→stok) → tawarkan link ke item katalog
+  const isInventorySelected = !!selectedAccount && isInventoryAccount(selectedAccount);
   const stockTransactions = useMemo(
     () => (isRevenueSelected ? getStockTransactions(allTransactions) : []),
     [isRevenueSelected, allTransactions]
@@ -263,6 +265,12 @@ export function QuickTransactionForm({
   // Quick entry: pilih satu item katalog → isi amount + nama otomatis.
   // Kalau item punya akun pendapatan sendiri, pindahkan ke akun itu.
   const handlePickCatalogItem = (item: CatalogItem) => {
+    // VAR→stok: cuma link chip ke catalog — amount adalah harga beli (bukan
+    // default_price jual) dan akun tetap akun persediaan yang dipilih user.
+    if (isInventorySelected) {
+      setPickedCatalogItem({ id: item.id, name: item.name });
+      return;
+    }
     setAmount(item.default_price);
     setDisplayAmount(formatAmountForCurrency(item.default_price, currencyCode));
     // Nama item TIDAK lagi digabung ke field nama/deskripsi — disimpan sbg chip
@@ -878,16 +886,17 @@ export function QuickTransactionForm({
         />
       )}
 
-      {/* Catalog Picker - shown when a revenue account is selected */}
-      {isRevenueSelected && businessId && (
+      {/* Catalog Picker - revenue (isi harga+akun) atau inventory/VAR→stok (link chip) */}
+      {(isRevenueSelected || isInventorySelected) && businessId && (
         <div className="rounded-xl border border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/40 dark:bg-indigo-900/10 p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-500 dark:text-indigo-400 mb-2">
-            {t.catalog.quickPickerLabel}
+            {isInventorySelected ? t.catalog.stockPickerLabel : t.catalog.quickPickerLabel}
           </p>
           <CatalogItemPicker
             businessId={businessId}
             mode="single"
             onPick={handlePickCatalogItem}
+            allowCreate={isInventorySelected}
           />
           {pickedCatalogItem && (
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
