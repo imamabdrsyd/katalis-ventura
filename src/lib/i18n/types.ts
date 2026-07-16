@@ -245,6 +245,7 @@ export interface Translations {
     categoryFin: string;
     tableNo: string;
     tableCategory: string;
+    filterStock: string;
     tableSubject: string;
     tableDescription: string;
     tableDate: string;

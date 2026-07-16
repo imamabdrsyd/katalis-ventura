@@ -237,6 +237,7 @@ export const id: Translations = {
     categoryFin: 'Pembiayaan',
     tableNo: 'No',
     tableCategory: 'Kategori',
+    filterStock: 'Stok',
     tableSubject: 'Kontak',
     tableDescription: 'Keterangan',
     tableDate: 'Tanggal',

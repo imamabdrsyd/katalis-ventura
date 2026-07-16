@@ -8,6 +8,7 @@ import type { Transaction, Account, AuditLog, Contact, TransactionAttachment } f
 import type { TransactionFormData } from '@/components/transactions/TransactionForm';
 import { CATEGORY_LABELS } from '@/lib/calculations';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
+import { isStockTransaction } from '@/lib/utils/inventoryHelper';
 import { SalesChannelBadge } from '@/components/transactions/SalesChannelBadge';
 import { formatCurrency, formatDate, formatDateWithDay, formatDateTime } from '@/lib/utils';
 import { getProfileName } from '@/lib/api/profiles';
@@ -72,16 +73,6 @@ const ACCOUNT_TYPE_BG: Record<string, string> = {
   REVENUE: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300',
   EXPENSE: 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-300',
 };
-
-function isInventoryTransaction(transaction: Transaction): boolean {
-  const debitCode = transaction.debit_account?.account_code || '';
-  const debitName = transaction.debit_account?.account_name?.toLowerCase() || '';
-  return transaction.category === 'VAR' && (
-    debitCode.startsWith('13') ||
-    debitName.includes('inventory') ||
-    debitName.includes('persediaan')
-  );
-}
 
 function isPdfAttachment(attachment: TransactionAttachment): boolean {
   const mimeType = attachment.mime_type?.toLowerCase() ?? '';
@@ -587,7 +578,7 @@ export function TransactionDetailModal({
         <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-gray-50 to-white dark:from-gray-800/60 dark:to-gray-800/20 p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2 flex-wrap">
-              {isInventoryTransaction(transaction) ? (
+              {isStockTransaction(transaction) ? (
                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${STOCK_COLOR}`}>
                   {t.transactionDetail.stock}
                 </span>

@@ -221,7 +221,7 @@ export interface PaginatedTransactions {
 
 export interface TransactionFilters {
   status?: TransactionStatus | 'all';
-  category?: TransactionCategory | 'SETTLE' | '';
+  category?: TransactionCategory | 'SETTLE' | 'STOCK' | '';
   startDate?: string;
   endDate?: string;
   contact?: string;
@@ -237,11 +237,16 @@ export async function getTransactionsPaginated(
   const supabase = createClient();
   const offset = (page - 1) * pageSize;
 
+  // Filter STOCK menyaring via kolom akun debit → butuh INNER join supaya
+  // kondisi embed ikut menyaring baris transaksi (default PostgREST = LEFT join
+  // yang hanya meng-null-kan embed). Jangan inner join di query biasa: transaksi
+  // legacy/multi-line tanpa debit_account_id akan ikut terbuang.
+  const debitJoin = filters?.category === 'STOCK' ? '!inner' : '';
   let query = supabase
     .from('transactions')
     .select(`
       *,
-      debit_account:accounts!transactions_debit_account_id_fkey(*),
+      debit_account:accounts!transactions_debit_account_id_fkey${debitJoin}(*),
       credit_account:accounts!transactions_credit_account_id_fkey(*),
       journal_lines(*, account:accounts(*))
     `, { count: 'exact' })
@@ -254,6 +259,16 @@ export async function getTransactionsPaginated(
   }
   if (filters?.category === 'SETTLE') {
     query = query.not('meta->>settlement_of_transaction_id', 'is', null);
+  } else if (filters?.category === 'STOCK') {
+    // Transaksi stok = VAR yang debit akun persediaan — mirror
+    // isInventoryAccount() di src/lib/utils/inventoryHelper.ts
+    query = query
+      .eq('category', 'VAR')
+      .eq('debit_account.account_type', 'ASSET')
+      .or(
+        'default_category.eq.VAR,account_name.ilike.%persediaan%,account_name.ilike.%inventory%,account_name.ilike.%stok%,account_name.ilike.%barang%,account_name.ilike.%bahan%',
+        { referencedTable: 'debit_account' }
+      );
   } else if (filters?.category) {
     query = query.eq('category', filters.category);
   }

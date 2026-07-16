@@ -237,6 +237,7 @@ export const en: Translations = {
     categoryFin: 'Financing',
     tableNo: 'No',
     tableCategory: 'Category',
+    filterStock: 'Stock',
     tableSubject: 'Contact',
     tableDescription: 'Description',
     tableDate: 'Date',

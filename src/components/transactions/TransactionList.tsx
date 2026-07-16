@@ -7,6 +7,7 @@ import { ContactTypeIcon, CONTACT_TYPE_LABELS } from '@/components/ui/ContactTyp
 import { useLanguage } from '@/context/LanguageContext';
 import type { Transaction, TransactionCategory, Contact } from '@/types';
 import { SalesChannelBadge } from './SalesChannelBadge';
+import { isStockTransaction } from '@/lib/utils/inventoryHelper';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
 
@@ -26,8 +27,8 @@ interface TransactionListProps {
   highlightIds?: Set<string>;
   /** IDs transaksi yang baru disimpan/diedit — baris di-highlight animasi + scroll into view. */
   savedHighlightIds?: Set<string>;
-  categoryFilter?: '' | TransactionCategory | 'SETTLE';
-  onCategoryFilterChange?: (category: '' | TransactionCategory | 'SETTLE') => void;
+  categoryFilter?: '' | TransactionCategory | 'SETTLE' | 'STOCK';
+  onCategoryFilterChange?: (category: '' | TransactionCategory | 'SETTLE' | 'STOCK') => void;
   contactFilter?: string;
   onContactFilterChange?: (contact: string) => void;
   descriptionSearch?: string;
@@ -51,6 +52,7 @@ const CATEGORY_DOT: Record<string, string> = {
   CAPEX: 'bg-blue-500',
   TAX: 'bg-yellow-500',
   FIN: 'bg-indigo-500',
+  STOCK: 'bg-blue-300 dark:bg-blue-400',
   SETTLE: 'bg-gray-400 dark:bg-gray-500',
 };
 
@@ -65,16 +67,6 @@ function getMonthKey(date: string) {
   return `${d.getFullYear()}-${d.getMonth()}`;
 }
 
-
-function isInventoryTransaction(transaction: Transaction): boolean {
-  const debitCode = transaction.debit_account?.account_code || '';
-  const debitName = transaction.debit_account?.account_name?.toLowerCase() || '';
-  return transaction.category === 'VAR' && (
-    debitCode.startsWith('13') ||
-    debitName.includes('inventory') ||
-    debitName.includes('persediaan')
-  );
-}
 
 // Kolom Kontak selalu tampilkan inputan kontak (transaction.name) untuk semua kategori
 function getRowSubject(transaction: Transaction): string {
@@ -245,6 +237,7 @@ export function TransactionList({
     CAPEX: t.dashboard.capex,
     TAX: t.dashboard.taxes,
     FIN: t.dashboard.financing,
+    STOCK: t.transactions.filterStock,
     SETTLE: t.arAp.settlementBadge,
   };
   const showActions = (onEdit || onDelete) && !selectMode;
@@ -544,13 +537,13 @@ export function TransactionList({
                     >
                       {t.common.all}
                     </button>
-                    {([...CATEGORIES, 'SETTLE'] as (TransactionCategory | 'SETTLE')[]).map((cat) => (
+                    {([...CATEGORIES, 'STOCK', 'SETTLE'] as (TransactionCategory | 'STOCK' | 'SETTLE')[]).map((cat) => (
                       <button
                         key={cat}
                         onClick={() => { onCategoryFilterChange?.(cat); setShowCategoryDropdown(false); }}
                         className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 ${categoryFilter === cat ? 'font-medium text-gray-900 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300'}`}
                       >
-                        <span className={`w-1 h-3.5 rounded-full flex-shrink-0 ${CATEGORY_DOT[cat as TransactionCategory] ?? 'bg-gray-400 dark:bg-gray-500'}`} />
+                        <span className={`w-1 h-3.5 rounded-full flex-shrink-0 ${CATEGORY_DOT[cat] ?? 'bg-gray-400 dark:bg-gray-500'}`} />
                         {CATEGORY_I18N_LABELS[cat]}
                       </button>
                     ))}
@@ -812,7 +805,7 @@ export function TransactionList({
               </td>
               <td className="py-3 pl-1 pr-2 md:py-4 md:pl-2 md:pr-4">
                 <div className="flex items-center gap-1">
-                  {isInventoryTransaction(transaction) ? (
+                  {isStockTransaction(transaction) ? (
                     <span className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${STOCK_BADGE_CLASS}`}>
                       STOCK
                     </span>

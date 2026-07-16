@@ -46,7 +46,7 @@ export function useTransactions() {
 
   // Filter state
   const [statusFilter, setStatusFilter] = useState<TransactionStatus | 'all'>('all');
-  const [categoryFilter, setCategoryFilter] = useState<TransactionCategory | 'SETTLE' | ''>('');
+  const [categoryFilter, setCategoryFilter] = useState<TransactionCategory | 'SETTLE' | 'STOCK' | ''>('');
   const [contactFilter, setContactFilter] = useState<string>('');
   const [descriptionSearch, setDescriptionSearch] = useState<string>('');
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });

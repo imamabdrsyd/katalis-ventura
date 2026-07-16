@@ -24,6 +24,7 @@ import { motion } from 'framer-motion';
 import { isReceivableTransaction, isSettled, isSettlementEntry } from '@/lib/accounting/guidance/receivableSettlement';
 import { isPayableTransaction, isPayableSettled, isPayableSettlementEntry } from '@/lib/accounting/guidance/payableSettlement';
 import { isDividendDeclaration, isDividendSettled } from '@/lib/accounting/guidance/dividendSettlement';
+import { isStockTransaction } from '@/lib/utils/inventoryHelper';
 import { useLanguage } from '@/context/LanguageContext';
 import { AgentProgressToast, type AgentStep } from '@/components/agent/AgentProgressToast';
 import { AGENT_IMPORT_SESSION_EVENT, isAgentImportSessionRunning, readAgentImportSession } from '@/lib/agent/importSession';
@@ -318,7 +319,7 @@ function TransactionsPageInner() {
   // (statusFilter/categoryFilter dst) yang dipakai tab All/Draft/Posted.
   // "Belum lunas" bukan kolom status DB, jadi tidak bisa lewat query paginasi;
   // semua penyaringan dilakukan di memori atas subset unsettledTransactions.
-  const [unsettledCategoryFilter, setUnsettledCategoryFilter] = useState<'' | TransactionCategory | 'SETTLE'>('');
+  const [unsettledCategoryFilter, setUnsettledCategoryFilter] = useState<'' | TransactionCategory | 'SETTLE' | 'STOCK'>('');
   const [unsettledContactFilter, setUnsettledContactFilter] = useState<string>('');
   const [unsettledDescriptionSearch, setUnsettledDescriptionSearch] = useState<string>('');
   const [unsettledDateRange, setUnsettledDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
@@ -326,7 +327,9 @@ function TransactionsPageInner() {
   const filteredUnsettled = useMemo(() => {
     const kw = unsettledDescriptionSearch.trim().toLowerCase();
     return unsettledTransactions.filter((t) => {
-      if (unsettledCategoryFilter && unsettledCategoryFilter !== 'SETTLE' && t.category !== unsettledCategoryFilter) return false;
+      if (unsettledCategoryFilter === 'STOCK') {
+        if (!isStockTransaction(t)) return false;
+      } else if (unsettledCategoryFilter && unsettledCategoryFilter !== 'SETTLE' && t.category !== unsettledCategoryFilter) return false;
       if (unsettledContactFilter && t.name !== unsettledContactFilter) return false;
       if (kw && !(t.description ?? '').toLowerCase().includes(kw)) return false;
       if (unsettledDateRange.start && t.date < unsettledDateRange.start) return false;
