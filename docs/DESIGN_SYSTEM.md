@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 12 Juli 2026 (§3.7 Form Field → floating-label underline via `<FloatingField>`/`<FloatingSelect>`; field komposit ikut underline: `.input-underline` untuk CurrencyInput/ContactAutocomplete, `AccountDropdown` floating saat berlabel)
+> Terakhir diupdate: 17 Juli 2026 (§3.9 baru: Tabel Data — divider antar kolom + kolom resizable drag-from-header, referensi `TransactionList`)
 
 ---
 
@@ -429,6 +429,26 @@ Pakai Recharts. Warna default:
 - Grid: `#e5e7eb` light, `#374151` dark (set via `<CartesianGrid stroke="...">`)
 
 Card wrapper chart: `.card-static` dengan `h-80` atau `h-96` untuk chart container.
+
+### 3.9 Tabel Data — Divider Kolom & Kolom Resizable
+
+Referensi implementasi: `src/components/transactions/TransactionList.tsx`.
+
+**Divider antar kolom** — pasang di elemen `<table>` via arbitrary variant (bukan per-cell):
+
+```
+[&_th:not(:last-child)]:border-r [&_th:not(:last-child)]:border-gray-200 dark:[&_th:not(:last-child)]:border-gray-700
+[&_td:not(:last-child)]:border-r [&_td:not(:last-child)]:border-gray-200 dark:[&_td:not(:last-child)]:border-gray-700
+```
+
+Warna sama dengan garis horizontal antar baris (`gray-200`/`gray-700`) agar grid konsisten.
+
+**Kolom resizable** (drag dari header):
+- Tabel `table-fixed`; lebar per kolom (px) di state, di-apply via `<col style={{ width }}>`. Satu kolom fleksibel (mis. Description) dibiarkan tanpa width — menyerap sisa ruang.
+- Handle = strip `w-2` absolut di tepi kanan `<th>` (`relative`), `cursor-col-resize touch-none`, indikator garis `w-0.5` warna `primary-300/400` (dark: `primary-500/600`) muncul saat hover/drag.
+- Drag pakai Pointer Events (`pointerdown` di handle + `pointermove`/`pointerup` di `window`); saat drag set `document.body` `cursor: col-resize` + `user-select: none`.
+- Untuk kolom **di kanan** kolom fleksibel, handle di boundary me-resize kolom kanan dengan delta **dibalik** (invert) supaya garis yang di-drag mengikuti kursor.
+- Lebar di-clamp min/max per kolom, dipersist ke `localStorage` setelah drag selesai, double-click handle = reset ke default.
 
 ---
 

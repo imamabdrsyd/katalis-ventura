@@ -62,6 +62,60 @@ const SETTLE_BADGE_CLASS = CATEGORY_BADGE_CLASSES.SETTLE;
 
 const STOCK_BADGE_CLASS = 'bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400';
 
+// Lebar kolom (px) yang bisa di-drag-resize dari header.
+// Kolom Description tidak ada di sini — tetap fleksibel menyerap sisa ruang tabel.
+const COLUMN_CONFIG = {
+  no: { default: 40, min: 32, max: 80 },
+  category: { default: 112, min: 72, max: 240 },
+  contact: { default: 144, min: 80, max: 360 },
+  date: { default: 96, min: 64, max: 200 },
+  amount: { default: 128, min: 88, max: 260 },
+  cashflow: { default: 128, min: 80, max: 320 },
+} as const;
+
+type ResizableColumn = keyof typeof COLUMN_CONFIG;
+
+const RESIZABLE_COLUMNS = Object.keys(COLUMN_CONFIG) as ResizableColumn[];
+
+const DEFAULT_COL_WIDTHS = Object.fromEntries(
+  RESIZABLE_COLUMNS.map((col) => [col, COLUMN_CONFIG[col].default])
+) as Record<ResizableColumn, number>;
+
+const COL_WIDTHS_STORAGE_KEY = 'katalis_txlist_col_widths';
+
+function clampColumnWidth(col: ResizableColumn, width: number) {
+  return Math.min(COLUMN_CONFIG[col].max, Math.max(COLUMN_CONFIG[col].min, width));
+}
+
+// Pegangan drag di tepi kanan header — garis indikator muncul saat hover/drag.
+function ColumnResizeHandle({
+  active,
+  onPointerDown,
+  onDoubleClick,
+}: {
+  active: boolean;
+  onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onDoubleClick: () => void;
+}) {
+  return (
+    <div
+      onPointerDown={onPointerDown}
+      onDoubleClick={onDoubleClick}
+      onClick={(e) => e.stopPropagation()}
+      className="group/resize absolute top-0 -right-1 z-20 flex h-full w-2 cursor-col-resize touch-none select-none items-center justify-center"
+      title="Geser untuk atur lebar kolom · klik 2x untuk reset"
+    >
+      <div
+        className={`h-full w-0.5 rounded-full transition-colors ${
+          active
+            ? 'bg-primary-400 dark:bg-primary-500'
+            : 'bg-transparent group-hover/resize:bg-primary-300 dark:group-hover/resize:bg-primary-600'
+        }`}
+      />
+    </div>
+  );
+}
+
 function getMonthKey(date: string) {
   const d = new Date(date);
   return `${d.getFullYear()}-${d.getMonth()}`;
@@ -285,9 +339,97 @@ export function TransactionList({
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; transaction: Transaction } | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
+  // Column resize state — lebar per kolom (px); Description tetap auto menyerap sisa ruang.
+  // Untuk kolom di kanan Description, handle di boundary me-resize kolom KANAN dengan delta
+  // dibalik (invert) supaya garis yang di-drag mengikuti kursor — sisa ruangnya diserap Description.
+  const [colWidths, setColWidths] = useState<Record<ResizableColumn, number>>(DEFAULT_COL_WIDTHS);
+  const [resizingCol, setResizingCol] = useState<ResizableColumn | null>(null);
+  const colWidthsRef = useRef(colWidths);
+  const resizeSession = useRef<{ col: ResizableColumn; invert: boolean; startX: number; startWidth: number } | null>(null);
+
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Muat lebar kolom tersimpan (sekali, setelah mount — hindari hydration mismatch)
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(COL_WIDTHS_STORAGE_KEY);
+      if (!saved) return;
+      const parsed = JSON.parse(saved) as Partial<Record<ResizableColumn, number>>;
+      setColWidths((current) => {
+        const next = { ...current };
+        RESIZABLE_COLUMNS.forEach((col) => {
+          const value = parsed[col];
+          if (typeof value === 'number' && Number.isFinite(value)) {
+            next[col] = clampColumnWidth(col, value);
+          }
+        });
+        return next;
+      });
+    } catch {
+      // localStorage tidak tersedia / data korup — pakai lebar default
+    }
+  }, []);
+
+  // Simpan lebar kolom setelah drag selesai (bukan per-pixel saat drag)
+  useEffect(() => {
+    colWidthsRef.current = colWidths;
+    if (resizingCol || !mounted) return;
+    try {
+      window.localStorage.setItem(COL_WIDTHS_STORAGE_KEY, JSON.stringify(colWidths));
+    } catch {
+      // abaikan — lebar tetap berlaku untuk sesi ini
+    }
+  }, [colWidths, resizingCol, mounted]);
+
+  const startColumnResize = (col: ResizableColumn, invert: boolean) => (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resizeSession.current = { col, invert, startX: e.clientX, startWidth: colWidthsRef.current[col] };
+    setResizingCol(col);
+  };
+
+  const resetColumnWidth = (col: ResizableColumn) => {
+    setColWidths((w) => ({ ...w, [col]: COLUMN_CONFIG[col].default }));
+  };
+
+  useEffect(() => {
+    if (!resizingCol) return;
+    const handleMove = (e: PointerEvent) => {
+      const session = resizeSession.current;
+      if (!session) return;
+      const delta = e.clientX - session.startX;
+      const width = clampColumnWidth(session.col, session.startWidth + (session.invert ? -delta : delta));
+      setColWidths((w) => (w[session.col] === width ? w : { ...w, [session.col]: width }));
+    };
+    const stopResize = () => {
+      resizeSession.current = null;
+      setResizingCol(null);
+    };
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', stopResize);
+    window.addEventListener('pointercancel', stopResize);
+    const prevCursor = document.body.style.cursor;
+    const prevUserSelect = document.body.style.userSelect;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    return () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', stopResize);
+      window.removeEventListener('pointercancel', stopResize);
+      document.body.style.cursor = prevCursor;
+      document.body.style.userSelect = prevUserSelect;
+    };
+  }, [resizingCol]);
+
+  const renderResizeHandle = (col: ResizableColumn, invert = false) => (
+    <ColumnResizeHandle
+      active={resizingCol === col}
+      onPointerDown={startColumnResize(col, invert)}
+      onDoubleClick={() => resetColumnWidth(col)}
+    />
+  );
 
   // Tutup context menu saat klik di luar, Escape, scroll, atau resize
   useEffect(() => {
@@ -488,17 +630,17 @@ export function TransactionList({
 
   return (
     <div>
-      <table className="w-full table-fixed min-w-[800px]">
+      <table className="w-full table-fixed min-w-[800px] [&_th:not(:last-child)]:border-r [&_th:not(:last-child)]:border-gray-200 dark:[&_th:not(:last-child)]:border-gray-700 [&_td:not(:last-child)]:border-r [&_td:not(:last-child)]:border-gray-200 dark:[&_td:not(:last-child)]:border-gray-700">
         <colgroup>
           {selectMode && <col className="w-8" />}
-          <col className="w-10" />
-          <col className="w-28" />
-          <col className="w-36" />
-          {/* Description menyerap sisa ruang; Date menyempit mepet ke Amount */}
-          <col className="w-auto" />
-          <col className="w-24" />
-          <col className="w-32" />
-          <col className="w-32" />
+          <col style={{ width: colWidths.no }} />
+          <col style={{ width: colWidths.category }} />
+          <col style={{ width: colWidths.contact }} />
+          {/* Description menyerap sisa ruang; kolom lain bisa di-drag-resize dari header */}
+          <col />
+          <col style={{ width: colWidths.date }} />
+          <col style={{ width: colWidths.amount }} />
+          <col style={{ width: colWidths.cashflow }} />
         </colgroup>
         <thead className="sticky top-0 z-10 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm">
           <tr className="border-b-2 border-gray-300 dark:border-gray-500">
@@ -512,10 +654,13 @@ export function TransactionList({
                 />
               </th>
             )}
-            <th className="text-left py-3 px-2 md:py-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t.transactions.tableNo}</th>
+            <th className="relative text-left py-3 px-2 md:py-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+              {t.transactions.tableNo}
+              {renderResizeHandle('no')}
+            </th>
 
             {/* Kategori header with filter dropdown */}
-            <th className="text-left py-3 pl-1 pr-2 md:py-4 md:pl-2 md:pr-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <th className="relative text-left py-3 pl-1 pr-2 md:py-4 md:pl-2 md:pr-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <div className="relative" ref={categoryDropdownRef}>
                 <button
                   onClick={toggleCategoryDropdown}
@@ -552,10 +697,11 @@ export function TransactionList({
                   document.body
                 )}
               </div>
+              {renderResizeHandle('category')}
             </th>
 
             {/* Contact header with filter dropdown */}
-            <th className="text-left py-3 px-2 md:py-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <th className="relative text-left py-3 px-2 md:py-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <div className="relative" ref={contactDropdownRef}>
                 <button
                   onClick={toggleContactDropdown}
@@ -610,8 +756,9 @@ export function TransactionList({
                   document.body
                 )}
               </div>
+              {renderResizeHandle('contact')}
             </th>
-            <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <th className="relative text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <div className="relative" ref={descriptionSearchRef}>
                 <button
                   type="button"
@@ -673,10 +820,12 @@ export function TransactionList({
                   document.body
                 )}
               </div>
+              {/* Boundary Description|Date — atur lebar Date (invert), sisa ruang diserap Description */}
+              {renderResizeHandle('date', true)}
             </th>
 
             {/* Tanggal header with date filter dropdown */}
-            <th className="text-left py-3 pl-1 pr-2 md:py-4 md:pl-1 md:pr-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <th className="relative text-left py-3 pl-1 pr-2 md:py-4 md:pl-1 md:pr-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <div className="relative" ref={dateDropdownRef}>
                 <button
                   onClick={() => setShowDateDropdown(!showDateDropdown)}
@@ -712,9 +861,15 @@ export function TransactionList({
                   </div>
                 )}
               </div>
+              {/* Boundary Date|Amount — atur lebar Amount (invert) */}
+              {renderResizeHandle('amount', true)}
             </th>
 
-            <th className="w-32 text-right py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t.transactions.tableAmount}</th>
+            <th className="relative text-right py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+              {t.transactions.tableAmount}
+              {/* Boundary Amount|Cash Flow — atur lebar Cash Flow (invert) */}
+              {renderResizeHandle('cashflow', true)}
+            </th>
             <th className="text-left py-3 px-2 md:py-4 md:px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t.transactions.tableCashFlow}</th>
           </tr>
         </thead>
