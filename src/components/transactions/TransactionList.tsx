@@ -630,7 +630,9 @@ export function TransactionList({
 
   return (
     <div>
-      <table className="w-full table-fixed min-w-[800px] [&_th:not(:last-child)]:border-r [&_th:not(:last-child)]:border-gray-200 dark:[&_th:not(:last-child)]:border-gray-700 [&_td:not(:last-child)]:border-r [&_td:not(:last-child)]:border-gray-200 dark:[&_td:not(:last-child)]:border-gray-700">
+      {/* Divider vertikal antar kolom sengaja tidak dirender (transparan) —
+          kolom tetap bisa di-resize via handle di header (indikator muncul saat hover) */}
+      <table className="w-full table-fixed min-w-[800px]">
         <colgroup>
           {selectMode && <col className="w-8" />}
           <col style={{ width: colWidths.no }} />

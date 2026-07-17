@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 17 Juli 2026 (§3.9 baru: Tabel Data — divider antar kolom + kolom resizable drag-from-header, referensi `TransactionList`)
+> Terakhir diupdate: 17 Juli 2026 (§3.9 baru: Tabel Data — kolom resizable drag-from-header + divider antar kolom opsional/transparan di `TransactionList`)
 
 ---
 
@@ -434,14 +434,14 @@ Card wrapper chart: `.card-static` dengan `h-80` atau `h-96` untuk chart contain
 
 Referensi implementasi: `src/components/transactions/TransactionList.tsx`.
 
-**Divider antar kolom** — pasang di elemen `<table>` via arbitrary variant (bukan per-cell):
+**Divider antar kolom** (opsional) — bila diperlukan, pasang di elemen `<table>` via arbitrary variant (bukan per-cell):
 
 ```
 [&_th:not(:last-child)]:border-r [&_th:not(:last-child)]:border-gray-200 dark:[&_th:not(:last-child)]:border-gray-700
 [&_td:not(:last-child)]:border-r [&_td:not(:last-child)]:border-gray-200 dark:[&_td:not(:last-child)]:border-gray-700
 ```
 
-Warna sama dengan garis horizontal antar baris (`gray-200`/`gray-700`) agar grid konsisten.
+Warna sama dengan garis horizontal antar baris (`gray-200`/`gray-700`) agar grid konsisten. **Catatan:** di `TransactionList` divider vertikal sengaja dibiarkan transparan (keputusan desain) — hanya garis horizontal antar baris yang tampil; kolom tetap resizable tanpa perlu divider terlihat.
 
 **Kolom resizable** (drag dari header):
 - Tabel `table-fixed`; lebar per kolom (px) di state, di-apply via `<col style={{ width }}>`. Satu kolom fleksibel (mis. Description) dibiarkan tanpa width — menyerap sisa ruang.
