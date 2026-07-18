@@ -407,12 +407,17 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
                     </p>
                   )}
                 </div>
-                <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium tabular-nums whitespace-nowrap flex-shrink-0">
+                <p className={`text-sm text-indigo-600 dark:text-indigo-400 font-medium tabular-nums whitespace-nowrap flex-shrink-0 transition-all duration-200 ${
+                  canManage ? '-mr-3 group-hover:mr-0' : ''
+                }`}>
                   {formatCurrency(item.default_price)}
                   {item.unit && <span className="text-gray-400 dark:text-gray-500 font-normal"> / {item.unit}</span>}
                 </p>
+                {/* Slot aksi menciut ke 0 saat idle (harga mepet ke pojok kanan) lalu
+                    melebar saat hover untuk memberi ruang tombol — geseran harga
+                    disengaja & dianimasikan, bukan lompatan mendadak. */}
                 {canManage && (
-                  <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex justify-end items-center gap-1 flex-shrink-0 overflow-hidden w-0 group-hover:w-[6.75rem] opacity-0 group-hover:opacity-100 transition-all duration-200">
                     {item.item_type === 'product' && item.track_stock && (
                       <button
                         onClick={() => openAddStock(item)}
