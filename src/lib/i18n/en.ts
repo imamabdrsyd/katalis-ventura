@@ -321,7 +321,6 @@ export const en: Translations = {
     saving: 'Saving…',
     create: 'Add Item',
     errorNameRequired: 'Item name is required',
-    errorNameTaken: 'Item name already in use',
     errorPriceNegative: 'Price cannot be negative',
     optional: 'optional',
     skuLabel: 'SKU',

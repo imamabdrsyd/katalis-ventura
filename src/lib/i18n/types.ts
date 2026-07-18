@@ -332,7 +332,6 @@ export interface Translations {
     saving: string;
     create: string;
     errorNameRequired: string;
-    errorNameTaken: string;
     errorPriceNegative: string;
     optional: string;
     skuLabel: string;

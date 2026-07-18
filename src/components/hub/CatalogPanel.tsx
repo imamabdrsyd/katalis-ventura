@@ -91,11 +91,6 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
     [accounts]
   );
 
-  const existingNames = useMemo(
-    () => items.map(i => i.name.toLowerCase()),
-    [items]
-  );
-
   const existingSkus = useMemo(
     () => items.filter(i => i.sku).map(i => i.sku!.toLowerCase()),
     [items]
@@ -145,7 +140,8 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
       setEditItem(null);
     } catch (err) {
       const msg = err instanceof Error ? err.message : tc.toastSaveFailed;
-      toast.error(msg.includes('unique') || msg.includes('duplicate') ? tc.errorNameTaken : msg);
+      // Satu-satunya unique constraint katalog kini SKU (migr 121)
+      toast.error(msg.includes('unique') || msg.includes('duplicate') ? tc.errorSkuTaken : msg);
     } finally {
       setSaving(false);
     }
@@ -190,13 +186,23 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
     }
   }
 
-  // Baris info SKU + sisa stok (hanya item produk yang punya salah satunya)
-  const renderStockSku = (item: CatalogItem) => {
-    if (item.item_type !== 'product' || (!item.sku && !item.track_stock)) return null;
+  // Chip SKU — identitas unik item (migr 121), dirender di KIRI nama
+  const renderSku = (item: CatalogItem) => {
+    if (item.item_type !== 'product' || !item.sku) return null;
+    return (
+      <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 font-mono text-[11px] uppercase tracking-tight text-gray-500 dark:text-gray-400">
+        {item.sku}
+      </span>
+    );
+  };
+
+  // Baris sisa stok (hanya item produk yang melacak stok)
+  const renderStock = (item: CatalogItem) => {
+    if (item.item_type !== 'product' || !item.track_stock) return null;
     const qty = Number(item.stock_qty ?? 0);
     return (
-      <p className="flex items-center gap-2 text-xs mt-0.5 min-w-0">
-        {item.track_stock && (qty > 0 ? (
+      <p className="text-xs mt-0.5">
+        {qty > 0 ? (
           <span className="text-gray-500 dark:text-gray-400 whitespace-nowrap">
             {tc.stockLabel}:{' '}
             <span className="font-semibold tabular-nums text-gray-700 dark:text-gray-300">
@@ -207,11 +213,6 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
         ) : (
           <span className="text-red-600 dark:text-red-400 font-medium whitespace-nowrap">
             {tc.stockOut}
-          </span>
-        ))}
-        {item.sku && (
-          <span className="font-mono uppercase text-gray-400 dark:text-gray-500 truncate">
-            {item.sku}
           </span>
         )}
       </p>
@@ -323,12 +324,15 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{item.name}</p>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      {renderSku(item)}
+                      <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{item.name}</p>
+                    </div>
                     <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium tabular-nums">
                       {formatCurrency(item.default_price)}
                       {item.unit && <span className="text-gray-400 dark:text-gray-500 font-normal"> / {item.unit}</span>}
                     </p>
-                    {renderStockSku(item)}
+                    {renderStock(item)}
                     {item.description && (
                       <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">
                         {item.description}
@@ -392,7 +396,8 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {renderSku(item)}
                     <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{item.name}</p>
                     {!item.is_active && (
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 flex-shrink-0">
@@ -400,7 +405,7 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
                       </span>
                     )}
                   </div>
-                  {renderStockSku(item)}
+                  {renderStock(item)}
                   {item.description && (
                     <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">
                       {item.description}
@@ -475,7 +480,6 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
             businessId={businessId!}
             item={editItem}
             revenueAccounts={revenueAccounts}
-            existingNames={existingNames}
             existingSkus={existingSkus}
             onSubmit={handleSubmit}
             onCancel={() => { setShowForm(false); setEditItem(null); }}

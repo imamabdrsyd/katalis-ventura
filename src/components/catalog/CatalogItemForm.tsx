@@ -29,7 +29,6 @@ interface CatalogItemFormProps {
   businessId: string;
   item?: CatalogItem | null;
   revenueAccounts: Account[];
-  existingNames: string[]; // lowercase names already used (for uniqueness check)
   existingSkus?: string[]; // lowercase SKUs already used (for uniqueness check)
   onSubmit: (data: CatalogItemFormData) => Promise<void>;
   onCancel: () => void;
@@ -45,7 +44,6 @@ export function CatalogItemForm({
   businessId,
   item,
   revenueAccounts,
-  existingNames,
   existingSkus = [],
   onSubmit,
   onCancel,
@@ -175,11 +173,8 @@ export function CatalogItemForm({
     }
   };
 
-  // Names taken by *other* items (exclude self when editing)
-  const takenNames = useMemo(() => {
-    const self = item?.name?.toLowerCase();
-    return new Set(existingNames.filter(n => n !== self));
-  }, [existingNames, item]);
+  // Nama item sengaja TIDAK dicek unik (migr 121) — varian sah bernama sama
+  // (mis. "Castor Oil" L & S). Identitas unik item = SKU.
 
   // SKUs taken by *other* items (exclude self when editing)
   const takenSkus = useMemo(() => {
@@ -191,11 +186,8 @@ export function CatalogItemForm({
 
   function validate(): boolean {
     const next: Record<string, string> = {};
-    const trimmed = formData.name.trim();
-    if (!trimmed) {
+    if (!formData.name.trim()) {
       next.name = tc.errorNameRequired;
-    } else if (takenNames.has(trimmed.toLowerCase())) {
-      next.name = tc.errorNameTaken;
     }
     if (formData.default_price < 0) {
       next.default_price = tc.errorPriceNegative;

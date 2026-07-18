@@ -322,7 +322,6 @@ export const id: Translations = {
     saving: 'Menyimpan…',
     create: 'Tambah Item',
     errorNameRequired: 'Nama item wajib diisi',
-    errorNameTaken: 'Nama item sudah dipakai',
     errorPriceNegative: 'Harga tidak boleh negatif',
     optional: 'opsional',
     skuLabel: 'SKU',
