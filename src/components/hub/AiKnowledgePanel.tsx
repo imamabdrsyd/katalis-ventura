@@ -143,37 +143,65 @@ export function AiKnowledgePanel() {
   return (
     <div className="group relative bg-white dark:bg-gray-800 rounded-xl shadow-card border border-transparent dark:border-gray-700 p-5 w-full">
       {/* Edit icon — muncul saat hover, pojok kanan atas */}
-      {canManage && !collapsed && (
+      {/* Header: judul (tombol collapse) + aksi edit — sebaris, tanpa absolute
+          supaya pensil & chevron tak saling menimpa. Saat tertutup hanya baris
+          ini yang tampil, memberi ruang untuk riwayat stok di bawahnya. */}
+      <div
+        className={`flex items-center gap-2 transition-[margin] duration-300 ease-in-out ${
+          collapsed ? 'mb-0' : 'mb-3'
+        }`}
+      >
         <button
           type="button"
-          onClick={openFieldsEditor}
-          title={th.editFields}
-          aria-label={th.editFields}
-          className="absolute top-3 right-11 p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+          onClick={toggleCollapsed}
+          aria-expanded={!collapsed}
+          title={collapsed ? th.expandPanel : th.collapsePanel}
+          className="flex flex-1 min-w-0 items-center gap-2 text-left"
         >
-          <Pencil className="w-4 h-4" />
+          <Image src="/persona/concierge.png" alt="Concierge" width={24} height={24} className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{th.aiInfoTitle}</h2>
         </button>
-      )}
 
-      {/* Judul = tombol collapse. Saat tertutup hanya baris ini yang tampil,
-          memberi ruang lebih besar untuk riwayat stok di bawahnya. */}
-      <button
-        type="button"
-        onClick={toggleCollapsed}
-        aria-expanded={!collapsed}
-        title={collapsed ? th.expandPanel : th.collapsePanel}
-        className={`flex w-full items-center gap-2 text-left pr-8 ${collapsed ? '' : 'mb-3'}`}
+        {/* -mr-1.5 menutup padding tombol supaya chevron benar-benar mepet pojok */}
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          aria-expanded={!collapsed}
+          title={collapsed ? th.expandPanel : th.collapsePanel}
+          aria-label={collapsed ? th.expandPanel : th.collapsePanel}
+          className="shrink-0 -mr-1.5 p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        >
+          <ChevronDown
+            className={`w-4 h-4 transition-transform duration-200 ${collapsed ? '-rotate-90' : ''}`}
+          />
+        </button>
+      </div>
+
+      {/* Animasi collapse: grid-rows 1fr↔0fr — tinggi konten bisa ditransisikan
+          tanpa perlu tahu tinggi pastinya (max-height selalu meleset). Anak
+          langsung wajib overflow-hidden + min-h-0 supaya ikut menciut. */}
+      <div
+        className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
+          collapsed ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'
+        }`}
+        aria-hidden={collapsed}
       >
-        <Image src="/persona/concierge.png" alt="Concierge" width={24} height={24} className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
-        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex-1 min-w-0 truncate">{th.aiInfoTitle}</h2>
-        <ChevronDown
-          className={`w-4 h-4 shrink-0 text-gray-400 dark:text-gray-500 transition-transform duration-200 ${collapsed ? '-rotate-90' : ''}`}
-        />
-      </button>
-
-      {!collapsed && (
-      <>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{th.aiInfoDesc}</p>
+        <div className="overflow-hidden min-h-0">
+      {/* Deskripsi + aksi edit sebaris — pensil menempel ke konteks yang diedit */}
+      <div className="flex items-start gap-2 mb-3">
+        <p className="flex-1 min-w-0 text-sm text-gray-500 dark:text-gray-400">{th.aiInfoDesc}</p>
+        {canManage && (
+          <button
+            type="button"
+            onClick={openFieldsEditor}
+            title={th.editFields}
+            aria-label={th.editFields}
+            className="shrink-0 -mt-1 -mr-1.5 p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+        )}
+      </div>
 
       {/* Chip kategori fakta yang sebaiknya diisi */}
       <div className="flex flex-wrap gap-1.5 mb-4">
@@ -257,8 +285,8 @@ export function AiKnowledgePanel() {
           </button>
         )}
       </div>
-      </>
-      )}
+        </div>
+      </div>
 
       {/* Modal edit field terstruktur */}
       <AnimatedDialog isOpen={showFields} onClose={() => setShowFields(false)}>
