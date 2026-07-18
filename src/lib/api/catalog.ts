@@ -138,3 +138,24 @@ export async function decrementStock(
   if (error) throw new Error(error.message);
   return (data as number | null) ?? null;
 }
+
+/**
+ * Tambah stok item katalog (aksi "Tambah Stok" di halaman Katalog).
+ * RPC increment_catalog_stock (Migration 120): atomik, hanya business manager,
+ * hanya item track_stock=true. Return null bila guard tidak terpenuhi.
+ *
+ * @returns stok baru setelah penambahan, atau null bila item tidak memenuhi guard.
+ */
+export async function incrementStock(
+  itemId: string,
+  qty: number
+): Promise<number | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('increment_catalog_stock', {
+    p_item_id: itemId,
+    p_qty: qty,
+  });
+
+  if (error) throw new Error(error.message);
+  return (data as number | null) ?? null;
+}

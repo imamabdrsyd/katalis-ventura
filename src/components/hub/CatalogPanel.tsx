@@ -12,7 +12,7 @@ import { formatCurrency } from '@/lib/utils';
 import { CatalogItemForm, type CatalogItemFormData } from '@/components/catalog/CatalogItemForm';
 import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
 import {
-  Plus, Search, Package, Pencil, Trash2, X, Eye, EyeOff,
+  Plus, Search, Package, PackagePlus, Pencil, Trash2, X, Eye, EyeOff,
   LayoutGrid, List,
 } from 'lucide-react';
 import { getSectorIcon } from '@/lib/sectorIcons';
@@ -45,6 +45,9 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<CatalogItem | null>(null);
   const [deleteItem, setDeleteItem] = useState<CatalogItem | null>(null);
+  // Modal "Tambah Stok" — aksi cepat barang masuk tanpa buka form edit
+  const [stockItem, setStockItem] = useState<CatalogItem | null>(null);
+  const [stockQtyInput, setStockQtyInput] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showInactive, setShowInactive] = useState(false);
@@ -90,6 +93,11 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
 
   const existingNames = useMemo(
     () => items.map(i => i.name.toLowerCase()),
+    [items]
+  );
+
+  const existingSkus = useMemo(
+    () => items.filter(i => i.sku).map(i => i.sku!.toLowerCase()),
     [items]
   );
 
@@ -143,6 +151,30 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
     }
   }
 
+  function openAddStock(item: CatalogItem) {
+    setStockItem(item);
+    setStockQtyInput('');
+  }
+
+  async function handleAddStock() {
+    if (!stockItem) return;
+    const qty = Number(stockQtyInput);
+    if (!qty || qty <= 0) return;
+    setSaving(true);
+    try {
+      const newQty = await catalogApi.incrementStock(stockItem.id, qty);
+      if (newQty == null) throw new Error(tc.addStockFailed);
+      setItems(prev => prev.map(i => (i.id === stockItem.id ? { ...i, stock_qty: newQty } : i)));
+      toast.success(tc.addStockSuccess);
+      setStockItem(null);
+      setStockQtyInput('');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : tc.addStockFailed);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function handleDelete() {
     if (!deleteItem) return;
     setSaving(true);
@@ -157,6 +189,34 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
       setSaving(false);
     }
   }
+
+  // Baris info SKU + sisa stok (hanya item produk yang punya salah satunya)
+  const renderStockSku = (item: CatalogItem) => {
+    if (item.item_type !== 'product' || (!item.sku && !item.track_stock)) return null;
+    const qty = Number(item.stock_qty ?? 0);
+    return (
+      <p className="flex items-center gap-2 text-xs mt-0.5 min-w-0">
+        {item.track_stock && (qty > 0 ? (
+          <span className="text-gray-500 dark:text-gray-400 whitespace-nowrap">
+            {tc.stockLabel}:{' '}
+            <span className="font-semibold tabular-nums text-gray-700 dark:text-gray-300">
+              {qty.toLocaleString('id-ID')}
+            </span>
+            {item.unit ? ` ${item.unit}` : ''}
+          </span>
+        ) : (
+          <span className="text-red-600 dark:text-red-400 font-medium whitespace-nowrap">
+            {tc.stockOut}
+          </span>
+        ))}
+        {item.sku && (
+          <span className="font-mono uppercase text-gray-400 dark:text-gray-500 truncate">
+            {item.sku}
+          </span>
+        )}
+      </p>
+    );
+  };
 
   return (
     <div>
@@ -268,6 +328,7 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
                       {formatCurrency(item.default_price)}
                       {item.unit && <span className="text-gray-400 dark:text-gray-500 font-normal"> / {item.unit}</span>}
                     </p>
+                    {renderStockSku(item)}
                     {item.description && (
                       <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">
                         {item.description}
@@ -282,6 +343,15 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
                 )}
                 {canManage && (
                   <div className="absolute bottom-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {item.item_type === 'product' && item.track_stock && (
+                      <button
+                        onClick={() => openAddStock(item)}
+                        className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                        title={tc.addStockTitle}
+                      >
+                        <PackagePlus className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <button
                       onClick={() => openEdit(item)}
                       className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
@@ -330,6 +400,7 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
                       </span>
                     )}
                   </div>
+                  {renderStockSku(item)}
                   {item.description && (
                     <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">
                       {item.description}
@@ -342,6 +413,15 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
                 </p>
                 {canManage && (
                   <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {item.item_type === 'product' && item.track_stock && (
+                      <button
+                        onClick={() => openAddStock(item)}
+                        className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                        title={tc.addStockTitle}
+                      >
+                        <PackagePlus className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <button
                       onClick={() => openEdit(item)}
                       className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
@@ -391,10 +471,59 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
             item={editItem}
             revenueAccounts={revenueAccounts}
             existingNames={existingNames}
+            existingSkus={existingSkus}
             onSubmit={handleSubmit}
             onCancel={() => { setShowForm(false); setEditItem(null); }}
             loading={saving}
           />
+        </div>
+      </AnimatedDialog>
+
+      {/* Tambah stok */}
+      <AnimatedDialog isOpen={!!stockItem} onClose={() => setStockItem(null)}>
+        <div className="p-6">
+          <div className="w-11 h-11 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center mb-4">
+            <PackagePlus className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">{tc.addStockTitle}</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            <span className="font-medium text-gray-700 dark:text-gray-300">{stockItem?.name}</span>
+            {' — '}{tc.addStockCurrent}{' '}
+            <span className="font-semibold tabular-nums">
+              {Number(stockItem?.stock_qty ?? 0).toLocaleString('id-ID')}
+            </span>
+            {stockItem?.unit ? ` ${stockItem.unit}` : ''}
+          </p>
+          <label className="label">{tc.addStockQtyLabel}</label>
+          <input
+            type="number"
+            min={1}
+            step="any"
+            autoFocus
+            value={stockQtyInput}
+            onChange={(e) => setStockQtyInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); handleAddStock(); }
+            }}
+            placeholder="0"
+            className="input tabular-nums mb-5"
+          />
+          <div className="flex gap-3">
+            <button
+              onClick={() => setStockItem(null)}
+              disabled={saving}
+              className="btn-secondary flex-1"
+            >
+              {tc.cancel}
+            </button>
+            <button
+              onClick={handleAddStock}
+              disabled={saving || !(Number(stockQtyInput) > 0)}
+              className="btn-primary-glow flex-1"
+            >
+              {saving ? tc.saving : tc.addStockSubmit}
+            </button>
+          </div>
         </div>
       </AnimatedDialog>
 

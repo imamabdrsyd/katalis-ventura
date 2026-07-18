@@ -13,6 +13,9 @@ export interface CatalogItemFormData {
   default_price: number;
   unit?: string | null;
   revenue_account_id?: string | null;
+  sku?: string | null;
+  track_stock?: boolean;
+  stock_qty?: number;
   is_active: boolean;
   image_url?: string | null;
   image_fit?: 'cover' | 'contain' | null;
@@ -27,6 +30,7 @@ interface CatalogItemFormProps {
   item?: CatalogItem | null;
   revenueAccounts: Account[];
   existingNames: string[]; // lowercase names already used (for uniqueness check)
+  existingSkus?: string[]; // lowercase SKUs already used (for uniqueness check)
   onSubmit: (data: CatalogItemFormData) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
@@ -42,6 +46,7 @@ export function CatalogItemForm({
   item,
   revenueAccounts,
   existingNames,
+  existingSkus = [],
   onSubmit,
   onCancel,
   loading = false,
@@ -57,6 +62,9 @@ export function CatalogItemForm({
     default_price: item?.default_price ?? 0,
     unit: item?.unit ?? '',
     revenue_account_id: item?.revenue_account_id ?? null,
+    sku: item?.sku ?? '',
+    track_stock: item?.track_stock ?? false,
+    stock_qty: item?.stock_qty ?? 0,
     is_active: item?.is_active ?? true,
     image_url: item?.image_url ?? '',
     image_fit: item?.image_fit ?? 'cover',
@@ -92,6 +100,9 @@ export function CatalogItemForm({
       default_price: item?.default_price ?? 0,
       unit: item?.unit ?? '',
       revenue_account_id: item?.revenue_account_id ?? null,
+      sku: item?.sku ?? '',
+      track_stock: item?.track_stock ?? false,
+      stock_qty: item?.stock_qty ?? 0,
       is_active: item?.is_active ?? true,
       image_url: item?.image_url ?? '',
       image_fit: item?.image_fit ?? 'cover',
@@ -170,6 +181,14 @@ export function CatalogItemForm({
     return new Set(existingNames.filter(n => n !== self));
   }, [existingNames, item]);
 
+  // SKUs taken by *other* items (exclude self when editing)
+  const takenSkus = useMemo(() => {
+    const self = item?.sku?.toLowerCase();
+    return new Set(existingSkus.filter(s => s !== self));
+  }, [existingSkus, item]);
+
+  const isProduct = formData.item_type === 'product';
+
   function validate(): boolean {
     const next: Record<string, string> = {};
     const trimmed = formData.name.trim();
@@ -180,6 +199,10 @@ export function CatalogItemForm({
     }
     if (formData.default_price < 0) {
       next.default_price = tc.errorPriceNegative;
+    }
+    const sku = formData.sku?.trim();
+    if (isProduct && sku && takenSkus.has(sku.toLowerCase())) {
+      next.sku = tc.errorSkuTaken;
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -194,6 +217,10 @@ export function CatalogItemForm({
       name: formData.name.trim(),
       description: formData.description?.trim() || null,
       unit: formData.unit?.trim() || null,
+      // SKU & stok hanya berlaku untuk item produk; jasa selalu bersih
+      sku: isProduct ? formData.sku?.trim() || null : null,
+      track_stock: isProduct ? (formData.track_stock ?? false) : false,
+      stock_qty: isProduct && formData.track_stock ? Math.max(0, formData.stock_qty ?? 0) : 0,
       image_url: hasImage ? formData.image_url : null,
       image_fit: hasImage ? (formData.image_fit ?? 'cover') : null,
       image_position_x: hasImage && formData.image_fit === 'cover' ? (formData.image_position_x ?? 50) : null,
@@ -370,6 +397,72 @@ export function CatalogItemForm({
           />
         </div>
       </div>
+
+      {/* SKU + stok — hanya untuk item produk */}
+      {isProduct && (
+        <>
+          <div>
+            <label className="label">
+              {tc.skuLabel} <span className="text-gray-400 font-normal">({tc.optional})</span>
+            </label>
+            <input
+              type="text"
+              value={formData.sku ?? ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
+              placeholder={tc.skuPlaceholder}
+              maxLength={64}
+              className="input font-mono"
+            />
+            {errors.sku && (
+              <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" /> {errors.sku}
+              </p>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.track_stock ?? false}
+                onChange={(e) => setFormData(prev => ({ ...prev, track_stock: e.target.checked }))}
+                className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500"
+              />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {tc.trackStockLabel}
+              </span>
+            </label>
+            <p className="text-xs text-gray-400 dark:text-gray-500 -mt-1">
+              {tc.trackStockHint}
+            </p>
+            {formData.track_stock && (
+              <div>
+                <label className="label">{tc.stockQtyLabel}</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={formData.stock_qty ?? 0}
+                    onChange={(e) => setFormData(prev => ({ ...prev, stock_qty: Math.max(0, Number(e.target.value) || 0) }))}
+                    className="input pr-16 tabular-nums"
+                  />
+                  {formData.unit?.trim() && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500">
+                      {formData.unit.trim()}
+                    </span>
+                  )}
+                </div>
+                {isEditMode && (
+                  <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+                    {tc.stockQtyHintEdit}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Akun pendapatan */}
       <div>
