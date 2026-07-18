@@ -28,6 +28,13 @@ interface ModalProps {
    * (mis. preview hasil OCR). Disembunyikan otomatis di layar <lg.
    */
   sidePanel?: React.ReactNode;
+  /**
+   * Kelas z-index overlay. Default `z-50` cukup untuk modal di atas halaman
+   * biasa, tapi modal yang dibuka DARI overlay full-screen (mis. Mode Kasir
+   * `z-[80]`) harus lebih tinggi — kalau tidak, modal ter-render di belakang
+   * dan klik terlihat "tidak bereaksi".
+   */
+  zIndexClassName?: string;
 }
 
 const SIZE_CLASSES: Record<ModalSize, string> = {
@@ -39,7 +46,7 @@ const SIZE_CLASSES: Record<ModalSize, string> = {
   '3xl': 'sm:max-w-3xl',
 };
 
-export function Modal({ isOpen, onClose, title, children, footer, size = 'md', sideNavPrev, sideNavNext, sidePanel, headerAction, closeButtonClassName = '' }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, footer, size = 'md', sideNavPrev, sideNavNext, sidePanel, headerAction, closeButtonClassName = '', zIndexClassName = 'z-50' }: ModalProps) {
   const [mounted, setMounted] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -79,7 +86,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', s
 
   const modalContent = (
     <div
-      className={`fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ease-out ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+      className={`fixed inset-0 bg-black/50 ${zIndexClassName} flex items-center justify-center p-4 transition-opacity duration-200 ease-out ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       onClick={onClose}
     >
       {/* Side nav — prev */}

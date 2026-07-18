@@ -99,6 +99,8 @@ export function PaymentModal({
       isOpen={isOpen}
       onClose={onClose}
       size="md"
+      // Dibuka dari overlay Mode Kasir (`z-[80]`) — default z-50 akan tertimbun.
+      zIndexClassName="z-[90]"
       title={
         <span className="flex items-center gap-2">
           {method === 'qris' ? (

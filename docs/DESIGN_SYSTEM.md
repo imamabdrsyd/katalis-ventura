@@ -358,6 +358,12 @@ Komponen: [`src/components/ui/Modal.tsx`](../src/components/ui/Modal.tsx). Selal
 - Footer opsional. Tombol di footer: primary di kanan, secondary/cancel di kiri.
 - Backdrop: `bg-black/40 backdrop-blur-sm` (sudah built-in).
 - `headerAction` (opsional): elemen aksi di header, dirender tepat di kiri tombol close. `closeButtonClassName` (opsional): kelas tambahan untuk tombol close (mis. `sm:hidden`). Kombinasi keduanya dipakai mis. di TransactionDetailModal — di desktop tombol Duplicate menggantikan icon close (close diwakili klik di luar modal/Esc), di mobile tombol close tetap ada.
+- **`zIndexClassName`** (opsional, default `z-50`): kelas z-index overlay. Modal yang
+  dibuka **dari dalam overlay full-screen** WAJIB menaikkannya di atas overlay induk,
+  kalau tidak modal ter-render di belakang dan klik terlihat "tidak bereaksi" (bug nyata
+  di PaymentModal: Mode Kasir `z-[80]` menimbun modal `z-50`). Tangga z-index yang
+  dipakai sekarang: `z-50` modal biasa · `z-[60]` lightbox AiKnowledgePanel ·
+  `z-[80]` overlay Mode Kasir · `z-[90]` PaymentModal.
 
 ### 3.7 Input / Form Field — Floating Label (Google/Material "underline")
 
