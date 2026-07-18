@@ -6,6 +6,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { Tabs } from '@/components/ui/Tabs';
 import { CatalogPanel } from './CatalogPanel';
 import { AiKnowledgePanel } from './AiKnowledgePanel';
+import { StockLogPanel } from './StockLogPanel';
 import { CashierLauncher } from './cashier/CashierLauncher';
 import { CalendarLauncher } from './calendar/CalendarLauncher';
 import { UnitManagerButton } from './calendar/UnitManagerButton';
@@ -28,6 +29,8 @@ export function HubPage({ variant }: { variant: HubVariant }) {
   const th = t.hub;
   // Kalender tampil duluan (tab operasional) — Katalog tetap default utk POS.
   const [tab, setTab] = useState<HubTab>(variant === 'calendar' ? 'operational' : 'catalog');
+  // Dinaikkan tiap stok berubah supaya StockLogPanel memuat ulang riwayatnya.
+  const [stockLogKey, setStockLogKey] = useState(0);
 
   const isPos = variant === 'pos';
   const OperationalIcon = isPos ? ShoppingCart : CalendarDays;
@@ -81,7 +84,18 @@ export function HubPage({ variant }: { variant: HubVariant }) {
       </div>
 
       {/* Tab Katalog: toolbar full-width di atas; grid (kiri) + Info AI (kanan) */}
-      {tab === 'catalog' && <CatalogPanel aside={<AiKnowledgePanel />} />}
+      {tab === 'catalog' && (
+        <CatalogPanel
+          onStockChanged={() => setStockLogKey((k) => k + 1)}
+          aside={
+            <div className="space-y-6">
+              <AiKnowledgePanel />
+              {/* Riwayat stok hanya relevan untuk hub produk (POS) */}
+              {isPos && <StockLogPanel refreshKey={stockLogKey} />}
+            </div>
+          }
+        />
+      )}
 
       {tab === 'operational' && (isPos ? <CashierLauncher /> : <CalendarLauncher headerSlot={calendarHeaderEl} />)}
     </div>

@@ -139,6 +139,83 @@ export async function decrementStock(
   return (data as number | null) ?? null;
 }
 
+/** Satu baris riwayat perubahan stok item katalog. */
+export interface StockLogEntry {
+  id: string;
+  itemId: string;
+  itemName: string;
+  changedAt: string;
+  changedByName: string | null;
+  /** Stok sebelum perubahan */
+  from: number;
+  /** Stok sesudah perubahan */
+  to: number;
+  /** to - from; positif = barang masuk, negatif = terjual/koreksi turun */
+  delta: number;
+}
+
+/**
+ * Riwayat perubahan stok katalog sebuah bisnis.
+ *
+ * Dibaca dari `audit_trail_with_users` (trigger `log_audit_trail` sudah aktif di
+ * `catalog_items` sejak migr 099) — TIDAK ada tabel log terpisah, jadi riwayat
+ * lama pun ikut terbaca. Baris yang stok-nya tidak berubah difilter di client
+ * karena PostgREST tak bisa membandingkan dua kolom JSONB.
+ *
+ * Mencakup semua sumber perubahan: tambah stok manual, checkout POS
+ * (decrement_catalog_stock), dan koreksi lewat form edit item.
+ */
+export async function getStockLogs(
+  businessId: string,
+  limit: number = 30
+): Promise<StockLogEntry[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('audit_trail_with_users')
+    .select('id, record_id, old_values, new_values, changed_at, changed_by_name')
+    .eq('table_name', 'catalog_items')
+    .eq('operation', 'UPDATE')
+    .eq('metadata->>business_id', businessId)
+    .order('changed_at', { ascending: false })
+    // Ambil lebih banyak dari limit: sebagian besar UPDATE item katalog bukan
+    // perubahan stok (rename, ganti harga) dan akan tersaring di bawah.
+    .limit(limit * 10);
+
+  if (error) throw new Error(error.message);
+
+  const rows = (data ?? []) as Array<{
+    id: string;
+    record_id: string;
+    old_values: Record<string, unknown> | null;
+    new_values: Record<string, unknown> | null;
+    changed_at: string;
+    changed_by_name: string | null;
+  }>;
+
+  const logs: StockLogEntry[] = [];
+  for (const r of rows) {
+    const rawFrom = r.old_values?.stock_qty;
+    const rawTo = r.new_values?.stock_qty;
+    if (rawFrom == null || rawTo == null) continue;
+    const from = Number(rawFrom);
+    const to = Number(rawTo);
+    if (!Number.isFinite(from) || !Number.isFinite(to) || from === to) continue;
+
+    logs.push({
+      id: r.id,
+      itemId: r.record_id,
+      itemName: String(r.new_values?.name ?? r.old_values?.name ?? '—'),
+      changedAt: r.changed_at,
+      changedByName: r.changed_by_name,
+      from,
+      to,
+      delta: to - from,
+    });
+    if (logs.length >= limit) break;
+  }
+  return logs;
+}
+
 /**
  * Tambah stok item katalog (aksi "Tambah Stok" di halaman Katalog).
  * RPC increment_catalog_stock (Migration 120): atomik, hanya business manager,

@@ -28,7 +28,15 @@ const VIEW_MODE_KEY = 'katalis_catalog_view_mode';
  * Layout: toolbar (search/filter/add) full-width di atas; di bawah grid (kiri)
  * + `aside` (kanan, mis. panel Info AI). `aside` opsional.
  */
-export function CatalogPanel({ aside }: { aside?: ReactNode }) {
+export function CatalogPanel({
+  aside,
+  onStockChanged,
+}: {
+  aside?: ReactNode;
+  /** Dipanggil setelah stok berubah (tambah stok / edit item) agar panel
+   *  riwayat stok di `aside` ikut ter-refresh tanpa reload halaman. */
+  onStockChanged?: () => void;
+}) {
   const { activeBusiness, userRole, user } = useBusinessContext();
   const { t } = useLanguage();
   const tc = t.catalog;
@@ -126,6 +134,10 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
       if (editItem) {
         const updated = await catalogApi.updateCatalogItem(editItem.id, data);
         setItems(prev => prev.map(i => (i.id === updated.id ? updated : i)));
+        // Koreksi stok lewat form juga tercatat di riwayat
+        if (Number(editItem.stock_qty ?? 0) !== Number(updated.stock_qty ?? 0)) {
+          onStockChanged?.();
+        }
         toast.success(tc.toastUpdated);
       } else {
         const created = await catalogApi.createCatalogItem({
@@ -161,6 +173,7 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
       const newQty = await catalogApi.incrementStock(stockItem.id, qty);
       if (newQty == null) throw new Error(tc.addStockFailed);
       setItems(prev => prev.map(i => (i.id === stockItem.id ? { ...i, stock_qty: newQty } : i)));
+      onStockChanged?.();
       toast.success(tc.addStockSuccess);
       setStockItem(null);
       setStockQtyInput('');
@@ -413,7 +426,7 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
                   )}
                 </div>
                 <p className={`text-sm text-indigo-600 dark:text-indigo-400 font-medium tabular-nums whitespace-nowrap flex-shrink-0 transition-all duration-200 ${
-                  canManage ? '-mr-3 group-hover:mr-0' : ''
+                  canManage ? '-mr-3 group-hover:-mr-1' : ''
                 }`}>
                   {formatCurrency(item.default_price)}
                   {item.unit && <span className="text-gray-400 dark:text-gray-500 font-normal"> / {item.unit}</span>}
@@ -422,7 +435,7 @@ export function CatalogPanel({ aside }: { aside?: ReactNode }) {
                     melebar saat hover untuk memberi ruang tombol — geseran harga
                     disengaja & dianimasikan, bukan lompatan mendadak. */}
                 {canManage && (
-                  <div className="flex justify-end items-center gap-1 flex-shrink-0 overflow-hidden w-0 group-hover:w-[6.75rem] opacity-0 group-hover:opacity-100 transition-all duration-200">
+                  <div className="flex justify-end items-center gap-0.5 flex-shrink-0 overflow-hidden w-0 group-hover:w-[6.25rem] opacity-0 group-hover:opacity-100 transition-all duration-200">
                     {item.item_type === 'product' && item.track_stock && (
                       <button
                         onClick={() => openAddStock(item)}

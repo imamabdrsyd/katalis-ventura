@@ -349,6 +349,9 @@ export interface Translations {
     addStockSubmit: string;
     addStockSuccess: string;
     addStockFailed: string;
+    stockLogTitle: string;
+    stockLogEmpty: string;
+    stockLogRefresh: string;
     deleteTitle: string;
     deleteBody: string;
     deleting: string;
@@ -393,6 +396,8 @@ export interface Translations {
     aiInfoReadonly: string;
     aiInfoNotesLabel: string;
     editFields: string;
+    collapsePanel: string;
+    expandPanel: string;
     fieldsModalTitle: string;
     fieldHours: string;
     fieldHoursPlaceholder: string;

@@ -128,11 +128,14 @@ export function CashierScreen({
         <button
           type="button"
           onClick={onClose}
-          className="group relative w-9 h-9 rounded-xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          className="group relative w-9 h-9 rounded-xl flex items-center justify-center hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
           aria-label="Keluar dari mode kasir"
           title="Keluar dari mode kasir"
         >
-          <SquareArrowRight className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" />
+          <SquareArrowRight
+            strokeWidth={1.5}
+            className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"
+          />
         </button>
       </div>
 

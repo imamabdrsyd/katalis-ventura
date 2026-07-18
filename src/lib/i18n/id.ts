@@ -339,6 +339,9 @@ export const id: Translations = {
     addStockSubmit: 'Tambah',
     addStockSuccess: 'Stok berhasil ditambah',
     addStockFailed: 'Gagal menambah stok',
+    stockLogTitle: 'Riwayat Stok',
+    stockLogEmpty: 'Belum ada perubahan stok.',
+    stockLogRefresh: 'Muat ulang riwayat',
     // Delete modal
     deleteTitle: 'Hapus Item?',
     deleteBody: 'Item {name} akan dihapus dari katalog. Transaksi yang sudah dibuat tidak terpengaruh.',
@@ -385,6 +388,8 @@ export const id: Translations = {
     aiInfoReadonly: 'Hanya manager yang bisa mengubah informasi ini.',
     aiInfoNotesLabel: 'Catatan tambahan',
     editFields: 'Edit detail',
+    collapsePanel: 'Tutup panel',
+    expandPanel: 'Buka panel',
     fieldsModalTitle: 'Detail bisnis',
     fieldHours: 'Jam buka',
     fieldHoursPlaceholder: 'Mis. Senin–Sabtu 09.00–18.00',

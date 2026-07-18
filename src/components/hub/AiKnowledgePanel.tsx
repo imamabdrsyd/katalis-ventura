@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import Image from 'next/image';
-import { Loader2, Lock, Pencil, X, Trash2 } from 'lucide-react';
+import { Loader2, Lock, Pencil, X, Trash2, ChevronDown } from 'lucide-react';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { isManagerRole } from '@/lib/roles';
@@ -14,6 +14,7 @@ import type { AiKnowledgeFields, AiKnowledgeImage } from '@/types';
 
 const MAX_LEN = 4000;
 const EMPTY_FIELDS: AiKnowledgeFields = {};
+const COLLAPSE_KEY = 'katalis_ai_knowledge_collapsed';
 
 /**
  * Panel "Info Bisnis untuk AI" — pengetahuan level-bisnis yang dibaca AI saat
@@ -36,6 +37,21 @@ export function AiKnowledgePanel() {
   const [loadedContent, setLoadedContent] = useState('');
   const [content, setContent] = useState('');
   const [fields, setFields] = useState<AiKnowledgeFields>(EMPTY_FIELDS);
+
+  // Collapse panel — dipakai supaya riwayat stok di bawahnya lebih terlihat.
+  // Preferensi disimpan agar tidak perlu di-collapse ulang tiap kunjungan.
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    setCollapsed(localStorage.getItem(COLLAPSE_KEY) === '1');
+  }, []);
+
+  function toggleCollapsed() {
+    setCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0');
+      return next;
+    });
+  }
 
   // Modal edit field terstruktur
   const [showFields, setShowFields] = useState(false);
@@ -127,23 +143,36 @@ export function AiKnowledgePanel() {
   return (
     <div className="group relative bg-white dark:bg-gray-800 rounded-xl shadow-card border border-transparent dark:border-gray-700 p-5 w-full">
       {/* Edit icon — muncul saat hover, pojok kanan atas */}
-      {canManage && (
+      {canManage && !collapsed && (
         <button
           type="button"
           onClick={openFieldsEditor}
           title={th.editFields}
           aria-label={th.editFields}
-          className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+          className="absolute top-3 right-11 p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
         >
           <Pencil className="w-4 h-4" />
         </button>
       )}
 
-      <div className="flex items-center gap-2 mb-3 pr-8">
+      {/* Judul = tombol collapse. Saat tertutup hanya baris ini yang tampil,
+          memberi ruang lebih besar untuk riwayat stok di bawahnya. */}
+      <button
+        type="button"
+        onClick={toggleCollapsed}
+        aria-expanded={!collapsed}
+        title={collapsed ? th.expandPanel : th.collapsePanel}
+        className={`flex w-full items-center gap-2 text-left pr-8 ${collapsed ? '' : 'mb-3'}`}
+      >
         <Image src="/persona/concierge.png" alt="Concierge" width={24} height={24} className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
-        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{th.aiInfoTitle}</h2>
-      </div>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex-1 min-w-0 truncate">{th.aiInfoTitle}</h2>
+        <ChevronDown
+          className={`w-4 h-4 shrink-0 text-gray-400 dark:text-gray-500 transition-transform duration-200 ${collapsed ? '-rotate-90' : ''}`}
+        />
+      </button>
 
+      {!collapsed && (
+      <>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{th.aiInfoDesc}</p>
 
       {/* Chip kategori fakta yang sebaiknya diisi */}
@@ -228,6 +257,8 @@ export function AiKnowledgePanel() {
           </button>
         )}
       </div>
+      </>
+      )}
 
       {/* Modal edit field terstruktur */}
       <AnimatedDialog isOpen={showFields} onClose={() => setShowFields(false)}>
