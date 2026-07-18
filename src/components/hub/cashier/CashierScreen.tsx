@@ -14,7 +14,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  X,
+  SquareArrowRight,
   Search,
   Plus,
   Minus,
@@ -129,10 +129,10 @@ export function CashierScreen({
           type="button"
           onClick={onClose}
           className="group relative w-9 h-9 rounded-xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          aria-label="Tutup mode kasir"
-          title="Tutup mode kasir"
+          aria-label="Keluar dari mode kasir"
+          title="Keluar dari mode kasir"
         >
-          <X className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" />
+          <SquareArrowRight className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" />
         </button>
       </div>
 
@@ -179,7 +179,7 @@ export function CashierScreen({
                 <p className="text-sm">Tidak ada produk yang cocok.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid auto-rows-fr grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filtered.map((item) => (
                   <ProductCard
                     key={item.id}
@@ -353,8 +353,9 @@ function CategoryChip({
       onClick={onClick}
       className={[
         'shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors',
+        // Filter satuan = kontrol netral, bukan aksi bermerek → hitam (dark: invert)
         active
-          ? 'bg-primary-500 text-white'
+          ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
           : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700',
       ].join(' ')}
     >
@@ -380,9 +381,11 @@ function ProductCard({
       type="button"
       onClick={onAdd}
       disabled={soldOut}
-      className="group relative text-left rounded-2xl bg-white dark:bg-gray-800 shadow-card border border-transparent dark:border-gray-700 overflow-hidden transition-all duration-200 hover:shadow-card-hover hover:-translate-y-1 dark:hover:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-card"
+      className="group relative flex h-full flex-col text-left rounded-2xl bg-white dark:bg-gray-800 shadow-card border border-transparent dark:border-gray-700 overflow-hidden transition-all duration-200 hover:shadow-card-hover hover:-translate-y-1 dark:hover:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-card"
     >
-      <div className="aspect-square bg-gray-50 dark:bg-gray-900/50 relative">
+      {/* flex-1 (bukan aspect-square): area gambar mengisi sisa tinggi kartu, jadi
+          kartu bernama pendek tak menyisakan celah putih saat grid menyamakan tinggi */}
+      <div className="flex-1 min-h-[7rem] bg-gray-50 dark:bg-gray-900/50 relative">
         {item.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -405,7 +408,7 @@ function ProductCard({
           <Plus className="w-4 h-4" />
         </span>
       </div>
-      <div className="p-3">
+      <div className="shrink-0 p-3">
         <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2 leading-snug">
           {item.name}
         </p>
