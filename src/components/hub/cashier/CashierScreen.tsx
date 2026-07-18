@@ -119,10 +119,11 @@ export function CashierScreen({
       {/* Header bar */}
       <div className="flex items-center justify-between px-4 md:px-6 h-14 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0">
         <div className="flex items-center gap-2.5">
-          <span className="w-8 h-8 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
-            <ShoppingCart className="w-4.5 h-4.5 text-primary-500 dark:text-primary-400" />
-          </span>
-          <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">Mode Kasir</h2>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/favicon-48.png" alt="AXION" className="w-8 h-8 rounded-lg shrink-0" />
+          <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
+            Point of Sales
+          </h2>
         </div>
         <button
           type="button"
@@ -131,13 +132,7 @@ export function CashierScreen({
           aria-label="Tutup mode kasir"
           title="Tutup mode kasir"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/favicon-48.png"
-            alt="AXION"
-            className="w-6 h-6 rounded-md group-hover:opacity-0 transition-opacity"
-          />
-          <X className="w-5 h-5 text-gray-500 dark:text-gray-400 absolute opacity-0 group-hover:opacity-100 transition-opacity" />
+          <X className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" />
         </button>
       </div>
 
@@ -176,14 +171,15 @@ export function CashierScreen({
           </div>
 
           {/* Grid produk */}
-          <div className="flex-1 overflow-y-auto -mx-1 px-1">
+          {/* Padding vertikal memberi ruang untuk hover -translate-y-1 + shadow */}
+          <div className="flex-1 overflow-y-auto -mx-2 px-2 py-2">
             {filtered.length === 0 ? (
               <div className="text-center py-16 text-gray-400 dark:text-gray-500">
                 <Package className="w-10 h-10 mx-auto mb-3 opacity-50" />
                 <p className="text-sm">Tidak ada produk yang cocok.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filtered.map((item) => (
                   <ProductCard
                     key={item.id}
@@ -384,9 +380,9 @@ function ProductCard({
       type="button"
       onClick={onAdd}
       disabled={soldOut}
-      className="group relative text-left rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 overflow-hidden hover:border-primary-200 dark:hover:border-primary-800 hover:shadow-card transition disabled:opacity-50 disabled:cursor-not-allowed"
+      className="group relative text-left rounded-2xl bg-white dark:bg-gray-800 shadow-card border border-transparent dark:border-gray-700 overflow-hidden transition-all duration-200 hover:shadow-card-hover hover:-translate-y-1 dark:hover:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-card"
     >
-      <div className="aspect-square bg-gray-50 dark:bg-gray-900 relative">
+      <div className="aspect-square bg-gray-50 dark:bg-gray-900/50 relative">
         {item.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -409,16 +405,20 @@ function ProductCard({
           <Plus className="w-4 h-4" />
         </span>
       </div>
-      <div className="p-2.5">
+      <div className="p-3">
         <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2 leading-snug">
           {item.name}
         </p>
-        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-0.5">
+        <p className="text-sm font-semibold text-primary-600 dark:text-primary-400 tabular-nums mt-1">
           {formatCurrency(item.default_price)}
         </p>
         {item.track_stock && typeof item.stock_qty === 'number' && (
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-            Stok: {item.stock_qty}
+          <p className="text-xs mt-0.5 tabular-nums">
+            {item.stock_qty > 0 ? (
+              <span className="text-gray-400 dark:text-gray-500">Stok: {item.stock_qty}</span>
+            ) : (
+              <span className="text-red-600 dark:text-red-400 font-medium">Stok habis</span>
+            )}
           </p>
         )}
       </div>
