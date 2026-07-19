@@ -321,7 +321,6 @@ export interface Translations {
     unitLabel: string;
     unitPlaceholder: string;
     revenueAccountLabel: string;
-    revenueAccountPlaceholder: string;
     revenueAccountHint: string;
     descriptionLabel: string;
     descriptionPlaceholder: string;
@@ -351,6 +350,7 @@ export interface Translations {
     stockLogTitle: string;
     stockLogEmpty: string;
     stockLogRefresh: string;
+    stockLogSaleChip: string;
     deleteTitle: string;
     deleteBody: string;
     deleting: string;

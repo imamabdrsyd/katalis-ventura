@@ -152,6 +152,9 @@ export interface StockLogEntry {
   to: number;
   /** to - from; positif = barang masuk, negatif = terjual/koreksi turun */
   delta: number;
+  /** Sumber perubahan (migr 123): 'pos_sale' = checkout kasir,
+   *  'stock_add' = aksi Tambah Stok, null = manual/form (pra-migr 123). */
+  source: string | null;
 }
 
 /**
@@ -172,7 +175,7 @@ export async function getStockLogs(
   const supabase = createClient();
   const { data, error } = await supabase
     .from('audit_trail_with_users')
-    .select('id, record_id, old_values, new_values, changed_at, changed_by_name')
+    .select('id, record_id, old_values, new_values, changed_at, changed_by_name, metadata')
     .eq('table_name', 'catalog_items')
     .eq('operation', 'UPDATE')
     .eq('metadata->>business_id', businessId)
@@ -190,6 +193,7 @@ export async function getStockLogs(
     new_values: Record<string, unknown> | null;
     changed_at: string;
     changed_by_name: string | null;
+    metadata: Record<string, unknown> | null;
   }>;
 
   const logs: StockLogEntry[] = [];
@@ -210,6 +214,7 @@ export async function getStockLogs(
       from,
       to,
       delta: to - from,
+      source: typeof r.metadata?.source === 'string' ? r.metadata.source : null,
     });
     if (logs.length >= limit) break;
   }

@@ -87,8 +87,15 @@ export function StockLogPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                      {log.itemName}
+                    <p className="min-w-0 flex items-baseline gap-1.5">
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                        {log.itemName}
+                      </span>
+                      {log.source === 'pos_sale' && (
+                        <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                          {tc.stockLogSaleChip}
+                        </span>
+                      )}
                     </p>
                     <span
                       className={`text-sm font-semibold tabular-nums shrink-0 ${

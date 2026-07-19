@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useId } from 'react';
 import type { CatalogItem, CatalogItemType, Account } from '@/types';
 import { AlertCircle, Package, Wrench, Camera, Crop, ImageIcon, Loader2, Maximize2, X } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
+import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 import { useLanguage } from '@/context/LanguageContext';
 
 export interface CatalogItemFormData {
@@ -30,6 +31,9 @@ interface CatalogItemFormProps {
   item?: CatalogItem | null;
   revenueAccounts: Account[];
   existingSkus?: string[]; // lowercase SKUs already used (for uniqueness check)
+  /** businesses.business_type — menentukan tipe item yang tersedia:
+   *  'jasa' → service saja; 'produk'/'dagang' → product saja; null → keduanya. */
+  businessType?: string | null;
   onSubmit: (data: CatalogItemFormData) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
@@ -45,6 +49,7 @@ export function CatalogItemForm({
   item,
   revenueAccounts,
   existingSkus = [],
+  businessType,
   onSubmit,
   onCancel,
   loading = false,
@@ -52,11 +57,27 @@ export function CatalogItemForm({
   const { t } = useLanguage();
   const tc = t.catalog;
   const isEditMode = !!item;
+  const descriptionId = useId();
+
+  // Tipe item mengikuti tipe bisnis: jasa → service saja, produk/dagang →
+  // product saja. Selector tipe hanya dirender bila ada >1 pilihan.
+  // Item lama yang tipenya di luar aturan tetap diakomodasi (jaga data).
+  const defaultItemType: CatalogItemType = businessType === 'jasa' ? 'service' : 'product';
+  const allowedTypes = useMemo<CatalogItemType[]>(() => {
+    const base: CatalogItemType[] =
+      businessType === 'jasa'
+        ? ['service']
+        : businessType === 'produk' || businessType === 'dagang'
+          ? ['product']
+          : ['product', 'service'];
+    if (item && !base.includes(item.item_type)) return [item.item_type, ...base];
+    return base;
+  }, [businessType, item]);
 
   const [formData, setFormData] = useState<CatalogItemFormData>({
     name: item?.name ?? '',
     description: item?.description ?? '',
-    item_type: item?.item_type ?? 'product',
+    item_type: item?.item_type ?? defaultItemType,
     default_price: item?.default_price ?? 0,
     unit: item?.unit ?? '',
     revenue_account_id: item?.revenue_account_id ?? null,
@@ -94,7 +115,7 @@ export function CatalogItemForm({
     setFormData({
       name: item?.name ?? '',
       description: item?.description ?? '',
-      item_type: item?.item_type ?? 'product',
+      item_type: item?.item_type ?? defaultItemType,
       default_price: item?.default_price ?? 0,
       unit: item?.unit ?? '',
       revenue_account_id: item?.revenue_account_id ?? null,
@@ -112,7 +133,7 @@ export function CatalogItemForm({
     setPriceDisplay(item?.default_price ? item.default_price.toLocaleString('id-ID') : '');
     setErrors({});
     setUploadError('');
-  }, [item]);
+  }, [item, defaultItemType]);
 
   const updateFocalFromEvent = (clientX: number, clientY: number) => {
     const el = focalAreaRef.current;
@@ -224,30 +245,33 @@ export function CatalogItemForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Tipe item */}
-      <div>
-        <label className="label">{tc.typeLabel}</label>
-        <div className="grid grid-cols-2 gap-2">
-          {TYPE_OPTIONS.map(({ value, icon: Icon }) => {
-            const active = formData.item_type === value;
-            return (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setFormData(prev => ({ ...prev, item_type: value }))}
-                className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
-                  active
-                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 ring-2 ring-primary-500/20'
-                    : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                {value === 'product' ? tc.typeProduct : tc.typeService}
-              </button>
-            );
-          })}
+      {/* Tipe item — disembunyikan bila tipe bisnis hanya mengizinkan satu
+          (produk→product, jasa→service); tipe di-set otomatis. */}
+      {allowedTypes.length > 1 && (
+        <div>
+          <label className="label">{tc.typeLabel}</label>
+          <div className="grid grid-cols-2 gap-2">
+            {TYPE_OPTIONS.filter(({ value }) => allowedTypes.includes(value)).map(({ value, icon: Icon }) => {
+              const active = formData.item_type === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, item_type: value }))}
+                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                    active
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 ring-2 ring-primary-500/20'
+                      : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {value === 'product' ? tc.typeProduct : tc.typeService}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Foto item — dipakai saat difitur di "Produk Unggulan" omni-channel */}
       <div>
@@ -343,15 +367,17 @@ export function CatalogItemForm({
 
       {/* Nama */}
       <div>
-        <label className="label">
-          {formData.item_type === 'product' ? tc.nameLabelProduct : tc.nameLabelService} <span className="text-red-500">*</span>
-        </label>
-        <input
+        <FloatingField
+          label={
+            <>
+              {formData.item_type === 'product' ? tc.nameLabelProduct : tc.nameLabelService}{' '}
+              <span className="text-red-500">*</span>
+            </>
+          }
           type="text"
           value={formData.name}
           onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
           placeholder={formData.item_type === 'product' ? tc.namePlaceholderProduct : tc.namePlaceholderService}
-          className="input"
           autoFocus
         />
         {errors.name && (
@@ -361,11 +387,11 @@ export function CatalogItemForm({
         )}
       </div>
 
-      {/* Harga + satuan */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Harga + satuan — items-end supaya underline keduanya sejajar */}
+      <div className="grid grid-cols-2 gap-4 items-end">
         <div>
-          <label className="label">{tc.priceLabel}</label>
           <CurrencyInputWithCalculator
+            label={tc.priceLabel}
             displayValue={priceDisplay}
             onChange={(val, display) => {
               setFormData(prev => ({ ...prev, default_price: val }));
@@ -378,32 +404,31 @@ export function CatalogItemForm({
             </p>
           )}
         </div>
-        <div>
-          <label className="label">{tc.unitLabel}</label>
-          <input
-            type="text"
-            value={formData.unit ?? ''}
-            onChange={(e) => setFormData(prev => ({ ...prev, unit: e.target.value }))}
-            placeholder={tc.unitPlaceholder}
-            className="input"
-          />
-        </div>
+        <FloatingField
+          label={tc.unitLabel}
+          type="text"
+          value={formData.unit ?? ''}
+          onChange={(e) => setFormData(prev => ({ ...prev, unit: e.target.value }))}
+          placeholder={tc.unitPlaceholder}
+        />
       </div>
 
       {/* SKU + stok — hanya untuk item produk */}
       {isProduct && (
         <>
           <div>
-            <label className="label">
-              {tc.skuLabel} <span className="text-gray-400 font-normal">({tc.optional})</span>
-            </label>
-            <input
+            <FloatingField
+              label={
+                <>
+                  {tc.skuLabel} <span className="text-gray-400 font-normal">({tc.optional})</span>
+                </>
+              }
               type="text"
               value={formData.sku ?? ''}
               onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
               placeholder={tc.skuPlaceholder}
               maxLength={64}
-              className="input font-mono"
+              className="font-mono"
             />
             {errors.sku && (
               <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
@@ -429,22 +454,22 @@ export function CatalogItemForm({
             </p>
             {formData.track_stock && (
               <div>
-                <label className="label">{tc.stockQtyLabel}</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    min={0}
-                    step="any"
-                    value={formData.stock_qty ?? 0}
-                    onChange={(e) => setFormData(prev => ({ ...prev, stock_qty: Math.max(0, Number(e.target.value) || 0) }))}
-                    className="input pr-16 tabular-nums"
-                  />
-                  {formData.unit?.trim() && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500">
-                      {formData.unit.trim()}
-                    </span>
-                  )}
-                </div>
+                <FloatingField
+                  label={tc.stockQtyLabel}
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={formData.stock_qty ?? 0}
+                  onChange={(e) => setFormData(prev => ({ ...prev, stock_qty: Math.max(0, Number(e.target.value) || 0) }))}
+                  className="tabular-nums"
+                  trailing={
+                    formData.unit?.trim() ? (
+                      <span className="text-sm text-gray-400 dark:text-gray-500">
+                        {formData.unit.trim()}
+                      </span>
+                    ) : undefined
+                  }
+                />
                 {isEditMode && (
                   <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
                     {tc.stockQtyHintEdit}
@@ -456,65 +481,75 @@ export function CatalogItemForm({
         </>
       )}
 
-      {/* Akun pendapatan */}
+      {/* Akun pendapatan — opsi placeholder sengaja kosong: label FloatingSelect
+          yang berperan sebagai placeholder */}
       <div>
-        <label className="label">{tc.revenueAccountLabel}</label>
-        <select
+        <FloatingSelect
+          label={tc.revenueAccountLabel}
           value={formData.revenue_account_id ?? ''}
           onChange={(e) => setFormData(prev => ({ ...prev, revenue_account_id: e.target.value || null }))}
-          className="input"
         >
-          <option value="">{tc.revenueAccountPlaceholder}</option>
+          <option value="" />
           {revenueAccounts.map(acc => (
             <option key={acc.id} value={acc.id}>
               {acc.account_code} - {acc.account_name}
             </option>
           ))}
-        </select>
+        </FloatingSelect>
         <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
           {tc.revenueAccountHint}
         </p>
       </div>
 
-      {/* Deskripsi */}
-      <div>
-        <label className="label">{tc.descriptionLabel}</label>
+      {/* Deskripsi — textarea gaya underline mengikuti pola FloatingField
+          (peer + :placeholder-shown untuk float label) */}
+      <div className="relative">
         <textarea
+          id={descriptionId}
           value={formData.description ?? ''}
           onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
           rows={2}
-          placeholder={tc.descriptionPlaceholder}
-          className="input resize-none"
+          placeholder={tc.descriptionPlaceholder || ' '}
+          className="peer block w-full appearance-none border-0 border-b-2 border-gray-300 dark:border-gray-600 bg-transparent px-0 pt-5 pb-1.5 text-gray-900 dark:text-gray-100 outline-none transition-colors resize-none
+            placeholder:text-transparent focus:placeholder:text-gray-400 dark:focus:placeholder:text-gray-500
+            focus:border-primary-500 focus:ring-0"
         />
+        <label
+          htmlFor={descriptionId}
+          className="pointer-events-none absolute left-0 origin-[0] transition-all duration-200 text-gray-500 dark:text-gray-400
+            top-5 -translate-y-5 scale-75
+            peer-placeholder-shown:top-5 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-placeholder-shown:text-gray-400 dark:peer-placeholder-shown:text-gray-500
+            peer-focus:-translate-y-5 peer-focus:scale-75 peer-focus:text-primary-500"
+        >
+          {tc.descriptionLabel}
+        </label>
       </div>
 
       {/* Link CTA — opsional. Kosong → klik produk di halaman publik buka WhatsApp. */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="label">
-            Link Beli <span className="text-gray-400 font-normal">(opsional)</span>
-          </label>
-          <input
-            type="url"
-            value={formData.link_url ?? ''}
-            onChange={(e) => setFormData(prev => ({ ...prev, link_url: e.target.value }))}
-            placeholder="https://shopee.co.id/..."
-            className="input"
-          />
-        </div>
-        <div>
-          <label className="label">
-            Label Tombol <span className="text-gray-400 font-normal">(opsional)</span>
-          </label>
-          <input
-            type="text"
-            value={formData.link_label ?? ''}
-            onChange={(e) => setFormData(prev => ({ ...prev, link_label: e.target.value }))}
-            placeholder="Beli Sekarang"
-            maxLength={100}
-            className="input"
-          />
-        </div>
+      <div className="grid grid-cols-2 gap-4">
+        <FloatingField
+          label={
+            <>
+              Link Beli <span className="text-gray-400 font-normal">(opsional)</span>
+            </>
+          }
+          type="url"
+          value={formData.link_url ?? ''}
+          onChange={(e) => setFormData(prev => ({ ...prev, link_url: e.target.value }))}
+          placeholder="https://shopee.co.id/..."
+        />
+        <FloatingField
+          label={
+            <>
+              Label Tombol <span className="text-gray-400 font-normal">(opsional)</span>
+            </>
+          }
+          type="text"
+          value={formData.link_label ?? ''}
+          onChange={(e) => setFormData(prev => ({ ...prev, link_label: e.target.value }))}
+          placeholder="Beli Sekarang"
+          maxLength={100}
+        />
       </div>
       <p className="-mt-3 text-xs text-gray-400 dark:text-gray-500">
         Kosongkan link untuk arahkan pembeli ke WhatsApp bisnis dengan pesan otomatis.

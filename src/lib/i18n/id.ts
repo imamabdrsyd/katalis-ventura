@@ -311,7 +311,6 @@ export const id: Translations = {
     unitLabel: 'Satuan',
     unitPlaceholder: 'pcs / jam / malam',
     revenueAccountLabel: 'Akun Pendapatan',
-    revenueAccountPlaceholder: '— Pilih nanti saat entry —',
     revenueAccountHint: 'Akun yang dikredit saat item ini dijual. Bisa dikosongkan.',
     descriptionLabel: 'Deskripsi',
     descriptionPlaceholder: 'Opsional',
@@ -341,6 +340,7 @@ export const id: Translations = {
     stockLogTitle: 'Riwayat Stok',
     stockLogEmpty: 'Belum ada perubahan stok.',
     stockLogRefresh: 'Muat ulang riwayat',
+    stockLogSaleChip: 'Penjualan',
     // Delete modal
     deleteTitle: 'Hapus Item?',
     deleteBody: 'Item {name} akan dihapus dari katalog. Transaksi yang sudah dibuat tidak terpengaruh.',

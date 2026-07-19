@@ -438,7 +438,7 @@ export function CatalogPanel({
                   )}
                 </div>
                 <p className={`text-sm text-indigo-600 dark:text-indigo-400 font-medium tabular-nums whitespace-nowrap flex-shrink-0 transition-all duration-200 ${
-                  canManage ? '-mr-3 group-hover:-mr-1' : ''
+                  canManage ? '-mr-3 group-hover:-mr-2' : ''
                 }`}>
                   {formatCurrency(item.default_price)}
                   {item.unit && <span className="text-gray-400 dark:text-gray-500 font-normal"> / {item.unit}</span>}
@@ -499,6 +499,7 @@ export function CatalogPanel({
             item={editItem}
             revenueAccounts={revenueAccounts}
             existingSkus={existingSkus}
+            businessType={activeBusiness?.business_type}
             onSubmit={handleSubmit}
             onCancel={() => { setShowForm(false); setEditItem(null); }}
             loading={saving}
