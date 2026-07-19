@@ -296,7 +296,6 @@ export const id: Translations = {
     emptyAll: 'Belum ada item katalog',
     emptyFiltered: 'Tidak ada item yang cocok',
     inactiveBadge: 'Nonaktif',
-    edit: 'Edit',
     delete: 'Hapus',
     // Form
     formAddTitle: 'Tambah Item',

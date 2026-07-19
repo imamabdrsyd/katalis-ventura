@@ -296,7 +296,6 @@ export const en: Translations = {
     emptyAll: 'No catalog items yet',
     emptyFiltered: 'No matching items',
     inactiveBadge: 'Inactive',
-    edit: 'Edit',
     delete: 'Delete',
     formAddTitle: 'Add Item',
     formEditTitle: 'Edit Item',

@@ -307,7 +307,6 @@ export interface Translations {
     emptyAll: string;
     emptyFiltered: string;
     inactiveBadge: string;
-    edit: string;
     delete: string;
     formAddTitle: string;
     formEditTitle: string;
