@@ -1399,22 +1399,39 @@ export async function exportLoanReceivablePDF(data: LoanReceivablePDFData) {
   doc.text(formatCurrency(data.amount), marginX, amountY);
 
   // kanan: chip Financing (atas) + status (bawah), keduanya rata kanan & di-stack
+  const rightEdge = pageWidth - marginX;
   const chipLabel = 'FINANCING';
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
   const chipW = doc.getTextWidth(chipLabel) + 7;
-  const chipX = pageWidth - marginX - chipW;
+  const chipX = rightEdge - chipW;
   const chipCY = heroTop + 1;
   doc.setFillColor(238, 240, 254);
   doc.roundedRect(chipX, chipCY - 3.8, chipW, 5.6, 2.8, 2.8, 'F');
   doc.setTextColor(...INDIGO);
   doc.text(chipLabel, chipX + chipW / 2, chipCY, { align: 'center' });
 
+  // status: ikon ceklis (lingkaran + centang) + label, di-stack di bawah chip.
   const statusLabel = data.isFullySettled ? 'LUNAS' : 'POSTED';
+  const statusCY = chipCY + 8;      // baseline teks status
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
+  const statusTextW = doc.getTextWidth(statusLabel) + statusLabel.length * 0.5; // +charSpace
+  const statusTextX = rightEdge; // rata kanan
   doc.setTextColor(...EMERALD);
-  doc.text(statusLabel, pageWidth - marginX, chipCY + 7, { align: 'right', charSpace: 0.5 });
+  doc.text(statusLabel, statusTextX, statusCY, { align: 'right', charSpace: 0.5 });
+
+  // lingkaran ceklis di kiri label
+  const circleR = 1.7;
+  const circleCX = rightEdge - statusTextW - 3 - circleR;
+  const circleCY = statusCY - 1.1; // sedikit naik agar center optik sejajar teks
+  doc.setDrawColor(...EMERALD);
+  doc.setLineWidth(0.4);
+  doc.circle(circleCX, circleCY, circleR, 'S');
+  // centang: dua ruas garis
+  doc.setLineWidth(0.45);
+  doc.line(circleCX - 0.85, circleCY + 0.05, circleCX - 0.2, circleCY + 0.75);
+  doc.line(circleCX - 0.2, circleCY + 0.75, circleCX + 0.95, circleCY - 0.7);
 
   y = amountY + 8;
 
@@ -1437,38 +1454,52 @@ export async function exportLoanReceivablePDF(data: LoanReceivablePDFData) {
 
   // ── Jurnal double-entry ──
   sectionHead('Jurnal Double-Entry');
+  const rowH = 9;                 // tinggi baris (lebih lega, tak mepet)
+  const badgeLabel = 'ASSET';
   const drawJournalRow = (side: string, acc: { code: string; name: string } | null) => {
-    ensureSpace(9);
+    ensureSpace(rowH + 1);
+    const baseY = y + rowH / 2 + 1; // baseline teks di tengah baris
+
+    // badge tipe akun (hitung dulu supaya nama akun bisa dipotong agar tak tabrakan)
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    const badgeW = doc.getTextWidth(badgeLabel) + 6;
+    const badgeH = 5;
+    const badgeX = pageWidth - marginX - badgeW;
+    const badgeY = y + (rowH - badgeH) / 2;
+
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7.5);
     doc.setTextColor(...INK_FAINT);
-    doc.text(side.toUpperCase(), marginX, y, { charSpace: 0.4 });
+    doc.text(side.toUpperCase(), marginX, baseY, { charSpace: 0.4 });
     doc.setFont('courier', 'normal');
     doc.setFontSize(8.5);
     doc.setTextColor(...INK_FAINT);
-    doc.text(acc?.code ?? '—', marginX + 22, y);
+    doc.text(acc?.code ?? '—', marginX + 22, baseY);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9.5);
     doc.setTextColor(...INK);
-    doc.text(acc?.name ?? 'Unknown', marginX + 36, y);
-    // badge tipe akun di kanan
+    const nameX = marginX + 36;
+    const nameMaxW = badgeX - nameX - 4; // sisakan jarak ≥4mm ke badge
+    const nameStr = doc.splitTextToSize(acc?.name ?? 'Unknown', nameMaxW)[0];
+    doc.text(nameStr, nameX, baseY);
+
+    // badge
+    doc.setFillColor(238, 244, 255);
+    doc.roundedRect(badgeX, badgeY, badgeW, badgeH, 1.2, 1.2, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7);
-    const typeLabel = 'ASSET';
-    const badgeW = doc.getTextWidth(typeLabel) + 5;
-    const badgeX = pageWidth - marginX - badgeW;
-    doc.setFillColor(238, 244, 255);
-    doc.roundedRect(badgeX, y - 3.2, badgeW, 4.8, 1.2, 1.2, 'F');
     doc.setTextColor(37, 99, 168);
-    doc.text(typeLabel, badgeX + badgeW / 2, y, { align: 'center' });
-    y += 7;
+    doc.text(badgeLabel, badgeX + badgeW / 2, badgeY + badgeH / 2 + 1.05, { align: 'center' });
+
+    y += rowH;
   };
   drawJournalRow('Debit', data.debitAccount);
   doc.setDrawColor(...LINE);
   doc.setLineWidth(0.2);
-  doc.line(marginX, y - 3.5, marginX + contentW, y - 3.5);
+  doc.line(marginX, y, marginX + contentW, y);
   drawJournalRow('Kredit', data.creditAccount);
-  y += 5;
+  y += 6;
 
   // ── Riwayat pembayaran ── (kartu berbingkai, mirip pratinjau)
   if (data.payments.length > 0) {
