@@ -179,6 +179,44 @@ export function useTransactions() {
     queryClient.invalidateQueries({ queryKey: ['transactions', businessId] });
   }, [queryClient, businessId]);
 
+  // ── Optimistic delete ──────────────────────────────────────────────────
+  // Buang transaksi dari SEMUA cache list (paginated per-halaman + full list)
+  // secara instan agar baris langsung hilang tanpa nunggu server. Mengembalikan
+  // snapshot untuk rollback bila request gagal.
+  const removeTransactionsFromCache = useCallback((ids: string[]) => {
+    const idSet = new Set(ids);
+    const paginatedSnapshots = queryClient.getQueriesData<transactionsApi.PaginatedTransactions>({
+      queryKey: ['transactions-paginated', businessId],
+    });
+    const fullSnapshot = queryClient.getQueryData<Transaction[]>(['transactions', businessId]);
+
+    queryClient.setQueriesData<transactionsApi.PaginatedTransactions>(
+      { queryKey: ['transactions-paginated', businessId] },
+      (old) => {
+        if (!old) return old;
+        const data = old.data.filter((tx) => !idSet.has(tx.id));
+        const removed = old.data.length - data.length;
+        if (removed === 0) return old;
+        const totalCount = Math.max(0, old.totalCount - removed);
+        return {
+          ...old,
+          data,
+          totalCount,
+          totalPages: Math.max(1, Math.ceil(totalCount / old.pageSize)),
+        };
+      }
+    );
+    queryClient.setQueryData<Transaction[]>(['transactions', businessId], (old) =>
+      old ? old.filter((tx) => !idSet.has(tx.id)) : old
+    );
+
+    return () => {
+      // Rollback: kembalikan snapshot persis seperti sebelum penghapusan.
+      paginatedSnapshots.forEach(([key, value]) => queryClient.setQueryData(key, value));
+      queryClient.setQueryData(['transactions', businessId], fullSnapshot);
+    };
+  }, [queryClient, businessId]);
+
   // Kept for backward compat — now just triggers cache invalidation
   const fetchTransactions = useCallback(() => {
     invalidateTransactions();
@@ -375,10 +413,12 @@ export function useTransactions() {
   const handleDeleteTransaction = useCallback(async () => {
     if (!deleteTransaction) return;
     const deletedId = deleteTransaction.id;
-    setSaving(true);
+    // Tutup modal konfirmasi & buang baris dari cache SEKARANG — feedback instan.
+    setDeleteTransaction(null);
+    const rollback = removeTransactionsFromCache([deletedId]);
     try {
       await transactionsApi.deleteTransaction(deletedId);
-      setDeleteTransaction(null);
+      // Reconcile: isi halaman dgn item berikutnya + koreksi total dari server.
       invalidateTransactions();
       showTransactionDeletedToast({
         message: 'Transaksi berhasil dihapus',
@@ -394,11 +434,13 @@ export function useTransactions() {
         },
       });
     } catch (err: any) {
+      // Gagal di server → kembalikan baris ke posisi semula.
+      rollback();
       toast.error(err.message || 'Gagal menghapus transaksi');
     } finally {
       setSaving(false);
     }
-  }, [deleteTransaction, invalidateTransactions, markSavedHighlight]);
+  }, [deleteTransaction, invalidateTransactions, markSavedHighlight, removeTransactionsFromCache]);
 
   const handlePrint = useCallback(() => {
     window.print();
