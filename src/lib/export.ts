@@ -6,7 +6,7 @@ import { formatCurrency, formatDate, formatDateWithDay } from './utils';
 import { calculateIncomeStatementMetrics } from './calculations';
 import type { IncomeStatementLineItems } from './calculations';
 import type { TransactionAttachment } from '@/types';
-import { resolveDeliverableAttachmentUrl } from './storage/signedUrl';
+import { resolveEmbeddableAttachmentUrl } from './storage/signedUrl';
 
 // --- Income Statement PDF helpers ---
 
@@ -1260,7 +1260,9 @@ async function loadImageForEmbed(
   maxSize = 900
 ): Promise<{ dataUrl: string; width: number; height: number } | null> {
   try {
-    const res = await fetch(url);
+    // credentials disertakan agar proxy same-origin (/api/.../download) menerima
+    // cookie auth Supabase; URL eksternal mengabaikan ini tanpa efek samping.
+    const res = await fetch(url, { credentials: 'include' });
     if (!res.ok) return null;
     const blob = await res.blob();
 
@@ -1355,20 +1357,16 @@ export async function exportLoanReceivablePDF(data: LoanReceivablePDFData) {
     y += 6;
   };
 
-  // ── Masthead ──
+  // ── Masthead ── (tanpa nama bisnis — atas permintaan)
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(15);
   doc.setTextColor(...INK);
   doc.text('BUKTI PEMBERIAN PINJAMAN', marginX, y, { charSpace: 0.3 });
 
-  doc.setFontSize(9.5);
-  doc.setTextColor(...INDIGO);
-  doc.text(data.businessName, marginX, y + 6);
-
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(...INK_FAINT);
-  doc.text('Piutang Talangan', marginX, y + 11);
+  doc.text('Piutang Talangan', marginX, y + 6);
 
   // kanan: nomor + tanggal + AXION
   doc.setFont('courier', 'bold');
@@ -1378,11 +1376,11 @@ export async function exportLoanReceivablePDF(data: LoanReceivablePDFData) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(...INK_SOFT);
-  doc.text(formatDateWithDay(data.date), pageWidth - marginX, y + 5, { align: 'right' });
+  doc.text(formatDateWithDay(data.date), pageWidth - marginX, y + 5.5, { align: 'right' });
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
   doc.setTextColor(...INK_FAINT);
-  doc.text('AXION', pageWidth - marginX, y + 10, { align: 'right', charSpace: 0.6 });
+  doc.text('AXION', pageWidth - marginX, y + 10.5, { align: 'right', charSpace: 0.6 });
 
   y += 15;
   doc.setDrawColor(...INK);
@@ -1433,8 +1431,8 @@ export async function exportLoanReceivablePDF(data: LoanReceivablePDFData) {
   doc.setFontSize(8.5);
   doc.setTextColor(...INK_SOFT);
   const party = data.counterpartyName
-    ? `${data.counterpartyName}  ·  Penerima Talangan`
-    : 'Penerima Talangan';
+    ? `${data.counterpartyName}  ·  Related Party (Penerima Talangan)`
+    : 'Related Party (Penerima Talangan)';
   doc.text(party, marginX, y);
   y += 10;
 
@@ -1473,64 +1471,92 @@ export async function exportLoanReceivablePDF(data: LoanReceivablePDFData) {
   drawJournalRow('Kredit', data.creditAccount);
   y += 5;
 
-  // ── Riwayat pembayaran ──
+  // ── Riwayat pembayaran ── (kartu berbingkai, mirip pratinjau)
   if (data.payments.length > 0) {
     sectionHead('Riwayat Pembayaran');
-    // header box (sisa)
-    ensureSpace(10);
+
+    const padX = 5;           // padding kiri/kanan dalam kartu
+    const innerL = marginX + padX;
+    const innerR = marginX + contentW - padX;
+    const headerH = 9;        // baris "RIWAYAT / Sisa"
+    const rowH = 11;          // tinggi tiap baris pembayaran
+    const totalH = 9;         // baris "Total Terbayar"
+    const boxH = headerH + data.payments.length * rowH + totalH;
+
+    ensureSpace(boxH + 2);
+    const boxTop = y;
+
+    // bingkai luar kartu
+    doc.setDrawColor(...LINE);
+    doc.setLineWidth(0.2);
+    doc.roundedRect(marginX, boxTop, contentW, boxH, 2, 2, 'S');
+
+    // header bar (sedikit abu)
+    doc.setFillColor(247, 248, 252);
+    doc.rect(marginX + 0.2, boxTop + 0.2, contentW - 0.4, headerH - 0.2, 'F');
+    let cy = boxTop + headerH / 2 + 1.6;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7.5);
     doc.setTextColor(...INK_FAINT);
-    doc.text('RIWAYAT', marginX, y, { charSpace: 0.3 });
+    doc.text('RIWAYAT', innerL, cy, { charSpace: 0.3 });
     if (!data.isFullySettled) {
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...INK_SOFT);
-      doc.setFontSize(8);
-      const remLabel = 'Sisa: ';
+      // "Sisa:" (soft) lalu nilai (bold) — dua text right-aligned yang di-stack.
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...INK);
       const remVal = formatCurrency(data.outstanding);
-      const remValW = doc.getTextWidth(remVal) * (9 / 8);
-      doc.text(remLabel, pageWidth - marginX - remValW - doc.getTextWidth(remLabel), y);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.setTextColor(...INK);
-      doc.text(remVal, pageWidth - marginX, y, { align: 'right' });
-    }
-    y += 6;
-
-    for (const p of data.payments) {
-      ensureSpace(9);
+      doc.text(remVal, innerR, cy, { align: 'right' });
+      const remValW = doc.getTextWidth(remVal);
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.5);
+      doc.setFontSize(8);
+      doc.setTextColor(...INK_SOFT);
+      doc.text('Sisa: ', innerR - remValW, cy, { align: 'right' });
+    }
+
+    // garis bawah header
+    doc.setDrawColor(...LINE);
+    doc.setLineWidth(0.2);
+    doc.line(marginX, boxTop + headerH, marginX + contentW, boxTop + headerH);
+
+    // baris pembayaran
+    let rowTop = boxTop + headerH;
+    for (const p of data.payments) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
       doc.setTextColor(...INK_FAINT);
-      doc.text(formatDate(p.date), marginX, y);
+      doc.text(formatDate(p.date), innerL, rowTop + 4);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.setTextColor(...INK);
-      const descW = contentW - 40;
+      const descW = contentW - padX * 2 - 42;
       const pLines = doc.splitTextToSize(p.description || 'Pembayaran', descW);
-      doc.text(pLines[0], marginX, y + 4.2);
+      doc.text(pLines[0], innerL, rowTop + 8.4);
       doc.setTextColor(...EMERALD);
-      doc.text(`+${formatCurrency(p.amount)}`, pageWidth - marginX, y + 4.2, { align: 'right' });
-      y += 9;
+      doc.text(`+${formatCurrency(p.amount)}`, innerR, rowTop + 8.4, { align: 'right' });
+      rowTop += rowH;
       doc.setDrawColor(...LINE);
       doc.setLineWidth(0.15);
-      doc.line(marginX, y - 1.5, marginX + contentW, y - 1.5);
+      doc.line(marginX, rowTop, marginX + contentW, rowTop);
     }
-    // total terbayar
-    ensureSpace(8);
+
+    // total terbayar (footer bar)
+    doc.setFillColor(247, 248, 252);
+    doc.rect(marginX + 0.2, rowTop + 0.2, contentW - 0.4, totalH - 0.4, 'F');
+    const ty = rowTop + totalH / 2 + 1.4;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(...INK_SOFT);
-    doc.text('Total Terbayar', marginX, y + 3);
+    doc.text('Total Terbayar', innerL, ty);
     doc.setTextColor(...INK);
-    doc.text(formatCurrency(data.totalPaid), pageWidth - marginX, y + 3, { align: 'right' });
-    y += 12;
+    doc.text(formatCurrency(data.totalPaid), innerR, ty, { align: 'right' });
+
+    y = boxTop + boxH + 10;
   }
 
   // ── Detail ──
   sectionHead('Detail');
   const kv: [string, string][] = [
-    ['Kategori', 'Financing (FIN) — Piutang Talangan'],
+    ['Kategori', 'Financing (FIN)'],
     ['Status', data.isFullySettled ? 'Lunas' : 'Posted · Belum lunas'],
     ['Nilai pokok', formatCurrency(data.amount)],
     ['Sudah dibayar', formatCurrency(data.totalPaid)],
@@ -1586,9 +1612,9 @@ export async function exportLoanReceivablePDF(data: LoanReceivablePDFData) {
         continue;
       }
 
-      // resolve URL & muat gambar
+      // resolve URL (same-origin, bebas CORS) & muat gambar
       try {
-        const resolved = await resolveDeliverableAttachmentUrl(
+        const resolved = await resolveEmbeddableAttachmentUrl(
           { url: att.url, path: att.path, resource_type: att.resource_type ?? 'image', filename: att.filename },
           300
         );

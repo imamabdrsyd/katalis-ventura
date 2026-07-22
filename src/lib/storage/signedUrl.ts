@@ -120,6 +120,38 @@ export async function resolveDeliverableAttachmentUrl(
 }
 
 /**
+ * Resolve URL lampiran yang AMAN untuk di-`fetch()` lalu dibaca byte-nya
+ * (mis. untuk ditanam ke PDF via canvas). Berbeda dari
+ * `resolveDeliverableAttachmentUrl` yang bisa mengembalikan URL langsung ke
+ * `res.cloudinary.com` — URL itu diblokir CORS saat di-fetch dari browser.
+ *
+ * - Lampiran Cloudinary kita (upload publik lama ATAU authenticated) → lewat
+ *   proxy same-origin `/api/transactions/attachments/download` (bebas CORS,
+ *   tetap dicek auth+role di server).
+ * - Legacy Supabase Storage → signed URL same-origin (aman di-fetch).
+ * - Lainnya (blob:, eksternal) → apa adanya.
+ */
+export async function resolveEmbeddableAttachmentUrl(
+  att: DeliverableAttachment,
+  ttlSeconds?: number
+): Promise<string> {
+  const rawUrl = att.url ?? '';
+  if (!rawUrl || rawUrl.startsWith('blob:')) return rawUrl;
+
+  if (isCloudinaryAttachmentUrl(rawUrl) && att.path) {
+    const params = new URLSearchParams({
+      public_id: att.path,
+      resource_type: att.resource_type ?? 'image',
+      type: isCloudinaryAuthenticatedUrl(rawUrl) ? 'authenticated' : 'upload',
+      filename: att.filename ?? 'lampiran',
+    });
+    return `/api/transactions/attachments/download?${params.toString()}`;
+  }
+
+  return resolveAttachmentUrl(rawUrl, ttlSeconds);
+}
+
+/**
  * Picu unduhan file lampiran.
  * - Cloudinary `authenticated`: lewat proxy server same-origin (Content-Disposition
  *   attachment) — hindari kegagalan CORS saat fetch langsung ke res.cloudinary.com.
