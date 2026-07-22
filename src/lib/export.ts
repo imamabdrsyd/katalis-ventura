@@ -1260,9 +1260,21 @@ async function loadImageForEmbed(
   maxSize = 900
 ): Promise<{ dataUrl: string; width: number; height: number } | null> {
   try {
-    // credentials disertakan agar proxy same-origin (/api/.../download) menerima
-    // cookie auth Supabase; URL eksternal mengabaikan ini tanpa efek samping.
-    const res = await fetch(url, { credentials: 'include' });
+    // Kirim cookie HANYA untuk URL same-origin (mis. proxy /api/.../download).
+    // Untuk URL lintas-origin (signed Supabase Storage / Cloudinary publik) yang
+    // membalas `Access-Control-Allow-Origin: *`, menyertakan credentials justru
+    // MEMBLOKIR request (wildcard ACAO tak boleh dipakai bersama credentials) —
+    // ini penyebab gambar legacy Supabase gagal dimuat. Auth-nya sudah ada di
+    // query-string signed URL, jadi credentials tak diperlukan.
+    let sameOrigin = url.startsWith('/');
+    if (!sameOrigin) {
+      try {
+        sameOrigin = new URL(url, window.location.href).origin === window.location.origin;
+      } catch {
+        sameOrigin = false;
+      }
+    }
+    const res = await fetch(url, sameOrigin ? { credentials: 'include' } : { mode: 'cors' });
     if (!res.ok) return null;
     const blob = await res.blob();
 
@@ -1298,6 +1310,14 @@ async function loadImageForEmbed(
   }
 }
 
+type AccountTypeCode = 'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENSE';
+
+interface PdfJournalAccount {
+  code: string;
+  name: string;
+  type?: AccountTypeCode | null;
+}
+
 export interface LoanReceivablePDFData {
   businessName: string;
   transactionNumber: string;
@@ -1308,13 +1328,22 @@ export interface LoanReceivablePDFData {
   totalPaid: number;
   outstanding: number;
   isFullySettled: boolean;
-  debitAccount: { code: string; name: string } | null;
-  creditAccount: { code: string; name: string } | null;
+  debitAccount: PdfJournalAccount | null;
+  creditAccount: PdfJournalAccount | null;
   payments: { date: string; description: string; amount: number }[];
   attachments: TransactionAttachment[];
   createdByName?: string | null;
   notes?: string | null;
 }
+
+// Label + warna badge per tipe akun (senada ACCOUNT_TYPE_BG di modal detail).
+const ACCOUNT_TYPE_BADGE: Record<AccountTypeCode, { label: string; fill: [number, number, number]; text: [number, number, number] }> = {
+  ASSET: { label: 'Asset', fill: [238, 244, 255], text: [37, 99, 168] },
+  LIABILITY: { label: 'Liability', fill: [254, 243, 224], text: [180, 120, 20] },
+  EQUITY: { label: 'Equity', fill: [243, 238, 254], text: [124, 92, 214] },
+  REVENUE: { label: 'Revenue', fill: [232, 247, 238], text: [22, 130, 90] },
+  EXPENSE: { label: 'Expense', fill: [254, 238, 238], text: [200, 70, 70] },
+};
 
 const INDIGO: [number, number, number] = [79, 70, 229];
 const EMERALD: [number, number, number] = [5, 150, 105];
@@ -1460,15 +1489,17 @@ export async function exportLoanReceivablePDF(data: LoanReceivablePDFData) {
   // ── Jurnal double-entry ──
   sectionHead('Jurnal Double-Entry');
   const rowH = 9;                 // tinggi baris (lebih lega, tak mepet)
-  const badgeLabel = 'Asset';     // title-case, senada pratinjau
-  const drawJournalRow = (side: string, acc: { code: string; name: string } | null) => {
+  const drawJournalRow = (side: string, acc: PdfJournalAccount | null) => {
     ensureSpace(rowH + 1);
     const baseY = y + rowH / 2 + 1.2; // baseline teks di tengah baris
 
-    // badge tipe akun (hitung dulu supaya nama akun bisa dipotong agar tak tabrakan)
+    // badge tipe akun sesuai account_type sebenarnya (fallback Asset bila tak diketahui)
+    const badge = (acc?.type && ACCOUNT_TYPE_BADGE[acc.type]) || ACCOUNT_TYPE_BADGE.ASSET;
+
+    // hitung lebar badge dulu supaya nama akun bisa dipotong agar tak tabrakan
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(6.5);
-    const badgeW = doc.getTextWidth(badgeLabel) + 5;
+    const badgeW = doc.getTextWidth(badge.label) + 5;
     const badgeH = 4.6;
     const badgeX = pageWidth - marginX - badgeW;
     const badgeY = y + (rowH - badgeH) / 2;
@@ -1489,13 +1520,13 @@ export async function exportLoanReceivablePDF(data: LoanReceivablePDFData) {
     const nameStr = doc.splitTextToSize(acc?.name ?? 'Unknown', nameMaxW)[0];
     doc.text(nameStr, nameX, baseY);
 
-    // badge (bg lembut #eef4ff, teks biru lembut #2563a8)
-    doc.setFillColor(238, 244, 255);
+    // badge bertipe (warna & label sesuai account_type)
+    doc.setFillColor(...badge.fill);
     doc.roundedRect(badgeX, badgeY, badgeW, badgeH, 1, 1, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(6.5);
-    doc.setTextColor(37, 99, 168);
-    doc.text(badgeLabel, badgeX + badgeW / 2, badgeY + badgeH / 2 + 0.95, { align: 'center' });
+    doc.setTextColor(...badge.text);
+    doc.text(badge.label, badgeX + badgeW / 2, badgeY + badgeH / 2 + 0.95, { align: 'center' });
 
     y += rowH;
   };

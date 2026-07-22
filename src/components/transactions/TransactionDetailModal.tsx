@@ -466,10 +466,10 @@ export function TransactionDetailModal({
         outstanding,
         isFullySettled: settled,
         debitAccount: transaction.debit_account
-          ? { code: transaction.debit_account.account_code ?? '', name: transaction.debit_account.account_name ?? 'Unknown' }
+          ? { code: transaction.debit_account.account_code ?? '', name: transaction.debit_account.account_name ?? 'Unknown', type: transaction.debit_account.account_type ?? null }
           : null,
         creditAccount: transaction.credit_account
-          ? { code: transaction.credit_account.account_code ?? '', name: transaction.credit_account.account_name ?? 'Unknown' }
+          ? { code: transaction.credit_account.account_code ?? '', name: transaction.credit_account.account_name ?? 'Unknown', type: transaction.credit_account.account_type ?? null }
           : null,
         payments: paymentTxns.map((pt) => ({
           date: pt.date,
