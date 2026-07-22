@@ -1368,7 +1368,7 @@ export async function exportLoanReceivablePDF(data: LoanReceivablePDFData) {
   doc.setTextColor(...INK_FAINT);
   doc.text('Piutang Talangan', marginX, y + 6);
 
-  // kanan: nomor + tanggal + AXION
+  // kanan: nomor + tanggal (tanpa AXION — atas permintaan)
   doc.setFont('courier', 'bold');
   doc.setFontSize(9.5);
   doc.setTextColor(...INK);
@@ -1377,47 +1377,46 @@ export async function exportLoanReceivablePDF(data: LoanReceivablePDFData) {
   doc.setFontSize(8);
   doc.setTextColor(...INK_SOFT);
   doc.text(formatDateWithDay(data.date), pageWidth - marginX, y + 5.5, { align: 'right' });
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.setTextColor(...INK_FAINT);
-  doc.text('AXION', pageWidth - marginX, y + 10.5, { align: 'right', charSpace: 0.6 });
 
   y += 15;
   doc.setDrawColor(...INK);
   doc.setLineWidth(0.5);
   doc.line(marginX, y, marginX + contentW, y);
-  y += 12;
+  y += 13;
 
   // ── Hero: nilai + status ──
+  const heroTop = y;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
   doc.setTextColor(...INK_FAINT);
-  doc.text('NILAI TRANSAKSI', marginX, y, { charSpace: 0.4 });
+  doc.text('NILAI TRANSAKSI', marginX, heroTop, { charSpace: 0.4 });
 
-  // chip kanan
-  const chipLabel = 'FINANCING';
-  doc.setFontSize(7.5);
-  const chipW = doc.getTextWidth(chipLabel) + 7;
-  const chipX = pageWidth - marginX - chipW;
-  doc.setFillColor(238, 240, 254);
-  doc.roundedRect(chipX, y - 3.6, chipW, 5.4, 2.7, 2.7, 'F');
-  doc.setTextColor(...INDIGO);
-  doc.setFont('helvetica', 'bold');
-  doc.text(chipLabel, chipX + chipW / 2, y, { align: 'center' });
-
-  y += 8;
+  // nominal (beri jarak lebih lega dari label)
+  const amountY = heroTop + 11;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(24);
   doc.setTextColor(...INK);
-  doc.text(formatCurrency(data.amount), marginX, y);
+  doc.text(formatCurrency(data.amount), marginX, amountY);
 
-  // status di kanan sejajar nominal
+  // kanan: chip Financing (atas) + status (bawah), keduanya rata kanan & di-stack
+  const chipLabel = 'FINANCING';
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  const chipW = doc.getTextWidth(chipLabel) + 7;
+  const chipX = pageWidth - marginX - chipW;
+  const chipCY = heroTop + 1;
+  doc.setFillColor(238, 240, 254);
+  doc.roundedRect(chipX, chipCY - 3.8, chipW, 5.6, 2.8, 2.8, 'F');
+  doc.setTextColor(...INDIGO);
+  doc.text(chipLabel, chipX + chipW / 2, chipCY, { align: 'center' });
+
   const statusLabel = data.isFullySettled ? 'LUNAS' : 'POSTED';
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(...EMERALD);
-  doc.text(statusLabel, pageWidth - marginX, y - 1, { align: 'right', charSpace: 0.5 });
-  y += 9;
+  doc.text(statusLabel, pageWidth - marginX, chipCY + 7, { align: 'right', charSpace: 0.5 });
+
+  y = amountY + 8;
 
   // ── Deskripsi + pihak ──
   doc.setFont('helvetica', 'bold');
@@ -1580,70 +1579,108 @@ export async function exportLoanReceivablePDF(data: LoanReceivablePDFData) {
   y += 4;
 
   // ── Sumber dokumen (embed gambar) ──
+  // Muat semua gambar DULU (async) + hitung dimensi gambarnya, supaya kita bisa
+  // menjaga judul + caption + gambar tetap satu kesatuan di halaman yang sama
+  // (kalau tak muat, seluruh blok — termasuk judul section — pindah ke halaman
+  // berikutnya, bukan cuma gambarnya).
   if (data.attachments.length > 0) {
-    sectionHead('Sumber Dokumen');
+    type PreparedAttachment = {
+      filename: string;
+      captionMeta: string;
+      isPdf: boolean;
+      img: { dataUrl: string; width: number; height: number } | null;
+      drawW: number;
+      drawH: number;
+    };
+
+    const prepared: PreparedAttachment[] = [];
     for (const att of data.attachments) {
       const mime = (att.mime_type || '').toLowerCase();
       const fn = (att.filename || '').toLowerCase();
       const isPdf = mime.includes('pdf') || fn.endsWith('.pdf');
+      const sizeKB = att.size ? `${(att.size / 1024).toFixed(1)} KB` : '';
+      const typeStr = isPdf ? 'PDF' : (mime.split('/')[1] || 'gambar').toUpperCase();
+      const captionMeta = [sizeKB, typeStr].filter(Boolean).join(' · ');
 
-      // caption nama file + ukuran
-      ensureSpace(8);
+      let img: PreparedAttachment['img'] = null;
+      if (!isPdf) {
+        try {
+          const resolved = await resolveEmbeddableAttachmentUrl(
+            { url: att.url, path: att.path, resource_type: att.resource_type ?? 'image', filename: att.filename },
+            300
+          );
+          img = await loadImageForEmbed(resolved);
+        } catch {
+          img = null;
+        }
+      }
+
+      // hitung ukuran gambar (struk biasanya potret): lebar maks ~62% konten, tinggi maks 120mm
+      let drawW = 0;
+      let drawH = 0;
+      if (img) {
+        const maxW = Math.min(contentW * 0.62, 95);
+        const maxH = 120;
+        drawW = maxW;
+        drawH = (img.height / img.width) * drawW;
+        if (drawH > maxH) {
+          drawH = maxH;
+          drawW = (img.width / img.height) * drawH;
+        }
+      }
+
+      prepared.push({ filename: att.filename || 'Lampiran', captionMeta, isPdf, img, drawW, drawH });
+    }
+
+    // Tinggi tiap blok caption (nama + meta) ~ 11mm; ditambah tinggi gambar/pesan.
+    const captionBlockH = 11;
+    const usableBottom = footerY - 6;
+
+    // Section header hanya digambar sekali; tapi ia harus menempel pada
+    // lampiran PERTAMA. Cek apakah header + lampiran pertama muat di sisa halaman.
+    const firstBlockH = captionBlockH + (prepared[0].img ? prepared[0].drawH + 8 : 8);
+    // sectionHead butuh ~12mm; total blok pertama termasuk header:
+    if (y + 12 + firstBlockH > usableBottom) {
+      doc.addPage();
+      y = 20;
+    }
+    sectionHead('Sumber Dokumen');
+
+    for (let i = 0; i < prepared.length; i++) {
+      const p = prepared[i];
+      const blockH = captionBlockH + (p.img ? p.drawH + 8 : 8);
+      // lampiran ke-2 dst: kalau tak muat, pindah halaman bersama caption+gambarnya.
+      if (i > 0 && y + blockH > usableBottom) {
+        doc.addPage();
+        y = 20;
+      }
+
+      // caption: nama file + meta
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8.5);
       doc.setTextColor(...INK);
-      const nameLines = doc.splitTextToSize(att.filename || 'Lampiran', contentW);
+      const nameLines = doc.splitTextToSize(p.filename, contentW);
       doc.text(nameLines, marginX, y);
       y += nameLines.length * 4.4;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7.5);
       doc.setTextColor(...INK_FAINT);
-      const sizeKB = att.size ? `${(att.size / 1024).toFixed(1)} KB` : '';
-      const typeStr = isPdf ? 'PDF' : (mime.split('/')[1] || 'gambar').toUpperCase();
-      doc.text([sizeKB, typeStr].filter(Boolean).join(' · '), marginX, y + 3.6);
+      doc.text(p.captionMeta, marginX, y + 3.6);
       y += 7;
 
-      if (isPdf) {
+      if (p.isPdf) {
         doc.setFont('helvetica', 'italic');
         doc.setFontSize(8);
         doc.setTextColor(...INK_SOFT);
         doc.text('(Lampiran PDF tidak ditanam — buka di aplikasi untuk melihat.)', marginX, y);
         y += 8;
-        continue;
-      }
-
-      // resolve URL (same-origin, bebas CORS) & muat gambar
-      try {
-        const resolved = await resolveEmbeddableAttachmentUrl(
-          { url: att.url, path: att.path, resource_type: att.resource_type ?? 'image', filename: att.filename },
-          300
-        );
-        const img = await loadImageForEmbed(resolved);
-        if (img) {
-          // batasi lebar ke setengah lebar konten (struk biasanya potret), maks tinggi 120mm
-          const maxW = Math.min(contentW * 0.62, 95);
-          const maxH = 120;
-          let drawW = maxW;
-          let drawH = (img.height / img.width) * drawW;
-          if (drawH > maxH) {
-            drawH = maxH;
-            drawW = (img.width / img.height) * drawH;
-          }
-          ensureSpace(drawH + 6);
-          // bingkai tipis
-          doc.setDrawColor(...LINE);
-          doc.setLineWidth(0.2);
-          doc.roundedRect(marginX, y, drawW, drawH, 1.5, 1.5, 'S');
-          doc.addImage(img.dataUrl, 'JPEG', marginX, y, drawW, drawH, undefined, 'FAST');
-          y += drawH + 8;
-        } else {
-          doc.setFont('helvetica', 'italic');
-          doc.setFontSize(8);
-          doc.setTextColor(...INK_SOFT);
-          doc.text('(Gambar lampiran gagal dimuat.)', marginX, y);
-          y += 8;
-        }
-      } catch {
+      } else if (p.img) {
+        doc.setDrawColor(...LINE);
+        doc.setLineWidth(0.2);
+        doc.roundedRect(marginX, y, p.drawW, p.drawH, 1.5, 1.5, 'S');
+        doc.addImage(p.img.dataUrl, 'JPEG', marginX, y, p.drawW, p.drawH, undefined, 'FAST');
+        y += p.drawH + 8;
+      } else {
         doc.setFont('helvetica', 'italic');
         doc.setFontSize(8);
         doc.setTextColor(...INK_SOFT);
