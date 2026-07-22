@@ -437,35 +437,36 @@ export function CatalogPanel({
                     </p>
                   )}
                 </div>
-                <p className={`text-sm text-indigo-600 dark:text-indigo-400 font-medium tabular-nums whitespace-nowrap flex-shrink-0 transition-all duration-200 ${
-                  canManage ? '-mr-3 group-hover:-mr-2' : ''
-                }`}>
-                  {formatCurrency(item.default_price)}
-                  {item.unit && <span className="text-gray-400 dark:text-gray-500 font-normal"> / {item.unit}</span>}
-                </p>
-                {/* Slot aksi menciut ke 0 saat idle (harga mepet ke pojok kanan) lalu
-                    melebar saat hover untuk memberi ruang tombol — geseran harga
-                    disengaja & dianimasikan, bukan lompatan mendadak. */}
-                {canManage && (
-                  <div className="flex justify-end items-center gap-0.5 flex-shrink-0 overflow-hidden w-0 group-hover:w-[4.25rem] opacity-0 group-hover:opacity-100 transition-all duration-200">
-                    {item.item_type === 'product' && item.track_stock && (
+                {/* Harga + slot aksi dibungkus satu wrapper agar jaraknya lepas
+                    dari gap-3 baris. Slot aksi menciut ke 0 saat idle (harga mepet
+                    pojok) lalu melebar saat hover; wrapper gap-1 menjaga harga
+                    hanya sedikit di kiri ikon. */}
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium tabular-nums whitespace-nowrap">
+                    {formatCurrency(item.default_price)}
+                    {item.unit && <span className="text-gray-400 dark:text-gray-500 font-normal"> / {item.unit}</span>}
+                  </p>
+                  {canManage && (
+                    <div className="flex justify-end items-center gap-0.5 overflow-hidden w-0 group-hover:w-[4.25rem] opacity-0 group-hover:opacity-100 transition-all duration-200">
+                      {item.item_type === 'product' && item.track_stock && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openAddStock(item); }}
+                          className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                          title={tc.addStockTitle}
+                        >
+                          <PackagePlus className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       <button
-                        onClick={(e) => { e.stopPropagation(); openAddStock(item); }}
-                        className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
-                        title={tc.addStockTitle}
+                        onClick={(e) => { e.stopPropagation(); setDeleteItem(item); }}
+                        className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                        title={tc.delete}
                       >
-                        <PackagePlus className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
-                    )}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setDeleteItem(item); }}
-                      className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-                      title={tc.delete}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
