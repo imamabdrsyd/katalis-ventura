@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { useReportData } from './useReportData';
 import { calculateCashFlow } from '@/lib/calculations';
+import { runExportToast } from '@/lib/exportToast';
 import {
   getFinancialCache,
   upsertFinancialCache,
@@ -73,18 +74,22 @@ export function useCashFlow(): UseCashFlowReturn {
 
   const handleExportPDF = useCallback(async () => {
     if (!activeBusiness) return;
-    const { exportCashFlowToPDF } = await import('@/lib/export');
-    const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
-    exportCashFlowToPDF(activeBusiness.business_name, periodLabel, cashFlow);
     setShowExportMenu(false);
+    const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    await runExportToast('pdf', async () => {
+      const { exportCashFlowToPDF } = await import('@/lib/export');
+      await exportCashFlowToPDF(activeBusiness.business_name, periodLabel, cashFlow);
+    });
   }, [activeBusiness, startDate, endDate, cashFlow, setShowExportMenu]);
 
   const handleExportExcel = useCallback(async () => {
     if (!activeBusiness) return;
-    const { exportCashFlowToExcel } = await import('@/lib/export');
-    const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
-    exportCashFlowToExcel(activeBusiness.business_name, periodLabel, cashFlow);
     setShowExportMenu(false);
+    const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    await runExportToast('excel', async () => {
+      const { exportCashFlowToExcel } = await import('@/lib/export');
+      await exportCashFlowToExcel(activeBusiness.business_name, periodLabel, cashFlow);
+    });
   }, [activeBusiness, startDate, endDate, cashFlow, setShowExportMenu]);
 
   return {

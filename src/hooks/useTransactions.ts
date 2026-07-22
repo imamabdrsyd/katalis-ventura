@@ -670,29 +670,41 @@ export function useTransactions() {
   // Bulk post selected draft transactions
   const handleBulkPost = useCallback(async () => {
     if (selectedIds.size === 0) return;
+    const draftIds = [...selectedIds].filter((id) => {
+      const tx = transactions.find((t) => t.id === id);
+      return tx?.status === 'draft';
+    });
+    if (draftIds.length === 0) {
+      toast.warning('Tidak ada transaksi draft yang dipilih');
+      return;
+    }
+
     setSaving(true);
-    try {
-      const draftIds = [...selectedIds].filter((id) => {
-        const tx = transactions.find((t) => t.id === id);
-        return tx?.status === 'draft';
-      });
-      if (draftIds.length === 0) {
-        toast.warning('Tidak ada transaksi draft yang dipilih');
-        return;
-      }
+    // Satu toast loading → sukses/gagal untuk seluruh proses posting.
+    const task = (async () => {
       // Konversi Persediaan→HPP tertunda dari Save Draft (hanya draft yang
       // lolos precheck posting) — sebelum status flip.
       await convertPendingSoldStock(draftIds);
-      const { posted, skipped } = await transactionsApi.postTransactionsBulk(draftIds);
+      const result = await transactionsApi.postTransactionsBulk(draftIds);
       setSelectedIds(new Set());
       setSelectMode(false);
       invalidateTransactions();
-      toast.success(`${posted} transaksi berhasil diposting`);
-      if (skipped > 0) {
-        toast.warning(`${skipped} draft dilewati karena belum lengkap (akun/jumlah kosong)`);
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Gagal memposting transaksi');
+      return result;
+    })();
+
+    toast.promise(task, {
+      loading: 'Memposting transaksi…',
+      success: ({ posted, skipped }) =>
+        skipped > 0
+          ? `${posted} transaksi diposting, ${skipped} dilewati (belum lengkap)`
+          : `${posted} transaksi berhasil diposting`,
+      error: (err) => (err instanceof Error && err.message ? err.message : 'Gagal memposting transaksi'),
+    });
+
+    try {
+      await task;
+    } catch {
+      // Error sudah ditampilkan oleh toast.promise; di sini hanya jaga saving.
     } finally {
       setSaving(false);
     }

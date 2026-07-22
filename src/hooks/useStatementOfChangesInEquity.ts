@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useReportData } from './useReportData';
 import { useLanguage } from '@/context/LanguageContext';
 import { calculateStatementOfChangesInEquity } from '@/lib/calculations';
+import { runExportToast } from '@/lib/exportToast';
 import * as accountsApi from '@/lib/api/accounts';
 import * as contactsApi from '@/lib/api/contacts';
 import type { Account, Contact, SCEData } from '@/types';
@@ -100,16 +101,20 @@ export function useStatementOfChangesInEquity(): UseSCEReturn {
 
   const handleExportPDF = useCallback(async () => {
     if (!activeBusiness) return;
-    const { exportSCEToPDF } = await import('@/lib/export');
-    exportSCEToPDF(activeBusiness.business_name, periodLabel, sce);
     setShowExportMenu(false);
+    await runExportToast('pdf', async () => {
+      const { exportSCEToPDF } = await import('@/lib/export');
+      await exportSCEToPDF(activeBusiness.business_name, periodLabel, sce);
+    });
   }, [activeBusiness, periodLabel, sce, setShowExportMenu]);
 
   const handleExportExcel = useCallback(async () => {
     if (!activeBusiness) return;
-    const { exportSCEToExcel } = await import('@/lib/export');
-    exportSCEToExcel(activeBusiness.business_name, periodLabel, sce);
     setShowExportMenu(false);
+    await runExportToast('excel', async () => {
+      const { exportSCEToExcel } = await import('@/lib/export');
+      await exportSCEToExcel(activeBusiness.business_name, periodLabel, sce);
+    });
   }, [activeBusiness, periodLabel, sce, setShowExportMenu]);
 
   return {

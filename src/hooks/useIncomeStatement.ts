@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { useReportData } from './useReportData';
+import { runExportToast } from '@/lib/exportToast';
 import { calculateFinancialSummary, calculateIncomeStatementMetrics, applyDepreciationToSummary, extractIncomeStatementLineItems, buildFixedAssetCostMap } from '@/lib/calculations';
 import { calculateDepreciationSummary } from '@/lib/accounting/depreciation';
 import * as accountsApi from '@/lib/api/accounts';
@@ -144,18 +145,22 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
 
   const handleExportPDF = useCallback(async () => {
     if (!activeBusiness) return;
-    const { exportIncomeStatementToPDF } = await import('@/lib/export');
-    const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
-    await exportIncomeStatementToPDF(activeBusiness.business_name, periodLabel, summary, transactionsByCategory, lineItems);
     setShowExportMenu(false);
+    const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    await runExportToast('pdf', async () => {
+      const { exportIncomeStatementToPDF } = await import('@/lib/export');
+      await exportIncomeStatementToPDF(activeBusiness.business_name, periodLabel, summary, transactionsByCategory, lineItems);
+    });
   }, [activeBusiness, startDate, endDate, summary, transactionsByCategory, lineItems, setShowExportMenu]);
 
   const handleExportExcel = useCallback(async () => {
     if (!activeBusiness) return;
-    const { exportIncomeStatementToExcel } = await import('@/lib/export');
-    const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
-    exportIncomeStatementToExcel(activeBusiness.business_name, periodLabel, summary);
     setShowExportMenu(false);
+    const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    await runExportToast('excel', async () => {
+      const { exportIncomeStatementToExcel } = await import('@/lib/export');
+      await exportIncomeStatementToExcel(activeBusiness.business_name, periodLabel, summary);
+    });
   }, [activeBusiness, startDate, endDate, summary, setShowExportMenu]);
 
   return {

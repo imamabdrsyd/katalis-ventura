@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { calculateBalanceSheet, calculateCapTable, filterTransactionsUpToDate } from '@/lib/calculations';
+import { runExportToast } from '@/lib/exportToast';
 import * as accountsApi from '@/lib/api/accounts';
 import * as transactionsApi from '@/lib/api/transactions';
 import {
@@ -146,26 +147,30 @@ export function useBalanceSheet(): UseBalanceSheetReturn {
 
   const handleExportPDF = useCallback(async () => {
     if (!activeBusiness) return;
-    const { exportBalanceSheetToPDF } = await import('@/lib/export');
+    setShowExportMenu(false);
     const dateLabel = new Date(asOfDate).toLocaleDateString('id-ID', {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
     });
-    exportBalanceSheetToPDF(activeBusiness.business_name, dateLabel, balanceSheet);
-    setShowExportMenu(false);
+    await runExportToast('pdf', async () => {
+      const { exportBalanceSheetToPDF } = await import('@/lib/export');
+      await exportBalanceSheetToPDF(activeBusiness.business_name, dateLabel, balanceSheet);
+    });
   }, [activeBusiness, asOfDate, balanceSheet]);
 
   const handleExportExcel = useCallback(async () => {
     if (!activeBusiness) return;
-    const { exportBalanceSheetToExcel } = await import('@/lib/export');
+    setShowExportMenu(false);
     const dateLabel = new Date(asOfDate).toLocaleDateString('id-ID', {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
     });
-    exportBalanceSheetToExcel(activeBusiness.business_name, dateLabel, balanceSheet);
-    setShowExportMenu(false);
+    await runExportToast('excel', async () => {
+      const { exportBalanceSheetToExcel } = await import('@/lib/export');
+      await exportBalanceSheetToExcel(activeBusiness.business_name, dateLabel, balanceSheet);
+    });
   }, [activeBusiness, asOfDate, balanceSheet]);
 
   return {
