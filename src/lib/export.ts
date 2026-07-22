@@ -1509,6 +1509,7 @@ export async function exportLoanReceivablePDF(data: LoanReceivablePDFData) {
   // ── Riwayat pembayaran ── (kartu berbingkai, mirip pratinjau)
   if (data.payments.length > 0) {
     sectionHead('Riwayat Pembayaran');
+    y += 3;                   // beri napas ekstra antara judul section & kartu
 
     const padX = 5;           // padding kiri/kanan dalam kartu
     const innerL = marginX + padX;
