@@ -2,9 +2,11 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import type { FinancialSummary, BalanceSheetData, Transaction, SCEData } from '@/types';
-import { formatCurrency } from './utils';
+import { formatCurrency, formatDate, formatDateWithDay } from './utils';
 import { calculateIncomeStatementMetrics } from './calculations';
 import type { IncomeStatementLineItems } from './calculations';
+import type { TransactionAttachment } from '@/types';
+import { resolveDeliverableAttachmentUrl } from './storage/signedUrl';
 
 // --- Income Statement PDF helpers ---
 
@@ -1241,4 +1243,413 @@ export function exportSCEToExcel(
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Perubahan Ekuitas');
   XLSX.writeFile(wb, `Laporan-Perubahan-Ekuitas-${businessName}-${period}.xlsx`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BUKTI PEMBERIAN PINJAMAN (Piutang Talangan) — single-transaction PDF
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Muat gambar lampiran, kompres jadi JPEG, dan kembalikan data URL + dimensi asli
+ * (dalam piksel) agar rasio aspek bisa dipertahankan saat ditanam ke PDF.
+ * Berbeda dari `loadImageAsBase64` (untuk favicon kecil), ini menjaga resolusi
+ * tetap layak dibaca (maxSize besar) untuk struk/bukti transfer.
+ */
+async function loadImageForEmbed(
+  url: string,
+  maxSize = 900
+): Promise<{ dataUrl: string; width: number; height: number } | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+
+    const originalDataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('image decode failed'));
+      el.src = originalDataUrl;
+    });
+
+    const scale = Math.min(1, maxSize / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.max(1, Math.round(img.naturalWidth * scale));
+    const h = Math.max(1, Math.round(img.naturalHeight * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+
+    return { dataUrl: canvas.toDataURL('image/jpeg', 0.82), width: w, height: h };
+  } catch {
+    return null;
+  }
+}
+
+export interface LoanReceivablePDFData {
+  businessName: string;
+  transactionNumber: string;
+  date: string;
+  description: string;
+  counterpartyName: string | null;
+  amount: number;
+  totalPaid: number;
+  outstanding: number;
+  isFullySettled: boolean;
+  debitAccount: { code: string; name: string } | null;
+  creditAccount: { code: string; name: string } | null;
+  payments: { date: string; description: string; amount: number }[];
+  attachments: TransactionAttachment[];
+  createdByName?: string | null;
+  notes?: string | null;
+}
+
+const INDIGO: [number, number, number] = [79, 70, 229];
+const EMERALD: [number, number, number] = [5, 150, 105];
+const INK: [number, number, number] = [26, 26, 46];
+const INK_SOFT: [number, number, number] = [75, 85, 99];
+const INK_FAINT: [number, number, number] = [139, 143, 163];
+const LINE: [number, number, number] = [226, 228, 238];
+
+/**
+ * Generate PDF "BUKTI PEMBERIAN PINJAMAN" untuk transaksi piutang talangan.
+ * Menanam gambar lampiran (bukti transfer) langsung ke dalam PDF.
+ */
+export async function exportLoanReceivablePDF(data: LoanReceivablePDFData) {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const marginX = 18;
+  const contentW = pageWidth - marginX * 2;
+  const footerY = pageHeight - 14;
+  let y = 20;
+
+  // Pastikan ruang cukup sebelum menggambar blok; buat halaman baru bila perlu.
+  const ensureSpace = (needed: number) => {
+    if (y + needed > footerY - 6) {
+      doc.addPage();
+      y = 20;
+    }
+  };
+
+  const sectionHead = (label: string) => {
+    ensureSpace(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...INK_FAINT);
+    doc.text(label.toUpperCase(), marginX, y, { charSpace: 0.4 });
+    y += 2.5;
+    doc.setDrawColor(...LINE);
+    doc.setLineWidth(0.2);
+    doc.line(marginX, y, marginX + contentW, y);
+    y += 6;
+  };
+
+  // ── Masthead ──
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.setTextColor(...INK);
+  doc.text('BUKTI PEMBERIAN PINJAMAN', marginX, y, { charSpace: 0.3 });
+
+  doc.setFontSize(9.5);
+  doc.setTextColor(...INDIGO);
+  doc.text(data.businessName, marginX, y + 6);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...INK_FAINT);
+  doc.text('Piutang Talangan', marginX, y + 11);
+
+  // kanan: nomor + tanggal + AXION
+  doc.setFont('courier', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(...INK);
+  doc.text(`#${data.transactionNumber}`, pageWidth - marginX, y, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...INK_SOFT);
+  doc.text(formatDateWithDay(data.date), pageWidth - marginX, y + 5, { align: 'right' });
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...INK_FAINT);
+  doc.text('AXION', pageWidth - marginX, y + 10, { align: 'right', charSpace: 0.6 });
+
+  y += 15;
+  doc.setDrawColor(...INK);
+  doc.setLineWidth(0.5);
+  doc.line(marginX, y, marginX + contentW, y);
+  y += 12;
+
+  // ── Hero: nilai + status ──
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...INK_FAINT);
+  doc.text('NILAI TRANSAKSI', marginX, y, { charSpace: 0.4 });
+
+  // chip kanan
+  const chipLabel = 'FINANCING';
+  doc.setFontSize(7.5);
+  const chipW = doc.getTextWidth(chipLabel) + 7;
+  const chipX = pageWidth - marginX - chipW;
+  doc.setFillColor(238, 240, 254);
+  doc.roundedRect(chipX, y - 3.6, chipW, 5.4, 2.7, 2.7, 'F');
+  doc.setTextColor(...INDIGO);
+  doc.setFont('helvetica', 'bold');
+  doc.text(chipLabel, chipX + chipW / 2, y, { align: 'center' });
+
+  y += 8;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(24);
+  doc.setTextColor(...INK);
+  doc.text(formatCurrency(data.amount), marginX, y);
+
+  // status di kanan sejajar nominal
+  const statusLabel = data.isFullySettled ? 'LUNAS' : 'POSTED';
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...EMERALD);
+  doc.text(statusLabel, pageWidth - marginX, y - 1, { align: 'right', charSpace: 0.5 });
+  y += 9;
+
+  // ── Deskripsi + pihak ──
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...INK);
+  const descLines = doc.splitTextToSize(data.description || '-', contentW);
+  doc.text(descLines, marginX, y);
+  y += descLines.length * 5.2 + 1.5;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...INK_SOFT);
+  const party = data.counterpartyName
+    ? `${data.counterpartyName}  ·  Penerima Talangan`
+    : 'Penerima Talangan';
+  doc.text(party, marginX, y);
+  y += 10;
+
+  // ── Jurnal double-entry ──
+  sectionHead('Jurnal Double-Entry');
+  const drawJournalRow = (side: string, acc: { code: string; name: string } | null) => {
+    ensureSpace(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...INK_FAINT);
+    doc.text(side.toUpperCase(), marginX, y, { charSpace: 0.4 });
+    doc.setFont('courier', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...INK_FAINT);
+    doc.text(acc?.code ?? '—', marginX + 22, y);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(...INK);
+    doc.text(acc?.name ?? 'Unknown', marginX + 36, y);
+    // badge tipe akun di kanan
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    const typeLabel = 'ASSET';
+    const badgeW = doc.getTextWidth(typeLabel) + 5;
+    const badgeX = pageWidth - marginX - badgeW;
+    doc.setFillColor(238, 244, 255);
+    doc.roundedRect(badgeX, y - 3.2, badgeW, 4.8, 1.2, 1.2, 'F');
+    doc.setTextColor(37, 99, 168);
+    doc.text(typeLabel, badgeX + badgeW / 2, y, { align: 'center' });
+    y += 7;
+  };
+  drawJournalRow('Debit', data.debitAccount);
+  doc.setDrawColor(...LINE);
+  doc.setLineWidth(0.2);
+  doc.line(marginX, y - 3.5, marginX + contentW, y - 3.5);
+  drawJournalRow('Kredit', data.creditAccount);
+  y += 5;
+
+  // ── Riwayat pembayaran ──
+  if (data.payments.length > 0) {
+    sectionHead('Riwayat Pembayaran');
+    // header box (sisa)
+    ensureSpace(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...INK_FAINT);
+    doc.text('RIWAYAT', marginX, y, { charSpace: 0.3 });
+    if (!data.isFullySettled) {
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...INK_SOFT);
+      doc.setFontSize(8);
+      const remLabel = 'Sisa: ';
+      const remVal = formatCurrency(data.outstanding);
+      const remValW = doc.getTextWidth(remVal) * (9 / 8);
+      doc.text(remLabel, pageWidth - marginX - remValW - doc.getTextWidth(remLabel), y);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...INK);
+      doc.text(remVal, pageWidth - marginX, y, { align: 'right' });
+    }
+    y += 6;
+
+    for (const p of data.payments) {
+      ensureSpace(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(...INK_FAINT);
+      doc.text(formatDate(p.date), marginX, y);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...INK);
+      const descW = contentW - 40;
+      const pLines = doc.splitTextToSize(p.description || 'Pembayaran', descW);
+      doc.text(pLines[0], marginX, y + 4.2);
+      doc.setTextColor(...EMERALD);
+      doc.text(`+${formatCurrency(p.amount)}`, pageWidth - marginX, y + 4.2, { align: 'right' });
+      y += 9;
+      doc.setDrawColor(...LINE);
+      doc.setLineWidth(0.15);
+      doc.line(marginX, y - 1.5, marginX + contentW, y - 1.5);
+    }
+    // total terbayar
+    ensureSpace(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...INK_SOFT);
+    doc.text('Total Terbayar', marginX, y + 3);
+    doc.setTextColor(...INK);
+    doc.text(formatCurrency(data.totalPaid), pageWidth - marginX, y + 3, { align: 'right' });
+    y += 12;
+  }
+
+  // ── Detail ──
+  sectionHead('Detail');
+  const kv: [string, string][] = [
+    ['Kategori', 'Financing (FIN) — Piutang Talangan'],
+    ['Status', data.isFullySettled ? 'Lunas' : 'Posted · Belum lunas'],
+    ['Nilai pokok', formatCurrency(data.amount)],
+    ['Sudah dibayar', formatCurrency(data.totalPaid)],
+    ['Sisa piutang', formatCurrency(data.outstanding)],
+  ];
+  if (data.createdByName) {
+    kv.push(['Dibuat oleh', `${data.createdByName} — ${formatDate(data.date)}`]);
+  }
+  if (data.notes) kv.push(['Catatan', data.notes]);
+  for (const [k, v] of kv) {
+    ensureSpace(6);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...INK_FAINT);
+    doc.text(k, marginX, y);
+    doc.setTextColor(...INK);
+    const vLines = doc.splitTextToSize(v, contentW - 48);
+    doc.text(vLines, marginX + 48, y);
+    y += Math.max(1, vLines.length) * 4.6 + 1.4;
+  }
+  y += 4;
+
+  // ── Sumber dokumen (embed gambar) ──
+  if (data.attachments.length > 0) {
+    sectionHead('Sumber Dokumen');
+    for (const att of data.attachments) {
+      const mime = (att.mime_type || '').toLowerCase();
+      const fn = (att.filename || '').toLowerCase();
+      const isPdf = mime.includes('pdf') || fn.endsWith('.pdf');
+
+      // caption nama file + ukuran
+      ensureSpace(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.setTextColor(...INK);
+      const nameLines = doc.splitTextToSize(att.filename || 'Lampiran', contentW);
+      doc.text(nameLines, marginX, y);
+      y += nameLines.length * 4.4;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(...INK_FAINT);
+      const sizeKB = att.size ? `${(att.size / 1024).toFixed(1)} KB` : '';
+      const typeStr = isPdf ? 'PDF' : (mime.split('/')[1] || 'gambar').toUpperCase();
+      doc.text([sizeKB, typeStr].filter(Boolean).join(' · '), marginX, y + 3.6);
+      y += 7;
+
+      if (isPdf) {
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8);
+        doc.setTextColor(...INK_SOFT);
+        doc.text('(Lampiran PDF tidak ditanam — buka di aplikasi untuk melihat.)', marginX, y);
+        y += 8;
+        continue;
+      }
+
+      // resolve URL & muat gambar
+      try {
+        const resolved = await resolveDeliverableAttachmentUrl(
+          { url: att.url, path: att.path, resource_type: att.resource_type ?? 'image', filename: att.filename },
+          300
+        );
+        const img = await loadImageForEmbed(resolved);
+        if (img) {
+          // batasi lebar ke setengah lebar konten (struk biasanya potret), maks tinggi 120mm
+          const maxW = Math.min(contentW * 0.62, 95);
+          const maxH = 120;
+          let drawW = maxW;
+          let drawH = (img.height / img.width) * drawW;
+          if (drawH > maxH) {
+            drawH = maxH;
+            drawW = (img.width / img.height) * drawH;
+          }
+          ensureSpace(drawH + 6);
+          // bingkai tipis
+          doc.setDrawColor(...LINE);
+          doc.setLineWidth(0.2);
+          doc.roundedRect(marginX, y, drawW, drawH, 1.5, 1.5, 'S');
+          doc.addImage(img.dataUrl, 'JPEG', marginX, y, drawW, drawH, undefined, 'FAST');
+          y += drawH + 8;
+        } else {
+          doc.setFont('helvetica', 'italic');
+          doc.setFontSize(8);
+          doc.setTextColor(...INK_SOFT);
+          doc.text('(Gambar lampiran gagal dimuat.)', marginX, y);
+          y += 8;
+        }
+      } catch {
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8);
+        doc.setTextColor(...INK_SOFT);
+        doc.text('(Gambar lampiran gagal dimuat.)', marginX, y);
+        y += 8;
+      }
+    }
+  }
+
+  // ── Footer di setiap halaman ──
+  const faviconBase64 = await loadImageAsBase64('/images/favicon.png');
+  const pageCount = (doc as any).internal.getNumberOfPages();
+  const logoSize = 4.5;
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setDrawColor(...LINE);
+    doc.setLineWidth(0.2);
+    doc.line(marginX, footerY - 4, pageWidth - marginX, footerY - 4);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(...INK_FAINT);
+    doc.text(
+      `Dicetak oleh AXION pada ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+      marginX,
+      footerY
+    );
+    doc.text(`Halaman ${i} dari ${pageCount}`, pageWidth - marginX, footerY, { align: 'right' });
+    if (faviconBase64) {
+      doc.addImage(faviconBase64, 'JPEG', (pageWidth - logoSize) / 2, footerY - 3.2, logoSize, logoSize);
+    }
+  }
+  doc.setTextColor(0, 0, 0);
+
+  doc.save(`Bukti-Pemberian-Pinjaman-${data.transactionNumber}.pdf`);
 }

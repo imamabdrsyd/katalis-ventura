@@ -28,7 +28,10 @@ import {
 import { useInvoiceFromTransactions } from '@/hooks/useInvoiceFromTransactions';
 import { CreateInvoiceFromTransactionsModal } from '@/components/invoices/CreateInvoiceFromTransactionsModal';
 import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
-import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, RotateCcw, ZoomIn, ZoomOut, Receipt, CirclePlus, ChevronLeft, ChevronRight, Maximize2, Loader2, Copy } from 'lucide-react';
+import { isAdvanceReceivableAccount } from '@/lib/accounting/classification';
+import { exportLoanReceivablePDF } from '@/lib/export';
+import { useBusinessContext } from '@/context/BusinessContext';
+import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, RotateCcw, ZoomIn, ZoomOut, Receipt, CirclePlus, ChevronLeft, ChevronRight, Maximize2, Loader2, Copy, Printer } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { updateTransaction } from '@/lib/api/transactions';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
@@ -112,6 +115,7 @@ export function TransactionDetailModal({
   hasNext = false,
 }: TransactionDetailModalProps) {
   const { t } = useLanguage();
+  const { activeBusiness } = useBusinessContext();
   const { linkedTransactionIds, canInvoiceTransactions, canManage: canManageInvoices } =
     useInvoiceFromTransactions();
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
@@ -180,6 +184,7 @@ export function TransactionDetailModal({
   const [partialError, setPartialError] = useState('');
   const [previewAttachment, setPreviewAttachment] = useState<TransactionAttachment | null>(null);
   const [previewScale, setPreviewScale] = useState(1);
+  const [printingPdf, setPrintingPdf] = useState(false);
   const tagInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
@@ -346,6 +351,22 @@ export function TransactionDetailModal({
     return allTransactions.filter((t) => soldIds.has(t.id));
   }, [transaction?.meta?.sold_stock_ids, allTransactions]);
 
+  // Piutang talangan (advance receivable) — transaksi asli (bukan entry pelunasan)
+  // yang debit-nya ke akun talangan. Hanya transaksi ini yang menampilkan tombol print.
+  const isLoanReceivable = useMemo(() => {
+    if (!transaction) return false;
+    if (transaction.meta?.settlement_of_transaction_id) return false; // ini entry pelunasan, bukan piutang
+    if (transaction.is_multi_line && transaction.journal_lines) {
+      return transaction.journal_lines.some(
+        (line) => line.debit_amount > 0 && isAdvanceReceivableAccount(line.account)
+      );
+    }
+    if (transaction.is_double_entry) {
+      return isAdvanceReceivableAccount(transaction.debit_account);
+    }
+    return false;
+  }, [transaction]);
+
   // Only show warning if EARN transaction has no sold stock linked (user skipped InventoryPicker)
   const showWarning = matchingWarning && !warningDismissed && !!onCreateFollowUp
     && (!transaction?.meta?.sold_stock_ids || transaction.meta.sold_stock_ids.length === 0);
@@ -408,6 +429,62 @@ export function TransactionDetailModal({
   const isDraft = transaction.status === 'draft';
   const showActions = onEdit || onDelete || onDuplicate || (onPost && isDraft);
 
+  const handlePrintLoanReceivablePdf = async () => {
+    if (printingPdf) return;
+    setPrintingPdf(true);
+    try {
+      // Kumpulkan pembayaran: partial settlements + pelunasan penuh (bila ada)
+      const partialIds = getPartialSettlementIds(transaction);
+      const settled = isSettled(transaction);
+      const finalSettlementId = transaction.meta?.settled_by_transaction_id;
+      const paymentIds = finalSettlementId && !partialIds.includes(finalSettlementId)
+        ? [...partialIds, finalSettlementId]
+        : partialIds;
+      const paymentTxns = (allTransactions?.filter((t) => paymentIds.includes(t.id)) ?? [])
+        .sort((a, b) => a.date.localeCompare(b.date));
+      const outstanding = getOutstandingAmount(transaction, paymentTxns);
+      const totalPaid = Math.max(0, transaction.amount - outstanding);
+
+      // Nama pembuat (fallback ke state yang sudah ada, lalu fetch bila perlu)
+      let createdByName = creatorName;
+      if (!createdByName && transaction.created_by) {
+        try {
+          createdByName = await getProfileName(transaction.created_by);
+        } catch {
+          createdByName = null;
+        }
+      }
+
+      await exportLoanReceivablePDF({
+        businessName: activeBusiness?.business_name ?? '',
+        transactionNumber: transaction.transaction_number ?? transaction.id.slice(0, 8),
+        date: transaction.date,
+        description: transaction.description || transaction.name || '-',
+        counterpartyName: transaction.name || null,
+        amount: transaction.amount,
+        totalPaid,
+        outstanding,
+        isFullySettled: settled,
+        debitAccount: transaction.debit_account
+          ? { code: transaction.debit_account.account_code ?? '', name: transaction.debit_account.account_name ?? 'Unknown' }
+          : null,
+        creditAccount: transaction.credit_account
+          ? { code: transaction.credit_account.account_code ?? '', name: transaction.credit_account.account_name ?? 'Unknown' }
+          : null,
+        payments: paymentTxns.map((pt) => ({
+          date: pt.date,
+          description: pt.description || pt.name || 'Pembayaran',
+          amount: pt.amount,
+        })),
+        attachments,
+        createdByName,
+        notes: transaction.notes || null,
+      });
+    } finally {
+      setPrintingPdf(false);
+    }
+  };
+
   const openAttachmentPreview = (attachment: TransactionAttachment) => {
     setPreviewAttachment(attachment);
     setPreviewScale(1);
@@ -423,18 +500,41 @@ export function TransactionDetailModal({
     setTimeout(() => onDuplicate?.(transaction), 200);
   };
 
+  // Tombol print PDF — khusus piutang talangan. Tampil di header samping tombol
+  // Duplicate (di mobile & desktop) untuk mengekspor bukti pemberian pinjaman.
+  const headerPrintAction = isLoanReceivable ? (
+    <button
+      onClick={handlePrintLoanReceivablePdf}
+      disabled={printingPdf}
+      title="Cetak bukti pemberian pinjaman (PDF)"
+      aria-label="Cetak bukti pemberian pinjaman (PDF)"
+      className="flex p-2 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-wait"
+    >
+      {printingPdf ? (
+        <Loader2 className="w-[18px] h-[18px] animate-spin" />
+      ) : (
+        <Printer className="w-[18px] h-[18px]" />
+      )}
+    </button>
+  ) : null;
+
   // Di desktop, tombol Duplicate menggantikan icon close di header (close diwakili
   // klik di luar modal / Esc). Di mobile, tombol close tetap ada & Duplicate muncul
   // di footer.
-  const headerDuplicateAction = onDuplicate ? (
-    <button
-      onClick={handleDuplicate}
-      title={t.transactionDetail.duplicateBtn}
-      aria-label={t.transactionDetail.duplicateBtn}
-      className="hidden sm:flex p-2 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-    >
-      <Copy className="w-[18px] h-[18px]" />
-    </button>
+  const headerActions = (headerPrintAction || onDuplicate) ? (
+    <>
+      {headerPrintAction}
+      {onDuplicate && (
+        <button
+          onClick={handleDuplicate}
+          title={t.transactionDetail.duplicateBtn}
+          aria-label={t.transactionDetail.duplicateBtn}
+          className="hidden sm:flex p-2 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        >
+          <Copy className="w-[18px] h-[18px]" />
+        </button>
+      )}
+    </>
   ) : undefined;
 
   const actionButtons = showActions ? (
@@ -530,7 +630,7 @@ export function TransactionDetailModal({
         </div>
       }
       footer={actionButtons}
-      headerAction={headerDuplicateAction}
+      headerAction={headerActions}
       closeButtonClassName={onDuplicate ? 'sm:hidden' : ''}
       sideNavPrev={onNavigatePrev ? { onClick: onNavigatePrev, disabled: !hasPrev, title: 'Transaksi sebelumnya (←)' } : undefined}
       sideNavNext={onNavigateNext ? { onClick: onNavigateNext, disabled: !hasNext, title: 'Transaksi berikutnya (→)' } : undefined}
