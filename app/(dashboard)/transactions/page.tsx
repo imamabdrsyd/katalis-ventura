@@ -1020,6 +1020,7 @@ function TransactionsPageInner() {
         title={multiLineOcrPrefill ? 'Jurnal Multi-Item (dari Struk)' : t.transactions.addTransaction}
         size={multiLineOcrPrefill ? '3xl' : 'md'}
         sidePanel={ocrSidePanel}
+        confirmOnClose
       >
         {multiLineOcrPrefill ? (
           <MultiLineJournalForm
@@ -1061,6 +1062,7 @@ function TransactionsPageInner() {
         }
         size={multiLineOcrPrefill ? '3xl' : 'md'}
         sidePanel={ocrSidePanel}
+        confirmOnClose
       >
         {multiLineOcrPrefill ? (
           <MultiLineJournalForm
@@ -1099,6 +1101,7 @@ function TransactionsPageInner() {
         onClose={() => setEditTransaction(null)}
         title={t.transactions.editTransaction}
         size={editTransaction?.is_multi_line ? '3xl' : editTransaction?.is_double_entry ? 'lg' : 'md'}
+        confirmOnClose
       >
         {editTransaction?.is_multi_line ? (
           <MultiLineJournalForm

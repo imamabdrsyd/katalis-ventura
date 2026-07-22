@@ -48,6 +48,10 @@ export const en: Translations = {
     businessNotFound: 'Business Not Found',
     setupBusiness: 'Setup Business',
     selectBusinessFirst: 'Please select a business first.',
+    unsavedTitle: 'Discard changes?',
+    unsavedMessage: 'You have unsaved changes. Are you sure you want to close?',
+    keepEditing: 'Keep editing',
+    discardChanges: 'Discard',
   },
 
   nav: {

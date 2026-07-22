@@ -188,6 +188,7 @@ export function FloatingQuickAdd({
         title={multiLineOcrPrefill ? 'Jurnal Multi-Item (dari Struk)' : 'Add Transaction'}
         size={multiLineOcrPrefill ? '3xl' : 'md'}
         sidePanel={ocrSidePanel}
+        confirmOnClose
       >
         {multiLineOcrPrefill ? (
           <MultiLineJournalForm

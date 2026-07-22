@@ -49,6 +49,10 @@ export interface Translations {
     businessNotFound: string;
     setupBusiness: string;
     selectBusinessFirst: string;
+    unsavedTitle: string;
+    unsavedMessage: string;
+    keepEditing: string;
+    discardChanges: string;
   };
 
   // Navigation & Layout

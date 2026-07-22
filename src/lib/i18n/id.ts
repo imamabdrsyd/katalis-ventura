@@ -48,6 +48,10 @@ export const id: Translations = {
     businessNotFound: 'Bisnis Tidak Ditemukan',
     setupBusiness: 'Setup Bisnis',
     selectBusinessFirst: 'Pilih bisnis terlebih dahulu.',
+    unsavedTitle: 'Buang perubahan?',
+    unsavedMessage: 'Ada perubahan yang belum disimpan. Yakin mau menutup?',
+    keepEditing: 'Lanjut edit',
+    discardChanges: 'Buang',
   },
 
   nav: {

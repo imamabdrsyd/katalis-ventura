@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useLanguage } from '@/context/LanguageContext';
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
 
@@ -35,6 +36,15 @@ interface ModalProps {
    * dan klik terlihat "tidak bereaksi".
    */
   zIndexClassName?: string;
+  /**
+   * Bila true, menutup modal (Escape / klik backdrop / tombol X) saat ada
+   * input yang sudah disentuh akan memunculkan konfirmasi "buang perubahan?"
+   * dulu — mencegah kehilangan data di form panjang. Deteksi dirty otomatis
+   * dari event input/change di dalam modal, jadi caller tidak perlu melacak
+   * state form-nya sendiri. Submit yang berhasil biasanya menutup modal via
+   * `isOpen=false` (bukan lewat guard ini), jadi tidak terganggu.
+   */
+  confirmOnClose?: boolean;
 }
 
 const SIZE_CLASSES: Record<ModalSize, string> = {
@@ -46,14 +56,27 @@ const SIZE_CLASSES: Record<ModalSize, string> = {
   '3xl': 'sm:max-w-3xl',
 };
 
-export function Modal({ isOpen, onClose, title, children, footer, size = 'md', sideNavPrev, sideNavNext, sidePanel, headerAction, closeButtonClassName = '', zIndexClassName = 'z-50' }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, footer, size = 'md', sideNavPrev, sideNavNext, sidePanel, headerAction, closeButtonClassName = '', zIndexClassName = 'z-50', confirmOnClose = false }: ModalProps) {
+  const { t } = useLanguage();
   const [mounted, setMounted] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  // Dirty = user sudah menyentuh salah satu input di dalam modal. Disimpan di
+  // ref (bukan state) karena tidak perlu re-render — hanya dibaca saat menutup.
+  const isDirtyRef = useRef(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Reset dirty & konfirmasi tiap kali modal dibuka ulang.
+  useEffect(() => {
+    if (isOpen) {
+      isDirtyRef.current = false;
+      setShowCloseConfirm(false);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -66,9 +89,24 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', s
     return () => clearTimeout(timeout);
   }, [isOpen]);
 
+  // Permintaan tutup terpusat — lewat guard bila confirmOnClose aktif & dirty.
+  const requestClose = () => {
+    if (confirmOnClose && isDirtyRef.current) {
+      setShowCloseConfirm(true);
+      return;
+    }
+    onClose();
+  };
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      // Escape saat konfirmasi tampil = batalkan konfirmasi, jangan tutup modal.
+      if (showCloseConfirm) {
+        setShowCloseConfirm(false);
+        return;
+      }
+      requestClose();
     };
 
     if (isOpen) {
@@ -80,14 +118,16 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', s
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = '';
     };
-  }, [isOpen, onClose]);
+    // requestClose sengaja tidak di-deps (closure baru tiap render tidak masalah
+    // karena listener dipasang ulang saat isOpen/showCloseConfirm berubah).
+  }, [isOpen, onClose, confirmOnClose, showCloseConfirm]);
 
   if (!shouldRender || !mounted) return null;
 
   const modalContent = (
     <div
       className={`fixed inset-0 bg-black/50 ${zIndexClassName} flex items-center justify-center p-4 transition-opacity duration-200 ease-out ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-      onClick={onClose}
+      onClick={requestClose}
     >
       {/* Side nav — prev */}
       {sideNavPrev && (
@@ -132,7 +172,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', s
             <div className="flex items-center gap-1">
               {headerAction}
               <button
-                onClick={onClose}
+                onClick={requestClose}
                 className={`p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${closeButtonClassName}`}
               >
                 <svg
@@ -152,12 +192,51 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', s
               </button>
             </div>
           </div>
-          <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0">
+          {/*
+            Deteksi dirty: setiap input/change dari elemen di dalam body modal
+            menandai form kotor. Capture phase agar tetap tertangkap walau child
+            memanggil stopPropagation di handler-nya sendiri.
+          */}
+          <div
+            className="px-5 py-4 overflow-y-auto flex-1 min-h-0"
+            onInputCapture={confirmOnClose ? () => { isDirtyRef.current = true; } : undefined}
+            onChangeCapture={confirmOnClose ? () => { isDirtyRef.current = true; } : undefined}
+          >
             {children}
           </div>
           {footer && (
             <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-700 shrink-0">
               {footer}
+            </div>
+          )}
+
+          {/* Overlay konfirmasi buang perubahan — nempel di dalam panel modal */}
+          {showCloseConfirm && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-[2px] p-6">
+              <div className="w-full max-w-xs bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 p-5 text-center">
+                <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">
+                  {t.common.unsavedTitle}
+                </h3>
+                <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
+                  {t.common.unsavedMessage}
+                </p>
+                <div className="mt-4 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCloseConfirm(false)}
+                    className="btn-ghost flex-1"
+                  >
+                    {t.common.keepEditing}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowCloseConfirm(false); onClose(); }}
+                    className="btn-danger flex-1"
+                  >
+                    {t.common.discardChanges}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>

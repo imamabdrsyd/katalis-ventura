@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 17 Juli 2026 (§3.9 baru: Tabel Data — kolom resizable drag-from-header + divider antar kolom opsional/transparan di `TransactionList`)
+> Terakhir diupdate: 22 Juli 2026 (§3.3 interaction states + §2 utility mobile/webview + §3.6 Modal `confirmOnClose` dirty-guard)
 
 ---
 
@@ -364,6 +364,15 @@ Komponen: [`src/components/ui/Modal.tsx`](../src/components/ui/Modal.tsx). Selal
   di PaymentModal: Mode Kasir `z-[80]` menimbun modal `z-50`). Tangga z-index yang
   dipakai sekarang: `z-50` modal biasa · `z-[60]` lightbox AiKnowledgePanel ·
   `z-[80]` overlay Mode Kasir · `z-[90]` PaymentModal.
+- **`confirmOnClose`** (opsional, default `false`): pasang di modal yang membungkus
+  **form panjang** (mis. Tambah/Edit Transaksi). Saat aktif, menutup modal via **Escape,
+  klik backdrop, atau tombol X** memunculkan konfirmasi inline "Buang perubahan?" bila
+  ada input yang sudah disentuh — mencegah kehilangan data karena salah tap. Deteksi
+  dirty **otomatis** lewat event `input`/`change` di dalam modal, jadi caller tidak perlu
+  melacak state form-nya sendiri (heuristik: ketik lalu hapus lagi tetap terhitung dirty).
+  **Tidak** menjaga tombol "Batal/Cancel" di dalam form — itu aksi dismiss yang disengaja.
+  Submit sukses menutup modal via `isOpen=false`, bukan lewat guard, jadi tak terganggu.
+  Teks konfirmasi dwibahasa via `t.common.unsavedTitle/unsavedMessage/keepEditing/discardChanges`.
 
 ### 3.7 Input / Form Field — Floating Label (Google/Material "underline")
 
