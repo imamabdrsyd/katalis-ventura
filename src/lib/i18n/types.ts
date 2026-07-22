@@ -324,6 +324,18 @@ export interface Translations {
     priceLabel: string;
     unitLabel: string;
     unitPlaceholder: string;
+    // Kategori layanan akomodasi (migr 124)
+    serviceRoleLabel: string;
+    serviceRoleMain: string;
+    serviceRoleMainHint: string;
+    serviceRoleAddon: string;
+    serviceRoleAddonHint: string;
+    rateKindLabel: string;
+    rateKindWeekday: string;
+    rateKindWeekend: string;
+    rateKindMonthly: string;
+    priceLabelPerNight: string;
+    priceLabelPerMonth: string;
     revenueAccountLabel: string;
     revenueAccountHint: string;
     descriptionLabel: string;

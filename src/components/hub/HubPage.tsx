@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Box, ShoppingCart, CalendarDays } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { Tabs } from '@/components/ui/Tabs';
@@ -10,6 +10,7 @@ import { StockLogPanel } from './StockLogPanel';
 import { CashierLauncher } from './cashier/CashierLauncher';
 import { CalendarLauncher } from './calendar/CalendarLauncher';
 import { UnitManagerButton } from './calendar/UnitManagerButton';
+import { CalendarUnitProvider } from './calendar/CalendarUnitContext';
 
 type HubTab = 'catalog' | 'operational';
 type HubVariant = 'pos' | 'calendar';
@@ -25,6 +26,13 @@ type HubVariant = 'pos' | 'calendar';
  * Info AI — fakta bisnis yang dibaca AI saat membalas lead di semua channel.
  */
 export function HubPage({ variant }: { variant: HubVariant }) {
+  // Hub kalender: bungkus dgn provider unit supaya tab Kalender & Services berbagi
+  // unit aktif yang sama (unit = level teratas). POS tak perlu.
+  const inner = <HubPageInner variant={variant} />;
+  return variant === 'calendar' ? <CalendarUnitProvider>{inner}</CalendarUnitProvider> : inner;
+}
+
+function HubPageInner({ variant }: { variant: HubVariant }): ReactNode {
   const { t } = useLanguage();
   const th = t.hub;
   // Kalender tampil duluan (tab operasional) — Katalog tetap default utk POS.
@@ -83,9 +91,11 @@ export function HubPage({ variant }: { variant: HubVariant }) {
         </div>
       </div>
 
-      {/* Tab Katalog: toolbar full-width di atas; grid (kiri) + Info AI (kanan) */}
+      {/* Tab Katalog / Layanan: toolbar full-width di atas; grid (kiri) + Info AI (kanan).
+          Di hub kalender, item di-scope ke unit aktif (variant='calendar'). */}
       {tab === 'catalog' && (
         <CatalogPanel
+          scopeToUnit={variant === 'calendar'}
           onStockChanged={() => setStockLogKey((k) => k + 1)}
           aside={
             <div className="space-y-6">

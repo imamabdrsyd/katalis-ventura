@@ -2,7 +2,16 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createAdminClient } from '@/lib/supabase-server';
 import { isReservedSlug } from '@/lib/utils/slugUtils';
-import { groupIntoRanges } from '@/lib/rates';
+import {
+  groupIntoRanges,
+  buildUnitBaseRates,
+  resolveNightPriceV2,
+  buildOverrideMap,
+  listDatesInRange,
+  type NightRate,
+  type RateOverride,
+} from '@/lib/rates';
+import type { CatalogItem } from '@/types';
 import { PublicOmniChannelPage } from '@/components/public/PublicOmniChannelPage';
 import type { BusinessOmniChannel, OmniChannelLink } from '@/types';
 import type {
@@ -169,64 +178,77 @@ export default async function PublicSlugPage({ params }: Props) {
       }))
     : [];
 
-  // Kalender harga (migr 117): bila salah satu unit fisik bisnis punya sumber
-  // harga terpasang, halaman publik memakai harga yang SAMA dengan kalender
-  // operasional — default_price item + override per tanggal (dikonversi ke
-  // pricing rules, menang atas rules manual karena priceForDate ambil match
-  // pertama). Set harga sekali di kalender unit → widget publik ikut.
-  // MVP: multi-unit hanya menampilkan headline harga dari unit pertama
-  // (widget publik cuma dukung satu default_price/price_unit).
+  // Kalender harga (migr 124): base price berasal dari item main-service unit
+  // pertama per kategori hari (weekday Sen–Jum / weekend Sab+Min), di-override per
+  // tanggal (unit_daily_rates). Server mengekspansi harga per tanggal untuk 365
+  // hari ke depan → pricing rules per rentang, sehingga widget publik (first-match-
+  // wins) mencerminkan weekday/weekend + override tanpa perlu logika hari. Headline
+  // default_price = base weekday. Rate MONTHLY diteruskan agar widget bisa memakai
+  // harga bulanan saat calon tamu memilih rentang > 27 malam.
   let calendarDefaultPrice: number | null = null;
   let calendarPriceUnit: string | null = null;
+  let calendarMonthlyPrice: number | null = null;
   if (showPricing) {
     const { data: rateUnit } = await supabase
       .from('business_units')
-      .select('id, rate_item:catalog_items!business_units_rate_item_id_fkey(default_price, unit)')
+      .select('id')
       .eq('business_id', oc.business_id)
       .eq('is_active', true)
       .is('deleted_at', null)
-      .not('rate_item_id', 'is', null)
       .order('sort_order', { ascending: true })
       .limit(1)
       .maybeSingle();
 
-    const rateItem = rateUnit
-      ? (Array.isArray((rateUnit as any).rate_item) ? (rateUnit as any).rate_item[0] : (rateUnit as any).rate_item)
-      : null;
+    const unitId = (rateUnit as any)?.id as string | undefined;
+    if (unitId) {
+      // Item main-service unit → base rates weekday/weekend/monthly.
+      const { data: itemRows } = await supabase
+        .from('catalog_items')
+        .select('id, default_price, unit, is_active, service_role, rate_kind')
+        .eq('business_id', oc.business_id)
+        .eq('unit_id', unitId)
+        .eq('is_active', true)
+        .is('deleted_at', null);
 
-    if (rateUnit && rateItem) {
-      const today = new Date().toISOString().slice(0, 10);
-      const horizon = new Date();
-      horizon.setDate(horizon.getDate() + 365);
-      const { data: rateRows } = await supabase
-        .from('unit_daily_rates')
-        .select('date, price')
-        .eq('unit_id', (rateUnit as any).id)
-        .gte('date', today)
-        .lte('date', horizon.toISOString().slice(0, 10))
-        .order('date', { ascending: true });
+      const base = buildUnitBaseRates((itemRows ?? []) as unknown as CatalogItem[]);
+      const hasBase = base.weekday != null || base.weekend != null;
 
-      calendarDefaultPrice =
-        typeof rateItem.default_price === 'string'
-          ? parseFloat(rateItem.default_price)
-          : (rateItem.default_price ?? null);
-      calendarPriceUnit = (rateItem.unit as string | null) ?? 'malam';
+      if (hasBase) {
+        const today = new Date().toISOString().slice(0, 10);
+        const horizon = new Date();
+        horizon.setDate(horizon.getDate() + 365);
+        const horizonStr = horizon.toISOString().slice(0, 10);
 
-      const rateRanges = groupIntoRanges(
-        ((rateRows ?? []) as Array<{ date: string; price: number | string }>).map((r) => ({
-          date: r.date,
-          price: typeof r.price === 'string' ? parseFloat(r.price) : r.price,
-          overridden: true,
-        }))
-      ).map((r, i) => ({
-        id: `calendar-rate-${i}`,
-        date_from: r.start,
-        date_to: r.end,
-        price: r.price,
-        label: 'Harga khusus',
-      }));
+        const { data: rateRows } = await supabase
+          .from('unit_daily_rates')
+          .select('date, price')
+          .eq('unit_id', unitId)
+          .gte('date', today)
+          .lte('date', horizonStr)
+          .order('date', { ascending: true });
 
-      pricingRules = [...rateRanges, ...pricingRules];
+        const overrides: RateOverride[] = ((rateRows ?? []) as Array<{ date: string; price: number | string }>).map(
+          (r) => ({ date: r.date, price: typeof r.price === 'string' ? parseFloat(r.price) : r.price })
+        );
+        const overrideMap = buildOverrideMap(overrides);
+
+        // Ekspansi harga tiap tanggal (override > base by hari) → rentang ringkas.
+        const nights: NightRate[] = listDatesInRange(today, horizonStr).map((d) =>
+          resolveNightPriceV2(d, base, overrideMap)
+        );
+        const rateRanges = groupIntoRanges(nights).map((r, i) => ({
+          id: `calendar-rate-${i}`,
+          date_from: r.start,
+          date_to: r.end,
+          price: r.price,
+          label: r.overridden ? 'Harga khusus' : null,
+        }));
+
+        calendarDefaultPrice = base.weekday ?? base.weekend ?? null;
+        calendarMonthlyPrice = base.monthly;
+        calendarPriceUnit = ((itemRows ?? [])[0] as any)?.unit ?? 'malam';
+        pricingRules = [...rateRanges, ...pricingRules];
+      }
     }
   }
 
@@ -260,6 +282,7 @@ export default async function PublicSlugPage({ params }: Props) {
           : null)
       : null,
     price_unit: showPricing ? calendarPriceUnit ?? oc.price_unit ?? null : null,
+    monthly_price: showPricing ? calendarMonthlyPrice : null,
     pricing_rules: pricingRules,
     banner_url: oc.banner_url ?? null,
     featured_products: featuredProducts,

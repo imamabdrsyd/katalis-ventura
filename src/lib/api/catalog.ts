@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase';
-import type { CatalogItem, CatalogItemType } from '@/types';
+import type { CatalogItem, CatalogItemType, ServiceRole, RateKind } from '@/types';
 
 export interface CatalogItemInsert {
   business_id: string;
@@ -8,6 +8,9 @@ export interface CatalogItemInsert {
   item_type: CatalogItemType;
   default_price: number;
   unit?: string | null;
+  unit_id?: string | null;
+  service_role?: ServiceRole | null;
+  rate_kind?: RateKind | null;
   revenue_account_id?: string | null;
   sku?: string | null;
   image_url?: string | null;
@@ -29,6 +32,9 @@ export interface CatalogItemUpdate {
   item_type?: CatalogItemType;
   default_price?: number;
   unit?: string | null;
+  unit_id?: string | null;
+  service_role?: ServiceRole | null;
+  rate_kind?: RateKind | null;
   revenue_account_id?: string | null;
   sku?: string | null;
   image_url?: string | null;
@@ -48,10 +54,17 @@ const SELECT_WITH_ACCOUNT = `
   revenue_account:accounts!catalog_items_revenue_account_id_fkey(*)
 `;
 
-/** Ambil semua item katalog bisnis (belum dihapus), urut by sort_order lalu name */
+/**
+ * Ambil item katalog bisnis (belum dihapus), urut by sort_order lalu name.
+ *
+ * `unitId` (migr 124): scope layanan per unit fisik akomodasi.
+ *   - undefined → semua item bisnis (perilaku lama; POS/produk).
+ *   - string    → hanya item unit itu.
+ *   - null      → hanya item tanpa unit (produk / add-on lintas unit).
+ */
 export async function getCatalogItems(
   businessId: string,
-  opts?: { activeOnly?: boolean }
+  opts?: { activeOnly?: boolean; unitId?: string | null }
 ): Promise<CatalogItem[]> {
   const supabase = createClient();
   let query = supabase
@@ -62,6 +75,10 @@ export async function getCatalogItems(
 
   if (opts?.activeOnly) {
     query = query.eq('is_active', true);
+  }
+
+  if (opts && 'unitId' in opts) {
+    query = opts.unitId == null ? query.is('unit_id', null) : query.eq('unit_id', opts.unitId);
   }
 
   const { data, error } = await query

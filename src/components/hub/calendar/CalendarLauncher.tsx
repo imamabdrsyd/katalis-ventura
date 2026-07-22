@@ -11,18 +11,16 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { CalendarDays, Lock, Loader2, Sparkles, ArrowRight, Tag, Settings2, Home, Inbox } from 'lucide-react';
+import { Lock, Loader2, Sparkles, ArrowRight, Tag, Settings2, Home, Inbox, CalendarDays } from 'lucide-react';
 import { toast } from 'sonner';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { isManagerRole } from '@/lib/roles';
-import { isAccommodationSector } from '@/lib/businessSectors';
 import { getCatalogItems } from '@/lib/api/catalog';
 import { getAccounts } from '@/lib/api/accounts';
-import { getUnits } from '@/lib/api/units';
 import { countUnlinkedStayTransactions, getPendingBookings } from '@/lib/api/bookings';
-import { listDatesInRange } from '@/lib/rates';
-import type { Account, Booking, BusinessUnit, CatalogItem } from '@/types';
+import { listDatesInRange, buildUnitBaseRates } from '@/lib/rates';
+import type { Account, Booking, CatalogItem } from '@/types';
 import { useCalendar } from '@/hooks/useCalendar';
 import { useDailyRates } from '@/hooks/useDailyRates';
 import { Tabs } from '@/components/ui/Tabs';
@@ -33,6 +31,7 @@ import { IcalSyncModal } from './IcalSyncModal';
 import { RateEditorPanel } from './RateEditorPanel';
 import { UnitManagerModal } from './UnitManagerModal';
 import { HoldingPanel } from './HoldingPanel';
+import { useCalendarUnit } from './CalendarUnitContext';
 
 interface CalendarLauncherProps {
   /** Node header HubPage (di-passing dari atas) — pemilih unit + "Perlu tindak
@@ -41,17 +40,24 @@ interface CalendarLauncherProps {
 }
 
 export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
-  const { activeBusinessId, activeBusiness, user, userRole } = useBusinessContext();
+  const { activeBusinessId, user, userRole } = useBusinessContext();
   const { t } = useLanguage();
   const c = t.calendar;
   const canManage = isManagerRole(userRole);
-  const isAccommodation = isAccommodationSector(activeBusiness?.business_sector);
+  // Unit aktif dari context (dibagi dgn tab Services). enabled = manager + akomodasi.
+  const {
+    enabled: isAccommodation,
+    activeUnits,
+    selectedUnit,
+    setSelectedUnitId,
+    loading: unitsLoading,
+    reloadUnits,
+  } = useCalendarUnit();
 
-  const [units, setUnits] = useState<BusinessUnit[]>([]);
-  const [rateItems, setRateItems] = useState<CatalogItem[]>([]); // catalog items yg bisa jadi sumber harga
+  // Item layanan unit terpilih (untuk base rates weekday/weekend/monthly) + CoA.
+  const [unitItems, setUnitItems] = useState<CatalogItem[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loadingData, setLoadingData] = useState(true);
-  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Booking | null>(null);
@@ -77,22 +83,21 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
     }
   }, [activeBusinessId, isAccommodation]);
 
+  // Muat CoA + item layanan unit terpilih (base rates) tiap ganti unit.
   const loadData = useCallback(async () => {
-    if (!activeBusinessId) return;
+    if (!activeBusinessId || !selectedUnit) {
+      setUnitItems([]);
+      setLoadingData(false);
+      return;
+    }
     setLoadingData(true);
     try {
-      const [unitList, catalog, accs] = await Promise.all([
-        getUnits(activeBusinessId),
-        getCatalogItems(activeBusinessId, { activeOnly: true }),
+      const [catalog, accs] = await Promise.all([
+        getCatalogItems(activeBusinessId, { activeOnly: true, unitId: selectedUnit.id }),
         getAccounts(activeBusinessId),
       ]);
-      setUnits(unitList);
-      setRateItems(catalog);
+      setUnitItems(catalog);
       setAccounts(accs);
-      setSelectedUnitId((prev) => {
-        if (prev && unitList.some((u) => u.id === prev)) return prev;
-        return unitList.find((u) => u.is_active)?.id ?? unitList[0]?.id ?? null;
-      });
       refreshUnlinked();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : c.loadFailed);
@@ -100,19 +105,17 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
       setLoadingData(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeBusinessId, refreshUnlinked]);
+  }, [activeBusinessId, selectedUnit?.id, refreshUnlinked]);
 
   useEffect(() => {
     if (canManage && isAccommodation) loadData();
     else setLoadingData(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canManage, isAccommodation, activeBusinessId]);
+  }, [canManage, isAccommodation, selectedUnit?.id]);
 
-  const activeUnits = useMemo(() => units.filter((u) => u.is_active), [units]);
-  const selectedUnit = useMemo(
-    () => units.find((u) => u.id === selectedUnitId) ?? activeUnits[0] ?? null,
-    [units, selectedUnitId, activeUnits]
-  );
+  // Base rates weekday/weekend/monthly dari item main-service unit terpilih.
+  const baseRates = useMemo(() => buildUnitBaseRates(unitItems), [unitItems]);
+  const hasRateSource = baseRates.weekday != null || baseRates.weekend != null;
 
   const calendar = useCalendar({
     businessId: activeBusinessId ?? '',
@@ -125,6 +128,7 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
     businessId: activeBusinessId ?? '',
     userId: user?.id ?? '',
     unit: selectedUnit,
+    baseRates,
     gridStart: calendar.gridStart,
     gridEnd: calendar.gridEnd,
   });
@@ -174,7 +178,7 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
       setSelectedUnitId(unitId);
       clearSelection();
     },
-    [clearSelection]
+    [setSelectedUnitId, clearSelection]
   );
 
   // Klik sel (hanya sel kosong & future — dijaga CalendarBoard) → pilih tanggal
@@ -251,7 +255,7 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
     );
   }
 
-  if (loadingData) {
+  if (unitsLoading || loadingData) {
     return (
       <div className="flex items-center justify-center py-24 text-gray-400">
         <Loader2 className="w-6 h-6 animate-spin" />
@@ -283,9 +287,7 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
           onClose={() => setUnitManagerOpen(false)}
           businessId={activeBusinessId ?? ''}
           userId={user?.id ?? ''}
-          units={units}
-          rateItems={rateItems}
-          onChanged={loadData}
+          onChanged={reloadUnits}
         />
       </>
     );
@@ -387,8 +389,9 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
         }}
       />
 
-      {/* Unit belum punya sumber harga → set harga tak bisa; ajak ke Kelola Unit */}
-      {!selectedUnit.rate_item && (
+      {/* Unit belum punya item tarif (weekday/weekend) → harga tak bisa tampil;
+          ajak buat item layanan tarif di tab Layanan. */}
+      {!hasRateSource && (
         <div className="card-static p-4 flex flex-col sm:flex-row sm:items-center gap-3">
           <Tag className="w-5 h-5 text-primary-500 dark:text-primary-400 shrink-0" />
           <p className="text-sm text-gray-700 dark:text-gray-200 flex-1">
@@ -396,20 +399,13 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
               i === 0 ? [seg] : [<b key={i}>{selectedUnit.name}</b>, seg]
             )}
           </p>
-          <button
-            type="button"
-            onClick={() => setUnitManagerOpen(true)}
-            className="btn-primary shrink-0"
-          >
-            {c.manageUnitCta}
-          </button>
         </div>
       )}
 
       {/* Panel set harga — muncul saat ada tanggal terpilih (klik sel kosong future) */}
-      {selectedUnit.rate_item && selStart && (
+      {hasRateSource && selStart && (
         <RateEditorPanel
-          rateItem={selectedUnit.rate_item}
+          defaultPrice={baseRates.weekday ?? baseRates.weekend ?? 0}
           rangeStart={selStart <= (selEnd ?? selStart) ? selStart : (selEnd ?? selStart)}
           rangeEnd={selStart <= (selEnd ?? selStart) ? (selEnd ?? selStart) : selStart}
           excludeDates={bookedDates}
@@ -432,8 +428,8 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
         onToday={calendar.goToday}
         onJump={calendar.goToMonth}
         onOpenSync={() => setSyncOpen(true)}
-        pricingEnabled={!!selectedUnit.rate_item}
-        priceOf={selectedUnit.rate_item ? rates.priceOf : undefined}
+        pricingEnabled={hasRateSource}
+        priceOf={hasRateSource ? rates.priceOf : undefined}
         selectedDates={selectedDates}
       />
 
@@ -456,7 +452,7 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
         businessId={activeBusinessId ?? ''}
         units={activeUnits}
         onSynced={() => {
-          loadData();
+          reloadUnits();
           calendar.reload();
         }}
       />
@@ -466,9 +462,7 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
         onClose={() => setUnitManagerOpen(false)}
         businessId={activeBusinessId ?? ''}
         userId={user?.id ?? ''}
-        units={units}
-        rateItems={rateItems}
-        onChanged={loadData}
+        onChanged={reloadUnits}
       />
     </div>
   );

@@ -3,26 +3,28 @@
 /**
  * Hook kalender harga untuk SATU unit fisik: memuat override harga
  * (unit_daily_rates, key = unit_id) untuk rentang grid yang tampak +
- * menyediakan aksi set/reset harga per kumpulan tanggal. Harga default berasal
- * dari item sumber harga unit (business_units.rate_item_id, hydrated sbg
- * unit.rate_item). Harga final per tanggal diresolve via lib murni `@/lib/rates`.
+ * menyediakan aksi set/reset harga per kumpulan tanggal. Base price (migr 124)
+ * berasal dari item main-service unit per kategori hari (weekday/weekend),
+ * di-passing sbg `baseRates`. Harga final per tanggal diresolve via lib murni
+ * `@/lib/rates` (override > base by hari).
  */
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
 import type { BusinessUnit, UnitDailyRate } from '@/types';
 import { getDailyRates, upsertDailyRates, deleteDailyRates } from '@/lib/api/dailyRates';
-import { buildOverrideMap, resolveNightPrice, type NightRate } from '@/lib/rates';
+import { buildOverrideMap, resolveNightPriceV2, type NightRate, type UnitBaseRates } from '@/lib/rates';
 
 interface UseDailyRatesArgs {
   businessId: string;
   userId: string;
   unit: BusinessUnit | null; // unit fisik yang sedang dilihat kalendernya
+  baseRates: UnitBaseRates; // base weekday/weekend/monthly dari item main-service unit
   gridStart: Date;
   gridEnd: Date; // eksklusif
 }
 
-export function useDailyRates({ businessId, userId, unit, gridStart, gridEnd }: UseDailyRatesArgs) {
+export function useDailyRates({ businessId, userId, unit, baseRates, gridStart, gridEnd }: UseDailyRatesArgs) {
   const [overrides, setOverrides] = useState<UnitDailyRate[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -52,13 +54,16 @@ export function useDailyRates({ businessId, userId, unit, gridStart, gridEnd }: 
     [overrides]
   );
 
-  /** Harga final untuk satu tanggal grid; null bila unit/item sumber belum ada. */
+  // Unit punya harga bila minimal ada base weekday (atau override apa pun).
+  const hasBase = baseRates.weekday != null || baseRates.weekend != null;
+
+  /** Harga final untuk satu tanggal grid; null bila unit belum punya base harga. */
   const priceOf = useCallback(
     (dateISO: string): NightRate | null => {
-      if (!unit?.rate_item) return null;
-      return resolveNightPrice(dateISO, Number(unit.rate_item.default_price), overrideMap);
+      if (!unit || !hasBase) return null;
+      return resolveNightPriceV2(dateISO, baseRates, overrideMap);
     },
-    [unit, overrideMap]
+    [unit, hasBase, baseRates, overrideMap]
   );
 
   const setPrices = useCallback(

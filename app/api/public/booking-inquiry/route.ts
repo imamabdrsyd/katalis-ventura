@@ -15,6 +15,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { isAccommodationSector } from '@/lib/businessSectors';
+import { buildUnitBaseRates, quoteStayV2, type RateOverride } from '@/lib/rates';
+import type { CatalogItem } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,16 +70,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, created: false });
   }
 
-  // Unit sumber harga (yang harga publiknya ditampilkan) = tempat inquiry masuk.
-  // Fallback: unit aktif pertama.
+  // Unit tempat inquiry masuk = unit aktif pertama (harga publiknya ditampilkan).
   const { data: units } = await admin
     .from('business_units')
-    .select('id, rate_item_id, rate_item:catalog_items!business_units_rate_item_id_fkey(default_price)')
+    .select('id')
     .eq('business_id', businessId)
     .eq('is_active', true)
     .is('deleted_at', null)
     .order('sort_order', { ascending: true });
-  const unit = (units ?? []).find((u) => u.rate_item_id) ?? (units ?? [])[0];
+  const unit = (units ?? [])[0];
   if (!unit) return NextResponse.json({ ok: true, created: false });
 
   const guestName = (body?.guest_name?.trim() || 'Calon tamu (web)').slice(0, 120);
@@ -98,10 +99,31 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
   if (dup) return NextResponse.json({ ok: true, created: false, duplicate: true });
 
-  const rateItem = Array.isArray((unit as { rate_item?: unknown }).rate_item)
-    ? (unit as { rate_item?: Array<{ default_price?: number }> }).rate_item?.[0]
-    : (unit as { rate_item?: { default_price?: number } }).rate_item;
-  const pricePerNight = Number(rateItem?.default_price ?? 0);
+  // Harga = quote model baru (migr 124): base weekday/weekend by hari + override
+  // per tanggal; rentang > 27 malam pakai rate bulanan bila ada.
+  const { data: itemRows } = await admin
+    .from('catalog_items')
+    .select('id, default_price, is_active, service_role, rate_kind')
+    .eq('business_id', businessId)
+    .eq('unit_id', unit.id)
+    .eq('is_active', true)
+    .is('deleted_at', null);
+  const base = buildUnitBaseRates((itemRows ?? []) as unknown as CatalogItem[]);
+
+  const { data: rateRows } = await admin
+    .from('unit_daily_rates')
+    .select('date, price')
+    .eq('unit_id', unit.id)
+    .gte('date', checkIn)
+    .lt('date', checkOut);
+  const overrides: RateOverride[] = ((rateRows ?? []) as Array<{ date: string; price: number | string }>).map((r) => ({
+    date: r.date,
+    price: typeof r.price === 'string' ? parseFloat(r.price) : r.price,
+  }));
+
+  const quote = quoteStayV2(checkIn, checkOut, base, overrides);
+  const totalAmount = quote.total;
+  const pricePerNight = nights > 0 ? Math.round(totalAmount / nights) : 0;
 
   const { error: insErr } = await admin.from('bookings').insert({
     business_id: businessId,
@@ -109,7 +131,7 @@ export async function POST(req: NextRequest) {
     check_in: checkIn,
     check_out: checkOut,
     price_per_night: pricePerNight,
-    total_amount: pricePerNight * nights,
+    total_amount: totalAmount,
     guest_name: guestName,
     status: 'tentative',
     payment_status: 'unpaid',

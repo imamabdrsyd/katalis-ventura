@@ -29,6 +29,16 @@ function addDaysISO(iso: string, days: number): string {
   return d.toISOString().split('T')[0];
 }
 
+/** Selisih malam antara dua tanggal ISO (checkout eksklusif). */
+function nightsBetween(checkin: string, checkout: string): number {
+  const a = new Date(`${checkin}T00:00:00Z`).getTime();
+  const b = new Date(`${checkout}T00:00:00Z`).getTime();
+  return Math.round((b - a) / 86_400_000);
+}
+
+/** Rentang di atas ambang ini memakai harga bulanan (bila tersedia). */
+const MONTHLY_STAY_THRESHOLD = 27;
+
 function priceForDate(
   dateISO: string,
   rules: PublicPricingRule[],
@@ -80,6 +90,28 @@ export function computeRangePricing(
   if (!business.show_pricing || !checkin || !checkout || checkin >= checkout) {
     return { lines: [], total: 0, unit, has_price: false };
   }
+
+  // Long-stay: rentang > 27 malam & ada harga bulanan → satu line harga bulanan
+  // (mengikuti quoteStayV2 kalender). Sewa jangka panjang tak dijumlah harian.
+  const nights = nightsBetween(checkin, checkout);
+  if (nights > MONTHLY_STAY_THRESHOLD && business.monthly_price != null && business.monthly_price > 0) {
+    return {
+      lines: [
+        {
+          unit_price: business.monthly_price,
+          units: 1,
+          subtotal: business.monthly_price,
+          rule_label: 'Sewa bulanan',
+          date_from: checkin,
+          date_to: addDaysISO(checkout, -1),
+        },
+      ],
+      total: business.monthly_price,
+      unit,
+      has_price: true,
+    };
+  }
+
   const rules = business.pricing_rules ?? [];
   const lines: PricingBreakdownLine[] = [];
   let total = 0;

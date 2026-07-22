@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, Copy, Check, RefreshCw, Link2, Upload } from 'lucide-react';
+import { Loader2, Copy, Check, RefreshCw, Link2, Upload, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import type { BusinessUnit } from '@/types';
 import { Modal } from '@/components/ui/Modal';
 import { createClient } from '@/lib/supabase';
+import { updateUnit } from '@/lib/api/units';
 
 interface IcalSyncModalProps {
   isOpen: boolean;
@@ -16,19 +17,24 @@ interface IcalSyncModalProps {
 }
 
 /**
- * Sinkronisasi iCal per unit fisik:
- *  - IMPOR (blok tanggal terisi OTA): atur URL feed di "Kelola Unit"
- *    (business_units.ical_import_url) — modal ini hanya memicu sync-nya.
+ * Sinkronisasi iCal per unit fisik ("Connect to another website"):
+ *  - IMPOR (blok tanggal terisi OTA): atur URL feed Airbnb/Booking.com per unit
+ *    di sini (business_units.ical_import_url).
  *  - EKSPOR: salin URL feed .ics AXION per unit → pasang di Airbnb/Booking.com
  *    agar OTA memblokir tanggal yang kamu booking langsung.
+ * Sync otomatis harian, atau tekan "Sync sekarang".
  */
 export function IcalSyncModal({ isOpen, onClose, businessId, units, onSynced }: IcalSyncModalProps) {
   const [feedToken, setFeedToken] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  // Draft URL impor per unit (disimpan on-blur ke business_units.ical_import_url).
+  const [importDrafts, setImportDrafts] = useState<Record<string, string>>({});
+  const [savingImport, setSavingImport] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
+    setImportDrafts(Object.fromEntries(units.map((u) => [u.id, u.ical_import_url ?? ''])));
     (async () => {
       const supabase = createClient();
       const { data } = await supabase
@@ -38,7 +44,24 @@ export function IcalSyncModal({ isOpen, onClose, businessId, units, onSynced }: 
         .maybeSingle();
       setFeedToken((data?.ical_feed_token as string | null) ?? null);
     })();
-  }, [isOpen, businessId]);
+  }, [isOpen, businessId, units]);
+
+  const handleImportBlur = useCallback(
+    async (unit: BusinessUnit) => {
+      const draft = (importDrafts[unit.id] ?? '').trim();
+      if (draft === (unit.ical_import_url ?? '')) return;
+      setSavingImport(unit.id);
+      try {
+        await updateUnit(unit.id, { ical_import_url: draft || null });
+        onSynced();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Gagal menyimpan URL iCal');
+      } finally {
+        setSavingImport(null);
+      }
+    },
+    [importDrafts, onSynced]
+  );
 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
@@ -104,10 +127,10 @@ export function IcalSyncModal({ isOpen, onClose, businessId, units, onSynced }: 
         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 flex items-start gap-3">
           <Link2 className="w-4 h-4 text-primary-500 mt-0.5 shrink-0" />
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Hubungkan tiap unit dengan Airbnb & Booking.com lewat iCal. URL <b>impor</b> (memblokir
-            tanggal terisi OTA) diatur di <b>Kelola Unit</b>. Salin URL <b>ekspor</b> di bawah ke
-            OTA agar mereka memblokir tanggal yang kamu booking langsung. Sinkronisasi otomatis
-            berjalan harian — atau tekan <b>Sync sekarang</b>.
+            Hubungkan tiap unit dengan Airbnb &amp; Booking.com lewat iCal. Tempel URL <b>impor</b>
+            {' '}OTA (memblokir tanggal terisi di sana) dan salin URL <b>ekspor</b> AXION ke OTA
+            (memblokir tanggal yang kamu booking langsung). Sinkronisasi otomatis berjalan harian —
+            atau tekan <b>Sync sekarang</b>.
           </p>
         </div>
 
@@ -118,6 +141,27 @@ export function IcalSyncModal({ isOpen, onClose, businessId, units, onSynced }: 
           >
             <p className="font-semibold text-gray-900 dark:text-gray-100">{unit.name}</p>
 
+            {/* IMPOR: URL feed OTA yang kita baca (blok tanggal terisi di Airbnb/Booking) */}
+            <div>
+              <label className="label flex items-center gap-1.5">
+                <Download className="w-3.5 h-3.5 text-gray-400" /> URL impor OTA (dari Airbnb / Booking.com)
+              </label>
+              <div className="relative">
+                <input
+                  type="url"
+                  className="input pr-8"
+                  placeholder="https://www.airbnb.com/calendar/ical/...ics"
+                  value={importDrafts[unit.id] ?? ''}
+                  onChange={(e) => setImportDrafts((p) => ({ ...p, [unit.id]: e.target.value }))}
+                  onBlur={() => handleImportBlur(unit)}
+                />
+                {savingImport === unit.id && (
+                  <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+                )}
+              </div>
+            </div>
+
+            {/* EKSPOR: URL feed AXION yang dipasang di OTA */}
             <div>
               <label className="label flex items-center gap-1.5">
                 <Upload className="w-3.5 h-3.5 text-gray-400" /> URL ekspor AXION (pasang di OTA)

@@ -13,7 +13,8 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { generateText, type AIMessage } from './provider';
-import { groupIntoRanges } from '@/lib/rates';
+import { groupIntoRanges, buildUnitBaseRates } from '@/lib/rates';
+import type { CatalogItem } from '@/types';
 import type { ChannelIntegration, Lead } from '@/types';
 
 export interface LeadReplyResult {
@@ -103,27 +104,35 @@ function formatAvailability(rows: BookingAvailabilityRow[] | null): string | nul
 
 interface RateInfo {
   unitName: string;
-  itemName: string;
-  defaultPrice: number;
+  weekday: number | null; // base Sen–Jum
+  weekend: number | null; // base Sab+Min (fallback weekday bila null)
+  monthly: number | null; // acuan sewa > 27 malam
   overrides: { date: string; price: number }[];
 }
 
 /**
- * Rangkum kalender harga PER UNIT (bisnis bisa punya >1 unit fisik, tiap unit
- * kalender harganya sendiri) supaya concierge bisa quote harga per tanggal yang
- * benar — bukan cuma harga default. Override berurutan berharga sama diringkas
- * jadi rentang. Nama unit disertakan hanya bila bisnis punya >1 unit berharga.
+ * Rangkum harga PER UNIT (migr 124) supaya concierge bisa quote per tanggal yang
+ * benar: base weekday (Sen–Jum) & weekend (Sab+Min), override tanggal tertentu,
+ * dan harga sewa bulanan untuk rentang panjang. Nama unit disertakan hanya bila
+ * bisnis punya >1 unit berharga.
  */
 function formatRates(infos: RateInfo[]): string | null {
-  if (infos.length === 0) return null;
-  const showUnitName = infos.length > 1;
+  const priced = infos.filter((i) => i.weekday != null || i.weekend != null);
+  if (priced.length === 0) return null;
+  const showUnitName = priced.length > 1;
 
-  const blocks = infos.map((info) => {
+  const blocks = priced.map((info) => {
+    const weekday = info.weekday ?? info.weekend ?? 0;
+    const weekend = info.weekend ?? info.weekday ?? 0;
+    const head = showUnitName ? `HARGA MENGINAP — Unit ${info.unitName}` : 'HARGA MENGINAP';
     const lines: string[] = [
-      showUnitName
-        ? `HARGA MENGINAP PER MALAM — Unit ${info.unitName} (${info.itemName}): normal ${formatPrice(info.defaultPrice)}.`
-        : `HARGA MENGINAP PER MALAM (${info.itemName}): normal ${formatPrice(info.defaultPrice)}.`,
+      weekday === weekend
+        ? `${head}: ${formatPrice(weekday)}/malam.`
+        : `${head}: weekday (Sen–Jum) ${formatPrice(weekday)}/malam, weekend (Sab+Min) ${formatPrice(weekend)}/malam.`,
     ];
+    if (info.monthly != null && info.monthly > 0) {
+      lines.push(`Sewa bulanan (menginap > 27 malam): ${formatPrice(info.monthly)}.`);
+    }
     if (info.overrides.length > 0) {
       const ranges = groupIntoRanges(
         info.overrides.map((o) => ({ date: o.date, price: o.price, overridden: true }))
@@ -141,7 +150,7 @@ function formatRates(infos: RateInfo[]): string | null {
   });
 
   blocks.push(
-    'Total menginap = jumlah harga per malam sesuai tanggalnya (malam check-out tidak dihitung). Tanggal di luar daftar harga khusus memakai harga normal.'
+    'Total menginap = jumlah harga per malam sesuai tanggalnya (malam check-out tidak dihitung); weekend Sabtu & Minggu. Tanggal di luar daftar harga khusus memakai harga normal weekday/weekend. Untuk sewa > 27 malam pakai harga bulanan.'
   );
   return blocks.join('\n\n');
 }
@@ -264,35 +273,46 @@ export async function generateLeadReply(
         .gte('check_out', today)
         .order('check_in', { ascending: true })
         .limit(40),
-      // Unit fisik aktif yang sudah punya sumber harga terpasang (bisa >1 unit).
+      // Unit fisik aktif (base rates dihitung dari item main-service per unit).
       supabase
         .from('business_units')
-        .select('id, name, rate_item:catalog_items!business_units_rate_item_id_fkey(name, default_price)')
+        .select('id, name')
         .eq('business_id', integration.business_id)
         .eq('is_active', true)
         .is('deleted_at', null)
-        .not('rate_item_id', 'is', null),
+        .order('sort_order', { ascending: true }),
     ]);
 
-  // Kalender harga per unit: override 60 hari ke depan (bila dikonfigurasi).
+  // Harga per unit (migr 124): base weekday/weekend/monthly dari item main-service
+  // + override 60 hari ke depan.
   const horizon = new Date();
   horizon.setDate(horizon.getDate() + 60);
   const horizonStr = horizon.toISOString().slice(0, 10);
 
   const rateInfos: RateInfo[] = await Promise.all(
     (unitsWithRate ?? []).map(async (u) => {
-      const rateItem = Array.isArray(u.rate_item) ? u.rate_item[0] : u.rate_item;
-      const { data: rateRows } = await supabase
-        .from('unit_daily_rates')
-        .select('date, price')
-        .eq('unit_id', u.id)
-        .gte('date', today)
-        .lte('date', horizonStr)
-        .order('date', { ascending: true });
+      const [{ data: itemRows }, { data: rateRows }] = await Promise.all([
+        supabase
+          .from('catalog_items')
+          .select('id, default_price, is_active, service_role, rate_kind')
+          .eq('business_id', integration.business_id)
+          .eq('unit_id', u.id)
+          .eq('is_active', true)
+          .is('deleted_at', null),
+        supabase
+          .from('unit_daily_rates')
+          .select('date, price')
+          .eq('unit_id', u.id)
+          .gte('date', today)
+          .lte('date', horizonStr)
+          .order('date', { ascending: true }),
+      ]);
+      const base = buildUnitBaseRates((itemRows ?? []) as unknown as CatalogItem[]);
       return {
         unitName: u.name as string,
-        itemName: (rateItem?.name as string | undefined) ?? 'Tarif',
-        defaultPrice: Number(rateItem?.default_price ?? 0),
+        weekday: base.weekday,
+        weekend: base.weekend,
+        monthly: base.monthly,
         overrides: (rateRows ?? []).map((r) => ({ date: r.date as string, price: Number(r.price) })),
       };
     })

@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Tag, Loader2, RotateCcw, X } from 'lucide-react';
 import { toast } from 'sonner';
-import type { CatalogItem } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { listDatesInRange } from '@/lib/rates';
 
@@ -19,8 +18,8 @@ const DAY_CHIPS: { label: string; dow: number }[] = [
 ];
 
 interface RateEditorPanelProps {
-  /** Item sumber harga unit ini (business_units.rate_item_id, hydrated). */
-  rateItem: CatalogItem;
+  /** Harga base weekday unit (utk placeholder input & konteks "default"). */
+  defaultPrice: number;
   /** Rentang terpilih (anchor..end, inklusif) — panel yang memfilter per hari. */
   rangeStart: string;
   rangeEnd: string;
@@ -32,13 +31,13 @@ interface RateEditorPanelProps {
 }
 
 /**
- * Panel set harga (pola Airbnb): tampil saat ada rentang tanggal terpilih. Set
- * harga / reset ke default untuk rentang, dengan filter hari (mis. hanya Jum+Sab
- * dalam rentang panjang = pola harga weekend). Tanggal yang sudah dibooking
- * (excludeDates) otomatis dilewati. Mengganti item sumber harga = di UnitManagerModal.
+ * Panel set harga (pola Airbnb): tampil saat ada rentang tanggal terpilih. Override
+ * harga per tanggal (menang atas base weekday/weekend item layanan) / reset ke base,
+ * dengan filter hari (mis. hanya Jum+Sab untuk pola weekend). Tanggal yang sudah
+ * dibooking (excludeDates) otomatis dilewati.
  */
 export function RateEditorPanel({
-  rateItem,
+  defaultPrice,
   rangeStart,
   rangeEnd,
   excludeDates,
@@ -143,7 +142,7 @@ export function RateEditorPanel({
           type="number"
           min={0}
           className="input flex-1"
-          placeholder={`Harga per malam (default ${formatCurrency(rateItem.default_price)})`}
+          placeholder={`Harga per malam (default ${formatCurrency(defaultPrice)})`}
           value={price}
           onChange={(e) => setPrice(e.target.value)}
         />

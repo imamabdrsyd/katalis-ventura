@@ -137,6 +137,13 @@ export interface Account {
 
 export type CatalogItemType = 'product' | 'service';
 
+// Model harga akomodasi (migr 124). service_role membedakan sewa kamar (main,
+// menyetir base price kalender) vs layanan tambahan (addon, mis. Cleaning).
+// rate_kind = kategori base price hanya untuk main: weekday (Sen–Jum), weekend
+// (Sab+Min), monthly (acuan long-stay > 27 malam di halaman publik).
+export type ServiceRole = 'main' | 'addon';
+export type RateKind = 'weekday' | 'weekend' | 'monthly';
+
 // Katalog produk/jasa terpusat per bisnis. Dipakai sebagai master data saat
 // entry transaksi EARN (picker di multi-line form & quick entry).
 export interface CatalogItem {
@@ -149,6 +156,10 @@ export interface CatalogItem {
   unit?: string | null;                  // satuan: pcs, jam, malam, dll
   revenue_account_id?: string | null;    // akun pendapatan default (credit saat dijual)
   sku?: string | null;                   // disiapkan untuk fase matching import (belum dipakai)
+  // Scope & kategori harga akomodasi (migr 124)
+  unit_id?: string | null;               // unit fisik pemilik layanan; NULL = milik bisnis (produk/addon lintas unit)
+  service_role?: ServiceRole | null;     // main = sewa kamar, addon = tambahan; NULL untuk produk
+  rate_kind?: RateKind | null;           // weekday|weekend|monthly — hanya bila service_role='main'
   // Stok sederhana POS (opt-in). Hanya item track_stock=true yang dikurangi saat checkout.
   track_stock?: boolean;
   stock_qty?: number;

@@ -1,16 +1,56 @@
 /**
  * Resolver harga per malam (kalender harga akomodasi) — fungsi murni, tanpa IO.
  *
- * Model: harga dasar = default_price item sumber (business_units.rate_item_id —
- * per unit fisik), di-override per tanggal oleh baris unit_daily_rates. Resolusi
- * per tanggal:
- * override > default. Dipakai bersama oleh grid kalender (mode Harga), auto-total
- * BookingModal, quote AI concierge, dan kalender harga halaman publik.
+ * Model (migr 124): harga dasar (base) berasal dari item main-service per unit,
+ * per KATEGORI HARI — weekday (Sen–Jum) & weekend (Sab+Min). Di-override per
+ * tanggal oleh baris unit_daily_rates. Resolusi per tanggal:
+ *   override > base(weekday|weekend by hari) > 0.
+ * Long-stay (> 27 malam) di halaman publik pakai rate monthly bila ada.
+ * Dipakai bersama oleh grid kalender, auto-total BookingModal, quote AI
+ * concierge, dan widget booking halaman publik.
  */
+
+import type { CatalogItem } from '@/types';
 
 export interface RateOverride {
   date: string; // ISO YYYY-MM-DD
   price: number;
+}
+
+/** Harga dasar per kategori (default_price item main-service unit). */
+export interface UnitBaseRates {
+  weekday: number | null;
+  weekend: number | null; // null → pakai weekday
+  monthly: number | null; // acuan long-stay, tak mewarnai grid harian
+}
+
+/** Rentang menginap di atas ambang ini (malam) memakai rate monthly bila ada. */
+export const MONTHLY_STAY_THRESHOLD = 27;
+
+/** Hari akhir pekan (getUTCDay): 6=Sabtu, 0=Minggu. */
+function isWeekendISO(dateISO: string): boolean {
+  const dow = new Date(`${dateISO}T00:00:00Z`).getUTCDay();
+  return dow === 0 || dow === 6;
+}
+
+/**
+ * Harga dasar untuk satu tanggal by kategori hari: weekend (Sab+Min) → weekend
+ * rate (fallback weekday bila null); selain itu weekday. null bila tak ada base.
+ */
+export function baseRateForDate(dateISO: string, base: UnitBaseRates): number | null {
+  if (isWeekendISO(dateISO)) return base.weekend ?? base.weekday;
+  return base.weekday;
+}
+
+/** Rakit UnitBaseRates dari item katalog satu unit (ambil main-service by rate_kind). */
+export function buildUnitBaseRates(items: CatalogItem[]): UnitBaseRates {
+  const pick = (kind: 'weekday' | 'weekend' | 'monthly'): number | null => {
+    const it = items.find(
+      (i) => i.is_active && i.service_role === 'main' && i.rate_kind === kind
+    );
+    return it ? Number(it.default_price) : null;
+  };
+  return { weekday: pick('weekday'), weekend: pick('weekend'), monthly: pick('monthly') };
 }
 
 export interface NightRate {
@@ -48,6 +88,52 @@ export function resolveNightPrice(
     date: dateISO,
     price: override ?? defaultPrice,
     overridden: override !== undefined,
+  };
+}
+
+/**
+ * Harga satu malam model baru (migr 124): override > base(weekday|weekend by hari).
+ * price=0 bila tak ada base sama sekali (unit belum punya item main-service).
+ */
+export function resolveNightPriceV2(
+  dateISO: string,
+  base: UnitBaseRates,
+  overrideMap: Map<string, number>
+): NightRate {
+  const override = overrideMap.get(dateISO);
+  return {
+    date: dateISO,
+    price: override ?? baseRateForDate(dateISO, base) ?? 0,
+    overridden: override !== undefined,
+  };
+}
+
+/**
+ * Quote menginap model baru: Σ per malam via resolveNightPriceV2. Bila total
+ * malam > MONTHLY_STAY_THRESHOLD dan base.monthly tersedia, total = harga monthly
+ * (breakdown flat = monthly/nights) — dipakai widget publik untuk sewa bulanan.
+ */
+export function quoteStayV2(
+  checkIn: string,
+  checkOut: string,
+  base: UnitBaseRates,
+  overrides: RateOverride[]
+): StayQuote {
+  const map = buildOverrideMap(overrides);
+  const breakdown: NightRate[] = [];
+  let cursor = checkIn;
+  for (let i = 0; cursor < checkOut && i < 1000; i++) {
+    breakdown.push(resolveNightPriceV2(cursor, base, map));
+    cursor = addDaysISO(cursor, 1);
+  }
+  const nights = breakdown.length;
+  if (nights > MONTHLY_STAY_THRESHOLD && base.monthly != null && base.monthly > 0) {
+    return { nights, total: base.monthly, breakdown };
+  }
+  return {
+    nights,
+    total: breakdown.reduce((s, n) => s + n.price, 0),
+    breakdown,
   };
 }
 

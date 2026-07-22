@@ -8,6 +8,8 @@ import type { CatalogItem, Account } from '@/types';
 import * as catalogApi from '@/lib/api/catalog';
 import { getAccounts } from '@/lib/api/accounts';
 import { isManagerRole } from '@/lib/roles';
+import { isAccommodationSector } from '@/lib/businessSectors';
+import { useCalendarUnit } from './calendar/CalendarUnitContext';
 import { formatCurrency } from '@/lib/utils';
 import { CatalogItemForm, type CatalogItemFormData } from '@/components/catalog/CatalogItemForm';
 import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
@@ -31,17 +33,25 @@ const VIEW_MODE_KEY = 'katalis_catalog_view_mode';
 export function CatalogPanel({
   aside,
   onStockChanged,
+  scopeToUnit = false,
 }: {
   aside?: ReactNode;
   /** Dipanggil setelah stok berubah (tambah stok / edit item) agar panel
    *  riwayat stok di `aside` ikut ter-refresh tanpa reload halaman. */
   onStockChanged?: () => void;
+  /** Hub kalender: item di-scope ke unit aktif (business_units), form tampilkan
+   *  kategori tarif akomodasi. POS/produk: false (per-bisnis, perilaku lama). */
+  scopeToUnit?: boolean;
 }) {
   const { activeBusiness, userRole, user } = useBusinessContext();
   const { t } = useLanguage();
   const tc = t.catalog;
   const businessId = activeBusiness?.id;
   const canManage = isManagerRole(userRole);
+  const isAccommodation = isAccommodationSector(activeBusiness?.business_sector);
+  // Unit aktif (dibagi dgn tab Kalender). Hanya dipakai bila scopeToUnit.
+  const { selectedUnit } = useCalendarUnit();
+  const scopedUnitId = scopeToUnit ? selectedUnit?.id ?? null : undefined;
   // Ikon item katalog mengikuti sektor bisnis aktif (mis. F&B → garpu-sendok).
   const SectorIcon = getSectorIcon(activeBusiness?.business_sector);
 
@@ -78,7 +88,10 @@ export function CatalogPanel({
       setLoading(true);
       try {
         const [itemsData, accountsData] = await Promise.all([
-          catalogApi.getCatalogItems(businessId),
+          // scopeToUnit: hanya item unit aktif; selain itu semua item bisnis (POS).
+          scopeToUnit
+            ? catalogApi.getCatalogItems(businessId, { unitId: scopedUnitId })
+            : catalogApi.getCatalogItems(businessId),
           getAccounts(businessId, false),
         ]);
         setItems(itemsData);
@@ -92,7 +105,7 @@ export function CatalogPanel({
     }
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [businessId]);
+  }, [businessId, scopeToUnit, scopedUnitId]);
 
   const revenueAccounts = useMemo(
     () => accounts.filter(a => a.account_type === 'REVENUE' && a.is_active),
@@ -143,6 +156,8 @@ export function CatalogPanel({
         const created = await catalogApi.createCatalogItem({
           business_id: businessId,
           created_by: user.id,
+          // Scope item baru ke unit aktif (hub kalender). POS → NULL (per-bisnis).
+          ...(scopeToUnit ? { unit_id: scopedUnitId } : {}),
           ...data,
         });
         setItems(prev => [...prev, created]);
@@ -198,6 +213,31 @@ export function CatalogPanel({
       setSaving(false);
     }
   }
+
+  // Chip kategori tarif akomodasi (migr 124) — Weekday/Weekend/Bulanan / Add-on.
+  const renderRateChip = (item: CatalogItem) => {
+    if (!scopeToUnit || item.item_type !== 'service' || !item.service_role) return null;
+    const label =
+      item.service_role === 'addon'
+        ? tc.serviceRoleAddon
+        : item.rate_kind === 'weekend'
+          ? tc.rateKindWeekend
+          : item.rate_kind === 'monthly'
+            ? tc.rateKindMonthly
+            : tc.rateKindWeekday;
+    const isMain = item.service_role === 'main';
+    return (
+      <span
+        className={`shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-tight ${
+          isMain
+            ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
+            : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+        }`}
+      >
+        {label}
+      </span>
+    );
+  };
 
   // Chip SKU — identitas unik item (migr 121), dirender di KIRI nama
   const renderSku = (item: CatalogItem) => {
@@ -348,6 +388,7 @@ export function CatalogPanel({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 min-w-0">
                       {renderSku(item)}
+                      {renderRateChip(item)}
                       <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{item.name}</p>
                     </div>
                     <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium tabular-nums">
@@ -423,6 +464,7 @@ export function CatalogPanel({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 min-w-0">
                     {renderSku(item)}
+                    {renderRateChip(item)}
                     <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{item.name}</p>
                     {!item.is_active && (
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 flex-shrink-0">
@@ -501,6 +543,7 @@ export function CatalogPanel({
             revenueAccounts={revenueAccounts}
             existingSkus={existingSkus}
             businessType={activeBusiness?.business_type}
+            isAccommodation={scopeToUnit && isAccommodation}
             onSubmit={handleSubmit}
             onCancel={() => { setShowForm(false); setEditItem(null); }}
             loading={saving}

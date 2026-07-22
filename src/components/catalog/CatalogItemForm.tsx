@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef, useId } from 'react';
-import type { CatalogItem, CatalogItemType, Account } from '@/types';
+import type { CatalogItem, CatalogItemType, Account, ServiceRole, RateKind } from '@/types';
 import { AlertCircle, Package, Wrench, Camera, Crop, ImageIcon, Loader2, Maximize2, X } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
@@ -13,6 +13,8 @@ export interface CatalogItemFormData {
   item_type: CatalogItemType;
   default_price: number;
   unit?: string | null;
+  service_role?: ServiceRole | null;
+  rate_kind?: RateKind | null;
   revenue_account_id?: string | null;
   sku?: string | null;
   track_stock?: boolean;
@@ -34,6 +36,9 @@ interface CatalogItemFormProps {
   /** businesses.business_type — menentukan tipe item yang tersedia:
    *  'jasa' → service saja; 'produk'/'dagang' → product saja; null → keduanya. */
   businessType?: string | null;
+  /** Bisnis sektor akomodasi → tampilkan pilihan main/addon + kategori tarif
+   *  (weekday/weekend/monthly) yang menyetir base price kalender (migr 124). */
+  isAccommodation?: boolean;
   onSubmit: (data: CatalogItemFormData) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
@@ -50,6 +55,7 @@ export function CatalogItemForm({
   revenueAccounts,
   existingSkus = [],
   businessType,
+  isAccommodation = false,
   onSubmit,
   onCancel,
   loading = false,
@@ -80,6 +86,8 @@ export function CatalogItemForm({
     item_type: item?.item_type ?? defaultItemType,
     default_price: item?.default_price ?? 0,
     unit: item?.unit ?? '',
+    service_role: item?.service_role ?? (isAccommodation ? 'main' : null),
+    rate_kind: item?.rate_kind ?? (isAccommodation ? 'weekday' : null),
     revenue_account_id: item?.revenue_account_id ?? null,
     sku: item?.sku ?? '',
     track_stock: item?.track_stock ?? false,
@@ -118,6 +126,8 @@ export function CatalogItemForm({
       item_type: item?.item_type ?? defaultItemType,
       default_price: item?.default_price ?? 0,
       unit: item?.unit ?? '',
+      service_role: item?.service_role ?? (isAccommodation ? 'main' : null),
+      rate_kind: item?.rate_kind ?? (isAccommodation ? 'weekday' : null),
       revenue_account_id: item?.revenue_account_id ?? null,
       sku: item?.sku ?? '',
       track_stock: item?.track_stock ?? false,
@@ -133,7 +143,7 @@ export function CatalogItemForm({
     setPriceDisplay(item?.default_price ? item.default_price.toLocaleString('id-ID') : '');
     setErrors({});
     setUploadError('');
-  }, [item, defaultItemType]);
+  }, [item, defaultItemType, isAccommodation]);
 
   const updateFocalFromEvent = (clientX: number, clientY: number) => {
     const el = focalAreaRef.current;
@@ -225,11 +235,18 @@ export function CatalogItemForm({
     e.preventDefault();
     if (!validate()) return;
     const hasImage = !!(formData.image_url && formData.image_url.trim());
+    // Kategori tarif hanya berlaku untuk layanan akomodasi. Produk / non-akomodasi
+    // → null. Add-on → rate_kind null (tak menyetir harga kalender).
+    const isService = formData.item_type === 'service';
+    const serviceRole = isAccommodation && isService ? (formData.service_role ?? 'main') : null;
+    const rateKind = serviceRole === 'main' ? (formData.rate_kind ?? 'weekday') : null;
     await onSubmit({
       ...formData,
       name: formData.name.trim(),
       description: formData.description?.trim() || null,
       unit: formData.unit?.trim() || null,
+      service_role: serviceRole,
+      rate_kind: rateKind,
       // SKU & stok hanya berlaku untuk item produk; jasa selalu bersih
       sku: isProduct ? formData.sku?.trim() || null : null,
       track_stock: isProduct ? (formData.track_stock ?? false) : false,
@@ -387,11 +404,79 @@ export function CatalogItemForm({
         )}
       </div>
 
+      {/* Kategori layanan akomodasi (migr 124) — main (sewa, menyetir base price)
+          vs add-on; bila main, pilih tarif weekday/weekend/monthly. */}
+      {isAccommodation && formData.item_type === 'service' && (
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+          <div>
+            <label className="label">{tc.serviceRoleLabel}</label>
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { value: 'main' as ServiceRole, label: tc.serviceRoleMain, hint: tc.serviceRoleMainHint },
+                { value: 'addon' as ServiceRole, label: tc.serviceRoleAddon, hint: tc.serviceRoleAddonHint },
+              ]).map(({ value, label, hint }) => {
+                const active = (formData.service_role ?? 'main') === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, service_role: value }))}
+                    className={`text-left px-3 py-2.5 rounded-xl border text-sm transition-all ${
+                      active
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 ring-2 ring-primary-500/20'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                    }`}
+                  >
+                    <span className={`block font-medium ${active ? 'text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                      {label}
+                    </span>
+                    <span className="block text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">{hint}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {(formData.service_role ?? 'main') === 'main' && (
+            <div>
+              <label className="label">{tc.rateKindLabel}</label>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { value: 'weekday' as RateKind, label: tc.rateKindWeekday },
+                  { value: 'weekend' as RateKind, label: tc.rateKindWeekend },
+                  { value: 'monthly' as RateKind, label: tc.rateKindMonthly },
+                ]).map(({ value, label }) => {
+                  const active = (formData.rate_kind ?? 'weekday') === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, rate_kind: value }))}
+                      className={`px-3 py-2 rounded-xl border text-sm font-medium transition-all ${
+                        active
+                          ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 ring-2 ring-primary-500/20'
+                          : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Harga + satuan — items-end supaya underline keduanya sejajar */}
       <div className="grid grid-cols-2 gap-4 items-end">
         <div>
           <CurrencyInputWithCalculator
-            label={tc.priceLabel}
+            label={
+              isAccommodation && formData.item_type === 'service' && (formData.service_role ?? 'main') === 'main'
+                ? ((formData.rate_kind ?? 'weekday') === 'monthly' ? tc.priceLabelPerMonth : tc.priceLabelPerNight)
+                : tc.priceLabel
+            }
             displayValue={priceDisplay}
             onChange={(val, display) => {
               setFormData(prev => ({ ...prev, default_price: val }));

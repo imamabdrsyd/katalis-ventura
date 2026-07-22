@@ -85,6 +85,8 @@ export interface PublicBusiness {
   show_pricing?: boolean;
   default_price?: number | null;
   price_unit?: string | null;
+  /** Harga sewa bulanan (rate_kind='monthly'). Dipakai bila rentang > 27 malam. */
+  monthly_price?: number | null;
   pricing_rules?: PublicPricingRule[];
   featured_products?: PublicFeaturedProduct[];
   button_color?: string | null;
