@@ -1411,27 +1411,32 @@ export async function exportLoanReceivablePDF(data: LoanReceivablePDFData) {
   doc.setTextColor(...INDIGO);
   doc.text(chipLabel, chipX + chipW / 2, chipCY, { align: 'center' });
 
-  // status: ikon ceklis (lingkaran + centang) + label, di-stack di bawah chip.
+  // status: ikon ceklis (lingkaran + centang) + label, RAPAT sebagai satu grup,
+  // lalu grup itu dirata-kanankan ke rightEdge (hitung lebar grup dulu).
   const statusLabel = data.isFullySettled ? 'LUNAS' : 'POSTED';
-  const statusCY = chipCY + 8;      // baseline teks status
+  const statusCY = chipCY + 8;                 // baseline teks status
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  const statusTextW = doc.getTextWidth(statusLabel) + statusLabel.length * 0.5; // +charSpace
-  const statusTextX = rightEdge; // rata kanan
-  doc.setTextColor(...EMERALD);
-  doc.text(statusLabel, statusTextX, statusCY, { align: 'right', charSpace: 0.5 });
+  const charSp = 0.5;
+  const labelW = doc.getTextWidth(statusLabel) + (statusLabel.length - 1) * charSp;
+  const circleR = 1.6;
+  const gap = 1.8;                             // jarak ceklis→teks (rapat)
+  const groupW = circleR * 2 + gap + labelW;
+  const groupLeft = rightEdge - groupW;
 
-  // lingkaran ceklis di kiri label
-  const circleR = 1.7;
-  const circleCX = rightEdge - statusTextW - 3 - circleR;
-  const circleCY = statusCY - 1.1; // sedikit naik agar center optik sejajar teks
+  // lingkaran ceklis (kiri grup)
+  const circleCX = groupLeft + circleR;
+  const circleCY = statusCY - 1.1;             // naik sedikit agar center optik = teks
   doc.setDrawColor(...EMERALD);
   doc.setLineWidth(0.4);
   doc.circle(circleCX, circleCY, circleR, 'S');
-  // centang: dua ruas garis
   doc.setLineWidth(0.45);
-  doc.line(circleCX - 0.85, circleCY + 0.05, circleCX - 0.2, circleCY + 0.75);
-  doc.line(circleCX - 0.2, circleCY + 0.75, circleCX + 0.95, circleCY - 0.7);
+  doc.line(circleCX - 0.8, circleCY + 0.05, circleCX - 0.2, circleCY + 0.7);
+  doc.line(circleCX - 0.2, circleCY + 0.7, circleCX + 0.85, circleCY - 0.65);
+
+  // label (kanan grup, rata kiri dari akhir ceklis+gap)
+  doc.setTextColor(...EMERALD);
+  doc.text(statusLabel, groupLeft + circleR * 2 + gap, statusCY, { charSpace: charSp });
 
   y = amountY + 8;
 
@@ -1455,21 +1460,21 @@ export async function exportLoanReceivablePDF(data: LoanReceivablePDFData) {
   // ── Jurnal double-entry ──
   sectionHead('Jurnal Double-Entry');
   const rowH = 9;                 // tinggi baris (lebih lega, tak mepet)
-  const badgeLabel = 'ASSET';
+  const badgeLabel = 'Asset';     // title-case, senada pratinjau
   const drawJournalRow = (side: string, acc: { code: string; name: string } | null) => {
     ensureSpace(rowH + 1);
-    const baseY = y + rowH / 2 + 1; // baseline teks di tengah baris
+    const baseY = y + rowH / 2 + 1.2; // baseline teks di tengah baris
 
     // badge tipe akun (hitung dulu supaya nama akun bisa dipotong agar tak tabrakan)
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7);
-    const badgeW = doc.getTextWidth(badgeLabel) + 6;
-    const badgeH = 5;
+    doc.setFontSize(6.5);
+    const badgeW = doc.getTextWidth(badgeLabel) + 5;
+    const badgeH = 4.6;
     const badgeX = pageWidth - marginX - badgeW;
     const badgeY = y + (rowH - badgeH) / 2;
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.5);
+    doc.setFontSize(7);
     doc.setTextColor(...INK_FAINT);
     doc.text(side.toUpperCase(), marginX, baseY, { charSpace: 0.4 });
     doc.setFont('courier', 'normal');
@@ -1480,17 +1485,17 @@ export async function exportLoanReceivablePDF(data: LoanReceivablePDFData) {
     doc.setFontSize(9.5);
     doc.setTextColor(...INK);
     const nameX = marginX + 36;
-    const nameMaxW = badgeX - nameX - 4; // sisakan jarak ≥4mm ke badge
+    const nameMaxW = badgeX - nameX - 5; // sisakan jarak ≥5mm ke badge
     const nameStr = doc.splitTextToSize(acc?.name ?? 'Unknown', nameMaxW)[0];
     doc.text(nameStr, nameX, baseY);
 
-    // badge
+    // badge (bg lembut #eef4ff, teks biru lembut #2563a8)
     doc.setFillColor(238, 244, 255);
-    doc.roundedRect(badgeX, badgeY, badgeW, badgeH, 1.2, 1.2, 'F');
+    doc.roundedRect(badgeX, badgeY, badgeW, badgeH, 1, 1, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7);
+    doc.setFontSize(6.5);
     doc.setTextColor(37, 99, 168);
-    doc.text(badgeLabel, badgeX + badgeW / 2, badgeY + badgeH / 2 + 1.05, { align: 'center' });
+    doc.text(badgeLabel, badgeX + badgeW / 2, badgeY + badgeH / 2 + 0.95, { align: 'center' });
 
     y += rowH;
   };
