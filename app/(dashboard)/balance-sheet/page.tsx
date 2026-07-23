@@ -7,6 +7,7 @@ import { useBalanceSheet } from '@/hooks/useBalanceSheet';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
 import { ReportSkeleton } from '@/components/ui/PageSkeleton';
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 
 function BalanceSheetPageInner() {
   const { t, locale } = useLanguage();
@@ -39,6 +40,9 @@ function BalanceSheetPageInner() {
       </div>
     );
   }
+
+  // Berubah saat tanggal neraca ganti → animasi total berdetak ulang dari 0.
+  const bsAnimationKey = asOfDate;
 
   const asOfLabel = new Date(asOfDate).toLocaleDateString(
     locale === 'id' ? 'id-ID' : 'en-US',
@@ -245,7 +249,7 @@ function BalanceSheetPageInner() {
             <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-bold border-t-2 border-gray-900 dark:border-gray-100 mt-auto">
               <span className="text-lg text-gray-800 dark:text-gray-100">{t.balanceSheetPage.totalAssets}</span>
               <span className="text-lg text-gray-900 dark:text-gray-100">
-                {formatCurrency(balanceSheet.assets.totalAssets)}
+                <AnimatedNumber value={balanceSheet.assets.totalAssets} formatter={formatCurrency} replayKey={bsAnimationKey} />
               </span>
             </div>
           </div>
@@ -284,7 +288,7 @@ function BalanceSheetPageInner() {
               <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-2">
                 <span className="text-gray-800 dark:text-gray-100">{t.balanceSheetPage.totalLiabilities}</span>
                 <span className="text-gray-800 dark:text-gray-100">
-                  {formatCurrency(balanceSheet.liabilities.totalLiabilities)}
+                  <AnimatedNumber value={balanceSheet.liabilities.totalLiabilities} formatter={formatCurrency} replayKey={bsAnimationKey} />
                 </span>
               </div>
             </div>
@@ -346,7 +350,7 @@ function BalanceSheetPageInner() {
               <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-2">
                 <span className="text-gray-800 dark:text-gray-100">{t.balanceSheetPage.totalEquity}</span>
                 <span className="text-gray-800 dark:text-gray-100">
-                  {formatCurrency(balanceSheet.equity.totalEquity)}
+                  <AnimatedNumber value={balanceSheet.equity.totalEquity} formatter={formatCurrency} replayKey={bsAnimationKey} />
                 </span>
               </div>
             </div>
@@ -357,9 +361,11 @@ function BalanceSheetPageInner() {
                 {t.balanceSheetPage.totalLiabilitiesEquity}
               </span>
               <span className="text-lg text-gray-900 dark:text-gray-100">
-                {formatCurrency(
-                  balanceSheet.liabilities.totalLiabilities + balanceSheet.equity.totalEquity
-                )}
+                <AnimatedNumber
+                  value={balanceSheet.liabilities.totalLiabilities + balanceSheet.equity.totalEquity}
+                  formatter={formatCurrency}
+                  replayKey={bsAnimationKey}
+                />
               </span>
             </div>
           </div>

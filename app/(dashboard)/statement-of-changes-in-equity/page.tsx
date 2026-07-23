@@ -5,6 +5,7 @@ import { Building2, GitBranch, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { useStatementOfChangesInEquity } from '@/hooks/useStatementOfChangesInEquity';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { PeriodFilterCard } from '@/components/reports/PeriodFilterCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 
@@ -58,6 +59,9 @@ function SCEPageInner() {
 
   const { t } = useLanguage();
   const text = t.changesInEquityPage;
+
+  // Berubah saat periode ganti → total ekuitas berdetak ulang dari 0.
+  const sceAnimationKey = `${startDate}-${endDate}`;
 
   if (loading) {
     return (
@@ -201,10 +205,14 @@ function SCEPageInner() {
               <tfoot>
                 <tr className="border-t-2 border-gray-300 dark:border-gray-600 font-semibold text-gray-900 dark:text-gray-100">
                   <td className="py-3 pr-3">{text.totalEquity}</td>
-                  <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(sce.totalEquityOpening)}</td>
+                  <td className="py-3 px-3 text-right tabular-nums">
+                    <AnimatedNumber value={sce.totalEquityOpening} formatter={formatCurrency} replayKey={sceAnimationKey} />
+                  </td>
                   <td className="py-3 px-3" />
                   <td className="py-3 px-3" />
-                  <td className="py-3 pl-3 text-right tabular-nums">{formatCurrency(sce.totalEquityClosing)}</td>
+                  <td className="py-3 pl-3 text-right tabular-nums">
+                    <AnimatedNumber value={sce.totalEquityClosing} formatter={formatCurrency} replayKey={sceAnimationKey} />
+                  </td>
                 </tr>
               </tfoot>
             </table>

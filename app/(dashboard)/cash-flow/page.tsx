@@ -6,6 +6,7 @@ import { TrendingUp, TrendingDown, Wallet, ChevronRight, ArrowUpCircle, ArrowDow
 import { useCashFlow } from '@/hooks/useCashFlow';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import type { CashFlowTransaction, Transaction } from '@/types';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import { PeriodFilterCard } from '@/components/reports/PeriodFilterCard';
@@ -173,6 +174,9 @@ function CashFlowPageInner() {
     return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
+  // Berubah saat periode ganti → total headline berdetak ulang dari 0.
+  const cfAnimationKey = `${startDate}-${endDate}`;
+
   const startDateLabel = safeFormat(startDate);
   const endDateLabel = safeFormat(endDate);
 
@@ -261,7 +265,7 @@ function CashFlowPageInner() {
               <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-600">
                 <span className="font-semibold text-gray-800 dark:text-gray-200">Ending Cash:</span>
                 <span className="font-bold text-gray-800 dark:text-gray-100">
-                  {formatCurrency(cashFlow.closingBalance)}
+                  <AnimatedNumber value={cashFlow.closingBalance} formatter={formatCurrency} replayKey={cfAnimationKey} />
                 </span>
               </div>
             </div>
@@ -384,7 +388,7 @@ function CashFlowPageInner() {
                       : <TrendingDown className="w-7 h-7 text-white/80" strokeWidth={2.5} />
                     }
                     <span className="text-3xl font-bold tabular-nums">
-                      {formatCurrency(cashFlow.netCashFlow)}
+                      <AnimatedNumber value={cashFlow.netCashFlow} formatter={formatCurrency} replayKey={cfAnimationKey} />
                     </span>
                   </div>
                 </div>
@@ -403,7 +407,7 @@ function CashFlowPageInner() {
                     <p className="text-xs text-gray-500 dark:text-gray-400">Opening Balance + Net Cash Flow</p>
                   </div>
                   <span className="text-2xl font-bold tabular-nums text-gray-800 dark:text-gray-100 flex-shrink-0">
-                    {formatCurrency(cashFlow.closingBalance)}
+                    <AnimatedNumber value={cashFlow.closingBalance} formatter={formatCurrency} replayKey={cfAnimationKey} />
                   </span>
                 </div>
               </div>

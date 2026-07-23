@@ -5,6 +5,7 @@ import { ClipboardCheck, Calendar, CheckCircle, AlertCircle } from 'lucide-react
 import { useTrialBalance } from '@/hooks/useTrialBalance';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { TableSkeleton } from '@/components/ui/PageSkeleton';
 import type { Period } from '@/hooks/useReportData';
@@ -59,6 +60,9 @@ function TrialBalancePageInner() {
       </div>
     );
   }
+
+  // Berubah saat periode ganti → total debit/kredit berdetak ulang dari 0.
+  const tbAnimationKey = `${startDate}-${endDate}`;
 
   // Group rows by account type for visual separation
   const groupedRows: { type: AccountType; label: string; rows: typeof trialBalance.rows }[] = [];
@@ -222,10 +226,10 @@ function TrialBalancePageInner() {
                     TOTAL
                   </td>
                   <td className="py-3 px-4 text-right text-sm font-bold text-gray-700 dark:text-gray-300">
-                    {formatCurrency(trialBalance.totalDebits)}
+                    <AnimatedNumber value={trialBalance.totalDebits} formatter={formatCurrency} replayKey={tbAnimationKey} />
                   </td>
                   <td className="py-3 px-4 text-right text-sm font-bold text-gray-700 dark:text-gray-300">
-                    {formatCurrency(trialBalance.totalCredits)}
+                    <AnimatedNumber value={trialBalance.totalCredits} formatter={formatCurrency} replayKey={tbAnimationKey} />
                   </td>
                 </tr>
               </tfoot>
