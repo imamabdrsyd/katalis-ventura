@@ -139,7 +139,10 @@ export function UnitManagerModal({ isOpen, onClose, businessId, userId, onChange
 
         {/* Daftar unit — klik untuk memilih (switch kalender & layanan) */}
         <div className="space-y-2">
-          {units.filter((u) => !u.deleted_at).map((unit) => {
+          {(() => {
+            const liveUnits = units.filter((u) => !u.deleted_at);
+            const singleUnit = liveUnits.length <= 1;
+            return liveUnits.map((unit) => {
             const busy = busyId === unit.id;
             const isSelected = selectedUnit?.id === unit.id;
             return (
@@ -174,16 +177,20 @@ export function UnitManagerModal({ isOpen, onClose, businessId, userId, onChange
                   onBlur={() => handleRenameBlur(unit)}
                   disabled={busy}
                 />
-                <label className="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 shrink-0">
-                  <input
-                    type="checkbox"
-                    checked={unit.is_active}
-                    onChange={() => handleToggleActive(unit)}
-                    disabled={busy}
-                    className="w-3.5 h-3.5 rounded text-primary-600 focus:ring-primary-500"
-                  />
-                  Aktif
-                </label>
+                {/* "Aktif" hanya relevan bila >1 unit — menonaktifkan unit tunggal
+                    bikin kalender & layanan kosong (empty-state). Disembunyikan. */}
+                {!singleUnit && (
+                  <label className="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={unit.is_active}
+                      onChange={() => handleToggleActive(unit)}
+                      disabled={busy}
+                      className="w-3.5 h-3.5 rounded text-primary-600 focus:ring-primary-500"
+                    />
+                    Aktif
+                  </label>
+                )}
                 <button
                   type="button"
                   onClick={() => handleDelete(unit)}
@@ -196,7 +203,8 @@ export function UnitManagerModal({ isOpen, onClose, businessId, userId, onChange
                 </button>
               </div>
             );
-          })}
+          });
+          })()}
         </div>
       </div>
     </Modal>
