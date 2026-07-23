@@ -225,15 +225,8 @@ export function CatalogPanel({
           : item.rate_kind === 'monthly'
             ? tc.rateKindMonthly
             : tc.rateKindWeekday;
-    const isMain = item.service_role === 'main';
     return (
-      <span
-        className={`shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-tight ${
-          isMain
-            ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
-            : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-        }`}
-      >
+      <span className="shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-tight bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
         {label}
       </span>
     );
@@ -488,26 +481,31 @@ export function CatalogPanel({
                     {formatCurrency(item.default_price)}
                     {item.unit && <span className="text-gray-400 dark:text-gray-500 font-normal"> / {item.unit}</span>}
                   </p>
-                  {canManage && (
-                    <div className="flex justify-end items-center gap-0.5 overflow-hidden w-0 group-hover:w-[4.25rem] opacity-0 group-hover:opacity-100 transition-all duration-200">
-                      {item.item_type === 'product' && item.track_stock && (
+                  {canManage && (() => {
+                    // Slot aksi selebar jumlah tombol yang tampil supaya harga tetap
+                    // mepet ke ikon (item tanpa tombol Tambah Stok = hanya Hapus).
+                    const hasStockBtn = item.item_type === 'product' && item.track_stock;
+                    return (
+                      <div className={`flex justify-end items-center gap-0.5 overflow-hidden w-0 opacity-0 group-hover:opacity-100 transition-all duration-200 ${hasStockBtn ? 'group-hover:w-[4rem]' : 'group-hover:w-8'}`}>
+                        {hasStockBtn && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openAddStock(item); }}
+                            className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                            title={tc.addStockTitle}
+                          >
+                            <PackagePlus className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         <button
-                          onClick={(e) => { e.stopPropagation(); openAddStock(item); }}
-                          className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
-                          title={tc.addStockTitle}
+                          onClick={(e) => { e.stopPropagation(); setDeleteItem(item); }}
+                          className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                          title={tc.delete}
                         >
-                          <PackagePlus className="w-3.5 h-3.5" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
-                      )}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setDeleteItem(item); }}
-                        className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-                        title={tc.delete}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             );
