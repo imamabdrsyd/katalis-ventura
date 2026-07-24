@@ -29,6 +29,30 @@ export interface AccountLedger {
 export type AccountTypeFilter = AccountType | 'ALL';
 
 /**
+ * Susun teks kolom Keterangan untuk satu entry ledger.
+ * Khusus akun tipe ASSET (mis. Inventory 1300) yang ter-link ke item katalog,
+ * judul = "Nama Katalog · Nama Kontak" dan subteks = deskripsi transaksi.
+ * Selain itu pakai perilaku lama: judul = nama kontak/deskripsi, subteks = deskripsi.
+ */
+function buildLedgerKeterangan(
+  t: Transaction,
+  account: Account
+): { description: string; subDescription?: string } {
+  const catalogName = t.meta?.catalog_item?.name;
+
+  if (account.account_type === 'ASSET' && catalogName) {
+    const description = t.name ? `${catalogName} · ${t.name}` : catalogName;
+    return { description, subDescription: t.description || undefined };
+  }
+
+  // Perilaku lama: nama kontak sebagai judul, deskripsi sebagai subteks
+  return {
+    description: t.name || t.description || '-',
+    subDescription: t.name && t.description ? t.description : undefined,
+  };
+}
+
+/**
  * Pre-index transaksi per account ID untuk menghindari O(n) filter berulang.
  * Return Map<accountId, Transaction[]> — single pass O(n).
  * Mendukung transaksi double-entry biasa DAN multi-line journal entries.
@@ -102,19 +126,15 @@ function buildMultiLineEntries(
   const counterAccountName = counterNames.join(', ') || '-';
   const counterAccountCode = counterCodes.join(', ') || '-';
 
-  return myLines.map((line) => {
-    // Sama seperti double-entry: description = nama kontak/referensi, subDescription = keterangan
-    const description = t.name || t.description || '-';
-    const subDescription = t.name && t.description ? t.description : undefined;
-    return {
-      debitAmount: Number(line.debit_amount) || 0,
-      creditAmount: Number(line.credit_amount) || 0,
-      counterAccountName,
-      counterAccountCode,
-      description,
-      subDescription,
-    };
-  });
+  const { description, subDescription } = buildLedgerKeterangan(t, account);
+  return myLines.map((line) => ({
+    debitAmount: Number(line.debit_amount) || 0,
+    creditAmount: Number(line.credit_amount) || 0,
+    counterAccountName,
+    counterAccountCode,
+    description,
+    subDescription,
+  }));
 }
 
 /**
@@ -210,14 +230,13 @@ export function calculateAccountLedger(
     totalDebits += debitAmount;
     totalCredits += creditAmount;
 
-    const keterangan = t.name || t.description || '-';
-    const subKeterangan = t.name && t.description ? t.description : undefined;
+    const { description, subDescription } = buildLedgerKeterangan(t, account);
 
     entries.push({
       transactionId: t.id,
       date: t.date,
-      description: keterangan,
-      subDescription: subKeterangan,
+      description,
+      subDescription,
       counterAccountName: counterAccount?.account_name ?? '-',
       counterAccountCode: counterAccount?.account_code ?? '-',
       debitAmount,
