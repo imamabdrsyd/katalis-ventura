@@ -15,6 +15,28 @@ const SELECT_WITH_RELATIONS = `
 `;
 
 /**
+ * Akun pendapatan unit (migr 124): dari item main-service unit — utamakan weekday,
+ * lalu weekend, lalu main mana pun yang punya revenue_account_id. null bila unit
+ * tak punya item main atau tak ada yang set akun (caller fallback ke default 4100).
+ */
+async function resolveUnitRevenueAccountId(unitId: string | null): Promise<string | null> {
+  if (!unitId) return null;
+  const supabase = createClient();
+  const { data } = await supabase
+    .from('catalog_items')
+    .select('rate_kind, revenue_account_id')
+    .eq('unit_id', unitId)
+    .eq('service_role', 'main')
+    .eq('is_active', true)
+    .is('deleted_at', null)
+    .not('revenue_account_id', 'is', null);
+  const rows = (data ?? []) as Array<{ rate_kind: string | null; revenue_account_id: string | null }>;
+  if (rows.length === 0) return null;
+  const byKind = (k: string) => rows.find((r) => r.rate_kind === k)?.revenue_account_id ?? null;
+  return byKind('weekday') ?? byKind('weekend') ?? rows[0].revenue_account_id;
+}
+
+/**
  * Petakan error Postgres ke pesan ramah. 23P01 = exclusion constraint
  * `bookings_no_double_booking` (migr 117) — backstop server-side untuk race
  * yang lolos cek overlap client (findOverlappingBookings, debounced).
@@ -294,10 +316,15 @@ export async function markBookingPaid(
     throw new Error('Akun Kas/Bank tidak ditemukan. Periksa Chart of Accounts.');
   }
 
+  // Akun pendapatan (migr 124): utamakan revenue_account_id item main-service unit
+  // (weekday → weekend → any main), lalu fallback akun pendapatan default (4100).
+  // rate_item lama (deprecated) tak dipakai lagi sebagai sumber.
   const revenueAccountId =
-    fresh.unit?.rate_item?.revenue_account_id ?? resolveDefaultRevenueAccount(accounts)?.id ?? null;
+    (await resolveUnitRevenueAccountId(fresh.unit_id)) ??
+    resolveDefaultRevenueAccount(accounts)?.id ??
+    null;
   if (!revenueAccountId) {
-    throw new Error('Akun pendapatan tidak ditemukan. Set sumber harga pada unit atau akun pendapatan default di CoA.');
+    throw new Error('Akun pendapatan tidak ditemukan. Set akun pendapatan pada item layanan atau akun pendapatan default di CoA.');
   }
 
   const total = fresh.total_amount;

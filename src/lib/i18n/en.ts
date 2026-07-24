@@ -339,6 +339,7 @@ export const en: Translations = {
     skuLabel: 'SKU',
     skuPlaceholder: 'e.g. CO-100ML',
     errorSkuTaken: 'SKU is already used by another item',
+    errorRateKindTaken: 'This unit already has a rate item for that category (Weekday/Weekend/Monthly). Only 1 item per category per unit.',
     trackStockLabel: 'Track stock for this item',
     trackStockHint: 'Stock decreases automatically on cashier checkout. Best for physical goods.',
     stockQtyLabel: 'Stock quantity',

@@ -19,7 +19,7 @@ import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
 import { formatCurrency, formatNumber } from '@/lib/utils';
 import { getDailyRates } from '@/lib/api/dailyRates';
-import { quoteStay, groupIntoRanges, type StayQuote } from '@/lib/rates';
+import { quoteStayV2, groupIntoRanges, type StayQuote, type UnitBaseRates } from '@/lib/rates';
 import { getBookingDisplayState, BOOKING_DOT_CLASSES, type BookingDisplayState } from '@/lib/bookingStatus';
 import { useLanguage } from '@/context/LanguageContext';
 import type { Translations } from '@/lib/i18n/types';
@@ -61,6 +61,9 @@ interface BookingModalProps {
   businessId: string;
   /** Unit fisik yang sedang dilihat kalendernya — booking selalu milik unit ini. */
   unit: BusinessUnit;
+  /** Base rates unit (weekday/weekend/monthly, migr 124) — untuk auto-quote booking
+   *  belum lunas. Menggantikan `unit.rate_item` yang deprecated. */
+  baseRates: UnitBaseRates;
   /** Booking yang dilihat/diedit. Modal ini EDIT-ONLY (booking mengalir dari
    *  transaksi/omnichannel — tak ada create di kalender). */
   booking: Booking | null;
@@ -84,6 +87,7 @@ export function BookingModal({
   onClose,
   businessId,
   unit,
+  baseRates,
   booking,
   onUpdate,
   onMarkPaid,
@@ -153,9 +157,11 @@ export function BookingModal({
   // Total: quote kalender harga bila aktif; selain itu flat harga × malam.
   const total = autoQuote ? autoQuote.total : nights * price;
 
-  // ── Auto-quote kalender harga — hanya untuk booking BELUM lunas (mis. tentatif
-  // dari website) yang harganya masih boleh dihitung ulang dari kalender harga.
-  const rateQuoteActive = !priceLocked && !!unit.rate_item_id;
+  // ── Auto-quote kalender harga (migr 124) — hanya untuk booking BELUM lunas (mis.
+  // tentatif dari website) yang harganya masih boleh dihitung ulang. Base rates
+  // weekday/weekend/monthly unit + override per tanggal → quoteStayV2.
+  const hasBaseRate = baseRates.weekday != null || baseRates.weekend != null;
+  const rateQuoteActive = !priceLocked && hasBaseRate;
   useEffect(() => {
     if (!rateQuoteActive || !datesValid) {
       setAutoQuote(null);
@@ -167,10 +173,10 @@ export function BookingModal({
         const lastNight = format(addDays(parseISO(checkOut), -1), 'yyyy-MM-dd');
         const overrides = await getDailyRates(unit.id, checkIn, lastNight);
         if (cancelled) return;
-        const q = quoteStay(
+        const q = quoteStayV2(
           checkIn,
           checkOut,
-          Number(unit.rate_item?.default_price ?? 0),
+          baseRates,
           overrides.map((o) => ({ date: o.date, price: Number(o.price) }))
         );
         setAutoQuote(q);
@@ -184,7 +190,7 @@ export function BookingModal({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [rateQuoteActive, datesValid, unit.id, unit.rate_item?.default_price, checkIn, checkOut]);
+  }, [rateQuoteActive, datesValid, unit.id, baseRates, checkIn, checkOut]);
 
   // Ringkasan breakdown per rentang harga ("2 mlm × 350rb + 1 mlm × 750rb").
   const quoteBreakdownLabel = useMemo(() => {

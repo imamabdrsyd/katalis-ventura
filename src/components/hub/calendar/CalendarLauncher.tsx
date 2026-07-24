@@ -438,6 +438,7 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
         onClose={() => setModalOpen(false)}
         businessId={activeBusinessId ?? ''}
         unit={selectedUnit}
+        baseRates={baseRates}
         booking={editing}
         onUpdate={calendar.update}
         onMarkPaid={calendar.markPaid}

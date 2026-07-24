@@ -167,8 +167,15 @@ export function CatalogPanel({
       setEditItem(null);
     } catch (err) {
       const msg = err instanceof Error ? err.message : tc.toastSaveFailed;
-      // Satu-satunya unique constraint katalog kini SKU (migr 121)
-      toast.error(msg.includes('unique') || msg.includes('duplicate') ? tc.errorSkuTaken : msg);
+      // Dua unique index katalog: SKU (migr 121) & (unit_id, rate_kind) main-service
+      // (migr 124 — 1 item weekday/weekend/monthly per unit). Bedakan pesannya.
+      if (msg.includes('unit_rate_kind')) {
+        toast.error(tc.errorRateKindTaken);
+      } else if (msg.includes('unique') || msg.includes('duplicate')) {
+        toast.error(tc.errorSkuTaken);
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setSaving(false);
     }

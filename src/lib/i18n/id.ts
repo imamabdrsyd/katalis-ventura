@@ -340,6 +340,7 @@ export const id: Translations = {
     skuLabel: 'SKU',
     skuPlaceholder: 'Contoh: CO-100ML',
     errorSkuTaken: 'SKU sudah dipakai item lain',
+    errorRateKindTaken: 'Unit ini sudah punya item tarif untuk kategori itu (Weekday/Weekend/Bulanan). Satu unit hanya boleh 1 item per kategori.',
     trackStockLabel: 'Lacak stok item ini',
     trackStockHint: 'Stok berkurang otomatis saat checkout kasir. Cocok untuk barang fisik.',
     stockQtyLabel: 'Jumlah stok',

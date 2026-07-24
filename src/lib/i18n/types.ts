@@ -351,6 +351,7 @@ export interface Translations {
     skuLabel: string;
     skuPlaceholder: string;
     errorSkuTaken: string;
+    errorRateKindTaken: string;
     trackStockLabel: string;
     trackStockHint: string;
     stockQtyLabel: string;
