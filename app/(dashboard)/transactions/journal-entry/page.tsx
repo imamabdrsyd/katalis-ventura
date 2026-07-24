@@ -1248,18 +1248,24 @@ export default function JournalEntryPage() {
             {/* ── Single-line mode (default) ── */}
             {!isMultiLineMode && (
               <>
-                {/* Row 1: Amount + Date */}
+                {/* Row 1: Amount + Date — dibuat sejajar dengan FloatingField Tanggal.
+                    Meniru struktur FloatingField (label mengambang absolut + input
+                    pt-5/pb-1.5) supaya garis bawah kedua field persis di garis yang
+                    sama, dan nominal pakai ukuran teks normal (bukan text-2xl).
+                    Khusus di form ini — komponen CurrencyInput tidak diubah. */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
+                  <div className="relative">
+                    <label className="pointer-events-none absolute left-0 top-5 z-10 origin-[0] -translate-y-5 scale-75 text-gray-500 dark:text-gray-400">
+                      Jumlah (Rp)
+                    </label>
                     <CurrencyInputWithCalculator
-                      label="Jumlah (Rp)"
                       displayValue={displayAmount}
                       onChange={(numeric, formatted) => {
                         setDisplayAmount(formatted);
                         setAmount(numeric);
                         if (errors.amount) setErrors(p => { const n = { ...p }; delete n.amount; return n; });
                       }}
-                      inputClassName="text-2xl font-bold"
+                      inputClassName="pt-5 pb-1.5"
                       colorVariant="primary"
                       error={errors.amount}
                       autoFocus
