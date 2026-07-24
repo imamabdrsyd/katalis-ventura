@@ -8,6 +8,7 @@ import type { Booking, BookingUpdate } from '@/types';
 import { Modal } from '@/components/ui/Modal';
 import { formatCurrency } from '@/lib/utils';
 import { BOOKING_CHANNEL_LABELS } from '@/lib/bookingStatus';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface HoldingPanelProps {
   isOpen: boolean;
@@ -25,6 +26,8 @@ interface HoldingPanelProps {
  * (revenue tak berubah), price_per_night di-recompute dari total/nights.
  */
 export function HoldingPanel({ isOpen, onClose, bookings, onUpdate, onReloaded }: HoldingPanelProps) {
+  const { t } = useLanguage();
+  const c = t.calendar;
   const [drafts, setDrafts] = useState<Record<string, { checkIn: string; checkOut: string }>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -42,8 +45,8 @@ export function HoldingPanel({ isOpen, onClose, bookings, onUpdate, onReloaded }
 
   const handleSave = async (b: Booking) => {
     const d = drafts[b.id];
-    if (!d?.checkIn || !d?.checkOut) return toast.error('Isi check-in dan check-out.');
-    if (d.checkOut <= d.checkIn) return toast.error('Check-out harus setelah check-in.');
+    if (!d?.checkIn || !d?.checkOut) return toast.error(c.hpToastFillDates);
+    if (d.checkOut <= d.checkIn) return toast.error(c.hpToastCheckoutAfter);
     const nights = Math.max(1, differenceInCalendarDays(parseISO(d.checkOut), parseISO(d.checkIn)));
     setBusyId(b.id);
     try {
@@ -53,10 +56,10 @@ export function HoldingPanel({ isOpen, onClose, bookings, onUpdate, onReloaded }
         check_out: d.checkOut,
         price_per_night: Math.round(b.total_amount / nights),
       });
-      toast.success('Tanggal diisi — booking masuk kalender');
+      toast.success(c.hpToastFilled);
       onReloaded();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal menyimpan');
+      toast.error(err instanceof Error ? err.message : c.hpToastSaveFailed);
     } finally {
       setBusyId(null);
     }
@@ -69,15 +72,12 @@ export function HoldingPanel({ isOpen, onClose, bookings, onUpdate, onReloaded }
       size="2xl"
       title={
         <span className="flex items-center gap-2">
-          Perlu tindak lanjut
+          {c.hpTitle}
           <span className="font-normal text-gray-500 dark:text-gray-400">({bookings.length})</span>
         </span>
       }
     >
-      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-        Booking ini masuk dari transaksi (sudah lunas) tapi belum ada tanggal menginap. Lengkapi
-        check-in/out agar tampil di kalender & terhitung di occupancy.
-      </p>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">{c.hpIntro}</p>
 
       {/* Search — panel bisa panjang, cari cepat by nama tamu */}
       {bookings.length > 5 && (
@@ -87,19 +87,17 @@ export function HoldingPanel({ isOpen, onClose, bookings, onUpdate, onReloaded }
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cari nama tamu…"
+            placeholder={c.hpSearchGuest}
             className="input pl-9"
           />
         </div>
       )}
 
       {bookings.length === 0 ? (
-        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">
-          Tidak ada booking yang perlu ditindaklanjuti. 🎉
-        </p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">{c.hpEmpty}</p>
       ) : filtered.length === 0 ? (
         <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
-          Tidak ada tamu cocok dengan &quot;{query}&quot;.
+          {c.hpNoMatch.replace('{query}', query)}
         </p>
       ) : (
       <ul className="space-y-2">
@@ -112,10 +110,10 @@ export function HoldingPanel({ isOpen, onClose, bookings, onUpdate, onReloaded }
             >
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                  {b.guest_name || b.contact?.name || 'Tamu'}
+                  {b.guest_name || b.contact?.name || c.hpGuest}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {formatCurrency(b.total_amount)} · via {BOOKING_CHANNEL_LABELS[b.channel]}
+                  {formatCurrency(b.total_amount)} · {c.bmVia} {BOOKING_CHANNEL_LABELS[b.channel]}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -124,7 +122,7 @@ export function HoldingPanel({ isOpen, onClose, bookings, onUpdate, onReloaded }
                   className="input py-1.5 text-sm"
                   value={d.checkIn}
                   onChange={(e) => setDraft(b.id, { checkIn: e.target.value })}
-                  aria-label="Check-in"
+                  aria-label={c.bmCheckIn}
                 />
                 <span className="text-gray-400">→</span>
                 <input
@@ -133,7 +131,7 @@ export function HoldingPanel({ isOpen, onClose, bookings, onUpdate, onReloaded }
                   value={d.checkOut}
                   min={d.checkIn ? format(addDays(parseISO(d.checkIn), 1), 'yyyy-MM-dd') : undefined}
                   onChange={(e) => setDraft(b.id, { checkOut: e.target.value })}
-                  aria-label="Check-out"
+                  aria-label={c.bmCheckOut}
                 />
                 <button
                   type="button"
@@ -146,7 +144,7 @@ export function HoldingPanel({ isOpen, onClose, bookings, onUpdate, onReloaded }
                   ) : (
                     <CheckCircle2 className="w-4 h-4" />
                   )}
-                  Simpan
+                  {c.hpSave}
                 </button>
               </div>
             </li>

@@ -5,17 +5,10 @@ import { Tag, Loader2, RotateCcw, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
 import { listDatesInRange } from '@/lib/rates';
+import { useLanguage } from '@/context/LanguageContext';
 
-/** Chip hari: label + getUTCDay index (0=Min..6=Sab), urut Sen–Min ala grid. */
-const DAY_CHIPS: { label: string; dow: number }[] = [
-  { label: 'Sen', dow: 1 },
-  { label: 'Sel', dow: 2 },
-  { label: 'Rab', dow: 3 },
-  { label: 'Kam', dow: 4 },
-  { label: 'Jum', dow: 5 },
-  { label: 'Sab', dow: 6 },
-  { label: 'Min', dow: 0 },
-];
+/** Urutan getUTCDay per chip hari (0=Min..6=Sab), urut Sen–Min ala grid. Label i18n. */
+const DAY_DOWS = [1, 2, 3, 4, 5, 6, 0];
 
 interface RateEditorPanelProps {
   /** Harga base weekday unit (utk placeholder input & konteks "default"). */
@@ -45,14 +38,16 @@ export function RateEditorPanel({
   onReset,
   onClear,
 }: RateEditorPanelProps) {
+  const { t } = useLanguage();
+  const c = t.calendar;
   const [price, setPrice] = useState('');
-  const [activeDows, setActiveDows] = useState<Set<number>>(new Set(DAY_CHIPS.map((d) => d.dow)));
+  const [activeDows, setActiveDows] = useState<Set<number>>(new Set(DAY_DOWS));
   const [busy, setBusy] = useState(false);
 
   // Reset input tiap ganti seleksi
   useEffect(() => {
     setPrice('');
-    setActiveDows(new Set(DAY_CHIPS.map((d) => d.dow)));
+    setActiveDows(new Set(DAY_DOWS));
   }, [rangeStart, rangeEnd]);
 
   const dates = useMemo(
@@ -79,7 +74,7 @@ export function RateEditorPanel({
       toast.success(successMsg);
       onClear();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal menyimpan harga');
+      toast.error(err instanceof Error ? err.message : c.reToastSaveFailed);
     } finally {
       setBusy(false);
     }
@@ -87,40 +82,45 @@ export function RateEditorPanel({
 
   const handleApply = () => {
     const p = Number(price);
-    if (!price || Number.isNaN(p) || p < 0) return toast.error('Isi harga yang valid.');
-    if (dates.length === 0) return toast.error('Tidak ada tanggal yang cocok dengan filter hari.');
-    run(() => onApply(dates, p), `Harga ${dates.length} malam di-set ${formatCurrency(p)}`);
+    if (!price || Number.isNaN(p) || p < 0) return toast.error(c.reToastPriceValid);
+    if (dates.length === 0) return toast.error(c.reToastNoDates);
+    run(
+      () => onApply(dates, p),
+      c.reToastApplied.replace('{count}', String(dates.length)).replace('{price}', formatCurrency(p))
+    );
   };
 
   const handleReset = () => {
-    if (dates.length === 0) return toast.error('Tidak ada tanggal yang cocok dengan filter hari.');
-    run(() => onReset(dates), `${dates.length} malam kembali ke harga default`);
+    if (dates.length === 0) return toast.error(c.reToastNoDates);
+    run(() => onReset(dates), c.reToastReset.replace('{count}', String(dates.length)));
   };
 
-  const rangeLabel = rangeStart === rangeEnd ? rangeStart : `${rangeStart} → ${rangeEnd}`;
+  const range = rangeStart === rangeEnd ? rangeStart : `${rangeStart} → ${rangeEnd}`;
 
   return (
     <div className="card-static p-4 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 inline-flex items-center gap-2">
           <Tag className="w-4 h-4 text-primary-500 dark:text-primary-400" />
-          Set harga · {rangeLabel}
-          <span className="font-normal text-gray-500 dark:text-gray-400">({dates.length} malam)</span>
+          {c.reTitle.replace('{range}', range)}
+          <span className="font-normal text-gray-500 dark:text-gray-400">
+            ({c.reNights.replace('{count}', String(dates.length))})
+          </span>
         </p>
-        <button type="button" onClick={onClear} className="btn-icon" aria-label="Batal pilih" title="Batal pilih">
+        <button type="button" onClick={onClear} className="btn-icon" aria-label={c.reCancel} title={c.reCancel}>
           <X className="w-4 h-4" />
         </button>
       </div>
 
       {/* Filter hari */}
       <div className="flex flex-wrap items-center gap-1.5">
-        {DAY_CHIPS.map((d) => {
-          const active = activeDows.has(d.dow);
+        {DAY_DOWS.map((dow, i) => {
+          const active = activeDows.has(dow);
           return (
             <button
-              key={d.dow}
+              key={dow}
               type="button"
-              onClick={() => toggleDow(d.dow)}
+              onClick={() => toggleDow(dow)}
               className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                 active
                   ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 ring-1 ring-inset ring-primary-200 dark:ring-primary-800'
@@ -128,13 +128,11 @@ export function RateEditorPanel({
               }`}
               aria-pressed={active}
             >
-              {d.label}
+              {c.reDayChips[i]}
             </button>
           );
         })}
-        <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">
-          filter hari — mis. hanya Jum+Sab untuk harga weekend
-        </span>
+        <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">{c.reDayFilterHint}</span>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-2">
@@ -142,7 +140,7 @@ export function RateEditorPanel({
           type="number"
           min={0}
           className="input flex-1"
-          placeholder={`Harga per malam (default ${formatCurrency(defaultPrice)})`}
+          placeholder={c.rePlaceholder.replace('{price}', formatCurrency(defaultPrice))}
           value={price}
           onChange={(e) => setPrice(e.target.value)}
         />
@@ -154,16 +152,16 @@ export function RateEditorPanel({
             className="btn-primary inline-flex items-center gap-1.5 disabled:opacity-50"
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Tag className="w-4 h-4" />}
-            Terapkan
+            {c.reApply}
           </button>
           <button
             type="button"
             onClick={handleReset}
             disabled={busy}
             className="btn-ghost inline-flex items-center gap-1.5 disabled:opacity-50"
-            title="Hapus harga khusus — kembali ke harga default item"
+            title={c.reResetTitle}
           >
-            <RotateCcw className="w-4 h-4" /> Reset ke default
+            <RotateCcw className="w-4 h-4" /> {c.reReset}
           </button>
         </div>
       </div>

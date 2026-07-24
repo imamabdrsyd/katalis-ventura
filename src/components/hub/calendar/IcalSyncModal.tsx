@@ -7,6 +7,7 @@ import type { BusinessUnit } from '@/types';
 import { Modal } from '@/components/ui/Modal';
 import { createClient } from '@/lib/supabase';
 import { updateUnit } from '@/lib/api/units';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface IcalSyncModalProps {
   isOpen: boolean;
@@ -25,6 +26,8 @@ interface IcalSyncModalProps {
  * Sync otomatis harian, atau tekan "Sync sekarang".
  */
 export function IcalSyncModal({ isOpen, onClose, businessId, units, onSynced }: IcalSyncModalProps) {
+  const { t } = useLanguage();
+  const c = t.calendar;
   const [feedToken, setFeedToken] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
@@ -55,12 +58,12 @@ export function IcalSyncModal({ isOpen, onClose, businessId, units, onSynced }: 
         await updateUnit(unit.id, { ical_import_url: draft || null });
         onSynced();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Gagal menyimpan URL iCal');
+        toast.error(err instanceof Error ? err.message : c.icToastSaveFailed);
       } finally {
         setSavingImport(null);
       }
     },
-    [importDrafts, onSynced]
+    [importDrafts, onSynced, c]
   );
 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -78,7 +81,7 @@ export function IcalSyncModal({ isOpen, onClose, businessId, units, onSynced }: 
       setCopied(key);
       setTimeout(() => setCopied(null), 1500);
     } catch {
-      toast.error('Gagal menyalin');
+      toast.error(c.icToastCopyFailed);
     }
   };
 
@@ -92,13 +95,15 @@ export function IcalSyncModal({ isOpen, onClose, businessId, units, onSynced }: 
         body: JSON.stringify({ businessId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? 'Sync gagal');
+      if (!res.ok) throw new Error(data?.error ?? c.icToastSyncFailed);
       toast.success(
-        `Sinkronisasi selesai: ${data.imported + data.updated} blok, ${data.removed} dihapus`
+        c.icToastSyncDone
+          .replace('{blocks}', String(data.imported + data.updated))
+          .replace('{removed}', String(data.removed))
       );
       onSynced();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Sync gagal');
+      toast.error(err instanceof Error ? err.message : c.icToastSyncFailed);
     } finally {
       setSyncing(false);
     }
@@ -107,7 +112,7 @@ export function IcalSyncModal({ isOpen, onClose, businessId, units, onSynced }: 
   const footer = (
     <div className="flex items-center justify-between gap-3">
       <button type="button" onClick={onClose} className="btn-ghost">
-        Tutup
+        {c.icClose}
       </button>
       <button
         type="button"
@@ -116,22 +121,17 @@ export function IcalSyncModal({ isOpen, onClose, businessId, units, onSynced }: 
         className="btn-primary inline-flex items-center gap-2 disabled:opacity-50"
       >
         {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-        Sync sekarang
+        {c.icSyncNow}
       </button>
     </div>
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Sinkronisasi kalender OTA (iCal)" size="2xl" footer={footer}>
+    <Modal isOpen={isOpen} onClose={onClose} title={c.icTitle} size="2xl" footer={footer}>
       <div className="space-y-5">
         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 flex items-start gap-3">
           <Link2 className="w-4 h-4 text-primary-500 mt-0.5 shrink-0" />
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Hubungkan tiap unit dengan Airbnb &amp; Booking.com lewat iCal. Tempel URL <b>impor</b>
-            {' '}OTA (memblokir tanggal terisi di sana) dan salin URL <b>ekspor</b> AXION ke OTA
-            (memblokir tanggal yang kamu booking langsung). Sinkronisasi otomatis berjalan harian —
-            atau tekan <b>Sync sekarang</b>.
-          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{c.icIntro}</p>
         </div>
 
         {units.map((unit) => (
@@ -144,7 +144,7 @@ export function IcalSyncModal({ isOpen, onClose, businessId, units, onSynced }: 
             {/* IMPOR: URL feed OTA yang kita baca (blok tanggal terisi di Airbnb/Booking) */}
             <div>
               <label className="label flex items-center gap-1.5">
-                <Download className="w-3.5 h-3.5 text-gray-400" /> URL impor OTA (dari Airbnb / Booking.com)
+                <Download className="w-3.5 h-3.5 text-gray-400" /> {c.icImportLabel}
               </label>
               <div className="relative">
                 <input
@@ -164,14 +164,14 @@ export function IcalSyncModal({ isOpen, onClose, businessId, units, onSynced }: 
             {/* EKSPOR: URL feed AXION yang dipasang di OTA */}
             <div>
               <label className="label flex items-center gap-1.5">
-                <Upload className="w-3.5 h-3.5 text-gray-400" /> URL ekspor AXION (pasang di OTA)
+                <Upload className="w-3.5 h-3.5 text-gray-400" /> {c.icExportLabel}
               </label>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
                   readOnly
                   className="input flex-1 text-xs text-gray-500 dark:text-gray-400"
-                  value={exportUrl(unit.id) || 'Memuat…'}
+                  value={exportUrl(unit.id) || c.icLoading}
                   onFocus={(e) => e.target.select()}
                 />
                 <button
@@ -185,7 +185,7 @@ export function IcalSyncModal({ isOpen, onClose, businessId, units, onSynced }: 
                   ) : (
                     <Copy className="w-4 h-4" />
                   )}
-                  Salin
+                  {c.icCopy}
                 </button>
               </div>
             </div>

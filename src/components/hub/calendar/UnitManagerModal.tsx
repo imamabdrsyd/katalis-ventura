@@ -7,6 +7,7 @@ import type { BusinessUnit } from '@/types';
 import { Modal } from '@/components/ui/Modal';
 import { createUnit, updateUnit, deleteUnit } from '@/lib/api/units';
 import { useCalendarUnit } from './CalendarUnitContext';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface UnitManagerModalProps {
   isOpen: boolean;
@@ -23,6 +24,8 @@ interface UnitManagerModalProps {
  * itu diatur per item layanan (rate_kind weekday/weekend/monthly, migr 124).
  */
 export function UnitManagerModal({ isOpen, onClose, businessId, userId, onChanged }: UnitManagerModalProps) {
+  const { t } = useLanguage();
+  const c = t.calendar;
   const { units, selectedUnit, setSelectedUnitId } = useCalendarUnit();
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -36,21 +39,21 @@ export function UnitManagerModal({ isOpen, onClose, businessId, userId, onChange
   }, [isOpen, units]);
 
   const handleCreate = useCallback(async () => {
-    if (!newName.trim()) return toast.error('Nama unit wajib diisi.');
+    if (!newName.trim()) return toast.error(c.umToastNameRequired);
     setCreating(true);
     try {
       const created = await createUnit({ business_id: businessId, name: newName.trim(), created_by: userId });
-      toast.success(`Unit "${newName.trim()}" dibuat`);
+      toast.success(c.umToastCreated.replace('{name}', newName.trim()));
       setNewName('');
       onChanged();
       // Otomatis pindah ke unit yang baru dibuat (kalender & layanan ikut).
       setSelectedUnitId(created.id);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal membuat unit');
+      toast.error(err instanceof Error ? err.message : c.umToastCreateFailed);
     } finally {
       setCreating(false);
     }
-  }, [newName, businessId, userId, onChanged, setSelectedUnitId]);
+  }, [newName, businessId, userId, onChanged, setSelectedUnitId, c]);
 
   const handleRenameBlur = useCallback(
     async (unit: BusinessUnit) => {
@@ -61,12 +64,12 @@ export function UnitManagerModal({ isOpen, onClose, businessId, userId, onChange
         await updateUnit(unit.id, { name: draft.trim() });
         onChanged();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Gagal mengubah nama unit');
+        toast.error(err instanceof Error ? err.message : c.umToastRenameFailed);
       } finally {
         setBusyId(null);
       }
     },
-    [nameDrafts, onChanged]
+    [nameDrafts, onChanged, c]
   );
 
   const handleToggleActive = useCallback(
@@ -76,44 +79,40 @@ export function UnitManagerModal({ isOpen, onClose, businessId, userId, onChange
         await updateUnit(unit.id, { is_active: !unit.is_active });
         onChanged();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Gagal mengubah status unit');
+        toast.error(err instanceof Error ? err.message : c.umToastStatusFailed);
       } finally {
         setBusyId(null);
       }
     },
-    [onChanged]
+    [onChanged, c]
   );
 
   const handleDelete = useCallback(
     async (unit: BusinessUnit) => {
       if (units.filter((u) => !u.deleted_at).length <= 1) {
-        toast.error('Tidak bisa menghapus unit terakhir — minimal 1 unit diperlukan untuk kalender.');
+        toast.error(c.umToastCannotDeleteLast);
         return;
       }
       setBusyId(unit.id);
       try {
         await deleteUnit(unit.id);
-        toast.success(`Unit "${unit.name}" dihapus`);
+        toast.success(c.umToastDeleted.replace('{name}', unit.name));
         onChanged();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Gagal menghapus unit');
+        toast.error(err instanceof Error ? err.message : c.umToastDeleteFailed);
       } finally {
         setBusyId(null);
       }
     },
-    [units, onChanged]
+    [units, onChanged, c]
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Kelola unit" size="2xl">
+    <Modal isOpen={isOpen} onClose={onClose} title={c.umTitle} size="2xl">
       <div className="space-y-5">
         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 flex items-start gap-3">
           <Home className="w-4 h-4 text-primary-500 dark:text-primary-400 mt-0.5 shrink-0" />
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Unit = properti/kamar/villa fisik yang bisa dibooking. Pilih unit untuk melihat kalender &amp;
-            layanannya. Tiap unit punya kalender, occupancy, dan daftar layanan (harga) sendiri. Harga
-            diatur di tiap item layanan (Weekday/Weekend/Bulanan), bukan di sini.
-          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{c.umIntro}</p>
         </div>
 
         {/* Tambah unit baru */}
@@ -121,7 +120,7 @@ export function UnitManagerModal({ isOpen, onClose, businessId, userId, onChange
           <input
             type="text"
             className="input flex-1"
-            placeholder="Nama unit baru, mis. Villa B"
+            placeholder={c.umNewPlaceholder}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
@@ -133,7 +132,7 @@ export function UnitManagerModal({ isOpen, onClose, businessId, userId, onChange
             className="btn-primary inline-flex items-center gap-1.5 disabled:opacity-50 shrink-0"
           >
             {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            Tambah unit
+            {c.umAdd}
           </button>
         </div>
 
@@ -163,8 +162,8 @@ export function UnitManagerModal({ isOpen, onClose, businessId, userId, onChange
                       ? 'border-primary-500 bg-primary-500 text-white'
                       : 'border-gray-300 dark:border-gray-600 hover:border-primary-400'
                   }`}
-                  aria-label={`Pilih ${unit.name}`}
-                  title={`Pilih ${unit.name}`}
+                  aria-label={c.umSelectTitle.replace('{name}', unit.name)}
+                  title={c.umSelectTitle.replace('{name}', unit.name)}
                 >
                   {isSelected && <Check className="w-3 h-3" />}
                 </button>
@@ -188,7 +187,7 @@ export function UnitManagerModal({ isOpen, onClose, businessId, userId, onChange
                       disabled={busy}
                       className="w-3.5 h-3.5 rounded text-primary-600 focus:ring-primary-500"
                     />
-                    Aktif
+                    {c.umActive}
                   </label>
                 )}
                 <button
@@ -196,8 +195,8 @@ export function UnitManagerModal({ isOpen, onClose, businessId, userId, onChange
                   onClick={() => handleDelete(unit)}
                   disabled={busy}
                   className="btn-icon shrink-0"
-                  aria-label={`Hapus unit ${unit.name}`}
-                  title="Hapus unit"
+                  aria-label={`${c.umDeleteTitle} ${unit.name}`}
+                  title={c.umDeleteTitle}
                 >
                   <Trash2 className="w-4 h-4 text-red-500" />
                 </button>

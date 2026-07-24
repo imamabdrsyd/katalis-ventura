@@ -20,13 +20,32 @@ import { ContactAutocomplete } from '@/components/transactions/ContactAutocomple
 import { formatCurrency, formatNumber } from '@/lib/utils';
 import { getDailyRates } from '@/lib/api/dailyRates';
 import { quoteStay, groupIntoRanges, type StayQuote } from '@/lib/rates';
-import {
-  BOOKING_STATUS_LABELS,
-  BOOKING_CHANNEL_LABELS,
-  getBookingDisplayState,
-  BOOKING_STATE_LABELS,
-  BOOKING_DOT_CLASSES,
-} from '@/lib/bookingStatus';
+import { getBookingDisplayState, BOOKING_DOT_CLASSES, type BookingDisplayState } from '@/lib/bookingStatus';
+import { useLanguage } from '@/context/LanguageContext';
+import type { Translations } from '@/lib/i18n/types';
+
+// Label state/status/channel dwibahasa (menggantikan konstanta ID di bookingStatus).
+function stateLabel(s: BookingDisplayState, c: Translations['calendar']): string {
+  const m: Record<BookingDisplayState, string> = {
+    paid: c.statePaid, confirmed: c.stateConfirmed, checked_in: c.statusCheckedIn,
+    tentative: c.stateInquiry, cancelled: c.statusCancelled, external: c.stateExternal,
+  };
+  return m[s];
+}
+function statusLabel(s: BookingStatus, c: Translations['calendar']): string {
+  const m: Record<BookingStatus, string> = {
+    tentative: c.statusTentative, confirmed: c.statusConfirmed, checked_in: c.statusCheckedIn,
+    completed: c.statusCompleted, cancelled: c.statusCancelled,
+  };
+  return m[s];
+}
+function channelLabel(ch: BookingChannel, c: Translations['calendar']): string {
+  const m: Record<BookingChannel, string> = {
+    manual: c.channelManual, airbnb: 'Airbnb', booking_com: 'Booking.com',
+    website: c.channelWebsite, other: c.channelOther,
+  };
+  return m[ch];
+}
 
 /** Prefill saat membuat booking baru (dari klik sel tanggal atau konversi lead). */
 export interface BookingPrefill {
@@ -72,6 +91,8 @@ export function BookingModal({
   onDelete,
   checkOverlap,
 }: BookingModalProps) {
+  const { t } = useLanguage();
+  const c = t.calendar;
   const isExternal = !!booking?.is_external;
   const isPaid = booking?.payment_status === 'paid';
   // Booking LUNAS = revenue sudah terkunci di ledger → harga/total tak boleh
@@ -169,9 +190,9 @@ export function BookingModal({
   const quoteBreakdownLabel = useMemo(() => {
     if (!autoQuote) return null;
     return groupIntoRanges(autoQuote.breakdown)
-      .map((r) => `${r.nights} mlm × ${formatCurrency(r.price)}`)
+      .map((r) => c.bmNightsTimes.replace('{nights}', String(r.nights)).replace('{price}', formatCurrency(r.price)))
       .join(' + ');
-  }, [autoQuote]);
+  }, [autoQuote, c]);
 
   // ── Overlap guard (debounced) ──────────────────────────────────────────────
   useEffect(() => {
@@ -220,15 +241,15 @@ export function BookingModal({
 
   const handleSubmit = async () => {
     if (!booking) return;
-    if (!datesValid) return toast.error('Tanggal check-out harus setelah check-in.');
-    if (hasConflict) return toast.error('Tanggal bentrok dengan booking lain untuk unit ini.');
+    if (!datesValid) return toast.error(c.bmToastDatesInvalid);
+    if (hasConflict) return toast.error(c.bmToastConflict);
     setBusy(true);
     try {
       await onUpdate(booking.id, buildBase());
-      toast.success('Booking diperbarui');
+      toast.success(c.bmToastUpdated);
       onClose();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal menyimpan booking');
+      toast.error(err instanceof Error ? err.message : c.bmToastSaveFailed);
     } finally {
       setBusy(false);
     }
@@ -241,9 +262,9 @@ export function BookingModal({
     setBusy(true);
     try {
       await onUpdate(booking.id, { status: newStatus });
-      toast.success('Status diperbarui');
+      toast.success(c.bmToastStatusUpdated);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal memperbarui status');
+      toast.error(err instanceof Error ? err.message : c.bmToastStatusFailed);
     } finally {
       setBusy(false);
     }
@@ -251,19 +272,19 @@ export function BookingModal({
 
   const handleMarkPaid = async () => {
     if (!booking) return;
-    if (!datesValid) return toast.error('Tanggal check-out harus setelah check-in.');
-    if (hasConflict) return toast.error('Tanggal bentrok dengan booking lain untuk unit ini.');
-    if (total <= 0) return toast.error('Total booking harus lebih dari 0.');
+    if (!datesValid) return toast.error(c.bmToastDatesInvalid);
+    if (hasConflict) return toast.error(c.bmToastConflict);
+    if (total <= 0) return toast.error(c.bmToastTotalPositive);
     setBusy(true);
     try {
       // Simpan nilai form dulu (harga/tanggal/status) supaya ledger mencatat
       // angka yang tampil di tombol — bukan snapshot booking sebelum diedit.
       const saved = await onUpdate(booking.id, buildBase());
       await onMarkPaid(saved, paymentMethod);
-      toast.success('Booking ditandai lunas — transaksi tercatat di pembukuan');
+      toast.success(c.bmToastMarkedPaid);
       onClose();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal menandai lunas');
+      toast.error(err instanceof Error ? err.message : c.bmToastMarkPaidFailed);
     } finally {
       setBusy(false);
     }
@@ -274,10 +295,10 @@ export function BookingModal({
     setBusy(true);
     try {
       await onCancel(booking.id);
-      toast.success('Booking dibatalkan');
+      toast.success(c.bmToastCancelled);
       onClose();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal membatalkan');
+      toast.error(err instanceof Error ? err.message : c.bmToastCancelFailed);
     } finally {
       setBusy(false);
     }
@@ -288,10 +309,10 @@ export function BookingModal({
     setBusy(true);
     try {
       await onDelete(booking.id);
-      toast.success('Booking dihapus');
+      toast.success(c.bmToastDeleted);
       onClose();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal menghapus');
+      toast.error(err instanceof Error ? err.message : c.bmToastDeleteFailed);
     } finally {
       setBusy(false);
     }
@@ -300,12 +321,12 @@ export function BookingModal({
   // ── Render ────────────────────────────────────────────────────────────────
   const displayState = booking ? getBookingDisplayState(booking) : null;
 
-  const title = isExternal ? 'Blok ketersediaan (OTA)' : 'Detail booking';
+  const title = isExternal ? c.bmTitleExternal : c.bmTitleDetail;
 
   const footer = (
     <div className="flex items-center justify-between gap-3">
       <button type="button" onClick={onClose} className="btn-ghost">
-        Tutup
+        {c.bmClose}
       </button>
       {!isExternal &&
         (isEditing ? (
@@ -316,7 +337,7 @@ export function BookingModal({
             className="btn-primary inline-flex items-center gap-2 disabled:opacity-50"
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            Simpan perubahan
+            {c.bmSaveChanges}
           </button>
         ) : (
           <button
@@ -324,7 +345,7 @@ export function BookingModal({
             onClick={() => setIsEditing(true)}
             className="btn-primary inline-flex items-center gap-2"
           >
-            <Pencil className="w-4 h-4" /> Edit
+            <Pencil className="w-4 h-4" /> {c.bmEdit}
           </button>
         ))}
     </div>
@@ -336,7 +357,7 @@ export function BookingModal({
         {/* Unit (fixed — kalender ini scoped ke satu unit) */}
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
           <Home className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-          Booking untuk unit: <span className="font-semibold text-gray-900 dark:text-gray-100">{unit.name}</span>
+          {c.bmForUnit} <span className="font-semibold text-gray-900 dark:text-gray-100">{unit.name}</span>
         </div>
 
         {/* Status + channel badge (edit) */}
@@ -344,14 +365,14 @@ export function BookingModal({
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
               <span className={`w-2 h-2 rounded-full ${BOOKING_DOT_CLASSES[displayState]}`} />
-              {BOOKING_STATE_LABELS[displayState]}
+              {stateLabel(displayState, c)}
             </span>
             <span className="text-xs text-gray-400 dark:text-gray-500">
-              via {BOOKING_CHANNEL_LABELS[booking.channel]}
+              {c.bmVia} {channelLabel(booking.channel, c)}
             </span>
             {isPaid && booking.transaction_id && (
               <span className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Tercatat di pembukuan
+                <CheckCircle2 className="w-3.5 h-3.5" /> {c.bmRecordedInBooks}
               </span>
             )}
           </div>
@@ -362,8 +383,7 @@ export function BookingModal({
           <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 flex items-start gap-3">
             <ExternalLink className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Blok ini diimpor dari kalender {BOOKING_CHANNEL_LABELS[channel]} (iCal) sebagai
-              penanda ketersediaan. Tidak bisa diedit atau ditandai lunas dari sini.
+              {c.bmExternalNote.replace('{channel}', channelLabel(channel, c))}
             </p>
           </div>
         )}
@@ -372,10 +392,7 @@ export function BookingModal({
         {isPaid && (
           <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-3 flex items-start gap-2.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
-            <p className="text-sm text-emerald-800 dark:text-emerald-300">
-              Booking ini <b>sudah lunas</b> — nilainya terkunci ke transaksi di pembukuan. Kamu
-              masih bisa menyesuaikan tanggal, tamu, dan catatan.
-            </p>
+            <p className="text-sm text-emerald-800 dark:text-emerald-300">{c.bmPaidNote}</p>
           </div>
         )}
 
@@ -383,22 +400,20 @@ export function BookingModal({
         {!isEditing && (
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-              <ViewRow label="Check-in" value={checkIn ? format(parseISO(checkIn), 'dd MMM yyyy') : '—'} />
-              <ViewRow label="Check-out" value={checkOut ? format(parseISO(checkOut), 'dd MMM yyyy') : '—'} />
-              <ViewRow label="Tamu" value={guestName || '—'} />
-              <ViewRow label="Tamu (org)" value={guestCount ? `${guestCount} org` : '—'} />
-              <ViewRow label="Harga / malam" value={formatCurrency(price)} />
-              <ViewRow label="Channel" value={BOOKING_CHANNEL_LABELS[channel]} />
-              {!isExternal && (
-                <ViewRow label="Status" value={BOOKING_STATUS_LABELS[status]} />
-              )}
+              <ViewRow label={c.bmCheckIn} value={checkIn ? format(parseISO(checkIn), 'dd MMM yyyy') : '—'} />
+              <ViewRow label={c.bmCheckOut} value={checkOut ? format(parseISO(checkOut), 'dd MMM yyyy') : '—'} />
+              <ViewRow label={c.bmGuest} value={guestName || '—'} />
+              <ViewRow label={c.bmGuestCount} value={guestCount || '—'} />
+              <ViewRow label={c.bmPricePerNight} value={formatCurrency(price)} />
+              <ViewRow label={c.bmChannel} value={channelLabel(channel, c)} />
+              {!isExternal && <ViewRow label={c.bmStatus} value={statusLabel(status, c)} />}
             </div>
-            {notes && <ViewRow label="Catatan" value={notes} />}
+            {notes && <ViewRow label={c.bmNotes} value={notes} />}
 
             {/* Ringkasan total (view) */}
             <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 flex items-center justify-between gap-3">
               <span className="text-sm text-gray-600 dark:text-gray-300 min-w-0">
-                {nights} malam × {formatCurrency(price)}
+                {c.bmNightsTimes.replace('{nights}', String(nights)).replace('{price}', formatCurrency(price))}
               </span>
               <span className="text-lg font-bold text-gray-900 dark:text-gray-100 tabular-nums shrink-0">
                 {formatCurrency(total)}
@@ -413,14 +428,14 @@ export function BookingModal({
         {/* Tanggal */}
         <div className="grid grid-cols-2 gap-3">
           <FloatingField
-            label="Check-in"
+            label={c.bmCheckIn}
             type="date"
             value={checkIn}
             onChange={(e) => setCheckIn(e.target.value)}
             disabled={datesLocked}
           />
           <FloatingField
-            label="Check-out"
+            label={c.bmCheckOut}
             type="date"
             value={checkOut}
             min={checkIn ? format(addDays(parseISO(checkIn), 1), 'yyyy-MM-dd') : undefined}
@@ -434,11 +449,11 @@ export function BookingModal({
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl p-3 flex items-start gap-2.5">
             <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
             <div className="text-sm text-amber-800 dark:text-amber-300">
-              <p className="font-semibold">Tanggal bentrok untuk unit ini</p>
+              <p className="font-semibold">{c.bmConflictTitle}</p>
               <ul className="mt-1 space-y-0.5 text-xs">
-                {conflicts.slice(0, 3).map((c) => (
-                  <li key={c.id}>
-                    {c.guest_name || c.contact?.name || 'Booking'} · {c.check_in} → {c.check_out}
+                {conflicts.slice(0, 3).map((cf) => (
+                  <li key={cf.id}>
+                    {cf.guest_name || cf.contact?.name || c.bmDefaultBooking} · {cf.check_in} → {cf.check_out}
                   </li>
                 ))}
               </ul>
@@ -449,7 +464,7 @@ export function BookingModal({
         {/* Tamu — dua field disejajarkan baseline underline-nya (items-end) */}
         <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
           <div className="relative">
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Tamu</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{c.bmGuest}</label>
             <ContactAutocomplete
               businessId={businessId}
               value={guestName}
@@ -457,16 +472,16 @@ export function BookingModal({
                 setGuestName(v);
                 setContactId(null);
               }}
-              onSelectContact={(c: Contact) => {
-                setGuestName(c.name);
-                setContactId(c.id);
+              onSelectContact={(ct: Contact) => {
+                setGuestName(ct.name);
+                setContactId(ct.id);
               }}
-              placeholder="Nama tamu"
+              placeholder={c.bmGuestPlaceholder}
               className={isExternal ? 'input-underline opacity-60 pointer-events-none' : 'input-underline'}
             />
           </div>
           <div className="w-24">
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Tamu (org)</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{c.bmGuestCount}</label>
             <input
               type="number"
               min={1}
@@ -483,7 +498,7 @@ export function BookingModal({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <FloatingField
-              label="Harga / malam"
+              label={c.bmPricePerNight}
               type="text"
               inputMode="numeric"
               value={pricePerNight ? formatNumber(Number(pricePerNight)) : ''}
@@ -496,20 +511,18 @@ export function BookingModal({
               disabled={priceLocked}
             />
             {autoQuote && (
-              <p className="mt-1 text-[10px] text-primary-600 dark:text-primary-400">
-                rata-rata · otomatis
-              </p>
+              <p className="mt-1 text-[10px] text-primary-600 dark:text-primary-400">{c.bmAvgAuto}</p>
             )}
           </div>
           <FloatingSelect
-            label="Channel"
+            label={c.bmChannel}
             value={channel}
             onChange={(e) => setChannel(e.target.value as BookingChannel)}
             disabled={priceLocked}
           >
-            {(Object.keys(BOOKING_CHANNEL_LABELS) as BookingChannel[]).map((c) => (
-              <option key={c} value={c}>
-                {BOOKING_CHANNEL_LABELS[c]}
+            {(['manual', 'airbnb', 'booking_com', 'website', 'other'] as BookingChannel[]).map((ch) => (
+              <option key={ch} value={ch}>
+                {channelLabel(ch, c)}
               </option>
             ))}
           </FloatingSelect>
@@ -518,10 +531,12 @@ export function BookingModal({
         {/* Ringkasan total */}
         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 flex items-center justify-between gap-3">
           <span className="text-sm text-gray-600 dark:text-gray-300 min-w-0">
-            {autoQuote && quoteBreakdownLabel ? quoteBreakdownLabel : `${nights} malam × ${formatCurrency(price)}`}
+            {autoQuote && quoteBreakdownLabel
+              ? quoteBreakdownLabel
+              : c.bmNightsTimes.replace('{nights}', String(nights)).replace('{price}', formatCurrency(price))}
             {autoQuote && (
               <span className="block text-xs text-primary-600 dark:text-primary-400 mt-0.5">
-                harga otomatis dari kalender harga
+                {c.bmAutoFromCalendar}
               </span>
             )}
           </span>
@@ -533,7 +548,7 @@ export function BookingModal({
         {/* Status editable (existing) */}
         {booking && !isExternal && (
           <FloatingSelect
-            label="Status"
+            label={c.bmStatus}
             value={status}
             onChange={(e) =>
               isPaid
@@ -543,7 +558,7 @@ export function BookingModal({
           >
             {EDITABLE_STATUSES.map((s) => (
               <option key={s} value={s}>
-                {BOOKING_STATUS_LABELS[s]}
+                {statusLabel(s, c)}
               </option>
             ))}
           </FloatingSelect>
@@ -552,13 +567,13 @@ export function BookingModal({
         {/* Notes */}
         {!isExternal && (
           <div>
-            <label className="label">Catatan</label>
+            <label className="label">{c.bmNotes}</label>
             <textarea
               className="input"
               rows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Permintaan khusus, jam kedatangan, dll."
+              placeholder={c.bmNotesPlaceholder}
             />
           </div>
         )}
@@ -571,21 +586,17 @@ export function BookingModal({
           <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
-                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                  Terima pembayaran
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Membuat transaksi pendapatan otomatis di pembukuan.
-                </p>
+                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{c.bmReceivePayment}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{c.bmReceivePaymentDesc}</p>
               </div>
               <SegmentedToggle
                 value={paymentMethod}
                 onChange={setPaymentMethod}
                 options={[
-                  { value: 'cash', label: 'Tunai' },
-                  { value: 'qris', label: 'QRIS' },
+                  { value: 'cash', label: c.bmCash },
+                  { value: 'qris', label: c.bmQris },
                 ]}
-                ariaLabel="Metode pembayaran"
+                ariaLabel={c.bmPaymentMethod}
               />
             </div>
             <button
@@ -595,7 +606,7 @@ export function BookingModal({
               className="btn-primary-glow w-full mt-3 inline-flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-              Tandai Lunas · {formatCurrency(total)}
+              {c.bmMarkPaid.replace('{total}', formatCurrency(total))}
             </button>
           </div>
         )}
@@ -610,7 +621,7 @@ export function BookingModal({
                 disabled={busy}
                 className="inline-flex items-center gap-1.5 text-sm text-amber-600 dark:text-amber-400 hover:underline disabled:opacity-50"
               >
-                <Ban className="w-4 h-4" /> Batalkan booking
+                <Ban className="w-4 h-4" /> {c.bmCancelBooking}
               </button>
             )}
             <button
@@ -619,7 +630,7 @@ export function BookingModal({
               disabled={busy}
               className="inline-flex items-center gap-1.5 text-sm text-red-600 dark:text-red-400 hover:underline disabled:opacity-50"
             >
-              <Trash2 className="w-4 h-4" /> Hapus
+              <Trash2 className="w-4 h-4" /> {c.bmDelete}
             </button>
           </div>
         )}

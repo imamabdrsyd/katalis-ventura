@@ -496,6 +496,119 @@ export interface Translations {
     // No rate source card
     noRateSource: string; // {unit}
     manageUnitCta: string;
+    // ── Modals (BookingModal / HoldingPanel / UnitManagerModal / IcalSyncModal / RateEditorPanel) ──
+    // BookingModal
+    bmTitleDetail: string;
+    bmTitleExternal: string;
+    bmForUnit: string;
+    bmVia: string;
+    bmRecordedInBooks: string;
+    bmExternalNote: string; // {channel}
+    bmPaidNote: string;
+    bmCheckIn: string;
+    bmCheckOut: string;
+    bmConflictTitle: string;
+    bmGuest: string;
+    bmGuestPlaceholder: string;
+    bmGuestCount: string;
+    bmPricePerNight: string;
+    bmAvgAuto: string;
+    bmChannel: string;
+    bmAutoFromCalendar: string;
+    bmNightsTimes: string; // {nights} {price}
+    bmStatus: string;
+    bmNotes: string;
+    bmNotesPlaceholder: string;
+    bmReceivePayment: string;
+    bmReceivePaymentDesc: string;
+    bmCash: string;
+    bmQris: string;
+    bmPaymentMethod: string;
+    bmMarkPaid: string; // {total}
+    bmCancelBooking: string;
+    bmClose: string;
+    bmSaveChanges: string;
+    bmEdit: string;
+    bmDefaultBooking: string;
+    bmToastDatesInvalid: string;
+    bmToastConflict: string;
+    bmToastTotalPositive: string;
+    bmToastUpdated: string;
+    bmToastSaveFailed: string;
+    bmToastStatusUpdated: string;
+    bmToastStatusFailed: string;
+    bmToastMarkedPaid: string;
+    bmToastMarkPaidFailed: string;
+    bmToastCancelled: string;
+    bmToastCancelFailed: string;
+    bmToastDeleted: string;
+    bmToastDeleteFailed: string;
+    bmDelete: string;
+    // HoldingPanel
+    hpTitle: string;
+    hpIntro: string;
+    hpSearchGuest: string;
+    hpEmpty: string;
+    hpNoMatch: string; // {query}
+    hpGuest: string;
+    hpSave: string;
+    hpToastFillDates: string;
+    hpToastCheckoutAfter: string;
+    hpToastFilled: string;
+    hpToastSaveFailed: string;
+    // UnitManagerModal
+    umTitle: string;
+    umIntro: string;
+    umNewPlaceholder: string;
+    umAdd: string;
+    umActive: string;
+    umDeleteTitle: string;
+    umSelectTitle: string; // {name}
+    umToastNameRequired: string;
+    umToastCreated: string; // {name}
+    umToastCreateFailed: string;
+    umToastRenameFailed: string;
+    umToastStatusFailed: string;
+    umToastCannotDeleteLast: string;
+    umToastDeleted: string; // {name}
+    umToastDeleteFailed: string;
+    // IcalSyncModal
+    icTitle: string;
+    icIntro: string;
+    icImportLabel: string;
+    icExportLabel: string;
+    icCopy: string;
+    icClose: string;
+    icSyncNow: string;
+    icLoading: string;
+    icToastCopyFailed: string;
+    icToastSaveFailed: string;
+    icToastSyncDone: string; // {blocks} {removed}
+    icToastSyncFailed: string;
+    // RateEditorPanel
+    reTitle: string; // {range} {count}
+    reNights: string;
+    reCancel: string;
+    reDayFilterHint: string;
+    rePlaceholder: string; // {price}
+    reApply: string;
+    reReset: string;
+    reResetTitle: string;
+    reToastPriceValid: string;
+    reToastNoDates: string;
+    reToastApplied: string; // {count} {price}
+    reToastReset: string; // {count}
+    reToastSaveFailed: string;
+    reDayChips: string[]; // Sen..Min (7)
+    // Booking status + channel labels (bilingual)
+    statusTentative: string; // = Inquiry
+    statusConfirmed: string;
+    statusCheckedIn: string;
+    statusCompleted: string;
+    statusCancelled: string;
+    channelManual: string;
+    channelWebsite: string;
+    channelOther: string;
   };
 
   // Businesses Page
