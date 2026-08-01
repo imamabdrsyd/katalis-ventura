@@ -3932,7 +3932,12 @@ Penjagaan:
   mencegah sisa kuantitas hantu akibat pembulatan.
 - Transaksi **beli** tanpa kuantitas menyalakan `hasUnknownQuantity` → UI
   memperingatkan bahwa avg cost baris itu belum bisa dipercaya, alih-alih
-  diam-diam menampilkan angka salah.
+  diam-diam menampilkan angka salah. Kuantitasnya sendiri di-fallback ke **1**
+  (bukan 0) — aset seperti properti/emas lazim dibeli sekali tanpa user pernah
+  mengisi field kuantitas ("1 unit" terasa aneh untuk 1 apartemen). Fallback 0
+  akan membuat cost basis kehitung tapi posisi terlihat tertutup (kustodian
+  hilang dari tabel, karena UI memfilter ke posisi `quantity > 0`) padahal
+  secara akuntansi posisinya jelas terbuka.
 - Harga pasar 0 → `marketValue` dan `unrealizedPl` di-nol-kan, bukan dilaporkan
   sebagai rugi −100%.
 - Hanya transaksi `status = 'posted'` yang dihitung, konsisten dengan aturan

@@ -285,7 +285,13 @@ describe('buildAssetHoldings — klasifikasi & penjagaan', () => {
     expect(h.events.some((e) => e.eventType === 'dividend')).toBe(true);
   });
 
-  it('menandai hasUnknownQuantity saat transaksi beli tak mencatat kuantitas', () => {
+  it('menandai hasUnknownQuantity saat transaksi beli tak mencatat kuantitas, tapi tetap dianggap 1 unit (bukan 0)', () => {
+    // Reproduksi bug nyata: beli "Studio Apartment" (asset_class='property')
+    // tanpa mengisi field kuantitas transaksi sama sekali. Sebelum fix,
+    // quantity jatuh ke 0 — cost basis kehitung tapi posisi terlihat
+    // "tertutup" dan baris kustodian hilang dari tabel konsolidasi (halaman
+    // list memfilter positions ke quantity > 0). Properti/emas lazim dibeli
+    // sekali tanpa pernah mengisi "1 unit", jadi fallback-nya harus 1.
     seq = 0;
     const btc = instrument('BTC', { asset_class: 'crypto', asset_lot_size: 1, unit: 'coin' });
     const tx = buy(btc, 'Binance', '2026-04-01', 1, 900_000_000);
@@ -294,6 +300,32 @@ describe('buildAssetHoldings — klasifikasi & penjagaan', () => {
     const holdings = buildAssetHoldings([btc], [tx]);
     expect(holdings[0].hasUnknownQuantity).toBe(true);
     expect(holdings[0].totalCostBasis).toBe(900_000_000);
+    expect(holdings[0].totalQuantity).toBe(1);
+    // Posisi tetap tampil dengan nama kustodiannya, tidak hilang.
+    expect(holdings[0].positions).toHaveLength(1);
+    expect(holdings[0].positions[0].custodian).toBe('Binance');
+    expect(holdings[0].positions[0].quantity).toBe(1);
+  });
+
+  it('properti dibeli sekali tanpa unit_breakdown tetap muncul dengan custodian (kasus nyata Studio Apartment)', () => {
+    seq = 0;
+    const property = instrument('Studio Apartment', {
+      asset_class: 'property',
+      asset_lot_size: 1,
+      unit: null,
+      default_price: 450_000_000,
+    });
+    const tx = buy(property, 'Ellys Taslim', '2024-07-31', 1, 350_000_000);
+    tx.meta = { catalog_item: { id: property.id, name: property.name } }; // tanpa unit_breakdown
+
+    const holdings = buildAssetHoldings([property], [tx]);
+    const h = holdings[0];
+
+    expect(h.totalQuantity).toBe(1);
+    expect(h.totalCostBasis).toBe(350_000_000);
+    expect(h.marketValue).toBe(450_000_000);
+    expect(h.positions.map((p) => p.custodian)).toEqual(['Ellys Taslim']);
+    expect(h.hasUnknownQuantity).toBe(true);
   });
 
   it('tidak melaporkan unrealized loss palsu saat harga pasar belum di-isi', () => {

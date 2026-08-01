@@ -235,6 +235,15 @@ function buildHolding(item: CatalogItem, txs: Transaction[]): AssetHolding {
         // Cost basis tetap benar, tapi kuantitas tidak diketahui → avg cost
         // tidak bisa dipertanggungjawabkan. Ditandai, bukan ditebak.
         hasUnknownQuantity = true;
+        // Fallback 1, BUKAN 0: aset seperti properti/emas lazim dibeli sekali
+        // tanpa user pernah mengisi field "kuantitas" (orang tidak menulis
+        // "1 unit" saat beli 1 apartemen). Tanpa fallback ini, cost basis
+        // tetap terhitung tapi quantity=0 membuat posisi terlihat "tertutup"
+        // dan custodian-nya hilang dari tampilan (positions.filter qty>0) —
+        // padahal secara akuntansi posisinya jelas terbuka. Saham tetap wajib
+        // isi kuantitas eksplisit (hasUnknownQuantity di atas tetap
+        // memperingatkan avg cost tidak presisi bila fallback ini terpakai).
+        quantity = 1;
       }
       // Dibulatkan di titik akumulasi (bukan hanya saat derive di 'sell') —
       // noise floating-point menumpuk lewat rantai +=/-= antar-transaksi
