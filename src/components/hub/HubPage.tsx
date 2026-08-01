@@ -13,21 +13,25 @@ import { UnitManagerButton } from './calendar/UnitManagerButton';
 import { CalendarUnitProvider } from './calendar/CalendarUnitContext';
 
 type HubTab = 'catalog' | 'operational';
-type HubVariant = 'pos' | 'calendar';
+type HubVariant = 'pos' | 'calendar' | 'finance';
 
 /**
- * Halaman hub yang dipakai route /point-of-sales (variant 'pos', produk/dagang)
- * dan /calendar (variant 'calendar', jasa).
+ * Halaman hub yang dipakai route /point-of-sales (variant 'pos' untuk
+ * produk/dagang, atau 'finance' untuk sektor investasi) dan /calendar
+ * (variant 'calendar', jasa).
  *
  * 2 tab di pojok kanan atas (pola halaman AR/AP): Katalog + panel operasional
- * (Kasir/Kalender, masih stub di MVP).
+ * (Kasir/Kalender, masih stub di MVP). Variant 'finance' PENGECUALIAN: hanya
+ * render Katalog tanpa tab switcher — bisnis sektor investasi tidak jualan
+ * lewat checkout kasir, Katalog di sana dipakai untuk set kelas aset per
+ * instrumen (lihat Asset Console, migr 125) bukan untuk transaksi POS.
  *
  * Tab Katalog = 2 panel: kiri (lebar) grid produk/jasa + kanan (lebih sempit)
  * Info AI — fakta bisnis yang dibaca AI saat membalas lead di semua channel.
  */
 export function HubPage({ variant }: { variant: HubVariant }) {
   // Hub kalender: bungkus dgn provider unit supaya tab Kalender & Services berbagi
-  // unit aktif yang sama (unit = level teratas). POS tak perlu.
+  // unit aktif yang sama (unit = level teratas). POS/finance tak perlu.
   const inner = <HubPageInner variant={variant} />;
   return variant === 'calendar' ? <CalendarUnitProvider>{inner}</CalendarUnitProvider> : inner;
 }
@@ -35,20 +39,22 @@ export function HubPage({ variant }: { variant: HubVariant }) {
 function HubPageInner({ variant }: { variant: HubVariant }): ReactNode {
   const { t } = useLanguage();
   const th = t.hub;
-  // Kalender tampil duluan (tab operasional) — Katalog tetap default utk POS.
+  // Kalender tampil duluan (tab operasional) — Katalog tetap default utk POS/finance.
   const [tab, setTab] = useState<HubTab>(variant === 'calendar' ? 'operational' : 'catalog');
   // Dinaikkan tiap stok berubah supaya StockLogPanel memuat ulang riwayatnya.
   const [stockLogKey, setStockLogKey] = useState(0);
 
   const isPos = variant === 'pos';
+  const isFinance = variant === 'finance';
   const OperationalIcon = isPos ? ShoppingCart : CalendarDays;
   const operationalLabel = isPos ? th.tabKasir : th.tabKalender;
-  // Hub jasa (kalender): tab katalog di-brand "Layanan"/"Services". POS tetap "Katalog".
-  const catalogLabel = isPos ? th.tabCatalog : th.tabServices;
-  const catalogSubtitle = isPos ? th.posSubtitle : th.servicesSubtitle;
+  // Hub jasa (kalender): tab katalog di-brand "Layanan"/"Services". POS/finance tetap "Katalog".
+  const catalogLabel = isPos || isFinance ? th.tabCatalog : th.tabServices;
+  const catalogSubtitle = isPos || isFinance ? th.posSubtitle : th.servicesSubtitle;
 
-  // Judul + ikon header mengikuti tab aktif (identitas menu tetap di sidebar)
-  const isCatalog = tab === 'catalog';
+  // Judul + ikon header mengikuti tab aktif (identitas menu tetap di sidebar).
+  // Finance selalu di tab catalog (tak ada tab lain), jadi header-nya statis.
+  const isCatalog = isFinance || tab === 'catalog';
   const HeaderIcon = isCatalog ? Box : OperationalIcon;
   const title = isCatalog ? catalogLabel : operationalLabel;
   const subtitle = isCatalog ? catalogSubtitle : (isPos ? th.posSubtitle : th.calendarSubtitle);
@@ -60,7 +66,9 @@ function HubPageInner({ variant }: { variant: HubVariant }): ReactNode {
 
   return (
     <div className="p-4 md:p-6">
-      {/* Header: judul kiri, kontrol kalender + tab kanan atas (pola AR/AP) */}
+      {/* Header: judul kiri, kontrol kalender + tab kanan atas (pola AR/AP).
+          Finance tidak punya tab lain — switcher-nya di-skip sepenuhnya
+          (bukan disembunyikan CSS) supaya tidak menawarkan pilihan kosong. */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
@@ -70,30 +78,32 @@ function HubPageInner({ variant }: { variant: HubVariant }): ReactNode {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Tab Layanan: tombol Kelola unit tetap tampil (unit ↔ rate plan dikelola dari sini) */}
-          {variant === 'calendar' && tab === 'catalog' && <UnitManagerButton />}
-          {showCalendarHeaderSlot && <div ref={setCalendarHeaderEl} className="flex flex-wrap items-center gap-2" />}
-          <Tabs<HubTab>
-            value={tab}
-            onChange={setTab}
-            tabs={(() => {
-              const catalogTab = { value: 'catalog' as HubTab, label: catalogLabel, icon: <Box className="w-4 h-4" /> };
-              const operationalTab = {
-                value: 'operational' as HubTab,
-                label: operationalLabel,
-                icon: <OperationalIcon className="w-4 h-4" />,
-              };
-              // Kalender: tab Kalender di kiri. POS: Katalog di kiri.
-              return isPos ? [catalogTab, operationalTab] : [operationalTab, catalogTab];
-            })()}
-          />
-        </div>
+        {!isFinance && (
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Tab Layanan: tombol Kelola unit tetap tampil (unit ↔ rate plan dikelola dari sini) */}
+            {variant === 'calendar' && tab === 'catalog' && <UnitManagerButton />}
+            {showCalendarHeaderSlot && <div ref={setCalendarHeaderEl} className="flex flex-wrap items-center gap-2" />}
+            <Tabs<HubTab>
+              value={tab}
+              onChange={setTab}
+              tabs={(() => {
+                const catalogTab = { value: 'catalog' as HubTab, label: catalogLabel, icon: <Box className="w-4 h-4" /> };
+                const operationalTab = {
+                  value: 'operational' as HubTab,
+                  label: operationalLabel,
+                  icon: <OperationalIcon className="w-4 h-4" />,
+                };
+                // Kalender: tab Kalender di kiri. POS: Katalog di kiri.
+                return isPos ? [catalogTab, operationalTab] : [operationalTab, catalogTab];
+              })()}
+            />
+          </div>
+        )}
       </div>
 
       {/* Tab Katalog / Layanan: toolbar full-width di atas; grid (kiri) + Info AI (kanan).
           Di hub kalender, item di-scope ke unit aktif (variant='calendar'). */}
-      {tab === 'catalog' && (
+      {(isFinance || tab === 'catalog') && (
         <CatalogPanel
           scopeToUnit={variant === 'calendar'}
           onStockChanged={() => setStockLogKey((k) => k + 1)}
@@ -107,7 +117,7 @@ function HubPageInner({ variant }: { variant: HubVariant }): ReactNode {
         />
       )}
 
-      {tab === 'operational' && (isPos ? <CashierLauncher /> : <CalendarLauncher headerSlot={calendarHeaderEl} />)}
+      {!isFinance && tab === 'operational' && (isPos ? <CashierLauncher /> : <CalendarLauncher headerSlot={calendarHeaderEl} />)}
     </div>
   );
 }

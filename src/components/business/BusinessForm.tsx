@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Camera, X, Loader2 } from 'lucide-react';
 import type { Business } from '@/types';
 import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
+import { BUSINESS_SECTOR_PRESETS } from '@/lib/businessSectors';
 
 export interface BusinessFormData {
   business_name: string;
@@ -27,13 +28,11 @@ interface BusinessFormProps {
   loading?: boolean;
 }
 
+// Preset resmi berasal dari businessSectors.ts (satu sumber, dipakai juga oleh
+// gating fitur spesifik-sektor seperti Asset Console) + opsi "Lainnya" khusus
+// UI form ini untuk free-text di luar preset.
 const BUSINESS_SECTORS = [
-  { value: 'agribusiness', label: 'Agribusiness' },
-  { value: 'personal_care', label: 'Personal Care' },
-  { value: 'accommodation', label: 'Accommodation' },
-  { value: 'creative_agency', label: 'Creative Agency' },
-  { value: 'food_and_beverage', label: 'F&B' },
-  { value: 'finance', label: 'Finance' },
+  ...BUSINESS_SECTOR_PRESETS,
   { value: 'other', label: 'Lainnya (Custom)' },
 ];
 

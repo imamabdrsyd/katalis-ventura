@@ -21,6 +21,7 @@ import {
   LucideIcon,
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
+import { isAssetConsoleSector } from '@/lib/businessSectors';
 
 export type NavItem = {
   href: string;
@@ -50,16 +51,23 @@ export type NavSection = {
 /**
  * Menu "Catalog" lama kini swap by tipe bisnis (hub Point of Sales / Calendar):
  * - jasa → "Calendar" (/calendar)
+ * - sektor finance → "Catalog" (masih /point-of-sales, tapi hub-nya cuma render
+ *   tab Katalog tanpa Kasir — bisnis finance tidak jualan lewat checkout,
+ *   Katalog di sana dipakai untuk set kelas aset per instrumen Asset Console)
  * - produk/dagang/legacy (tipe kosong) → "Point of Sales" (/point-of-sales)
  * Dipakai DUA situs (Sidebar + SearchDialog) — keduanya wajib panggil helper ini
  * agar tidak drift.
  */
 export function getPosNavItem(
   businessType: string | undefined,
-  nav: { pointOfSales: string; calendar: string }
+  nav: { pointOfSales: string; calendar: string; catalog: string },
+  businessSector?: string | null
 ): NavItem {
   if (businessType === 'jasa') {
     return { href: '/calendar', label: nav.calendar, icon: CalendarDays };
+  }
+  if (isAssetConsoleSector(businessSector)) {
+    return { href: '/point-of-sales', label: nav.catalog, icon: Store };
   }
   return { href: '/point-of-sales', label: nav.pointOfSales, icon: Store };
 }
@@ -71,12 +79,12 @@ export function getPosNavItem(
  * di header memang berasal dari sana (label EN untuk 'dagang'), tapi semantik
  * 'dagang' adalah perdagangan barang/merchandising — UMKM retail biasa juga
  * 'dagang' dan tidak butuh Asset Console. Penanda yang benar adalah sektornya.
+ *
+ * Daftar sektornya didefinisikan SATU tempat di `businessSectors.ts` (dipakai
+ * juga oleh dropdown BusinessForm) — jangan hardcode literal 'finance' di sini
+ * lagi, supaya rename/typo preset sektor tidak diam-diam memutus nav item ini.
  */
-const ASSET_CONSOLE_SECTORS = new Set(['finance']);
-
-export function isAssetConsoleEnabled(businessSector: string | undefined | null): boolean {
-  return !!businessSector && ASSET_CONSOLE_SECTORS.has(businessSector.trim().toLowerCase());
-}
+export const isAssetConsoleEnabled = isAssetConsoleSector;
 
 export function getAssetConsoleNavItem(nav: { assetConsole: string }): NavItem {
   return { href: '/asset-console', label: nav.assetConsole, icon: Gamepad2 };
