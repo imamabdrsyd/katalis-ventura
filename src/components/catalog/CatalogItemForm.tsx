@@ -362,7 +362,8 @@ export function CatalogItemForm({
             {imageFit === 'cover' && (
               <div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                  Klik atau geser titik pada gambar untuk memilih bagian yang akan ditampilkan.
+                  Klik atau geser titik pada gambar untuk memilih bagian yang akan ditampilkan — persegi
+                  ini sama persis dengan bentuk thumbnail di daftar Katalog, jadi hasilnya sesuai yang terlihat di sini.
                 </p>
                 <div
                   ref={focalAreaRef}
@@ -371,7 +372,7 @@ export function CatalogItemForm({
                     const tt = e.touches[0];
                     if (tt) { setDraggingFocal(true); updateFocalFromEvent(tt.clientX, tt.clientY); }
                   }}
-                  className="relative w-full max-w-sm aspect-[4/3] rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 cursor-crosshair select-none"
+                  className="relative w-full max-w-[240px] aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 cursor-crosshair select-none"
                 >
                   <img
                     src={imageUrl}

@@ -203,7 +203,7 @@ export default function AssetInstrumentPage() {
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${
                           e.eventType === 'buy'
-                            ? 'border-primary-200 dark:border-primary-800/60 text-primary-600 dark:text-primary-400'
+                            ? 'border-blue-200 dark:border-blue-800/60 text-blue-600 dark:text-blue-300'
                             : e.eventType === 'sell'
                               ? 'border-emerald-200 dark:border-emerald-800/60 text-emerald-600 dark:text-emerald-400'
                               : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
