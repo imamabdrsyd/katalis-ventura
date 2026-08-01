@@ -6,7 +6,7 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { createClient } from '@/lib/supabase';
 import { LOCALE_LABELS, LOCALE_FLAGS, type Locale } from '@/lib/i18n';
-import { Camera, User, Mail, Briefcase, Save, Globe, CheckCircle2, XCircle, Copy, RefreshCw, FileEdit, CheckCheck, LayoutList, ClipboardCheck, HandCoins, FileText, Landmark, LineChart, GitBranch, Bot, Database } from 'lucide-react';
+import { Camera, User, Mail, Briefcase, Save, Globe, CheckCircle2, XCircle, Copy, RefreshCw, FileEdit, CheckCheck, Database } from 'lucide-react';
 
 function TelegramIcon({ className }: { className?: string }) {
   return (
@@ -62,43 +62,6 @@ export default function SettingsPage() {
   // GCP Sync State
   const [gcpLoading, setGcpLoading] = useState(false);
   const [gcpSyncing, setGcpSyncing] = useState(false);
-
-  const TOGGLEABLE_NAV_ITEMS = [
-    { href: '/trial-balance', label: 'Trial Balance', icon: ClipboardCheck },
-    { href: '/ar-ap', label: 'AR & AP', icon: HandCoins },
-    { href: '/invoices', label: 'Invoicing', icon: FileText },
-    { href: '/reconciliation', label: 'Bank Reconciliation', icon: Landmark },
-    { href: '/market', label: 'Market Tracker', icon: LineChart },
-    { href: '/statement-of-changes-in-equity', label: 'Changes in Equity', icon: GitBranch },
-    { href: '/agent', label: 'Agentic Workspace', icon: Bot },
-  ];
-
-  const DEFAULT_HIDDEN = TOGGLEABLE_NAV_ITEMS.map(i => i.href);
-  const [hiddenNavItems, setHiddenNavItems] = useState<string[]>(DEFAULT_HIDDEN);
-
-  useEffect(() => {
-    if (!user) return;
-    supabase
-      .from('profiles')
-      .select('hidden_nav_items')
-      .eq('id', user.id)
-      .single()
-      .then(({ data }) => {
-        if (data) setHiddenNavItems(data.hidden_nav_items ?? DEFAULT_HIDDEN);
-      });
-  }, [user?.id]);
-
-  const toggleNavItem = async (href: string) => {
-    if (!user) return;
-    const next = hiddenNavItems.includes(href)
-      ? hiddenNavItems.filter(h => h !== href)
-      : [...hiddenNavItems, href];
-    setHiddenNavItems(next);
-    await supabase
-      .from('profiles')
-      .update({ hidden_nav_items: next })
-      .eq('id', user.id);
-  };
 
   useEffect(() => {
     if (user) {
@@ -651,41 +614,6 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
-          {/* Sidebar Menu Visibility */}
-          <div className="card">
-            <div className="flex items-center gap-3 mb-5">
-              <LayoutList className="w-5 h-5 text-gray-900 dark:text-gray-100" />
-              <div>
-                <h3 className="font-semibold text-gray-800 dark:text-gray-100">{t.settings.sidebarMenuTitle}</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t.settings.sidebarMenuDesc}</p>
-              </div>
-            </div>
-            <div className="divide-y divide-gray-100 dark:divide-gray-700/60">
-              {TOGGLEABLE_NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-                const isVisible = !hiddenNavItems.includes(href);
-                return (
-                  <div
-                    key={href}
-                    className="flex items-center justify-between py-3 px-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors first:pt-1 last:pb-1"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon className={`w-4 h-4 ${isVisible ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`} />
-                      <span className={`text-sm font-medium ${isVisible ? 'text-gray-800 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'}`}>{label}</span>
-                    </div>
-                    <button
-                      onClick={() => toggleNavItem(href)}
-                      className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isVisible ? 'bg-gray-900 dark:bg-gray-100' : 'bg-gray-300 dark:bg-gray-600'}`}
-                      role="switch"
-                      aria-checked={isVisible}
-                    >
-                      <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ease-in-out ${isVisible ? 'translate-x-4 shadow-[0_1px_3px_rgba(0,0,0,0.4),0_1px_2px_rgba(0,0,0,0.25)] ring-1 ring-black/10' : 'translate-x-0 shadow'}`} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Integrasi Database (GCP) */}
           {(isManagerRole(userRole) || isSuperadmin) && (
             <div className="card">

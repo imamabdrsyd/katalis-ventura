@@ -100,6 +100,31 @@ export interface Translations {
     searchResultsCount: (n: number) => string;
   };
 
+  // Nav hub pages (landing grid Akuntansi / Laporan Keuangan / Analitik)
+  navHub: {
+    accountingTitle: string;
+    accountingSubtitle: string;
+    financialReportsTitle: string;
+    financialReportsSubtitle: string;
+    analyticsTitle: string;
+    analyticsSubtitle: string;
+    desc: {
+      chartOfAccounts: string;
+      generalLedger: string;
+      trialBalance: string;
+      arAp: string;
+      invoice: string;
+      bankReconciliation: string;
+      profitLoss: string;
+      balanceSheet: string;
+      cashFlow: string;
+      changesInEquity: string;
+      scenarioModeling: string;
+      budgetForecast: string;
+      marketTracker: string;
+    };
+  };
+
   // Roles
   roles: {
     businessManager: string;
@@ -155,9 +180,6 @@ export interface Translations {
     telegramConnectHint: string;
     telegramConnect: string;
     telegramInvestorOnly: string;
-    // Sidebar visibility card
-    sidebarMenuTitle: string;
-    sidebarMenuDesc: string;
   };
 
   // Dashboard Page

@@ -97,6 +97,30 @@ export const en: Translations = {
     searchResultsCount: (n: number) => `${n} result${n === 1 ? '' : 's'} found`,
   },
 
+  navHub: {
+    accountingTitle: 'Accounting',
+    accountingSubtitle: 'Manage your chart of accounts, ledgers, and core bookkeeping.',
+    financialReportsTitle: 'Financial Reports',
+    financialReportsSubtitle: 'Profit & loss, balance sheet, cash flow, and equity changes.',
+    analyticsTitle: 'Analytics',
+    analyticsSubtitle: 'Scenario modeling, budget forecasting, and market tracking.',
+    desc: {
+      chartOfAccounts: 'Your business account structure',
+      generalLedger: 'Full activity per account',
+      trialBalance: 'Debit & credit balance summary',
+      arAp: 'Track receivables & payables',
+      invoice: 'Create & manage invoices',
+      bankReconciliation: 'Match records to bank statements',
+      profitLoss: 'Revenue, expenses & net profit',
+      balanceSheet: 'Assets, liabilities & equity',
+      cashFlow: 'Operating, investing & financing flows',
+      changesInEquity: "Movement of owner's equity",
+      scenarioModeling: 'Financial what-if analysis',
+      budgetForecast: 'Budget plan & ROI projection',
+      marketTracker: 'Track market prices & trends',
+    },
+  },
+
   roles: {
     businessManager: 'Business Manager',
     investor: 'Investor',
@@ -150,9 +174,6 @@ export const en: Translations = {
     telegramConnectHint: 'Connect your Telegram account to log transactions straight from chat, without opening the app.',
     telegramConnect: 'Connect',
     telegramInvestorOnly: 'Telegram integration is only available for Business Managers.',
-    // Sidebar visibility card
-    sidebarMenuTitle: 'Sidebar Menu',
-    sidebarMenuDesc: 'Hidden menus can still be accessed via URL',
   },
 
   dashboard: {

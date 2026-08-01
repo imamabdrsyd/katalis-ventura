@@ -12,39 +12,27 @@ import {
   PieChart,
   CreditCard,
   Building2,
-  DollarSign,
-  Scale,
-  ArrowLeftRight,
   LogOut,
   Search,
   ChevronDown,
+  ChevronRight,
   LucideIcon,
   Menu,
   PanelLeft,
   X,
   Settings,
   BookOpen,
-  BookOpenCheck,
   ClipboardCheck,
   Zap,
-  FlaskConical,
   Plus,
   UserPlus,
-  Calculator,
-  ChartNoAxesCombined,
-  LineChart,
   Target,
   Calendar,
-  CalendarDays,
-  HandCoins,
   Languages,
   FileText,
   RefreshCw,
   Upload,
-  GitBranch,
-  Landmark,
   Bot,
-  Store,
   MessagesSquare,
 } from 'lucide-react';
 
@@ -57,83 +45,7 @@ import { AIChatFAB } from '@/components/ai/AIChatFAB';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
 import { useNotifications } from '@/hooks/useNotifications';
 import { isManagerRole } from '@/lib/roles';
-
-type NavItem = {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-};
-
-/**
- * Menu "Catalog" lama kini swap by tipe bisnis (hub Point of Sales / Calendar):
- * - jasa → "Calendar" (/calendar)
- * - produk/dagang/legacy (tipe kosong) → "Point of Sales" (/point-of-sales)
- * Dipakai DUA situs (Sidebar + SearchDialog) — keduanya wajib panggil helper ini
- * agar tidak drift.
- */
-function getPosNavItem(
-  businessType: string | undefined,
-  nav: { pointOfSales: string; calendar: string }
-): NavItem {
-  if (businessType === 'jasa') {
-    return { href: '/calendar', label: nav.calendar, icon: CalendarDays };
-  }
-  return { href: '/point-of-sales', label: nav.pointOfSales, icon: Store };
-}
-
-type NavSection = {
-  label: string;
-  icon: LucideIcon;
-  items: NavItem[];
-};
-
-const SIDEBAR_DEFAULT_HIDDEN = ['/trial-balance', '/ar-ap', '/invoices', '/reconciliation', '/market', '/statement-of-changes-in-equity', '/agent'];
-
-function useNavData() {
-  const { t } = useLanguage();
-
-  const roleLabels: Record<string, string> = useMemo(() => ({
-    business_manager: t.roles.businessManager,
-    investor: t.roles.investor,
-    superadmin: t.roles.superAdmin,
-  }), [t]);
-
-  const navSections: NavSection[] = useMemo(() => [
-    {
-      label: t.nav.accounting,
-      icon: Calculator,
-      items: [
-        { href: '/accounts', label: t.nav.chartOfAccounts, icon: BookOpen },
-        { href: '/general-ledger', label: t.nav.generalLedger, icon: BookOpenCheck },
-        { href: '/trial-balance', label: t.nav.trialBalance, icon: ClipboardCheck },
-        { href: '/ar-ap', label: t.nav.arAp, icon: HandCoins },
-        { href: '/invoices', label: t.nav.invoice, icon: FileText },
-        { href: '/reconciliation', label: t.nav.bankReconciliation, icon: Landmark },
-      ],
-    },
-    {
-      label: t.nav.financialReports,
-      icon: Scale,
-      items: [
-        { href: '/income-statement', label: t.nav.profitLoss, icon: DollarSign },
-        { href: '/balance-sheet', label: t.nav.balanceSheet, icon: Scale },
-        { href: '/cash-flow', label: t.nav.cashFlow, icon: ArrowLeftRight },
-        { href: '/statement-of-changes-in-equity', label: t.nav.changesInEquity, icon: GitBranch },
-      ],
-    },
-    {
-      label: t.nav.analytics,
-      icon: ChartNoAxesCombined,
-      items: [
-        { href: '/scenario-modeling', label: t.nav.scenarioModeling, icon: FlaskConical },
-        { href: '/roi-forecast', label: t.nav.budgetForecast, icon: Target },
-        { href: '/market', label: t.nav.marketTracker, icon: LineChart },
-      ],
-    },
-  ], [t]);
-
-  return { roleLabels, navSections, t };
-}
+import { useNavData, getPosNavItem, type NavItem } from '@/lib/navigation';
 
 type SearchResult = {
   type: 'page' | 'data';
@@ -717,14 +629,12 @@ function Sidebar({
   isCollapsed,
   onToggleCollapse,
   userRole,
-  userId,
 }: {
   isOpen: boolean;
   onClose: () => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   userRole: string | null;
-  userId: string | null;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -734,29 +644,6 @@ function Sidebar({
 
   // Badge unread lead untuk bisnis yang sedang aktif (sidebar scoped ke 1 bisnis).
   const activeLeadCount = activeBusinessId ? leadCounts.byBusiness[activeBusinessId] ?? 0 : 0;
-
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
-  const [hiddenNavItems, setHiddenNavItems] = useState<string[]>(SIDEBAR_DEFAULT_HIDDEN);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('sidebar_sections_expanded');
-      if (saved) setExpandedSections(JSON.parse(saved));
-    } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => {
-    if (!userId) return;
-    const supabase = createClient();
-    supabase
-      .from('profiles')
-      .select('hidden_nav_items')
-      .eq('id', userId)
-      .single()
-      .then(({ data }) => {
-        if (data) setHiddenNavItems(data.hidden_nav_items ?? SIDEBAR_DEFAULT_HIDDEN);
-      });
-  }, [userId]);
 
   // Saat ganti bisnis sambil berada di hub (Calendar/Point of Sales), route bisa
   // jadi tak cocok dengan tipe bisnis baru (mis. tetap di /calendar padahal bisnis
@@ -770,14 +657,6 @@ function Sidebar({
       router.replace(correctHubHref);
     }
   }, [activeBusiness, pathname, router, t.nav]);
-
-  const isSectionExpanded = (label: string) => expandedSections[label] ?? true;
-
-  const toggleSection = (label: string) => {
-    const next = { ...expandedSections, [label]: !isSectionExpanded(label) };
-    setExpandedSections(next);
-    localStorage.setItem('sidebar_sections_expanded', JSON.stringify(next));
-  };
 
   return (
     <>
@@ -903,7 +782,7 @@ function Sidebar({
             { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
             ...(canManage ? [getPosNavItem(activeBusiness?.business_type, t.nav)] : []),
             ...(canManage ? [{ href: '/agent', label: 'Agentic Workspace', icon: Bot }] : []),
-          ].filter(item => !hiddenNavItems.includes(item.href)).map((item) => {
+          ].map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             const badge = item.href === '/leads' ? activeLeadCount : 0;
@@ -951,90 +830,69 @@ function Sidebar({
 
         <div className="mx-4 border-t border-gray-200 dark:border-gray-700" />
 
-        {/* Navigation */}
-        <nav className="py-4 px-2">
-          {navSections.map((section, sectionIndex) => {
-            const expanded = isSectionExpanded(section.label);
+        {/* Navigation — tiap section kini link langsung ke halaman hub (kartu sub-menu),
+            bukan lagi drill-down accordion. Sub-menu ditampilkan sebagai kotak di hub. */}
+        <nav className="py-4 px-2 space-y-0.5">
+          {navSections.map((section) => {
+            const SectionIcon = section.icon;
+            const isActive =
+              pathname === section.href ||
+              pathname.startsWith(section.href + '/') ||
+              section.items.some((item) => pathname === item.href || pathname.startsWith(item.href + '/'));
             return (
-              <div key={section.label} className={sectionIndex > 0 ? 'mt-5' : ''}>
-                {/* Divider antar section — collapsed dan expanded */}
-                {sectionIndex > 0 && (
-                  <div className="border-t border-gray-200 dark:border-gray-700 mb-4 mx-1" />
-                )}
-                {/* Section header with icon — fade to icon-only saat collapsed */}
-                {(() => {
-                  const SectionIcon = section.icon;
-                  const hasActiveChild = section.items.some(item => pathname === item.href || pathname.startsWith(item.href + '/'));
-                  return (
-                    <div className="relative group/section">
-                      <button
-                        onClick={() => isCollapsed ? router.push(section.items[0].href) : toggleSection(section.label)}
-                        className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-xl transition-colors ${
-                          isCollapsed
-                            ? hasActiveChild
-                              ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
-                              : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300'
-                            : ''
-                        }`}
-                      >
-                        <SectionIcon className={`w-5 h-5 flex-shrink-0 transition-colors ${
-                          hasActiveChild
-                            ? 'text-indigo-500 dark:text-indigo-400'
-                            : 'text-gray-400 dark:text-gray-500'
-                        }`} />
-                        {/* Label + chevron — hidden saat collapsed */}
-                        <span className={`flex items-center justify-between flex-1 overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
-                          <span className={`text-xs font-semibold uppercase tracking-wider whitespace-nowrap ${hasActiveChild ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                            {section.label}
-                          </span>
-                          <ChevronDown className={`w-3 h-3 text-gray-400 dark:text-gray-500 flex-shrink-0 transition-transform duration-200 ${expanded ? '' : '-rotate-90'}`} />
-                        </span>
-                      </button>
-                      {/* Flyout menu saat collapsed — clickable */}
-                      {isCollapsed && (
-                        <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 invisible group-hover/section:opacity-100 group-hover/section:visible transition-all duration-150 z-[60] overflow-hidden">
-                          <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400 border-b border-gray-700 dark:border-gray-600">
-                            {section.label}
-                          </div>
-                          {section.items.filter(item => !hiddenNavItems.includes(item.href)).map((item) => (
-                            <Link
-                              key={item.href}
-                              href={item.href}
-                              onClick={onClose}
-                              className={`flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors ${
-                                pathname === item.href || pathname.startsWith(item.href + '/')
-                                  ? 'text-indigo-400 font-semibold'
-                                  : 'text-gray-100'
-                              }`}
-                            >
-                              {item.label}
-                            </Link>
-                          ))}
-                          <div className="absolute right-full top-5 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-                <div className={`space-y-0.5 transition-all duration-200 ease-in-out ${!isCollapsed && !expanded ? 'max-h-0 overflow-hidden' : isCollapsed ? 'hidden' : 'max-h-96'}`}>
-                  {section.items.filter(item => !hiddenNavItems.includes(item.href)).map((item) => {
-                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-                    return (
+              <div key={section.key} className="relative group/section">
+                <Link
+                  href={section.href}
+                  onClick={onClose}
+                  className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl transition-colors ${
+                    isActive
+                      ? 'bg-indigo-50 dark:bg-indigo-900/30'
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                  } ${isCollapsed ? 'justify-center' : ''}`}
+                >
+                  <SectionIcon className={`w-5 h-5 flex-shrink-0 transition-colors ${
+                    isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'
+                  }`} />
+                  {/* Chevron-right menandai section ini masuk ke halaman hub dulu
+                      (beda dari menu biasa yang langsung ke tujuannya). */}
+                  <span className={`flex items-center justify-between flex-1 overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+                    <span className={`text-xs font-semibold uppercase tracking-wider whitespace-nowrap ${
+                      isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'
+                    }`}>
+                      {section.label}
+                    </span>
+                    <ChevronRight className={`w-4 h-4 flex-shrink-0 transition-colors ${
+                      isActive ? 'text-indigo-400 dark:text-indigo-400' : 'text-gray-300 dark:text-gray-600'
+                    }`} />
+                  </span>
+                </Link>
+                {/* Flyout saat collapsed — quick access ke tiap sub-menu tanpa buka hub */}
+                {isCollapsed && (
+                  <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 invisible group-hover/section:opacity-100 group-hover/section:visible transition-all duration-150 z-[60] overflow-hidden">
+                    <Link
+                      href={section.href}
+                      onClick={onClose}
+                      className="block px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-300 hover:text-white border-b border-gray-700 dark:border-gray-600 transition-colors"
+                    >
+                      {section.label}
+                    </Link>
+                    {section.items.map((item) => (
                       <Link
                         key={item.href}
                         href={item.href}
                         onClick={onClose}
-                        className={`flex items-center pl-10 pr-3 py-2 rounded-xl text-sm font-medium transition-colors
-                          ${isActive
-                            ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
-                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-indigo-500 dark:hover:text-indigo-400'
-                          }`}
+                        className={`flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors ${
+                          pathname === item.href || pathname.startsWith(item.href + '/')
+                            ? 'text-indigo-400 font-semibold'
+                            : 'text-gray-100'
+                        }`}
                       >
                         {item.label}
                       </Link>
-                    );
-                  })}
-                </div>
+                    ))}
+                    <div className="absolute right-full top-5 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
+                  </div>
+                )}
               </div>
             );
           })}
@@ -1056,7 +914,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { userRole, user, activeBusinessId, activeBusiness } = useBusinessContext();
+  const { userRole, activeBusinessId, activeBusiness } = useBusinessContext();
   const pathname = usePathname();
   const prefersReducedMotion = useReducedMotion();
   const touchStartX = useRef<number | null>(null);
@@ -1126,7 +984,6 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
         isCollapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
         userRole={userRole}
-        userId={user?.id ?? null}
       />
 
       {/* Fixed Header */}

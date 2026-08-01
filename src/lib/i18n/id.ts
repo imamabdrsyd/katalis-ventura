@@ -97,6 +97,30 @@ export const id: Translations = {
     searchResultsCount: (n: number) => `${n} hasil ditemukan`,
   },
 
+  navHub: {
+    accountingTitle: 'Akuntansi',
+    accountingSubtitle: 'Kelola bagan akun, buku besar, dan pembukuan inti bisnismu.',
+    financialReportsTitle: 'Laporan Keuangan',
+    financialReportsSubtitle: 'Laba rugi, neraca, arus kas, dan perubahan ekuitas.',
+    analyticsTitle: 'Analitik',
+    analyticsSubtitle: 'Pemodelan skenario, proyeksi anggaran, dan pemantauan pasar.',
+    desc: {
+      chartOfAccounts: 'Struktur bagan akun bisnis',
+      generalLedger: 'Mutasi lengkap tiap akun',
+      trialBalance: 'Ringkasan saldo debit & kredit',
+      arAp: 'Pantau piutang & hutang',
+      invoice: 'Buat & kelola faktur',
+      bankReconciliation: 'Cocokkan catatan dengan rekening bank',
+      profitLoss: 'Pendapatan, beban, & laba bersih',
+      balanceSheet: 'Aset, liabilitas, & ekuitas',
+      cashFlow: 'Arus kas operasi, investasi, & pendanaan',
+      changesInEquity: 'Pergerakan ekuitas pemilik',
+      scenarioModeling: 'Analisis what-if keuangan',
+      budgetForecast: 'Rencana anggaran & proyeksi ROI',
+      marketTracker: 'Pantau harga & tren pasar',
+    },
+  },
+
   roles: {
     businessManager: 'Business Manager',
     investor: 'Investor',
@@ -150,9 +174,6 @@ export const id: Translations = {
     telegramConnectHint: 'Hubungkan akun Telegram kamu untuk bisa input transaksi langsung dari chat, tanpa buka aplikasi.',
     telegramConnect: 'Hubungkan',
     telegramInvestorOnly: 'Integrasi Telegram hanya tersedia untuk Business Manager.',
-    // Sidebar visibility card
-    sidebarMenuTitle: 'Menu Sidebar',
-    sidebarMenuDesc: 'Menu yang disembunyikan tetap bisa diakses lewat URL',
   },
 
   dashboard: {
