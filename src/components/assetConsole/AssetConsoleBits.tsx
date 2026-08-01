@@ -49,11 +49,16 @@ export function PlValue({
 }) {
   const sign = value > 0 ? '+' : '';
   return (
-    <span className={`tabular-nums font-medium ${plColorClass(value)} ${className}`}>
-      {sign}
-      {formatCurrency(value)}
+    // inline-flex + flex-wrap (bukan teks nowrap polos): pada KPI card sempit
+    // dengan angka besar (mis. Rp 100.055.351 (+28.44%)), nilai dan
+    // persentase turun ke baris sendiri alih-alih meluber keluar card.
+    <span className={`inline-flex flex-wrap items-baseline gap-x-1.5 tabular-nums font-medium ${plColorClass(value)} ${className}`}>
+      <span className="break-all">
+        {sign}
+        {formatCurrency(value)}
+      </span>
       {pct !== undefined && Number.isFinite(pct) && (
-        <span className="ml-1.5 text-xs opacity-80">
+        <span className="text-xs opacity-80 whitespace-nowrap">
           ({sign}
           {pct.toFixed(2)}%)
         </span>

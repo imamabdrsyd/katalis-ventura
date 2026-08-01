@@ -96,13 +96,17 @@ export default function AssetConsolePage() {
           </span>
         </KpiCard>
         <KpiCard icon={TrendingUp} label={ta.kpiUnrealized} hint={ta.kpiUnrealizedHint}>
-          <span className={plColorClass(summary.totalUnrealizedPl)}>
-            <AnimatedNumber
-              value={summary.totalUnrealizedPl}
-              formatter={(v) => `${v > 0 ? '+' : ''}${formatCurrency(v)}`}
-            />
+          {/* flex-wrap: angka rupiah besar + persentase turun ke baris sendiri
+              di card sempit (xl:grid-cols-4), bukan meluber keluar card. */}
+          <span className={`inline-flex flex-wrap items-baseline gap-x-2 ${plColorClass(summary.totalUnrealizedPl)}`}>
+            <span className="break-all">
+              <AnimatedNumber
+                value={summary.totalUnrealizedPl}
+                formatter={(v) => `${v > 0 ? '+' : ''}${formatCurrency(v)}`}
+              />
+            </span>
             {summary.totalInvested > 0 && (
-              <span className="ml-2 text-sm font-medium">
+              <span className="text-sm font-medium whitespace-nowrap">
                 ({summary.totalUnrealizedPl > 0 ? '+' : ''}
                 {summary.totalUnrealizedPlPct.toFixed(2)}%)
               </span>
