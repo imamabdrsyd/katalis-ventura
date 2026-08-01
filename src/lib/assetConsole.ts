@@ -22,6 +22,28 @@ import type { Account, AssetClass, CatalogItem, JournalLine, Transaction } from 
 /** Toleransi pembulatan rupiah — sama dengan yang dipakai calculations.ts. */
 const EPSILON = 0.01;
 
+/**
+ * Bersihkan noise pada kuantitas yang DITURUNKAN dari pembagian
+ * (costRemoved / avgCostBefore). avgCostBefore sendiri sudah dibulatkan ke sen
+ * (mis. 578.310,25), sehingga hasil bagi bisa meleset ke digit ke-6/7 —
+ * 3.0000004322939113 alih-alih 3 — jauh lebih besar dari presisi biner biasa
+ * (~1e-15).
+ *
+ * "Snap to nearest integer" dengan toleransi RELATIF (bukan absolut): saham
+ * hampir selalu bertransaksi dalam lot bulat, jadi selisih kecil ke bilangan
+ * bulat adalah noise pembulatan rupiah. Tapi kripto sah bertransaksi dalam
+ * pecahan kecil (0,0001 BTC bisa senilai jutaan rupiah) — toleransi absolut
+ * akan salah membulatkan itu ke 0. Toleransi 1e-6 relatif terhadap kuantitas
+ * itu sendiri aman untuk kedua kasus: cukup longgar untuk noise pembagian
+ * rupiah, cukup ketat untuk tidak mengganggu pecahan kripto yang wajar.
+ */
+function roundQty(qty: number): number {
+  const nearestInt = Math.round(qty);
+  const tolerance = Math.max(Math.abs(nearestInt), 1) * 1e-6;
+  if (nearestInt !== 0 && Math.abs(qty - nearestInt) < tolerance) return nearestInt;
+  return Math.round(qty * 1e8) / 1e8;
+}
+
 export type AssetEventType = 'buy' | 'sell' | 'dividend' | 'adjustment';
 
 export interface AssetEvent {
@@ -214,14 +236,17 @@ function buildHolding(item: CatalogItem, txs: Transaction[]): AssetHolding {
         // tidak bisa dipertanggungjawabkan. Ditandai, bukan ditebak.
         hasUnknownQuantity = true;
       }
-      state.quantity += quantity;
+      // Dibulatkan di titik akumulasi (bukan hanya saat derive di 'sell') —
+      // noise floating-point menumpuk lewat rantai +=/-= antar-transaksi
+      // berurutan, tidak cukup dibersihkan sekali di satu titik pembagian.
+      state.quantity = roundQty(state.quantity + quantity);
       state.costBasis += costBasisDelta;
     } else if (eventType === 'sell') {
       const costRemoved = -costBasisDelta;
       if (quantityOf(tx) === null) {
         // Turunkan dari metode average cost itu sendiri: qty = cost yang
         // dilepas / rata-rata saat itu. Eksak, tidak menebak dari teks.
-        quantity = avgCostBefore > 0 ? costRemoved / avgCostBefore : 0;
+        quantity = avgCostBefore > 0 ? roundQty(costRemoved / avgCostBefore) : 0;
         quantityDerived = true;
       }
       // Jual yang melepas seluruh cost basis = menutup posisi; hindari sisa
@@ -229,7 +254,7 @@ function buildHolding(item: CatalogItem, txs: Transaction[]): AssetHolding {
       if (Math.abs(costRemoved - state.costBasis) < EPSILON) {
         quantity = state.quantity;
       }
-      state.quantity = Math.max(0, state.quantity - quantity);
+      state.quantity = roundQty(Math.max(0, state.quantity - quantity));
       state.costBasis = Math.max(0, state.costBasis - costRemoved);
       state.realizedPl += realizedPl;
     } else if (eventType === 'dividend') {

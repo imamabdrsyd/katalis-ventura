@@ -195,6 +195,32 @@ describe('buildAssetHoldings — average cost saat jual', () => {
     expect(h.realizedPl).toBe(219_755);
   });
 
+  it('membulatkan noise floating-point pada kuantitas turunan (bug: 99,999957 Lembar)', () => {
+    // Reproduksi bug nyata: BBCA sisa 1 lot setelah dua kali jual berturut-turut
+    // tanpa unit_breakdown. Pembagian costRemoved/avgCostBefore berantai
+    // menghasilkan noise biner (0.9999999999999999...) yang lolos ke UI
+    // sebagai "99,999957 Lembar" alih-alih "1 Lembar" bersih.
+    seq = 0;
+    const bbca = instrument('BBCA');
+    const holdings = buildAssetHoldings(
+      [bbca],
+      [
+        buy(bbca, 'Sinarmas Sekuritas', '2026-05-29', 1, 573_303),
+        buy(bbca, 'Sinarmas Sekuritas', '2026-05-29', 1, 576_439),
+        buy(bbca, 'Sinarmas Sekuritas', '2026-06-04', 1, 548_268),
+        sell(bbca, 'Sinarmas Sekuritas', '2026-06-15', 1_870_494, 1_698_010),
+        buy(bbca, 'Sinarmas Sekuritas', '2026-06-30', 4, 2_313_241),
+        sell(bbca, 'Sinarmas Sekuritas', '2026-07-20', 1_954_686, 1_734_931),
+      ]
+    );
+
+    const h = holdings[0];
+    // Harus persis 1, bukan 0.999999... — exact equality, bukan toBeCloseTo,
+    // supaya regresi noise floating-point tertangkap.
+    expect(h.totalQuantity).toBe(1);
+    expect(h.totalQuantity * h.lotSize).toBe(100);
+  });
+
   it('jual yang melepas seluruh cost basis menutup posisi tanpa sisa hantu', () => {
     seq = 0;
     const gold = instrument('Emas Antam', { asset_class: 'gold', asset_lot_size: 1, unit: 'gram', default_price: 1_500_000 });

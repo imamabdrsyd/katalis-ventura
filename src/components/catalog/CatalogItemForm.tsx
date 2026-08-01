@@ -137,6 +137,8 @@ export function CatalogItemForm({
       sku: item?.sku ?? '',
       track_stock: item?.track_stock ?? false,
       stock_qty: item?.stock_qty ?? 0,
+      asset_class: item?.asset_class ?? null,
+      asset_lot_size: item?.asset_lot_size ?? 1,
       is_active: item?.is_active ?? true,
       image_url: item?.image_url ?? '',
       image_fit: item?.image_fit ?? 'cover',
