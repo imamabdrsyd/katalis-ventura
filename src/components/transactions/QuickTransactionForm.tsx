@@ -17,7 +17,7 @@ import {
 } from '@/lib/utils/quickTransactionHelper';
 import { DividendEntryModeModal } from './DividendEntryModeModal';
 import { findDividendPayableAccount } from '@/lib/accounting/guidance/dividendSettlement';
-import { getStockTransactions, isInventoryAccount } from '@/lib/utils/inventoryHelper';
+import { getStockTransactions, isInventoryAccount, deriveCatalogItemFromStock } from '@/lib/utils/inventoryHelper';
 import { InventoryPicker } from './InventoryPicker';
 import { CatalogItemPicker } from '@/components/catalog/CatalogItemPicker';
 import type { CatalogItem } from '@/types';
@@ -489,7 +489,14 @@ export function QuickTransactionForm({
 
   const buildMeta = (finalAttachments: TransactionAttachment[]) => ({
     ...(selectedStockIds.length > 0 ? { sold_stock_ids: selectedStockIds } : {}),
-    ...(pickedCatalogItem ? { catalog_item: pickedCatalogItem } : {}),
+    // Item katalog: pilihan eksplisit user menang; kalau tidak ada, turunkan
+    // dari stok yang dilepas agar penjualan tetap terbaca di Asset Console.
+    ...(pickedCatalogItem
+      ? { catalog_item: pickedCatalogItem }
+      : (() => {
+          const derived = deriveCatalogItemFromStock(selectedStockIds, allTransactions);
+          return derived ? { catalog_item: derived } : {};
+        })()),
     unit_breakdown: unitBreakdown && unitBreakdown.unit ? unitBreakdown : undefined,
     attachments: finalAttachments.length > 0 ? finalAttachments : undefined,
   });

@@ -57,6 +57,33 @@ export function findCogsAccount(accounts: Account[]): Account | null {
   );
 }
 
+/**
+ * Turunkan item katalog sebuah penjualan dari transaksi stok yang dilepasnya.
+ *
+ * Dipakai supaya transaksi JUAL ikut membawa `meta.catalog_item` seperti
+ * transaksi BELI. Tanpa ini Asset Console hanya melihat sisi beli dan posisi
+ * terbaca bruto (mis. BBCA 7 lot padahal tersisa 1 lot setelah dua kali jual).
+ *
+ * Mengembalikan null bila stok yang dilepas berasal dari lebih dari satu item
+ * katalog — penjualan campuran tidak boleh ditebak sepihak.
+ */
+export function deriveCatalogItemFromStock(
+  soldStockIds: string[],
+  allTransactions: Transaction[]
+): { id: string; name: string } | null {
+  if (soldStockIds.length === 0) return null;
+
+  const ids = new Set(soldStockIds);
+  const picked = allTransactions
+    .filter((t) => ids.has(t.id))
+    .map((t) => t.meta?.catalog_item)
+    .filter((c): c is { id: string; name: string } => !!c?.id);
+
+  if (picked.length === 0) return null;
+  const first = picked[0];
+  return picked.every((c) => c.id === first.id) ? first : null;
+}
+
 export interface StockToCOGSUpdate {
   transactionId: string;
   newDebitAccountId: string; // COGS account

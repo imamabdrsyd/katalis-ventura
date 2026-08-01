@@ -169,6 +169,21 @@
 - **Solusi**: Tambah context awareness — kalau ada keyword "terima" + "sewa" → revenue, kalau "bayar" + "sewa" → expense.
 - **Status**: [x] DONE — Ditambahkan early context check: "terima sewa"/"pendapatan sewa" → revenue. Juga "bayar pinjaman" → pay_loan (bukan receive_loan).
 
+### 11. Asset Console (Portofolio Investasi Konsolidasi)
+- **Prioritas**: SEDANG (khusus bisnis sektor investasi)
+- **Manfaat**: Aplikasi broker hanya tahu posisinya sendiri. Pemilik yang punya BMRI di Sinarmas (1 lot) dan Stockbit (2 lot) tidak punya tempat melihat total 3 lot dengan average cost gabungan Rp 4.186,13/lembar. Asset Console mengisi gap itu.
+- **Keputusan arsitektur**: **read-model di atas `transactions`, BUKAN ledger paralel.** Usulan awal (4 tabel `asset_instruments`/`asset_custodians`/`asset_positions`/`asset_position_events` + trigger average-cost + pembuatan jurnal otomatis) ditolak — posisi & cost basis sudah lengkap di buku besar, menyalinnya ke tabel kedua hanya menciptakan dua sumber kebenaran yang bisa berbeda tanpa informasi baru. Dengan read-model, posisi ADALAH buku besar.
+- **Status**: [x] SELESAI
+  - DB: migration 125 — `catalog_items.asset_class` (opt-in, NULL = item biasa), `asset_lot_size` (jembatan lot↔lembar; saham IDX = 100), `asset_price_updated_at`. Tidak ada tabel baru.
+  - Engine: `src/lib/assetConsole.ts` — average cost per (instrumen × kustodian), kustodian dari `transactions.name`. Klasifikasi beli/jual/dividen via `account_type` + flag `is_cash_equivalent`/`is_trade_receivable` (bukan pencocokan nama akun, §18).
+  - Kuantitas jual: diturunkan eksak dari `cost_basis_dilepas / avg_cost_saat_itu` bila `meta.unit_breakdown` kosong. Terverifikasi: BBCA 1.734.931 / 578.310,25 = 3 lot tepat.
+  - Data access: `src/lib/api/assetConsole.ts`; hook `src/hooks/useAssetConsole.ts`
+  - Halaman: `app/(dashboard)/asset-console/page.tsx` (KPI + filter kelas + tabel konsolidasi) + `[itemId]/page.tsx` (breakdown per kustodian + riwayat + update harga manual)
+  - Nav: gated `business_sector = 'finance'` via `isAssetConsoleEnabled()`. Sengaja **bukan** `business_type = 'dagang'` — badge "TRADING" berasal dari sana tapi semantiknya perdagangan barang, UMKM retail biasa juga 'dagang'.
+  - Test: `tests/unit/assetConsole.test.ts` (9 test, termasuk acceptance criteria 3 lot @ 4.186,13 lintas dua broker)
+- **Temuan data saat implementasi**: transaksi JUAL tidak pernah membawa `meta.catalog_item` (hanya BELI), sehingga posisi akan terbaca **bruto** — BBCA 7 lot / Rp 4.011.251 padahal tersisa 1 lot / Rp 578.310 setelah dua kali jual @3 lot. Diperbaiki migrasi 125 (backfill **meta-only**: nominal, akun, `journal_lines` tidak disentuh) + `deriveCatalogItemFromStock()` agar tidak terulang. Sekaligus menutup bug lama: pindah ke mode multi-line di Journal Entry membuang `sold_stock_ids` diam-diam.
+- **Belum dikerjakan**: integrasi API broker, live price feed, FIFO/LIFO per-lot, multi-currency penuh.
+
 ---
 
 ## D. RINGKASAN PRIORITAS
@@ -189,3 +204,4 @@
 | 12 | ~~Deteksi keyword context-aware~~ | UX | Kecil | **DONE** |
 | 13 | ~~Bank reconciliation~~ | Operasional | Sedang | **DONE** |
 | 14 | ~~Automatic closing entry~~ | Kelengkapan | Sedang | **DONE** |
+| 15 | ~~Asset Console (portofolio konsolidasi lintas broker)~~ | Kelengkapan | Sedang | **DONE** |

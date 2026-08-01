@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase';
-import type { CatalogItem, CatalogItemType, ServiceRole, RateKind } from '@/types';
+import type { CatalogItem, CatalogItemType, ServiceRole, RateKind, AssetClass } from '@/types';
 
 export interface CatalogItemInsert {
   business_id: string;
@@ -21,6 +21,8 @@ export interface CatalogItemInsert {
   link_label?: string | null;
   track_stock?: boolean;
   stock_qty?: number;
+  asset_class?: AssetClass | null;
+  asset_lot_size?: number;
   is_active?: boolean;
   sort_order?: number;
   created_by: string;
@@ -45,6 +47,8 @@ export interface CatalogItemUpdate {
   link_label?: string | null;
   track_stock?: boolean;
   stock_qty?: number;
+  asset_class?: AssetClass | null;
+  asset_lot_size?: number;
   is_active?: boolean;
   sort_order?: number;
 }

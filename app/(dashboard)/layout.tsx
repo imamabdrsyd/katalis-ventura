@@ -45,7 +45,13 @@ import { AIChatFAB } from '@/components/ai/AIChatFAB';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
 import { useNotifications } from '@/hooks/useNotifications';
 import { isManagerRole } from '@/lib/roles';
-import { useNavData, getPosNavItem, type NavItem } from '@/lib/navigation';
+import {
+  useNavData,
+  getPosNavItem,
+  isAssetConsoleEnabled,
+  getAssetConsoleNavItem,
+  type NavItem,
+} from '@/lib/navigation';
 
 type SearchResult = {
   type: 'page' | 'data';
@@ -146,6 +152,9 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
   const searchablePages = useMemo(() => {
     const pages: NavItem[] = [
       { href: '/dashboard', label: t.nav.dashboard, icon: PieChart},
+      ...(isAssetConsoleEnabled(activeBusiness?.business_sector)
+        ? [getAssetConsoleNavItem(t.nav)]
+        : []),
       { href: '/leads', label: 'Leads', icon: MessagesSquare },
       { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
       ...navSections.flatMap((s) => s.items),
@@ -155,7 +164,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
     if (canManage) {
       // /invoices & /reconciliation sudah ada via navSections — jangan di-splice lagi
       // (mencegah duplikat key di SearchDialog).
-      pages.splice(2, 0,
+      pages.splice(isAssetConsoleEnabled(activeBusiness?.business_sector) ? 3 : 2, 0,
         getPosNavItem(activeBusiness?.business_type, t.nav),
         { href: '/agent', label: 'Agentic Workspace', icon: Bot },
         { href: '/transactions', label: t.nav.transactions, icon: CreditCard },
@@ -164,7 +173,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
     }
 
     return pages;
-  }, [canManage, navSections, t, activeBusiness?.business_type]);
+  }, [canManage, navSections, t, activeBusiness?.business_type, activeBusiness?.business_sector]);
 
   const filteredPages = useMemo(
     () =>
@@ -775,13 +784,18 @@ function Sidebar({
             );
           })()}
 
-          {/* Dashboard — full width, section sama dengan Transactions */}
-          {(() => {
-            const item = { href: '/dashboard', label: t.nav.dashboard, icon: PieChart };
+          {/* Dashboard (+ Asset Console untuk bisnis sektor investasi) — full
+              width, section sama dengan Transactions */}
+          {[
+            { href: '/dashboard', label: t.nav.dashboard, icon: PieChart },
+            ...(isAssetConsoleEnabled(activeBusiness?.business_sector)
+              ? [getAssetConsoleNavItem(t.nav)]
+              : []),
+          ].map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
-              <div className="relative group">
+              <div key={item.href} className="relative group">
                 <Link
                   href={item.href}
                   onClick={onClose}
@@ -804,7 +818,7 @@ function Sidebar({
                 )}
               </div>
             );
-          })()}
+          })}
         </div>
 
         {/* Line pembatas di bawah Transactions + Dashboard */}

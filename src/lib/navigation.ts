@@ -17,6 +17,7 @@ import {
   LineChart,
   CalendarDays,
   Store,
+  Wallet,
   LucideIcon,
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
@@ -61,6 +62,24 @@ export function getPosNavItem(
     return { href: '/calendar', label: nav.calendar, icon: CalendarDays };
   }
   return { href: '/point-of-sales', label: nav.pointOfSales, icon: Store };
+}
+
+/**
+ * Sektor bisnis yang memakai Asset Console.
+ *
+ * CATATAN: sengaja TIDAK memakai `business_type === 'dagang'`. Badge "TRADING"
+ * di header memang berasal dari sana (label EN untuk 'dagang'), tapi semantik
+ * 'dagang' adalah perdagangan barang/merchandising — UMKM retail biasa juga
+ * 'dagang' dan tidak butuh Asset Console. Penanda yang benar adalah sektornya.
+ */
+const ASSET_CONSOLE_SECTORS = new Set(['finance']);
+
+export function isAssetConsoleEnabled(businessSector: string | undefined | null): boolean {
+  return !!businessSector && ASSET_CONSOLE_SECTORS.has(businessSector.trim().toLowerCase());
+}
+
+export function getAssetConsoleNavItem(nav: { assetConsole: string }): NavItem {
+  return { href: '/asset-console', label: nav.assetConsole, icon: Wallet };
 }
 
 /**

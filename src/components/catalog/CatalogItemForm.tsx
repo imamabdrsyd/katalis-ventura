@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef, useId } from 'react';
-import type { CatalogItem, CatalogItemType, Account, ServiceRole, RateKind } from '@/types';
+import type { CatalogItem, CatalogItemType, Account, ServiceRole, RateKind, AssetClass } from '@/types';
 import { AlertCircle, Package, Wrench, Camera, Crop, ImageIcon, Loader2, Maximize2, X } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 import { useLanguage } from '@/context/LanguageContext';
+import { ASSET_CLASSES, ASSET_CLASS_META } from '@/lib/assetClasses';
 
 export interface CatalogItemFormData {
   name: string;
@@ -19,6 +20,8 @@ export interface CatalogItemFormData {
   sku?: string | null;
   track_stock?: boolean;
   stock_qty?: number;
+  asset_class?: AssetClass | null;
+  asset_lot_size?: number;
   is_active: boolean;
   image_url?: string | null;
   image_fit?: 'cover' | 'contain' | null;
@@ -92,6 +95,8 @@ export function CatalogItemForm({
     sku: item?.sku ?? '',
     track_stock: item?.track_stock ?? false,
     stock_qty: item?.stock_qty ?? 0,
+    asset_class: item?.asset_class ?? null,
+    asset_lot_size: item?.asset_lot_size ?? 1,
     is_active: item?.is_active ?? true,
     image_url: item?.image_url ?? '',
     image_fit: item?.image_fit ?? 'cover',
@@ -251,6 +256,11 @@ export function CatalogItemForm({
       sku: isProduct ? formData.sku?.trim() || null : null,
       track_stock: isProduct ? (formData.track_stock ?? false) : false,
       stock_qty: isProduct && formData.track_stock ? Math.max(0, formData.stock_qty ?? 0) : 0,
+      // Instrumen investasi hanya masuk akal untuk item produk. Melepas kelas
+      // aset mengembalikan lot size ke 1 supaya tidak ada sisa nilai menggantung.
+      asset_class: isProduct ? (formData.asset_class ?? null) : null,
+      asset_lot_size:
+        isProduct && formData.asset_class ? Math.max(Number(formData.asset_lot_size) || 1, 0.00000001) : 1,
       image_url: hasImage ? formData.image_url : null,
       image_fit: hasImage ? (formData.image_fit ?? 'cover') : null,
       image_position_x: hasImage && formData.image_fit === 'cover' ? (formData.image_position_x ?? 50) : null,
@@ -560,6 +570,70 @@ export function CatalogItemForm({
                     {tc.stockQtyHintEdit}
                   </p>
                 )}
+              </div>
+            )}
+          </div>
+
+          {/* Kelas aset investasi (migr 125) — opt-in ke Asset Console.
+              Kosong = produk biasa. Kelas aset & lot size sengaja di sini
+              (bukan tabel terpisah) supaya katalog tetap satu master data. */}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+            <div>
+              <FloatingSelect
+                label={tc.assetClassLabel}
+                value={formData.asset_class ?? ''}
+                onChange={(e) => {
+                  const next = (e.target.value || null) as AssetClass | null;
+                  setFormData(prev => ({
+                    ...prev,
+                    asset_class: next,
+                    // Saat kelas dipilih pertama kali, tawarkan lot size wajar
+                    // (saham IDX 100). Nilai yang sudah disetel user dihormati.
+                    asset_lot_size:
+                      next && !prev.asset_class
+                        ? ASSET_CLASS_META[next].suggestedLotSize
+                        : (prev.asset_lot_size ?? 1),
+                  }));
+                }}
+              >
+                <option value="">{tc.assetClassNone}</option>
+                {ASSET_CLASSES.map(cls => (
+                  <option key={cls} value={cls}>
+                    {t.assetConsole[
+                      `class${cls.charAt(0).toUpperCase()}${cls.slice(1)}` as
+                        'classStock' | 'classCrypto' | 'classProperty' | 'classGold'
+                    ]}
+                  </option>
+                ))}
+              </FloatingSelect>
+              <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+                {tc.assetClassHint}
+              </p>
+            </div>
+
+            {formData.asset_class && (
+              <div>
+                <FloatingField
+                  label={tc.assetLotSizeLabel}
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={formData.asset_lot_size ?? 1}
+                  onChange={(e) =>
+                    setFormData(prev => ({ ...prev, asset_lot_size: Number(e.target.value) || 0 }))
+                  }
+                  className="tabular-nums"
+                  trailing={
+                    formData.unit?.trim() ? (
+                      <span className="text-sm text-gray-400 dark:text-gray-500">
+                        {formData.unit.trim()}
+                      </span>
+                    ) : undefined
+                  }
+                />
+                <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+                  {tc.assetLotSizeHint}
+                </p>
               </div>
             )}
           </div>

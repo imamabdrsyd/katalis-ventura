@@ -144,6 +144,11 @@ export type CatalogItemType = 'product' | 'service';
 export type ServiceRole = 'main' | 'addon';
 export type RateKind = 'weekday' | 'weekend' | 'monthly';
 
+// Kelas aset investasi (migr 125). Item katalog yang di-set asset_class akan
+// muncul di Asset Console; NULL = produk/jasa biasa. Tambah kelas baru cukup di
+// sini + ASSET_CLASS_META (src/lib/assetClasses.ts) — jangan sebar literalnya.
+export type AssetClass = 'stock' | 'crypto' | 'property' | 'gold';
+
 // Katalog produk/jasa terpusat per bisnis. Dipakai sebagai master data saat
 // entry transaksi EARN (picker di multi-line form & quick entry).
 export interface CatalogItem {
@@ -163,6 +168,13 @@ export interface CatalogItem {
   // Stok sederhana POS (opt-in). Hanya item track_stock=true yang dikurangi saat checkout.
   track_stock?: boolean;
   stock_qty?: number;
+  // Asset Console (migr 125). asset_class NULL = item katalog biasa (tidak ikut
+  // ke Asset Console). asset_lot_size menjembatani satuan: transaksi mencatat
+  // kuantitas dalam lot, sedangkan `unit`/`default_price` dikutip per lembar —
+  // saham IDX = 100. default_price merangkap harga pasar terakhir (input manual).
+  asset_class?: AssetClass | null;
+  asset_lot_size?: number;
+  asset_price_updated_at?: string | null;
   // Rich display config — dipakai saat item difitur di omni-channel "Produk Unggulan"
   image_url?: string | null;
   image_fit?: 'cover' | 'contain' | null;

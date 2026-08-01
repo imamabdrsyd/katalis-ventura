@@ -17,7 +17,7 @@ import {
 } from '@/lib/utils/quickTransactionHelper';
 import { findDividendPayableAccount } from '@/lib/accounting/guidance/dividendSettlement';
 import { DividendEntryModeModal } from '@/components/transactions/DividendEntryModeModal';
-import { getStockTransactions, findCogsAccount } from '@/lib/utils/inventoryHelper';
+import { getStockTransactions, findCogsAccount, deriveCatalogItemFromStock } from '@/lib/utils/inventoryHelper';
 import { updateTransaction } from '@/lib/api/transactions';
 import { InventoryPicker } from '@/components/transactions/InventoryPicker';
 import { AccountDropdown } from '@/components/transactions/AccountDropdown';
@@ -902,6 +902,19 @@ export default function JournalEntryPage() {
           sort_order: i,
         }));
 
+        // Stok yang dipilih sebelum masuk mode multi-line ikut tersimpan.
+        // Sebelumnya tautan ini hilang diam-diam saat ganti mode, sehingga
+        // penjualan multi-line tidak pernah terhubung ke item katalognya.
+        // Catatan: di mode multi-line user menulis sendiri baris kredit
+        // persediaan, jadi stok TIDAK dikonversi ke HPP di sini (beda dengan
+        // jalur single-line) — kalau tidak, cost basis akan terpotong dua kali.
+        const mlMeta: Record<string, unknown> = {};
+        if (selectedStockIds.length > 0) {
+          mlMeta.sold_stock_ids = selectedStockIds;
+          const soldItem = deriveCatalogItemFromStock(selectedStockIds, allTransactions);
+          if (soldItem) mlMeta.catalog_item = soldItem;
+        }
+
         savedTransaction = await createMultiLineTransaction({
           business_id: businessId,
           created_by: user.id,
@@ -911,6 +924,7 @@ export default function JournalEntryPage() {
           description: description || (selectedEntryType?.label ?? ''),
           notes: description || undefined,
           attachments: attachments.length > 0 ? attachments : undefined,
+          meta: Object.keys(mlMeta).length > 0 ? mlMeta : undefined,
           journal_lines: journalLines,
         });
       } else {
@@ -927,6 +941,10 @@ export default function JournalEntryPage() {
         const meta: Record<string, unknown> = {};
         if (selectedStockIds.length > 0) {
           meta.sold_stock_ids = selectedStockIds;
+          // Bawa serta item katalog dari stok yang dilepas, supaya penjualan
+          // ikut terbaca Asset Console (posisi berkurang, bukan cuma sisi beli).
+          const soldItem = deriveCatalogItemFromStock(selectedStockIds, allTransactions);
+          if (soldItem) meta.catalog_item = soldItem;
         }
         if (unitBreakdown && unitBreakdown.unit) {
           meta.unit_breakdown = unitBreakdown;

@@ -1,0 +1,307 @@
+import { describe, it, expect } from 'vitest';
+import { buildAssetHoldings, summarizeHoldings } from '@/lib/assetConsole';
+import type { Account, CatalogItem, Transaction } from '@/types';
+
+/**
+ * Fixture direplika dari data nyata bisnis "AXION Finance" (Supabase, Agt 2026)
+ * supaya angka acceptance criteria bisa dicek langsung: BMRI 3 lot lintas dua
+ * broker dengan avg cost Rp 4.186,13/lembar, dan BBCA yang tersisa 1 lot
+ * setelah dua kali jual @3 lot.
+ */
+
+function account(over: Partial<Account> & Pick<Account, 'account_code' | 'account_name' | 'account_type'>): Account {
+  return {
+    id: `acc-${over.account_code}`,
+    business_id: 'biz',
+    parent_account_id: null,
+    normal_balance: over.account_type === 'ASSET' || over.account_type === 'EXPENSE' ? 'DEBIT' : 'CREDIT',
+    is_active: true,
+    is_system: false,
+    sort_order: 0,
+    created_at: '2026-01-01',
+    updated_at: '2026-01-01',
+    ...over,
+  } as Account;
+}
+
+const BANK = account({ account_code: '1200', account_name: 'Bank', account_type: 'ASSET', is_cash_equivalent: true });
+const INVENTORY = account({ account_code: '1300', account_name: 'Inventory', account_type: 'ASSET', default_category: 'VAR' });
+const CAPITAL = account({ account_code: '3100', account_name: "Owner's Capital", account_type: 'EQUITY' });
+const REVENUE = account({ account_code: '4100', account_name: 'Sales Revenue', account_type: 'REVENUE' });
+
+let seq = 0;
+const nextId = () => `tx-${++seq}`;
+
+/** Transaksi BELI: legacy double-entry Dr Persediaan / Cr Kas-atau-Modal. */
+function buy(item: CatalogItem, custodian: string, date: string, qtyLots: number, amount: number, credit = BANK): Transaction {
+  return {
+    id: nextId(),
+    business_id: 'biz',
+    date,
+    created_at: `${date}T00:00:00Z`,
+    updated_at: `${date}T00:00:00Z`,
+    created_by: 'u',
+    category: 'VAR',
+    name: custodian,
+    description: `Beli ${qtyLots} lot ${item.name}`,
+    amount,
+    account: '',
+    status: 'posted',
+    is_double_entry: true,
+    debit_account_id: INVENTORY.id,
+    credit_account_id: credit.id,
+    debit_account: INVENTORY,
+    credit_account: credit,
+    meta: {
+      catalog_item: { id: item.id, name: item.name },
+      unit_breakdown: { unit: `Lot ${item.name}`, quantity: qtyLots, price_per_unit: amount / qtyLots },
+    },
+  } as Transaction;
+}
+
+/** Transaksi JUAL multi-line: Dr Bank / Cr Persediaan (cost) / Cr Pendapatan (gain). */
+function sell(
+  item: CatalogItem,
+  custodian: string,
+  date: string,
+  proceeds: number,
+  costRemoved: number,
+  opts: { qtyLots?: number } = {}
+): Transaction {
+  const gain = proceeds - costRemoved;
+  return {
+    id: nextId(),
+    business_id: 'biz',
+    date,
+    created_at: `${date}T00:00:00Z`,
+    updated_at: `${date}T00:00:00Z`,
+    created_by: 'u',
+    category: 'EARN',
+    name: custodian,
+    description: `Jual ${item.name}`,
+    amount: proceeds,
+    account: '',
+    status: 'posted',
+    is_multi_line: true,
+    meta: {
+      catalog_item: { id: item.id, name: item.name },
+      ...(opts.qtyLots ? { unit_breakdown: { unit: `Lot ${item.name}`, quantity: opts.qtyLots, price_per_unit: proceeds / opts.qtyLots } } : {}),
+    },
+    journal_lines: [
+      { id: 'l1', transaction_id: 'x', account_id: BANK.id, debit_amount: proceeds, credit_amount: 0, sort_order: 0, created_at: date, account: BANK },
+      { id: 'l2', transaction_id: 'x', account_id: INVENTORY.id, debit_amount: 0, credit_amount: costRemoved, sort_order: 1, created_at: date, account: INVENTORY },
+      { id: 'l3', transaction_id: 'x', account_id: REVENUE.id, debit_amount: 0, credit_amount: gain, sort_order: 2, created_at: date, account: REVENUE },
+    ],
+  } as Transaction;
+}
+
+function instrument(name: string, over: Partial<CatalogItem> = {}): CatalogItem {
+  return {
+    id: `item-${name}`,
+    business_id: 'biz',
+    name,
+    item_type: 'product',
+    default_price: 0,
+    unit: 'Lembar',
+    asset_class: 'stock',
+    asset_lot_size: 100,
+    is_active: true,
+    sort_order: 0,
+    created_at: '2026-01-01',
+    updated_at: '2026-01-01',
+    ...over,
+  } as CatalogItem;
+}
+
+describe('buildAssetHoldings — konsolidasi lintas broker', () => {
+  it('menggabungkan BMRI dari Sinarmas + Stockbit jadi 3 lot @ Rp4.186,13/lembar', () => {
+    seq = 0;
+    const bmri = instrument('BMRI', { default_price: 4270 });
+    const holdings = buildAssetHoldings(
+      [bmri],
+      [
+        buy(bmri, 'Sinarmas Sekuritas', '2026-07-16', 1, 427_599),
+        buy(bmri, 'Stockbit Sekuritas', '2026-07-24', 1, 417_625, CAPITAL),
+        buy(bmri, 'Stockbit Sekuritas', '2026-07-29', 1, 410_615, CAPITAL),
+      ]
+    );
+
+    expect(holdings).toHaveLength(1);
+    const h = holdings[0];
+
+    // Inti fitur: tak satu pun aplikasi broker tahu angka gabungan ini.
+    expect(h.totalQuantity).toBe(3);
+    expect(h.totalCostBasis).toBe(1_255_839);
+    expect(h.avgCostPerPriceUnit).toBeCloseTo(4186.13, 2);
+
+    // Dua posisi terpisah per kustodian, seperti kenyataannya di broker.
+    expect(h.positions).toHaveLength(2);
+    const stockbit = h.positions.find((p) => p.custodian === 'Stockbit Sekuritas')!;
+    expect(stockbit.quantity).toBe(2);
+    // Cocok dengan yang ditampilkan aplikasi Stockbit: Avg Price 4.141,2
+    expect(stockbit.avgCost / h.lotSize).toBeCloseTo(4141.2, 1);
+
+    const sinarmas = h.positions.find((p) => p.custodian === 'Sinarmas Sekuritas')!;
+    expect(sinarmas.quantity).toBe(1);
+
+    // Market value & unrealized pakai harga per lembar × lot size.
+    expect(h.marketValue).toBe(3 * 100 * 4270);
+    expect(h.unrealizedPl).toBeCloseTo(1_281_000 - 1_255_839, 2);
+    expect(h.hasUnknownQuantity).toBe(false);
+  });
+});
+
+describe('buildAssetHoldings — average cost saat jual', () => {
+  it('mengurangi posisi & mencatat realized gain (kuantitas jual dari meta)', () => {
+    seq = 0;
+    const bbca = instrument('BBCA');
+    const holdings = buildAssetHoldings(
+      [bbca],
+      [
+        buy(bbca, 'Sinarmas Sekuritas', '2026-05-29', 1, 573_303, CAPITAL),
+        buy(bbca, 'Sinarmas Sekuritas', '2026-05-29', 1, 576_439, CAPITAL),
+        buy(bbca, 'Sinarmas Sekuritas', '2026-06-04', 1, 548_268, CAPITAL),
+        sell(bbca, 'Sinarmas Sekuritas', '2026-06-15', 1_870_494, 1_698_010, { qtyLots: 3 }),
+      ]
+    );
+
+    const h = holdings[0];
+    expect(h.totalQuantity).toBe(0);
+    expect(h.totalCostBasis).toBe(0);
+    expect(h.realizedPl).toBe(172_484);
+  });
+
+  it('menurunkan kuantitas jual dari cost basis saat meta tidak mencatatnya', () => {
+    seq = 0;
+    const bbca = instrument('BBCA');
+    const holdings = buildAssetHoldings(
+      [bbca],
+      [
+        // 4 lot @ 578.310,25/lot
+        buy(bbca, 'Sinarmas Sekuritas', '2026-06-30', 4, 2_313_241),
+        // Jual 3 lot tanpa unit_breakdown — harus terhitung 3, bukan 0.
+        sell(bbca, 'Sinarmas Sekuritas', '2026-07-20', 1_954_686, 1_734_931),
+      ]
+    );
+
+    const h = holdings[0];
+    const sellEvent = h.events.find((e) => e.eventType === 'sell')!;
+    expect(sellEvent.quantityDerived).toBe(true);
+    expect(sellEvent.quantity).toBeCloseTo(3, 6);
+
+    // Sisa persis 1 lot dengan cost basis pro-rata.
+    expect(h.totalQuantity).toBeCloseTo(1, 6);
+    expect(h.totalCostBasis).toBeCloseTo(578_310, 0);
+    expect(h.realizedPl).toBe(219_755);
+  });
+
+  it('jual yang melepas seluruh cost basis menutup posisi tanpa sisa hantu', () => {
+    seq = 0;
+    const gold = instrument('Emas Antam', { asset_class: 'gold', asset_lot_size: 1, unit: 'gram', default_price: 1_500_000 });
+    const holdings = buildAssetHoldings(
+      [gold],
+      [
+        buy(gold, 'Pegadaian', '2026-01-10', 3, 3_999_999),
+        sell(gold, 'Pegadaian', '2026-02-10', 4_500_000, 3_999_999),
+      ]
+    );
+    expect(holdings[0].totalQuantity).toBe(0);
+    expect(holdings[0].totalCostBasis).toBe(0);
+  });
+});
+
+describe('buildAssetHoldings — klasifikasi & penjagaan', () => {
+  it('mengabaikan item katalog tanpa asset_class dan transaksi draft', () => {
+    seq = 0;
+    const bmri = instrument('BMRI', { default_price: 4270 });
+    const motor = instrument('Yamaha NMAX', { asset_class: null, asset_lot_size: 1 });
+
+    const draft = buy(bmri, 'Sinarmas Sekuritas', '2026-07-16', 1, 427_599);
+    (draft as Transaction).status = 'draft';
+
+    const holdings = buildAssetHoldings(
+      [bmri, motor],
+      [draft, buy(motor, 'Dealer', '2026-03-01', 1, 20_000_000)]
+    );
+
+    // Motor tidak ikut; BMRI ada tapi kosong karena satu-satunya transaksi draft.
+    expect(holdings.map((h) => h.symbol)).toEqual(['BMRI']);
+    expect(holdings[0].totalQuantity).toBe(0);
+  });
+
+  it('mencatat dividen sebagai realized P/L tanpa mengubah posisi', () => {
+    seq = 0;
+    const bmri = instrument('BMRI', { default_price: 4270 });
+    const dividend: Transaction = {
+      ...buy(bmri, 'Sinarmas Sekuritas', '2026-08-01', 1, 0),
+      id: 'tx-div',
+      category: 'EARN',
+      amount: 50_000,
+      is_multi_line: true,
+      debit_account: undefined,
+      credit_account: undefined,
+      meta: { catalog_item: { id: bmri.id, name: bmri.name } },
+      journal_lines: [
+        { id: 'd1', transaction_id: 'x', account_id: BANK.id, debit_amount: 50_000, credit_amount: 0, sort_order: 0, created_at: '2026-08-01', account: BANK },
+        { id: 'd2', transaction_id: 'x', account_id: REVENUE.id, debit_amount: 0, credit_amount: 50_000, sort_order: 1, created_at: '2026-08-01', account: REVENUE },
+      ],
+    } as Transaction;
+
+    const holdings = buildAssetHoldings(
+      [bmri],
+      [buy(bmri, 'Sinarmas Sekuritas', '2026-07-16', 1, 427_599), dividend]
+    );
+
+    const h = holdings[0];
+    expect(h.totalQuantity).toBe(1);
+    expect(h.totalCostBasis).toBe(427_599);
+    expect(h.realizedPl).toBe(50_000);
+    expect(h.events.some((e) => e.eventType === 'dividend')).toBe(true);
+  });
+
+  it('menandai hasUnknownQuantity saat transaksi beli tak mencatat kuantitas', () => {
+    seq = 0;
+    const btc = instrument('BTC', { asset_class: 'crypto', asset_lot_size: 1, unit: 'coin' });
+    const tx = buy(btc, 'Binance', '2026-04-01', 1, 900_000_000);
+    tx.meta = { catalog_item: { id: btc.id, name: btc.name } };
+
+    const holdings = buildAssetHoldings([btc], [tx]);
+    expect(holdings[0].hasUnknownQuantity).toBe(true);
+    expect(holdings[0].totalCostBasis).toBe(900_000_000);
+  });
+
+  it('tidak melaporkan unrealized loss palsu saat harga pasar belum di-isi', () => {
+    seq = 0;
+    const bbca = instrument('BBCA', { default_price: 0 });
+    const holdings = buildAssetHoldings([bbca], [buy(bbca, 'Sinarmas Sekuritas', '2026-06-30', 4, 2_313_241)]);
+
+    expect(holdings[0].marketValue).toBe(0);
+    expect(holdings[0].unrealizedPl).toBe(0);
+    expect(holdings[0].unrealizedPlPct).toBe(0);
+    expect(summarizeHoldings(holdings).missingPriceCount).toBe(1);
+  });
+});
+
+describe('summarizeHoldings', () => {
+  it('menjumlahkan seluruh instrumen untuk KPI', () => {
+    seq = 0;
+    const bmri = instrument('BMRI', { default_price: 4270 });
+    const bbca = instrument('BBCA', { default_price: 6000 });
+
+    const holdings = buildAssetHoldings(
+      [bmri, bbca],
+      [
+        buy(bmri, 'Sinarmas Sekuritas', '2026-07-16', 1, 427_599),
+        buy(bmri, 'Stockbit Sekuritas', '2026-07-24', 2, 828_240, CAPITAL),
+        buy(bbca, 'Sinarmas Sekuritas', '2026-06-30', 4, 2_313_241),
+        sell(bbca, 'Sinarmas Sekuritas', '2026-07-20', 1_954_686, 1_734_931),
+      ]
+    );
+
+    const s = summarizeHoldings(holdings);
+    expect(s.totalInvested).toBeCloseTo(427_599 + 828_240 + 578_310, 0);
+    expect(s.totalRealizedPl).toBe(219_755);
+    expect(s.openInstrumentCount).toBe(2);
+    expect(s.totalUnrealizedPlPct).toBeCloseTo((s.totalUnrealizedPl / s.totalInvested) * 100, 6);
+  });
+});
