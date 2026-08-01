@@ -17,6 +17,7 @@ import {
   LineChart,
   CalendarDays,
   Store,
+  Box,
   Gamepad2,
   LucideIcon,
 } from 'lucide-react';
@@ -67,7 +68,10 @@ export function getPosNavItem(
     return { href: '/calendar', label: nav.calendar, icon: CalendarDays };
   }
   if (isAssetConsoleSector(businessSector)) {
-    return { href: '/point-of-sales', label: nav.catalog, icon: Store };
+    // Box = ikon yang sama persis dipakai tab Katalog di HubPage — nav
+    // sidebar & tab dalam halaman harus konsisten, bukan Store (ikon toko/POS
+    // yang tidak relevan lagi karena hub ini sudah tanpa Cashier).
+    return { href: '/point-of-sales', label: nav.catalog, icon: Box };
   }
   return { href: '/point-of-sales', label: nav.pointOfSales, icon: Store };
 }
