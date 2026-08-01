@@ -17,8 +17,10 @@ import {
   AssetClassBadge,
   KpiCard,
   PlValue,
+  SensitiveAmountToggle,
   formatQuantity,
   formatUnitPrice,
+  maskAmount,
   plColorClass,
   useAssetClassLabel,
 } from '@/components/assetConsole/AssetConsoleBits';
@@ -36,6 +38,9 @@ export default function AssetConsolePage() {
   const { holdings, summary, instruments, loading, error, updatePrice } = useAssetConsole();
   const [filter, setFilter] = useState<ClassFilter>('all');
   const [priceTarget, setPriceTarget] = useState<AssetHolding | null>(null);
+  // Sensor nominal Total Invested — state di memori saja (bukan localStorage),
+  // reset tiap reload sesuai keputusan produk saat ini ("untuk sementara ini").
+  const [investedVisible, setInvestedVisible] = useState(true);
 
   // Hanya tawarkan filter untuk kelas yang benar-benar dimiliki bisnis ini.
   const availableClasses = useMemo(
@@ -86,9 +91,21 @@ export default function AssetConsolePage() {
       {/* KPI */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <KpiCard icon={PiggyBank} label={ta.kpiInvested} hint={ta.kpiInvestedHint}>
-          <span className="text-gray-800 dark:text-gray-100">
-            <AnimatedNumber value={summary.totalInvested} formatter={(v) => formatCurrency(v)} />
+          <span className="inline-flex items-center gap-2 text-gray-800 dark:text-gray-100">
+            {investedVisible ? (
+              <AnimatedNumber value={summary.totalInvested} formatter={(v) => formatCurrency(v)} />
+            ) : (
+              <span aria-hidden>{maskAmount(formatCurrency(summary.totalInvested))}</span>
+            )}
+            <SensitiveAmountToggle
+              visible={investedVisible}
+              onToggle={() => setInvestedVisible((v) => !v)}
+              labelShow={ta.showAmount}
+              labelHide={ta.hideAmount}
+            />
           </span>
+          {/* Screen reader tetap dapat angka aslinya walau visual disensor. */}
+          {!investedVisible && <span className="sr-only">{formatCurrency(summary.totalInvested)}</span>}
         </KpiCard>
         <KpiCard icon={CandlestickChart} label={ta.kpiMarketValue} hint={ta.kpiMarketValueHint}>
           <span className="text-gray-800 dark:text-gray-100">

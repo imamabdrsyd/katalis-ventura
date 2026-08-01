@@ -1356,6 +1356,8 @@ export const en: Translations = {
     kpiUnrealized: 'Unrealized P/L',
     kpiRealized: 'Realized P/L',
     kpiInvestedHint: 'Cost basis of open positions',
+    showAmount: 'Show amount',
+    hideAmount: 'Hide amount',
     kpiMarketValueHint: 'Quantity × last price',
     kpiUnrealizedHint: 'Market value − invested',
     kpiRealizedHint: 'Accumulated across all sales',

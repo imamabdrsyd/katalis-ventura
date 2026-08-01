@@ -1419,6 +1419,8 @@ export interface Translations {
     kpiMarketValueHint: string;
     kpiUnrealizedHint: string;
     kpiRealizedHint: string;
+    showAmount: string;
+    hideAmount: string;
     colSymbol: string;
     colClass: string;
     colBalance: string;

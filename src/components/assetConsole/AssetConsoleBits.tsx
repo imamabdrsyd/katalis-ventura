@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import type { LucideIcon } from 'lucide-react';
+import { Eye, EyeOff, type LucideIcon } from 'lucide-react';
 import type { AssetClass } from '@/types';
 import { ASSET_CLASS_BADGE_CLASS, ASSET_CLASS_META } from '@/lib/assetClasses';
 import { useLanguage } from '@/context/LanguageContext';
@@ -72,23 +72,65 @@ export function KpiCard({
   icon: Icon,
   label,
   hint,
+  headerAction,
   children,
 }: {
   icon: LucideIcon;
   label: string;
   hint?: string;
+  /** Aksi opsional di pojok kanan header card (mis. toggle sensor nominal). */
+  headerAction?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className="card-static">
-      <div className="flex items-center gap-2 mb-2">
-        <Icon className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" aria-hidden />
-        <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{label}</p>
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Icon className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" aria-hidden />
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-300 truncate">{label}</p>
+        </div>
+        {headerAction}
       </div>
       <div className="text-2xl font-bold tabular-nums">{children}</div>
       {hint && <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{hint}</p>}
     </div>
   );
+}
+
+/**
+ * Toggle ikon mata netral untuk sensor nominal sensitif di KPI card. State
+ * hanya di memori (bukan localStorage) — "sementara" per sesi/reload, sesuai
+ * keputusan produk saat ini.
+ */
+export function SensitiveAmountToggle({
+  visible,
+  onToggle,
+  labelShow,
+  labelHide,
+}: {
+  visible: boolean;
+  onToggle: () => void;
+  labelShow: string;
+  labelHide: string;
+}) {
+  const Icon = visible ? Eye : EyeOff;
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      title={visible ? labelHide : labelShow}
+      aria-label={visible ? labelHide : labelShow}
+      aria-pressed={!visible}
+      className="p-1 -m-1 rounded-md text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors flex-shrink-0"
+    >
+      <Icon className="w-4 h-4" aria-hidden />
+    </button>
+  );
+}
+
+/** Ganti tiap digit dengan bintang, pertahankan simbol non-digit (Rp, titik, spasi, tanda +/-). */
+export function maskAmount(formatted: string): string {
+  return formatted.replace(/\d/g, '•');
 }
 
 /**

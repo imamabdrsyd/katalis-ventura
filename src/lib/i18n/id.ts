@@ -1360,6 +1360,8 @@ export const id: Translations = {
     kpiUnrealized: 'P/L Belum Terealisasi',
     kpiRealized: 'P/L Terealisasi',
     kpiInvestedHint: 'Cost basis posisi terbuka',
+    showAmount: 'Tampilkan nominal',
+    hideAmount: 'Sembunyikan nominal',
     kpiMarketValueHint: 'Kuantitas × harga terakhir',
     kpiUnrealizedHint: 'Nilai pasar − modal',
     kpiRealizedHint: 'Akumulasi dari semua penjualan',
