@@ -775,24 +775,15 @@ function Sidebar({
             );
           })()}
 
-          {/* Dashboard & Manage Business & Agent — independent */}
-          {[
-            { href: '/dashboard', label: t.nav.dashboard, icon: PieChart },
-            { href: '/leads', label: 'Leads', icon: MessagesSquare },
-            { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
-            ...(canManage ? [getPosNavItem(activeBusiness?.business_type, t.nav)] : []),
-            ...(canManage ? [{ href: '/agent', label: 'Agentic Workspace', icon: Bot }] : []),
-          ].map((item) => {
+          {/* Dashboard — full width, section sama dengan Transactions */}
+          {(() => {
+            const item = { href: '/dashboard', label: t.nav.dashboard, icon: PieChart };
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-            const badge = item.href === '/leads' ? activeLeadCount : 0;
-            // Klik badge Leads (ada unread) → buka lead unread terlama otomatis.
-            const href =
-              item.href === '/leads' && badge > 0 ? '/leads?openUnread=1' : item.href;
             return (
-              <div key={item.href} className="relative group">
+              <div className="relative group">
                 <Link
-                  href={href}
+                  href={item.href}
                   onClick={onClose}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors
                     ${isActive
@@ -800,26 +791,52 @@ function Sidebar({
                       : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-indigo-500 dark:hover:text-indigo-400'
                     }`}
                 >
-                  <span className="relative flex-shrink-0">
-                    <Icon className={`w-5 h-5 ${isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`} />
-                    {/* Saat collapsed label tersembunyi — pakai dot kecil di ikon sbg indikator unread. */}
-                    {badge > 0 && isCollapsed && (
-                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-indigo-500 rounded-full ring-2 ring-white dark:ring-gray-800" />
-                    )}
-                  </span>
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`} />
                   <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
                     {item.label}
                   </span>
-                  {badge > 0 && !isCollapsed && (
-                    <span className="ml-auto min-w-[18px] h-[18px] flex items-center justify-center bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold rounded-full px-1.5 leading-none">
-                      {badge > 99 ? '99+' : badge}
-                    </span>
-                  )}
                 </Link>
                 {isCollapsed && (
                   <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg px-3 py-2 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-[60]">
                     {item.label}
-                    {badge > 0 && ` (${badge > 99 ? '99+' : badge})`}
+                    <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Line pembatas di bawah Transactions + Dashboard */}
+        <div className="mx-4 border-t border-gray-200 dark:border-gray-700" />
+
+        <div className="px-2 pt-3 pb-3 space-y-0.5">
+          {/* Manage Business & Agent — full width */}
+          {[
+            { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
+            ...(canManage ? [{ href: '/agent', label: 'Agentic Workspace', icon: Bot }] : []),
+          ].map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+            return (
+              <div key={item.href} className="relative group">
+                <Link
+                  href={item.href}
+                  onClick={onClose}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors
+                    ${isActive
+                      ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-indigo-500 dark:hover:text-indigo-400'
+                    }`}
+                >
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`} />
+                  <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+                    {item.label}
+                  </span>
+                </Link>
+                {isCollapsed && (
+                  <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg px-3 py-2 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-[60]">
+                    {item.label}
                     <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
                   </div>
                 )}
@@ -897,6 +914,64 @@ function Sidebar({
             );
           })}
         </nav>
+
+        {/* Line pembatas di atas section Leads/Calendar-POS */}
+        <div className="mx-4 border-t border-gray-200 dark:border-gray-700" />
+
+        <div className="px-2 pt-3 pb-3 space-y-0.5">
+          {/* Leads & Point of Sales/Calendar — section sendiri paling bawah, 2 kotak sejajar.
+              Saat collapsed, kembali jadi 2 baris ikon biasa (grid 2 kolom tak muat). */}
+          <div className={isCollapsed ? 'space-y-0.5' : 'grid grid-cols-2 gap-1.5'}>
+            {[
+              { href: '/leads', label: 'Leads', icon: MessagesSquare },
+              ...(canManage ? [getPosNavItem(activeBusiness?.business_type, t.nav)] : []),
+            ].map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+              const badge = item.href === '/leads' ? activeLeadCount : 0;
+              // Klik badge Leads (ada unread) → buka lead unread terlama otomatis.
+              const href =
+                item.href === '/leads' && badge > 0 ? '/leads?openUnread=1' : item.href;
+              return (
+                <div key={item.href} className="relative group">
+                  <Link
+                    href={href}
+                    onClick={onClose}
+                    className={`flex items-center rounded-xl text-sm font-medium transition-colors
+                      ${isCollapsed ? 'gap-3 px-3 py-2.5' : 'flex-col gap-1.5 px-2 py-3 text-center border'}
+                      ${isActive
+                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800'
+                        : `text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-indigo-500 dark:hover:text-indigo-400 ${!isCollapsed ? 'border-gray-200 dark:border-gray-700' : ''}`
+                      }`}
+                  >
+                    <span className="relative flex-shrink-0">
+                      <Icon className={`w-5 h-5 ${isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`} />
+                      {/* Saat collapsed label tersembunyi — pakai dot kecil di ikon sbg indikator unread. */}
+                      {badge > 0 && isCollapsed && (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-indigo-500 rounded-full ring-2 ring-white dark:ring-gray-800" />
+                      )}
+                    </span>
+                    <span className={`overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'whitespace-nowrap w-0 opacity-0' : 'w-auto opacity-100 text-xs leading-tight'}`}>
+                      {item.label}
+                    </span>
+                    {badge > 0 && !isCollapsed && (
+                      <span className="min-w-[18px] h-[18px] flex items-center justify-center bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold rounded-full px-1.5 leading-none">
+                        {badge > 99 ? '99+' : badge}
+                      </span>
+                    )}
+                  </Link>
+                  {isCollapsed && (
+                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg px-3 py-2 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-[60]">
+                      {item.label}
+                      {badge > 0 && ` (${badge > 99 ? '99+' : badge})`}
+                      <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
         </div>
 
         {/* Footer */}
