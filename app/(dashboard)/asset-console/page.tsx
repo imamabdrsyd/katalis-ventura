@@ -62,7 +62,7 @@ export default function AssetConsolePage() {
   // karena di sanalah instrumen didefinisikan (bukan di halaman ini).
   if (instruments.length === 0) {
     return (
-      <div className="space-y-6">
+      <div className="p-4 md:p-8 space-y-6">
         <PageHeader title={ta.title} subtitle={ta.subtitle} />
         <EmptyState
           variant="accent"
@@ -80,7 +80,7 @@ export default function AssetConsolePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-8 space-y-6">
       <PageHeader title={ta.title} subtitle={ta.subtitle} />
 
       {/* KPI */}
@@ -174,11 +174,17 @@ export default function AssetConsolePage() {
                           </span>
                         )}
                       </div>
-                      {h.positions.length > 1 && (
-                        <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
-                          {h.positions.map((p) => p.custodian).join(' · ')}
-                        </p>
-                      )}
+                      {(() => {
+                        // positions bisa memuat posisi yang sudah tertutup
+                        // (quantity=0) tapi masih dicatat karena realized P/L-nya
+                        // — baris kustodian di sini hanya untuk yang MASIH pegang.
+                        const openCustodians = h.positions.filter((p) => p.quantity > 0);
+                        return openCustodians.length > 0 ? (
+                          <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
+                            {openCustodians.map((p) => p.custodian).join(' · ')}
+                          </p>
+                        ) : null;
+                      })()}
                     </td>
                     <Td align="right">
                       {closed ? (

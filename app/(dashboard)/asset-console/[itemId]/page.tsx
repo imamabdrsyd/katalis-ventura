@@ -44,7 +44,7 @@ export default function AssetInstrumentPage() {
 
   if (error || !holding) {
     return (
-      <div className="space-y-6">
+      <div className="p-4 md:p-8 space-y-6">
         <BackLink label={ta.backToConsole} />
         <EmptyState icon={AlertTriangle} title={error ?? ta.noPositionTitle} description={error ? undefined : ta.noPositionDesc} />
       </div>
@@ -61,7 +61,7 @@ export default function AssetInstrumentPage() {
   const closed = holding.totalQuantity <= 0;
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-8 space-y-6">
       <BackLink label={ta.backToConsole} />
 
       {/* Header instrumen */}

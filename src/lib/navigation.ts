@@ -17,7 +17,7 @@ import {
   LineChart,
   CalendarDays,
   Store,
-  Wallet,
+  Gamepad2,
   LucideIcon,
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
@@ -79,7 +79,7 @@ export function isAssetConsoleEnabled(businessSector: string | undefined | null)
 }
 
 export function getAssetConsoleNavItem(nav: { assetConsole: string }): NavItem {
-  return { href: '/asset-console', label: nav.assetConsole, icon: Wallet };
+  return { href: '/asset-console', label: nav.assetConsole, icon: Gamepad2 };
 }
 
 /**
