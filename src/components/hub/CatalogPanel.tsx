@@ -15,12 +15,33 @@ import { CatalogItemForm, type CatalogItemFormData } from '@/components/catalog/
 import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
 import {
   Plus, Search, Package, PackagePlus, Trash2, X, Eye, EyeOff,
-  LayoutGrid, List,
+  LayoutGrid, List, type LucideIcon,
 } from 'lucide-react';
 import { getSectorIcon } from '@/lib/sectorIcons';
 
 type ViewMode = 'grid' | 'list';
 const VIEW_MODE_KEY = 'katalis_catalog_view_mode';
+
+/**
+ * Thumbnail item katalog — menerapkan focal point (`image_position_x/y`) yang
+ * di-set user di modal edit (§ "Potong (Crop)"). Sebelumnya thumbnail di sini
+ * pakai `object-cover` polos tanpa `objectPosition`, jadi selalu crop ke
+ * tengah dan mengabaikan titik fokus yang sudah digeser user — cropper di
+ * modal (aspect-square, sama dengan bentuk thumbnail ini) jadi tidak berefek
+ * di list, hanya di halaman publik "Produk Unggulan" yang sudah benar.
+ */
+function CatalogThumbnail({ item, sectorIcon: SectorIcon }: { item: CatalogItem; sectorIcon: LucideIcon }) {
+  if (!item.image_url) return <SectorIcon className="w-4 h-4" />;
+  const fit = item.image_fit ?? 'cover';
+  return (
+    <img
+      src={item.image_url}
+      alt={item.name}
+      className={fit === 'contain' ? 'w-full h-full object-contain' : 'w-full h-full object-cover'}
+      style={fit === 'cover' ? { objectPosition: `${item.image_position_x ?? 50}% ${item.image_position_y ?? 50}%` } : undefined}
+    />
+  );
+}
 
 /**
  * Panel manajemen Katalog produk/jasa di dalam HubPage.
@@ -379,11 +400,7 @@ export function CatalogPanel({
               >
                 <div className="flex items-start gap-3">
                   <div className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-                    {item.image_url ? (
-                      <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <SectorIcon className="w-4 h-4" />
-                    )}
+                    <CatalogThumbnail item={item} sectorIcon={SectorIcon} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 min-w-0">
@@ -455,11 +472,7 @@ export function CatalogPanel({
                 }`}
               >
                 <div className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-                  {item.image_url ? (
-                    <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <SectorIcon className="w-4 h-4" />
-                  )}
+                  <CatalogThumbnail item={item} sectorIcon={SectorIcon} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 min-w-0">

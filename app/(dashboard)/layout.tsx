@@ -821,13 +821,13 @@ function Sidebar({
         <div className="mx-4 border-t border-gray-200 dark:border-gray-700" />
 
         <div className="px-2 pt-3 pb-3 space-y-0.5">
-          {/* Manage Business, Agent, Asset Console (bisnis sektor investasi) — full width */}
+          {/* Asset Console (bisnis sektor investasi), Manage Business, Agent — full width */}
           {[
-            { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
-            ...(canManage ? [{ href: '/agent', label: 'Agentic Workspace', icon: Bot }] : []),
             ...(isAssetConsoleEnabled(activeBusiness?.business_sector)
               ? [getAssetConsoleNavItem(t.nav)]
               : []),
+            { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
+            ...(canManage ? [{ href: '/agent', label: 'Agentic Workspace', icon: Bot }] : []),
           ].map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
