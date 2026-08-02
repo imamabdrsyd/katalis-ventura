@@ -259,9 +259,9 @@ export default function AssetConsolePage() {
                     <Td align="right">{h.lastPrice > 0 ? formatCurrency(h.marketValue) : '—'}</Td>
                     <td className="px-4 py-3.5 text-right">
                       {h.lastPrice > 0 && !closed ? (
-                        <PlValue value={h.unrealizedPl} pct={h.unrealizedPlPct} />
+                        <PlValue value={h.unrealizedPl} pct={h.unrealizedPlPct} wrap={false} />
                       ) : h.realizedPl !== 0 ? (
-                        <PlValue value={h.realizedPl} />
+                        <PlValue value={h.realizedPl} wrap={false} />
                       ) : (
                         <span className="text-gray-400 dark:text-gray-500">—</span>
                       )}

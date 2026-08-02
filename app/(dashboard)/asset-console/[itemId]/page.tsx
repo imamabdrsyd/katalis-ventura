@@ -183,7 +183,7 @@ export default function AssetInstrumentPage() {
                     </Td>
                     <Td align="right">{formatCurrency(p.costBasis)}</Td>
                     <td className="px-4 py-3.5 text-right">
-                      {p.realizedPl !== 0 ? <PlValue value={p.realizedPl} /> : <span className="text-gray-400 dark:text-gray-500">—</span>}
+                      {p.realizedPl !== 0 ? <PlValue value={p.realizedPl} wrap={false} /> : <span className="text-gray-400 dark:text-gray-500">—</span>}
                     </td>
                   </tr>
                 );
@@ -248,7 +248,7 @@ export default function AssetInstrumentPage() {
                     </Td>
                     <Td align="right">{formatCurrency(e.amount)}</Td>
                     <td className="px-4 py-3.5 text-right">
-                      {e.realizedPl !== 0 ? <PlValue value={e.realizedPl} /> : <span className="text-gray-400 dark:text-gray-500">—</span>}
+                      {e.realizedPl !== 0 ? <PlValue value={e.realizedPl} wrap={false} /> : <span className="text-gray-400 dark:text-gray-500">—</span>}
                     </td>
                   </tr>
                 ))}

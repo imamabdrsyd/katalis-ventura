@@ -57,18 +57,30 @@ export function PlValue({
   value,
   pct,
   className = '',
+  wrap = true,
 }: {
   value: number;
   pct?: number;
   className?: string;
+  /**
+   * true (default) = boleh wrap ke baris baru saat sempit — dipakai di KPI
+   * card yang lebarnya terbatas (xl:grid-cols-4) dengan angka besar.
+   * false = paksa satu baris — WAJIB di sel tabel, di mana ruang horizontal
+   * cukup tapi baris antar-instrumen harus sejajar tinggi. Baris dengan
+   * persentase lebih panjang (mis. "(+28.57%)" vs "(+14.33%)") akan wrap
+   * beda-beda kalau dibiarkan default, membuat kolom P/L antar baris tidak
+   * rata (bug nyata: baris Studio Unit turun ke 2 baris, baris lain tidak).
+   */
+  wrap?: boolean;
 }) {
   const sign = value > 0 ? '+' : '';
   return (
-    // inline-flex + flex-wrap (bukan teks nowrap polos): pada KPI card sempit
-    // dengan angka besar (mis. Rp 100.055.351 (+28.44%)), nilai dan
-    // persentase turun ke baris sendiri alih-alih meluber keluar card.
-    <span className={`inline-flex flex-wrap items-baseline gap-x-1.5 tabular-nums font-medium ${plColorClass(value)} ${className}`}>
-      <span className="break-all">
+    <span
+      className={`inline-flex items-baseline gap-x-1.5 tabular-nums font-medium ${
+        wrap ? 'flex-wrap' : 'whitespace-nowrap'
+      } ${plColorClass(value)} ${className}`}
+    >
+      <span className={wrap ? 'break-all' : ''}>
         {sign}
         {formatCurrency(value)}
       </span>
