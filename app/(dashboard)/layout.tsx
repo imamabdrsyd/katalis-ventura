@@ -738,7 +738,7 @@ function Sidebar({
         {/* Scrollable nav area */}
         <div className={`flex-1 min-h-0 ${isCollapsed ? 'overflow-visible' : 'overflow-y-auto'}`}>
         {/* Independent nav items: Transactions + Dashboard + Manage Business */}
-        <div className="px-2 pt-3 pb-3 space-y-0.5">
+        <div className="px-2 pt-3 pb-3 space-y-1.5">
           {/* Transactions (manager only) */}
           {canManage && (() => {
             const isTransactionsActive = pathname === '/transactions' || pathname.startsWith('/transactions/') || pathname === '/invoices' || pathname === '/reconciliation';
@@ -820,7 +820,7 @@ function Sidebar({
         {/* Line pembatas di bawah Transactions + Dashboard */}
         <div className="mx-4 border-t border-gray-200 dark:border-gray-700" />
 
-        <div className="px-2 pt-3 pb-3 space-y-0.5">
+        <div className="px-2 pt-3 pb-3 space-y-1.5">
           {/* Asset Console (bisnis sektor investasi), Manage Business, Agent — full width */}
           {[
             ...(isAssetConsoleEnabled(activeBusiness?.business_sector)
@@ -862,7 +862,7 @@ function Sidebar({
 
         {/* Navigation — tiap section kini link langsung ke halaman hub (kartu sub-menu),
             bukan lagi drill-down accordion. Sub-menu ditampilkan sebagai kotak di hub. */}
-        <nav className="py-4 px-2 space-y-0.5">
+        <nav className="py-4 px-2 space-y-1.5">
           {navSections.map((section) => {
             const SectionIcon = section.icon;
             const isActive =
@@ -931,10 +931,10 @@ function Sidebar({
         {/* Line pembatas di atas section Leads/Calendar-POS */}
         <div className="mx-4 border-t border-gray-200 dark:border-gray-700" />
 
-        <div className="px-2 pt-3 pb-3 space-y-0.5">
+        <div className="px-2 pt-3 pb-3 space-y-1.5">
           {/* Leads & Point of Sales/Calendar — section sendiri paling bawah, 2 kotak sejajar.
               Saat collapsed, kembali jadi 2 baris ikon biasa (grid 2 kolom tak muat). */}
-          <div className={isCollapsed ? 'space-y-0.5' : 'grid grid-cols-2 gap-1.5'}>
+          <div className={isCollapsed ? 'space-y-1.5' : 'grid grid-cols-2 gap-1.5'}>
             {[
               { href: '/leads', label: 'Leads', icon: MessagesSquare },
               ...(canManage ? [getPosNavItem(activeBusiness?.business_type, t.nav, activeBusiness?.business_sector)] : []),
