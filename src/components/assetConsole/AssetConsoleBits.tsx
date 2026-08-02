@@ -169,10 +169,19 @@ export function formatQuantity(qty: number): string {
   return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 8 }).format(rounded);
 }
 
-/** Harga per satuan kutipan (lembar/gram/coin) — bukan currency bulat. */
+/**
+ * Harga per satuan kutipan (lembar/gram/coin) — bukan currency bulat.
+ *
+ * Desimal hanya dipertahankan untuk harga KECIL (saham < Rp10.000/lembar,
+ * mis. 4.186,13) di mana sen itu signifikan secara ekonomi. Untuk harga
+ * besar (crypto seperti BTC ~Rp991 juta/coin), 2 desimal cuma noise visual
+ * ("991.411.075,38" tidak lebih bermakna dari "991.411.075") — dibulatkan
+ * ke integer.
+ */
 export function formatUnitPrice(price: number): string {
+  const maximumFractionDigits = Math.abs(price) < 10_000 ? 2 : 0;
   return new Intl.NumberFormat('id-ID', {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
+    maximumFractionDigits,
   }).format(price);
 }
