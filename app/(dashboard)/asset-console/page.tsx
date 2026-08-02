@@ -22,6 +22,7 @@ import {
   formatUnitPrice,
   maskAmount,
   plColorClass,
+  quantityUnitLabel,
   useAssetClassLabel,
 } from '@/components/assetConsole/AssetConsoleBits';
 import type { AssetClass } from '@/types';
@@ -212,7 +213,16 @@ export default function AssetConsolePage() {
                         <span className="text-xs text-gray-400 dark:text-gray-500">{ta.closedPosition}</span>
                       ) : (
                         <>
-                          <span className="text-gray-800 dark:text-gray-100">{formatQuantity(h.totalQuantity)}</span>
+                          <span className="text-gray-800 dark:text-gray-100">
+                            {formatQuantity(h.totalQuantity)}
+                            {/* Nama satuan kuantitas: "Lot" utk saham (kuantitas
+                                transaksi, beda dari priceUnit "Lembar"), atau
+                                unit Katalog apa adanya utk kelas lain (Coin,
+                                gram, dst — di sana kuantitas = satuan harga). */}
+                            <span className="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500">
+                              {quantityUnitLabel(h)}
+                            </span>
+                          </span>
                           {h.lotSize > 1 && (
                             <span className="block text-xs text-gray-400 dark:text-gray-500">
                               {formatQuantity(h.totalQuantity * h.lotSize)} {h.priceUnit}

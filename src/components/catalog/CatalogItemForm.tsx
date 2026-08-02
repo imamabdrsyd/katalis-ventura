@@ -616,8 +616,16 @@ export function CatalogItemForm({
 
             {formData.asset_class && (
               <div>
+                {/* Crypto: field ini adalah TOTAL UNIT yang dipegang (canon
+                    Asset Console, bukan rasio konversi) — label & hint beda
+                    dari stock/gold/property, di mana field yang sama berarti
+                    "berapa satuan harga per 1 kuantitas transaksi". */}
                 <FloatingField
-                  label={tc.assetLotSizeLabel}
+                  label={
+                    formData.asset_class === 'crypto'
+                      ? tc.assetCryptoUnitLabel
+                      : tc.assetLotSizeLabel
+                  }
                   type="number"
                   min={0}
                   step="any"
@@ -635,7 +643,7 @@ export function CatalogItemForm({
                   }
                 />
                 <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
-                  {tc.assetLotSizeHint}
+                  {formData.asset_class === 'crypto' ? tc.assetCryptoUnitHint : tc.assetLotSizeHint}
                 </p>
               </div>
             )}

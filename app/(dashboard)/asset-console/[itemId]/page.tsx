@@ -26,6 +26,7 @@ import {
   formatQuantity,
   formatUnitPrice,
   plColorClass,
+  quantityUnitLabel,
 } from '@/components/assetConsole/AssetConsoleBits';
 import type { AssetEventType } from '@/lib/assetConsole';
 
@@ -108,6 +109,9 @@ export default function AssetInstrumentPage() {
             ) : (
               <>
                 {formatQuantity(holding.totalQuantity)}
+                <span className="ml-1 text-sm font-normal text-gray-400 dark:text-gray-500">
+                  {quantityUnitLabel(holding)}
+                </span>
                 {holding.lotSize > 1 && (
                   <span className="ml-2 text-sm font-medium text-gray-400 dark:text-gray-500">
                     ({formatQuantity(holding.totalQuantity * holding.lotSize)} {holding.priceUnit})
@@ -153,21 +157,37 @@ export default function AssetInstrumentPage() {
               </tr>
             </thead>
             <tbody>
-              {holding.positions.map((p) => (
-                <tr key={p.custodian} className="border-b border-gray-100 dark:border-gray-700/60 last:border-0">
-                  <td className="px-4 py-3.5 font-medium text-gray-800 dark:text-gray-100">{p.custodian}</td>
-                  <Td align="right">
-                    {p.quantity > 0 ? formatQuantity(p.quantity) : <span className="text-gray-400 dark:text-gray-500">—</span>}
-                  </Td>
-                  <Td align="right">
-                    {p.quantity > 0 ? formatUnitPrice(p.avgCost / holding.lotSize) : '—'}
-                  </Td>
-                  <Td align="right">{formatCurrency(p.costBasis)}</Td>
-                  <td className="px-4 py-3.5 text-right">
-                    {p.realizedPl !== 0 ? <PlValue value={p.realizedPl} /> : <span className="text-gray-400 dark:text-gray-500">—</span>}
-                  </td>
-                </tr>
-              ))}
+              {holding.positions.map((p) => {
+                // Crypto: Unit total di KPI card di atas di-canon dari
+                // catalog_items.asset_lot_size (bukan SUM transaksi), karena
+                // qty per transaksi rawan salah/data eksperimen tidak
+                // merepresentasikan kuantitas riil (pecahan mikro seperti
+                // 0,00302599 BTC). Breakdown per-custodian belum punya
+                // sumber unit yang sama-sama valid, jadi kolom Unit &
+                // Avg Price per baris disembunyikan untuk crypto — hanya
+                // cost basis & realized P/L (murni dari transaksi, tidak
+                // butuh kuantitas) yang tetap ditampilkan per broker.
+                const isCrypto = holding.assetClass === 'crypto';
+                return (
+                  <tr key={p.custodian} className="border-b border-gray-100 dark:border-gray-700/60 last:border-0">
+                    <td className="px-4 py-3.5 font-medium text-gray-800 dark:text-gray-100">{p.custodian}</td>
+                    <Td align="right">
+                      {!isCrypto && p.quantity > 0 ? (
+                        formatQuantity(p.quantity)
+                      ) : (
+                        <span className="text-gray-400 dark:text-gray-500">—</span>
+                      )}
+                    </Td>
+                    <Td align="right">
+                      {!isCrypto && p.quantity > 0 ? formatUnitPrice(p.avgCost / holding.lotSize) : '—'}
+                    </Td>
+                    <Td align="right">{formatCurrency(p.costBasis)}</Td>
+                    <td className="px-4 py-3.5 text-right">
+                      {p.realizedPl !== 0 ? <PlValue value={p.realizedPl} /> : <span className="text-gray-400 dark:text-gray-500">—</span>}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

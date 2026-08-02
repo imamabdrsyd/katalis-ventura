@@ -6,6 +6,21 @@ import type { AssetClass } from '@/types';
 import { ASSET_CLASS_BADGE_CLASS, ASSET_CLASS_META } from '@/lib/assetClasses';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
+import type { AssetHolding } from '@/lib/assetConsole';
+
+/**
+ * Label satuan kuantitas untuk kolom Unit/Balance.
+ *
+ * Untuk saham, kuantitas TRANSAKSI ("Lot") berbeda dari satuan HARGA
+ * ("Lembar", tersimpan di `priceUnit`/catalog.unit) — 1 lot = 100 lembar.
+ * Kelas lain (crypto/gold/property) tidak punya perbedaan ini: kuantitas
+ * yang tercatat SUDAH dalam satuan harga akhir, jadi label-nya = unit
+ * Katalog apa adanya (Coin, gram, unit, dst).
+ */
+export function quantityUnitLabel(holding: Pick<AssetHolding, 'assetClass' | 'priceUnit'>): string {
+  if (holding.assetClass === 'stock') return 'Lot';
+  return holding.priceUnit;
+}
 
 /** Label kelas aset dari i18n tanpa menyebar literal kelas ke seluruh UI. */
 export function useAssetClassLabel(): (cls: AssetClass) => string {

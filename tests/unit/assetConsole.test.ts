@@ -292,18 +292,21 @@ describe('buildAssetHoldings — klasifikasi & penjagaan', () => {
     // "tertutup" dan baris kustodian hilang dari tabel konsolidasi (halaman
     // list memfilter positions ke quantity > 0). Properti/emas lazim dibeli
     // sekali tanpa pernah mengisi "1 unit", jadi fallback-nya harus 1.
+    // Pakai asset_class='gold' (bukan 'crypto') di sini karena crypto sejak
+    // fix berikutnya punya jalur totalQuantity yang sepenuhnya berbeda
+    // (override dari catalog, lihat describe block di bawah).
     seq = 0;
-    const btc = instrument('BTC', { asset_class: 'crypto', asset_lot_size: 1, unit: 'coin' });
-    const tx = buy(btc, 'Binance', '2026-04-01', 1, 900_000_000);
-    tx.meta = { catalog_item: { id: btc.id, name: btc.name } };
+    const gold = instrument('Emas Batangan', { asset_class: 'gold', asset_lot_size: 1, unit: 'gram' });
+    const tx = buy(gold, 'Pegadaian', '2026-04-01', 1, 900_000_000);
+    tx.meta = { catalog_item: { id: gold.id, name: gold.name } };
 
-    const holdings = buildAssetHoldings([btc], [tx]);
+    const holdings = buildAssetHoldings([gold], [tx]);
     expect(holdings[0].hasUnknownQuantity).toBe(true);
     expect(holdings[0].totalCostBasis).toBe(900_000_000);
     expect(holdings[0].totalQuantity).toBe(1);
     // Posisi tetap tampil dengan nama kustodiannya, tidak hilang.
     expect(holdings[0].positions).toHaveLength(1);
-    expect(holdings[0].positions[0].custodian).toBe('Binance');
+    expect(holdings[0].positions[0].custodian).toBe('Pegadaian');
     expect(holdings[0].positions[0].quantity).toBe(1);
   });
 
@@ -361,5 +364,52 @@ describe('summarizeHoldings', () => {
     expect(s.totalRealizedPl).toBe(219_755);
     expect(s.openInstrumentCount).toBe(2);
     expect(s.totalUnrealizedPlPct).toBeCloseTo((s.totalUnrealizedPl / s.totalInvested) * 100, 6);
+  });
+});
+
+describe('buildAssetHoldings — crypto: Unit di-canon dari catalog, bukan SUM(transaksi)', () => {
+  // Reproduksi bug nyata: 1 BTC ≈ Rp1,1 miliar, jadi pembelian riil selalu
+  // pecahan mikro (mis. 0,00302599 BTC). Transaksi eksperimen sempat ditulis
+  // "beli 3 Coin @ Rp1.000.000" (jelas bukan harga pasar BTC) — kalau
+  // totalQuantity diagregasi dari unit_breakdown transaksi seperti kelas
+  // lain, kartu Unit akan menampilkan "3" yang tidak masuk akal. Untuk
+  // sementara, crypto memakai catalog_items.asset_lot_size sebagai ANGKA
+  // TOTAL unit yang dipegang (diisi manual di form Katalog), bukan rasio
+  // konversi seperti pada stock (1 lot saham = 100 lembar).
+  it('mengabaikan unit_breakdown transaksi dan memakai asset_lot_size sebagai Unit', () => {
+    seq = 0;
+    const btc = instrument('BTC', {
+      asset_class: 'crypto',
+      asset_lot_size: 0.00302599, // "Jumlah yang Dipegang" — diisi manual di Katalog
+      unit: 'Coin',
+      default_price: 1_133_437_991,
+    });
+    // Transaksi eksperimen: qty=3 di unit_breakdown, harga jelas bukan BTC riil.
+    const tx = buy(btc, 'Binance Centralized Exchange', '2025-04-01', 3, 3_000_000);
+    tx.meta = { catalog_item: { id: btc.id, name: 'Bitcoin' } }; // nama snapshot lama, id tetap match
+
+    const holdings = buildAssetHoldings([btc], [tx]);
+    const h = holdings[0];
+
+    // Unit HARUS dari catalog (0,00302599), BUKAN dari unit_breakdown (3).
+    expect(h.totalQuantity).toBe(0.00302599);
+    // Cost basis tetap dari transaksi seperti biasa — tidak disentuh override.
+    expect(h.totalCostBasis).toBe(3_000_000);
+    // Avg cost & market value ikut terhitung ulang dari Unit yang benar.
+    expect(h.avgCost).toBeCloseTo(3_000_000 / 0.00302599, 2);
+    expect(h.avgCostPerPriceUnit).toBeCloseTo(3_000_000 / 0.00302599, 2); // lotSize efektif = 1 utk crypto
+    expect(h.marketValue).toBeCloseTo(0.00302599 * 1_133_437_991, 0);
+    expect(h.lotSize).toBe(1); // TIDAK dikalikan lagi ke market value (beda dari stock)
+  });
+
+  it('stock TETAP pakai SUM(unit_breakdown) seperti biasa — override hanya berlaku utk crypto', () => {
+    seq = 0;
+    const bmri = instrument('BMRI', { asset_class: 'stock', asset_lot_size: 100, default_price: 4270 });
+    const holdings = buildAssetHoldings(
+      [bmri],
+      [buy(bmri, 'Sinarmas Sekuritas', '2026-07-16', 3, 1_282_797)]
+    );
+    expect(holdings[0].totalQuantity).toBe(3); // dari transaksi, bukan asset_lot_size (100)
+    expect(holdings[0].lotSize).toBe(100); // tetap rasio lembar-per-lot, bukan di-override ke 1
   });
 });

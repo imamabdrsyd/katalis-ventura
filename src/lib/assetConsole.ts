@@ -301,13 +301,28 @@ function buildHolding(item: CatalogItem, txs: Transaction[]): AssetHolding {
     .filter((p) => p.quantity > EPSILON || Math.abs(p.costBasis) > EPSILON || Math.abs(p.realizedPl) > EPSILON)
     .sort((a, b) => b.costBasis - a.costBasis);
 
-  const totalQuantity = positions.reduce((s, p) => s + p.quantity, 0);
   const totalCostBasis = positions.reduce((s, p) => s + p.costBasis, 0);
   const realizedPl = positions.reduce((s, p) => s + p.realizedPl, 0);
 
+  // Crypto SEMENTARA canon dari catalog, bukan SUM(transaksi): transaksi
+  // crypto riil selalu pecahan mikro (mis. 0,00302599 BTC — 1 coin ~Rp1,1M),
+  // dan mengagregasi unit_breakdown antar-transaksi rawan salah/data
+  // eksperimen ("beli 3 Coin @1jt" — jelas bukan harga BTC riil) bocor jadi
+  // Balance yang tidak masuk akal. asset_lot_size dipakai sebagai OVERRIDE
+  // total unit yang dipegang (bukan rasio konversi seperti pada stock — 1
+  // lot saham = 100 lembar), diisi manual di form Katalog. Cost basis & avg
+  // cost TETAP dari transaksi seperti biasa, hanya Unit-nya yang diganti.
+  const isCryptoUnitOverride = item.asset_class === 'crypto';
+  const positionQuantity = positions.reduce((s, p) => s + p.quantity, 0);
+  const totalQuantity = isCryptoUnitOverride ? lotSize : positionQuantity;
+  // Saat override aktif, lotSize sudah MENJADI unit itu sendiri — tidak boleh
+  // dikalikan lagi ke market value / avg-per-harga (beda dari stock, di mana
+  // lotSize tetap rasio lembar-per-lot yang harus dikalikan).
+  const effectiveLotSize = isCryptoUnitOverride ? 1 : lotSize;
+
   const avgCost = totalQuantity > 0 ? totalCostBasis / totalQuantity : 0;
-  const avgCostPerPriceUnit = lotSize > 0 ? avgCost / lotSize : 0;
-  const marketValue = totalQuantity * lotSize * lastPrice;
+  const avgCostPerPriceUnit = effectiveLotSize > 0 ? avgCost / effectiveLotSize : 0;
+  const marketValue = totalQuantity * effectiveLotSize * lastPrice;
   // Tanpa harga pasar, unrealized P/L tidak bermakna — jangan laporkan −100%.
   const unrealizedPl = lastPrice > 0 ? marketValue - totalCostBasis : 0;
 
@@ -316,7 +331,7 @@ function buildHolding(item: CatalogItem, txs: Transaction[]): AssetHolding {
     symbol: item.name,
     assetClass: item.asset_class as AssetClass,
     priceUnit: item.unit?.trim() || '',
-    lotSize,
+    lotSize: effectiveLotSize,
     lastPrice,
     lastPriceUpdatedAt: item.asset_price_updated_at ?? null,
     positions,

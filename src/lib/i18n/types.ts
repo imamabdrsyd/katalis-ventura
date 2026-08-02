@@ -385,6 +385,8 @@ export interface Translations {
     assetClassNone: string;
     assetLotSizeLabel: string;
     assetLotSizeHint: string;
+    assetCryptoUnitLabel: string;
+    assetCryptoUnitHint: string;
     stockLabel: string;
     stockOut: string;
     addStockTitle: string;
