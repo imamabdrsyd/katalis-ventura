@@ -1373,7 +1373,7 @@ export const id: Translations = {
     colBalance: 'Kepemilikan',
     colCapitalUnit: 'Modal',
     colAvgPrice: 'Harga Rata-rata',
-    colLastPrice: 'Harga Terakhir (Rp/unit)',
+    colLastPrice: 'Harga Terakhir',
     colMarketValue: 'Nilai Pasar',
     colInvested: 'Modal',
     colPl: 'Laba/Rugi (P/L)',

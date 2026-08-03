@@ -1369,7 +1369,7 @@ export const en: Translations = {
     colBalance: 'Ownership',
     colCapitalUnit: 'Capital',
     colAvgPrice: 'Avg Price',
-    colLastPrice: 'Last Price (Rp/unit)',
+    colLastPrice: 'Last Price',
     colMarketValue: 'Market Value',
     colInvested: 'Invested',
     colPl: 'Profit/Loss (P/L)',
