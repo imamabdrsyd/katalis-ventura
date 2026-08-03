@@ -1427,6 +1427,7 @@ export interface Translations {
     colSymbol: string;
     colClass: string;
     colBalance: string;
+    colCapitalUnit: string;
     colAvgPrice: string;
     colLastPrice: string;
     colMarketValue: string;

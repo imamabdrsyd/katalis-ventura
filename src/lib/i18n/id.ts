@@ -1371,6 +1371,7 @@ export const id: Translations = {
     colSymbol: 'Simbol',
     colClass: 'Kelas',
     colBalance: 'Kepemilikan',
+    colCapitalUnit: 'Modal',
     colAvgPrice: 'Harga Rata-rata',
     colLastPrice: 'Harga Terakhir',
     colMarketValue: 'Nilai Pasar',

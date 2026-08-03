@@ -1367,6 +1367,7 @@ export const en: Translations = {
     colSymbol: 'Symbol',
     colClass: 'Class',
     colBalance: 'Ownership',
+    colCapitalUnit: 'Capital',
     colAvgPrice: 'Avg Price',
     colLastPrice: 'Last Price',
     colMarketValue: 'Market Value',

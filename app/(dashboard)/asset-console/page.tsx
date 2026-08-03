@@ -244,10 +244,11 @@ export default function AssetConsolePage() {
                       </div>
                       {isVenture ? (
                         // Baris venture: bukan broker/exchange pihak ketiga —
-                        // "kustodian"-nya adalah identitas kepemilikanmu sendiri
-                        // di buku besar bisnis target (nama akun EQUITY is_stock
-                        // yang ditautkan). Valuasi bisnis sudah dipindah ke
-                        // kolom Harga Terakhir (digabung dgn Avg Price).
+                        // "kustodian"-nya adalah nama PROFIL user yang jadi
+                        // pengelola bisnis target (profiles.full_name via
+                        // user_business_roles, bukan account_name akun ekuitas
+                        // yang bisa generik). Valuasi bisnis dipindah ke kolom
+                        // Harga Terakhir (digabung dgn Avg Price).
                         h.venture?.ownerAccountName ? (
                           <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
                             {h.venture.ownerAccountName}
@@ -273,6 +274,13 @@ export default function AssetConsolePage() {
                       ) : isVenture ? (
                         <span className="text-gray-800 dark:text-gray-100">
                           {formatOwnershipPct(h.totalQuantity)}
+                          {/* Satuan kuantitas venture: "Modal"/"Capital" —
+                              persen kepemilikan itu sendiri = porsi modal
+                              disetor, konsisten dgn label satuan kelas lain
+                              (Lot/Coin/gram) yg tampil di samping angka. */}
+                          <span className="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500">
+                            {ta.colCapitalUnit}
+                          </span>
                         </span>
                       ) : (
                         <>
@@ -295,7 +303,13 @@ export default function AssetConsolePage() {
                       )}
                     </Td>
                     <Td align="right">
-                      {closed || isVenture ? '' : formatUnitPrice(h.avgCostPerPriceUnit)}
+                      {closed ? (
+                        ''
+                      ) : isVenture ? (
+                        <span className="text-gray-400 dark:text-gray-500">—</span>
+                      ) : (
+                        formatUnitPrice(h.avgCostPerPriceUnit)
+                      )}
                     </Td>
                     {isVenture ? (
                       // Avg Price + Last Price digabung secara visual: Avg Price

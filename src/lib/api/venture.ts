@@ -129,10 +129,45 @@ export async function disconnectVenture(itemId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Nama pemilik yang ditampilkan sebagai "kustodian" venture di Asset Console.
+ *
+ * Venture tidak punya kustodian pihak ketiga (bukan broker/exchange) —
+ * proxy paling jujur adalah nama PROFIL user yang jadi pengelola bisnis
+ * target (`profiles.full_name`, bukan `accounts.account_name`: nama akun
+ * ekuitas bisa generik seperti "Owner's Capital" dan tidak selalu sama
+ * dengan nama pemiliknya). Diambil dari `user_business_roles` role
+ * business_manager/both; kalau lebih dari satu, gabung dengan " · " —
+ * kalau tidak ada satu pun (mis. hanya investor), fallback ke pembuat bisnis
+ * (`businesses.created_by`).
+ */
+async function loadTargetManagerNames(businessId: string, createdBy: string | null): Promise<string> {
+  const supabase = createClient();
+
+  const { data: roles, error } = await supabase
+    .from('user_business_roles')
+    .select('user_id, role')
+    .eq('business_id', businessId)
+    .in('role', ['business_manager', 'both']);
+
+  if (error) return '';
+
+  const managerIds = [...new Set((roles ?? []).map((r) => r.user_id as string))];
+  const ids = managerIds.length > 0 ? managerIds : createdBy ? [createdBy] : [];
+  if (ids.length === 0) return '';
+
+  const { data: profiles } = await supabase.from('profiles').select('id, full_name').in('id', ids);
+
+  return (profiles ?? [])
+    .map((p) => p.full_name as string)
+    .filter(Boolean)
+    .join(' · ');
+}
+
 /** Buku besar satu bisnis target, seperlunya untuk cap table + neraca. */
 async function loadTargetLedger(
   businessId: string
-): Promise<{ business: Business | null; transactions: Transaction[]; accounts: Account[] }> {
+): Promise<{ business: Business | null; transactions: Transaction[]; accounts: Account[]; managerName: string }> {
   const supabase = createClient();
 
   const [businessRes, txRes, accRes] = await Promise.all([
@@ -156,10 +191,14 @@ async function loadTargetLedger(
   if (txRes.error) throw new Error(txRes.error.message);
   if (accRes.error) throw new Error(accRes.error.message);
 
+  const business = (businessRes.data as Business | null) ?? null;
+  const managerName = business ? await loadTargetManagerNames(businessId, business.created_by ?? null) : '';
+
   return {
-    business: (businessRes.data as Business | null) ?? null,
+    business,
     transactions: (txRes.data ?? []) as Transaction[],
     accounts: (accRes.data ?? []) as Account[],
+    managerName,
   };
 }
 
@@ -229,7 +268,11 @@ export async function getVentureSnapshots(items: CatalogItem[]): Promise<Venture
     return {
       ...base,
       businessName: ledger.business.business_name,
-      ownerAccountName: entry?.accountName ?? '',
+      // Nama pemilik yang ditampilkan = profil manager bisnis target, BUKAN
+      // account_name akun ekuitas (bisa generik, mis. "Owner's Capital").
+      // Fallback ke nama akun kalau tidak ada satu manager pun ditemukan,
+      // supaya baris tidak tampil kosong.
+      ownerAccountName: ledger.managerName || entry?.accountName || '',
       contributed: entry?.contributed ?? 0,
       ownershipPct: entry?.percentage ?? 0,
       totalEquity: balanceSheet.equity.totalEquity,
