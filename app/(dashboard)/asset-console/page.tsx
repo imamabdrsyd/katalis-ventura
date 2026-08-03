@@ -231,16 +231,30 @@ export default function AssetConsolePage() {
                     className="border-b border-gray-200 dark:border-gray-700 last:border-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
                   >
                     <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-gray-800 dark:text-gray-100">{h.symbol}</span>
-                        <AssetClassBadge assetClass={h.assetClass} />
+                      {/* Tanpa `flex-wrap`: badge kelas aset WAJIB tetap
+                          sebaris dengan simbol. Nama panjang ("Hillside
+                          Studio") sebelumnya mendorong badge turun ke baris
+                          sendiri, membuat tinggi baris tidak seragam dan
+                          badge terbaca seolah milik baris kustodian di
+                          bawahnya. Yang mengalah simbolnya: truncate + title
+                          supaya nama penuh tetap terbaca saat hover. */}
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          title={h.symbol}
+                          className="font-semibold text-gray-800 dark:text-gray-100 truncate"
+                        >
+                          {h.symbol}
+                        </span>
+                        <span className="flex-shrink-0">
+                          <AssetClassBadge assetClass={h.assetClass} />
+                        </span>
                         {h.hasUnknownQuantity && (
-                          <span title={ta.unknownQtyWarning}>
+                          <span className="flex-shrink-0" title={ta.unknownQtyWarning}>
                             <AlertTriangle className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" aria-label={ta.unknownQtyWarning} />
                           </span>
                         )}
                         {h.venture?.unresolved && (
-                          <span title={ta.ventureUnresolved}>
+                          <span className="flex-shrink-0" title={ta.ventureUnresolved}>
                             <AlertTriangle className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" aria-label={ta.ventureUnresolved} />
                           </span>
                         )}
@@ -291,23 +305,36 @@ export default function AssetConsolePage() {
                           </span>
                         </span>
                       ) : (
-                        <>
+                        // Saham: SATUAN HARGA yang jadi baris utama (300
+                        // Lembar), lot turun ke baris kedua. Kolom Avg/Last
+                        // Price dikutip per LEMBAR (4.170 × 300 = market value
+                        // Rp 1.251.000), jadi angka yang sebaris dengan harga
+                        // harus yang dikalikan dengannya — kalau "3 Lot" yang
+                        // di atas, pembaca membaca 4.170 × 3 dan salah 100×.
+                        // Kelas lain (lotSize = 1) tidak punya dua satuan:
+                        // kuantitas = satuan harga, jadi tetap satu baris.
+                        h.lotSize > 1 ? (
+                          <>
+                            <span className="text-gray-800 dark:text-gray-100">
+                              {formatQuantity(h.totalQuantity * h.lotSize)}
+                              <span className="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500">
+                                {h.priceUnit}
+                              </span>
+                            </span>
+                            <span className="block text-xs text-gray-400 dark:text-gray-500">
+                              {formatQuantity(h.totalQuantity)} {quantityUnitLabel(h)}
+                            </span>
+                          </>
+                        ) : (
                           <span className="text-gray-800 dark:text-gray-100">
                             {formatQuantity(h.totalQuantity)}
-                            {/* Nama satuan kuantitas: "Lot" utk saham (kuantitas
-                                transaksi, beda dari priceUnit "Lembar"), atau
-                                unit Katalog apa adanya utk kelas lain (Coin,
-                                gram, dst — di sana kuantitas = satuan harga). */}
+                            {/* Kelas non-saham: kuantitas = satuan harga
+                                (Coin, gram, Unit) — labelnya dari Katalog. */}
                             <span className="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500">
                               {quantityUnitLabel(h)}
                             </span>
                           </span>
-                          {h.lotSize > 1 && (
-                            <span className="block text-xs text-gray-400 dark:text-gray-500">
-                              {formatQuantity(h.totalQuantity * h.lotSize)} {h.priceUnit}
-                            </span>
-                          )}
-                        </>
+                        )
                       )}
                     </Td>
                     {/* Avg Price + Last Price. Untuk venture keduanya tetap DUA
@@ -344,20 +371,25 @@ export default function AssetConsolePage() {
                             <span className="text-gray-400 dark:text-gray-500">—</span>
                           ) : (
                             <span className="flex flex-col items-end gap-0.5">
-                              {/* `formatUnitPrice`, bukan `formatCurrency`:
-                                  kolom ini menampilkan angka telanjang di
-                                  semua kelas aset lain (400.000.000, 4.170),
-                                  jadi prefix "Rp" hanya pada baris venture
-                                  membuat kolomnya tidak sejajar terbaca. */}
+                              {/* Harga per SATU SATUAN, sama seperti kelas
+                                  lain: satuan venture adalah persen, jadi
+                                  angkanya = valuasi per 1% (`h.lastPrice` =
+                                  totalEquity / 100). Dengan begitu identitas
+                                  kolom "Kepemilikan × Harga = Nilai Pasar"
+                                  berlaku di SEMUA baris (2,65 × 1.901.462 =
+                                  5.046.819), persis seperti BMRI 300 × 4.170.
+                                  `formatUnitPrice`, bukan `formatCurrency`:
+                                  kolom ini angka telanjang di kelas lain. */}
                               <span className="text-gray-800 dark:text-gray-100">
-                                {formatUnitPrice(h.venture?.totalEquity ?? 0)}
+                                {formatUnitPrice(h.lastPrice)}
                               </span>
                               {/* `whitespace-nowrap`: label wajib satu baris —
-                                  terpecah jadi dua ("BUSINESS / VALUATION")
-                                  membuat baris venture jauh lebih tinggi dari
-                                  baris lain dan merusak ritme tabel. */}
+                                  terpecah jadi dua membuat baris venture jauh
+                                  lebih tinggi dari baris lain. Nominal valuasi
+                                  penuh tetap tampil di halaman detail & di
+                                  tooltip chip rumus pada kolom Avg Price. */}
                               <span className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500 whitespace-nowrap">
-                                {ta.ventureValuation}
+                                {ta.ventureValuationPerPct}
                               </span>
                             </span>
                           )}

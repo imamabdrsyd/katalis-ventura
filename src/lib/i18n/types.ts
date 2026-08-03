@@ -1492,6 +1492,7 @@ export interface Translations {
     ventureSourceNote: string;
     ventureNoHistory: string;
     ventureHistorySubtitle: string;
+    ventureValuationPerPct: string;
     ventureValuationFormula: string;
     ventureValuationFormulaHint: string;
     ventureEventCapitalIn: string;
