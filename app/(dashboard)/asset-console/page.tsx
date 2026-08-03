@@ -302,32 +302,26 @@ export default function AssetConsolePage() {
                         </>
                       )}
                     </Td>
-                    <Td align="right">
-                      {closed ? (
-                        ''
-                      ) : isVenture ? (
-                        <span className="text-gray-400 dark:text-gray-500">—</span>
-                      ) : (
-                        formatUnitPrice(h.avgCostPerPriceUnit)
-                      )}
-                    </Td>
                     {isVenture ? (
-                      // Avg Price + Last Price digabung secara visual: Avg Price
-                      // dikosongkan (di atas), valuasi bisnis muncul di sini —
-                      // venture tidak punya "harga per unit" yang sebanding
-                      // dengan lembar/coin/gram kelas lain (§28.4b).
-                      <td className="px-4 py-3.5 text-right tabular-nums whitespace-nowrap">
+                      // Avg Price + Last Price di-MERGE beneran (colSpan=2),
+                      // bukan sekadar dikosongkan sebelah — venture tidak
+                      // punya "harga per unit" yang sebanding dengan
+                      // lembar/coin/gram kelas lain (§28.4b), jadi satu sel
+                      // gabungan lebih jujur daripada dua kolom yang salah
+                      // satunya selalu kosong. Dibungkus pill supaya keliatan
+                      // beda dari kolom harga biasa, bukan angka nyasar.
+                      <td className="px-4 py-3.5 text-right tabular-nums whitespace-nowrap" colSpan={2}>
                         {h.venture?.unresolved ? (
                           <span className="text-gray-400 dark:text-gray-500">—</span>
                         ) : (
-                          <>
+                          <span className="inline-flex flex-col items-end gap-0.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-2.5 py-1">
                             <span className="text-gray-800 dark:text-gray-100">
                               {formatCurrency(h.venture?.totalEquity ?? 0)}
                             </span>
-                            <span className="block text-xs text-gray-400 dark:text-gray-500">
+                            <span className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">
                               {ta.ventureValuation}
                             </span>
-                          </>
+                          </span>
                         )}
                       </td>
                     ) : (
