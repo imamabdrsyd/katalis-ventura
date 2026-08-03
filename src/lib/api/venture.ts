@@ -19,7 +19,7 @@
  */
 
 import { createClient } from '@/lib/supabase';
-import { calculateBalanceSheet, calculateCapTable } from '@/lib/calculations';
+import { accumulateDividendsByOwner, calculateBalanceSheet, calculateCapTable } from '@/lib/calculations';
 import type { Account, Business, CatalogItem, Transaction } from '@/types';
 import type { VentureSnapshot } from '@/lib/assetConsole';
 
@@ -251,6 +251,9 @@ export async function getVentureSnapshots(items: CatalogItem[]): Promise<Venture
         contributed: 0,
         ownershipPct: 0,
         totalEquity: 0,
+        dividendSharePct: 0,
+        dividendShareIsExplicit: false,
+        dividendsReceived: 0,
         unresolved: true,
       };
     }
@@ -268,6 +271,22 @@ export async function getVentureSnapshots(items: CatalogItem[]): Promise<Venture
       ledger.accounts
     );
 
+    // Hak laba ≠ % modal. `profit_share_pct` (migr 094) adalah kesepakatan
+    // pembagian PROFIT, terpisah dari proporsi modal disetor — data nyata:
+    // Imam pegang 2,65% modal Hillside tapi hak dividennya 50%. Nilai pasar
+    // venture tetap memakai % modal (klaim atas aset bersih); angka ini
+    // ditampilkan sebagai informasi supaya kedua hak itu tidak tercampur.
+    // Aturan fallback disamakan dengan SCE: pct eksplisit bila ada, kalau
+    // NULL jatuh ke % modal.
+    const stockAccount = ledger.accounts.find((a) => a.id === accountId);
+    const explicitPct = stockAccount?.profit_share_pct ?? null;
+    const ownershipPct = entry?.percentage ?? 0;
+
+    // Dividen yang benar-benar sudah diterima — pakai helper yang SAMA dengan
+    // SCE (menangani settlement & dividen declared-belum-dibayar), bukan
+    // rumus kedua yang bisa menyimpang dari halaman Changes in Equity.
+    const dividendsReceived = accumulateDividendsByOwner(posted).get(accountId)?.actual ?? 0;
+
     return {
       ...base,
       businessName: ledger.business.business_name,
@@ -277,8 +296,11 @@ export async function getVentureSnapshots(items: CatalogItem[]): Promise<Venture
       // supaya baris tidak tampil kosong.
       ownerAccountName: ledger.managerName || entry?.accountName || '',
       contributed: entry?.contributed ?? 0,
-      ownershipPct: entry?.percentage ?? 0,
+      ownershipPct,
       totalEquity: balanceSheet.equity.totalEquity,
+      dividendSharePct: explicitPct != null ? Number(explicitPct) : ownershipPct,
+      dividendShareIsExplicit: explicitPct != null,
+      dividendsReceived,
       // Akun ada di DB tapi belum punya mutasi apa pun → cap table tidak
       // memuatnya. Itu bukan kegagalan baca: posisinya memang 0%.
       unresolved: false,

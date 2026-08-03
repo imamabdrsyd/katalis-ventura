@@ -132,6 +132,19 @@ export interface VentureLink {
   ownerAccountName: string;
   /** Total ekuitas bisnis target (valuasi 100%). */
   totalEquity: number;
+  /**
+   * Hak laba (`accounts.profit_share_pct`), 0–100 — SENGAJA dipisah dari
+   * `totalQuantity` (% modal). Keduanya hak ekonomi yang berbeda: % modal
+   * adalah klaim atas aset bersih (kalau bisnis dilikuidasi hari ini), hak
+   * laba adalah klaim atas profit periode. Data nyata memang bisa jauh
+   * berbeda — Imam pegang 2,65% modal Hillside tapi hak dividennya 50%.
+   * Nilai pasar tetap memakai % modal; angka ini murni informasi.
+   */
+  dividendSharePct: number;
+  /** True bila profit_share_pct di-set eksplisit, bukan fallback ke % modal. */
+  dividendShareIsExplicit: boolean;
+  /** Akumulasi dividen yang benar-benar sudah diterima (sepanjang waktu). */
+  dividendsReceived: number;
   /** Buku besar target tidak terbaca (mis. user keluar dari bisnis itu). */
   unresolved: boolean;
 }
@@ -155,6 +168,12 @@ export interface VentureSnapshot {
   ownershipPct: number;
   /** Total ekuitas bisnis target = valuasi 100% (proxy book value, Fase 1). */
   totalEquity: number;
+  /** Hak laba dari `accounts.profit_share_pct`, 0–100. Lihat VentureLink. */
+  dividendSharePct: number;
+  /** True bila profit_share_pct eksplisit, bukan fallback ke % modal. */
+  dividendShareIsExplicit: boolean;
+  /** Akumulasi dividen yang sudah benar-benar diterima (sepanjang waktu). */
+  dividendsReceived: number;
   /** Data bisnis target gagal dibaca — jangan tampilkan angka nol yang menyesatkan. */
   unresolved: boolean;
 }
@@ -414,9 +433,13 @@ function buildHolding(item: CatalogItem, txs: Transaction[]): AssetHolding {
  * apa adanya (2,65 × equity/100 = 2,65% × equity), jadi tidak ada cabang
  * kalkulasi khusus yang bisa melenceng dari kelas lain.
  *
- * Realized P/L sengaja 0: dividen/prive yang ditarik dari bisnis target adalah
- * peristiwa di buku besar SANA, dan menariknya ke sini akan menghitung ganda
- * dengan laporan bisnis itu sendiri.
+ * Realized P/L sengaja 0 dan dividen TIDAK dimasukkan ke sana. Realized P/L
+ * bermakna capital gain saat posisi dilepas (proceeds − cost basis), sedangkan
+ * dividen adalah income — dua hal berbeda yang kalau digabung membuat angkanya
+ * ambigu. Untuk venture bedanya bahkan struktural: stake tidak bisa "dijual"
+ * lewat Asset Console (ini tautan, bukan posisi yang ditransaksikan), jadi
+ * capital gain memang selalu 0 sampai kepemilikan benar-benar dilepas.
+ * Dividen yang sudah diterima dilaporkan terpisah lewat `venture.dividendsReceived`.
  */
 function buildVentureHolding(item: CatalogItem, snapshot: VentureSnapshot | undefined): AssetHolding {
   const resolved = snapshot !== undefined && !snapshot.unresolved;
@@ -464,6 +487,9 @@ function buildVentureHolding(item: CatalogItem, snapshot: VentureSnapshot | unde
       stockAccountId: snapshot?.stockAccountId ?? item.linked_stock_account_id ?? '',
       ownerAccountName: snapshot?.ownerAccountName ?? '',
       totalEquity,
+      dividendSharePct: resolved ? snapshot.dividendSharePct : 0,
+      dividendShareIsExplicit: resolved ? snapshot.dividendShareIsExplicit : false,
+      dividendsReceived: resolved ? snapshot.dividendsReceived : 0,
       unresolved: !resolved,
     },
   };

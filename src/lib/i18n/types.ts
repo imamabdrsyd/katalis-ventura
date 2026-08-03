@@ -1486,6 +1486,8 @@ export interface Translations {
     ventureUnresolved: string;
     ventureOwnership: string;
     ventureValuation: string;
+    ventureDividendShare: string;
+    ventureDividendReceived: string;
     ventureValuationHint: string;
     ventureSourceNote: string;
     ventureNoHistory: string;

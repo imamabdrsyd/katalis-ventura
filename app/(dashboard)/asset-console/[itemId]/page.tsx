@@ -104,6 +104,15 @@ export default function AssetInstrumentPage() {
                   {holding.venture?.ownerAccountName}
                   {holding.venture?.ownerAccountName ? ' · ' : ''}
                   {ta.ventureValuation}: {formatCurrency(holding.venture?.totalEquity ?? 0)}
+                  {/* Hak dividen ≠ % modal: ditampilkan terpisah supaya jelas
+                      nilai pasar dihitung dari % modal, bukan dari hak laba. */}
+                  {holding.venture?.dividendShareIsExplicit &&
+                    Math.abs(holding.venture.dividendSharePct - holding.totalQuantity) > 0.01 && (
+                      <>
+                        {' · '}
+                        {ta.ventureDividendShare} {formatOwnershipPct(holding.venture.dividendSharePct)}
+                      </>
+                    )}
                 </>
               )
             ) : holding.lastPrice > 0 ? (
@@ -173,7 +182,14 @@ export default function AssetInstrumentPage() {
           label={ta.kpiInvested}
           hint={
             isVenture
-              ? ta.kpiInvestedHint
+              ? // Dividen yang sudah diterima disandingkan dgn modal disetor —
+                // menjawab "sudah balik berapa dari yang saya setor". Dividen
+                // SENGAJA tidak dimasukkan ke P/L Terealisasi: peristiwanya
+                // ada di buku besar bisnis target, dan nilai pasar di sini
+                // sudah ikut turun saat laba dibagikan.
+                (holding.venture?.dividendsReceived ?? 0) > 0
+                ? `${ta.ventureDividendReceived}: ${formatCurrency(holding.venture?.dividendsReceived ?? 0)}`
+                : ta.kpiInvestedHint
               : `${ta.colAvgPrice}: ${formatUnitPrice(holding.avgCostPerPriceUnit)}`
           }
         >

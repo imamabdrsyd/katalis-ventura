@@ -4026,7 +4026,32 @@ tidak membaca transaksi bisnis pemantau sama sekali.
 | Modal (Total Invested) | `capTable.entries[…].contributed` — net credit akun ekuitas user itu sendiri |
 | Nilai Pasar | `%` kepemilikan × `calculateBalanceSheet(txTarget, capital, accounts).equity.totalEquity` |
 | P/L Belum Terealisasi | Nilai Pasar − Modal |
-| P/L Terealisasi | selalu 0 — dividen/prive diakui di buku besar bisnis target; menariknya ke sini menghitung ganda |
+| P/L Terealisasi | selalu 0 — realized = capital gain saat posisi dilepas, dan stake venture tidak bisa dijual lewat Asset Console (ini tautan, bukan posisi yang ditransaksikan) |
+| Hak dividen | `accounts.profit_share_pct` akun stock itu; fallback ke % modal bila NULL (aturan sama dgn SCE) |
+| Dividen diterima | `accumulateDividendsByOwner()` — helper yang SAMA dengan SCE, supaya tidak lahir rumus kedua |
+
+**Hak dividen ≠ % modal — dan keduanya sengaja tidak dicampur.** Data nyata:
+Imam memegang **2,65% modal** Hillside Studio tapi **hak dividennya 50%**
+(`profit_share_pct`). Dua klaim ekonomi yang berbeda:
+
+| | Angka | Klaim atas |
+|---|---|---|
+| `ownershipPct` (cap table) | 2,65% | **Aset bersih** — porsi yang didapat kalau bisnis dilikuidasi hari ini |
+| `dividendSharePct` (`profit_share_pct`) | 50% | **Laba periode** — porsi profit yang dibagikan |
+
+Nilai pasar venture memakai **% modal**, bukan hak laba. Memakai 50% akan
+melompatkan nilai pasar dari Rp 5.046.819 → Rp 95.073.094 dan itu keliru: saat
+likuidasi pemilik ini tidak berhak atas 50% aset yang sebagian besar disetor
+pemilik lain. Hak dividen ditampilkan sebagai **informasi** di baris kedua
+(hanya bila di-set eksplisit DAN berbeda dari % modal — kalau sama, menampilkannya
+cuma mengulang kolom Kepemilikan).
+
+**Dividen bukan realized P/L.** Realized bermakna capital gain (proceeds −
+cost basis); dividen adalah *income*. Menggabungkan keduanya membuat angkanya
+ambigu, jadi dividen yang sudah diterima dilaporkan terpisah
+(`venture.dividendsReceived`, tampil sebagai hint kartu Total Modal di halaman
+detail). Catatan: kelas lain (saham) SUDAH memasukkan dividen ke `realizedPl`
+lewat `classifyEvent()` — inkonsistensi lama yang tidak diubah di sini.
 
 Fungsi yang dipakai persis fungsi yang dipakai halaman Cap Table / SCE / Neraca
 bisnis itu (keduanya stateless & aman dipanggil lintas bisnis), jadi angka di

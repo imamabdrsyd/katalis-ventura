@@ -530,7 +530,7 @@ function getDividendDeclarationOutstanding(
  * declaredOutstanding agar UI bisa membedakan "declared" vs "settled".
  * Akun dividen tanpa owner_stock_account_id dikumpulkan ke key 'unassigned'.
  */
-function accumulateDividendsByOwner(transactions: Transaction[]): Map<string, DividendOwnerAmounts> {
+export function accumulateDividendsByOwner(transactions: Transaction[]): Map<string, DividendOwnerAmounts> {
   const byOwner = new Map<string, DividendOwnerAmounts>();
   const settlementPaidByOriginalId = new Map<string, number>();
 

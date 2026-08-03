@@ -1429,6 +1429,8 @@ export const en: Translations = {
     ventureUnresolved: 'This business could not be read — your access may have been revoked.',
     ventureOwnership: 'Ownership',
     ventureValuation: 'Business Valuation',
+    ventureDividendShare: 'Dividend share',
+    ventureDividendReceived: 'Dividends Received',
     ventureValuationHint: 'Total equity of the business (book value)',
     ventureSourceNote:
       'Venture figures are read straight from the linked business’s ledger: capital from its cap table, market value from its total equity. Valuation currently uses book value.',

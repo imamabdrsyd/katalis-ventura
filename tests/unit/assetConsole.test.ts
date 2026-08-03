@@ -438,6 +438,10 @@ describe('buildAssetHoldings — venture: posisi dibaca dari buku besar bisnis l
       contributed: 5_276_819,
       ownershipPct: 2.65,
       totalEquity: 199_123_456,
+      // Hak dividen 50% walau modal cuma 2,65% — kasus nyata Hillside Studio.
+      dividendSharePct: 50,
+      dividendShareIsExplicit: true,
+      dividendsReceived: 2_294_771,
       unresolved: false,
       ...over,
     };
@@ -464,11 +468,39 @@ describe('buildAssetHoldings — venture: posisi dibaca dari buku besar bisnis l
     expect(h.totalQuantity * h.avgCostPerPriceUnit).toBeCloseTo(h.totalCostBasis, 2);
   });
 
-  it('tidak mengklaim P/L terealisasi — laba bisnis target diakui di buku besar sana', () => {
+  it('dividen TIDAK dihitung sebagai realized P/L — itu income, bukan capital gain', () => {
+    const item = venture('Hillside Studio');
+    const [h] = buildAssetHoldings([item], [], [snapshot({ dividendsReceived: 2_294_771 })]);
+    // Realized P/L = capital gain saat posisi dilepas. Stake venture tidak bisa
+    // dijual lewat Asset Console, jadi strukturnya selalu 0 — dividen yang
+    // sudah diterima dilaporkan terpisah supaya angkanya tidak ambigu.
+    expect(h.realizedPl).toBe(0);
+    expect(h.venture?.dividendsReceived).toBe(2_294_771);
+    expect(h.events).toHaveLength(0);
+  });
+
+  it('hak dividen dipisah dari % modal dan TIDAK mempengaruhi valuasi', () => {
     const item = venture('Hillside Studio');
     const [h] = buildAssetHoldings([item], [], [snapshot()]);
-    expect(h.realizedPl).toBe(0);
-    expect(h.events).toHaveLength(0);
+    // Dua hak ekonomi berbeda: 2,65% = klaim atas aset bersih (dipakai nilai
+    // pasar), 50% = klaim atas laba periode (informasi saja). Kalau hak laba
+    // ikut dipakai menghitung nilai pasar, angkanya melonjak ~18x dan salah:
+    // saat likuidasi pemilik ini tidak berhak 50% aset.
+    expect(h.venture?.dividendSharePct).toBe(50);
+    expect(h.venture?.dividendShareIsExplicit).toBe(true);
+    expect(h.totalQuantity).toBeCloseTo(2.65, 6);
+    expect(h.marketValue).toBeCloseTo(0.0265 * 199_123_456, 2);
+  });
+
+  it('hak dividen jatuh ke % modal bila profit_share_pct tidak di-set', () => {
+    const item = venture('Hillside Studio');
+    const [h] = buildAssetHoldings(
+      [item],
+      [],
+      [snapshot({ dividendSharePct: 2.65, dividendShareIsExplicit: false, dividendsReceived: 0 })]
+    );
+    expect(h.venture?.dividendShareIsExplicit).toBe(false);
+    expect(h.venture?.dividendSharePct).toBeCloseTo(h.totalQuantity, 6);
   });
 
   it('ekuitas negatif tetap dilaporkan, bukan disembunyikan sebagai "harga belum diisi"', () => {

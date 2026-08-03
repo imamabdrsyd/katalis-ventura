@@ -249,9 +249,21 @@ export default function AssetConsolePage() {
                         // user_business_roles, bukan account_name akun ekuitas
                         // yang bisa generik). Valuasi bisnis dipindah ke kolom
                         // Harga Terakhir (digabung dgn Avg Price).
-                        h.venture?.ownerAccountName ? (
+                        h.venture?.ownerAccountName || h.venture?.dividendShareIsExplicit ? (
                           <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
-                            {h.venture.ownerAccountName}
+                            {h.venture?.ownerAccountName}
+                            {/* Hak dividen hanya ditampilkan bila di-set
+                                EKSPLISIT dan berbeda dari % modal — kalau sama,
+                                menampilkannya cuma mengulang kolom Ownership.
+                                Sengaja info saja: nilai pasar tetap dari %
+                                modal (klaim atas aset bersih), bukan hak laba. */}
+                            {h.venture?.dividendShareIsExplicit &&
+                              Math.abs(h.venture.dividendSharePct - h.totalQuantity) > 0.01 && (
+                                <>
+                                  {h.venture?.ownerAccountName ? ' · ' : ''}
+                                  {ta.ventureDividendShare} {formatOwnershipPct(h.venture.dividendSharePct)}
+                                </>
+                              )}
                           </p>
                         ) : null
                       ) : (
@@ -312,11 +324,15 @@ export default function AssetConsolePage() {
                         lain ikut bergeser (pernah terjadi: Studio Unit tampil
                         Avg/Last tertukar dan P/L kosong). */}
                     {isVenture ? (
-                      <td className="px-4 py-3.5 text-right tabular-nums" colSpan={2}>
+                      <td className="px-4 py-3.5 text-center tabular-nums" colSpan={2}>
                         {h.venture?.unresolved ? (
                           <span className="text-gray-400 dark:text-gray-500">—</span>
                         ) : (
-                          <span className="inline-flex flex-col items-center gap-0.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-3 py-1.5">
+                          // `flex` + `w-full` (bukan inline-flex): box MENGISI
+                          // penuh lebar sel gabungan, supaya terbaca sebagai
+                          // satu field yang membentang di kedua kolom — bukan
+                          // pill sempit yang nempel di kolom kanan saja.
+                          <span className="flex w-full flex-col items-center gap-0.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-3 py-1.5">
                             <span className="text-gray-800 dark:text-gray-100">
                               {formatCurrency(h.venture?.totalEquity ?? 0)}
                             </span>

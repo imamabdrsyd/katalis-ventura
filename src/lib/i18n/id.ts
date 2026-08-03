@@ -1433,6 +1433,8 @@ export const id: Translations = {
     ventureUnresolved: 'Data bisnis ini tidak bisa dibaca — mungkin aksesmu sudah dicabut.',
     ventureOwnership: 'Kepemilikan',
     ventureValuation: 'Valuasi Bisnis',
+    ventureDividendShare: 'Hak dividen',
+    ventureDividendReceived: 'Dividen Diterima',
     ventureValuationHint: 'Total ekuitas bisnis (nilai buku)',
     ventureSourceNote:
       'Angka venture dibaca langsung dari buku besar bisnis yang ditautkan: modal dari cap table, nilai pasar dari total ekuitasnya. Valuasi saat ini memakai nilai buku.',
