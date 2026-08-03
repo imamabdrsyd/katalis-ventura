@@ -929,9 +929,9 @@ function Sidebar({
         </nav>
 
         {/* Line pembatas di atas section Leads/Calendar-POS */}
-        <div className="mx-4 border-t border-gray-200 dark:border-gray-700" />
+        <div className="mx-4 mt-2 border-t border-gray-200 dark:border-gray-700" />
 
-        <div className="px-2 pt-3 pb-3 space-y-1.5">
+        <div className="px-2 pt-5 pb-3 space-y-1.5">
           {/* Leads & Point of Sales/Calendar — section sendiri paling bawah, 2 kotak sejajar.
               Saat collapsed, kembali jadi 2 baris ikon biasa (grid 2 kolom tak muat). */}
           <div className={isCollapsed ? 'space-y-1.5' : 'grid grid-cols-2 gap-1.5'}>
