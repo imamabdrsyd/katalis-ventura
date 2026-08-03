@@ -249,21 +249,14 @@ export default function AssetConsolePage() {
                         // user_business_roles, bukan account_name akun ekuitas
                         // yang bisa generik). Valuasi bisnis dipindah ke kolom
                         // Harga Terakhir (digabung dgn Avg Price).
-                        h.venture?.ownerAccountName || h.venture?.dividendShareIsExplicit ? (
+                        // Hak dividen SENGAJA tidak ditampilkan di sini —
+                        // baris tabel utama cukup memuat identitas pemilik.
+                        // Angkanya ada di halaman detail instrumen, supaya
+                        // tidak tertukar dengan kolom Kepemilikan (% modal)
+                        // yang justru dipakai menghitung nilai pasar.
+                        h.venture?.ownerAccountName ? (
                           <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
-                            {h.venture?.ownerAccountName}
-                            {/* Hak dividen hanya ditampilkan bila di-set
-                                EKSPLISIT dan berbeda dari % modal — kalau sama,
-                                menampilkannya cuma mengulang kolom Ownership.
-                                Sengaja info saja: nilai pasar tetap dari %
-                                modal (klaim atas aset bersih), bukan hak laba. */}
-                            {h.venture?.dividendShareIsExplicit &&
-                              Math.abs(h.venture.dividendSharePct - h.totalQuantity) > 0.01 && (
-                                <>
-                                  {h.venture?.ownerAccountName ? ' · ' : ''}
-                                  {ta.ventureDividendShare} {formatOwnershipPct(h.venture.dividendSharePct)}
-                                </>
-                              )}
+                            {h.venture.ownerAccountName}
                           </p>
                         ) : null
                       ) : (
