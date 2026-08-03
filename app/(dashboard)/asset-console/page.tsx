@@ -243,12 +243,14 @@ export default function AssetConsolePage() {
                         )}
                       </div>
                       {isVenture ? (
-                        // Baris venture: konteks yang berguna bukan "kustodian"
-                        // (namanya sudah jadi simbol) tapi valuasi 100% bisnis
-                        // target — pembilang dari mana nilai pasar berasal.
-                        h.hasLivePrice ? (
+                        // Baris venture: bukan broker/exchange pihak ketiga —
+                        // "kustodian"-nya adalah identitas kepemilikanmu sendiri
+                        // di buku besar bisnis target (nama akun EQUITY is_stock
+                        // yang ditautkan). Valuasi bisnis sudah dipindah ke
+                        // kolom Harga Terakhir (digabung dgn Avg Price).
+                        h.venture?.ownerAccountName ? (
                           <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
-                            {ta.ventureValuation}: {formatCurrency(h.venture?.totalEquity ?? 0)}
+                            {h.venture.ownerAccountName}
                           </p>
                         ) : null
                       ) : (
@@ -293,12 +295,27 @@ export default function AssetConsolePage() {
                       )}
                     </Td>
                     <Td align="right">
-                      {closed || isVenture ? '—' : formatUnitPrice(h.avgCostPerPriceUnit)}
+                      {closed || isVenture ? '' : formatUnitPrice(h.avgCostPerPriceUnit)}
                     </Td>
                     {isVenture ? (
-                      <Td align="right">
-                        <span className="text-gray-400 dark:text-gray-500">—</span>
-                      </Td>
+                      // Avg Price + Last Price digabung secara visual: Avg Price
+                      // dikosongkan (di atas), valuasi bisnis muncul di sini —
+                      // venture tidak punya "harga per unit" yang sebanding
+                      // dengan lembar/coin/gram kelas lain (§28.4b).
+                      <td className="px-4 py-3.5 text-right tabular-nums whitespace-nowrap">
+                        {h.venture?.unresolved ? (
+                          <span className="text-gray-400 dark:text-gray-500">—</span>
+                        ) : (
+                          <>
+                            <span className="text-gray-800 dark:text-gray-100">
+                              {formatCurrency(h.venture?.totalEquity ?? 0)}
+                            </span>
+                            <span className="block text-xs text-gray-400 dark:text-gray-500">
+                              {ta.ventureValuation}
+                            </span>
+                          </>
+                        )}
+                      </td>
                     ) : (
                       <td className="px-4 py-3.5 text-right tabular-nums whitespace-nowrap">
                         {/* Update harga inline: klik sel ini tidak boleh ikut

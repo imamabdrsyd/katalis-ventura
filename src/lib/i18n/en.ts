@@ -1366,7 +1366,7 @@ export const en: Translations = {
     kpiRealizedHint: 'Accumulated across all sales',
     colSymbol: 'Symbol',
     colClass: 'Class',
-    colBalance: 'Unit',
+    colBalance: 'Ownership',
     colAvgPrice: 'Avg Price',
     colLastPrice: 'Last Price',
     colMarketValue: 'Market Value',

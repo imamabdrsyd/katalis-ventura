@@ -1370,7 +1370,7 @@ export const id: Translations = {
     kpiRealizedHint: 'Akumulasi dari semua penjualan',
     colSymbol: 'Simbol',
     colClass: 'Kelas',
-    colBalance: 'Unit',
+    colBalance: 'Kepemilikan',
     colAvgPrice: 'Harga Rata-rata',
     colLastPrice: 'Harga Terakhir',
     colMarketValue: 'Nilai Pasar',
