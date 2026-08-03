@@ -174,8 +174,36 @@ export interface VentureSnapshot {
   dividendShareIsExplicit: boolean;
   /** Akumulasi dividen yang sudah benar-benar diterima (sepanjang waktu). */
   dividendsReceived: number;
+  /**
+   * Transaksi di buku besar bisnis target yang MEMBENTUK angka di atas —
+   * setoran/penarikan modal (yang menyusun `contributed`) dan dividen (yang
+   * menyusun `dividendsReceived`). Terurut kronologis (lama → baru).
+   */
+  events: VentureLedgerEvent[];
   /** Data bisnis target gagal dibaca — jangan tampilkan angka nol yang menyesatkan. */
   unresolved: boolean;
+}
+
+/**
+ * Satu mutasi di buku besar bisnis target yang menyentuh posisi pemilik ini.
+ *
+ * `kind` sengaja dipisah dari AssetEventType karena artinya berbeda: 'capital'
+ * menambah/mengurangi modal disetor (cost basis), 'dividend' adalah distribusi
+ * laba yang TIDAK menyentuh cost basis.
+ */
+export interface VentureLedgerEvent {
+  transactionId: string;
+  transactionNumber?: string | null;
+  date: string;
+  description: string;
+  kind: 'capital' | 'dividend';
+  /**
+   * Perubahan modal disetor: positif = setoran, negatif = penarikan/prive.
+   * Untuk 'dividend' selalu 0 — dividen tidak mengurangi modal disetor.
+   */
+  capitalDelta: number;
+  /** Dividen yang diterima pemilik pada transaksi ini. 0 untuk 'capital'. */
+  dividendAmount: number;
 }
 
 export interface AssetConsoleSummary {
@@ -417,6 +445,59 @@ function buildHolding(item: CatalogItem, txs: Transaction[]): AssetHolding {
 }
 
 /**
+ * Label kustodian untuk venture: "Self Custody · {nama pemilik}".
+ *
+ * Berbeda dari kelas lain, tidak ada pihak ketiga yang menyimpan posisi ini —
+ * stake dipegang langsung atas nama pemilik di buku besar bisnis target.
+ * Menyebutnya "Self Custody" membuat kolom Kustodian tetap bermakna sama di
+ * semua kelas (siapa yang memegang aset), sementara nama pemilik menjawab
+ * "atas nama siapa".
+ */
+function custodianOfVenture(snapshot: VentureSnapshot | undefined): string {
+  const owner = snapshot?.ownerAccountName?.trim();
+  return owner ? `Self Custody · ${owner}` : 'Self Custody';
+}
+
+/**
+ * Petakan mutasi buku besar bisnis target ke bentuk AssetEvent yang dipakai
+ * tabel riwayat.
+ *
+ * Pemetaan tipe peristiwa:
+ *   setoran modal (capitalDelta > 0) → 'buy'   (menambah cost basis)
+ *   penarikan/prive (capitalDelta<0) → 'sell'  (mengurangi cost basis)
+ *   dividen                          → 'dividend'
+ *
+ * Kuantitas dibiarkan 0: satuan venture adalah PERSEN kepemilikan, dan persen
+ * pada saat sebuah setoran terjadi tidak bisa diturunkan dari transaksi itu
+ * sendiri (bergantung pada total modal seluruh pemilik pada saat itu, yang
+ * berubah tiap ada setoran pemilik lain). Menampilkan '—' jujur; menghitung
+ * angka yang tidak bisa dipertanggungjawabkan tidak.
+ *
+ * `realizedPl` juga 0 — lihat catatan di buildVentureHolding: dividen adalah
+ * income, bukan capital gain, dan sudah dilaporkan lewat kolom Jumlah + KPI
+ * "Dividen Diterima".
+ */
+function mapVentureEvents(events: VentureLedgerEvent[], custodian: string): AssetEvent[] {
+  return events
+    .map<AssetEvent>((e) => ({
+      transactionId: e.transactionId,
+      transactionNumber: e.transactionNumber,
+      date: e.date,
+      custodian,
+      eventType: e.kind === 'dividend' ? 'dividend' : e.capitalDelta >= 0 ? 'buy' : 'sell',
+      description: e.description,
+      quantity: 0,
+      quantityDerived: false,
+      costBasisDelta: e.capitalDelta,
+      amount: e.kind === 'dividend' ? e.dividendAmount : Math.abs(e.capitalDelta),
+      realizedPl: 0,
+      avgCostBefore: 0,
+      status: 'posted',
+    }))
+    .reverse(); // terbaru dulu, konsisten dengan kelas aset lain
+}
+
+/**
  * Bangun holding kelas 'venture' — kepemilikan pemilik di bisnis LAIN.
  *
  * Berbeda dari kelas lain, tidak ada satu pun transaksi di bisnis pemantau yang
@@ -440,6 +521,12 @@ function buildHolding(item: CatalogItem, txs: Transaction[]): AssetHolding {
  * lewat Asset Console (ini tautan, bukan posisi yang ditransaksikan), jadi
  * capital gain memang selalu 0 sampai kepemilikan benar-benar dilepas.
  * Dividen yang sudah diterima dilaporkan terpisah lewat `venture.dividendsReceived`.
+ *
+ * Riwayat transaksi TETAP ditampilkan meski tidak ada transaksi di bisnis
+ * pemantau: `snapshot.events` memuat mutasi di buku besar bisnis TARGET yang
+ * membentuk KPI di halaman ini — setoran/penarikan modal (sumber Total
+ * Invested) dan dividen (sumber Dividen Diterima). Tanpa ini, angka KPI tidak
+ * bisa ditelusuri ke satu pun peristiwa.
  */
 function buildVentureHolding(item: CatalogItem, snapshot: VentureSnapshot | undefined): AssetHolding {
   const resolved = snapshot !== undefined && !snapshot.unresolved;
@@ -450,6 +537,11 @@ function buildVentureHolding(item: CatalogItem, snapshot: VentureSnapshot | unde
   const valuationPerPct = totalEquity / 100;
   const marketValue = (ownershipPct / 100) * totalEquity;
   const unrealizedPl = resolved ? marketValue - contributed : 0;
+
+  // Venture tidak dititipkan ke broker/exchange mana pun — stake-nya dipegang
+  // langsung atas nama pemilik di bisnis target. "Self Custody" menyatakan itu
+  // eksplisit alih-alih memakai nama bisnis, yang sudah jadi judul halaman.
+  const custodian = custodianOfVenture(snapshot);
 
   return {
     itemId: item.id,
@@ -462,7 +554,7 @@ function buildVentureHolding(item: CatalogItem, snapshot: VentureSnapshot | unde
     positions: resolved
       ? [
           {
-            custodian: snapshot.businessName,
+            custodian,
             quantity: ownershipPct,
             costBasis: contributed,
             avgCost: ownershipPct > 0 ? contributed / ownershipPct : 0,
@@ -470,7 +562,7 @@ function buildVentureHolding(item: CatalogItem, snapshot: VentureSnapshot | unde
           },
         ]
       : [],
-    events: [],
+    events: mapVentureEvents(snapshot?.events ?? [], custodian),
     totalQuantity: ownershipPct,
     totalCostBasis: contributed,
     avgCost: ownershipPct > 0 ? contributed / ownershipPct : 0,

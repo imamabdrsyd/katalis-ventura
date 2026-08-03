@@ -20,8 +20,8 @@
 
 import { createClient } from '@/lib/supabase';
 import { accumulateDividendsByOwner, calculateBalanceSheet, calculateCapTable } from '@/lib/calculations';
-import type { Account, Business, CatalogItem, Transaction } from '@/types';
-import type { VentureSnapshot } from '@/lib/assetConsole';
+import type { Account, Business, CatalogItem, JournalLine, Transaction } from '@/types';
+import type { VentureLedgerEvent, VentureSnapshot } from '@/lib/assetConsole';
 
 /** Akun ekuitas pemilik yang bisa ditautkan sebagai posisi venture. */
 export interface VentureStockAccountOption {
@@ -205,6 +205,106 @@ async function loadTargetLedger(
   };
 }
 
+/** Baris jurnal transaksi, disintesis untuk transaksi lama 1-debit/1-kredit. */
+function ledgerLinesOf(tx: Transaction): Array<Pick<JournalLine, 'debit_amount' | 'credit_amount'> & { account?: Account | null }> {
+  if (tx.is_multi_line && tx.journal_lines && tx.journal_lines.length > 0) {
+    return tx.journal_lines;
+  }
+  const amount = Number(tx.amount) || 0;
+  const lines: Array<Pick<JournalLine, 'debit_amount' | 'credit_amount'> & { account?: Account | null }> = [];
+  if (tx.debit_account) lines.push({ debit_amount: amount, credit_amount: 0, account: tx.debit_account });
+  if (tx.credit_account) lines.push({ debit_amount: 0, credit_amount: amount, account: tx.credit_account });
+  return lines;
+}
+
+/**
+ * Transaksi di buku besar target yang MEMBENTUK angka posisi venture ini.
+ *
+ * Dua sumber, sengaja dibaca dengan aturan akun yang PERSIS sama dengan
+ * fungsi agregatnya supaya daftar ini tidak mungkin bercerita lain dari KPI
+ * di atasnya:
+ *
+ *   modal    → net kredit akun `is_stock` yang ditautkan  (lih. calculateCapTable)
+ *   dividen  → debit akun `is_dividend` yang `owner_stock_account_id`-nya
+ *              menunjuk akun stock itu   (lih. accumulateDividendsByOwner)
+ *
+ * Yang TIDAK diikutkan: transaksi yang tidak menyentuh salah satu akun di
+ * atas. Nilai pasar venture memang bergerak karena laba/rugi operasional
+ * bisnis target, tapi menampilkan seluruh buku besar bisnis itu di sini
+ * berarti menyalin laporan orang lain ke halaman instrumen — bukan riwayat
+ * posisi. Selisih nilai pasar vs modal sudah diringkas sebagai Unrealized P/L.
+ */
+function extractVentureEvents(
+  transactions: Transaction[],
+  accounts: Account[],
+  stockAccountId: string
+): VentureLedgerEvent[] {
+  // Akun dividen yang hasilnya jatuh ke pemilik ini. Dicari lewat flag +
+  // pointer owner, bukan pencocokan nama akun.
+  const dividendAccountIds = new Set(
+    accounts
+      .filter((a) => a.account_type === 'EQUITY' && a.is_dividend === true && a.owner_stock_account_id === stockAccountId)
+      .map((a) => a.id)
+  );
+
+  const events: VentureLedgerEvent[] = [];
+
+  for (const tx of transactions) {
+    if (tx.deleted_at) continue;
+
+    let capitalDelta = 0;
+    let dividendAmount = 0;
+
+    for (const line of ledgerLinesOf(tx)) {
+      const acc = line.account;
+      if (!acc) continue;
+      const debit = Number(line.debit_amount) || 0;
+      const credit = Number(line.credit_amount) || 0;
+
+      // Modal disetor: kredit menambah, debit (prive) mengurangi.
+      if (acc.id === stockAccountId) capitalDelta += credit - debit;
+      // Dividen diakui saat DIDEBIT ke akun dividen milik pemilik ini —
+      // sama seperti accumulateDividendsByOwner.
+      else if (dividendAccountIds.has(acc.id)) dividendAmount += debit;
+    }
+
+    const hasCapital = Math.abs(capitalDelta) > 0.01;
+    const hasDividend = dividendAmount > 0.01;
+    if (!hasCapital && !hasDividend) continue;
+
+    // Satu transaksi bisa menyentuh keduanya (mis. dividen yang langsung
+    // dikapitalisasi jadi tambahan modal). Dipecah jadi dua baris supaya
+    // tiap angka bisa ditelusuri ke KPI-nya masing-masing.
+    if (hasCapital) {
+      events.push({
+        transactionId: tx.id,
+        transactionNumber: tx.transaction_number,
+        date: tx.date,
+        description: tx.description ?? '',
+        kind: 'capital',
+        capitalDelta,
+        dividendAmount: 0,
+      });
+    }
+    if (hasDividend) {
+      events.push({
+        transactionId: tx.id,
+        transactionNumber: tx.transaction_number,
+        date: tx.date,
+        description: tx.description ?? '',
+        kind: 'dividend',
+        capitalDelta: 0,
+        dividendAmount,
+      });
+    }
+  }
+
+  return events.sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+    return 0;
+  });
+}
+
 /**
  * Hitung potret posisi untuk setiap item katalog berkelas 'venture'.
  *
@@ -254,6 +354,7 @@ export async function getVentureSnapshots(items: CatalogItem[]): Promise<Venture
         dividendSharePct: 0,
         dividendShareIsExplicit: false,
         dividendsReceived: 0,
+        events: [],
         unresolved: true,
       };
     }
@@ -301,6 +402,7 @@ export async function getVentureSnapshots(items: CatalogItem[]): Promise<Venture
       dividendSharePct: explicitPct != null ? Number(explicitPct) : ownershipPct,
       dividendShareIsExplicit: explicitPct != null,
       dividendsReceived,
+      events: extractVentureEvents(posted, ledger.accounts, accountId),
       // Akun ada di DB tapi belum punya mutasi apa pun → cap table tidak
       // memuatnya. Itu bukan kegagalan baca: posisinya memang 0%.
       unresolved: false,

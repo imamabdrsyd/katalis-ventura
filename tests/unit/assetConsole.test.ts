@@ -442,6 +442,7 @@ describe('buildAssetHoldings — venture: posisi dibaca dari buku besar bisnis l
       dividendSharePct: 50,
       dividendShareIsExplicit: true,
       dividendsReceived: 2_294_771,
+      events: [],
       unresolved: false,
       ...over,
     };

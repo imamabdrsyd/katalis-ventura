@@ -58,18 +58,20 @@ export default function AssetInstrumentPage() {
     );
   }
 
+  const closed = holding.totalQuantity <= 0;
+  // Venture: tidak ada harga manual (valuasi live dari neraca bisnis target)
+  // dan riwayatnya datang dari buku besar bisnis target — aksinya
+  // "putuskan tautan", bukan "update harga".
+  const isVenture = isLinkedAssetClass(holding.assetClass);
+
+  // Venture memakai kosakata modal, bukan jual-beli: yang terjadi adalah
+  // setoran/penarikan modal di bisnis target, bukan transaksi pasar.
   const eventLabel: Record<AssetEventType, string> = {
-    buy: ta.eventBuy,
-    sell: ta.eventSell,
+    buy: isVenture ? ta.ventureEventCapitalIn : ta.eventBuy,
+    sell: isVenture ? ta.ventureEventCapitalOut : ta.eventSell,
     dividend: ta.eventDividend,
     adjustment: ta.eventAdjustment,
   };
-
-  const closed = holding.totalQuantity <= 0;
-  // Venture: tidak ada harga manual (valuasi live dari neraca bisnis target)
-  // dan tidak ada riwayat transaksi lokal — aksinya "putuskan tautan",
-  // bukan "update harga".
-  const isVenture = isLinkedAssetClass(holding.assetClass);
 
   async function handleDisconnect() {
     if (!holding || !window.confirm(ta.ventureDisconnectConfirm)) return;
@@ -134,7 +136,10 @@ export default function AssetInstrumentPage() {
             type="button"
             onClick={handleDisconnect}
             disabled={disconnecting}
-            className="btn-ghost flex items-center gap-2 text-red-600 dark:text-red-400"
+            // Netral, bukan merah: memutus tautan itu reversible (soft delete
+            // baris katalog — data bisnis & transaksinya tidak tersentuh) dan
+            // sewarna dengan tombol "Update Harga" di kelas aset lain.
+            className="btn-ghost flex items-center gap-2"
           >
             <Unlink className="w-4 h-4" aria-hidden />
             {ta.ventureDisconnect}
@@ -284,7 +289,9 @@ export default function AssetInstrumentPage() {
       <section className="card-static !p-0 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
           <h2 className="font-semibold text-gray-800 dark:text-gray-100">{ta.historyTitle}</h2>
-          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{ta.historySubtitle}</p>
+          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+            {isVenture ? ta.ventureHistorySubtitle : ta.historySubtitle}
+          </p>
         </div>
 
         {holding.events.length === 0 ? (
@@ -297,9 +304,12 @@ export default function AssetInstrumentPage() {
                   <Th>{ta.colDate}</Th>
                   <Th>{ta.colEvent}</Th>
                   <Th>{ta.colCustodian}</Th>
-                  <Th align="right">{ta.colQty}</Th>
+                  {/* Venture: kuantitas (%) tidak bisa diturunkan per-transaksi
+                      dan realized P/L selalu 0 — kolomnya dihilangkan alih-alih
+                      menampilkan dua kolom '—' di setiap baris. */}
+                  {!isVenture && <Th align="right">{ta.colQty}</Th>}
                   <Th align="right">{ta.colAmount}</Th>
-                  <Th align="right">{ta.kpiRealized}</Th>
+                  {!isVenture && <Th align="right">{ta.kpiRealized}</Th>}
                 </tr>
               </thead>
               <tbody>
@@ -323,20 +333,24 @@ export default function AssetInstrumentPage() {
                       </p>
                     </td>
                     <Td>{e.custodian}</Td>
-                    <Td align="right">
-                      {e.quantity > 0 ? (
-                        <span title={e.quantityDerived ? ta.derivedQty : undefined}>
-                          {formatQuantity(e.quantity)}
-                          {e.quantityDerived && <span className="ml-1 text-gray-400 dark:text-gray-500">*</span>}
-                        </span>
-                      ) : (
-                        '—'
-                      )}
-                    </Td>
+                    {!isVenture && (
+                      <Td align="right">
+                        {e.quantity > 0 ? (
+                          <span title={e.quantityDerived ? ta.derivedQty : undefined}>
+                            {formatQuantity(e.quantity)}
+                            {e.quantityDerived && <span className="ml-1 text-gray-400 dark:text-gray-500">*</span>}
+                          </span>
+                        ) : (
+                          '—'
+                        )}
+                      </Td>
+                    )}
                     <Td align="right">{formatCurrency(e.amount)}</Td>
-                    <td className="px-4 py-3.5 text-right">
-                      {e.realizedPl !== 0 ? <PlValue value={e.realizedPl} wrap={false} /> : <span className="text-gray-400 dark:text-gray-500">—</span>}
-                    </td>
+                    {!isVenture && (
+                      <td className="px-4 py-3.5 text-right">
+                        {e.realizedPl !== 0 ? <PlValue value={e.realizedPl} wrap={false} /> : <span className="text-gray-400 dark:text-gray-500">—</span>}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

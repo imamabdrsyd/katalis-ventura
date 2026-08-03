@@ -244,19 +244,19 @@ export default function AssetConsolePage() {
                       </div>
                       {isVenture ? (
                         // Baris venture: bukan broker/exchange pihak ketiga —
-                        // "kustodian"-nya adalah nama PROFIL user yang jadi
-                        // pengelola bisnis target (profiles.full_name via
-                        // user_business_roles, bukan account_name akun ekuitas
-                        // yang bisa generik). Valuasi bisnis dipindah ke kolom
-                        // Harga Terakhir (digabung dgn Avg Price).
+                        // stake dipegang langsung, jadi kustodiannya
+                        // "Self Custody · {nama pemilik}". Nama pemilik diambil
+                        // dari profil pengelola bisnis target (profiles.full_name,
+                        // bukan account_name akun ekuitas yang bisa generik).
+                        // Valuasi bisnis dipindah ke kolom Harga Terakhir.
                         // Hak dividen SENGAJA tidak ditampilkan di sini —
                         // baris tabel utama cukup memuat identitas pemilik.
                         // Angkanya ada di halaman detail instrumen, supaya
                         // tidak tertukar dengan kolom Kepemilikan (% modal)
                         // yang justru dipakai menghitung nilai pasar.
-                        h.venture?.ownerAccountName ? (
+                        h.positions[0]?.custodian ? (
                           <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
-                            {h.venture.ownerAccountName}
+                            {h.positions[0].custodian}
                           </p>
                         ) : null
                       ) : (
@@ -307,34 +307,47 @@ export default function AssetConsolePage() {
                         </>
                       )}
                     </Td>
-                    {/* Avg Price + Last Price. Untuk venture keduanya jadi SATU
-                        sel (colSpan=2) berisi valuasi bisnis — venture tidak
-                        punya "harga per unit" yang sebanding dengan
-                        lembar/coin/gram kelas lain (§28.4b).
+                    {/* Avg Price + Last Price. Untuk venture keduanya tetap DUA
+                        sel terpisah, tapi isinya beda dari kelas lain: venture
+                        tidak punya "harga per unit" yang sebanding dengan
+                        lembar/coin/gram (§28.4b). Kolom Last Price diisi
+                        valuasi bisnis, kolom Avg Price diisi RUMUS asal angka
+                        itu — supaya pembaca tahu valuasinya bukan harga pasar
+                        melainkan nilai buku dari neraca bisnis target.
 
                         PENTING: kedua cabang WAJIB menghasilkan tepat 2 kolom.
                         Kalau jumlahnya beda, seluruh kolom sesudahnya di baris
                         lain ikut bergeser (pernah terjadi: Studio Unit tampil
                         Avg/Last tertukar dan P/L kosong). */}
                     {isVenture ? (
-                      <td className="px-4 py-3.5 text-center tabular-nums" colSpan={2}>
-                        {h.venture?.unresolved ? (
-                          <span className="text-gray-400 dark:text-gray-500">—</span>
-                        ) : (
-                          // `flex` + `w-full` (bukan inline-flex): box MENGISI
-                          // penuh lebar sel gabungan, supaya terbaca sebagai
-                          // satu field yang membentang di kedua kolom — bukan
-                          // pill sempit yang nempel di kolom kanan saja.
-                          <span className="flex w-full flex-col items-center gap-0.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-3 py-1.5">
-                            <span className="text-gray-800 dark:text-gray-100">
-                              {formatCurrency(h.venture?.totalEquity ?? 0)}
+                      <>
+                        <td className="px-4 py-3.5 text-right">
+                          {h.venture?.unresolved ? (
+                            <span className="text-gray-400 dark:text-gray-500">—</span>
+                          ) : (
+                            <span
+                              title={ta.ventureValuationFormulaHint}
+                              className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap"
+                            >
+                              {ta.ventureValuationFormula}
                             </span>
-                            <span className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                              {ta.ventureValuation}
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5 text-right tabular-nums">
+                          {h.venture?.unresolved ? (
+                            <span className="text-gray-400 dark:text-gray-500">—</span>
+                          ) : (
+                            <span className="flex flex-col items-end gap-0.5">
+                              <span className="text-gray-800 dark:text-gray-100">
+                                {formatCurrency(h.venture?.totalEquity ?? 0)}
+                              </span>
+                              <span className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                                {ta.ventureValuation}
+                              </span>
                             </span>
-                          </span>
-                        )}
-                      </td>
+                          )}
+                        </td>
+                      </>
                     ) : (
                       <>
                         <Td align="right">{closed ? '—' : formatUnitPrice(h.avgCostPerPriceUnit)}</Td>

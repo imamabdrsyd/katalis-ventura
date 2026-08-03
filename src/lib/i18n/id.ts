@@ -1439,6 +1439,12 @@ export const id: Translations = {
     ventureSourceNote:
       'Angka venture dibaca langsung dari buku besar bisnis yang ditautkan: modal dari cap table, nilai pasar dari total ekuitasnya. Valuasi saat ini memakai nilai buku.',
     ventureNoHistory:
-      'Riwayat transaksi ada di buku besar bisnis yang ditautkan, bukan di sini.',
+      'Belum ada mutasi modal atau dividen yang tercatat untuk posisi ini.',
+    ventureHistorySubtitle:
+      'Mutasi modal dan dividen dari buku besar bisnis yang ditautkan — peristiwa di balik angka di atas',
+    ventureValuationFormula: 'Aset − Liabilitas',
+    ventureValuationFormulaHint: 'Nilai buku: total aset dikurangi total liabilitas bisnis yang ditautkan',
+    ventureEventCapitalIn: 'Setor Modal',
+    ventureEventCapitalOut: 'Tarik Modal',
   },
 };

@@ -1435,6 +1435,12 @@ export const en: Translations = {
     ventureSourceNote:
       'Venture figures are read straight from the linked business’s ledger: capital from its cap table, market value from its total equity. Valuation currently uses book value.',
     ventureNoHistory:
-      'Transaction history lives in the linked business’s ledger, not here.',
+      'No capital or dividend movement has been recorded for this position yet.',
+    ventureHistorySubtitle:
+      'Capital and dividend movements from the linked business’s ledger — the events behind the figures above',
+    ventureValuationFormula: 'Assets − Liabilities',
+    ventureValuationFormulaHint: 'Book value: total assets minus total liabilities of the linked business',
+    ventureEventCapitalIn: 'Capital In',
+    ventureEventCapitalOut: 'Capital Out',
   },
 };

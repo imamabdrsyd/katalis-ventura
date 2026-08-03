@@ -260,7 +260,10 @@ export default function BusinessesPage() {
                       type="button"
                       onClick={() => router.push(`/businesses/${activeBusiness.id}/config?tab=${value}`)}
                       title={label}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                      // Hover cukup mewarnai label — tanpa kotak latar. Ini
+                      // deretan jalan pintas, bukan tab: kotak pada hover
+                      // membuatnya terbaca seolah salah satunya sedang aktif.
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
                     >
                       <Icon className="w-4 h-4" />
                       {label}
