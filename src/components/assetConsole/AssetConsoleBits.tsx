@@ -26,11 +26,16 @@ export function quantityUnitLabel(holding: Pick<AssetHolding, 'assetClass' | 'pr
  * Persen kepemilikan venture. Dipisah dari `formatQuantity` karena satuannya
  * melekat pada angkanya ("2,65%", tanpa spasi) — beda dari lot/coin/gram yang
  * label satuannya tampil terpisah dengan gaya redup.
+ *
+ * Desimal disembunyikan bila nol: kepemilikan penuh dibaca "100%", bukan
+ * "100,00%" — dua digit nol di sana tidak menambah informasi apa pun dan
+ * justru membuat angka bulat terlihat seperti hasil pembulatan.
  */
 export function formatOwnershipPct(pct: number): string {
+  const isWhole = Math.abs(pct - Math.round(pct)) < 0.005;
   return `${new Intl.NumberFormat('id-ID', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: isWhole ? 0 : 2,
+    maximumFractionDigits: isWhole ? 0 : 2,
   }).format(pct)}%`;
 }
 

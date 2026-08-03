@@ -225,7 +225,10 @@ export default function AssetConsolePage() {
                   <tr
                     key={h.itemId}
                     onClick={() => router.push(`/asset-console/${h.itemId}`)}
-                    className="border-b border-gray-100 dark:border-gray-700/60 last:border-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+                    // Ketebalan garis antar-baris disamakan dengan tabel
+                    // Transaksi (gray-200/gray-700) — sebelumnya gray-100 dan
+                    // terlihat lebih tipis dari tabel lain di aplikasi.
+                    className="border-b border-gray-200 dark:border-gray-700 last:border-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
                   >
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -325,9 +328,12 @@ export default function AssetConsolePage() {
                           {h.venture?.unresolved ? (
                             <span className="text-gray-400 dark:text-gray-500">—</span>
                           ) : (
+                            // Chip netral: rumus, bukan nominal — bentuk chip
+                            // memisahkannya secara visual dari kolom angka di
+                            // kiri-kanannya supaya tidak terbaca sebagai harga.
                             <span
                               title={ta.ventureValuationFormulaHint}
-                              className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap"
+                              className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-2.5 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap"
                             >
                               {ta.ventureValuationFormula}
                             </span>
@@ -338,10 +344,19 @@ export default function AssetConsolePage() {
                             <span className="text-gray-400 dark:text-gray-500">—</span>
                           ) : (
                             <span className="flex flex-col items-end gap-0.5">
+                              {/* `formatUnitPrice`, bukan `formatCurrency`:
+                                  kolom ini menampilkan angka telanjang di
+                                  semua kelas aset lain (400.000.000, 4.170),
+                                  jadi prefix "Rp" hanya pada baris venture
+                                  membuat kolomnya tidak sejajar terbaca. */}
                               <span className="text-gray-800 dark:text-gray-100">
-                                {formatCurrency(h.venture?.totalEquity ?? 0)}
+                                {formatUnitPrice(h.venture?.totalEquity ?? 0)}
                               </span>
-                              <span className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                              {/* `whitespace-nowrap`: label wajib satu baris —
+                                  terpecah jadi dua ("BUSINESS / VALUATION")
+                                  membuat baris venture jauh lebih tinggi dari
+                                  baris lain dan merusak ritme tabel. */}
+                              <span className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500 whitespace-nowrap">
                                 {ta.ventureValuation}
                               </span>
                             </span>

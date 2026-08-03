@@ -260,7 +260,7 @@ export default function AssetInstrumentPage() {
                 // butuh kuantitas) yang tetap ditampilkan per broker.
                 const isCrypto = holding.assetClass === 'crypto';
                 return (
-                  <tr key={p.custodian} className="border-b border-gray-100 dark:border-gray-700/60 last:border-0">
+                  <tr key={p.custodian} className="border-b border-gray-200 dark:border-gray-700 last:border-0">
                     <td className="px-4 py-3.5 font-medium text-gray-800 dark:text-gray-100">{p.custodian}</td>
                     <Td align="right">
                       {!isCrypto && p.quantity > 0 ? (
@@ -314,7 +314,7 @@ export default function AssetInstrumentPage() {
               </thead>
               <tbody>
                 {holding.events.map((e) => (
-                  <tr key={e.transactionId} className="border-b border-gray-100 dark:border-gray-700/60 last:border-0">
+                  <tr key={e.transactionId} className="border-b border-gray-200 dark:border-gray-700 last:border-0">
                     <Td>{formatDateShort(e.date)}</Td>
                     <td className="px-4 py-3.5">
                       <span
