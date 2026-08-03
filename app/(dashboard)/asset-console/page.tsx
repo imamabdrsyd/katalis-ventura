@@ -302,54 +302,55 @@ export default function AssetConsolePage() {
                         </>
                       )}
                     </Td>
+                    {/* Avg Price + Last Price. Untuk venture keduanya jadi SATU
+                        sel (colSpan=2) berisi valuasi bisnis — venture tidak
+                        punya "harga per unit" yang sebanding dengan
+                        lembar/coin/gram kelas lain (§28.4b).
+
+                        PENTING: kedua cabang WAJIB menghasilkan tepat 2 kolom.
+                        Kalau jumlahnya beda, seluruh kolom sesudahnya di baris
+                        lain ikut bergeser (pernah terjadi: Studio Unit tampil
+                        Avg/Last tertukar dan P/L kosong). */}
                     {isVenture ? (
-                      // Avg Price + Last Price tampil sebagai SATU field
-                      // gabungan utk venture. Struktur tabel TETAP 2 <td>
-                      // biasa (bukan colSpan, bukan negative margin) — kedua
-                      // pendekatan itu mengubah lebar efektif kolom lain dan
-                      // bikin baris lain (BTC/BMRI/dst) ikut bergeser/wrap.
-                      // Sel Avg Price dikosongkan, sel Last Price berisi pill
-                      // yang secukupnya lebar (bukan menutup fisik dua kolom)
-                      // — tetap satu unit visual tanpa menyentuh grid tabel.
-                      <>
-                        <td className="px-4 py-3.5" />
-                        <td className="px-4 py-3.5 text-right tabular-nums whitespace-nowrap">
-                          {h.venture?.unresolved ? (
-                            <span className="text-gray-400 dark:text-gray-500">—</span>
-                          ) : (
-                            <span className="inline-flex flex-col items-end gap-0.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-2.5 py-1">
-                              <span className="text-gray-800 dark:text-gray-100">
-                                {formatCurrency(h.venture?.totalEquity ?? 0)}
-                              </span>
-                              <span className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                                {ta.ventureValuation}
-                              </span>
+                      <td className="px-4 py-3.5 text-right tabular-nums" colSpan={2}>
+                        {h.venture?.unresolved ? (
+                          <span className="text-gray-400 dark:text-gray-500">—</span>
+                        ) : (
+                          <span className="inline-flex flex-col items-center gap-0.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-3 py-1.5">
+                            <span className="text-gray-800 dark:text-gray-100">
+                              {formatCurrency(h.venture?.totalEquity ?? 0)}
                             </span>
-                          )}
+                            <span className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                              {ta.ventureValuation}
+                            </span>
+                          </span>
+                        )}
+                      </td>
+                    ) : (
+                      <>
+                        <Td align="right">{closed ? '—' : formatUnitPrice(h.avgCostPerPriceUnit)}</Td>
+                        <td className="px-4 py-3.5 text-right tabular-nums whitespace-nowrap">
+                          {/* Update harga inline: klik sel ini tidak boleh ikut
+                              membuka halaman detail (row-nya clickable). */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPriceTarget(h);
+                            }}
+                            title={ta.updatePrice}
+                            className="min-h-[44px] sm:min-h-0 px-2 py-1 -mr-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                          >
+                            {h.lastPrice > 0 ? (
+                              formatUnitPrice(h.lastPrice)
+                            ) : (
+                              <span className="text-xs text-amber-600 dark:text-amber-400">
+                                {ta.priceNeverUpdated}
+                              </span>
+                            )}
+                          </button>
                         </td>
                       </>
-                    ) : (
-                      <td className="px-4 py-3.5 text-right tabular-nums whitespace-nowrap">
-                        {/* Update harga inline: klik sel ini tidak boleh ikut
-                            membuka halaman detail (row-nya clickable). */}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPriceTarget(h);
-                          }}
-                          title={ta.updatePrice}
-                          className="min-h-[44px] sm:min-h-0 px-2 py-1 -mr-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-                        >
-                          {h.lastPrice > 0 ? (
-                            formatUnitPrice(h.lastPrice)
-                          ) : (
-                            <span className="text-xs text-amber-600 dark:text-amber-400">
-                              {ta.priceNeverUpdated}
-                            </span>
-                          )}
-                        </button>
-                      </td>
                     )}
                     <Td align="right">{formatCurrency(h.totalCostBasis)}</Td>
                     <Td align="right">{h.hasLivePrice ? formatCurrency(h.marketValue) : '—'}</Td>
