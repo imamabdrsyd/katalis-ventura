@@ -133,27 +133,30 @@ export async function disconnectVenture(itemId: string): Promise<void> {
  * Nama pemilik yang ditampilkan sebagai "kustodian" venture di Asset Console.
  *
  * Venture tidak punya kustodian pihak ketiga (bukan broker/exchange) —
- * proxy paling jujur adalah nama PROFIL user yang jadi pengelola bisnis
- * target (`profiles.full_name`, bukan `accounts.account_name`: nama akun
- * ekuitas bisa generik seperti "Owner's Capital" dan tidak selalu sama
- * dengan nama pemiliknya). Diambil dari `user_business_roles` role
- * business_manager/both; kalau lebih dari satu, gabung dengan " · " —
- * kalau tidak ada satu pun (mis. hanya investor), fallback ke pembuat bisnis
- * (`businesses.created_by`).
+ * proxy paling jujur adalah nama PROFIL pemilik bisnis target
+ * (`profiles.full_name`, bukan `accounts.account_name`: nama akun ekuitas
+ * bisa generik seperti "Owner's Capital" dan tidak selalu sama dengan nama
+ * pemiliknya). Sumbernya adalah **pembuat bisnis** (`businesses.created_by`)
+ * — creator bukan selalu punya row `user_business_roles` bertipe
+ * business_manager (bisa berperan Super Admin/Creator murni, seperti pada
+ * data real: Imam Abdurasyid = creator Hillside Studio, sementara role
+ * business_manager di tabel roles dipegang Monica Sandra). Fallback ke role
+ * business_manager/both kalau bisnisnya tidak punya created_by (data lama).
  */
 async function loadTargetManagerNames(businessId: string, createdBy: string | null): Promise<string> {
   const supabase = createClient();
 
-  const { data: roles, error } = await supabase
-    .from('user_business_roles')
-    .select('user_id, role')
-    .eq('business_id', businessId)
-    .in('role', ['business_manager', 'both']);
+  let ids = createdBy ? [createdBy] : [];
 
-  if (error) return '';
+  if (ids.length === 0) {
+    const { data: roles } = await supabase
+      .from('user_business_roles')
+      .select('user_id')
+      .eq('business_id', businessId)
+      .in('role', ['business_manager', 'both']);
+    ids = [...new Set((roles ?? []).map((r) => r.user_id as string))];
+  }
 
-  const managerIds = [...new Set((roles ?? []).map((r) => r.user_id as string))];
-  const ids = managerIds.length > 0 ? managerIds : createdBy ? [createdBy] : [];
   if (ids.length === 0) return '';
 
   const { data: profiles } = await supabase.from('profiles').select('id, full_name').in('id', ids);
