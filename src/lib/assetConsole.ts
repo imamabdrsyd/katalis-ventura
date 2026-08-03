@@ -109,6 +109,54 @@ export interface AssetHolding {
    * memperingatkan alih-alih diam-diam menampilkan angka yang salah.
    */
   hasUnknownQuantity: boolean;
+
+  /**
+   * Nilai pasar/valuasi tersedia, sehingga marketValue & unrealizedPl bermakna.
+   *
+   * Bukan sekadar `lastPrice > 0`: untuk kelas 'venture' valuasi datang dari
+   * total ekuitas bisnis target, yang SAH bernilai nol atau negatif (bisnis
+   * rugi melebihi modal disetor). Memakai `lastPrice > 0` akan menyembunyikan
+   * justru kasus yang paling perlu dilihat pemilik.
+   */
+  hasLivePrice: boolean;
+
+  /** Hanya untuk kelas 'venture' — konteks bisnis & akun ekuitas yang ditaut. */
+  venture?: VentureLink;
+}
+
+/** Identitas tautan venture, untuk ditampilkan & untuk aksi putus-tautan. */
+export interface VentureLink {
+  businessId: string;
+  businessName: string;
+  stockAccountId: string;
+  ownerAccountName: string;
+  /** Total ekuitas bisnis target (valuasi 100%). */
+  totalEquity: number;
+  /** Buku besar target tidak terbaca (mis. user keluar dari bisnis itu). */
+  unresolved: boolean;
+}
+
+/**
+ * Potret posisi ekuitas pemilik di bisnis lain — dihitung di layer API dari
+ * buku besar bisnis TARGET (calculateCapTable + calculateBalanceSheet), lalu
+ * disuntikkan ke sini. Engine ini sengaja tidak melakukan I/O sendiri supaya
+ * tetap murni & mudah diuji.
+ */
+export interface VentureSnapshot {
+  /** catalog_items.id baris venture-nya. */
+  itemId: string;
+  businessId: string;
+  businessName: string;
+  stockAccountId: string;
+  ownerAccountName: string;
+  /** Net credit akun EQUITY is_stock milik user = modal yang disetor. */
+  contributed: number;
+  /** Persentase kepemilikan dari cap table, 0–100. */
+  ownershipPct: number;
+  /** Total ekuitas bisnis target = valuasi 100% (proxy book value, Fase 1). */
+  totalEquity: number;
+  /** Data bisnis target gagal dibaca — jangan tampilkan angka nol yang menyesatkan. */
+  unresolved: boolean;
 }
 
 export interface AssetConsoleSummary {
@@ -345,6 +393,79 @@ function buildHolding(item: CatalogItem, txs: Transaction[]): AssetHolding {
     unrealizedPlPct: totalCostBasis > 0 && lastPrice > 0 ? (unrealizedPl / totalCostBasis) * 100 : 0,
     realizedPl,
     hasUnknownQuantity,
+    hasLivePrice: lastPrice > 0,
+  };
+}
+
+/**
+ * Bangun holding kelas 'venture' — kepemilikan pemilik di bisnis LAIN.
+ *
+ * Berbeda dari kelas lain, tidak ada satu pun transaksi di bisnis pemantau yang
+ * dibaca: seluruh angka berasal dari buku besar bisnis target lewat
+ * `VentureSnapshot`. Pemetaannya ke bentuk holding yang sama:
+ *
+ *   kuantitas       → persen kepemilikan (2,65)
+ *   satuan harga    → '%'
+ *   harga terakhir  → valuasi per 1% = totalEquity / 100
+ *   cost basis      → modal disetor pemilik di akun ekuitasnya
+ *
+ * Pemetaan itu bukan kosmetik: dengan lastPrice = totalEquity/100, identitas
+ * `kuantitas × harga = nilai pasar` yang dipakai seluruh tabel tetap berlaku
+ * apa adanya (2,65 × equity/100 = 2,65% × equity), jadi tidak ada cabang
+ * kalkulasi khusus yang bisa melenceng dari kelas lain.
+ *
+ * Realized P/L sengaja 0: dividen/prive yang ditarik dari bisnis target adalah
+ * peristiwa di buku besar SANA, dan menariknya ke sini akan menghitung ganda
+ * dengan laporan bisnis itu sendiri.
+ */
+function buildVentureHolding(item: CatalogItem, snapshot: VentureSnapshot | undefined): AssetHolding {
+  const resolved = snapshot !== undefined && !snapshot.unresolved;
+  const ownershipPct = resolved ? snapshot.ownershipPct : 0;
+  const contributed = resolved ? snapshot.contributed : 0;
+  const totalEquity = resolved ? snapshot.totalEquity : 0;
+
+  const valuationPerPct = totalEquity / 100;
+  const marketValue = (ownershipPct / 100) * totalEquity;
+  const unrealizedPl = resolved ? marketValue - contributed : 0;
+
+  return {
+    itemId: item.id,
+    symbol: snapshot?.businessName || item.name,
+    assetClass: 'venture',
+    priceUnit: '%',
+    lotSize: 1,
+    lastPrice: valuationPerPct,
+    lastPriceUpdatedAt: null, // valuasi selalu live dari neraca, bukan input manual
+    positions: resolved
+      ? [
+          {
+            custodian: snapshot.businessName,
+            quantity: ownershipPct,
+            costBasis: contributed,
+            avgCost: ownershipPct > 0 ? contributed / ownershipPct : 0,
+            realizedPl: 0,
+          },
+        ]
+      : [],
+    events: [],
+    totalQuantity: ownershipPct,
+    totalCostBasis: contributed,
+    avgCost: ownershipPct > 0 ? contributed / ownershipPct : 0,
+    avgCostPerPriceUnit: ownershipPct > 0 ? contributed / ownershipPct : 0,
+    marketValue: resolved ? marketValue : 0,
+    unrealizedPl,
+    unrealizedPlPct: resolved && contributed > 0 ? (unrealizedPl / contributed) * 100 : 0,
+    realizedPl: 0,
+    hasUnknownQuantity: false,
+    hasLivePrice: resolved,
+    venture: {
+      businessId: snapshot?.businessId ?? item.linked_business_id ?? '',
+      businessName: snapshot?.businessName ?? item.name,
+      stockAccountId: snapshot?.stockAccountId ?? item.linked_stock_account_id ?? '',
+      ownerAccountName: snapshot?.ownerAccountName ?? '',
+      totalEquity,
+      unresolved: !resolved,
+    },
   };
 }
 
@@ -357,7 +478,8 @@ function buildHolding(item: CatalogItem, txs: Transaction[]): AssetHolding {
  */
 export function buildAssetHoldings(
   catalogItems: CatalogItem[],
-  transactions: Transaction[]
+  transactions: Transaction[],
+  ventureSnapshots: VentureSnapshot[] = []
 ): AssetHolding[] {
   const assetItems = catalogItems.filter((i) => i.asset_class && !i.deleted_at);
   if (assetItems.length === 0) return [];
@@ -374,8 +496,14 @@ export function buildAssetHoldings(
     if (bucket) bucket.push(tx);
   }
 
+  const snapshotByItem = new Map(ventureSnapshots.map((s) => [s.itemId, s]));
+
   return assetItems
-    .map((item) => buildHolding(item, byItem.get(item.id) ?? []))
+    .map((item) =>
+      item.asset_class === 'venture'
+        ? buildVentureHolding(item, snapshotByItem.get(item.id))
+        : buildHolding(item, byItem.get(item.id) ?? [])
+    )
     .sort((a, b) => b.marketValue - a.marketValue || b.totalCostBasis - a.totalCostBasis);
 }
 
@@ -392,6 +520,6 @@ export function summarizeHoldings(holdings: AssetHolding[]): AssetConsoleSummary
     totalUnrealizedPlPct: totalInvested > 0 ? (totalUnrealizedPl / totalInvested) * 100 : 0,
     totalRealizedPl,
     openInstrumentCount: holdings.filter((h) => h.totalQuantity > EPSILON).length,
-    missingPriceCount: holdings.filter((h) => h.totalQuantity > EPSILON && h.lastPrice <= 0).length,
+    missingPriceCount: holdings.filter((h) => h.totalQuantity > EPSILON && !h.hasLivePrice).length,
   };
 }

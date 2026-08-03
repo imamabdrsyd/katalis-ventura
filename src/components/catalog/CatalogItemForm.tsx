@@ -6,7 +6,7 @@ import { AlertCircle, Package, Wrench, Camera, Crop, ImageIcon, Loader2, Maximiz
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 import { useLanguage } from '@/context/LanguageContext';
-import { ASSET_CLASSES, ASSET_CLASS_META } from '@/lib/assetClasses';
+import { CATALOG_ASSET_CLASSES, ASSET_CLASS_META, assetClassLabelKey } from '@/lib/assetClasses';
 
 export interface CatalogItemFormData {
   name: string;
@@ -600,12 +600,12 @@ export function CatalogItemForm({
                 }}
               >
                 <option value="">{tc.assetClassNone}</option>
-                {ASSET_CLASSES.map(cls => (
+                {/* 'venture' sengaja tidak ditawarkan di sini — kelas itu tidak
+                    menandai barang/jasa, melainkan menautkan bisnis lain, dan
+                    dibuat lewat tombol "Hubungkan Venture" di Asset Console. */}
+                {CATALOG_ASSET_CLASSES.map(cls => (
                   <option key={cls} value={cls}>
-                    {t.assetConsole[
-                      `class${cls.charAt(0).toUpperCase()}${cls.slice(1)}` as
-                        'classStock' | 'classCrypto' | 'classProperty' | 'classGold'
-                    ]}
+                    {t.assetConsole[assetClassLabelKey(cls)]}
                   </option>
                 ))}
               </FloatingSelect>

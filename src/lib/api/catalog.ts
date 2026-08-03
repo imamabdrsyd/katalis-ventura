@@ -65,6 +65,11 @@ const SELECT_WITH_ACCOUNT = `
  *   - undefined → semua item bisnis (perilaku lama; POS/produk).
  *   - string    → hanya item unit itu.
  *   - null      → hanya item tanpa unit (produk / add-on lintas unit).
+ *
+ * Baris `asset_class='venture'` (migr 126) selalu dikecualikan: ia menumpang
+ * tabel ini sebagai registry instrumen Asset Console, tapi bukan barang/jasa —
+ * tidak punya SKU, stok, atau harga jual, dan ditautkan lewat halaman Asset
+ * Console, bukan form Katalog. Menampilkannya di sini hanya membingungkan.
  */
 export async function getCatalogItems(
   businessId: string,
@@ -75,7 +80,10 @@ export async function getCatalogItems(
     .from('catalog_items')
     .select(SELECT_WITH_ACCOUNT)
     .eq('business_id', businessId)
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    // `.neq()` saja tidak cukup — di SQL, NULL <> 'venture' bernilai NULL,
+    // sehingga seluruh item katalog biasa (asset_class NULL) ikut terbuang.
+    .or('asset_class.is.null,asset_class.neq.venture');
 
   if (opts?.activeOnly) {
     query = query.eq('is_active', true);

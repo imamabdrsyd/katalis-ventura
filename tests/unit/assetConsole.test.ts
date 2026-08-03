@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildAssetHoldings, summarizeHoldings } from '@/lib/assetConsole';
+import { buildAssetHoldings, summarizeHoldings, type VentureSnapshot } from '@/lib/assetConsole';
 import type { Account, CatalogItem, Transaction } from '@/types';
 
 /**
@@ -411,5 +411,106 @@ describe('buildAssetHoldings — crypto: Unit di-canon dari catalog, bukan SUM(t
     );
     expect(holdings[0].totalQuantity).toBe(3); // dari transaksi, bukan asset_lot_size (100)
     expect(holdings[0].lotSize).toBe(100); // tetap rasio lembar-per-lot, bukan di-override ke 1
+  });
+});
+
+describe('buildAssetHoldings — venture: posisi dibaca dari buku besar bisnis lain', () => {
+  /** Item venture: penunjuk saja, tidak menyimpan satu pun nominal. */
+  function venture(name: string): CatalogItem {
+    return instrument(name, {
+      asset_class: 'venture',
+      asset_lot_size: 1,
+      default_price: 0,
+      unit: '%',
+      linked_business_id: 'biz-hillside',
+      linked_stock_account_id: 'acc-3200',
+    });
+  }
+
+  /** Potret cap table + neraca bisnis target, dihitung di layer API. */
+  function snapshot(over: Partial<VentureSnapshot> = {}): VentureSnapshot {
+    return {
+      itemId: 'item-Hillside Studio',
+      businessId: 'biz-hillside',
+      businessName: 'Hillside Studio',
+      stockAccountId: 'acc-3200',
+      ownerAccountName: 'Imam',
+      contributed: 5_276_819,
+      ownershipPct: 2.65,
+      totalEquity: 199_123_456,
+      unresolved: false,
+      ...over,
+    };
+  }
+
+  it('memetakan kepemilikan ke kuantitas dan valuasi ke nilai pasar', () => {
+    const item = venture('Hillside Studio');
+    const [h] = buildAssetHoldings([item], [], [snapshot()]);
+
+    expect(h.assetClass).toBe('venture');
+    expect(h.totalQuantity).toBeCloseTo(2.65, 6); // kolom Unit menampilkan "2,65%"
+    expect(h.totalCostBasis).toBe(5_276_819); // dari akun ekuitas Imam, bukan input manual
+    expect(h.marketValue).toBeCloseTo(0.0265 * 199_123_456, 2);
+    expect(h.unrealizedPl).toBeCloseTo(0.0265 * 199_123_456 - 5_276_819, 2);
+    expect(h.hasLivePrice).toBe(true);
+  });
+
+  it('menjaga identitas kuantitas × harga = nilai pasar seperti kelas lain', () => {
+    const item = venture('Hillside Studio');
+    const [h] = buildAssetHoldings([item], [], [snapshot()]);
+    // lastPrice = valuasi per 1% — bukan angka kosmetik: tabel memakai
+    // identitas ini untuk semua kelas, jadi venture tidak butuh cabang khusus.
+    expect(h.totalQuantity * h.lotSize * h.lastPrice).toBeCloseTo(h.marketValue, 2);
+    expect(h.totalQuantity * h.avgCostPerPriceUnit).toBeCloseTo(h.totalCostBasis, 2);
+  });
+
+  it('tidak mengklaim P/L terealisasi — laba bisnis target diakui di buku besar sana', () => {
+    const item = venture('Hillside Studio');
+    const [h] = buildAssetHoldings([item], [], [snapshot()]);
+    expect(h.realizedPl).toBe(0);
+    expect(h.events).toHaveLength(0);
+  });
+
+  it('ekuitas negatif tetap dilaporkan, bukan disembunyikan sebagai "harga belum diisi"', () => {
+    const item = venture('Hillside Studio');
+    // Bisnis rugi melebihi modal disetor: nilai pasar posisi jadi negatif.
+    // Gate `lastPrice > 0` yang dipakai kelas lain akan menyembunyikan justru
+    // kasus yang paling perlu dilihat pemilik — karena itu ada hasLivePrice.
+    const [h] = buildAssetHoldings([item], [], [snapshot({ totalEquity: -10_000_000 })]);
+    expect(h.hasLivePrice).toBe(true);
+    expect(h.marketValue).toBeCloseTo(-265_000, 2);
+    expect(h.unrealizedPl).toBeLessThan(0);
+    expect(summarizeHoldings([h]).missingPriceCount).toBe(0);
+  });
+
+  it('tautan yang tidak terbaca ditandai unresolved, bukan dilaporkan sebagai Rp0 nyata', () => {
+    const item = venture('Hillside Studio');
+    const [h] = buildAssetHoldings([item], [], [snapshot({ unresolved: true })]);
+    expect(h.venture?.unresolved).toBe(true);
+    expect(h.hasLivePrice).toBe(false);
+    expect(h.totalCostBasis).toBe(0);
+    expect(h.unrealizedPl).toBe(0); // jangan laporkan −100% dari data yang gagal dibaca
+    expect(h.positions).toHaveLength(0);
+  });
+
+  it('venture tanpa snapshot (mis. fetch gagal total) tidak melempar', () => {
+    const item = venture('Hillside Studio');
+    const [h] = buildAssetHoldings([item], [], []);
+    expect(h.venture?.unresolved).toBe(true);
+    expect(h.totalQuantity).toBe(0);
+  });
+
+  it('ikut dijumlahkan ke KPI bersama kelas lain', () => {
+    const bmri = instrument('BMRI', { default_price: 4270 });
+    const item = venture('Hillside Studio');
+    seq = 0;
+    const holdings = buildAssetHoldings(
+      [bmri, item],
+      [buy(bmri, 'Sinarmas Sekuritas', '2026-07-16', 3, 1_282_797)],
+      [snapshot()]
+    );
+    const s = summarizeHoldings(holdings);
+    expect(s.totalInvested).toBeCloseTo(1_282_797 + 5_276_819, 2);
+    expect(s.openInstrumentCount).toBe(2);
   });
 });

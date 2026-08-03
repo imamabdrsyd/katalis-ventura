@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import { Eye, EyeOff, type LucideIcon } from 'lucide-react';
 import type { AssetClass } from '@/types';
-import { ASSET_CLASS_BADGE_CLASS, ASSET_CLASS_META } from '@/lib/assetClasses';
+import { ASSET_CLASS_BADGE_CLASS, ASSET_CLASS_META, assetClassLabelKey } from '@/lib/assetClasses';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
 import type { AssetHolding } from '@/lib/assetConsole';
@@ -22,14 +22,22 @@ export function quantityUnitLabel(holding: Pick<AssetHolding, 'assetClass' | 'pr
   return holding.priceUnit;
 }
 
+/**
+ * Persen kepemilikan venture. Dipisah dari `formatQuantity` karena satuannya
+ * melekat pada angkanya ("2,65%", tanpa spasi) — beda dari lot/coin/gram yang
+ * label satuannya tampil terpisah dengan gaya redup.
+ */
+export function formatOwnershipPct(pct: number): string {
+  return `${new Intl.NumberFormat('id-ID', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(pct)}%`;
+}
+
 /** Label kelas aset dari i18n tanpa menyebar literal kelas ke seluruh UI. */
 export function useAssetClassLabel(): (cls: AssetClass) => string {
   const { t } = useLanguage();
-  return (cls) =>
-    t.assetConsole[
-      `class${cls.charAt(0).toUpperCase()}${cls.slice(1)}` as
-        'classStock' | 'classCrypto' | 'classProperty' | 'classGold'
-    ];
+  return (cls) => t.assetConsole[assetClassLabelKey(cls)];
 }
 
 export function AssetClassBadge({ assetClass }: { assetClass: AssetClass }) {

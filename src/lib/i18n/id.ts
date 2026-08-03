@@ -1356,6 +1356,7 @@ export const id: Translations = {
     classCrypto: 'Kripto',
     classProperty: 'Properti',
     classGold: 'Emas',
+    classVenture: 'Venture',
     filterAll: 'Semua',
     kpiInvested: 'Total Modal',
     kpiMarketValue: 'Nilai Pasar',
@@ -1410,5 +1411,31 @@ export const id: Translations = {
     viewTransaction: 'Lihat transaksi',
     sourceNote: 'Semua angka dihitung langsung dari transaksi yang tercatat di buku besar — tidak ada pembukuan terpisah.',
     closedPosition: 'Posisi tertutup',
+    connectVenture: 'Hubungkan Venture',
+    connectVentureTitle: 'Hubungkan Venture',
+    connectVentureDesc:
+      'Pantau kepemilikanmu di bisnis lain yang ada di AXION. Modal dan persentase dibaca dari cap table bisnis itu — tidak ada angka yang diinput manual di sini.',
+    ventureBusinessLabel: 'Bisnis',
+    ventureBusinessPlaceholder: 'Pilih bisnis',
+    ventureAccountLabel: 'Akun Ekuitas Kamu',
+    ventureAccountPlaceholder: 'Pilih akun',
+    ventureAccountHint:
+      'Akun modal atas namamu di bisnis tersebut (akun ekuitas yang ditandai sebagai setoran pemilik).',
+    ventureAccountLinked: 'sudah terhubung',
+    ventureNoBusiness: 'Tidak ada bisnis lain yang bisa dihubungkan.',
+    ventureNoAccounts:
+      'Bisnis ini belum punya akun setoran pemilik. Tandai akun ekuitas sebagai setoran pemilik di Bagan Akun bisnis tersebut dulu.',
+    ventureSubmit: 'Hubungkan',
+    ventureDisconnect: 'Putuskan Tautan',
+    ventureDisconnectConfirm:
+      'Putuskan tautan venture ini dari Asset Console? Data bisnis dan transaksinya tidak ikut terhapus.',
+    ventureUnresolved: 'Data bisnis ini tidak bisa dibaca — mungkin aksesmu sudah dicabut.',
+    ventureOwnership: 'Kepemilikan',
+    ventureValuation: 'Valuasi Bisnis',
+    ventureValuationHint: 'Total ekuitas bisnis (nilai buku)',
+    ventureSourceNote:
+      'Angka venture dibaca langsung dari buku besar bisnis yang ditautkan: modal dari cap table, nilai pasar dari total ekuitasnya. Valuasi saat ini memakai nilai buku.',
+    ventureNoHistory:
+      'Riwayat transaksi ada di buku besar bisnis yang ditautkan, bukan di sini.',
   },
 };

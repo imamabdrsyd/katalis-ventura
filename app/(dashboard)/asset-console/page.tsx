@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Wallet, TrendingUp, Coins, PiggyBank, AlertTriangle, ChevronRight, Info, CandlestickChart, Gamepad2 } from 'lucide-react';
+import { Wallet, TrendingUp, Coins, PiggyBank, AlertTriangle, ChevronRight, Info, CandlestickChart, Gamepad2, Link2 } from 'lucide-react';
 import { useAssetConsole } from '@/hooks/useAssetConsole';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
@@ -11,13 +11,15 @@ import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { TableSkeleton } from '@/components/ui/PageSkeleton';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
-import { ASSET_CLASSES } from '@/lib/assetClasses';
+import { ASSET_CLASSES, isLinkedAssetClass } from '@/lib/assetClasses';
 import { UpdatePriceModal } from '@/components/assetConsole/UpdatePriceModal';
+import { ConnectVentureModal } from '@/components/assetConsole/ConnectVentureModal';
 import {
   AssetClassBadge,
   KpiCard,
   PlValue,
   SensitiveAmountToggle,
+  formatOwnershipPct,
   formatQuantity,
   formatUnitPrice,
   maskAmount,
@@ -36,12 +38,24 @@ export default function AssetConsolePage() {
   const router = useRouter();
   const classLabel = useAssetClassLabel();
 
-  const { holdings, summary, instruments, loading, error, updatePrice } = useAssetConsole();
+  const { holdings, summary, instruments, loading, error, activeBusinessId, updatePrice, refetch } =
+    useAssetConsole();
   const [filter, setFilter] = useState<ClassFilter>('all');
   const [priceTarget, setPriceTarget] = useState<AssetHolding | null>(null);
+  const [connectingVenture, setConnectingVenture] = useState(false);
   // Sensor nominal Total Invested — state di memori saja (bukan localStorage),
   // reset tiap reload sesuai keputusan produk saat ini ("untuk sementara ini").
   const [investedVisible, setInvestedVisible] = useState(true);
+
+  // Akun ekuitas yang sudah ditautkan — dipakai modal untuk menonaktifkan
+  // pilihan yang akan bentrok dengan unique index di DB.
+  const linkedAccountIds = useMemo(
+    () =>
+      instruments
+        .filter((i) => i.asset_class === 'venture' && i.linked_stock_account_id)
+        .map((i) => i.linked_stock_account_id as string),
+    [instruments]
+  );
 
   // Hanya tawarkan filter untuk kelas yang benar-benar dimiliki bisnis ini.
   const availableClasses = useMemo(
@@ -66,10 +80,31 @@ export default function AssetConsolePage() {
 
   // Belum ada item katalog yang ditandai sebagai aset — arahkan ke Katalog,
   // karena di sanalah instrumen didefinisikan (bukan di halaman ini).
+  const connectButton = (
+    <button
+      type="button"
+      onClick={() => setConnectingVenture(true)}
+      className="btn-ghost flex items-center gap-2 flex-shrink-0"
+    >
+      <Link2 className="w-4 h-4" aria-hidden />
+      {ta.connectVenture}
+    </button>
+  );
+
+  const ventureModal = activeBusinessId ? (
+    <ConnectVentureModal
+      isOpen={connectingVenture}
+      onClose={() => setConnectingVenture(false)}
+      businessId={activeBusinessId}
+      linkedAccountIds={linkedAccountIds}
+      onConnected={refetch}
+    />
+  ) : null;
+
   if (instruments.length === 0) {
     return (
       <div className="p-4 md:p-8 space-y-6">
-        <PageHeader title={ta.title} subtitle={ta.subtitle} />
+        <PageHeader title={ta.title} subtitle={ta.subtitle} action={connectButton} />
         <EmptyState
           variant="accent"
           icon={Wallet}
@@ -81,13 +116,14 @@ export default function AssetConsolePage() {
             </Link>
           }
         />
+        {ventureModal}
       </div>
     );
   }
 
   return (
     <div className="p-4 md:p-8 space-y-6">
-      <PageHeader title={ta.title} subtitle={ta.subtitle} />
+      <PageHeader title={ta.title} subtitle={ta.subtitle} action={connectButton} />
 
       {/* KPI */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -180,6 +216,11 @@ export default function AssetConsolePage() {
             <tbody>
               {visible.map((h) => {
                 const closed = h.totalQuantity <= 0;
+                // Venture: harga per satuan tidak punya arti yang bisa
+                // dibandingkan dengan baris lain (satuannya persen, bukan
+                // lembar/coin/gram) dan tidak pernah diinput manual — valuasinya
+                // live dari neraca bisnis target. Kolom harga jadi "—".
+                const isVenture = isLinkedAssetClass(h.assetClass);
                 return (
                   <tr
                     key={h.itemId}
@@ -195,22 +236,42 @@ export default function AssetConsolePage() {
                             <AlertTriangle className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" aria-label={ta.unknownQtyWarning} />
                           </span>
                         )}
+                        {h.venture?.unresolved && (
+                          <span title={ta.ventureUnresolved}>
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" aria-label={ta.ventureUnresolved} />
+                          </span>
+                        )}
                       </div>
-                      {(() => {
-                        // positions bisa memuat posisi yang sudah tertutup
-                        // (quantity=0) tapi masih dicatat karena realized P/L-nya
-                        // — baris kustodian di sini hanya untuk yang MASIH pegang.
-                        const openCustodians = h.positions.filter((p) => p.quantity > 0);
-                        return openCustodians.length > 0 ? (
+                      {isVenture ? (
+                        // Baris venture: konteks yang berguna bukan "kustodian"
+                        // (namanya sudah jadi simbol) tapi valuasi 100% bisnis
+                        // target — pembilang dari mana nilai pasar berasal.
+                        h.hasLivePrice ? (
                           <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
-                            {openCustodians.map((p) => p.custodian).join(' · ')}
+                            {ta.ventureValuation}: {formatCurrency(h.venture?.totalEquity ?? 0)}
                           </p>
-                        ) : null;
-                      })()}
+                        ) : null
+                      ) : (
+                        (() => {
+                          // positions bisa memuat posisi yang sudah tertutup
+                          // (quantity=0) tapi masih dicatat karena realized P/L-nya
+                          // — baris kustodian di sini hanya untuk yang MASIH pegang.
+                          const openCustodians = h.positions.filter((p) => p.quantity > 0);
+                          return openCustodians.length > 0 ? (
+                            <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
+                              {openCustodians.map((p) => p.custodian).join(' · ')}
+                            </p>
+                          ) : null;
+                        })()
+                      )}
                     </td>
                     <Td align="right">
                       {closed ? (
                         <span className="text-xs text-gray-400 dark:text-gray-500">{ta.closedPosition}</span>
+                      ) : isVenture ? (
+                        <span className="text-gray-800 dark:text-gray-100">
+                          {formatOwnershipPct(h.totalQuantity)}
+                        </span>
                       ) : (
                         <>
                           <span className="text-gray-800 dark:text-gray-100">
@@ -232,33 +293,39 @@ export default function AssetConsolePage() {
                       )}
                     </Td>
                     <Td align="right">
-                      {closed ? '—' : formatUnitPrice(h.avgCostPerPriceUnit)}
+                      {closed || isVenture ? '—' : formatUnitPrice(h.avgCostPerPriceUnit)}
                     </Td>
-                    <td className="px-4 py-3.5 text-right tabular-nums whitespace-nowrap">
-                      {/* Update harga inline: klik sel ini tidak boleh ikut
-                          membuka halaman detail (row-nya clickable). */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPriceTarget(h);
-                        }}
-                        title={ta.updatePrice}
-                        className="min-h-[44px] sm:min-h-0 px-2 py-1 -mr-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-                      >
-                        {h.lastPrice > 0 ? (
-                          formatUnitPrice(h.lastPrice)
-                        ) : (
-                          <span className="text-xs text-amber-600 dark:text-amber-400">
-                            {ta.priceNeverUpdated}
-                          </span>
-                        )}
-                      </button>
-                    </td>
+                    {isVenture ? (
+                      <Td align="right">
+                        <span className="text-gray-400 dark:text-gray-500">—</span>
+                      </Td>
+                    ) : (
+                      <td className="px-4 py-3.5 text-right tabular-nums whitespace-nowrap">
+                        {/* Update harga inline: klik sel ini tidak boleh ikut
+                            membuka halaman detail (row-nya clickable). */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPriceTarget(h);
+                          }}
+                          title={ta.updatePrice}
+                          className="min-h-[44px] sm:min-h-0 px-2 py-1 -mr-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                        >
+                          {h.lastPrice > 0 ? (
+                            formatUnitPrice(h.lastPrice)
+                          ) : (
+                            <span className="text-xs text-amber-600 dark:text-amber-400">
+                              {ta.priceNeverUpdated}
+                            </span>
+                          )}
+                        </button>
+                      </td>
+                    )}
                     <Td align="right">{formatCurrency(h.totalCostBasis)}</Td>
-                    <Td align="right">{h.lastPrice > 0 ? formatCurrency(h.marketValue) : '—'}</Td>
+                    <Td align="right">{h.hasLivePrice ? formatCurrency(h.marketValue) : '—'}</Td>
                     <td className="px-4 py-3.5 text-right">
-                      {h.lastPrice > 0 && !closed ? (
+                      {h.hasLivePrice && !closed ? (
                         <PlValue value={h.unrealizedPl} pct={h.unrealizedPlPct} wrap={false} />
                       ) : h.realizedPl !== 0 ? (
                         <PlValue value={h.realizedPl} wrap={false} />
@@ -287,18 +354,30 @@ export default function AssetConsolePage() {
       </p>
 
       <UpdatePriceModal holding={priceTarget} onClose={() => setPriceTarget(null)} onSave={updatePrice} />
+      {ventureModal}
     </div>
   );
 }
 
-function PageHeader({ title, subtitle }: { title: string; subtitle: string }) {
+function PageHeader({
+  title,
+  subtitle,
+  action,
+}: {
+  title: string;
+  subtitle: string;
+  action?: React.ReactNode;
+}) {
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
-        <Gamepad2 className="w-7 h-7 text-indigo-500 dark:text-indigo-400" aria-hidden />
-        {title}
-      </h1>
-      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>
+    <div className="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
+          <Gamepad2 className="w-7 h-7 text-indigo-500 dark:text-indigo-400" aria-hidden />
+          {title}
+        </h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>
+      </div>
+      {action}
     </div>
   );
 }

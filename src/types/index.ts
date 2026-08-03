@@ -147,7 +147,7 @@ export type RateKind = 'weekday' | 'weekend' | 'monthly';
 // Kelas aset investasi (migr 125). Item katalog yang di-set asset_class akan
 // muncul di Asset Console; NULL = produk/jasa biasa. Tambah kelas baru cukup di
 // sini + ASSET_CLASS_META (src/lib/assetClasses.ts) — jangan sebar literalnya.
-export type AssetClass = 'stock' | 'crypto' | 'property' | 'gold';
+export type AssetClass = 'stock' | 'crypto' | 'property' | 'gold' | 'venture';
 
 // Katalog produk/jasa terpusat per bisnis. Dipakai sebagai master data saat
 // entry transaksi EARN (picker di multi-line form & quick entry).
@@ -175,6 +175,13 @@ export interface CatalogItem {
   asset_class?: AssetClass | null;
   asset_lot_size?: number;
   asset_price_updated_at?: string | null;
+  // Kelas 'venture' (migr 126) — satu-satunya kelas yang TIDAK bersumber dari
+  // transaksi bisnis ini. Yang dipantau adalah posisi ekuitas pemilik di bisnis
+  // LAIN: cost basis & % kepemilikan dari cap table bisnis target, nilai pasar
+  // dari total ekuitasnya. Kedua kolom wajib terisi bila (dan hanya bila)
+  // asset_class='venture' — dijaga CHECK catalog_items_venture_link_check.
+  linked_business_id?: string | null;
+  linked_stock_account_id?: string | null;
   // Rich display config — dipakai saat item difitur di omni-channel "Produk Unggulan"
   image_url?: string | null;
   image_fit?: 'cover' | 'contain' | null;

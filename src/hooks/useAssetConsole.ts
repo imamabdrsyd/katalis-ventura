@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useBusinessContext } from '@/context/BusinessContext';
 import * as assetApi from '@/lib/api/assetConsole';
+import { disconnectVenture } from '@/lib/api/venture';
 import type { AssetConsoleData } from '@/lib/api/assetConsole';
 import type { AssetHolding } from '@/lib/assetConsole';
 
@@ -27,6 +28,8 @@ export interface UseAssetConsoleReturn extends AssetConsoleData {
   refetch: () => Promise<void>;
   /** Simpan harga pasar baru lalu hitung ulang seluruh turunannya. */
   updatePrice: (itemId: string, price: number) => Promise<void>;
+  /** Lepas tautan venture (soft delete baris katalognya), lalu muat ulang. */
+  disconnect: (itemId: string) => Promise<void>;
   findHolding: (itemId: string) => AssetHolding | undefined;
 }
 
@@ -74,6 +77,14 @@ export function useAssetConsole(): UseAssetConsoleReturn {
     [load]
   );
 
+  const disconnect = useCallback(
+    async (itemId: string) => {
+      await disconnectVenture(itemId);
+      await load();
+    },
+    [load]
+  );
+
   const findHolding = useCallback(
     (itemId: string) => data.holdings.find((h) => h.itemId === itemId),
     [data.holdings]
@@ -86,6 +97,7 @@ export function useAssetConsole(): UseAssetConsoleReturn {
     activeBusinessId: activeBusinessId ?? null,
     refetch: load,
     updatePrice,
+    disconnect,
     findHolding,
   };
 }

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   ArrowLeft,
   Wallet,
@@ -12,17 +13,20 @@ import {
   AlertTriangle,
   Pencil,
   Info,
+  Unlink,
 } from 'lucide-react';
 import { useAssetConsole } from '@/hooks/useAssetConsole';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { TableSkeleton } from '@/components/ui/PageSkeleton';
+import { isLinkedAssetClass } from '@/lib/assetClasses';
 import { UpdatePriceModal } from '@/components/assetConsole/UpdatePriceModal';
 import {
   AssetClassBadge,
   KpiCard,
   PlValue,
+  formatOwnershipPct,
   formatQuantity,
   formatUnitPrice,
   plColorClass,
@@ -34,10 +38,12 @@ export default function AssetInstrumentPage() {
   const { t } = useLanguage();
   const ta = t.assetConsole;
   const params = useParams<{ itemId: string }>();
+  const router = useRouter();
   const itemId = params?.itemId;
 
-  const { findHolding, loading, error, updatePrice } = useAssetConsole();
+  const { findHolding, loading, error, updatePrice, disconnect } = useAssetConsole();
   const [editingPrice, setEditingPrice] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   const holding = itemId ? findHolding(itemId) : undefined;
 
@@ -60,6 +66,23 @@ export default function AssetInstrumentPage() {
   };
 
   const closed = holding.totalQuantity <= 0;
+  // Venture: tidak ada harga manual (valuasi live dari neraca bisnis target)
+  // dan tidak ada riwayat transaksi lokal — aksinya "putuskan tautan",
+  // bukan "update harga".
+  const isVenture = isLinkedAssetClass(holding.assetClass);
+
+  async function handleDisconnect() {
+    if (!holding || !window.confirm(ta.ventureDisconnectConfirm)) return;
+    setDisconnecting(true);
+    try {
+      await disconnect(holding.itemId);
+      toast.success(ta.ventureDisconnect);
+      router.push('/asset-console');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : ta.ventureDisconnect);
+      setDisconnecting(false);
+    }
+  }
 
   return (
     <div className="p-4 md:p-8 space-y-6">
@@ -73,7 +96,17 @@ export default function AssetInstrumentPage() {
             <AssetClassBadge assetClass={holding.assetClass} />
           </div>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {holding.lastPrice > 0 ? (
+            {isVenture ? (
+              holding.venture?.unresolved ? (
+                <span className="text-amber-600 dark:text-amber-400">{ta.ventureUnresolved}</span>
+              ) : (
+                <>
+                  {holding.venture?.ownerAccountName}
+                  {holding.venture?.ownerAccountName ? ' · ' : ''}
+                  {ta.ventureValuation}: {formatCurrency(holding.venture?.totalEquity ?? 0)}
+                </>
+              )
+            ) : holding.lastPrice > 0 ? (
               <>
                 {formatUnitPrice(holding.lastPrice)}
                 {holding.priceUnit ? ` / ${holding.priceUnit}` : ''}
@@ -87,10 +120,22 @@ export default function AssetInstrumentPage() {
             )}
           </p>
         </div>
-        <button type="button" onClick={() => setEditingPrice(true)} className="btn-ghost flex items-center gap-2">
-          <Pencil className="w-4 h-4" aria-hidden />
-          {ta.updatePrice}
-        </button>
+        {isVenture ? (
+          <button
+            type="button"
+            onClick={handleDisconnect}
+            disabled={disconnecting}
+            className="btn-ghost flex items-center gap-2 text-red-600 dark:text-red-400"
+          >
+            <Unlink className="w-4 h-4" aria-hidden />
+            {ta.ventureDisconnect}
+          </button>
+        ) : (
+          <button type="button" onClick={() => setEditingPrice(true)} className="btn-ghost flex items-center gap-2">
+            <Pencil className="w-4 h-4" aria-hidden />
+            {ta.updatePrice}
+          </button>
+        )}
       </div>
 
       {holding.hasUnknownQuantity && (
@@ -102,10 +147,12 @@ export default function AssetInstrumentPage() {
 
       {/* KPI instrumen */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <KpiCard icon={Wallet} label={ta.colBalance}>
+        <KpiCard icon={Wallet} label={isVenture ? ta.ventureOwnership : ta.colBalance}>
           <span className="text-gray-800 dark:text-gray-100">
             {closed ? (
               <span className="text-base font-medium text-gray-400 dark:text-gray-500">{ta.closedPosition}</span>
+            ) : isVenture ? (
+              formatOwnershipPct(holding.totalQuantity)
             ) : (
               <>
                 {formatQuantity(holding.totalQuantity)}
@@ -121,25 +168,48 @@ export default function AssetInstrumentPage() {
             )}
           </span>
         </KpiCard>
-        <KpiCard icon={PiggyBank} label={ta.kpiInvested} hint={`${ta.colAvgPrice}: ${formatUnitPrice(holding.avgCostPerPriceUnit)}`}>
+        <KpiCard
+          icon={PiggyBank}
+          label={ta.kpiInvested}
+          hint={
+            isVenture
+              ? ta.kpiInvestedHint
+              : `${ta.colAvgPrice}: ${formatUnitPrice(holding.avgCostPerPriceUnit)}`
+          }
+        >
           <span className="text-gray-800 dark:text-gray-100">{formatCurrency(holding.totalCostBasis)}</span>
         </KpiCard>
         <KpiCard icon={TrendingUp} label={ta.kpiUnrealized}>
-          {holding.lastPrice > 0 && !closed ? (
+          {holding.hasLivePrice && !closed ? (
             <PlValue value={holding.unrealizedPl} pct={holding.unrealizedPlPct} className="!text-2xl !font-bold" />
           ) : (
             <span className="text-gray-400 dark:text-gray-500">—</span>
           )}
         </KpiCard>
-        <KpiCard icon={Coins} label={ta.kpiRealized}>
-          <span className={plColorClass(holding.realizedPl)}>
-            {holding.realizedPl > 0 ? '+' : ''}
-            {formatCurrency(holding.realizedPl)}
-          </span>
-        </KpiCard>
+        {/* Venture tidak punya P/L terealisasi — laba dari bisnis target diakui
+            di buku besar SANA (dividen/prive), menariknya ke sini menghitung
+            ganda. Slot KPI-nya dipakai untuk nilai pasar posisi, yang justru
+            tidak muncul di tempat lain pada halaman ini. */}
+        {isVenture ? (
+          <KpiCard icon={Coins} label={ta.kpiMarketValue} hint={ta.ventureValuationHint}>
+            <span className="text-gray-800 dark:text-gray-100">
+              {holding.hasLivePrice ? formatCurrency(holding.marketValue) : '—'}
+            </span>
+          </KpiCard>
+        ) : (
+          <KpiCard icon={Coins} label={ta.kpiRealized}>
+            <span className={plColorClass(holding.realizedPl)}>
+              {holding.realizedPl > 0 ? '+' : ''}
+              {formatCurrency(holding.realizedPl)}
+            </span>
+          </KpiCard>
+        )}
       </div>
 
-      {/* Rincian per kustodian — inti fitur: satu instrumen, banyak broker */}
+      {/* Rincian per kustodian — inti fitur: satu instrumen, banyak broker.
+          Tidak berlaku untuk venture: "kustodian"-nya cuma satu (bisnis target
+          itu sendiri) dan namanya sudah jadi judul halaman. */}
+      {!isVenture && (
       <section className="card-static !p-0 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
           <h2 className="font-semibold text-gray-800 dark:text-gray-100">{ta.breakdownTitle}</h2>
@@ -192,6 +262,7 @@ export default function AssetInstrumentPage() {
           </table>
         </div>
       </section>
+      )}
 
       {/* Riwayat transaksi — tiap baris menaut balik ke jurnalnya di buku besar */}
       <section className="card-static !p-0 overflow-hidden">
@@ -201,7 +272,7 @@ export default function AssetInstrumentPage() {
         </div>
 
         {holding.events.length === 0 ? (
-          <EmptyState size="sm" icon={Wallet} title={ta.historyEmpty} />
+          <EmptyState size="sm" icon={Wallet} title={isVenture ? ta.ventureNoHistory : ta.historyEmpty} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -266,14 +337,16 @@ export default function AssetInstrumentPage() {
 
       <p className="flex items-start gap-2 text-xs text-gray-400 dark:text-gray-500">
         <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" aria-hidden />
-        {ta.sourceNote}
+        {isVenture ? ta.ventureSourceNote : ta.sourceNote}
       </p>
 
-      <UpdatePriceModal
-        holding={editingPrice ? holding : null}
-        onClose={() => setEditingPrice(false)}
-        onSave={updatePrice}
-      />
+      {!isVenture && (
+        <UpdatePriceModal
+          holding={editingPrice ? holding : null}
+          onClose={() => setEditingPrice(false)}
+          onSave={updatePrice}
+        />
+      )}
     </div>
   );
 }

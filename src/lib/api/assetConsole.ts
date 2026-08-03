@@ -9,6 +9,7 @@
 import { createClient } from '@/lib/supabase';
 import type { AssetClass, CatalogItem, Transaction } from '@/types';
 import { buildAssetHoldings, summarizeHoldings, type AssetConsoleSummary, type AssetHolding } from '@/lib/assetConsole';
+import { getVentureSnapshots } from '@/lib/api/venture';
 
 export interface AssetConsoleData {
   holdings: AssetHolding[];
@@ -69,12 +70,18 @@ export async function getAssetTransactions(
 /** Satu panggilan untuk seluruh halaman Asset Console. */
 export async function getAssetConsoleData(businessId: string): Promise<AssetConsoleData> {
   const instruments = await getAssetInstruments(businessId);
-  const transactions = await getAssetTransactions(
-    businessId,
-    instruments.map((i) => i.id)
-  );
 
-  const holdings = buildAssetHoldings(instruments, transactions);
+  // Kelas 'venture' tidak punya transaksi di bisnis ini — angkanya dibaca dari
+  // buku besar bisnis target. Dua sumber ini independen, jadi diambil paralel.
+  const [transactions, ventureSnapshots] = await Promise.all([
+    getAssetTransactions(
+      businessId,
+      instruments.map((i) => i.id)
+    ),
+    getVentureSnapshots(instruments),
+  ]);
+
+  const holdings = buildAssetHoldings(instruments, transactions, ventureSnapshots);
   return { holdings, summary: summarizeHoldings(holdings), instruments };
 }
 

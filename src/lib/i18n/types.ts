@@ -1412,6 +1412,7 @@ export interface Translations {
     classCrypto: string;
     classProperty: string;
     classGold: string;
+    classVenture: string;
     filterAll: string;
     kpiInvested: string;
     kpiMarketValue: string;
@@ -1466,5 +1467,26 @@ export interface Translations {
     viewTransaction: string;
     sourceNote: string;
     closedPosition: string;
+    // Kelas 'venture' — tautan ke bisnis lain
+    connectVenture: string;
+    connectVentureTitle: string;
+    connectVentureDesc: string;
+    ventureBusinessLabel: string;
+    ventureBusinessPlaceholder: string;
+    ventureAccountLabel: string;
+    ventureAccountPlaceholder: string;
+    ventureAccountHint: string;
+    ventureAccountLinked: string;
+    ventureNoBusiness: string;
+    ventureNoAccounts: string;
+    ventureSubmit: string;
+    ventureDisconnect: string;
+    ventureDisconnectConfirm: string;
+    ventureUnresolved: string;
+    ventureOwnership: string;
+    ventureValuation: string;
+    ventureValuationHint: string;
+    ventureSourceNote: string;
+    ventureNoHistory: string;
   };
 }

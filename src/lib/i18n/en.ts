@@ -1352,6 +1352,7 @@ export const en: Translations = {
     classCrypto: 'Crypto',
     classProperty: 'Property',
     classGold: 'Gold',
+    classVenture: 'Venture',
     filterAll: 'All',
     kpiInvested: 'Total Invested',
     kpiMarketValue: 'Market Value',
@@ -1406,5 +1407,31 @@ export const en: Translations = {
     viewTransaction: 'View transaction',
     sourceNote: 'Every figure is computed straight from transactions recorded in the general ledger — there is no separate book.',
     closedPosition: 'Closed position',
+    connectVenture: 'Connect Venture',
+    connectVentureTitle: 'Connect Venture',
+    connectVentureDesc:
+      'Track your ownership in another business on AXION. Invested capital and ownership percentage are read from that business’s cap table — nothing is typed in here.',
+    ventureBusinessLabel: 'Business',
+    ventureBusinessPlaceholder: 'Select a business',
+    ventureAccountLabel: 'Your Equity Account',
+    ventureAccountPlaceholder: 'Select an account',
+    ventureAccountHint:
+      'The capital account in your name at that business (an equity account flagged as owner contribution).',
+    ventureAccountLinked: 'already connected',
+    ventureNoBusiness: 'No other business is available to connect.',
+    ventureNoAccounts:
+      'This business has no owner-contribution accounts yet. Flag an equity account as owner contribution in its Chart of Accounts first.',
+    ventureSubmit: 'Connect',
+    ventureDisconnect: 'Disconnect',
+    ventureDisconnectConfirm:
+      'Disconnect this venture from the Asset Console? The business and its transactions are not deleted.',
+    ventureUnresolved: 'This business could not be read — your access may have been revoked.',
+    ventureOwnership: 'Ownership',
+    ventureValuation: 'Business Valuation',
+    ventureValuationHint: 'Total equity of the business (book value)',
+    ventureSourceNote:
+      'Venture figures are read straight from the linked business’s ledger: capital from its cap table, market value from its total equity. Valuation currently uses book value.',
+    ventureNoHistory:
+      'Transaction history lives in the linked business’s ledger, not here.',
   },
 };
