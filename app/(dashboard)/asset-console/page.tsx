@@ -303,27 +303,31 @@ export default function AssetConsolePage() {
                       )}
                     </Td>
                     {isVenture ? (
-                      // Avg Price + Last Price di-MERGE beneran (colSpan=2),
-                      // bukan sekadar dikosongkan sebelah — venture tidak
-                      // punya "harga per unit" yang sebanding dengan
-                      // lembar/coin/gram kelas lain (§28.4b), jadi satu sel
-                      // gabungan lebih jujur daripada dua kolom yang salah
-                      // satunya selalu kosong. Dibungkus pill supaya keliatan
-                      // beda dari kolom harga biasa, bukan angka nyasar.
-                      <td className="px-4 py-3.5 text-right tabular-nums whitespace-nowrap" colSpan={2}>
-                        {h.venture?.unresolved ? (
-                          <span className="text-gray-400 dark:text-gray-500">—</span>
-                        ) : (
-                          <span className="inline-flex flex-col items-end gap-0.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-2.5 py-1">
-                            <span className="text-gray-800 dark:text-gray-100">
-                              {formatCurrency(h.venture?.totalEquity ?? 0)}
+                      // Avg Price + Last Price tampil sebagai SATU field
+                      // gabungan utk venture. Struktur tabel TETAP 2 <td>
+                      // biasa (bukan colSpan, bukan negative margin) — kedua
+                      // pendekatan itu mengubah lebar efektif kolom lain dan
+                      // bikin baris lain (BTC/BMRI/dst) ikut bergeser/wrap.
+                      // Sel Avg Price dikosongkan, sel Last Price berisi pill
+                      // yang secukupnya lebar (bukan menutup fisik dua kolom)
+                      // — tetap satu unit visual tanpa menyentuh grid tabel.
+                      <>
+                        <td className="px-4 py-3.5" />
+                        <td className="px-4 py-3.5 text-right tabular-nums whitespace-nowrap">
+                          {h.venture?.unresolved ? (
+                            <span className="text-gray-400 dark:text-gray-500">—</span>
+                          ) : (
+                            <span className="inline-flex flex-col items-end gap-0.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-2.5 py-1">
+                              <span className="text-gray-800 dark:text-gray-100">
+                                {formatCurrency(h.venture?.totalEquity ?? 0)}
+                              </span>
+                              <span className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                                {ta.ventureValuation}
+                              </span>
                             </span>
-                            <span className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                              {ta.ventureValuation}
-                            </span>
-                          </span>
-                        )}
-                      </td>
+                          )}
+                        </td>
+                      </>
                     ) : (
                       <td className="px-4 py-3.5 text-right tabular-nums whitespace-nowrap">
                         {/* Update harga inline: klik sel ini tidak boleh ikut
