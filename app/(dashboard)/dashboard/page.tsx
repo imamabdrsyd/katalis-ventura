@@ -409,7 +409,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Month tabs — scrollable */}
-        <div className="flex-1 min-w-0 rounded-full border border-gray-200 dark:border-transparent bg-[#EEF0F2] dark:bg-gray-800 p-1 overflow-hidden">
+        <div className="flex-1 min-w-0 rounded-full bg-[#EEF0F2] dark:bg-gray-800 p-1 overflow-hidden">
           <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <div className="inline-flex items-center min-w-max">
               <button

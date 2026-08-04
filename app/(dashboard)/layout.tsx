@@ -533,16 +533,18 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
 
         {/* Notification Bell — hanya untuk manager/superadmin */}
         {canManage && (
-          <NotificationBell
-            count={pendingCount}
-            leadCountsByBusiness={leadCounts.byBusiness}
-            businesses={businesses}
-            activeBusinessId={activeBusinessId}
-            onSwitchBusiness={setActiveBusiness}
-            href="/businesses"
-            userId={user?.id || ''}
-            onChange={refreshNotifications}
-          />
+          <div className="-mr-1">
+            <NotificationBell
+              count={pendingCount}
+              leadCountsByBusiness={leadCounts.byBusiness}
+              businesses={businesses}
+              activeBusinessId={activeBusinessId}
+              onSwitchBusiness={setActiveBusiness}
+              href="/businesses"
+              userId={user?.id || ''}
+              onChange={refreshNotifications}
+            />
+          </div>
         )}
 
         {/* Profile Dropdown */}
@@ -551,7 +553,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
             onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
             className="flex items-center gap-3 p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
           >
-            <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
+            <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm overflow-hidden shadow-sm ring-1 ring-black/5 dark:ring-white/10">
               {user?.user_metadata?.avatar_url ? (
                 <Image
                   src={user.user_metadata.avatar_url}

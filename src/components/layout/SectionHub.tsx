@@ -21,9 +21,7 @@ export function SectionHub({ sectionKey }: { sectionKey: NavSectionKey }) {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
-        <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
-          <HeaderIcon className="w-6 h-6 text-indigo-500 dark:text-indigo-400" />
-        </div>
+        <HeaderIcon className="w-8 h-8 text-indigo-500 dark:text-indigo-400 flex-shrink-0" />
         <div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{section.title}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{section.subtitle}</p>

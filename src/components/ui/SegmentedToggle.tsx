@@ -33,7 +33,7 @@ export function SegmentedToggle<T extends string>({
 
   const containerClass = [
     fullWidth ? 'flex' : 'inline-flex',
-    'p-1 bg-gray-100 dark:bg-gray-700 rounded-full',
+    'p-1 bg-[#EEF0F2] dark:bg-gray-700 rounded-full',
     className,
   ]
     .filter(Boolean)
