@@ -25,7 +25,8 @@ export function UpdatePriceModal({ holding, onClose, onSave }: UpdatePriceModalP
     setDisplay(holding?.lastPrice ? holding.lastPrice.toLocaleString('id-ID') : '');
   }, [holding]);
 
-  async function handleSave() {
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
     if (!holding) return;
     setSaving(true);
     try {
@@ -44,23 +45,8 @@ export function UpdatePriceModal({ holding, onClose, onSave }: UpdatePriceModalP
       isOpen={!!holding}
       onClose={onClose}
       title={`${ta.updatePriceTitle}${holding ? ` — ${holding.symbol}` : ''}`}
-      footer={
-        <div className="flex gap-3">
-          <button type="button" onClick={onClose} className="btn-ghost flex-1" disabled={saving}>
-            {t.common.cancel}
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="btn-primary flex-1"
-            disabled={saving}
-          >
-            {saving ? t.common.saving : ta.updatePriceSave}
-          </button>
-        </div>
-      }
     >
-      <div className="space-y-4">
+      <form onSubmit={handleSave} className="space-y-4">
         <CurrencyInputWithCalculator
           label={`${ta.updatePriceLabel}${holding?.priceUnit ? ` / ${holding.priceUnit}` : ''}`}
           displayValue={display}
@@ -70,7 +56,15 @@ export function UpdatePriceModal({ holding, onClose, onSave }: UpdatePriceModalP
           }}
         />
         <p className="text-xs text-gray-500 dark:text-gray-400">{ta.updatePriceHint}</p>
-      </div>
+        <div className="flex gap-3 pt-2">
+          <button type="button" onClick={onClose} className="btn-ghost flex-1" disabled={saving}>
+            {t.common.cancel}
+          </button>
+          <button type="submit" className="btn-primary-glow flex-1" disabled={saving}>
+            {saving ? t.common.saving : ta.updatePriceSave}
+          </button>
+        </div>
+      </form>
     </Modal>
   );
 }

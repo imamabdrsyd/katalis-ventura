@@ -400,7 +400,9 @@ export default function AssetConsolePage() {
                         <Td align="right">{closed ? '—' : formatUnitPrice(h.avgCostPerPriceUnit)}</Td>
                         <td className="px-4 py-3.5 text-right tabular-nums whitespace-nowrap">
                           {/* Update harga inline: klik sel ini tidak boleh ikut
-                              membuka halaman detail (row-nya clickable). */}
+                              membuka halaman detail (row-nya clickable). Baris
+                              kedua "Diupdate <tanggal>" mengikuti pola sel
+                              venture di atas supaya kedua kelas seragam. */}
                           <button
                             type="button"
                             onClick={(e) => {
@@ -411,7 +413,14 @@ export default function AssetConsolePage() {
                             className="min-h-[44px] sm:min-h-0 px-2 py-1 -mr-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
                           >
                             {h.lastPrice > 0 ? (
-                              formatUnitPrice(h.lastPrice)
+                              <span className="flex flex-col items-end gap-0.5">
+                                <span>{formatUnitPrice(h.lastPrice)}</span>
+                                <span className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                                  {h.lastPriceUpdatedAt
+                                    ? `${ta.priceUpdatedAt} ${formatDateDDMM(h.lastPriceUpdatedAt)}`
+                                    : ta.priceNeverUpdated}
+                                </span>
+                              </span>
                             ) : (
                               <span className="text-xs text-amber-600 dark:text-amber-400">
                                 {ta.priceNeverUpdated}
@@ -422,7 +431,7 @@ export default function AssetConsolePage() {
                       </>
                     )}
                     <Td align="right">{formatCurrency(h.totalCostBasis)}</Td>
-                    <Td align="right">{h.hasLivePrice ? formatCurrency(h.marketValue) : '—'}</Td>
+                    <Td align="right" bold>{h.hasLivePrice ? formatCurrency(h.marketValue) : '—'}</Td>
                     <td className="px-4 py-3.5 text-right">
                       {h.hasLivePrice && !closed ? (
                         <PlValue value={h.unrealizedPl} pct={h.unrealizedPlPct} wrap={false} />
@@ -481,6 +490,10 @@ function PageHeader({
   );
 }
 
+function formatDateDDMM(date: string | Date): string {
+  return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: '2-digit' }).format(new Date(date));
+}
+
 function Th({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' }) {
   return (
     <th
@@ -493,12 +506,20 @@ function Th({ children, align = 'left' }: { children: React.ReactNode; align?: '
   );
 }
 
-function Td({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' }) {
+function Td({
+  children,
+  align = 'left',
+  bold = false,
+}: {
+  children: React.ReactNode;
+  align?: 'left' | 'right';
+  bold?: boolean;
+}) {
   return (
     <td
-      className={`px-4 py-3.5 tabular-nums text-gray-700 dark:text-gray-300 whitespace-nowrap ${
-        align === 'right' ? 'text-right' : 'text-left'
-      }`}
+      className={`px-4 py-3.5 tabular-nums whitespace-nowrap ${
+        bold ? 'font-semibold text-gray-900 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300'
+      } ${align === 'right' ? 'text-right' : 'text-left'}`}
     >
       {children}
     </td>
