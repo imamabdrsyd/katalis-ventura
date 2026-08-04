@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useTheme } from 'next-themes';
+import { useMemo } from 'react';
+import { useChartPalette } from '@/hooks/useThemeMode';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -33,14 +33,7 @@ interface MacroChartProps {
 }
 
 export default function MacroChart({ series, height = 320 }: MacroChartProps) {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const isDark = mounted && resolvedTheme === 'dark';
+  const chart = useChartPalette();
 
   const chartData = useMemo(() => {
     if (!series) return null;
@@ -72,10 +65,10 @@ export default function MacroChart({ series, height = 320 }: MacroChartProps) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: isDark ? '#1f2937' : '#ffffff',
-          titleColor: isDark ? '#f3f4f6' : '#1f2937',
-          bodyColor: isDark ? '#f3f4f6' : '#1f2937',
-          borderColor: isDark ? '#374151' : '#e5e7eb',
+          backgroundColor: chart.surface,
+          titleColor: chart.text,
+          bodyColor: chart.text,
+          borderColor: chart.border,
           borderWidth: 1,
           padding: 10,
           callbacks: {
@@ -89,21 +82,21 @@ export default function MacroChart({ series, height = 320 }: MacroChartProps) {
       },
       scales: {
         x: {
-          grid: { color: isDark ? '#374151' : '#f3f4f6' },
+          grid: { color: chart.grid },
           ticks: {
-            color: isDark ? '#9ca3af' : '#9ca3af',
+            color: chart.axis,
             maxTicksLimit: 8,
             maxRotation: 0,
             font: { size: 11 },
           },
         },
         y: {
-          grid: { color: isDark ? '#374151' : '#f3f4f6' },
-          ticks: { color: isDark ? '#9ca3af' : '#9ca3af', font: { size: 11 } },
+          grid: { color: chart.grid },
+          ticks: { color: chart.axis, font: { size: 11 } },
         },
       },
     }),
-    [isDark, series]
+    [chart, series]
   );
 
   if (!series || !chartData || series.observations.length === 0) {

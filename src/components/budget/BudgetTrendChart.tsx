@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { useTheme } from 'next-themes';
+import { useMemo } from 'react';
+import { useChartPalette } from '@/hooks/useThemeMode';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -29,12 +29,8 @@ interface BudgetTrendChartProps {
 }
 
 export function BudgetTrendChart({ projections, projectionMonths, onProjectionMonthsChange }: BudgetTrendChartProps) {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => { setMounted(true); }, []);
-
-  const isDark = mounted && resolvedTheme === 'dark';
+  const chart = useChartPalette();
+  const isDark = chart.isDark;
 
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -117,7 +113,7 @@ export function BudgetTrendChart({ projections, projectionMonths, onProjectionMo
       legend: {
         position: 'top' as const,
         labels: {
-          color: isDark ? '#9CA3AF' : '#6B7280',
+          color: chart.muted,
           usePointStyle: true,
           pointStyle: 'circle',
           padding: 20,
@@ -136,12 +132,12 @@ export function BudgetTrendChart({ projections, projectionMonths, onProjectionMo
     scales: {
       x: {
         grid: { display: false },
-        ticks: { color: isDark ? '#9CA3AF' : '#6B7280', font: { size: 11 } },
+        ticks: { color: chart.muted, font: { size: 11 } },
       },
       y: {
-        grid: { color: isDark ? 'rgba(75, 85, 99, 0.3)' : 'rgba(229, 231, 235, 0.8)' },
+        grid: { color: chart.gridSoft },
         ticks: {
-          color: isDark ? '#9CA3AF' : '#6B7280',
+          color: chart.muted,
           font: { size: 11 },
           callback: (value: unknown) => {
             const num = value as number;

@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
-import { useTheme } from 'next-themes';
+import { useMemo } from 'react';
+import { useChartPalette } from '@/hooks/useThemeMode';
 import { useRouter } from 'next/navigation';
 import { Doughnut } from 'react-chartjs-2';
 import { ArrowRight } from 'lucide-react';
@@ -48,11 +48,7 @@ export default function ExpenseBreakdownChart({
   periodLabel,
 }: ExpenseBreakdownChartProps) {
   const router = useRouter();
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-
-  const isDark = mounted && resolvedTheme === 'dark';
+  const chart = useChartPalette();
   const activePeriodLabel = periodLabel
     ?? (selectedMonth === null
       ? `${selectedYear}`
@@ -122,11 +118,11 @@ export default function ExpenseBreakdownChart({
     datasets: [{
       data: allExpenseData.map(([, amount]) => amount),
       backgroundColor: allExpenseData.map((_, i) => EXPENSE_COLORS[i % EXPENSE_COLORS.length]),
-      borderColor: isDark ? '#1f2937' : '#ffffff',
+      borderColor: chart.surface,
       borderWidth: 2,
       hoverOffset: 6,
     }],
-  }), [allExpenseData, isDark]);
+  }), [allExpenseData, chart]);
 
   const options = useMemo(() => ({
     responsive: true,
@@ -135,10 +131,10 @@ export default function ExpenseBreakdownChart({
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: isDark ? '#1f2937' : '#ffffff',
-        titleColor: isDark ? '#f3f4f6' : '#1f2937',
-        bodyColor: isDark ? '#f3f4f6' : '#1f2937',
-        borderColor: isDark ? '#374151' : '#e5e7eb',
+        backgroundColor: chart.surface,
+        titleColor: chart.text,
+        bodyColor: chart.text,
+        borderColor: chart.border,
         borderWidth: 1,
         padding: 12,
         callbacks: {
@@ -150,7 +146,7 @@ export default function ExpenseBreakdownChart({
         },
       },
     },
-  }), [isDark, totalExpense]);
+  }), [chart, totalExpense]);
 
   if (loading) {
     return (

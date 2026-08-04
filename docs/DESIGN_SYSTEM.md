@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 22 Juli 2026 (§3.3 interaction states + §2 utility mobile/webview + §3.6 Modal `confirmOnClose` dirty-guard)
+> Terakhir diupdate: 4 Agustus 2026 (§1.5 tema Midnight + token netral berbasis CSS variable)
 
 ---
 
@@ -11,7 +11,7 @@
 
 **AXION (Katalis Ventura)** — platform akuntansi dan pembukuan double-entry untuk UKM Indonesia.
 
-- **Stack UI:** Next.js App Router + Tailwind CSS + TypeScript, dark/light mode via `next-themes` (class-based)
+- **Stack UI:** Next.js App Router + Tailwind CSS + TypeScript, tiga tema (Terang / Gelap / Midnight) via `next-themes` (class-based) — lihat §1.5
 - **Bahasa UI:** Bahasa Indonesia (prioritas), English (fallback untuk istilah teknis)
 - **Audience:** Pemilik UKM & investor — **bukan akuntan profesional**. UI harus terasa seperti aplikasi fintech modern, bukan software akuntansi enterprise
 - **Nada visual:** Bersih, airy, ramah. Rounded-corners generous (xl/2xl), shadow ringan, transisi halus
@@ -101,6 +101,38 @@ Disimpan di komponen ContactList & memory:
 | Code inline | `bg-gray-200` | `dark:bg-gray-700` |
 
 **Catatan nested surface:** di halaman (yang body-nya `gray-50`), nested panel pakai `bg-gray-50` — tapi di dalam card putih, nested panel harus kontras, pakai `bg-gray-100` atau `bg-gray-50` dengan border. Hindari "bg-gray-50 di atas bg-white" yang nyaris invisible.
+
+#### Tiga tema — dan kenapa tabel di atas cuma dua kolom
+
+Tema ada tiga: **Terang**, **Gelap** (abu kebiruan, default lama), dan **Midnight** (near-black netral, ala terminal trading). Tapi dari sisi komponen tetap **dua state saja** — Midnight bukan varian ketiga yang perlu ditulis di call-site.
+
+Caranya: seluruh skala `gray-*` dialiaskan ke CSS variable di [tailwind.config.js](../tailwind.config.js), nilainya diisi per tema di `:root` / `.midnight` ([app/globals.css](../app/globals.css)). `darkMode` juga diset ke daftar selector supaya varian `dark:` menyala untuk `.dark` **dan** `.midnight`:
+
+```js
+darkMode: ['variant', ['&:is(.dark *)', '&:is(.midnight *)']]
+```
+
+Konsekuensi praktis untuk siapa pun yang menulis UI:
+
+| Aturan | Alasan |
+|--------|--------|
+| Permukaan/border/teks netral **wajib** lewat `gray-*`, jangan hex mentah (`bg-[#1f2937]`) | Hex mentah tidak ikut ter-remap → jadi kotak navy nyangkut di kanvas hitam |
+| Tetap tulis pasangan `dark:` seperti biasa, **tanpa** `midnight:` | Varian `midnight:` tidak ada; `dark:` sudah mencakup keduanya |
+| Di JS, jangan cek `resolvedTheme === 'dark'` | Midnight akan salah terbaca terang. Pakai `useThemeMode()` / `useChartPalette()` dari [src/hooks/useThemeMode.ts](../src/hooks/useThemeMode.ts) |
+| Warna chart ambil dari `useChartPalette()` | Chart.js butuh nilai konkret; palet per tema terkunci di satu tempat |
+
+Nilai netral per tema (`--c-gray-*`):
+
+| Shade | Terang & Gelap (gray Tailwind) | Midnight | Peran di tema gelap |
+|-------|-------------------------------|----------|---------------------|
+| 900 | `#111827` | `#0d0d11` | Latar aplikasi |
+| 800 | `#1f2937` | `#18181e` | Kartu & panel |
+| 700 | `#374151` | `#282830` | Border, bg input, tombol sekunder |
+| 600 | `#4b5563` | `#383842` | Border tegas, hover |
+| 400 | `#9ca3af` | `#9696a2` | Teks sekunder (6.2:1 di atas panel) |
+| 100 | `#f3f4f6` | `#eeeef3` | Teks utama |
+
+Warna brand (indigo) dan warna kategori **tidak** berubah antar tema gelap — yang bergeser hanya kanvasnya.
 
 ### 1.6 Border
 

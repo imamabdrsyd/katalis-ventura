@@ -8,6 +8,8 @@ export interface SegmentedToggleOption<T extends string> {
   label: ReactNode;
   icon?: ReactNode;
   disabled?: boolean;
+  /** Nama aksesibel + tooltip. Wajib diisi bila `label` hanya ikon/visual. */
+  ariaLabel?: string;
 }
 
 interface SegmentedToggleProps<T extends string> {
@@ -51,6 +53,8 @@ export function SegmentedToggle<T extends string>({
             type="button"
             role="tab"
             aria-selected={isActive}
+            aria-label={option.ariaLabel}
+            title={option.ariaLabel}
             disabled={isDisabled}
             onClick={() => !isActive && onChange(option.value)}
             className={[

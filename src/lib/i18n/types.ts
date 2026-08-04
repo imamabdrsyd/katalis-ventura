@@ -156,6 +156,11 @@ export interface Translations {
     profileUpdateFailed: string;
     language: string;
     languageHint: string;
+    // Pemilih tema
+    appearance: string;
+    themeLight: string;
+    themeDark: string;
+    themeMidnight: string;
     // Telegram Bot card
     telegramTitle: string;
     telegramSubtitle: string;

@@ -150,6 +150,10 @@ export const en: Translations = {
     profileUpdateFailed: 'Failed to update profile',
     language: 'Language',
     languageHint: 'Choose the display language for the application',
+    appearance: 'Appearance',
+    themeLight: 'Light',
+    themeDark: 'Dark',
+    themeMidnight: 'Midnight',
     // Telegram Bot card
     telegramTitle: 'Telegram Bot',
     telegramSubtitle: 'Log transactions directly from Telegram',

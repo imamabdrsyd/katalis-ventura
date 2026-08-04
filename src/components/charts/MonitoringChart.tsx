@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useTheme } from 'next-themes';
+import { useChartPalette } from '@/hooks/useThemeMode';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -43,18 +43,11 @@ interface MonitoringChartProps {
 export default function MonitoringChart({ transactions, loading = false, selectedYear }: MonitoringChartProps) {
   const [period, setPeriod] = useState<MonitoringPeriod>('monthly');
   const [interval, setInterval] = useState<MonitoringInterval>('1m');
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const chart = useChartPalette();
 
   useEffect(() => {
     if (period === 'monthly') setInterval('1m');
   }, [period]);
-
-  const isDark = mounted && resolvedTheme === 'dark';
 
   const chartDataPoints = useMemo(
     () => buildMonitoringDataPoints({ transactions, period, interval, selectedYear }),
@@ -133,26 +126,26 @@ export default function MonitoringChart({ transactions, loading = false, selecte
             weight: 500 as const,
             family: "'Plus Jakarta Sans', sans-serif",
           },
-          color: isDark ? '#9ca3af' : '#6b7280',
+          color: chart.muted,
         },
       },
       title: {
         display: false,
       },
       tooltip: {
-        backgroundColor: isDark ? '#1f2937' : '#ffffff',
+        backgroundColor: chart.surface,
         padding: 12,
         titleFont: {
           size: 14,
           weight: 600 as const,
         },
-        titleColor: isDark ? '#f3f4f6' : '#1f2937',
+        titleColor: chart.text,
         bodyFont: {
           size: 13,
           weight: 500 as const,
         },
-        bodyColor: isDark ? '#f3f4f6' : '#1f2937',
-        borderColor: isDark ? '#374151' : '#e5e7eb',
+        bodyColor: chart.text,
+        borderColor: chart.border,
         borderWidth: 1,
         displayColors: true,
         usePointStyle: true,
@@ -171,11 +164,11 @@ export default function MonitoringChart({ transactions, loading = false, selecte
       x: {
         grid: {
           display: true,
-          color: isDark ? '#374151' : '#f3f4f6',
+          color: chart.grid,
           lineWidth: 1.5,
         },
         ticks: {
-          color: isDark ? '#9ca3af' : '#9ca3af',
+          color: chart.axis,
           maxTicksLimit: 12,
           maxRotation: 0,
           font: {
@@ -189,11 +182,11 @@ export default function MonitoringChart({ transactions, loading = false, selecte
         max: maxValue,
         grid: {
           display: true,
-          color: isDark ? '#374151' : '#f3f4f6',
+          color: chart.grid,
           lineWidth: 1.5,
         },
         ticks: {
-          color: isDark ? '#9ca3af' : '#9ca3af',
+          color: chart.axis,
           font: {
             size: 12,
             family: "'Plus Jakarta Sans', sans-serif",
@@ -211,7 +204,7 @@ export default function MonitoringChart({ transactions, loading = false, selecte
       intersect: false,
       mode: 'index' as const,
     },
-  }), [isDark, maxValue]);
+  }), [chart, maxValue]);
 
   const hasData = chartDataPoints.some((d) => d.earning > 0 || d.expense > 0);
 

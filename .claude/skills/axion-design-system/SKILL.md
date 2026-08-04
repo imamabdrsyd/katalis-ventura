@@ -15,6 +15,10 @@ The full design system spec lives in **[docs/DESIGN_SYSTEM.md](../../../docs/DES
 
 2. **Always pair dark mode.** Every `bg-*`, `text-*`, `border-*` that sets a visible color needs a `dark:` pasangan. No exceptions.
 
+   There are **three** themes (Terang / Gelap / Midnight) but still only **two** states to write. Midnight is a near-black remap of the `gray-*` scale, and `dark:` already covers it — there is no `midnight:` variant. Two consequences:
+   - Neutral surfaces/borders/text must go through `gray-*`. A raw hex (`bg-[#1f2937]`) or another neutral family (`slate-*`, `zinc-*`) won't remap and will sit as a navy patch on a black canvas.
+   - In JS, never branch on `resolvedTheme === 'dark'` — Midnight would read as light. Use `useThemeMode()` / `useChartPalette()` from `src/hooks/useThemeMode.ts`.
+
 3. **Use `primary-*` (indigo scale), not `indigo-*` directly.** The brand token is defined in `tailwind.config.js`.
 
 4. **Respect the component patterns.** When building a toggle/tab/button/badge/card/modal, copy the canonical pattern from `docs/DESIGN_SYSTEM.md` §3 — don't improvise.
@@ -26,7 +30,7 @@ The full design system spec lives in **[docs/DESIGN_SYSTEM.md](../../../docs/DES
   - Child `rounded-full` + `px-4 py-1.5 text-sm`
   - Active: `bg-white dark:bg-gray-600 text-indigo-500 dark:text-indigo-400 font-semibold shadow-sm`
   - Inactive: `bg-transparent text-gray-500 dark:text-gray-400 font-normal` + hover
-  - Reference: [src/components/charts/MonitoringChart.tsx:262-283](../../../src/components/charts/MonitoringChart.tsx#L262-L283)
+  - Canonical component: [src/components/ui/SegmentedToggle.tsx](../../../src/components/ui/SegmentedToggle.tsx) — use it instead of re-implementing. Example call site: `MonitoringChart.tsx` (Monthly/Yearly).
 
 - **Tab Navigation** (3+ options, switching views/sections):
   - Container `rounded-xl` + `bg-gray-100 dark:bg-gray-800` + `p-1`

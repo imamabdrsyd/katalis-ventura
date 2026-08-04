@@ -12,6 +12,28 @@
     /* Notch/home-indicator (viewport-fit=cover) — 0px di browser biasa */
     --safe-area-top: env(safe-area-inset-top, 0px);
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+
+    /* ─── Skala netral (dipetakan ke colors.gray di tailwind.config.js) ───
+       Nilai di bawah = gray bawaan Tailwind, persis. Ini baseline untuk tema
+       Terang dan Gelap; hanya .midnight yang menimpanya. */
+    --c-gray-50: 249 250 251;
+    --c-gray-100: 243 244 246;
+    --c-gray-200: 229 231 235;
+    --c-gray-300: 209 213 219;
+    --c-gray-400: 156 163 175;
+    --c-gray-500: 107 114 128;
+    --c-gray-600: 75 85 99;
+    --c-gray-700: 55 65 81;
+    --c-gray-800: 31 41 55;
+    --c-gray-900: 17 24 39;
+    --c-gray-950: 3 7 18;
+
+    /* Warna chart yang ikut tema — dibaca lewat useChartPalette() */
+    --chart-surface: 255 255 255;
+    --chart-text: 31 41 55;
+    --chart-muted: 107 114 128;
+    --chart-grid: 243 244 246;
+    --chart-border: 229 231 235;
   }
 
   .dark {
@@ -20,6 +42,46 @@
     --card: 31 41 55;
     --card-border: 55 65 81;
     --muted: 156 163 175;
+
+    --chart-surface: 31 41 55;
+    --chart-text: 243 244 246;
+    --chart-muted: 156 163 175;
+    --chart-grid: 55 65 81;
+    --chart-border: 55 65 81;
+  }
+
+  /* ─── Tema Midnight ───
+     Kanvas near-black ala terminal trading (Stockbit/TradingView). Bukan tema
+     terpisah dari sisi komponen: semua varian `dark:` tetap menyala (lihat
+     darkMode di tailwind.config.js), yang berubah hanya nilai skala netralnya.
+     Hue sengaja disisakan sedikit dingin (biru +5) supaya aksen indigo brand
+     tidak terbaca asing di atas hitam, tapi tetap netral — bukan navy. */
+  .midnight {
+    color-scheme: dark;
+
+    --c-gray-50: 250 250 252;
+    --c-gray-100: 238 238 243; /* teks utama */
+    --c-gray-200: 223 223 230;
+    --c-gray-300: 198 198 208;
+    --c-gray-400: 150 150 162; /* teks sekunder — 6.2:1 di atas panel */
+    --c-gray-500: 112 112 124;
+    --c-gray-600: 56 56 66; /* border tegas / hover */
+    --c-gray-700: 40 40 48; /* border, bg input, tombol sekunder */
+    --c-gray-800: 24 24 30; /* panel & kartu */
+    --c-gray-900: 13 13 17; /* latar aplikasi */
+    --c-gray-950: 8 8 11;
+
+    --background: 13 13 17;
+    --foreground: 238 238 243;
+    --card: 24 24 30;
+    --card-border: 40 40 48;
+    --muted: 150 150 162;
+
+    --chart-surface: 24 24 30;
+    --chart-text: 238 238 243;
+    --chart-muted: 150 150 162;
+    --chart-grid: 40 40 48;
+    --chart-border: 40 40 48;
   }
 
   html {
@@ -152,7 +214,8 @@
     background-position: right 12px center;
   }
 
-  .dark select.input-search {
+  .dark select.input-search,
+  .midnight select.input-search {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   }
 
@@ -162,7 +225,8 @@
     background-position: right 12px center;
   }
 
-  .dark select.input {
+  .dark select.input,
+  .midnight select.input {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   }
 
@@ -222,7 +286,8 @@
   }
 }
 
-.dark .animate-import-highlight {
+.dark .animate-import-highlight,
+.midnight .animate-import-highlight {
   animation: import-highlight-dark 3s ease-out forwards;
 }
 
@@ -283,7 +348,8 @@
   animation: ocr-shimmer 2.2s ease-in-out infinite;
 }
 
-.dark .ocr-shimmer::before {
+.dark .ocr-shimmer::before,
+.midnight .ocr-shimmer::before {
   background: linear-gradient(
     90deg,
     transparent 0%,

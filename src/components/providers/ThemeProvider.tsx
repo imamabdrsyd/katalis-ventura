@@ -9,6 +9,9 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
       attribute="class"
       defaultTheme="system"
       enableSystem
+      // 'midnight' adalah tema gelap kedua (near-black), opt-in eksplisit —
+      // `system` tetap hanya memilih antara light/dark seperti sebelumnya.
+      themes={['light', 'dark', 'midnight']}
       disableTransitionOnChange
       {...props}
     >
