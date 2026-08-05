@@ -491,7 +491,7 @@ export default function DashboardPage() {
               )}
             </div>
             <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.revenue}</div>
-            <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 break-all">
+            <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 break-all tabular-nums">
               {transactionsLoading ? '...' : (
                 <AnimatedNumber
                   value={summary.totalEarn}
@@ -542,7 +542,7 @@ export default function DashboardPage() {
               )}
             </div>
             <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.profitLoss}</div>
-            <div className={`text-xl md:text-2xl font-bold break-all ${summary.netProfit === 0 ? 'text-gray-500 dark:text-gray-400' : summary.netProfit > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+            <div className={`text-xl md:text-2xl font-bold break-all tabular-nums ${summary.netProfit === 0 ? 'text-gray-500 dark:text-gray-400' : summary.netProfit > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
               {transactionsLoading ? '...' : (
                 <AnimatedNumber
                   value={summary.netProfit}
@@ -588,7 +588,7 @@ export default function DashboardPage() {
               )}
             </div>
             <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.roi}</div>
-            <div className={`text-xl md:text-2xl font-bold ${roi === 0 ? 'text-gray-500 dark:text-gray-400' : roi > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+            <div className={`text-xl md:text-2xl font-bold tabular-nums ${roi === 0 ? 'text-gray-500 dark:text-gray-400' : roi > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
               {transactionsLoading ? '...' : (
                 <AnimatedNumber
                   value={roi}
@@ -639,7 +639,7 @@ export default function DashboardPage() {
               )}
             </div>
             <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.cashBalance}</div>
-            <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 break-all">
+            <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 break-all tabular-nums">
               {transactionsLoading ? '...' : (
                 <AnimatedNumber
                   value={balanceSheet.assets.cash}
@@ -731,7 +731,7 @@ export default function DashboardPage() {
               <div className="lg:col-span-2">
                 <div className="mb-4">
                   <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.arTotalOutstanding}</div>
-                  <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(arData.total)}</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">{formatCurrency(arData.total)}</div>
                 </div>
                 {/* Aging bar */}
                 <div className="flex rounded-lg overflow-hidden h-2 bg-gray-100 dark:bg-gray-700 mb-3">
@@ -766,7 +766,7 @@ export default function DashboardPage() {
                         <div className={`w-1.5 h-1.5 rounded-full ${bucket.dot}`} />
                         <div className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{bucket.label}</div>
                       </div>
-                      <div className={`text-sm font-bold ${bucket.value === 0 ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
+                      <div className={`text-sm font-bold tabular-nums ${bucket.value === 0 ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
                         {bucket.value === 0 ? '—' : formatCurrency(bucket.value)}
                       </div>
                     </div>
@@ -789,7 +789,7 @@ export default function DashboardPage() {
                             </div>
                             <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{debtor.name}</div>
                           </div>
-                          <div className="text-sm font-bold text-gray-900 dark:text-gray-100 flex-shrink-0 ml-2">
+                          <div className="text-sm font-bold text-gray-900 dark:text-gray-100 flex-shrink-0 ml-2 tabular-nums">
                             {formatCurrency(debtor.amount)}
                           </div>
                         </div>
@@ -835,7 +835,7 @@ export default function DashboardPage() {
                     <div className="text-sm text-gray-600 dark:text-gray-400">{item.label}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600/50 px-2 py-0.5 rounded-full">{t.dashboard.records.replace('{n}', String(item.count))}</div>
                   </div>
-                  <div className="text-base font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(item.value)}</div>
+                  <div className="text-base font-bold text-gray-900 dark:text-gray-100 mt-1 tabular-nums">{formatCurrency(item.value)}</div>
                 </div>
               ))}
             </div>
@@ -873,7 +873,7 @@ export default function DashboardPage() {
                                 {formatPercentage(row.margin)}
                               </span>
                             )}
-                            <span className={`text-sm ${row.bold ? 'font-bold' : 'font-semibold'} ${
+                            <span className={`text-sm tabular-nums ${row.bold ? 'font-bold' : 'font-semibold'} ${
                               row.bold
                                 ? isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
                                 : 'text-gray-700 dark:text-gray-200'
@@ -943,7 +943,7 @@ export default function DashboardPage() {
                       <td className="py-3 pr-4">
                         <CategoryBadge category={transaction.category} size="xs" />
                       </td>
-                      <td className={`py-3 text-sm font-semibold text-right whitespace-nowrap ${
+                      <td className={`py-3 text-sm font-semibold text-right whitespace-nowrap tabular-nums ${
                         transaction.amount === 0
                           ? 'text-gray-500 dark:text-gray-400'
                           : transaction.category === 'EARN'

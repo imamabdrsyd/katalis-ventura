@@ -437,7 +437,6 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
   const supabase = createClient();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
 
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
@@ -475,12 +474,6 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
     };
   }, []);
 
-  useEffect(() => {
-    setCurrentTime(new Date());
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
   return (
     <>
       <header className={`fixed top-0 left-0 right-0 h-[calc(4rem+var(--safe-area-top))] pt-[var(--safe-area-top)] bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-30 flex items-center justify-between px-4 md:px-6 transition-[left] duration-300 ease-in-out ${isCollapsed ? 'md:left-16' : 'md:left-56'}`}>
@@ -501,7 +494,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
         {/* Search */}
         <button
           onClick={() => setIsSearchOpen(true)}
-          className="hidden md:flex items-center gap-2 px-4 py-1.5 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/60 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors border border-gray-300 dark:border-gray-600 min-w-[220px]"
+          className="hidden md:flex items-center gap-2 px-4 py-1.5 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/60 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors border border-gray-300 dark:border-gray-600 min-w-[220px] lg:min-w-[360px]"
         >
           <Search className="w-4 h-4" />
           <span>{t.nav.searchPlaceholder}</span>
@@ -509,16 +502,6 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
             ⌘K
           </kbd>
         </button>
-
-        {/* Real-time Date Widget */}
-        {currentTime && (
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-xs text-gray-700 dark:text-gray-200">
-            <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
-            <span>
-              {currentTime.toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-            </span>
-          </div>
-        )}
 
         {/* Quick Entry Button */}
         {canManage && activeBusiness && (
@@ -640,12 +623,16 @@ function Sidebar({
   isCollapsed,
   onToggleCollapse,
   userRole,
+  currentTime,
+  locale,
 }: {
   isOpen: boolean;
   onClose: () => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   userRole: string | null;
+  currentTime: Date | null;
+  locale: string;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -989,9 +976,22 @@ function Sidebar({
         </div>
         </div>
 
-        {/* Footer */}
+        {/* Footer — Date & Time Widget */}
         <div className="pt-4 pb-[calc(1rem+var(--safe-area-bottom))] px-4 border-t border-gray-200 dark:border-gray-700">
-          <p className={`text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+          {currentTime && (
+            <div className={`flex items-center gap-2 px-2.5 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-gray-700 dark:text-gray-200 transition-all duration-300 ease-in-out ${isCollapsed ? 'justify-center' : ''}`}>
+              <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+              <div className={`text-[10px] leading-tight overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+                <p className="font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                  {currentTime.toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                </p>
+                <p className="text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                  {currentTime.toLocaleTimeString(locale === 'id' ? 'id-ID' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            </div>
+          )}
+          <p className={`text-[10px] text-gray-400 dark:text-gray-500 whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out mt-2 ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
             Engine by Imam Abdurasyid
           </p>
         </div>
@@ -1004,11 +1004,20 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const { userRole, activeBusinessId, activeBusiness } = useBusinessContext();
+  const { locale } = useLanguage();
   const pathname = usePathname();
   const prefersReducedMotion = useReducedMotion();
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
+
+  // Update current time every second
+  useEffect(() => {
+    setCurrentTime(new Date());
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Swipe to open/close sidebar on mobile
   useEffect(() => {
@@ -1074,6 +1083,8 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
         isCollapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
         userRole={userRole}
+        currentTime={currentTime}
+        locale={locale}
       />
 
       {/* Fixed Header */}

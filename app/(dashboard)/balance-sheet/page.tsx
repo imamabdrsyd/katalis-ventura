@@ -179,14 +179,14 @@ function BalanceSheetPageInner() {
               </div>
               <div className="flex justify-between py-2 pl-4">
                 <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.cashAndBank}</span>
-                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                <span className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums">
                   {formatCurrency(balanceSheet.assets.cash)}
                 </span>
               </div>
               {balanceSheet.assets.inventory !== 0 && (
                 <div className="flex justify-between py-2 pl-4">
                   <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.inventory}</span>
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                  <span className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums">
                     {formatCurrency(balanceSheet.assets.inventory)}
                   </span>
                 </div>
@@ -194,7 +194,7 @@ function BalanceSheetPageInner() {
               {balanceSheet.assets.receivables !== 0 && (
                 <div className="flex justify-between py-2 pl-4">
                   <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.accountsReceivable}</span>
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                  <span className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums">
                     {formatCurrency(balanceSheet.assets.receivables)}
                   </span>
                 </div>
@@ -202,14 +202,14 @@ function BalanceSheetPageInner() {
               {balanceSheet.assets.otherCurrentAssets !== 0 && (
                 <div className="flex justify-between py-2 pl-4">
                   <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.otherCurrentAssets}</span>
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                  <span className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums">
                     {formatCurrency(balanceSheet.assets.otherCurrentAssets)}
                   </span>
                 </div>
               )}
               <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-2">
                 <span className="text-gray-800 dark:text-gray-100">{t.balanceSheetPage.totalCurrentAssets}</span>
-                <span className="text-gray-900 dark:text-gray-100">
+                <span className="text-gray-900 dark:text-gray-100 tabular-nums">
                   {formatCurrency(balanceSheet.assets.totalCurrentAssets)}
                 </span>
               </div>
@@ -223,14 +223,14 @@ function BalanceSheetPageInner() {
               </div>
               <div className="flex justify-between py-2 pl-4">
                 <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.acquisitionValue}</span>
-                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                <span className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums">
                   {formatCurrency(balanceSheet.assets.fixedAssets)}
                 </span>
               </div>
               {balanceSheet.assets.accumulatedDepreciation > 0 && (
                 <div className="flex justify-between py-2 pl-4">
                   <span className="text-gray-500 dark:text-gray-400 italic">{t.balanceSheetPage.accumulatedDepreciation}</span>
-                  <span className="font-semibold text-red-500 dark:text-red-400">
+                  <span className="font-semibold text-red-500 dark:text-red-400 tabular-nums">
                     ({formatCurrency(balanceSheet.assets.accumulatedDepreciation)})
                   </span>
                 </div>
@@ -239,7 +239,7 @@ function BalanceSheetPageInner() {
                 <span className="text-gray-800 dark:text-gray-100">
                   {balanceSheet.assets.accumulatedDepreciation > 0 ? t.balanceSheetPage.netFixedAssets : t.balanceSheetPage.fixedAssets}
                 </span>
-                <span className="text-gray-900 dark:text-gray-100">
+                <span className="text-gray-900 dark:text-gray-100 tabular-nums">
                   {formatCurrency(balanceSheet.assets.totalFixedAssets)}
                 </span>
               </div>
@@ -248,7 +248,7 @@ function BalanceSheetPageInner() {
             {/* Total Assets */}
             <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-bold border-t-2 border-gray-900 dark:border-gray-100 mt-auto">
               <span className="text-lg text-gray-800 dark:text-gray-100">{t.balanceSheetPage.totalAssets}</span>
-              <span className="text-lg text-gray-900 dark:text-gray-100">
+              <span className="text-lg text-gray-900 dark:text-gray-100 tabular-nums">
                 <AnimatedNumber value={balanceSheet.assets.totalAssets} formatter={formatCurrency} replayKey={bsAnimationKey} />
               </span>
             </div>
@@ -281,13 +281,13 @@ function BalanceSheetPageInner() {
               </div>
               <div className="flex justify-between py-2 pl-4">
                 <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.loans}</span>
-                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                <span className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums">
                   {formatCurrency(balanceSheet.liabilities.loans)}
                 </span>
               </div>
               <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-2">
                 <span className="text-gray-800 dark:text-gray-100">{t.balanceSheetPage.totalLiabilities}</span>
-                <span className="text-gray-800 dark:text-gray-100">
+                <span className="text-gray-800 dark:text-gray-100 tabular-nums">
                   <AnimatedNumber value={balanceSheet.liabilities.totalLiabilities} formatter={formatCurrency} replayKey={bsAnimationKey} />
                 </span>
               </div>
@@ -309,7 +309,7 @@ function BalanceSheetPageInner() {
               <div className="space-y-2">
                 <div className="flex justify-between py-2 pl-4">
                   <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.paidInCapital}</span>
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                  <span className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums">
                     {formatCurrency(balanceSheet.equity.capital)}
                   </span>
                 </div>
@@ -336,7 +336,7 @@ function BalanceSheetPageInner() {
                 )}
                 <div className="flex justify-between py-2 pl-4">
                   <span className="text-gray-700 dark:text-gray-300">{t.balanceSheetPage.retainedEarnings}</span>
-                  <span className={`font-semibold ${
+                  <span className={`font-semibold tabular-nums ${
                     balanceSheet.equity.retainedEarnings >= 0
                       ? 'text-emerald-500 dark:text-emerald-400'
                       : 'text-red-500 dark:text-red-400'
@@ -349,7 +349,7 @@ function BalanceSheetPageInner() {
               </div>
               <div className="flex justify-between py-3 bg-gray-50 dark:bg-gray-800 px-4 font-semibold border-t border-gray-200 dark:border-gray-700 mt-2">
                 <span className="text-gray-800 dark:text-gray-100">{t.balanceSheetPage.totalEquity}</span>
-                <span className="text-gray-800 dark:text-gray-100">
+                <span className="text-gray-800 dark:text-gray-100 tabular-nums">
                   <AnimatedNumber value={balanceSheet.equity.totalEquity} formatter={formatCurrency} replayKey={bsAnimationKey} />
                 </span>
               </div>
@@ -360,7 +360,7 @@ function BalanceSheetPageInner() {
               <span className="text-lg text-gray-800 dark:text-gray-100">
                 {t.balanceSheetPage.totalLiabilitiesEquity}
               </span>
-              <span className="text-lg text-gray-900 dark:text-gray-100">
+              <span className="text-lg text-gray-900 dark:text-gray-100 tabular-nums">
                 <AnimatedNumber
                   value={balanceSheet.liabilities.totalLiabilities + balanceSheet.equity.totalEquity}
                   formatter={formatCurrency}
