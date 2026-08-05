@@ -791,7 +791,7 @@ export default function AgentPage() {
             {/* Chip nama tools — berjejer di header (sembunyi di layar kecil).
                 Saat AI sedang berpikir, nama tool digantikan sementara oleh judul
                 tahap berpikir yang sedang aktif (mis. "Confirming Settlements"). */}
-            <div className="hidden lg:flex items-center gap-1.5 overflow-x-auto scrollbar-hide flex-1 min-w-0 py-1 px-2 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 rounded-full max-w-[500px] xl:max-w-[800px] 2xl:max-w-[1000px]">
+            <div className="hidden lg:flex items-center gap-1.5 overflow-x-auto scrollbar-hide flex-1 min-w-0 py-1 px-2 border border-gray-200 dark:border-gray-700 bg-[#EEF0F2] dark:bg-gray-800 rounded-full max-w-[500px] xl:max-w-[800px] 2xl:max-w-[1000px]">
               <AnimatePresence mode="wait" initial={false}>
                 {activeThinkingHeading ? (
                   <motion.div
@@ -835,7 +835,7 @@ export default function AgentPage() {
                       <span
                         key={tool.fn}
                         title={tool.label}
-                        className="px-2.5 py-1 rounded-full text-[10px] font-mono text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700 shadow-sm whitespace-nowrap shrink-0"
+                        className="px-2.5 py-1 rounded-full text-[10px] font-mono text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-200/60 dark:border-gray-700 shadow-sm whitespace-nowrap shrink-0"
                       >
                         {tool.fn}
                       </span>
