@@ -388,7 +388,7 @@ export default function AssetConsolePage() {
                                   lebih tinggi dari baris lain. Nominal valuasi
                                   penuh tetap tampil di halaman detail & di
                                   tooltip chip rumus pada kolom Avg Price. */}
-                              <span className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                              <span className="text-[10px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
                                 {ta.ventureValuationPerPct}
                               </span>
                             </span>
@@ -415,7 +415,7 @@ export default function AssetConsolePage() {
                             {h.lastPrice > 0 ? (
                               <span className="flex flex-col items-end gap-0.5">
                                 <span>{formatUnitPrice(h.lastPrice)}</span>
-                                <span className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                                <span className="text-[10px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
                                   {h.lastPriceUpdatedAt
                                     ? `${ta.priceUpdatedAt} ${formatDateDDMM(h.lastPriceUpdatedAt)}`
                                     : ta.priceNeverUpdated}
