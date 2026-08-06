@@ -25,6 +25,7 @@ export const en: Translations = {
     exporting: 'Exporting...',
     exportPDF: 'Export as PDF',
     exportExcel: 'Export as Excel',
+    exportSheets: 'Export to Google Sheets',
     retry: 'Retry',
     yes: 'Yes',
     no: 'No',
@@ -179,6 +180,27 @@ export const en: Translations = {
     telegramConnectHint: 'Connect your Telegram account to log transactions straight from chat, without opening the app.',
     telegramConnect: 'Connect',
     telegramInvestorOnly: 'Telegram integration is only available for Business Managers.',
+    googleSheetsTitle: 'Google Sheets',
+    googleSheetsSubtitle: 'Export reports to a spreadsheet you can play with',
+    googleSheetsLoadingStatus: 'Checking connection…',
+    googleSheetsConnected: 'Connected',
+    googleSheetsConnectedAs: 'Connected as',
+    googleSheetsSince: 'Connected since',
+    googleSheetsPlaygroundNote:
+      'Spreadsheets are a scratchpad, not official bookkeeping. Anything pulled from there still has to be approved through the transaction form before it reaches your ledger.',
+    googleSheetsConnect: 'Connect Google',
+    googleSheetsConnectHint:
+      'Connect your Google account to export reports to a spreadsheet. AXION can only open files you pick yourself.',
+    googleSheetsDisconnect: 'Disconnect',
+    googleSheetsDisconnectTitle: 'Disconnect Google account?',
+    googleSheetsDisconnectConfirm:
+      "AXION's access to your Google files will be revoked. Spreadsheets already created stay in your Drive.",
+    googleSheetsDisconnecting: 'Disconnecting…',
+    googleSheetsReconnect: 'Reconnect',
+    googleSheetsRevokedHint:
+      'Access to Google is no longer valid. Reconnect to use spreadsheet features.',
+    googleSheetsInvestorOnly: 'Google Sheets integration is only available for Business Managers.',
+    googleSheetsScopeNote: 'AXION cannot see the contents of your Google Drive.',
   },
 
   dashboard: {

@@ -32,6 +32,9 @@ const REVOKE_ENDPOINT = 'https://oauth2.googleapis.com/revoke';
 /** Umur `state` yang masih diterima. Cukup longgar untuk consent yang lambat. */
 const STATE_TTL_MS = 10 * 60 * 1000;
 
+/** Nama cookie HttpOnly penyimpan nonce (double-submit terhadap `state`). */
+export const NONCE_COOKIE = 'gs_oauth_nonce';
+
 export interface GoogleStatePayload {
   /** nonce — dicocokkan dengan cookie HttpOnly (double-submit). */
   n: string;

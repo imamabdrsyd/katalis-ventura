@@ -31,6 +31,7 @@ export interface UseIncomeStatementReturn extends ReturnType<typeof useReportDat
   refetchAccounts: () => Promise<void>;
   handleExportPDF: () => Promise<void>;
   handleExportExcel: () => Promise<void>;
+  handleExportSheets: () => Promise<void>;
 }
 
 export function useIncomeStatement(): UseIncomeStatementReturn {
@@ -163,6 +164,26 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
     });
   }, [activeBusiness, startDate, endDate, summary, setShowExportMenu]);
 
+  /**
+   * Export ke spreadsheet baru di Google Drive user.
+   *
+   * Memakai penyusun baris yang SAMA dengan export Excel (`buildIncomeStatementRows`),
+   * jadi isi laporan tidak mungkin menyimpang antar-format.
+   */
+  const handleExportSheets = useCallback(async () => {
+    if (!activeBusiness) return;
+    setShowExportMenu(false);
+    const periodLabel = `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    const { buildIncomeStatementRows } = await import('@/lib/reports/reportRows');
+    const { exportToGoogleSheetsWithToast } = await import('@/lib/api/googleSheets');
+    await exportToGoogleSheetsWithToast({
+      title: `Laba Rugi — ${activeBusiness.business_name} (${periodLabel})`,
+      sheetTitle: 'Laba Rugi',
+      rows: buildIncomeStatementRows(activeBusiness.business_name, periodLabel, summary),
+      businessId: activeBusiness.id,
+    });
+  }, [activeBusiness, startDate, endDate, summary, setShowExportMenu]);
+
   return {
     ...reportData,
     summary,
@@ -173,5 +194,6 @@ export function useIncomeStatement(): UseIncomeStatementReturn {
     refetchAccounts,
     handleExportPDF,
     handleExportExcel,
+    handleExportSheets,
   };
 }

@@ -18,6 +18,7 @@ function TelegramIcon({ className }: { className?: string }) {
 import Image from 'next/image';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
+import { GoogleSheetsCard } from '@/components/google/GoogleSheetsCard';
 import { isManagerRole } from '@/lib/roles';
 import type { UserRole } from '@/types';
 import { toast } from 'sonner';
@@ -614,6 +615,9 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
+          {/* Google Sheets — integrasi per-USER, sejajar dengan Telegram */}
+          <GoogleSheetsCard canManage={isManagerRole(userRole) || isSuperadmin} />
+
           {/* Integrasi Database (GCP) */}
           {(isManagerRole(userRole) || isSuperadmin) && (
             <div className="card">

@@ -12,6 +12,7 @@ import type { AccountLineItem } from '@/lib/calculations';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import { IncomeStatementConfigModal } from '@/components/reports/IncomeStatementConfigModal';
 import { PeriodFilterCard } from '@/components/reports/PeriodFilterCard';
+import { useGoogleSheetsConnection } from '@/hooks/useGoogleSheetsConnection';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ReportSkeleton } from '@/components/ui/PageSkeleton';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
@@ -537,7 +538,12 @@ function IncomeStatementPageInner() {
     refetchAccounts,
     handleExportPDF,
     handleExportExcel,
+    handleExportSheets,
   } = useIncomeStatement();
+
+  // Opsi "Export ke Google Sheets" hanya dirender bila akun Google user sudah
+  // terhubung — kalau belum, item-nya tidak muncul sama sekali (tanpa jalan buntu).
+  const { isConnected: googleConnected } = useGoogleSheetsConnection();
 
   const { locale, t } = useLanguage();
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -601,6 +607,7 @@ function IncomeStatementPageInner() {
             onEndDateChange={setEndDate}
             onExportPDF={handleExportPDF}
             onExportExcel={handleExportExcel}
+            onExportSheets={googleConnected ? handleExportSheets : undefined}
             months={t.dashboard.months}
           />
 

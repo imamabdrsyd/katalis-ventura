@@ -2,7 +2,7 @@
 
 import { toast } from 'sonner';
 
-type ExportKind = 'pdf' | 'excel';
+type ExportKind = 'pdf' | 'excel' | 'sheets';
 
 const LABELS: Record<ExportKind, { loading: string; success: string; error: string }> = {
   pdf: {
@@ -14,6 +14,13 @@ const LABELS: Record<ExportKind, { loading: string; success: string; error: stri
     loading: 'Menyiapkan Excel…',
     success: 'Excel berhasil diunduh',
     error: 'Gagal membuat Excel',
+  },
+  sheets: {
+    // Beda dari pdf/excel: tidak ada file yang diunduh — spreadsheet dibuat di
+    // Drive user, dan tautannya ditawarkan lewat toast aksi terpisah.
+    loading: 'Membuat Google Sheets…',
+    success: 'Google Sheets berhasil dibuat',
+    error: 'Gagal membuat Google Sheets',
   },
 };
 

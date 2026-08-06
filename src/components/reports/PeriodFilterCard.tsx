@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useEffect } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Download, FileText, FileSpreadsheet } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Download, FileText, FileSpreadsheet, Table2 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import type { Period } from '@/hooks/useReportData';
 
@@ -14,6 +14,8 @@ interface PeriodFilterCardProps {
   onEndDateChange: (date: string) => void;
   onExportPDF?: () => void;
   onExportExcel?: () => void;
+  /** Hanya diisi bila akun Google user sudah terhubung — kalau tidak, item tidak dirender. */
+  onExportSheets?: () => void;
   onExport?: () => void;
   isExporting?: boolean;
   months: string[];
@@ -28,6 +30,7 @@ export function PeriodFilterCard({
   onEndDateChange,
   onExportPDF,
   onExportExcel,
+  onExportSheets,
   onExport,
   isExporting = false,
   months,
@@ -141,12 +144,16 @@ export function PeriodFilterCard({
   const currentQuarter = Math.floor(new Date().getMonth() / 3) + 1;
   const currentYear = new Date().getFullYear();
 
-  const hasMultipleExports = onExportPDF && onExportExcel;
+  // Dihitung dari jumlah handler, bukan dipatok dua — supaya Google Sheets
+  // (yang hanya muncul bila akun Google terhubung) ikut terhitung.
+  const exportHandlerCount = [onExportPDF, onExportExcel, onExportSheets].filter(Boolean).length;
+  const hasMultipleExports = exportHandlerCount > 1;
 
   const handleSingleExport = () => {
     if (onExport) onExport();
     else if (onExportPDF) onExportPDF();
     else if (onExportExcel) onExportExcel();
+    else if (onExportSheets) onExportSheets();
   };
 
   return (
@@ -307,26 +314,42 @@ export function PeriodFilterCard({
 
           {showExportMenu && hasMultipleExports && (
             <div className="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 py-2 z-20">
-              <button
-                onClick={() => {
-                  onExportPDF?.();
-                  setShowExportMenu(false);
-                }}
-                className="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-3 transition-colors cursor-pointer"
-              >
-                <FileText className="w-4 h-4 text-red-500 flex-shrink-0" />
-                <span>{t.common.exportPDF}</span>
-              </button>
-              <button
-                onClick={() => {
-                  onExportExcel?.();
-                  setShowExportMenu(false);
-                }}
-                className="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-3 transition-colors cursor-pointer"
-              >
-                <FileSpreadsheet className="w-4 h-4 text-green-500 flex-shrink-0" />
-                <span>{t.common.exportExcel}</span>
-              </button>
+              {onExportPDF && (
+                <button
+                  onClick={() => {
+                    onExportPDF();
+                    setShowExportMenu(false);
+                  }}
+                  className="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-3 transition-colors cursor-pointer"
+                >
+                  <FileText className="w-4 h-4 text-red-500 flex-shrink-0" />
+                  <span>{t.common.exportPDF}</span>
+                </button>
+              )}
+              {onExportExcel && (
+                <button
+                  onClick={() => {
+                    onExportExcel();
+                    setShowExportMenu(false);
+                  }}
+                  className="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-3 transition-colors cursor-pointer"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span>{t.common.exportExcel}</span>
+                </button>
+              )}
+              {onExportSheets && (
+                <button
+                  onClick={() => {
+                    onExportSheets();
+                    setShowExportMenu(false);
+                  }}
+                  className="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-3 transition-colors cursor-pointer"
+                >
+                  <Table2 className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                  <span>{t.common.exportSheets}</span>
+                </button>
+              )}
             </div>
           )}
         </div>

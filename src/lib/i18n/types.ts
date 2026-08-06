@@ -26,6 +26,7 @@ export interface Translations {
     exporting: string;
     exportPDF: string;
     exportExcel: string;
+    exportSheets: string;
     retry: string;
     yes: string;
     no: string;
@@ -186,6 +187,24 @@ export interface Translations {
     telegramConnectHint: string;
     telegramConnect: string;
     telegramInvestorOnly: string;
+    // Google Sheets card
+    googleSheetsTitle: string;
+    googleSheetsSubtitle: string;
+    googleSheetsLoadingStatus: string;
+    googleSheetsConnected: string;
+    googleSheetsConnectedAs: string;
+    googleSheetsSince: string;
+    googleSheetsPlaygroundNote: string;
+    googleSheetsConnect: string;
+    googleSheetsConnectHint: string;
+    googleSheetsDisconnect: string;
+    googleSheetsDisconnectTitle: string;
+    googleSheetsDisconnectConfirm: string;
+    googleSheetsDisconnecting: string;
+    googleSheetsReconnect: string;
+    googleSheetsRevokedHint: string;
+    googleSheetsInvestorOnly: string;
+    googleSheetsScopeNote: string;
   };
 
   // Dashboard Page

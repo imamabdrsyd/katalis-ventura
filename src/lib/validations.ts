@@ -484,6 +484,27 @@ export const sendLeadReplySchema = z.object({
 });
 
 // ============================================
+// Google Sheets (playground)
+// ============================================
+
+/**
+ * Export laporan ke spreadsheet baru.
+ *
+ * `rows` dibatasi 5000 baris agar sejalan dengan MAX_ROWS jalur import, dan
+ * tiap sel dibatasi 2000 karakter supaya payload tidak bisa dipakai membanjiri
+ * Sheets API.
+ */
+export const googleSheetsExportSchema = z.object({
+  title: z.string().min(1).max(200),
+  sheet_title: z.string().min(1).max(100),
+  rows: z
+    .array(z.array(z.union([z.string().max(2000), z.number()])))
+    .min(1)
+    .max(5000),
+  business_id: z.string().uuid().optional(),
+});
+
+// ============================================
 // Type exports
 // ============================================
 
@@ -502,3 +523,4 @@ export type CreateLeadInput = z.infer<typeof createLeadSchema>;
 export type UpdateLeadInput = z.infer<typeof updateLeadSchema>;
 export type CreateLeadMessageInput = z.infer<typeof createLeadMessageSchema>;
 export type InboundWebhookInput = z.infer<typeof inboundWebhookSchema>;
+export type GoogleSheetsExportInput = z.infer<typeof googleSheetsExportSchema>;

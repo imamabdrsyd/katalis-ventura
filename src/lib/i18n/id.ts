@@ -25,6 +25,7 @@ export const id: Translations = {
     exporting: 'Mengunduh...',
     exportPDF: 'Export as PDF',
     exportExcel: 'Export as Excel',
+    exportSheets: 'Export ke Google Sheets',
     retry: 'Coba lagi',
     yes: 'Ya',
     no: 'Tidak',
@@ -179,6 +180,27 @@ export const id: Translations = {
     telegramConnectHint: 'Hubungkan akun Telegram kamu untuk bisa input transaksi langsung dari chat, tanpa buka aplikasi.',
     telegramConnect: 'Hubungkan',
     telegramInvestorOnly: 'Integrasi Telegram hanya tersedia untuk Business Manager.',
+    googleSheetsTitle: 'Google Sheets',
+    googleSheetsSubtitle: 'Ekspor laporan ke spreadsheet buat diutak-atik',
+    googleSheetsLoadingStatus: 'Memeriksa koneksi…',
+    googleSheetsConnected: 'Terhubung',
+    googleSheetsConnectedAs: 'Terhubung sebagai',
+    googleSheetsSince: 'Terhubung sejak',
+    googleSheetsPlaygroundNote:
+      'Spreadsheet dipakai sebagai ruang coba-coba, bukan pembukuan resmi. Data yang ditarik dari sana tetap harus kamu setujui lewat form transaksi sebelum masuk buku besar.',
+    googleSheetsConnect: 'Hubungkan Google',
+    googleSheetsConnectHint:
+      'Hubungkan akun Google untuk mengekspor laporan ke spreadsheet. AXION hanya bisa membuka berkas yang kamu pilih sendiri.',
+    googleSheetsDisconnect: 'Putuskan',
+    googleSheetsDisconnectTitle: 'Putuskan akun Google?',
+    googleSheetsDisconnectConfirm:
+      'Izin AXION atas berkas Google kamu akan dicabut. Spreadsheet yang sudah dibuat tetap ada di Drive kamu.',
+    googleSheetsDisconnecting: 'Memutuskan…',
+    googleSheetsReconnect: 'Hubungkan ulang',
+    googleSheetsRevokedHint:
+      'Akses ke Google sudah tidak berlaku. Hubungkan ulang untuk memakai fitur spreadsheet.',
+    googleSheetsInvestorOnly: 'Integrasi Google Sheets hanya tersedia untuk Business Manager.',
+    googleSheetsScopeNote: 'AXION tidak bisa melihat daftar isi Google Drive kamu.',
   },
 
   dashboard: {
