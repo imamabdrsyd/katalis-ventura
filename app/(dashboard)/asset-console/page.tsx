@@ -123,7 +123,7 @@ export default function AssetConsolePage() {
 
   return (
     <div className="p-4 md:p-8 space-y-6">
-      <PageHeader title={ta.title} subtitle={ta.subtitle} action={connectButton} />
+      <PageHeader title={ta.title} subtitle={ta.subtitle} />
 
       {/* KPI */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -149,22 +149,26 @@ export default function AssetConsolePage() {
             <AnimatedNumber value={summary.totalMarketValue} formatter={(v) => formatCurrency(v)} />
           </span>
         </KpiCard>
-        <KpiCard icon={TrendingUp} label={ta.kpiUnrealized} hint={ta.kpiUnrealizedHint}>
-          {/* flex-wrap: angka rupiah besar + persentase turun ke baris sendiri
-              di card sempit (xl:grid-cols-4), bukan meluber keluar card. */}
-          <span className={`inline-flex flex-wrap items-baseline gap-x-2 ${plColorClass(summary.totalUnrealizedPl)}`}>
-            <span className="break-all">
-              <AnimatedNumber
-                value={summary.totalUnrealizedPl}
-                formatter={(v) => `${v > 0 ? '+' : ''}${formatCurrency(v)}`}
-              />
-            </span>
-            {summary.totalInvested > 0 && (
-              <span className="text-sm font-medium whitespace-nowrap">
+        <KpiCard
+          icon={TrendingUp}
+          label={ta.kpiUnrealized}
+          hint={ta.kpiUnrealizedHint}
+          headerAction={
+            summary.totalInvested > 0 ? (
+              <span
+                className={`text-[11px] font-semibold whitespace-nowrap ${plColorClass(summary.totalUnrealizedPl)}`}
+              >
                 ({summary.totalUnrealizedPl > 0 ? '+' : ''}
                 {summary.totalUnrealizedPlPct.toFixed(2)}%)
               </span>
-            )}
+            ) : undefined
+          }
+        >
+          <span className={`break-all ${plColorClass(summary.totalUnrealizedPl)}`}>
+            <AnimatedNumber
+              value={summary.totalUnrealizedPl}
+              formatter={(v) => `${v > 0 ? '+' : ''}${formatCurrency(v)}`}
+            />
           </span>
         </KpiCard>
         <KpiCard icon={Coins} label={ta.kpiRealized} hint={ta.kpiRealizedHint}>
@@ -184,18 +188,24 @@ export default function AssetConsolePage() {
         </div>
       )}
 
-      {/* Filter kelas aset — hanya bila lebih dari satu kelas dimiliki */}
-      {availableClasses.length > 1 && (
-        <SegmentedToggle
-          value={filter}
-          onChange={(v) => setFilter(v as ClassFilter)}
-          ariaLabel={ta.colClass}
-          options={[
-            { value: 'all', label: ta.filterAll },
-            ...availableClasses.map((cls) => ({ value: cls, label: classLabel(cls) })),
-          ]}
-        />
-      )}
+      {/* Filter kelas aset (kiri) + Connect Venture (kanan), sejajar satu baris
+          di atas tabel — tombol tetap tampil walau filter tidak (hanya 1 kelas). */}
+      <div className="flex items-center justify-between gap-4">
+        {availableClasses.length > 1 ? (
+          <SegmentedToggle
+            value={filter}
+            onChange={(v) => setFilter(v as ClassFilter)}
+            ariaLabel={ta.colClass}
+            options={[
+              { value: 'all', label: ta.filterAll },
+              ...availableClasses.map((cls) => ({ value: cls, label: classLabel(cls) })),
+            ]}
+          />
+        ) : (
+          <div />
+        )}
+        {connectButton}
+      </div>
 
       {/* Tabel konsolidasi */}
       <div className="card-static overflow-hidden !p-0">
