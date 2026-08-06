@@ -65,7 +65,7 @@ export default function TermsOfServicePage() {
           penghapusan akun beserta datanya. Perlakuan data selengkapnya dijelaskan di{' '}
           <Link
             href="/privacy"
-            className="text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 underline"
+            className="underline decoration-gray-300 dark:decoration-gray-600 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
           >
             Kebijakan Privasi
           </Link>
@@ -182,7 +182,7 @@ export default function TermsOfServicePage() {
           Pertanyaan mengenai ketentuan ini dapat dikirim ke{' '}
           <a
             href="mailto:support@axionventura.com"
-            className="text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 underline"
+            className="underline decoration-gray-300 dark:decoration-gray-600 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
           >
             support@axionventura.com
           </a>

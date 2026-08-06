@@ -26,7 +26,7 @@ export function LegalPage({
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2">
             <Image
-              src="/images/axion.png"
+              src="/images/favicon.png"
               alt="AXION"
               width={28}
               height={28}
@@ -36,7 +36,7 @@ export function LegalPage({
           </Link>
           <Link
             href="/"
-            className="text-sm font-medium text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300"
+            className="text-sm font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100 transition-colors"
           >
             Kembali ke beranda
           </Link>
@@ -57,7 +57,7 @@ export function LegalPage({
             PT Imam Katalis Ventura · Indonesia ·{' '}
             <a
               href="mailto:support@axionventura.com"
-              className="text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300"
+              className="underline hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
             >
               support@axionventura.com
             </a>

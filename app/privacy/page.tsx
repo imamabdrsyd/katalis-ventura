@@ -105,7 +105,7 @@ export default function PrivacyPolicyPage() {
             href="https://developers.google.com/terms/api-services-user-data-policy"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 underline"
+            className="underline decoration-gray-300 dark:decoration-gray-600 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
           >
             Google API Services User Data Policy
           </a>
@@ -120,7 +120,7 @@ export default function PrivacyPolicyPage() {
             href="https://myaccount.google.com/permissions"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 underline"
+            className="underline decoration-gray-300 dark:decoration-gray-600 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
           >
             halaman izin akun Google
           </a>
@@ -220,7 +220,7 @@ export default function PrivacyPolicyPage() {
           Anda dapat meminta penghapusan akun beserta seluruh datanya dengan menghubungi{' '}
           <a
             href="mailto:support@axionventura.com"
-            className="text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 underline"
+            className="underline decoration-gray-300 dark:decoration-gray-600 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
           >
             support@axionventura.com
           </a>
@@ -261,14 +261,14 @@ export default function PrivacyPolicyPage() {
           Pertanyaan atau permintaan terkait data pribadi Anda dapat dikirim ke{' '}
           <a
             href="mailto:support@axionventura.com"
-            className="text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 underline"
+            className="underline decoration-gray-300 dark:decoration-gray-600 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
           >
             support@axionventura.com
           </a>
           . Lihat juga{' '}
           <Link
             href="/terms"
-            className="text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 underline"
+            className="underline decoration-gray-300 dark:decoration-gray-600 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
           >
             Syarat &amp; Ketentuan
           </Link>{' '}
