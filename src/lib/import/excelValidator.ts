@@ -4,7 +4,15 @@ import { parseDate } from './excelParser';
 
 const VALID_CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
-const MAX_ROWS = 5000;
+/**
+ * Batas baris per sekali import.
+ *
+ * EXPORTED: pemanggil WAJIB pre-check `rows.length > MAX_ROWS` sebelum memanggil
+ * `validateRows`/`validateRowsSmart`. Kedua fungsi itu mengembalikan
+ * `{ isValid: false, errorCount: 1 }` TANPA detail error apa pun saat batas
+ * terlampaui, sehingga UI hanya menampilkan preview kosong tanpa penjelasan.
+ */
+export const MAX_ROWS = 5000;
 const MAX_FIELD_LENGTH = 500;
 
 /**

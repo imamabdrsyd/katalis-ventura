@@ -30,7 +30,7 @@ export async function parseExcelFile(file: File): Promise<ParsedRow[]> {
         });
 
         // Normalize headers and data
-        const normalizedData = jsonData.map((row) => normalizeRow(row));
+        const normalizedData = normalizeRows(jsonData);
 
         resolve(normalizedData);
       } catch (error) {
@@ -117,8 +117,13 @@ export function applyColumnMapping(
 
 /**
  * Normalize row data - convert column names to standard format
+ *
+ * EXPORTED dengan sengaja: sumber data non-file (Google Sheets) perlu masuk
+ * pipeline import di titik yang SAMA PERSIS dengan output `parseExcelFile`,
+ * supaya validator, smart resolver, preview UI, dan `createTransactionsBulk`
+ * di hilir tidak perlu diubah sama sekali. Lihat `./sheetsParser.ts`.
  */
-function normalizeRow(row: any): ParsedRow {
+export function normalizeRow(row: any): ParsedRow {
   const normalized: any = {};
 
   // Map of possible column variations to standard names
@@ -177,6 +182,11 @@ function normalizeRow(row: any): ParsedRow {
   }
 
   return normalized as ParsedRow;
+}
+
+/** Versi batch dari `normalizeRow` — entry point yang dipakai pemanggil baru. */
+export function normalizeRows(rows: Record<string, any>[]): ParsedRow[] {
+  return rows.map((row) => normalizeRow(row));
 }
 
 /** System categories that indicate the file was already in full-import format */

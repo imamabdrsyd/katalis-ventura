@@ -5,6 +5,14 @@ import type { FinancialSummary, BalanceSheetData, Transaction, SCEData } from '@
 import { formatCurrency, formatDate, formatDateWithDay } from './utils';
 import { calculateIncomeStatementMetrics } from './calculations';
 import type { IncomeStatementLineItems } from './calculations';
+import {
+  buildIncomeStatementRows,
+  buildCashFlowRows,
+  buildBalanceSheetRows,
+  buildSCERows,
+  ownerLabel,
+  type CashFlowExportData,
+} from './reports/reportRows';
 import type { TransactionAttachment } from '@/types';
 import { resolveEmbeddableAttachmentUrl } from './storage/signedUrl';
 
@@ -332,51 +340,9 @@ export function exportIncomeStatementToExcel(
   period: string,
   summary: FinancialSummary
 ) {
-  // Use consolidated calculation
-  const metrics = calculateIncomeStatementMetrics(summary);
-
-  // Create worksheet data
-  const data = [
-    ['INCOME STATEMENT'],
-    [businessName],
-    [`Period: ${period}`],
-    [],
-    ['Description', 'Amount'],
-    ['REVENUE', ''],
-    ['Total Revenue', summary.totalEarn],
-    [],
-    ['COST OF GOODS SOLD', ''],
-    ['Variable Costs', -summary.totalVar],
-    [],
-    ['GROSS PROFIT', summary.grossProfit],
-    ['Gross Margin (%)', metrics.grossMargin],
-    [],
-    ['OPERATING EXPENSES', ''],
-    ['Operating Expenses', -summary.totalOpex],
-    ...(summary.totalDepreciation > 0
-      ? [[], ['BEBAN PENYUSUTAN', ''], ['Depreciation Expense', -summary.totalDepreciation]]
-      : []),
-    [],
-    ['OPERATING INCOME', metrics.operatingIncome],
-    ['Operating Margin (%)', metrics.operatingMargin],
-    [],
-    ['FINANCING COSTS', ''],
-    ['Interest & Financing', -summary.totalInterest],
-    [],
-    ['EARNINGS BEFORE TAX (EBT)', metrics.ebt],
-    [],
-    ['TAX', ''],
-    ['Tax', -summary.totalTax],
-    [],
-    ['NET INCOME', summary.netProfit],
-    ['Net Margin (%)', metrics.netMargin],
-    [],
-    [],
-    [`Generated on ${new Date().toLocaleDateString('id-ID')}`],
-  ];
-
-  // Create workbook and worksheet
-  const ws = XLSX.utils.aoa_to_sheet(data);
+  // Baris laporan disusun di `reports/reportRows.ts` supaya dipakai bersama
+  // dengan export Google Sheets — isi laporan tidak boleh menyimpang antar-format.
+  const ws = XLSX.utils.aoa_to_sheet(buildIncomeStatementRows(businessName, period, summary));
 
   // Set column widths
   ws['!cols'] = [{ wch: 30 }, { wch: 20 }];
@@ -581,43 +547,9 @@ export async function exportCashFlowToPDF(
 export function exportCashFlowToExcel(
   businessName: string,
   period: string,
-  data: {
-    operating: number;
-    investing: number;
-    financing: number;
-    netCashFlow: number;
-    openingBalance: number;
-    closingBalance: number;
-  }
+  data: CashFlowExportData
 ) {
-  // Create worksheet data
-  const excelData = [
-    ['CASH FLOW STATEMENT'],
-    [businessName],
-    [`Period: ${period}`],
-    [],
-    ['Description', 'Amount'],
-    ['Opening Balance', data.openingBalance],
-    [],
-    ['OPERATING ACTIVITIES', ''],
-    ['Cash from Operations', data.operating],
-    [],
-    ['INVESTING ACTIVITIES', ''],
-    ['Capital Expenditure', data.investing],
-    [],
-    ['FINANCING ACTIVITIES', ''],
-    ['Financing Cash Flow', data.financing],
-    [],
-    ['NET CASH FLOW', data.netCashFlow],
-    [],
-    ['CLOSING BALANCE', data.closingBalance],
-    [],
-    [],
-    [`Generated on ${new Date().toLocaleDateString('id-ID')}`],
-  ];
-
-  // Create workbook and worksheet
-  const ws = XLSX.utils.aoa_to_sheet(excelData);
+  const ws = XLSX.utils.aoa_to_sheet(buildCashFlowRows(businessName, period, data));
 
   // Set column widths
   ws['!cols'] = [{ wch: 30 }, { wch: 20 }];
@@ -971,61 +903,7 @@ export function exportBalanceSheetToExcel(
   asOfDate: string,
   data: BalanceSheetData
 ) {
-  // Check if balanced
-  const isBalanced = Math.abs(
-    data.assets.totalAssets - (data.liabilities.totalLiabilities + data.equity.totalEquity)
-  ) < 0.01;
-
-  // Prepare Excel data
-  const excelData = [
-    ['BALANCE SHEET'],
-    [businessName],
-    [`As of: ${asOfDate}`],
-    [],
-    ['ASSETS', 'Amount'],
-    [],
-    ['Current Assets', ''],
-    ['Cash & Bank', data.assets.cash],
-    ...(data.assets.inventory !== 0 ? [['Inventory', data.assets.inventory]] : []),
-    ...(data.assets.receivables !== 0 ? [['Receivables', data.assets.receivables]] : []),
-    ...(data.assets.otherCurrentAssets !== 0 ? [['Other Current Assets', data.assets.otherCurrentAssets]] : []),
-    ['Total Current Assets', data.assets.totalCurrentAssets],
-    [],
-    ['Fixed Assets', ''],
-    ['Nilai Perolehan', data.assets.fixedAssets],
-    ...(data.assets.accumulatedDepreciation > 0
-      ? [['Akumulasi Penyusutan', -data.assets.accumulatedDepreciation]]
-      : []),
-    [data.assets.accumulatedDepreciation > 0 ? 'Nilai Buku Aset Tetap' : 'Total Fixed Assets', data.assets.totalFixedAssets],
-    [],
-    ['TOTAL ASSETS', data.assets.totalAssets],
-    [],
-    [],
-    ['LIABILITIES & EQUITY', 'Amount'],
-    [],
-    ['Liabilities', ''],
-    ['Loans', data.liabilities.loans],
-    ['Total Liabilities', data.liabilities.totalLiabilities],
-    [],
-    ['Equity', ''],
-    ['Modal Disetor', data.equity.capital],
-    ['Retained Earnings', data.equity.retainedEarnings],
-    ['Total Equity', data.equity.totalEquity],
-    [],
-    ['TOTAL LIABILITIES & EQUITY', data.liabilities.totalLiabilities + data.equity.totalEquity],
-    [],
-    [],
-    [
-      isBalanced ? '✓ Balanced' : '⚠ Not Balanced',
-      isBalanced ? 'Assets = Liabilities + Equity' : 'Assets ≠ Liabilities + Equity',
-    ],
-    [],
-    [],
-    [`Generated on ${new Date().toLocaleDateString('id-ID')}`],
-  ];
-
-  // Create workbook and worksheet
-  const ws = XLSX.utils.aoa_to_sheet(excelData);
+  const ws = XLSX.utils.aoa_to_sheet(buildBalanceSheetRows(businessName, asOfDate, data));
 
   // Set column widths
   ws['!cols'] = [{ wch: 30 }, { wch: 20 }];
@@ -1039,9 +917,6 @@ export function exportBalanceSheetToExcel(
 }
 
 // ==================== STATEMENT OF CHANGES IN EQUITY ====================
-
-const ownerLabel = (o: { contactName: string | null; ownerName: string }) =>
-  o.contactName ?? o.ownerName;
 
 // Export Statement of Changes in Equity to PDF
 export async function exportSCEToPDF(
@@ -1193,52 +1068,7 @@ export function exportSCEToExcel(
   period: string,
   data: SCEData
 ) {
-  const rows: (string | number)[][] = [
-    ['STATEMENT OF CHANGES IN EQUITY'],
-    [businessName],
-    [`Periode: ${period}`],
-    [],
-    ['Komponen', 'Saldo Awal', 'Penambahan', 'Pengurangan', 'Saldo Akhir'],
-  ];
-
-  for (const o of data.owners) {
-    rows.push([
-      `Modal — ${ownerLabel(o)}`,
-      o.capitalOpening,
-      o.capitalAdditions,
-      -o.capitalWithdrawals,
-      o.capitalClosing,
-    ]);
-  }
-  rows.push([
-    'Laba Ditahan',
-    data.retainedOpening,
-    data.netIncome >= 0 ? data.netIncome : 0,
-    data.netIncome < 0 ? data.netIncome : -data.dividendsDeclared,
-    data.retainedClosing,
-  ]);
-  rows.push(['TOTAL EKUITAS', data.totalEquityOpening, '', '', data.totalEquityClosing]);
-
-  rows.push([]);
-  rows.push([]);
-  rows.push(['Rekonsiliasi Dividen — Hak vs Aktual']);
-  rows.push(['Pemilik', 'Hak (%)', 'Hak Dividen', 'Dividen Aktual', 'Selisih']);
-  for (const r of data.dividendReconciliation) {
-    const owner = data.owners.find((o) => o.stockAccountId === r.stockAccountId);
-    rows.push([
-      owner ? ownerLabel(owner) : r.ownerName,
-      owner ? owner.profitSharePct : 0,
-      r.entitled,
-      r.actual,
-      r.variance,
-    ]);
-  }
-
-  rows.push([]);
-  rows.push([data.isReconciled ? '✓ Cocok dengan Neraca' : '⚠ Tidak cocok dengan Neraca']);
-  rows.push([`Generated on ${new Date().toLocaleDateString('id-ID')}`]);
-
-  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const ws = XLSX.utils.aoa_to_sheet(buildSCERows(businessName, period, data));
   ws['!cols'] = [{ wch: 32 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Perubahan Ekuitas');
