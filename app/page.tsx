@@ -86,6 +86,8 @@ const content = {
     statUsers: 'Pengguna',
     statBusinesses: 'Bisnis',
     statPrivacy: 'Data Privacy',
+    privacyPolicy: 'Kebijakan Privasi',
+    termsOfService: 'Syarat & Ketentuan',
   },
   en: {
     navAccounting: 'Accounting Engine',
@@ -148,6 +150,8 @@ const content = {
     statUsers: 'Users',
     statBusinesses: 'Businesses',
     statPrivacy: 'Data Privacy',
+    privacyPolicy: 'Privacy Policy',
+    termsOfService: 'Terms of Service',
   },
 } as const;
 
@@ -766,6 +770,16 @@ export default function LandingPage() {
           <div className="container mx-auto px-6 max-w-6xl py-5 flex flex-col md:flex-row items-center justify-between text-sm text-gray-500 gap-3">
             <p>{t.copyright}</p>
             <div className="flex items-center gap-5">
+              {/* Link legal wajib terjangkau dari halaman utama — Google
+                  memverifikasinya saat consent screen OAuth dipublish. */}
+              <div className="flex items-center gap-4 text-xs">
+                <Link href="/privacy" className="hover:text-gray-300 transition-colors">
+                  {t.privacyPolicy}
+                </Link>
+                <Link href="/terms" className="hover:text-gray-300 transition-colors">
+                  {t.termsOfService}
+                </Link>
+              </div>
               <div className="flex items-center gap-1 border border-gray-700 rounded-full overflow-hidden">
                 {(['id', 'en'] as const).map((l) => (
                   <Fragment key={l}>

@@ -37,6 +37,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly',
       priority: 0.5,
     },
+    // Halaman legal wajib bisa diakses publik & terindeks — Google memverifikasi
+    // URL ini saat consent screen OAuth dipublish ke production.
+    {
+      url: `${baseUrl}/privacy`,
+      lastModified: new Date(),
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/terms`,
+      lastModified: new Date(),
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
   ];
 
   // Blog articles
