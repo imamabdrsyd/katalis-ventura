@@ -8,10 +8,6 @@
   },
   "crons": [
     {
-      "path": "/api/cron/sync-olap",
-      "schedule": "0 19 * * *"
-    },
-    {
       "path": "/api/cron/sync-ical",
       "schedule": "0 5 * * *"
     }

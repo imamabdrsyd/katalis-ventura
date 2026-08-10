@@ -9,8 +9,14 @@
  * `Authorization: Bearer ${CRON_SECRET}` bila env CRON_SECRET di-set. Request tanpa
  * secret yang cocok ditolak 401.
  *
- * Jadwal diatur di vercel.json (crons). Tiap bisnis disync sequential dengan isolasi
- * error: kegagalan satu bisnis tidak menghentikan yang lain.
+ * Tiap bisnis disync sequential dengan isolasi error: kegagalan satu bisnis tidak
+ * menghentikan yang lain.
+ *
+ * ⚠️ NONAKTIF sejak 10 Agustus 2026 — jadwalnya sudah dihapus dari vercel.json karena
+ * instance Cloud SQL `axion-agents` dihapus untuk menolkan tagihan, jadi cron ini hanya
+ * akan gagal tiap hari. Route sengaja DIPERTAHANKAN supaya tinggal pasang lagi entry
+ * crons di vercel.json kalau instance OLAP dibangun ulang (jangan lupa update env
+ * GCP_ANALYTICS_DB_URL + jalankan /api/admin/gcp/init-schema lebih dulu).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
