@@ -241,8 +241,6 @@ export const en: Translations = {
     arTrackerOutstandingLabel: 'Outstanding Transactions',
     arTrackerFrom: 'from',
     arTrackerContactsLabel: 'Contacts',
-    arTrackerEmpty: 'No outstanding receivables',
-    arTrackerEmptyDesc: 'All receivable transactions have been settled',
     arTotalOutstanding: 'Total Outstanding',
     arTopDebtors: 'Top Debtors',
   },

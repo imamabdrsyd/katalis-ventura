@@ -241,8 +241,6 @@ export const id: Translations = {
     arTrackerOutstandingLabel: 'Transaksi Outstanding',
     arTrackerFrom: 'dari',
     arTrackerContactsLabel: 'Kontak',
-    arTrackerEmpty: 'Tidak ada piutang outstanding',
-    arTrackerEmptyDesc: 'Semua transaksi piutang sudah dilunasi',
     arTotalOutstanding: 'Total Outstanding',
     arTopDebtors: 'Top Debitur',
   },

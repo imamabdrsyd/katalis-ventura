@@ -246,8 +246,6 @@ export interface Translations {
     arTrackerOutstandingLabel: string;
     arTrackerFrom: string;
     arTrackerContactsLabel: string;
-    arTrackerEmpty: string;
-    arTrackerEmptyDesc: string;
     arTotalOutstanding: string;
     arTopDebtors: string;
   };
