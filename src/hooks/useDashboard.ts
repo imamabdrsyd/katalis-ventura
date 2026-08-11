@@ -78,13 +78,16 @@ export function useDashboard() {
   // runway calc & ROI all-time. Numbers per year/month dihitung di page
   // dari `transactions` yang sudah ter-load.
   const capital = business?.capital_investment ?? 0;
+  // `accounts` + reportDate WAJIB diteruskan: tanpa keduanya calculateBalanceSheet
+  // melewati perhitungan depresiasi, sehingga aset tetap & ekuitas di dashboard
+  // overstated dan berbeda dari halaman /balance-sheet yang memang mengirimkannya.
   const { summary, balanceSheet, investedCapital } = useMemo(
     () => ({
       summary: calculateFinancialSummary(transactions),
-      balanceSheet: calculateBalanceSheet(transactions, capital),
+      balanceSheet: calculateBalanceSheet(transactions, capital, accounts, new Date()),
       investedCapital: calculateInvestedCapital(transactions, capital),
     }),
-    [transactions, capital]
+    [transactions, capital, accounts]
   );
 
   // Write-through cache: simpan hasil kalkulasi ke DB setelah compute selesai.
@@ -111,8 +114,12 @@ export function useDashboard() {
       transactionCount: transactions.length,
       computedBy: user.id,
     }).catch((err) => console.error('[useDashboard] Failed to persist cache:', err));
+    // `accounts.length` ikut jadi dep: accounts di-fetch di query terpisah dan bisa
+    // tiba SETELAH transaksi. Tanpa ini, cache terlanjur menyimpan balance sheet yang
+    // dihitung saat accounts masih kosong (= tanpa depresiasi, aset overstated) dan
+    // kunjungan berikutnya meng-hydrate angka itu dari cache.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [businessId, user?.id, transactionsLoading, transactions.length, capital]);
+  }, [businessId, user?.id, transactionsLoading, transactions.length, capital, accounts.length]);
 
   // Hasil akhir: kalau transactions sudah loaded, pakai nilai computed;
   // kalau belum loaded tapi cache valid, pakai cache payload

@@ -136,10 +136,26 @@ function resolveExpenseSection(
   return account?.default_category === 'VAR' ? 'cost_of_revenue' : 'operating_expense';
 }
 
+/**
+ * Jurnal penutup (closing entry) me-nol-kan saldo revenue & expense ke Laba Ditahan.
+ *
+ * Seluruh laporan di app ini menurunkan laba dari transaksi mentah (revenue − expense),
+ * BUKAN dari saldo akun Laba Ditahan. Memproses closing entry karena itu selalu salah:
+ * di Neraca ia men-nol-kan revenue/expense dan salah-mengklasifikasi laba ke Modal/Prive,
+ * di Income Statement ia mengurangkan seluruh pendapatan & beban periode dua kali.
+ *
+ * Satu-satunya perlakuan yang benar: abaikan di semua jalur pelaporan.
+ */
+export function isClosingEntry(t: Transaction): boolean {
+  return t.meta?.entry_type?.id === 'closing_entry';
+}
+
 // Calculate financial summary from transactions
 export function calculateFinancialSummary(
-  transactions: Transaction[]
+  rawTransactions: Transaction[]
 ): FinancialSummary {
+  // Closing entry historis tidak boleh masuk Income Statement (lihat isClosingEntry)
+  const transactions = rawTransactions.filter((t) => !isClosingEntry(t));
   const summary: FinancialSummary = {
     totalEarn: 0,
     totalOpex: 0,
@@ -786,8 +802,11 @@ export interface IncomeStatementLineItems {
 }
 
 export function extractIncomeStatementLineItems(
-  transactions: Transaction[]
+  rawTransactions: Transaction[]
 ): IncomeStatementLineItems {
+  // Closing entry historis tidak boleh masuk drill-down/export IS (lihat isClosingEntry)
+  const transactions = rawTransactions.filter((t) => !isClosingEntry(t));
+
   // Maps: accountId → { accountCode, accountName, total, transactions[] }
   const revenueMap = new Map<string, AccountLineItem>();
   const cogsMap = new Map<string, AccountLineItem>();
@@ -1030,8 +1049,11 @@ export function calculateCategoryCounts(
 
 // Group transactions by month
 export function groupTransactionsByMonth(
-  transactions: Transaction[]
+  rawTransactions: Transaction[]
 ): MonthlyData[] {
+  // Closing entry historis tidak boleh masuk agregat bulanan (lihat isClosingEntry)
+  const transactions = rawTransactions.filter((t) => !isClosingEntry(t));
+
   const monthMap = new Map<string, MonthlyData>();
 
   transactions.forEach((t) => {
@@ -1158,7 +1180,12 @@ export function groupTransactionsByMonth(
       monthData.earn - monthData.opex - monthData.var - monthData.tax - monthData.interest;
   });
 
-  return Array.from(monthMap.values()).sort((a, b) => a.month.localeCompare(b.month));
+  // Sortir pakai KEY (`YYYY-MM`), bukan `month` yang berisi nama bulan terlokalisasi
+  // ("Agu 2026"). Mengurutkan nama bulan menghasilkan urutan alfabetis — Agu sebelum
+  // Des sebelum Jan — sehingga deret waktu kacau begitu data melewati batas tahun.
+  return Array.from(monthMap.entries())
+    .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
+    .map(([, data]) => data);
 }
 
 /**
@@ -1217,32 +1244,11 @@ export function calculateInitialCapital(transactions: Transaction[]): number {
   return initialCapital;
 }
 
-/**
- * Calculate total CAPEX from ALL transactions
- * Used for BusinessCard display
- *
- * @param transactions - All transactions for the business
- * @returns Total CAPEX amount (sum of all CAPEX transactions)
- */
-export function calculateTotalCapex(transactions: Transaction[]): number {
-  // Sum ALL CAPEX transactions (not just first month)
-  return transactions
-    .filter(t => {
-      // Skip deleted transactions
-      if (t.deleted_at) return false;
-
-      if (t.category === 'CAPEX') return true;
-
-      // Check if double-entry transaction debits to a non-cash ASSET (fixed asset purchase)
-      if (t.is_double_entry && t.debit_account) {
-        return t.debit_account.account_type === 'ASSET'
-          && !isCashAccount(t.debit_account);
-      }
-
-      return false;
-    })
-    .reduce((sum, t) => sum + Number(t.amount), 0);
-}
+// CATATAN: `calculateTotalCapex()` dihapus (audit ACC-M12). Fungsi ini sudah tidak
+// dipanggil siapa pun — total CAPEX di halaman Businesses kini dihitung server-side
+// lewat RPC `get_capex_by_business` (migrasi 077, diperbaiki di migrasi 128).
+// Logikanya juga salah: setiap debit ASSET non-kas dihitung CAPEX, sehingga pembelian
+// persediaan & piutang ikut terhitung sebagai belanja modal.
 
 // Calculate balance sheet using double-entry bookkeeping
 // Capital should come from business settings (capital_investment), not calculated from transactions
@@ -1254,11 +1260,10 @@ export function calculateBalanceSheet(
 ): BalanceSheetData {
 
   // Retained earnings di-AUTO-CALCULATE dari (revenue − expense), bukan dari saldo
-  // akun Laba Ditahan. Karena itu jurnal penutup (closing entry) lama HARUS diabaikan:
-  // memprosesnya akan men-nol-kan revenue/expense dan salah-mengklasifikasi laba ke
-  // pos Modal/Prive. Filter ini juga jadi pengaman bila ada data closing entry historis.
+  // akun Laba Ditahan. Karena itu jurnal penutup (closing entry) lama HARUS diabaikan
+  // (lihat isClosingEntry).
   const sourceTransactions = transactions.filter(
-    (t) => t.meta?.entry_type?.id !== 'closing_entry'
+    (t) => !isClosingEntry(t)
   );
 
   // Single-pass partition: O(n) bukan 2x O(n)

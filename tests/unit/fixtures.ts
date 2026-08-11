@@ -148,6 +148,7 @@ interface MultiLineInput {
   amount: number;
   category: TransactionCategory;
   lines: Array<{ account: Account; debit?: number; credit?: number }>;
+  meta?: Transaction['meta'];
 }
 
 export function multiLineTxn(input: MultiLineInput): Transaction {
@@ -182,5 +183,6 @@ export function multiLineTxn(input: MultiLineInput): Transaction {
     is_double_entry: true,
     is_multi_line: true,
     journal_lines,
+    meta: input.meta,
   };
 }
