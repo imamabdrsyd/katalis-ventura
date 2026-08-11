@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { useUIPreferences } from '@/context/UIPreferencesContext';
 import { createClient } from '@/lib/supabase';
 import { LOCALE_LABELS, LOCALE_FLAGS, type Locale } from '@/lib/i18n';
-import { Camera, User, Mail, Briefcase, Save, Globe, CheckCircle2, XCircle, Copy, RefreshCw, FileEdit, CheckCheck, Database } from 'lucide-react';
+import { Camera, User, Mail, Briefcase, Save, Globe, CheckCircle2, XCircle, Copy, RefreshCw, FileEdit, CheckCheck, Database, Bot } from 'lucide-react';
 
 function TelegramIcon({ className }: { className?: string }) {
   return (
@@ -26,6 +27,7 @@ import { toast } from 'sonner';
 export default function SettingsPage() {
   const { user, userRole, displayRole, isSuperadmin, switchRole, refetch, activeBusinessId } = useBusinessContext();
   const { locale, setLocale, t } = useLanguage();
+  const { showAIFab, setShowAIFab } = useUIPreferences();
   const router = useRouter();
   const supabase = createClient();
 
@@ -455,6 +457,41 @@ export default function SettingsPage() {
 
         {/* RIGHT PANEL — Integrations */}
         <div className="flex-1 min-w-0 space-y-6">
+          {/* Preferensi Tampilan — FAB AI Chat */}
+          <div className="card">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
+                <Bot className="w-5 h-5 text-primary-500 dark:text-primary-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.settings.aiFabTitle}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t.settings.aiFabSubtitle}</p>
+              </div>
+            </div>
+            <div className="flex items-start justify-between gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.settings.aiFabLabel}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t.settings.aiFabHint}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={showAIFab}
+                aria-label={t.settings.aiFabLabel}
+                onClick={() => setShowAIFab(!showAIFab)}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                  showAIFab ? 'bg-gray-900 dark:bg-gray-100' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-800 transition-transform ${
+                    showAIFab ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
           {/* Telegram Bot */}
           {canUseTelegram ? (
             <div className="card">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { searchContacts, getContacts } from '@/lib/api/contacts';
 import { UserPlus, BookUser } from 'lucide-react';
@@ -26,6 +26,12 @@ interface ContactAutocompleteProps {
   required?: boolean;
   /** Tampilkan opsi "Simpan sebagai kontak" jika nama belum ada */
   onSaveAsContact?: (name: string) => void;
+  /**
+   * Label mengambang gaya Material (sama seperti FloatingField/FloatingSelect).
+   * Kalau diisi, field pakai padding `pt-5 pb-1.5` supaya baseline-nya sejajar
+   * dengan FloatingSelect di kolom sebelahnya.
+   */
+  floatingLabel?: string;
 }
 
 export function ContactAutocomplete({
@@ -37,7 +43,10 @@ export function ContactAutocomplete({
   className = 'input',
   required,
   onSaveAsContact,
+  floatingLabel,
 }: ContactAutocompleteProps) {
+  const generatedId = useId();
+  const inputId = `contact-autocomplete-${generatedId}`;
   const [suggestions, setSuggestions] = useState<Contact[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -186,6 +195,7 @@ export function ContactAutocomplete({
       <div className="relative">
         <input
           ref={inputRef}
+          id={inputId}
           type="text"
           value={value}
           onChange={(e) => {
@@ -198,15 +208,32 @@ export function ContactAutocomplete({
             if (value.trim()) setShowDropdown(true);
           }}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          className={`${className} pr-10`}
+          placeholder={floatingLabel ? (placeholder || ' ') : placeholder}
+          className={`${className} pr-10 ${
+            floatingLabel
+              ? 'peer !pt-5 !pb-1.5 placeholder:text-transparent focus:placeholder:text-gray-400 dark:focus:placeholder:text-gray-500'
+              : ''
+          }`}
           required={required}
           autoComplete="off"
         />
+        {floatingLabel && (
+          <label
+            htmlFor={inputId}
+            className="pointer-events-none absolute left-0 origin-[0] transition-all duration-200 text-gray-500 dark:text-gray-400
+              top-5 -translate-y-5 scale-75
+              peer-placeholder-shown:top-5 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:dark:text-gray-500
+              peer-focus:-translate-y-5 peer-focus:scale-75 peer-focus:text-primary-500"
+          >
+            {floatingLabel}
+          </label>
+        )}
         <button
           type="button"
           onClick={toggleContactBook}
-          className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-colors ${
+          className={`absolute right-2 p-1.5 rounded-lg transition-colors ${
+            floatingLabel ? 'top-8 -translate-y-1/2' : 'top-1/2 -translate-y-1/2'
+          } ${
             showContactBook
               ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
               : 'text-gray-400 hover:text-indigo-500 hover:bg-gray-100 dark:hover:bg-gray-700'

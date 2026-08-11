@@ -42,6 +42,7 @@ import { NotificationBell } from '@/components/ui/NotificationBell';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import { FloatingQuickAdd } from '@/components/transactions/FloatingQuickAdd';
 import { AIChatFAB } from '@/components/ai/AIChatFAB';
+import { useUIPreferences } from '@/context/UIPreferencesContext';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
 import { useNotifications } from '@/hooks/useNotifications';
 import { isManagerRole } from '@/lib/roles';
@@ -1007,6 +1008,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const { userRole, activeBusinessId, activeBusiness } = useBusinessContext();
   const { locale } = useLanguage();
+  const { showAIFab } = useUIPreferences();
   const pathname = usePathname();
   const prefersReducedMotion = useReducedMotion();
   const touchStartX = useRef<number | null>(null);
@@ -1114,8 +1116,8 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       {/* Global Floating Quick Add Button with shared state */}
       <FloatingQuickAdd isOpen={quickAddOpen} onOpenChange={setQuickAddOpen} />
 
-      {/* Global AI Chat FAB */}
-      {activeBusinessId && (
+      {/* Global AI Chat FAB — hanya tampil bila dinyalakan di /settings (default: sembunyi) */}
+      {activeBusinessId && showAIFab && (
         <AIChatFAB
           businessId={activeBusinessId}
           businessName={activeBusiness?.business_name ?? ''}

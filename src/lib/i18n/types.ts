@@ -162,6 +162,11 @@ export interface Translations {
     themeLight: string;
     themeDark: string;
     themeMidnight: string;
+    // Preferensi tampilan — FAB AI Chat
+    aiFabTitle: string;
+    aiFabSubtitle: string;
+    aiFabLabel: string;
+    aiFabHint: string;
     // Telegram Bot card
     telegramTitle: string;
     telegramSubtitle: string;

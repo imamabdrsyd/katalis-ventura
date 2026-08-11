@@ -155,6 +155,10 @@ export const id: Translations = {
     themeLight: 'Terang',
     themeDark: 'Gelap',
     themeMidnight: 'Midnight',
+    aiFabTitle: 'Tombol AI Mengambang',
+    aiFabSubtitle: 'Tombol pintasan AXION AI di pojok kanan bawah',
+    aiFabLabel: 'Tampilkan tombol AI mengambang',
+    aiFabHint: 'Kalau dimatikan, tombol robot di pojok kanan bawah disembunyikan. Preferensi ini tersimpan di perangkat ini saja.',
     // Telegram Bot card
     telegramTitle: 'Telegram Bot',
     telegramSubtitle: 'Input transaksi langsung dari Telegram',

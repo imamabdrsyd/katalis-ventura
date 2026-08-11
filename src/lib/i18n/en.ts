@@ -155,6 +155,10 @@ export const en: Translations = {
     themeLight: 'Light',
     themeDark: 'Dark',
     themeMidnight: 'Midnight',
+    aiFabTitle: 'Floating AI Button',
+    aiFabSubtitle: 'AXION AI shortcut button at the bottom-right corner',
+    aiFabLabel: 'Show floating AI button',
+    aiFabHint: 'When off, the robot button at the bottom-right corner is hidden. This preference is saved on this device only.',
     // Telegram Bot card
     telegramTitle: 'Telegram Bot',
     telegramSubtitle: 'Log transactions directly from Telegram',

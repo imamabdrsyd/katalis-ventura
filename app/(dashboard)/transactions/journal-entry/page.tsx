@@ -1579,7 +1579,6 @@ export default function JournalEntryPage() {
             {/* Row 3: Name + Category */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="label text-base font-semibold">{selectedEntryType!.nameLabel}</label>
                 <ContactAutocomplete
                   businessId={businessId ?? ''}
                   value={name}
@@ -1588,6 +1587,7 @@ export default function JournalEntryPage() {
                     if (errors.name) setErrors(p => { const n = { ...p }; delete n.name; return n; });
                   }}
                   className="input-underline"
+                  floatingLabel={selectedEntryType!.nameLabel}
                   placeholder={selectedEntryType!.namePlaceholder}
                   onSaveAsContact={async (contactName) => {
                     if (!businessId || !user) return;
