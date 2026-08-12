@@ -14,6 +14,7 @@ import { Building2, Archive, Lock, Users, Contact, Globe, Blocks } from 'lucide-
 import { useLanguage } from '@/context/LanguageContext';
 import { Tabs } from '@/components/ui/Tabs';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { CardGridSkeleton } from '@/components/ui/PageSkeleton';
 import * as businessesApi from '@/lib/api/businesses';
 import { createClient } from '@/lib/supabase';
 import { isManagerRole } from '@/lib/roles';
@@ -293,12 +294,7 @@ export default function BusinessesPage() {
 
       {/* Business List */}
       {fetchLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-500 dark:text-gray-400">{t.businesses.loadingBusinesses}</p>
-          </div>
-        </div>
+        <CardGridSkeleton count={6} />
       ) : displayedBusinesses.length === 0 ? (
         <EmptyState
           className="bg-gray-50 dark:bg-gray-800 rounded-xl"

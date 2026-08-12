@@ -678,7 +678,6 @@ export const en: Translations = {
     hardDelete: 'Delete Permanently',
     hardDeleting: 'Deleting...',
     periodLock: 'Period Lock',
-    loadingBusinesses: 'Loading business data...',
   },
 
   businessForm: {

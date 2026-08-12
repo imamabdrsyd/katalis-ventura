@@ -20,6 +20,7 @@ import Image from 'next/image';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 import { GoogleSheetsCard } from '@/components/google/GoogleSheetsCard';
+import { FormSkeleton } from '@/components/ui/PageSkeleton';
 import { isManagerRole } from '@/lib/roles';
 import type { UserRole } from '@/types';
 import { toast } from 'sonner';
@@ -298,14 +299,7 @@ export default function SettingsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="p-8 flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500 dark:text-gray-400">{t.common.loading}</p>
-        </div>
-      </div>
-    );
+    return <FormSkeleton />;
   }
 
   return (

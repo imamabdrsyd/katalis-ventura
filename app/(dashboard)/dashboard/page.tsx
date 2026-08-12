@@ -471,7 +471,7 @@ export default function DashboardPage() {
             onClick={() => router.push('/transactions?category=EARN')}
           >
             <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center transition-colors duration-200 group-hover:bg-gray-900 group-hover:text-white dark:group-hover:bg-gray-100 dark:group-hover:text-gray-900">
                 <TrendingUp className="w-5 h-5" />
               </div>
               {!transactionsLoading && revenueGrowthData.growth !== null && (
@@ -490,7 +490,7 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-            <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.revenue}</div>
+            <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1 transition-colors duration-200 group-hover:text-gray-900 dark:group-hover:text-gray-100">{t.dashboard.revenue}</div>
             <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 break-all tabular-nums">
               {transactionsLoading ? '...' : (
                 <AnimatedNumber
@@ -527,7 +527,7 @@ export default function DashboardPage() {
             }}
           >
             <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center transition-colors duration-200 group-hover:bg-gray-900 group-hover:text-white dark:group-hover:bg-gray-100 dark:group-hover:text-gray-900">
                 <BarChart3 className="w-5 h-5" />
               </div>
               {!transactionsLoading && netMargin !== null && (
@@ -541,7 +541,7 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-            <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.profitLoss}</div>
+            <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1 transition-colors duration-200 group-hover:text-gray-900 dark:group-hover:text-gray-100">{t.dashboard.profitLoss}</div>
             <div className={`text-xl md:text-2xl font-bold break-all tabular-nums ${summary.netProfit === 0 ? 'text-gray-500 dark:text-gray-400' : summary.netProfit > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
               {transactionsLoading ? '...' : (
                 <AnimatedNumber
@@ -568,9 +568,9 @@ export default function DashboardPage() {
 
         {/* ROI */}
         <motion.div variants={shouldReduceMotion ? undefined : DASHBOARD_ITEM_VARIANTS}>
-          <div className="card flex flex-col">
+          <div className="card flex flex-col group">
             <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center transition-colors duration-200 group-hover:bg-gray-900 group-hover:text-white dark:group-hover:bg-gray-100 dark:group-hover:text-gray-900">
                 <Target className="w-5 h-5" />
               </div>
               {!transactionsLoading && investedCapital.remainingInvestedCapital > 0 && (
@@ -587,7 +587,7 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-            <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.roi}</div>
+            <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1 transition-colors duration-200 group-hover:text-gray-900 dark:group-hover:text-gray-100">{t.dashboard.roi}</div>
             <div className={`text-xl md:text-2xl font-bold tabular-nums ${roi === 0 ? 'text-gray-500 dark:text-gray-400' : roi > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
               {transactionsLoading ? '...' : (
                 <AnimatedNumber
@@ -625,11 +625,11 @@ export default function DashboardPage() {
         {/* Cash Balance */}
         <motion.div variants={shouldReduceMotion ? undefined : DASHBOARD_ITEM_VARIANTS}>
           <div
-            className="card cursor-pointer flex flex-col"
+            className="card cursor-pointer flex flex-col group"
             onClick={() => router.push('/general-ledger?filterType=ASSET')}
           >
             <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center transition-colors duration-200 group-hover:bg-gray-900 group-hover:text-white dark:group-hover:bg-gray-100 dark:group-hover:text-gray-900">
                 <Wallet className="w-5 h-5" />
               </div>
               {!transactionsLoading && cashRunwayMonths !== null && cashRunwayMonths > 0 && (
@@ -638,7 +638,7 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-            <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.cashBalance}</div>
+            <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1 transition-colors duration-200 group-hover:text-gray-900 dark:group-hover:text-gray-100">{t.dashboard.cashBalance}</div>
             <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 break-all tabular-nums">
               {transactionsLoading ? '...' : (
                 <AnimatedNumber

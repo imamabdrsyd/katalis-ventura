@@ -682,7 +682,6 @@ export const id: Translations = {
     hardDelete: 'Hapus Permanen',
     hardDeleting: 'Menghapus...',
     periodLock: 'Kunci Periode',
-    loadingBusinesses: 'Memuat data bisnis...',
   },
 
   businessForm: {

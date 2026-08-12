@@ -12,6 +12,7 @@ import { formatCurrency } from '@/lib/utils';
 import type { Business } from '@/types';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import FloatingField from '@/components/ui/FloatingField';
+import { CardFormSkeleton, ListSkeleton } from '@/components/ui/PageSkeleton';
 
 type RequestStatus = 'pending' | 'approved' | 'rejected' | null;
 
@@ -198,11 +199,8 @@ export default function JoinBusinessPage() {
 
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="mt-4 text-gray-600">Memeriksa autentikasi...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center p-6">
+        <CardFormSkeleton />
       </div>
     );
   }
@@ -294,10 +292,7 @@ export default function JoinBusinessPage() {
 
             {/* Business List */}
             {loading ? (
-              <div className="text-center py-8">
-                <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-gray-500 dark:text-gray-400">Memuat daftar bisnis...</p>
-              </div>
+              <ListSkeleton rows={4} className="mb-6" />
             ) : filteredBusinesses.length === 0 ? (
               <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-xl">
                 <div className="flex justify-center mb-3"><Building2 className="w-10 h-10 text-gray-400" /></div>

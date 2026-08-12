@@ -695,7 +695,6 @@ export interface Translations {
     hardDelete: string;
     hardDeleting: string;
     periodLock: string;
-    loadingBusinesses: string;
   };
 
   // Business Form

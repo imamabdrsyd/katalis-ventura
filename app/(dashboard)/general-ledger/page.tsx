@@ -11,6 +11,7 @@ import type { Period } from '@/hooks/useReportData';
 import type { AccountType, Transaction } from '@/types';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ListSkeleton, TableSkeleton } from '@/components/ui/PageSkeleton';
 
 // Account type labels are now dynamic via useLanguage - see component body
 
@@ -256,9 +257,7 @@ function GeneralLedgerPageInner() {
             {/* Account List */}
             <div className="overflow-y-auto flex-1 min-h-0">
               {loading || accountsLoading ? (
-                <div className="p-6 text-center">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500 mx-auto"></div>
-                </div>
+                <ListSkeleton rows={8} className="p-3" />
               ) : allLedgers.length === 0 ? (
                 <div className="p-6 text-center text-sm text-gray-500 dark:text-gray-400">
                   {t.generalLedger.noAccountsFound}
@@ -608,7 +607,7 @@ function GeneralLedgerPageInner() {
 
 export default function GeneralLedgerPage() {
   return (
-    <Suspense fallback={<div className="p-8 flex items-center justify-center min-h-[50vh]"><div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+    <Suspense fallback={<TableSkeleton />}>
       <GeneralLedgerPageInner />
     </Suspense>
   );

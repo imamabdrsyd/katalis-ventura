@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase';
 import { Building2 } from 'lucide-react';
 import { createBusiness } from '@/lib/api/businesses';
 import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
+import { CardFormSkeleton } from '@/components/ui/PageSkeleton';
 
 const BUSINESS_TYPES = [
   { value: 'agribusiness', label: 'Agribusiness' },
@@ -87,14 +88,11 @@ export default function SetupBusinessPage() {
     }
   };
 
-  // Show nothing while checking authentication
+  // Skeleton berbentuk kartu form sementara autentikasi dicek
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-4 text-gray-600">Checking authentication...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-6">
+        <CardFormSkeleton />
       </div>
     );
   }

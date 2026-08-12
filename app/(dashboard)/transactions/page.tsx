@@ -29,6 +29,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { AgentProgressToast, type AgentStep } from '@/components/agent/AgentProgressToast';
 import { AGENT_IMPORT_SESSION_EVENT, isAgentImportSessionRunning, readAgentImportSession } from '@/lib/agent/importSession';
 import { BulkDeleteProgressToast } from '@/components/transactions/BulkDeleteProgressToast';
+import { TableSkeleton } from '@/components/ui/PageSkeleton';
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
@@ -594,14 +595,7 @@ function TransactionsPageInner() {
 
   // Loading state
   if (businessLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500 dark:text-gray-400">{t.common.loading}</p>
-        </div>
-      </div>
-    );
+    return <TableSkeleton />;
   }
 
   // Error state (no business)
@@ -1281,7 +1275,7 @@ function TransactionsPageInner() {
 
 export default function TransactionsPage() {
   return (
-    <Suspense fallback={<div className="p-8 flex items-center justify-center min-h-[50vh]"><div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+    <Suspense fallback={<TableSkeleton />}>
       <TransactionsPageInner />
     </Suspense>
   );

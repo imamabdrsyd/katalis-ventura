@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 4 Agustus 2026 (§1.5 tema Midnight + token netral berbasis CSS variable)
+> Terakhir diupdate: 12 Agustus 2026 (§4.3 skeleton: bentuk Form/CardForm/CardGrid/List + `SkeletonRoot` a11y)
 
 ---
 
@@ -548,13 +548,24 @@ Dua varian:
 
 ### 4.3 Loading Skeleton
 
-**Untuk initial page-load, pakai skeleton berbentuk konten — bukan spinner terpusat.** Skeleton menahan layout agar tidak "melompat" saat data masuk (KB §5 konsistensi internal). Tiga bentuk kanonik di [`src/components/ui/PageSkeleton.tsx`](../src/components/ui/PageSkeleton.tsx):
+**Untuk initial page-load, pakai skeleton berbentuk konten — bukan spinner terpusat.** Skeleton menahan layout agar tidak "melompat" saat data masuk (KB §5 konsistensi internal). Bentuk kanonik di [`src/components/ui/PageSkeleton.tsx`](../src/components/ui/PageSkeleton.tsx):
+
+**Skeleton se-halaman** (punya header sendiri — dipakai sebagai `return` awal atau `Suspense` fallback):
 
 | Komponen | Untuk halaman |
 |----------|---------------|
 | `<PageSkeleton>` | dashboard-style (header + KPI cards + chart + list) |
 | `<ReportSkeleton>` | laporan (cash-flow, income-statement, balance-sheet, scenario-modeling) — 2 chart + summary |
-| `<TableSkeleton>` | tabular (trial-balance, ar-ap) — header + baris tabel |
+| `<TableSkeleton>` | tabular (trial-balance, ar-ap, transactions, invoices, general-ledger) — header + baris tabel |
+| `<FormSkeleton>` | halaman pengaturan 2 panel (settings) — header + panel profil + tumpukan kartu isian |
+| `<CardFormSkeleton>` | kartu form terpusat di luar layout dashboard (setup-business, join-business); taruh di dalam pembungkus gradient halaman |
+
+**Skeleton region** (tanpa header — untuk bagian yang memuat sendiri sementara header/tab halaman sudah tampil):
+
+| Komponen | Untuk region |
+|----------|--------------|
+| `<CardGridSkeleton count={6}>` | grid kartu (daftar bisnis) |
+| `<ListSkeleton rows={8} className="p-3">` | daftar/panel sempit (sidebar akun di buku besar, daftar bisnis di join-business) |
 
 ```tsx
 // Page-load state & Suspense fallback pakai skeleton yang sama
@@ -565,7 +576,9 @@ if (loading) return <ReportSkeleton />;
 </Suspense>
 ```
 
-**Spinner (`animate-spin`) tetap benar untuk aksi inline** — tombol Save/Submit yang sedang proses, bukan untuk memuat seluruh halaman.
+Semua skeleton dibungkus `SkeletonRoot`: `role="status"` + `aria-busy` + teks `sr-only` dari `t.common.loading`, supaya status memuat tetap terbaca screen reader setelah teks "Memuat…" milik spinner dihapus. Animasi `animate-pulse` selalu berpasangan dengan `motion-reduce:animate-none`.
+
+**Spinner (`animate-spin`) tetap benar untuk aksi inline** — tombol Save/Submit yang sedang proses, ikon Refresh yang berputar — bukan untuk memuat seluruh halaman atau region daftar.
 
 ### 4.4 Nested Panel (info box)
 
