@@ -1221,15 +1221,26 @@ export default function JournalEntryPage() {
         </button>
       </div>
 
+      {/* Baris label — di LUAR area scroll kedua panel supaya ikut ter-pin
+          bersama header halaman saat isi panel di-scroll. */}
+      <div className="flex flex-shrink-0 pt-8 pb-3">
+        <div className="w-72 flex-shrink-0 pl-8 pr-3">
+          <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide h-5">
+            Jenis Transaksi
+          </p>
+        </div>
+        <div className="flex-1 min-w-0 pl-3 pr-8">
+          <p className="text-sm text-gray-500 dark:text-gray-400 h-5 truncate">
+            {selectedEntryType?.description ?? ''}
+          </p>
+        </div>
+      </div>
+
       {/* Main Content: 2-Panel Layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Panel: Transaction Types */}
-        <div className="w-72 overflow-y-auto flex-shrink-0">
-          <div className="pl-8 pr-3 pt-8 pb-6 space-y-4">
-            <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide h-5">
-              Jenis Transaksi
-            </p>
-
+        <div className="w-72 overflow-y-auto scrollbar-hide flex-shrink-0">
+          <div className="pl-8 pr-3 pb-6 space-y-4">
             {/* Default visible entry types */}
             <div className="space-y-2">
               {defaultEntryTypes.map((et) => (
@@ -1280,13 +1291,7 @@ export default function JournalEntryPage() {
         {/* Right Panel: Form */}
         <div className="flex-1 overflow-y-auto flex flex-col min-w-0">
           {/* Form */}
-          <div className="flex-1 pl-3 pr-8 pt-8 pb-8">
-            {/* Entry type description — sejajar dengan label "Jenis Transaksi" di kiri */}
-            {selectedEntryType && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 h-5">
-                {selectedEntryType.description}
-              </p>
-            )}
+          <div className="flex-1 pl-3 pr-8 pb-8">
             {/* Pilih-dulu: daftar hutang/talangan outstanding (settle langsung) */}
             {showSettlementPicker && settlementPickerKind && (
               <OutstandingSettlementPicker

@@ -292,11 +292,15 @@ export function OutstandingSettlementPicker({
                 }`}
               >
                 <div className="min-w-0">
+                  {/* Judul = keterangan transaksi. Nama kontak turun ke sub —
+                      satu kontak bisa punya banyak tagihan, jadi namanya saja
+                      tidak membedakan baris mana yang mau dilunasi. */}
                   <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
-                    {t.name || t.description || 'Tanpa nama'}
+                    {t.description || t.name || 'Tanpa keterangan'}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                     {formatDate(t.date)}
+                    {t.description && t.name ? ` · ${t.name}` : ''}
                     {counter.code ? ` · ${counter.code} ${counter.name}` : ''}
                     {partialCount > 0 ? ` · ${partialCount}× cicilan` : ''}
                   </p>
