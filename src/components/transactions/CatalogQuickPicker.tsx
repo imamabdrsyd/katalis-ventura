@@ -19,6 +19,7 @@
 import { useMemo, useState } from 'react';
 import type { CatalogItem } from '@/types';
 import { formatCurrency } from '@/lib/utils';
+import { useLanguage } from '@/context/LanguageContext';
 import { Search, PenLine, Minus, Plus, Package, Wrench } from 'lucide-react';
 
 interface CatalogQuickPickerProps {
@@ -30,6 +31,8 @@ interface CatalogQuickPickerProps {
 }
 
 export function CatalogQuickPicker({ items, onSelect, onManualEntry }: CatalogQuickPickerProps) {
+  const { t } = useLanguage();
+  const tp = t.journalEntry.picker;
   const [search, setSearch] = useState('');
   const [qtyById, setQtyById] = useState<Record<string, number>>({});
 
@@ -55,12 +58,9 @@ export function CatalogQuickPicker({ items, onSelect, onManualEntry }: CatalogQu
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">
-            Pilih produk atau layanan
+            {tp.catalogTitle}
           </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Harga & akun pendapatan terisi otomatis dari katalog. Masih bisa diubah di form
-            berikutnya.
-          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{tp.catalogSubtitle}</p>
         </div>
         <button
           type="button"
@@ -68,7 +68,7 @@ export function CatalogQuickPicker({ items, onSelect, onManualEntry }: CatalogQu
           className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
         >
           <PenLine className="w-4 h-4" />
-          Catat manual
+          {tp.manualEntry}
         </button>
       </div>
 
@@ -79,7 +79,7 @@ export function CatalogQuickPicker({ items, onSelect, onManualEntry }: CatalogQu
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari produk atau layanan..."
+            placeholder={tp.catalogSearchPlaceholder}
             className="input-search pl-9"
           />
         </div>
@@ -87,7 +87,7 @@ export function CatalogQuickPicker({ items, onSelect, onManualEntry }: CatalogQu
 
       {filtered.length === 0 ? (
         <p className="px-4 py-6 text-sm text-center text-gray-500 dark:text-gray-400">
-          Tidak ada item yang cocok dengan &ldquo;{search}&rdquo;
+          {tp.catalogNoResults.replace('{keyword}', search)}
         </p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -114,7 +114,9 @@ export function CatalogQuickPicker({ items, onSelect, onManualEntry }: CatalogQu
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {formatCurrency(item.default_price)}
                       {item.unit ? ` / ${item.unit}` : ''}
-                      {item.track_stock ? ` · stok ${item.stock_qty ?? 0}` : ''}
+                      {item.track_stock
+                        ? ` · ${tp.catalogStock.replace('{count}', String(item.stock_qty ?? 0))}`
+                        : ''}
                     </p>
                   </div>
                 </div>
@@ -126,7 +128,7 @@ export function CatalogQuickPicker({ items, onSelect, onManualEntry }: CatalogQu
                       onClick={() => setQty(item.id, qty - 1)}
                       disabled={qty <= 1}
                       className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 transition-colors"
-                      aria-label="Kurangi jumlah"
+                      aria-label={tp.decreaseQty}
                     >
                       <Minus className="w-3.5 h-3.5" />
                     </button>
@@ -137,7 +139,7 @@ export function CatalogQuickPicker({ items, onSelect, onManualEntry }: CatalogQu
                       type="button"
                       onClick={() => setQty(item.id, qty + 1)}
                       className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                      aria-label="Tambah jumlah"
+                      aria-label={tp.increaseQty}
                     >
                       <Plus className="w-3.5 h-3.5" />
                     </button>
@@ -148,13 +150,13 @@ export function CatalogQuickPicker({ items, onSelect, onManualEntry }: CatalogQu
                     onClick={() => onSelect(item, qty, total)}
                     className="btn-primary text-xs px-3 py-1.5"
                   >
-                    Pilih · {formatCurrency(total)}
+                    {tp.catalogSelect} · {formatCurrency(total)}
                   </button>
                 </div>
 
                 {outOfStock && (
                   <p className="text-[11px] text-amber-600 dark:text-amber-400">
-                    Stok habis — penjualan tetap bisa dicatat, stok akan minus.
+                    {tp.catalogOutOfStock}
                   </p>
                 )}
               </div>

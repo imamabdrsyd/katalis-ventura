@@ -23,7 +23,7 @@ import { InventoryPicker } from '@/components/transactions/InventoryPicker';
 import {
   OutstandingSettlementPicker,
   getOutstandingTransactions,
-  type OutstandingKind,
+  type SettlementSide,
 } from '@/components/transactions/OutstandingSettlementPicker';
 import { CatalogQuickPicker } from '@/components/transactions/CatalogQuickPicker';
 import { getCatalogItems } from '@/lib/api/catalog';
@@ -42,6 +42,9 @@ import {
   computeNextDueDate,
 } from '@/lib/api/recurring';
 import type { Account, AccountType, TransactionCategory, Transaction, UnitBreakdown, TransactionAttachment, JournalLineInput, TransactionTemplate, CatalogItem } from '@/types';
+import { useLanguage } from '@/context/LanguageContext';
+import type { Translations, JournalEntryTypeKey, JournalEntryTypeStrings } from '@/lib/i18n/types';
+import { isAnyReceivableAccount } from '@/lib/accounting/classification';
 import {
   ArrowLeft,
   BookOpen,
@@ -77,25 +80,15 @@ import { FileUpload } from '@/components/ui/FileUpload';
 
 // ─── entry types ───────────────────────────────────────────────────────────
 
-type EntryTypeId =
-  | 'penjualan'
-  | 'pengeluaran'
-  | 'pinjaman'
-  | 'bayar_hutang'
-  | 'cicil_hutang'
-  | 'suntik_modal'
-  | 'tarik_dividen'
-  | 'beban_terutang'
-  | 'realisasi_pendapatan_dimuka'
-  | 'reklasifikasi_hutang'
-  | 'pendapatan_dimuka'
-  | 'catat_talangan'
-  | 'terima_kembali_talangan';
+type EntryTypeId = JournalEntryTypeKey;
 
-interface EntryType {
+/**
+ * Konfigurasi non-teks jenis transaksi. Label/deskripsi/label nama diambil dari
+ * i18n (`t.journalEntry.entryTypes[id]`) lewat `buildEntryTypes()` — panel ini
+ * dwibahasa, jadi teksnya tidak boleh ditanam di sini.
+ */
+interface EntryTypeConfig {
   id: EntryTypeId;
-  label: string;
-  description: string;
   icon: React.ReactNode;
   color: string;
   bgColor: string;
@@ -116,10 +109,9 @@ interface EntryType {
   suggestedCategory: TransactionCategory;
   /** If true, category dropdown is locked (user cannot change it) */
   lockCategory?: boolean;
-  /** Nama label for the "from" party */
-  nameLabel: string;
-  namePlaceholder: string;
 }
+
+type EntryType = EntryTypeConfig & JournalEntryTypeStrings;
 
 /** Filter: only ASSET accounts that are talangan/advance (default_category=FIN or name match) */
 function isTalanganAccount(acc: Account): boolean {
@@ -127,11 +119,9 @@ function isTalanganAccount(acc: Account): boolean {
   return /talangan|advance|piutang talangan/i.test(acc.account_name);
 }
 
-const ENTRY_TYPES: EntryType[] = [
+const ENTRY_TYPE_CONFIGS: EntryTypeConfig[] = [
   {
     id: 'penjualan',
-    label: 'Penjualan',
-    description: 'Terima uang dari pelanggan',
     icon: <TrendingUp className="w-5 h-5" />,
     color: 'text-emerald-500 dark:text-emerald-400',
     bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
@@ -141,13 +131,9 @@ const ENTRY_TYPES: EntryType[] = [
     defaultDebitType: 'ASSET',
     defaultCreditType: 'REVENUE',
     suggestedCategory: 'EARN',
-    nameLabel: 'Nama Pelanggan',
-    namePlaceholder: 'Siapa yang membayar?',
   },
   {
     id: 'pengeluaran',
-    label: 'Pengeluaran',
-    description: 'Bayar beban operasional',
     icon: <TrendingDown className="w-5 h-5" />,
     color: 'text-red-500 dark:text-red-400',
     bgColor: 'bg-red-50 dark:bg-red-900/20',
@@ -157,13 +143,9 @@ const ENTRY_TYPES: EntryType[] = [
     defaultDebitType: 'EXPENSE',
     defaultCreditType: 'ASSET',
     suggestedCategory: 'OPEX',
-    nameLabel: 'Nama Vendor / Penerima',
-    namePlaceholder: 'Dibayar ke siapa?',
   },
   {
     id: 'pinjaman',
-    label: 'Terima Pinjaman',
-    description: 'Uang masuk dari pinjaman',
     icon: <Landmark className="w-5 h-5" />,
     color: 'text-amber-500 dark:text-amber-400',
     bgColor: 'bg-amber-50 dark:bg-amber-900/20',
@@ -173,13 +155,12 @@ const ENTRY_TYPES: EntryType[] = [
     defaultDebitType: 'ASSET',
     defaultCreditType: 'LIABILITY',
     suggestedCategory: 'FIN',
-    nameLabel: 'Nama Pemberi Pinjaman',
-    namePlaceholder: 'Bank / kreditur',
   },
   {
+    // Lunas & cicil digabung di satu kartu — pilihannya ada di dalam baris
+    // daftar hutang (lihat OutstandingSettlementPicker), karena dari sisi user
+    // kejadiannya sama: bayar ke kreditur. Yang beda cuma nominalnya.
     id: 'bayar_hutang',
-    label: 'Bayar Hutang',
-    description: 'Lunasi kewajiban sepenuhnya',
     icon: <CreditCard className="w-5 h-5" />,
     color: 'text-orange-600 dark:text-orange-400',
     bgColor: 'bg-orange-50 dark:bg-orange-900/20',
@@ -189,29 +170,9 @@ const ENTRY_TYPES: EntryType[] = [
     defaultDebitType: 'LIABILITY',
     defaultCreditType: 'ASSET',
     suggestedCategory: 'FIN',
-    nameLabel: 'Nama Kreditur',
-    namePlaceholder: 'Bank / kreditur yang dibayar',
-  },
-  {
-    id: 'cicil_hutang',
-    label: 'Cicil Hutang',
-    description: 'Bayar sebagian kewajiban',
-    icon: <ArrowRightLeft className="w-5 h-5" />,
-    color: 'text-yellow-600 dark:text-yellow-400',
-    bgColor: 'bg-yellow-50 dark:bg-yellow-900/20',
-    borderColor: 'border-yellow-500',
-    debitFilter: 'LIABILITY',
-    creditFilter: 'ASSET',
-    defaultDebitType: 'LIABILITY',
-    defaultCreditType: 'ASSET',
-    suggestedCategory: 'FIN',
-    nameLabel: 'Nama Kreditur',
-    namePlaceholder: 'Bank / kreditur yang dicicil',
   },
   {
     id: 'suntik_modal',
-    label: 'Suntik Modal',
-    description: 'Pemilik menambah modal bisnis',
     icon: <PiggyBank className="w-5 h-5" />,
     color: 'text-purple-500 dark:text-purple-400',
     bgColor: 'bg-purple-50 dark:bg-purple-900/20',
@@ -221,13 +182,9 @@ const ENTRY_TYPES: EntryType[] = [
     defaultDebitType: 'ASSET',
     defaultCreditType: 'EQUITY',
     suggestedCategory: 'FIN',
-    nameLabel: 'Nama Penyetor Modal',
-    namePlaceholder: 'Nama pemilik / investor',
   },
   {
     id: 'tarik_dividen',
-    label: 'Tarik Dividen',
-    description: 'Pemilik mengambil keuntungan',
     icon: <Wallet className="w-5 h-5" />,
     color: 'text-indigo-500 dark:text-indigo-400',
     bgColor: 'bg-indigo-50 dark:bg-indigo-900/20',
@@ -237,13 +194,9 @@ const ENTRY_TYPES: EntryType[] = [
     defaultDebitType: 'EQUITY',
     defaultCreditType: 'ASSET',
     suggestedCategory: 'FIN',
-    nameLabel: 'Nama Penerima',
-    namePlaceholder: 'Nama pemilik / investor',
   },
   {
     id: 'beban_terutang',
-    label: 'Beban Terutang',
-    description: 'Catat beban yang belum dibayar (accrued expense)',
     icon: <AlertTriangle className="w-5 h-5" />,
     color: 'text-rose-600 dark:text-rose-400',
     bgColor: 'bg-rose-50 dark:bg-rose-900/20',
@@ -253,13 +206,9 @@ const ENTRY_TYPES: EntryType[] = [
     defaultDebitType: 'EXPENSE',
     defaultCreditType: 'LIABILITY',
     suggestedCategory: 'OPEX',
-    nameLabel: 'Nama Beban / Vendor',
-    namePlaceholder: 'Contoh: PLN, Telkom, Gaji karyawan',
   },
   {
     id: 'realisasi_pendapatan_dimuka',
-    label: 'Realisasi Pendapatan',
-    description: 'Akui pendapatan dari uang muka yang sudah diterima',
     icon: <RotateCcw className="w-5 h-5" />,
     color: 'text-teal-600 dark:text-teal-400',
     bgColor: 'bg-teal-50 dark:bg-teal-900/20',
@@ -269,13 +218,9 @@ const ENTRY_TYPES: EntryType[] = [
     defaultDebitType: 'LIABILITY',
     defaultCreditType: 'REVENUE',
     suggestedCategory: 'EARN',
-    nameLabel: 'Nama Pelanggan',
-    namePlaceholder: 'Pelanggan yang sudah bayar di muka',
   },
   {
     id: 'reklasifikasi_hutang',
-    label: 'Reklasifikasi Hutang',
-    description: 'Pindahkan saldo antar akun hutang',
     icon: <Repeat className="w-5 h-5" />,
     color: 'text-slate-600 dark:text-slate-400',
     bgColor: 'bg-slate-50 dark:bg-slate-900/20',
@@ -285,13 +230,9 @@ const ENTRY_TYPES: EntryType[] = [
     defaultDebitType: 'LIABILITY',
     defaultCreditType: 'LIABILITY',
     suggestedCategory: 'FIN',
-    nameLabel: 'Keterangan',
-    namePlaceholder: 'Reklasifikasi dari ... ke ...',
   },
   {
     id: 'pendapatan_dimuka',
-    label: 'Pendapatan Dimuka',
-    description: 'Terima uang sebelum jasa/barang diserahkan',
     icon: <Clock className="w-5 h-5" />,
     color: 'text-cyan-600 dark:text-cyan-400',
     bgColor: 'bg-cyan-50 dark:bg-cyan-900/20',
@@ -301,13 +242,9 @@ const ENTRY_TYPES: EntryType[] = [
     defaultDebitType: 'ASSET',
     defaultCreditType: 'LIABILITY',
     suggestedCategory: 'FIN',
-    nameLabel: 'Nama Pelanggan',
-    namePlaceholder: 'Pelanggan yang membayar di muka',
   },
   {
     id: 'catat_talangan',
-    label: 'Catat Talangan',
-    description: 'Bayar dulu untuk orang lain, akan ditagih kembali',
     icon: <HandCoins className="w-5 h-5" />,
     color: 'text-sky-600 dark:text-sky-400',
     bgColor: 'bg-sky-50 dark:bg-sky-900/20',
@@ -319,28 +256,31 @@ const ENTRY_TYPES: EntryType[] = [
     defaultCreditType: 'ASSET',
     suggestedCategory: 'FIN',
     lockCategory: true,
-    nameLabel: 'Nama Penerima Talangan',
-    namePlaceholder: 'Siapa yang ditalangi?',
   },
   {
-    id: 'terima_kembali_talangan',
-    label: 'Terima Kembali Talangan',
-    description: 'Terima pembayaran kembali atas talangan yang diberikan',
+    // Piutang usaha & talangan digabung: keduanya "orang bayar balik ke saya".
+    // Kategori TIDAK dikunci — pelunasan piutang usaha masuk EARN, talangan FIN,
+    // dan itu diturunkan otomatis dari akun piutang transaksi asalnya.
+    id: 'terima_pelunasan',
     icon: <Receipt className="w-5 h-5" />,
     color: 'text-lime-600 dark:text-lime-400',
     bgColor: 'bg-lime-50 dark:bg-lime-900/20',
     borderColor: 'border-lime-500',
     debitFilter: 'ASSET',
     creditFilter: 'ASSET',
-    creditSubFilter: isTalanganAccount,
+    creditSubFilter: isAnyReceivableAccount,
     defaultDebitType: 'ASSET',
     defaultCreditType: 'ASSET',
     suggestedCategory: 'FIN',
-    lockCategory: true,
-    nameLabel: 'Nama Pembayar',
-    namePlaceholder: 'Siapa yang membayar kembali?',
   },
 ];
+
+function buildEntryTypes(t: Translations): EntryType[] {
+  return ENTRY_TYPE_CONFIGS.map((config) => ({
+    ...config,
+    ...t.journalEntry.entryTypes[config.id],
+  }));
+}
 
 /**
  * Kartu jenis transaksi di panel kiri. Memakai utility `.card` (shadow diffuse
@@ -395,7 +335,7 @@ const DEFAULT_VISIBLE_IDS: Set<EntryTypeId> = new Set([
   'penjualan',
   'pengeluaran',
   'catat_talangan',
-  'terima_kembali_talangan',
+  'terima_pelunasan',
   'suntik_modal',
   'tarik_dividen',
 ]);
@@ -435,6 +375,8 @@ function mlParseNumber(s: string): number {
 export default function JournalEntryPage() {
   const router = useRouter();
   const { user, activeBusiness, activeBusinessId: businessId } = useBusinessContext();
+  const { t } = useLanguage();
+  const entryTypes = useMemo(() => buildEntryTypes(t), [t]);
 
   // Invoice modal — Buat Invoice di header
   const {
@@ -446,10 +388,13 @@ export default function JournalEntryPage() {
     handleCreateInvoice,
   } = useInvoices();
 
-  // step state — initialize with first default entry type to show form by default
-  const [selectedEntryType, setSelectedEntryType] = useState<EntryType | null>(() => {
-    return ENTRY_TYPES.find(et => et.id === 'penjualan') || null;
-  });
+  // step state — simpan ID-nya saja; objek EntryType diturunkan dari `entryTypes`
+  // supaya label ikut berganti saat bahasa diubah.
+  const [selectedEntryTypeId, setSelectedEntryTypeId] = useState<EntryTypeId | null>('penjualan');
+  const selectedEntryType = useMemo(
+    () => entryTypes.find((et) => et.id === selectedEntryTypeId) ?? null,
+    [entryTypes, selectedEntryTypeId]
+  );
 
   // dividend entry mode (only relevant when selectedEntryType.id === 'tarik_dividen')
   const [dividendEntryMode, setDividendEntryMode] = useState<DividendEntryMode | null>(null);
@@ -468,8 +413,8 @@ export default function JournalEntryPage() {
     });
   };
 
-  const defaultEntryTypes = ENTRY_TYPES.filter(et => DEFAULT_VISIBLE_IDS.has(et.id));
-  const extraEntryTypes = ENTRY_TYPES.filter(et => !DEFAULT_VISIBLE_IDS.has(et.id));
+  const defaultEntryTypes = entryTypes.filter(et => DEFAULT_VISIBLE_IDS.has(et.id));
+  const extraEntryTypes = entryTypes.filter(et => !DEFAULT_VISIBLE_IDS.has(et.id));
 
   // form state
   const [amount, setAmount] = useState(0);
@@ -582,29 +527,26 @@ export default function JournalEntryPage() {
   // atas transaksi/data yang sudah ada. Untuk jenis-jenis ini form jurnal
   // mentah ditahan dulu dan user memilih dari daftar:
   //
-  //   bayar_hutang / cicil_hutang  → daftar hutang belum lunas  (settle via RPC)
-  //   terima_kembali_talangan      → daftar talangan belum kembali (settle via RPC)
-  //   penjualan                    → katalog produk/jasa (prefill form)
+  //   bayar_hutang      → daftar hutang belum lunas (lunas/cicil, settle via RPC)
+  //   terima_pelunasan  → daftar piutang belum lunas: usaha & talangan (2 tab)
+  //   penjualan         → katalog produk/jasa (prefill form)
   //
   // Kalau daftarnya kosong (belum ada hutang / katalog masih kosong), form
   // manual langsung ditampilkan seperti sebelumnya.
-  const settlementPickerKind: OutstandingKind | null =
-    selectedEntryType?.id === 'bayar_hutang' || selectedEntryType?.id === 'cicil_hutang'
+  const settlementSide: SettlementSide | null =
+    selectedEntryType?.id === 'bayar_hutang'
       ? 'payable'
-      : selectedEntryType?.id === 'terima_kembali_talangan'
-        ? 'advance_receivable'
+      : selectedEntryType?.id === 'terima_pelunasan'
+        ? 'receivable'
         : null;
 
-  const settlementPickerMode: 'full' | 'partial' =
-    selectedEntryType?.id === 'cicil_hutang' ? 'partial' : 'full';
-
   const outstandingRows = useMemo(
-    () => (settlementPickerKind ? getOutstandingTransactions(settlementPickerKind, allTransactions) : []),
-    [settlementPickerKind, allTransactions]
+    () => (settlementSide ? getOutstandingTransactions(settlementSide, allTransactions) : []),
+    [settlementSide, allTransactions]
   );
 
   const showSettlementPicker =
-    !!settlementPickerKind && !manualEntryOverride && outstandingRows.length > 0;
+    !!settlementSide && !manualEntryOverride && outstandingRows.length > 0;
 
   const sellableCatalogItems = useMemo(
     () => catalogItems.filter((i) => i.asset_class == null),
@@ -634,7 +576,7 @@ export default function JournalEntryPage() {
 
   // Auto-set default accounts & category when entry type is selected
   const handleSelectEntryType = useCallback((entryType: EntryType) => {
-    setSelectedEntryType(entryType);
+    setSelectedEntryTypeId(entryType.id);
     setDividendEntryMode(null);
     setErrors({});
     // Kembali ke mode "pilih dulu" tiap ganti jenis transaksi.
@@ -1226,7 +1168,7 @@ export default function JournalEntryPage() {
       <div className="flex flex-shrink-0 pt-8 pb-3">
         <div className="w-72 flex-shrink-0 pl-8 pr-3">
           <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide h-5">
-            Jenis Transaksi
+            {t.journalEntry.sectionLabel}
           </p>
         </div>
         <div className="flex-1 min-w-0 pl-3 pr-8">
@@ -1276,12 +1218,12 @@ export default function JournalEntryPage() {
               {entryTypesExpanded ? (
                 <>
                   <ChevronUp className="w-3.5 h-3.5" />
-                  Sembunyikan
+                  {t.journalEntry.hide}
                 </>
               ) : (
                 <>
                   <ChevronDown className="w-3.5 h-3.5" />
-                  Tampilkan Lainnya
+                  {t.journalEntry.showMore}
                 </>
               )}
             </button>
@@ -1293,10 +1235,9 @@ export default function JournalEntryPage() {
           {/* Form */}
           <div className="flex-1 pl-3 pr-8 pb-8">
             {/* Pilih-dulu: daftar hutang/talangan outstanding (settle langsung) */}
-            {showSettlementPicker && settlementPickerKind && (
+            {showSettlementPicker && settlementSide && (
               <OutstandingSettlementPicker
-                kind={settlementPickerKind}
-                mode={settlementPickerMode}
+                side={settlementSide}
                 transactions={allTransactions}
                 accounts={accounts}
                 onSettled={refreshTransactions}
@@ -1320,7 +1261,8 @@ export default function JournalEntryPage() {
             {selectedCatalogItem && (
               <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-primary-200 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20">
                 <p className="text-sm text-primary-700 dark:text-primary-300 truncate">
-                  Dari katalog: <span className="font-semibold">{selectedCatalogItem.name}</span>
+                  {t.journalEntry.picker.fromCatalog}{' '}
+                  <span className="font-semibold">{selectedCatalogItem.name}</span>
                 </p>
                 <button
                   type="button"
@@ -1330,7 +1272,7 @@ export default function JournalEntryPage() {
                   }}
                   className="shrink-0 text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
                 >
-                  Ganti item
+                  {t.journalEntry.picker.changeItem}
                 </button>
               </div>
             )}

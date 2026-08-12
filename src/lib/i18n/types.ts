@@ -1579,4 +1579,77 @@ export interface Translations {
     recordTransaction: string;
     recordFirstTransaction: string;
   };
+
+  journalEntry: {
+    sectionLabel: string;
+    showMore: string;
+    hide: string;
+    entryTypes: Record<JournalEntryTypeKey, JournalEntryTypeStrings>;
+    picker: {
+      manualEntry: string;
+      searchPlaceholder: string;
+      noResults: string;
+      remaining: string;
+      installmentCount: string; // "{count}× cicilan"
+      untitled: string;
+      // Hutang (AP)
+      payableTitle: string;
+      payableSubtitle: string;
+      payFull: string;
+      payPartial: string;
+      paidFullSuccess: string;
+      paidPartialSuccess: string;
+      // Piutang (AR) — usaha & talangan
+      receivableTitle: string;
+      receivableSubtitle: string;
+      tabTrade: string;
+      tabAdvance: string;
+      receiveFull: string;
+      receivePartial: string;
+      receivedFullSuccess: string;
+      receivedPartialSuccess: string;
+      // Input cicilan
+      amountLabel: string;
+      recordPayment: string;
+      cancel: string;
+      processing: string;
+      enterAmount: string;
+      mustBeLessThan: string; // "Jumlah harus kurang dari {amount}"
+      failed: string;
+      // Katalog (jenis transaksi Penjualan)
+      catalogTitle: string;
+      catalogSubtitle: string;
+      catalogSearchPlaceholder: string;
+      catalogNoResults: string;
+      catalogSelect: string;
+      catalogStock: string;
+      catalogOutOfStock: string;
+      decreaseQty: string;
+      increaseQty: string;
+      fromCatalog: string;
+      changeItem: string;
+    };
+  };
+}
+
+export type JournalEntryTypeKey =
+  | 'penjualan'
+  | 'pengeluaran'
+  | 'pinjaman'
+  | 'bayar_hutang'
+  | 'suntik_modal'
+  | 'tarik_dividen'
+  | 'beban_terutang'
+  | 'realisasi_pendapatan_dimuka'
+  | 'reklasifikasi_hutang'
+  | 'pendapatan_dimuka'
+  | 'catat_talangan'
+  | 'terima_pelunasan';
+
+export interface JournalEntryTypeStrings {
+  label: string;
+  description: string;
+  /** Label field nama pihak lawan (pelanggan/vendor/kreditur/…) */
+  nameLabel: string;
+  namePlaceholder: string;
 }
