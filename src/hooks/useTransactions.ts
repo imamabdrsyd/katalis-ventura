@@ -981,6 +981,8 @@ export function useTransactions() {
     handleCreateFollowUp,
     handleSettleReceivable,
     handlePartialSettleReceivable,
+    handleSettlePayable,
+    handlePartialSettlePayable,
     handleSettleDividend,
     handlePartialSettleDividend,
     handleConvertStockToCOGS,

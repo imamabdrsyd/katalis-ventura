@@ -1260,6 +1260,17 @@ export interface Translations {
     partialAmountLabel: string;
     enterPaymentAmount: string;
     mustBeLessThan: string;
+    // Pelunasan hutang (AP)
+    payableSettled: string;
+    payableSettledDesc: string;
+    payableOutstanding: string;
+    payableOutstandingDesc: string;
+    payDebtFull: string;
+    payDebtPartial: string;
+    confirmFullDebtPayment: string;
+    yesPay: string;
+    debtRemaining: string;
+    mustBeLessThanDebt: string;
     failedRecordPayment: string;
     recordPayment: string;
     // Related transactions

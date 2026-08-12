@@ -24,6 +24,11 @@ import {
   isDividendSettled,
   getDividendOutstandingAmount,
   getDividendPartialSettlementIds,
+  isPayableTransaction,
+  isPayableSettled,
+  getPayableLineAmount,
+  getPayableOutstandingAmount,
+  getPayablePartialSettlementIds,
 } from '@/lib/accounting/guidance';
 import { useInvoiceFromTransactions } from '@/hooks/useInvoiceFromTransactions';
 import { CreateInvoiceFromTransactionsModal } from '@/components/invoices/CreateInvoiceFromTransactionsModal';
@@ -54,6 +59,8 @@ interface TransactionDetailModalProps {
   allTags?: string[];
   onSettleReceivable?: (transaction: Transaction) => void;
   onPartialSettleReceivable?: (transaction: Transaction, amount: number) => Promise<void>;
+  onSettlePayable?: (transaction: Transaction) => void;
+  onPartialSettlePayable?: (transaction: Transaction, amount: number) => Promise<void>;
   onSettleDividend?: (transaction: Transaction) => void;
   onPartialSettleDividend?: (transaction: Transaction, amount: number) => Promise<void>;
   settleLoading?: boolean;
@@ -104,6 +111,8 @@ export function TransactionDetailModal({
   allTags = [],
   onSettleReceivable,
   onPartialSettleReceivable,
+  onSettlePayable,
+  onPartialSettlePayable,
   onSettleDividend,
   onPartialSettleDividend,
   settleLoading = false,
@@ -1268,6 +1277,235 @@ export function TransactionDetailModal({
           );
         })()}
 
+        {/* Payable Settlement Section — mirror sisi hutang (AP).
+            Dividend declaration punya section sendiri (di bawah) walau akun
+            kreditnya LIABILITY, jadi dikecualikan di sini. Transaksi piutang
+            juga dikecualikan supaya tidak ada dua panel yang berbagi state
+            showSettleConfirm/showPartialInput. */}
+        {isPayableTransaction(transaction) &&
+          !isDividendDeclaration(transaction) &&
+          !isReceivableTransaction(transaction) &&
+          onSettlePayable && (() => {
+          const partialIds = getPayablePartialSettlementIds(transaction);
+          const settled = isPayableSettled(transaction);
+          const finalSettlementId = transaction.meta?.settled_by_transaction_id;
+          const paymentIds = finalSettlementId && !partialIds.includes(finalSettlementId)
+            ? [...partialIds, finalSettlementId]
+            : partialIds;
+          const paymentTxns = allTransactions?.filter(t => paymentIds.includes(t.id)) ?? [];
+          const hasPayments = paymentTxns.length > 0;
+          const outstanding = getPayableOutstandingAmount(transaction, paymentTxns);
+          const payableTotal = getPayableLineAmount(transaction);
+          // Akun hutang yang akan didebit saat pelunasan — untuk multi-line ambil
+          // baris kredit LIABILITY (credit_account NULL di transaksi multi-line).
+          const payableAccount = transaction.is_multi_line && transaction.journal_lines
+            ? transaction.journal_lines.find(
+                (l) => l.credit_amount > 0 && l.account?.account_type === 'LIABILITY'
+              )?.account
+            : transaction.credit_account;
+
+          return (
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
+
+              {/* Status badge */}
+              {settled ? (
+                <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-lg">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-300">{t.transactionDetail.payableSettled}</p>
+                    <p className="text-xs text-emerald-500 dark:text-emerald-400">
+                      {t.transactionDetail.payableSettledDesc}
+                    </p>
+                  </div>
+                </div>
+              ) : !hasPayments ? (
+                <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg">
+                  <FileText className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t.transactionDetail.payableOutstanding}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {t.transactionDetail.payableOutstandingDesc}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Riwayat pembayaran — partial + pelunasan akhir */}
+              {hasPayments && (
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  <div className="px-3 py-2.5 flex items-center justify-between gap-2 bg-gray-50 dark:bg-gray-700/50">
+                    <div className="flex items-center gap-1.5">
+                      <History className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                      <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        {t.transactionDetail.paymentHistory}
+                      </span>
+                    </div>
+                    {!settled && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {t.transactionDetail.remaining} <span className="font-semibold text-gray-700 dark:text-gray-200">{formatCurrency(outstanding)}</span>
+                      </span>
+                    )}
+                  </div>
+                  <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {paymentTxns
+                      .sort((a, b) => a.date.localeCompare(b.date))
+                      .map((pt) => {
+                        const clickable = !!onShowRelatedTransaction;
+                        const isFinal = settled && pt.id === finalSettlementId;
+                        return (
+                          <div
+                            key={pt.id}
+                            onClick={clickable ? () => onShowRelatedTransaction!(pt) : undefined}
+                            className={`flex items-center justify-between px-3 py-2.5 ${
+                              clickable ? 'cursor-pointer group' : ''
+                            }`}
+                          >
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(pt.date)}</p>
+                              <p className={`text-sm font-medium text-gray-700 dark:text-gray-200 ${
+                                clickable ? 'group-hover:underline' : ''
+                              }`}>
+                                {pt.description || (isFinal ? t.transactionDetail.finalSettlement : t.transactionDetail.partialPayment)}
+                              </p>
+                            </div>
+                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                              −{formatCurrency(pt.amount)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-700/50">
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">{t.transactionDetail.totalPaid}</span>
+                      <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
+                        {formatCurrency(payableTotal - outstanding)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Aksi — hanya saat belum lunas */}
+              {!settled && !showSettleConfirm && !showPartialInput && (
+                <div className="flex items-stretch gap-2">
+                  <button
+                    onClick={() => setShowSettleConfirm(true)}
+                    className="flex-[3] flex items-center justify-between gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl border border-gray-300 dark:border-gray-600 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+                  >
+                    {t.transactionDetail.payDebtFull}
+                    <ChevronRight className="w-4 h-4 shrink-0" />
+                  </button>
+                  {onPartialSettlePayable && (
+                    <button
+                      onClick={() => setShowPartialInput(true)}
+                      className="btn-ghost flex-[2] flex items-center justify-between gap-1.5"
+                    >
+                      {t.transactionDetail.payDebtPartial}
+                      <ChevronRight className="w-4 h-4 shrink-0" />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Konfirmasi pelunasan penuh */}
+              {showSettleConfirm && (
+                <div className="rounded-lg border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 p-4 space-y-3">
+                  <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                    {t.transactionDetail.confirmFullDebtPayment}
+                  </p>
+                  <div className="px-3 py-2 bg-white dark:bg-gray-800 rounded-md font-mono text-xs text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                    {(() => {
+                      const cashAcc = findDefaultCashAccount(accounts || []);
+                      return (
+                        <>
+                          Dr {payableAccount?.account_code} – {payableAccount?.account_name} &nbsp;|&nbsp;
+                          Cr {cashAcc?.account_code ?? '1200'} – {cashAcc?.account_name ?? 'Bank'} &nbsp;|&nbsp;
+                          {formatCurrency(outstanding)}
+                        </>
+                      );
+                    })()}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { setShowSettleConfirm(false); onSettlePayable(transaction); }}
+                      disabled={settleLoading}
+                      className="btn-emerald-glow flex-1"
+                    >
+                      {settleLoading ? t.transactionDetail.processing : t.transactionDetail.yesPay}
+                    </button>
+                    <button
+                      onClick={() => setShowSettleConfirm(false)}
+                      disabled={settleLoading}
+                      className="flex-1 px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+                    >
+                      {t.transactionDetail.cancel}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Input cicilan */}
+              {showPartialInput && onPartialSettlePayable && (
+                <div className="rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50/50 dark:bg-indigo-900/10 p-4 space-y-3">
+                  <p className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">
+                    {t.transactionDetail.debtRemaining.replace('{amount}', formatCurrency(outstanding))}
+                  </p>
+                  <CurrencyInputWithCalculator
+                    label={t.transactionDetail.partialAmountLabel}
+                    displayValue={partialDisplayAmount}
+                    onChange={(num, fmt) => {
+                      setPartialAmount(num);
+                      setPartialDisplayAmount(fmt);
+                      setPartialError('');
+                    }}
+                    colorVariant="default"
+                  />
+                  {partialError && (
+                    <p className="text-xs text-red-500 dark:text-red-400">{partialError}</p>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        if (partialAmount <= 0) {
+                          setPartialError(t.transactionDetail.enterPaymentAmount);
+                          return;
+                        }
+                        if (partialAmount >= outstanding) {
+                          setPartialError(t.transactionDetail.mustBeLessThanDebt.replace('{amount}', formatCurrency(outstanding)));
+                          return;
+                        }
+                        setPartialLoading(true);
+                        setPartialError('');
+                        try {
+                          await onPartialSettlePayable(transaction, partialAmount);
+                          setShowPartialInput(false);
+                          setPartialAmount(0);
+                          setPartialDisplayAmount('');
+                        } catch (err: any) {
+                          setPartialError(err.message || t.transactionDetail.failedRecordPayment);
+                        } finally {
+                          setPartialLoading(false);
+                        }
+                      }}
+                      disabled={partialLoading}
+                      className="btn-primary-glow flex-1"
+                    >
+                      {partialLoading ? t.transactionDetail.processing : t.transactionDetail.recordPayment}
+                    </button>
+                    <button
+                      onClick={() => { setShowPartialInput(false); setPartialError(''); }}
+                      disabled={partialLoading}
+                      className="flex-1 px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+                    >
+                      {t.transactionDetail.cancel}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          );
+        })()}
+
         {/* Dividend Settlement Section — mirror of receivable settlement */}
         {isDividendDeclaration(transaction) && onSettleDividend && (() => {
           const partialIds = getDividendPartialSettlementIds(transaction);
@@ -1490,7 +1728,9 @@ export function TransactionDetailModal({
           // Hide "settled by" link when this transaction already shows the final settlement
           // inside its own Payment History (receivable/dividend declarations).
           const showSettledBy =
-            !isReceivableTransaction(transaction) && !isDividendDeclaration(transaction);
+            !isReceivableTransaction(transaction) &&
+            !isDividendDeclaration(transaction) &&
+            !isPayableTransaction(transaction);
           const settledBy = showSettledBy && transaction.meta?.settled_by_transaction_id
             ? allTransactions?.find(tx => tx.id === transaction.meta!.settled_by_transaction_id)
             : null;

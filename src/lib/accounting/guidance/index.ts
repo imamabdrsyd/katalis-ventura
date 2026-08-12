@@ -20,6 +20,17 @@ export {
 } from './receivableSettlement';
 export type { SettlementPrefill, PartialSettlementPrefill } from './receivableSettlement';
 export {
+  isPayableTransaction,
+  isPayableSettled,
+  isPayableSettlementEntry,
+  getPayableLineAmount,
+  getPayableOutstandingAmount,
+  getPayablePartialSettlementIds,
+  buildPayableSettlementPrefill,
+  buildPayablePartialSettlementPrefill,
+} from './payableSettlement';
+export type { PayableSettlementPrefill } from './payableSettlement';
+export {
   findDividendPayableAccount,
   isDividendAccount,
   isDividendDeclaration,

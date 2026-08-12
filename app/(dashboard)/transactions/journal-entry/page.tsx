@@ -20,6 +20,13 @@ import { DividendEntryModeModal } from '@/components/transactions/DividendEntryM
 import { getStockTransactions, findCogsAccount, deriveCatalogItemFromStock } from '@/lib/utils/inventoryHelper';
 import { updateTransaction } from '@/lib/api/transactions';
 import { InventoryPicker } from '@/components/transactions/InventoryPicker';
+import {
+  OutstandingSettlementPicker,
+  getOutstandingTransactions,
+  type OutstandingKind,
+} from '@/components/transactions/OutstandingSettlementPicker';
+import { CatalogQuickPicker } from '@/components/transactions/CatalogQuickPicker';
+import { getCatalogItems } from '@/lib/api/catalog';
 import { AccountDropdown } from '@/components/transactions/AccountDropdown';
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
 import { resolveContactTypeFromCategory, saveContactFromTransaction } from '@/lib/api/contacts';
@@ -34,7 +41,7 @@ import {
   createRecurringTransaction,
   computeNextDueDate,
 } from '@/lib/api/recurring';
-import type { Account, AccountType, TransactionCategory, Transaction, UnitBreakdown, TransactionAttachment, JournalLineInput, TransactionTemplate } from '@/types';
+import type { Account, AccountType, TransactionCategory, Transaction, UnitBreakdown, TransactionAttachment, JournalLineInput, TransactionTemplate, CatalogItem } from '@/types';
 import {
   ArrowLeft,
   BookOpen,
@@ -335,6 +342,43 @@ const ENTRY_TYPES: EntryType[] = [
   },
 ];
 
+/**
+ * Kartu jenis transaksi di panel kiri. Memakai utility `.card` (shadow diffuse
+ * ala Airbnb + hover lift) supaya seragam dengan kartu di hub Accounting —
+ * hanya padding yang dikecilkan karena daftar ini kompak & tetap vertikal.
+ */
+function EntryTypeCard({
+  entryType,
+  isSelected,
+  onSelect,
+}: {
+  entryType: EntryType;
+  isSelected: boolean;
+  onSelect: (entryType: EntryType) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(entryType)}
+      className={`card !p-3 w-full flex items-center gap-3 text-left ${
+        isSelected
+          ? '!bg-indigo-50 dark:!bg-indigo-900/20 !border-indigo-500 dark:!border-indigo-400'
+          : ''
+      }`}
+    >
+      <span className={isSelected ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}>
+        {entryType.icon}
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className={`text-sm font-semibold ${isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300'}`}>
+          {entryType.label}
+        </div>
+        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{entryType.description}</div>
+      </div>
+    </button>
+  );
+}
+
 const CATEGORY_LABELS: Record<TransactionCategory, string> = {
   EARN: 'Pendapatan (EARN)',
   OPEX: 'Beban Operasional (OPEX)',
@@ -477,21 +521,29 @@ export default function JournalEntryPage() {
   // data state
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // fetch accounts + transactions
+  // Pemilihan-dulu (lihat blok "list-first entry" di bawah): user bisa keluar
+  // dari daftar dan kembali ke form jurnal mentah lewat "Catat manual".
+  const [manualEntryOverride, setManualEntryOverride] = useState(false);
+  const [selectedCatalogItem, setSelectedCatalogItem] = useState<CatalogItem | null>(null);
+
+  // fetch accounts + transactions + katalog
   useEffect(() => {
     if (!businessId) return;
     async function fetchData() {
       try {
-        const [accs, txns] = await Promise.all([
+        const [accs, txns, items] = await Promise.all([
           getAccounts(businessId!),
           getTransactions(businessId!),
+          getCatalogItems(businessId!, { activeOnly: true }).catch(() => [] as CatalogItem[]),
         ]);
         setAccounts(accs);
         setAllTransactions(txns);
+        setCatalogItems(items);
       } catch (err) {
         console.error('Failed to fetch data:', err);
       } finally {
@@ -499,6 +551,17 @@ export default function JournalEntryPage() {
       }
     }
     fetchData();
+  }, [businessId]);
+
+  // Refresh daftar transaksi setelah pelunasan lewat picker — supaya baris yang
+  // baru lunas langsung hilang dari daftar outstanding.
+  const refreshTransactions = useCallback(async () => {
+    if (!businessId) return;
+    try {
+      setAllTransactions(await getTransactions(businessId));
+    } catch (err) {
+      console.error('Failed to refresh transactions:', err);
+    }
   }, [businessId]);
 
   // fetch templates
@@ -514,11 +577,69 @@ export default function JournalEntryPage() {
 
   const dividendPayableAccount = useMemo(() => findDividendPayableAccount(accounts), [accounts]);
 
+  // ── list-first entry ──────────────────────────────────────────────────────
+  // Sebagian jenis transaksi sebenarnya bukan "entry baru", tapi tindak lanjut
+  // atas transaksi/data yang sudah ada. Untuk jenis-jenis ini form jurnal
+  // mentah ditahan dulu dan user memilih dari daftar:
+  //
+  //   bayar_hutang / cicil_hutang  → daftar hutang belum lunas  (settle via RPC)
+  //   terima_kembali_talangan      → daftar talangan belum kembali (settle via RPC)
+  //   penjualan                    → katalog produk/jasa (prefill form)
+  //
+  // Kalau daftarnya kosong (belum ada hutang / katalog masih kosong), form
+  // manual langsung ditampilkan seperti sebelumnya.
+  const settlementPickerKind: OutstandingKind | null =
+    selectedEntryType?.id === 'bayar_hutang' || selectedEntryType?.id === 'cicil_hutang'
+      ? 'payable'
+      : selectedEntryType?.id === 'terima_kembali_talangan'
+        ? 'advance_receivable'
+        : null;
+
+  const settlementPickerMode: 'full' | 'partial' =
+    selectedEntryType?.id === 'cicil_hutang' ? 'partial' : 'full';
+
+  const outstandingRows = useMemo(
+    () => (settlementPickerKind ? getOutstandingTransactions(settlementPickerKind, allTransactions) : []),
+    [settlementPickerKind, allTransactions]
+  );
+
+  const showSettlementPicker =
+    !!settlementPickerKind && !manualEntryOverride && outstandingRows.length > 0;
+
+  const sellableCatalogItems = useMemo(
+    () => catalogItems.filter((i) => i.asset_class == null),
+    [catalogItems]
+  );
+
+  const showCatalogPicker =
+    selectedEntryType?.id === 'penjualan' &&
+    !manualEntryOverride &&
+    !selectedCatalogItem &&
+    sellableCatalogItems.length > 0;
+
+  const showEntryForm = !showSettlementPicker && !showCatalogPicker;
+
+  /** Prefill form penjualan dari item katalog yang dipilih. */
+  const handleSelectCatalogItem = useCallback(
+    (item: CatalogItem, qty: number, total: number) => {
+      setSelectedCatalogItem(item);
+      setAmount(total);
+      setDisplayAmount(total.toLocaleString('id-ID'));
+      setDescription(qty > 1 ? `${item.name} × ${qty}` : item.name);
+      if (item.revenue_account_id) setCreditAccountId(item.revenue_account_id);
+      setErrors({});
+    },
+    []
+  );
+
   // Auto-set default accounts & category when entry type is selected
   const handleSelectEntryType = useCallback((entryType: EntryType) => {
     setSelectedEntryType(entryType);
     setDividendEntryMode(null);
     setErrors({});
+    // Kembali ke mode "pilih dulu" tiap ganti jenis transaksi.
+    setManualEntryOverride(false);
+    setSelectedCatalogItem(null);
 
     // Auto-fill debit: prefer cash/bank for ASSET type
     if (entryType.defaultDebitType === 'ASSET' && cashAccount) {
@@ -1111,62 +1232,27 @@ export default function JournalEntryPage() {
 
             {/* Default visible entry types */}
             <div className="space-y-2">
-              {defaultEntryTypes.map((et) => {
-                const isSelected = selectedEntryType?.id === et.id;
-                return (
-                  <button
-                    key={et.id}
-                    type="button"
-                    onClick={() => handleSelectEntryType(et)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left ${
-                      isSelected
-                        ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 dark:border-indigo-400'
-                        : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                    }`}
-                  >
-                    <span className={isSelected ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}>
-                      {et.icon}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className={`text-sm font-semibold ${isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300'}`}>
-                        {et.label}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{et.description}</div>
-                    </div>
-                  </button>
-                );
-              })}
+              {defaultEntryTypes.map((et) => (
+                <EntryTypeCard
+                  key={et.id}
+                  entryType={et}
+                  isSelected={selectedEntryType?.id === et.id}
+                  onSelect={handleSelectEntryType}
+                />
+              ))}
             </div>
 
             {/* Expandable extra entry types */}
             {entryTypesExpanded && (
               <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 space-y-2">
-                {extraEntryTypes.map((et) => {
-                  const isSelected = selectedEntryType?.id === et.id;
-                  return (
-                    <button
-                      key={et.id}
-                      type="button"
-                      onClick={() => handleSelectEntryType(et)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left ${
-                        isSelected
-                          ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 dark:border-indigo-400'
-                          : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                      }`}
-                    >
-                      <span className={isSelected ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}>
-                        {et.icon}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className={`text-sm font-semibold ${isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300'}`}>
-                          {et.label}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{et.description}</div>
-                      </div>
-                    </button>
-                  );
-                })}
-
+                {extraEntryTypes.map((et) => (
+                  <EntryTypeCard
+                    key={et.id}
+                    entryType={et}
+                    isSelected={selectedEntryType?.id === et.id}
+                    onSelect={handleSelectEntryType}
+                  />
+                ))}
               </div>
             )}
 
@@ -1201,8 +1287,48 @@ export default function JournalEntryPage() {
                 {selectedEntryType.description}
               </p>
             )}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
+            {/* Pilih-dulu: daftar hutang/talangan outstanding (settle langsung) */}
+            {showSettlementPicker && settlementPickerKind && (
+              <OutstandingSettlementPicker
+                kind={settlementPickerKind}
+                mode={settlementPickerMode}
+                transactions={allTransactions}
+                accounts={accounts}
+                onSettled={refreshTransactions}
+                onManualEntry={() => setManualEntryOverride(true)}
+              />
+            )}
+
+            {/* Pilih-dulu: katalog produk/jasa (prefill form penjualan) */}
+            {showCatalogPicker && (
+              <CatalogQuickPicker
+                items={sellableCatalogItems}
+                onSelect={handleSelectCatalogItem}
+                onManualEntry={() => setManualEntryOverride(true)}
+              />
+            )}
+
+            <div className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 ${showEntryForm ? '' : 'hidden'}`}>
           <form onSubmit={handleSubmit} className="space-y-6">
+
+            {/* Item katalog terpilih — konteks untuk form penjualan */}
+            {selectedCatalogItem && (
+              <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-primary-200 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20">
+                <p className="text-sm text-primary-700 dark:text-primary-300 truncate">
+                  Dari katalog: <span className="font-semibold">{selectedCatalogItem.name}</span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCatalogItem(null);
+                    setManualEntryOverride(false);
+                  }}
+                  className="shrink-0 text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
+                >
+                  Ganti item
+                </button>
+              </div>
+            )}
 
             {/* Submit error */}
             {errors.submit && (
