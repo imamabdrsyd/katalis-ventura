@@ -1524,4 +1524,48 @@ export interface Translations {
     ventureEventCapitalIn: string;
     ventureEventCapitalOut: string;
   };
+  onboarding: {
+    // Header
+    title: string;
+    subtitle: string;
+    stepLabel: string; // "Langkah {current} dari {total}"
+    // Langkah 1 — identitas
+    step1Title: string;
+    step1Desc: string;
+    businessName: string;
+    businessNameHint: string;
+    businessCategory: string;
+    businessCategoryHint: string;
+    sector: string;
+    customSector: string;
+    customSectorHint: string;
+    // Langkah 2 — modal & lokasi
+    step2Title: string;
+    step2Desc: string;
+    capital: string;
+    capitalHint: string;
+    capitalSkipHint: string;
+    address: string;
+    addressHint: string;
+    optional: string;
+    // Navigasi
+    back: string;
+    next: string;
+    createBusiness: string;
+    creating: string;
+    createFailed: string;
+    // Layar ringkasan
+    doneTitle: string;
+    doneSubtitle: string;
+    doneAccounts: string;
+    doneAccountsDesc: string;
+    doneAccountsCount: string; // "{count} akun siap pakai"
+    doneCapital: string;
+    doneCapitalDesc: string;
+    doneNoCapital: string;
+    doneNoCapitalDesc: string;
+    goToDashboard: string;
+    recordTransaction: string;
+    recordFirstTransaction: string;
+  };
 }

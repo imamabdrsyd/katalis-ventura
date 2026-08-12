@@ -33,6 +33,22 @@ export const BUSINESS_SECTOR_PRESETS = [
 
 export type BusinessSectorPreset = (typeof BUSINESS_SECTOR_PRESETS)[number]['value'];
 
+/**
+ * Kategori usaha (`businesses.business_type`) — menentukan menu Katalog
+ * (jasa → /calendar, produk & dagang → /point-of-sales), tipe item katalog, dan
+ * label di BusinessSwitcher. Alasan sama seperti preset sektor di atas: satu
+ * sumber saja. Dipakai `BusinessForm` (edit) dan `setup-business` (onboarding) —
+ * dulu onboarding tidak mengirim field ini sama sekali sehingga kolomnya NULL
+ * dan konsumen jatuh ke default yang berbeda-beda.
+ */
+export const BUSINESS_TYPE_PRESETS = [
+  { value: 'jasa', label: 'Jasa' },
+  { value: 'produk', label: 'Produk' },
+  { value: 'dagang', label: 'Dagang' },
+] as const;
+
+export type BusinessTypePreset = (typeof BUSINESS_TYPE_PRESETS)[number]['value'];
+
 /** Sektor yang memakai Asset Console (portofolio investasi konsolidasi). */
 export const ASSET_CONSOLE_SECTORS = ['finance'] as const;
 

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Camera, X, Loader2 } from 'lucide-react';
 import type { Business } from '@/types';
 import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
-import { BUSINESS_SECTOR_PRESETS } from '@/lib/businessSectors';
+import { BUSINESS_SECTOR_PRESETS, BUSINESS_TYPE_PRESETS } from '@/lib/businessSectors';
 
 export interface BusinessFormData {
   business_name: string;
@@ -36,11 +36,7 @@ const BUSINESS_SECTORS = [
   { value: 'other', label: 'Lainnya (Custom)' },
 ];
 
-const BUSINESS_CATEGORIES = [
-  { value: 'jasa', label: 'Jasa' },
-  { value: 'produk', label: 'Produk' },
-  { value: 'dagang', label: 'Dagang' },
-];
+const BUSINESS_CATEGORIES = BUSINESS_TYPE_PRESETS;
 
 export function BusinessForm({
   business,
