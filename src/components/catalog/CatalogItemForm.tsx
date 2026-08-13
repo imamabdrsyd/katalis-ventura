@@ -5,6 +5,7 @@ import type { CatalogItem, CatalogItemType, Account, ServiceRole, RateKind, Asse
 import { AlertCircle, Package, Wrench, Camera, Crop, ImageIcon, Loader2, Maximize2, X } from 'lucide-react';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
+import NumberStepperField from '@/components/ui/NumberStepperField';
 import { useLanguage } from '@/context/LanguageContext';
 import { CATALOG_ASSET_CLASSES, ASSET_CLASS_META, assetClassLabelKey } from '@/lib/assetClasses';
 
@@ -552,21 +553,12 @@ export function CatalogItemForm({
             </p>
             {formData.track_stock && (
               <div>
-                <FloatingField
+                <NumberStepperField
                   label={tc.stockQtyLabel}
-                  type="number"
                   min={0}
-                  step="any"
                   value={formData.stock_qty ?? 0}
-                  onChange={(e) => setFormData(prev => ({ ...prev, stock_qty: Math.max(0, Number(e.target.value) || 0) }))}
-                  className="tabular-nums"
-                  trailing={
-                    formData.unit?.trim() ? (
-                      <span className="text-sm text-gray-400 dark:text-gray-500">
-                        {formData.unit.trim()}
-                      </span>
-                    ) : undefined
-                  }
+                  onValueChange={(v) => setFormData(prev => ({ ...prev, stock_qty: v }))}
+                  unit={formData.unit?.trim() || undefined}
                 />
                 {isEditMode && (
                   <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
@@ -620,27 +612,18 @@ export function CatalogItemForm({
                     Asset Console, bukan rasio konversi) — label & hint beda
                     dari stock/gold/property, di mana field yang sama berarti
                     "berapa satuan harga per 1 kuantitas transaksi". */}
-                <FloatingField
+                <NumberStepperField
                   label={
                     formData.asset_class === 'crypto'
                       ? tc.assetCryptoUnitLabel
                       : tc.assetLotSizeLabel
                   }
-                  type="number"
                   min={0}
-                  step="any"
                   value={formData.asset_lot_size ?? 1}
-                  onChange={(e) =>
-                    setFormData(prev => ({ ...prev, asset_lot_size: Number(e.target.value) || 0 }))
+                  onValueChange={(v) =>
+                    setFormData(prev => ({ ...prev, asset_lot_size: v }))
                   }
-                  className="tabular-nums"
-                  trailing={
-                    formData.unit?.trim() ? (
-                      <span className="text-sm text-gray-400 dark:text-gray-500">
-                        {formData.unit.trim()}
-                      </span>
-                    ) : undefined
-                  }
+                  unit={formData.unit?.trim() || undefined}
                 />
                 <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
                   {formData.asset_class === 'crypto' ? tc.assetCryptoUnitHint : tc.assetLotSizeHint}

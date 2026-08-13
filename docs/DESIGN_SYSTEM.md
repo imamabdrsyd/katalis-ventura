@@ -448,6 +448,29 @@ import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 - **`label` menerima `ReactNode`** (boleh string atau JSX kecil), tapi hindari JSX kompleks
   (ikut mengecil saat floating) — taruh hint tambahan di `<p>` bawah field.
 
+**Field angka (kuantitas) — pakai `<NumberStepperField>`:**
+Spinner bawaan `<input type="number">` **tidak dirender sama sekali di browser mobile**
+(iOS Safari, Chrome Android) dan target kliknya terlalu kecil di desktop. Untuk field
+kuantitas (stok, lot size, jumlah unit) pakai
+[`src/components/ui/NumberStepperField.tsx`](../src/components/ui/NumberStepperField.tsx) —
+wrapper `FloatingField` yang mematikan spinner native lalu menyediakan tombol −/+ sendiri
+(pola tombol sama dengan stepper qty di `CatalogQuickPicker`):
+
+```tsx
+<NumberStepperField
+  label={tc.stockQtyLabel}
+  min={0}                       // tombol − disabled saat menyentuh min
+  step={1}                      // default 1; ketik manual tetap bebas desimal
+  value={formData.stock_qty ?? 0}
+  onValueChange={(v) => setFormData(prev => ({ ...prev, stock_qty: v }))}
+  unit={formData.unit?.trim() || undefined}   // teks satuan di kiri tombol
+/>
+```
+
+Nilai di-clamp ke `min`/`max` saat blur (selama fokus isian dibiarkan apa adanya supaya
+bisa dikosongkan sementara). `FloatingField` punya prop `trailingPad` untuk memperbesar
+padding kanan input bila `trailing` berisi lebih dari satu ikon.
+
 **Field komposit — pakai `.input-underline` (label eksternal di atas):**
 Untuk komponen yang tak bisa jadi `<FloatingField>` (punya tombol/pill/autocomplete internal),
 `globals.css` menyediakan `.input-underline` (garis bawah, `px-0`, fokus indigo):

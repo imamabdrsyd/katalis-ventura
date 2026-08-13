@@ -21,6 +21,8 @@ export const id: Translations = {
     previous: 'Sebelumnya',
     next: 'Selanjutnya',
     reset: 'Reset',
+    decrease: 'Kurangi',
+    increase: 'Tambah',
     export: 'Export',
     exporting: 'Mengunduh...',
     exportPDF: 'Export as PDF',

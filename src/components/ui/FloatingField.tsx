@@ -11,6 +11,9 @@ interface FloatingFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   icon?: ReactNode;
   /** Elemen di kanan field (opsional), mis. tombol show/hide password */
   trailing?: ReactNode;
+  /** Padding kanan input saat ada `trailing` — perbesar bila isinya lebih dari
+   *  satu ikon (mis. satuan + tombol −/+). Default cukup untuk 1 ikon. */
+  trailingPad?: string;
   /** Class tambahan untuk wrapper */
   wrapperClassName?: string;
 }
@@ -31,7 +34,7 @@ interface FloatingFieldProps extends InputHTMLAttributes<HTMLInputElement> {
  * latar warna apa pun (tak seperti varian outlined).
  */
 const FloatingField = forwardRef<HTMLInputElement, FloatingFieldProps>(
-  ({ label, icon, trailing, id, className = '', wrapperClassName = '', placeholder, ...props }, ref) => {
+  ({ label, icon, trailing, trailingPad = 'pr-7', id, className = '', wrapperClassName = '', placeholder, ...props }, ref) => {
     const generatedId = useId();
     const inputId = id ?? generatedId;
 
@@ -45,7 +48,7 @@ const FloatingField = forwardRef<HTMLInputElement, FloatingFieldProps>(
             placeholder:text-transparent focus:placeholder:text-gray-400 dark:focus:placeholder:text-gray-500
             focus:border-primary-500 focus:ring-0
             disabled:opacity-50 disabled:cursor-not-allowed
-            ${icon ? 'pl-7' : 'px-0'} ${trailing ? 'pr-7' : ''} ${className}`}
+            ${icon ? 'pl-7' : 'px-0'} ${trailing ? trailingPad : ''} ${className}`}
           {...props}
         />
 

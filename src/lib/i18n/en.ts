@@ -21,6 +21,8 @@ export const en: Translations = {
     previous: 'Previous',
     next: 'Next',
     reset: 'Reset',
+    decrease: 'Decrease',
+    increase: 'Increase',
     export: 'Export',
     exporting: 'Exporting...',
     exportPDF: 'Export as PDF',

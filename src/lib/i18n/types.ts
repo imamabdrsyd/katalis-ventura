@@ -22,6 +22,8 @@ export interface Translations {
     previous: string;
     next: string;
     reset: string;
+    decrease: string;
+    increase: string;
     export: string;
     exporting: string;
     exportPDF: string;
