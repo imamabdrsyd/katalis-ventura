@@ -303,9 +303,9 @@ function EntryTypeCard({
       type="button"
       onClick={() => onSelect(entryType)}
       className={`card !py-4 !px-3.5 w-full flex items-center gap-3 text-left ${
-        isSelected
-          ? '!bg-indigo-50 dark:!bg-indigo-900/20 !border-indigo-500 dark:!border-indigo-400'
-          : ''
+        // Kartu terpilih ditandai outline + ikon + judul indigo saja — latar
+        // kartu tetap putih supaya panel tidak jadi blok warna.
+        isSelected ? '!border-indigo-500 dark:!border-indigo-400' : ''
       }`}
     >
       <span className={isSelected ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}>
@@ -2002,8 +2002,10 @@ export default function JournalEntryPage() {
                     onClick={() => togglePinnedEntryType(et.id)}
                     aria-pressed={isPinned}
                     className={`w-full flex items-center gap-3 text-left p-3 rounded-xl border transition-colors ${
+                      // Sama seperti kartu di panel: outline + ikon + judul saja
+                      // yang indigo, latar tidak ikut diwarnai.
                       isPinned
-                        ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
+                        ? 'border-indigo-500 dark:border-indigo-400'
                         : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
                     }`}
                   >
