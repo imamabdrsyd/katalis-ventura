@@ -1218,6 +1218,7 @@ export const id: Translations = {
     partialAmountLabel: 'Jumlah Pembayaran (Rp)',
     enterPaymentAmount: 'Masukkan jumlah pembayaran',
     mustBeLessThan: 'Jumlah harus kurang dari sisa piutang ({amount}). Gunakan "Lunasi Piutang" untuk pelunasan penuh.',
+    ofTotalPaid: 'pokok, dari total {amount}',
     payableSettled: 'HUTANG LUNAS',
     payableSettledDesc: 'Hutang telah dibayar sepenuhnya',
     payableOutstanding: 'Hutang belum dibayar',

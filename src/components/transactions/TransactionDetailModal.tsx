@@ -1298,11 +1298,29 @@ export function TransactionDetailModal({
           const payableTotal = getPayableLineAmount(transaction);
           // Akun hutang yang akan didebit saat pelunasan — untuk multi-line ambil
           // baris kredit LIABILITY (credit_account NULL di transaksi multi-line).
-          const payableAccount = transaction.is_multi_line && transaction.journal_lines
+          const payableLine = transaction.is_multi_line && transaction.journal_lines
             ? transaction.journal_lines.find(
                 (l) => l.credit_amount > 0 && l.account?.account_type === 'LIABILITY'
-              )?.account
-            : transaction.credit_account;
+              )
+            : null;
+          const payableAccount = payableLine ? payableLine.account : transaction.credit_account;
+          const payableAccountId = payableLine?.account_id ?? transaction.credit_account_id ?? null;
+
+          // Porsi tiap pembayaran yang benar-benar mengurangi hutang ini.
+          // Cicilan pinjaman berisi pokok + bunga/ujrah: header amount-nya lebih
+          // besar dari yang melunasi hutang. Menampilkan header amount membuat
+          // deret pembayaran tidak pernah menjumlah ke "Total dibayar" (yang
+          // memang dihitung dari baris pokok saja).
+          const principalPortionOf = (pt: Transaction): number => {
+            if (!payableAccountId) return pt.amount;
+            if (pt.is_multi_line && pt.journal_lines) {
+              const net = pt.journal_lines
+                .filter((l) => l.account_id === payableAccountId)
+                .reduce((sum, l) => sum + (l.debit_amount - l.credit_amount), 0);
+              return net > 0 ? net : pt.amount;
+            }
+            return pt.amount;
+          };
 
           return (
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
@@ -1352,25 +1370,36 @@ export function TransactionDetailModal({
                       .map((pt) => {
                         const clickable = !!onShowRelatedTransaction;
                         const isFinal = settled && pt.id === finalSettlementId;
+                        const principal = principalPortionOf(pt);
+                        // Selisih = bunga/ujrah/biaya yang ikut dibayar tapi
+                        // tidak mengurangi pokok hutang.
+                        const hasInterest = Math.abs(pt.amount - principal) > 0.5;
                         return (
                           <div
                             key={pt.id}
                             onClick={clickable ? () => onShowRelatedTransaction!(pt) : undefined}
-                            className={`flex items-center justify-between px-3 py-2.5 ${
+                            className={`flex items-center justify-between gap-3 px-3 py-2.5 ${
                               clickable ? 'cursor-pointer group' : ''
                             }`}
                           >
-                            <div>
+                            <div className="min-w-0">
                               <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(pt.date)}</p>
-                              <p className={`text-sm font-medium text-gray-700 dark:text-gray-200 ${
+                              <p className={`text-sm font-medium text-gray-700 dark:text-gray-200 truncate ${
                                 clickable ? 'group-hover:underline' : ''
                               }`}>
                                 {pt.description || (isFinal ? t.transactionDetail.finalSettlement : t.transactionDetail.partialPayment)}
                               </p>
                             </div>
-                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                              −{formatCurrency(pt.amount)}
-                            </span>
+                            <div className="text-right shrink-0">
+                              <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                                −{formatCurrency(principal)}
+                              </span>
+                              {hasInterest && (
+                                <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                                  {t.transactionDetail.ofTotalPaid.replace('{amount}', formatCurrency(pt.amount))}
+                                </p>
+                              )}
+                            </div>
                           </div>
                         );
                       })}

@@ -1509,7 +1509,11 @@ Settlement (pelunasan):
 ```
 Bukan pembalikan mentah jurnal asal — kas keluar dari akun kas default (`findDefaultCashAccount`, prioritas 1200 lalu 1100).
 
-**UI — `TransactionDetailModal`:** section "Pelunasan Hutang" dengan tombol **Bayar Lunas** (`onSettlePayable`) dan **Cicil** (`onPartialSettlePayable`), plus riwayat pembayaran & sisa hutang. Handler-nya `handleSettlePayable` / `handlePartialSettlePayable` di `useTransactions` (sudah ada sejak awal, baru di-export ke halaman transaksi bersamaan dengan section ini). Keduanya lewat RPC `settle_transaction` yang sama dengan piutang, jadi meta & FX gain/loss (§14.7) berlaku identik.
+**UI — `TransactionDetailModal`:** section "Pelunasan Hutang" dengan tombol **Bayar Lunas** (`onSettlePayable`) dan **Cicil** (`onPartialSettlePayable`), plus riwayat pembayaran & sisa hutang.
+
+Di riwayat pembayaran, tiap baris menampilkan **porsi pokok** (net debit ke akun hutang itu), bukan header amount. Cicilan pinjaman berisi pokok + bunga/ujrah — mis. cicilan KPA Rp 3.931.520 yang hanya Rp 2.206.520-nya mengurangi pokok. Memakai header amount membuat deret pembayaran tidak pernah menjumlah ke "Total dibayar" (yang memang dihitung dari baris pokok). Selisihnya ditampilkan sebagai keterangan kecil "dari total Rp …" supaya kas keluar yang sebenarnya tetap terlihat.
+
+**Backfill data lama (migr 132).** Cicilan yang dicatat sebelum fitur ini ada berdiri sendiri tanpa `meta` penghubung — buku besarnya benar, tapi di UI pinjamannya tampil belum dibayar sepeser pun. Migrasi 132 menulis jejaknya tanpa membuat transaksi baru & tanpa mengubah angka jurnal: pencairan dapat `partial_settlements[]` + `remaining_amount`, tiap cicilan dapat `settlement_of_transaction_id`. Yang dihitung terbayar adalah **debit ke akun pinjaman** (pokok), bukan header amount. Trigger `USER` dimatikan sementara supaya `updated_by` tidak jadi NULL dan audit_log tidak banjir; versi cache di-bump manual sebagai gantinya. Handler-nya `handleSettlePayable` / `handlePartialSettlePayable` di `useTransactions` (sudah ada sejak awal, baru di-export ke halaman transaksi bersamaan dengan section ini). Keduanya lewat RPC `settle_transaction` yang sama dengan piutang, jadi meta & FX gain/loss (§14.7) berlaku identik.
 
 Section ini **tidak** dirender untuk dividend declaration (punya section sendiri, §14.6) maupun transaksi piutang, walau akun kreditnya LIABILITY — supaya tidak ada dua panel yang berbagi state konfirmasi.
 

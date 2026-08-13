@@ -1214,6 +1214,7 @@ export const en: Translations = {
     partialAmountLabel: 'Payment Amount (Rp)',
     enterPaymentAmount: 'Enter payment amount',
     mustBeLessThan: 'Amount must be less than outstanding ({amount}). Use "Settle Receivable" for full payment.',
+    ofTotalPaid: 'principal, of {amount} paid',
     payableSettled: 'PAID OFF',
     payableSettledDesc: 'This debt has been paid in full',
     payableOutstanding: 'Debt not yet paid',

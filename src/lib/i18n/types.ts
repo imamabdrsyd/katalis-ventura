@@ -1263,6 +1263,7 @@ export interface Translations {
     enterPaymentAmount: string;
     mustBeLessThan: string;
     // Pelunasan hutang (AP)
+    ofTotalPaid: string; // "dari total {amount}" — cicilan pokok + bunga
     payableSettled: string;
     payableSettledDesc: string;
     payableOutstanding: string;
