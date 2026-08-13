@@ -1180,31 +1180,9 @@ export default function JournalEntryPage() {
             )}
           </div>
 
-          {/* Pemisah */}
-          <div className="h-8 w-px bg-gray-200 dark:bg-gray-700 mx-1" />
-
-          {/* Menu navigation — Invoicing, Rekonsiliasi Bank, Tutup Buku */}
-          <nav className="flex items-center">
-            <button
-              type="button"
-              onClick={() => router.push('/invoices')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-              title={t.nav.invoice}
-            >
-              <FileText className="w-4 h-4" />
-              {t.nav.invoice}
-            </button>
-            <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 mx-0.5" />
-            <button
-              type="button"
-              onClick={() => router.push('/reconciliation')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-              title={t.nav.bankReconciliation}
-            >
-              <Landmark className="w-4 h-4" />
-              {t.nav.bankReconciliation}
-            </button>
-          </nav>
+          {/* Shortcut Invoicing & Rekonsiliasi Bank sengaja TIDAK di sini —
+              keduanya sudah jadi kartu di hub Akuntansi, dan jalur sebaliknya
+              (hub → Journal Entry) kini disediakan tombol di header hub. */}
         </div>
 
         <div className="flex-1" />

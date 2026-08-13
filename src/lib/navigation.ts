@@ -19,6 +19,7 @@ import {
   Store,
   Box,
   Gamepad2,
+  Plus,
   LucideIcon,
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
@@ -47,6 +48,13 @@ export type NavSection = {
   href: string;
   icon: LucideIcon;
   items: NavItem[];
+  /**
+   * Aksi utama section, dirender sebagai tombol di header hub (bukan kartu).
+   * Bedanya dengan `items`: ini MEMBUAT data, bukan membuka halaman lihat-lihat
+   * — makanya hanya tampil untuk role manager. Dipakai Akuntansi → Journal Entry
+   * setelah shortcut balik-arah di header Journal Entry dihapus.
+   */
+  cta?: NavItem;
 };
 
 /**
@@ -116,6 +124,7 @@ export function useNavData() {
       subtitle: t.navHub.accountingSubtitle,
       href: '/accounting',
       icon: Calculator,
+      cta: { href: '/transactions/journal-entry', label: t.nav.journalEntry, icon: Plus },
       items: [
         { href: '/accounts', label: t.nav.chartOfAccounts, icon: BookOpen, description: t.navHub.desc.chartOfAccounts },
         { href: '/general-ledger', label: t.nav.generalLedger, icon: BookOpenCheck, description: t.navHub.desc.generalLedger },
