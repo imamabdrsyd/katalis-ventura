@@ -125,21 +125,21 @@ export default function SettingsPage() {
       setTelegramTokenExpiry(new Date(data.expires_at));
       setTelegramBotUsername(data.bot_username || '');
     } catch {
-      toast.error('Gagal membuat token Telegram.');
+      toast.error(t.settings.telegramTokenFailed);
     } finally {
       setTelegramActionLoading(false);
     }
   };
 
   const handleDisconnectTelegram = async () => {
-    if (!confirm('Putuskan koneksi Telegram?')) return;
+    if (!confirm(t.settings.telegramDisconnectConfirm)) return;
     setTelegramActionLoading(true);
     try {
       await fetch('/api/telegram/link', { method: 'DELETE' });
       setTelegramConn(null);
       setTelegramToken(null);
     } catch {
-      toast.error('Gagal memutuskan koneksi Telegram.');
+      toast.error(t.settings.telegramDisconnectFailed);
     } finally {
       setTelegramActionLoading(false);
     }
@@ -155,9 +155,9 @@ export default function SettingsPage() {
       });
       if (!res.ok) throw new Error('fail');
       setTelegramConn((prev) => (prev ? { ...prev, default_transaction_status: newStatus } : prev));
-      toast.success('Preferensi Telegram berhasil diperbarui.');
+      toast.success(t.settings.telegramPrefsSaved);
     } catch {
-      toast.error('Gagal menyimpan preferensi Telegram.');
+      toast.error(t.settings.telegramPrefsFailed);
     } finally {
       setTelegramStatusSaving(false);
     }
@@ -172,15 +172,15 @@ export default function SettingsPage() {
   };
 
   const handleInitGcpSchema = async () => {
-    if (!confirm('Inisialisasi skema GCP akan menjalankan DDL query. Lanjutkan?')) return;
+    if (!confirm(t.settings.gcpInitConfirm)) return;
     setGcpLoading(true);
     try {
       const res = await fetch('/api/admin/gcp/init-schema', { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed');
-      toast.success('Skema GCP berhasil diinisialisasi.');
+      toast.success(t.settings.gcpInitSuccess);
     } catch (err: any) {
-      toast.error(err.message || 'Gagal inisialisasi GCP.');
+      toast.error(err.message || t.settings.gcpInitFailed);
     } finally {
       setGcpLoading(false);
     }
@@ -188,7 +188,7 @@ export default function SettingsPage() {
 
   const handleSyncGcp = async () => {
     if (!activeBusinessId) {
-      toast.error('Pilih bisnis terlebih dahulu.');
+      toast.error(t.common.selectBusinessFirst);
       return;
     }
     setGcpSyncing(true);
@@ -200,9 +200,9 @@ export default function SettingsPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed');
-      toast.success(`Berhasil sinkronisasi: ${data.details.transactions} transaksi disalin.`);
+      toast.success(t.settings.gcpSyncSuccess(data.details.transactions));
     } catch (err: any) {
-      toast.error(err.message || 'Gagal sinkronisasi GCP.');
+      toast.error(err.message || t.settings.gcpSyncFailed);
     } finally {
       setGcpSyncing(false);
     }
@@ -655,8 +655,8 @@ export default function SettingsPage() {
               <div className="flex items-center gap-3 mb-5">
                 <Database className="w-5 h-5 text-gray-900 dark:text-gray-100" />
                 <div>
-                  <h3 className="font-semibold text-gray-800 dark:text-gray-100">Integrasi Database (GCP)</h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Sinkronisasi data ke Cloud SQL (pgvector)</p>
+                  <h3 className="font-semibold text-gray-800 dark:text-gray-100">{t.settings.gcpTitle}</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t.settings.gcpSubtitle}</p>
                 </div>
               </div>
               <div className="space-y-4">
@@ -667,9 +667,9 @@ export default function SettingsPage() {
                       disabled={gcpLoading}
                       className="btn-secondary w-full justify-start text-sm"
                     >
-                      {gcpLoading ? 'Memproses...' : 'Inisialisasi Skema (DDL)'}
+                      {gcpLoading ? t.settings.gcpInitProcessing : t.settings.gcpInitButton}
                     </button>
-                    <p className="text-xs text-gray-500 mt-1">Hanya dijalankan sekali oleh superadmin untuk membuat tabel OLAP di GCP.</p>
+                    <p className="text-xs text-gray-500 mt-1">{t.settings.gcpInitHint}</p>
                   </div>
                 )}
                 <div>
@@ -678,9 +678,9 @@ export default function SettingsPage() {
                     disabled={gcpSyncing || !activeBusinessId}
                     className="btn-primary-glow w-full justify-start text-sm"
                   >
-                    {gcpSyncing ? 'Menyinkronkan...' : 'Sinkronkan Data Bisnis Sekarang'}
+                    {gcpSyncing ? t.settings.gcpSyncing : t.settings.gcpSyncButton}
                   </button>
-                  <p className="text-xs text-gray-500 mt-1">Salin data transaksi, akun, dan bisnis ke GCP untuk keperluan analitik dan AI.</p>
+                  <p className="text-xs text-gray-500 mt-1">{t.settings.gcpSyncHint}</p>
                 </div>
               </div>
             </div>

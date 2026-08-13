@@ -285,21 +285,21 @@ function ReconciliationPageInner() {
                 <Calendar className="w-3.5 h-3.5 shrink-0 text-gray-400" />
                 {dateRange.start || dateRange.end
                   ? `${dateRange.start ? new Date(dateRange.start).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '…'} — ${dateRange.end ? new Date(dateRange.end).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '…'}`
-                  : 'Periode'}
+                  : t.reconciliation.periodLabel}
                 <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
               {showDateDropdown && (
                 <div className="absolute top-full right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-3 min-w-[200px] z-20">
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Dari</label>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t.common.from}</label>
                   <input
                     type="date"
                     value={dateRange.start}
                     onChange={(e) => setDateRange((d) => ({ ...d, start: e.target.value }))}
                     className="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 mb-2"
                   />
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Sampai</label>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t.common.to}</label>
                   <input
                     type="date"
                     value={dateRange.end}
@@ -311,7 +311,7 @@ function ReconciliationPageInner() {
                       onClick={() => { setDateRange({ start: '', end: '' }); setShowDateDropdown(false); }}
                       className="w-full text-center text-xs text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 py-1 transition-colors"
                     >
-                      Reset
+                      {t.common.reset}
                     </button>
                   )}
                 </div>
@@ -334,10 +334,10 @@ function ReconciliationPageInner() {
         {/* Table Header */}
         <div className="hidden sm:grid grid-cols-[32px_100px_1fr_80px_112px_36px] gap-3 px-4 py-2.5 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-100 dark:border-gray-700">
           <span />
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Tanggal</span>
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Transaksi</span>
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Kategori</span>
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 text-right">Jumlah</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">{t.common.date}</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">{t.reconciliation.colTransaction}</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">{t.common.category}</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 text-right">{t.common.amount}</span>
           <span />
         </div>
 

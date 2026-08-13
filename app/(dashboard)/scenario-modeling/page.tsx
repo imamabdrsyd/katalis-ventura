@@ -62,6 +62,7 @@ function ScenarioCard({
   color: 'green' | 'red' | 'blue' | 'gray';
   icon: React.ElementType;
 }) {
+  const { t } = useLanguage();
   const colorMap = {
     green: {
       bg: 'bg-white dark:bg-gray-800',
@@ -114,33 +115,33 @@ function ScenarioCard({
       </div>
 
       <div className="space-y-2.5">
-        <Row label="Revenue" value={scenario.revenue} />
-        <Row label="COGS" value={-scenario.cogs} negative />
+        <Row label={t.scenario.revenue} value={scenario.revenue} />
+        <Row label={t.scenario.cogs} value={-scenario.cogs} negative />
         <Divider />
-        <Row label="Gross Profit" value={scenario.grossProfit} bold />
-        <Row label="OpEx" value={-scenario.opex} negative />
+        <Row label={t.scenario.grossProfit} value={scenario.grossProfit} bold />
+        <Row label={t.scenario.opexLabel} value={-scenario.opex} negative />
         {scenario.depreciation > 0 && (
-          <Row label="Depreciation" value={-scenario.depreciation} negative />
+          <Row label={t.scenario.depreciation} value={-scenario.depreciation} negative />
         )}
         <Divider />
-        <Row label="Operating Income" value={scenario.operatingIncome} bold />
-        <Row label="Interest" value={-scenario.interest} negative />
-        <Row label="Tax" value={-scenario.tax} negative />
+        <Row label={t.scenario.operatingIncome} value={scenario.operatingIncome} bold />
+        <Row label={t.scenario.interest} value={-scenario.interest} negative />
+        <Row label={t.scenario.tax} value={-scenario.tax} negative />
         <Divider />
         <div className={`flex justify-between items-center pt-1 ${
           scenario.netIncome >= 0
             ? 'text-green-700 dark:text-green-400'
             : 'text-red-500 dark:text-red-400'
         }`}>
-          <span className="font-bold">Net Income</span>
+          <span className="font-bold">{t.scenario.netIncome}</span>
           <span className="font-bold text-lg">{formatCurrency(scenario.netIncome)}</span>
         </div>
       </div>
 
       <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 grid grid-cols-3 gap-2">
-        <MarginBadge label="Gross" value={scenario.grossMargin} />
-        <MarginBadge label="Operating" value={scenario.operatingMargin} />
-        <MarginBadge label="Net" value={scenario.netMargin} />
+        <MarginBadge label={t.scenario.marginGross} value={scenario.grossMargin} />
+        <MarginBadge label={t.scenario.marginOperating} value={scenario.operatingMargin} />
+        <MarginBadge label={t.scenario.marginNet} value={scenario.netMargin} />
       </div>
     </div>
   );
@@ -179,9 +180,10 @@ function MarginBadge({ label, value }: { label: string; value: number }) {
 }
 
 function ProjectionBar({ projections }: { projections: { month: string; revenue: number; netIncome: number; cumulativeNetIncome: number }[] }) {
+  const { t } = useLanguage();
   if (projections.length === 0) {
     return (
-      <EmptyState size="sm" icon={LineChart} title="Belum ada data transaksi untuk proyeksi" />
+      <EmptyState size="sm" icon={LineChart} title={t.scenario.noProjectionData} />
     );
   }
 
@@ -196,9 +198,9 @@ function ProjectionBar({ projections }: { projections: { month: string; revenue:
           <div className="flex items-center justify-between text-xs">
             <span className="text-gray-600 dark:text-gray-400 font-medium w-20">{p.month}</span>
             <div className="flex gap-4 text-[11px]">
-              <span className="text-blue-600 dark:text-blue-400">Rev: {formatCurrency(p.revenue)}</span>
+              <span className="text-blue-600 dark:text-blue-400">{t.scenario.revShort}: {formatCurrency(p.revenue)}</span>
               <span className={p.netIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}>
-                Net: {formatCurrency(p.netIncome)}
+                {t.scenario.netShort}: {formatCurrency(p.netIncome)}
               </span>
             </div>
           </div>
@@ -217,11 +219,11 @@ function ProjectionBar({ projections }: { projections: { month: string; revenue:
       <div className="flex gap-4 pt-2 text-xs text-gray-500 dark:text-gray-400">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm bg-blue-400 dark:bg-blue-500" />
-          Revenue
+          {t.scenario.revenue}
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm bg-emerald-400 dark:bg-emerald-500" />
-          Net Income
+          {t.scenario.netIncome}
         </div>
       </div>
     </div>
@@ -266,8 +268,8 @@ function ScenarioModelingPageInner() {
       <div className="p-8">
         <EmptyState
           icon={Building2}
-          title="Tidak ada bisnis aktif"
-          description="Pilih atau buat bisnis terlebih dahulu"
+          title={t.common.noActiveBusiness}
+          description={t.common.selectOrCreateBusiness}
           className="bg-gray-50 dark:bg-gray-800 rounded-xl"
         />
       </div>
@@ -280,10 +282,10 @@ function ScenarioModelingPageInner() {
       <div className="mb-8">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
           <FlaskConical className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
-          Scenario Modeling
+          {t.scenario.title}
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Simulasi skenario keuangan - {activeBusiness.business_name}
+          {t.scenario.subtitle.replace('{name}', activeBusiness.business_name)}
         </p>
       </div>
 
@@ -303,7 +305,7 @@ function ScenarioModelingPageInner() {
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
-                  {p === 'month' ? 'Bulan Ini' : p === 'quarter' ? 'Kuartal' : p === 'year' ? 'Tahun Ini' : 'Custom'}
+                  {p === 'month' ? t.scenario.periodMonth : p === 'quarter' ? t.scenario.periodQuarter : p === 'year' ? t.scenario.periodYear : t.scenario.periodCustom}
                 </button>
               ))}
             </div>
@@ -313,7 +315,7 @@ function ScenarioModelingPageInner() {
             <div>
               <label className="label flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                Start Date
+                {t.scenario.startDate}
               </label>
               <input
                 type="date"
@@ -326,7 +328,7 @@ function ScenarioModelingPageInner() {
               />
             </div>
             <div>
-              <label className="label">End Date</label>
+              <label className="label">{t.scenario.endDate}</label>
               <input
                 type="date"
                 value={endDate}
@@ -386,22 +388,22 @@ function ScenarioModelingPageInner() {
               </div>
               <div className="space-y-4">
                 <AssumptionSlider
-                  label="Revenue Growth"
+                  label={t.scenario.revenueGrowth}
                   value={optimisticAssumptions.revenueGrowth}
                   onChange={(v) => setOptimisticAssumptions(prev => ({ ...prev, revenueGrowth: v }))}
                 />
                 <AssumptionSlider
-                  label="COGS Growth"
+                  label={t.scenario.cogsGrowth}
                   value={optimisticAssumptions.cogsGrowth}
                   onChange={(v) => setOptimisticAssumptions(prev => ({ ...prev, cogsGrowth: v }))}
                 />
                 <AssumptionSlider
-                  label="OpEx Growth"
+                  label={t.scenario.opexGrowth}
                   value={optimisticAssumptions.opexGrowth}
                   onChange={(v) => setOptimisticAssumptions(prev => ({ ...prev, opexGrowth: v }))}
                 />
                 <AssumptionSlider
-                  label="Tax Rate (% of EBT)"
+                  label={t.scenario.taxRate}
                   value={optimisticAssumptions.taxRate}
                   onChange={(v) => setOptimisticAssumptions(prev => ({ ...prev, taxRate: v }))}
                   min={0}
@@ -418,22 +420,22 @@ function ScenarioModelingPageInner() {
               </div>
               <div className="space-y-4">
                 <AssumptionSlider
-                  label="Revenue Growth"
+                  label={t.scenario.revenueGrowth}
                   value={pessimisticAssumptions.revenueGrowth}
                   onChange={(v) => setPessimisticAssumptions(prev => ({ ...prev, revenueGrowth: v }))}
                 />
                 <AssumptionSlider
-                  label="COGS Growth"
+                  label={t.scenario.cogsGrowth}
                   value={pessimisticAssumptions.cogsGrowth}
                   onChange={(v) => setPessimisticAssumptions(prev => ({ ...prev, cogsGrowth: v }))}
                 />
                 <AssumptionSlider
-                  label="OpEx Growth"
+                  label={t.scenario.opexGrowth}
                   value={pessimisticAssumptions.opexGrowth}
                   onChange={(v) => setPessimisticAssumptions(prev => ({ ...prev, opexGrowth: v }))}
                 />
                 <AssumptionSlider
-                  label="Tax Rate (% of EBT)"
+                  label={t.scenario.taxRate}
                   value={pessimisticAssumptions.taxRate}
                   onChange={(v) => setPessimisticAssumptions(prev => ({ ...prev, taxRate: v }))}
                   min={0}
@@ -452,31 +454,31 @@ function ScenarioModelingPageInner() {
             <div className="card">
               <div className="flex items-center gap-2 mb-4">
                 <SlidersHorizontal className="w-5 h-5 text-blue-500" />
-                <h3 className="font-bold text-gray-800 dark:text-gray-100">Custom Assumptions</h3>
+                <h3 className="font-bold text-gray-800 dark:text-gray-100">{t.scenario.customAssumptions}</h3>
               </div>
               <div className="space-y-4">
                 <AssumptionSlider
-                  label="Revenue Growth"
+                  label={t.scenario.revenueGrowth}
                   value={customAssumptions.revenueGrowth}
                   onChange={(v) => setCustomAssumptions(prev => ({ ...prev, revenueGrowth: v }))}
                 />
                 <AssumptionSlider
-                  label="COGS Growth"
+                  label={t.scenario.cogsGrowth}
                   value={customAssumptions.cogsGrowth}
                   onChange={(v) => setCustomAssumptions(prev => ({ ...prev, cogsGrowth: v }))}
                 />
                 <AssumptionSlider
-                  label="OpEx Growth"
+                  label={t.scenario.opexGrowth}
                   value={customAssumptions.opexGrowth}
                   onChange={(v) => setCustomAssumptions(prev => ({ ...prev, opexGrowth: v }))}
                 />
                 <AssumptionSlider
-                  label="Interest Growth"
+                  label={t.scenario.interestGrowth}
                   value={customAssumptions.interestGrowth}
                   onChange={(v) => setCustomAssumptions(prev => ({ ...prev, interestGrowth: v }))}
                 />
                 <AssumptionSlider
-                  label="Tax Rate (% of EBT)"
+                  label={t.scenario.taxRate}
                   value={customAssumptions.taxRate}
                   onChange={(v) => setCustomAssumptions(prev => ({ ...prev, taxRate: v }))}
                   min={0}
@@ -521,7 +523,7 @@ function ScenarioModelingPageInner() {
                 <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4">{t.scenario.projectionSummary}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4">
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">Total Revenue Proyeksi</p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">{t.scenario.totalRevenueProjection}</p>
                     <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
                       {formatCurrency(projections.reduce((s, p) => s + p.revenue, 0))}
                     </p>
@@ -535,7 +537,7 @@ function ScenarioModelingPageInner() {
                       projections[projections.length - 1]?.cumulativeNetIncome >= 0
                         ? 'text-emerald-500 dark:text-emerald-400'
                         : 'text-red-500 dark:text-red-400'
-                    }`}>Kumulatif Net Income</p>
+                    }`}>{t.scenario.cumulativeNetIncome}</p>
                     <p className={`text-lg font-bold ${
                       projections[projections.length - 1]?.cumulativeNetIncome >= 0
                         ? 'text-emerald-500 dark:text-emerald-300'
@@ -545,13 +547,13 @@ function ScenarioModelingPageInner() {
                     </p>
                   </div>
                   <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4">
-                    <p className="text-xs text-purple-500 dark:text-purple-400 mb-1">Avg Monthly Revenue</p>
+                    <p className="text-xs text-purple-500 dark:text-purple-400 mb-1">{t.scenario.avgMonthlyRevenue}</p>
                     <p className="text-lg font-bold text-purple-500 dark:text-purple-300">
                       {formatCurrency(projections.reduce((s, p) => s + p.revenue, 0) / projections.length)}
                     </p>
                   </div>
                   <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4">
-                    <p className="text-xs text-amber-500 dark:text-amber-400 mb-1">Avg Monthly Net Income</p>
+                    <p className="text-xs text-amber-500 dark:text-amber-400 mb-1">{t.scenario.avgMonthlyNetIncome}</p>
                     <p className="text-lg font-bold text-amber-500 dark:text-amber-300">
                       {formatCurrency(projections.reduce((s, p) => s + p.netIncome, 0) / projections.length)}
                     </p>
@@ -565,29 +567,29 @@ function ScenarioModelingPageInner() {
 
       {/* Comparison Table */}
       <div className="card mt-6">
-        <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4">Perbandingan Detail Semua Skenario</h3>
+        <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4">{t.scenario.comparisonTable}</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b-2 border-gray-200 dark:border-gray-700">
-                <th className="text-left py-3 px-3 text-gray-500 dark:text-gray-400 font-semibold">Metrik</th>
+                <th className="text-left py-3 px-3 text-gray-500 dark:text-gray-400 font-semibold">{t.scenario.metric}</th>
                 <th className="text-right py-3 px-3 text-gray-500 dark:text-gray-400 font-semibold">{t.scenario.baseline}</th>
                 <th className="text-right py-3 px-3 text-emerald-500 dark:text-emerald-400 font-semibold">{t.scenario.optimistic}</th>
                 <th className="text-right py-3 px-3 text-red-500 dark:text-red-400 font-semibold">{t.scenario.pessimistic}</th>
-                <th className="text-right py-3 px-3 text-blue-600 dark:text-blue-400 font-semibold">Custom</th>
+                <th className="text-right py-3 px-3 text-blue-600 dark:text-blue-400 font-semibold">{t.scenario.customScenario}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {[
-                { label: 'Revenue', key: 'revenue' as const },
-                { label: 'COGS', key: 'cogs' as const },
-                { label: 'Gross Profit', key: 'grossProfit' as const, bold: true },
-                { label: 'OpEx', key: 'opex' as const },
-                { label: 'Depreciation', key: 'depreciation' as const },
-                { label: 'Operating Income', key: 'operatingIncome' as const, bold: true },
-                { label: 'Interest', key: 'interest' as const },
-                { label: 'Tax', key: 'tax' as const },
-                { label: 'Net Income', key: 'netIncome' as const, bold: true, highlight: true },
+                { label: t.scenario.revenue, key: 'revenue' as const },
+                { label: t.scenario.cogs, key: 'cogs' as const },
+                { label: t.scenario.grossProfit, key: 'grossProfit' as const, bold: true },
+                { label: t.scenario.opexLabel, key: 'opex' as const },
+                { label: t.scenario.depreciation, key: 'depreciation' as const },
+                { label: t.scenario.operatingIncome, key: 'operatingIncome' as const, bold: true },
+                { label: t.scenario.interest, key: 'interest' as const },
+                { label: t.scenario.tax, key: 'tax' as const },
+                { label: t.scenario.netIncome, key: 'netIncome' as const, bold: true, highlight: true },
               ].map(({ label, key, bold, highlight }) => (
                 <tr key={key} className={highlight ? 'bg-gray-50 dark:bg-gray-800/50' : ''}>
                   <td className={`py-2.5 px-3 ${bold ? 'font-semibold text-gray-800 dark:text-gray-200' : 'text-gray-600 dark:text-gray-400'}`}>
@@ -601,19 +603,19 @@ function ScenarioModelingPageInner() {
                 </tr>
               ))}
               <tr className="border-t-2 border-gray-300 dark:border-gray-600">
-                <td className="py-2.5 px-3 text-gray-600 dark:text-gray-400">Gross Margin</td>
+                <td className="py-2.5 px-3 text-gray-600 dark:text-gray-400">{t.scenario.grossMargin}</td>
                 {[baseline, optimistic, pessimistic, custom].map((s, i) => (
                   <td key={i} className="py-2.5 px-3 text-right tabular-nums text-gray-700 dark:text-gray-300">{s.grossMargin.toFixed(1)}%</td>
                 ))}
               </tr>
               <tr>
-                <td className="py-2.5 px-3 text-gray-600 dark:text-gray-400">Operating Margin</td>
+                <td className="py-2.5 px-3 text-gray-600 dark:text-gray-400">{t.scenario.operatingMargin}</td>
                 {[baseline, optimistic, pessimistic, custom].map((s, i) => (
                   <td key={i} className="py-2.5 px-3 text-right tabular-nums text-gray-700 dark:text-gray-300">{s.operatingMargin.toFixed(1)}%</td>
                 ))}
               </tr>
               <tr>
-                <td className="py-2.5 px-3 text-gray-600 dark:text-gray-400">Net Margin</td>
+                <td className="py-2.5 px-3 text-gray-600 dark:text-gray-400">{t.scenario.netMargin}</td>
                 {[baseline, optimistic, pessimistic, custom].map((s, i) => (
                   <td key={i} className={`py-2.5 px-3 text-right tabular-nums font-semibold ${s.netMargin >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                     {s.netMargin.toFixed(1)}%

@@ -6,7 +6,6 @@ import { createPortal } from 'react-dom';
 import { Modal } from '@/components/ui/Modal';
 import type { Transaction, Account, AuditLog, Contact, TransactionAttachment } from '@/types';
 import type { TransactionFormData } from '@/components/transactions/TransactionForm';
-import { CATEGORY_LABELS } from '@/lib/calculations';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
 import { isStockTransaction } from '@/lib/utils/inventoryHelper';
 import { SalesChannelBadge } from '@/components/transactions/SalesChannelBadge';
@@ -482,7 +481,7 @@ export function TransactionDetailModal({
           : null,
         payments: paymentTxns.map((pt) => ({
           date: pt.date,
-          description: pt.description || pt.name || 'Pembayaran',
+          description: pt.description || pt.name || t.transactionDetail.paymentFallbackName,
           amount: pt.amount,
         })),
         attachments,
@@ -515,8 +514,8 @@ export function TransactionDetailModal({
     <button
       onClick={handlePrintLoanReceivablePdf}
       disabled={printingPdf}
-      title="Cetak bukti pemberian pinjaman (PDF)"
-      aria-label="Cetak bukti pemberian pinjaman (PDF)"
+      title={t.transactionDetail.printLoanReceipt}
+      aria-label={t.transactionDetail.printLoanReceipt}
       className="flex p-2 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-wait"
     >
       {printingPdf ? (
@@ -641,8 +640,8 @@ export function TransactionDetailModal({
       footer={actionButtons}
       headerAction={headerActions}
       closeButtonClassName={onDuplicate ? 'sm:hidden' : ''}
-      sideNavPrev={onNavigatePrev ? { onClick: onNavigatePrev, disabled: !hasPrev, title: 'Transaksi sebelumnya (←)' } : undefined}
-      sideNavNext={onNavigateNext ? { onClick: onNavigateNext, disabled: !hasNext, title: 'Transaksi berikutnya (→)' } : undefined}
+      sideNavPrev={onNavigatePrev ? { onClick: onNavigatePrev, disabled: !hasPrev, title: t.transactionDetail.prevTransaction } : undefined}
+      sideNavNext={onNavigateNext ? { onClick: onNavigateNext, disabled: !hasNext, title: t.transactionDetail.nextTransaction } : undefined}
     >
       <div className="space-y-6">
         {/* Matching Principle Warning — expanded panel */}
@@ -696,7 +695,7 @@ export function TransactionDetailModal({
                   <span
                     className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${transaction.meta?.settlement_of_transaction_id ? CATEGORY_COLORS['SETTLE'] : CATEGORY_COLORS[transaction.category]}`}
                   >
-                    {transaction.meta?.settlement_of_transaction_id ? t.arAp.settlementBadge : CATEGORY_LABELS[transaction.category]}
+                    {transaction.meta?.settlement_of_transaction_id ? t.arAp.settlementBadge : t.categories[transaction.category]}
                   </span>
                   {transaction.meta?.entry_type && (
                     <>
@@ -793,7 +792,7 @@ export function TransactionDetailModal({
                 <Link
                   href={contactManageHref}
                   className="inline-flex items-center gap-1 font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-300 hover:underline underline-offset-2 transition-colors"
-                  title="Kelola kontak"
+                  title={t.transactionDetail.manageContacts}
                 >
                   <span>{transaction.name}</span>
                 </Link>
@@ -820,7 +819,7 @@ export function TransactionDetailModal({
                       onClick={() => handleRemoveTag(tag)}
                       disabled={savingTag}
                       className="hover:text-indigo-900 dark:hover:text-indigo-100 transition-colors disabled:opacity-50"
-                      aria-label={`Hapus tag ${tag}`}
+                      aria-label={t.transactionDetail.removeTag.replace('{tag}', tag)}
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -844,7 +843,7 @@ export function TransactionDetailModal({
                       if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); setShowSuggestions(false); }
                       if (e.key === 'Escape') setShowSuggestions(false);
                     }}
-                    placeholder="+ tag"
+                    placeholder={t.transactionDetail.addTag}
                     disabled={savingTag}
                     className="w-16 text-xs px-2 py-0.5 rounded-full border border-dashed border-gray-300 dark:border-gray-600 bg-transparent text-gray-500 dark:text-gray-400 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-indigo-400 focus:w-24 transition-all disabled:opacity-50"
                   />
@@ -1171,7 +1170,7 @@ export function TransactionDetailModal({
                   linkedTransactionIds.has(transaction.id) && (
                     <div className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
                       <Receipt className="w-3.5 h-3.5" />
-                      Transaksi ini sudah dijadikan invoice
+                      {t.transactionDetail.alreadyInvoiced}
                     </div>
                   )}
                 </>
@@ -1555,9 +1554,9 @@ export function TransactionDetailModal({
                 <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-lg">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-300">Dividen sudah dibayar penuh</p>
+                    <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-300">{t.transactionDetail.dividendPaidInFull}</p>
                     <p className="text-xs text-emerald-500 dark:text-emerald-400">
-                      Hutang dividen sudah dilunasi via Kas/Bank.
+                      {t.transactionDetail.dividendPaidInFullDesc}
                     </p>
                   </div>
                 </div>
@@ -1565,9 +1564,9 @@ export function TransactionDetailModal({
                 <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg">
                   <FileText className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Dividen di-declare (belum dibayar)</p>
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t.transactionDetail.dividendDeclared}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Klik tombol di bawah untuk mencatat pembayaran ke pemilik.
+                      {t.transactionDetail.dividendDeclaredDesc}
                     </p>
                   </div>
                 </div>
@@ -1580,12 +1579,12 @@ export function TransactionDetailModal({
                     <div className="flex items-center gap-1.5">
                       <History className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
                       <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                        Riwayat Pembayaran
+                        {t.transactionDetail.paymentHistory}
                       </span>
                     </div>
                     {!settled && (
                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                        Sisa: <span className="font-semibold text-gray-700 dark:text-gray-200">{formatCurrency(outstanding)}</span>
+                        {t.transactionDetail.remaining} <span className="font-semibold text-gray-700 dark:text-gray-200">{formatCurrency(outstanding)}</span>
                       </span>
                     )}
                   </div>
@@ -1608,7 +1607,7 @@ export function TransactionDetailModal({
                               <p className={`text-sm font-medium text-gray-700 dark:text-gray-200 ${
                                 clickable ? 'group-hover:underline' : ''
                               }`}>
-                                {pt.description || (isFinal ? 'Pelunasan akhir' : 'Pembayaran sebagian')}
+                                {pt.description || (isFinal ? t.transactionDetail.finalSettlement : t.transactionDetail.partialPaymentGeneric)}
                               </p>
                             </div>
                             <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
@@ -1618,7 +1617,7 @@ export function TransactionDetailModal({
                         );
                       })}
                     <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-700/50">
-                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Total dibayar</span>
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">{t.transactionDetail.totalPaidShort}</span>
                       <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
                         {formatCurrency(transaction.amount - outstanding)}
                       </span>
@@ -1635,7 +1634,7 @@ export function TransactionDetailModal({
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg transition-colors"
                   >
                     <Banknote className="w-4 h-4" />
-                    Bayar Dividen Penuh
+                    {t.transactionDetail.payDividendFull}
                   </button>
                   {onPartialSettleDividend && (
                     <button
@@ -1643,7 +1642,7 @@ export function TransactionDetailModal({
                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-400 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                     >
                       <ChevronDown className="w-4 h-4" />
-                      Bayar Sebagian
+                      {t.transactionDetail.payDividendPartial}
                     </button>
                   )}
                 </div>
@@ -1653,7 +1652,7 @@ export function TransactionDetailModal({
               {showSettleConfirm && (
                 <div className="rounded-lg border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 p-4 space-y-3">
                   <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                    Konfirmasi pembayaran dividen penuh
+                    {t.transactionDetail.confirmFullDividendPayment}
                   </p>
                   <div className="px-3 py-2 bg-white dark:bg-gray-800 rounded-md font-mono text-xs text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
                     {(() => {
@@ -1673,7 +1672,7 @@ export function TransactionDetailModal({
                       disabled={settleLoading}
                       className="btn-emerald-glow flex-1"
                     >
-                      {settleLoading ? 'Memproses...' : 'Ya, Bayar'}
+                      {settleLoading ? t.transactionDetail.processing : t.transactionDetail.yesPay}
                     </button>
                     <button
                       onClick={() => setShowSettleConfirm(false)}
@@ -1690,10 +1689,10 @@ export function TransactionDetailModal({
               {showPartialInput && onPartialSettleDividend && (
                 <div className="rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50/50 dark:bg-indigo-900/10 p-4 space-y-3">
                   <p className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">
-                    Sisa dividen yang perlu dibayar: {formatCurrency(outstanding)}
+                    {t.transactionDetail.dividendRemaining.replace('{amount}', formatCurrency(outstanding))}
                   </p>
                   <CurrencyInputWithCalculator
-                    label="Jumlah pembayaran"
+                    label={t.transactionDetail.paymentAmountLabel}
                     displayValue={partialDisplayAmount}
                     onChange={(num, fmt) => {
                       setPartialAmount(num);
@@ -1709,11 +1708,11 @@ export function TransactionDetailModal({
                     <button
                       onClick={async () => {
                         if (partialAmount <= 0) {
-                          setPartialError('Masukkan jumlah pembayaran');
+                          setPartialError(t.transactionDetail.enterPaymentAmount);
                           return;
                         }
                         if (partialAmount >= outstanding) {
-                          setPartialError(`Jumlah harus kurang dari ${formatCurrency(outstanding)}`);
+                          setPartialError(t.transactionDetail.dividendMustBeLessThan.replace('{amount}', formatCurrency(outstanding)));
                           return;
                         }
                         setPartialLoading(true);
@@ -1724,7 +1723,7 @@ export function TransactionDetailModal({
                           setPartialAmount(0);
                           setPartialDisplayAmount('');
                         } catch (err: any) {
-                          setPartialError(err.message || 'Gagal mencatat pembayaran');
+                          setPartialError(err.message || t.transactionDetail.failedRecordPayment);
                         } finally {
                           setPartialLoading(false);
                         }
@@ -1732,7 +1731,7 @@ export function TransactionDetailModal({
                       disabled={partialLoading}
                       className="btn-primary-glow flex-1"
                     >
-                      {partialLoading ? 'Memproses...' : 'Catat Pembayaran'}
+                      {partialLoading ? t.transactionDetail.processing : t.transactionDetail.recordPayment}
                     </button>
                     <button
                       onClick={() => { setShowPartialInput(false); setPartialError(''); }}
@@ -1781,7 +1780,7 @@ export function TransactionDetailModal({
                     <Link2 className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 flex-shrink-0 mt-0.5 transition-colors" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-300 font-semibold mb-1 transition-colors">
-                        Pelunasan dari transaksi:
+                        {t.transactionDetail.settlementFrom}
                       </p>
                       <p className="text-sm text-gray-800 dark:text-gray-100 font-medium group-hover:text-blue-600 dark:group-hover:text-blue-300 group-hover:underline transition-colors">
                         {formatDate(settlementOf.date)} • {settlementOf.name}
@@ -1802,7 +1801,7 @@ export function TransactionDetailModal({
                     <Link2 className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 flex-shrink-0 mt-0.5 transition-colors" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-300 font-semibold mb-1 transition-colors">
-                        Dilunasi oleh transaksi:
+                        {t.transactionDetail.settledBy}
                       </p>
                       <p className="text-sm text-gray-800 dark:text-gray-100 font-medium group-hover:text-blue-600 dark:group-hover:text-blue-300 group-hover:underline transition-colors">
                         {formatDate(settledBy.date)} • {settledBy.name}
@@ -1827,7 +1826,7 @@ export function TransactionDetailModal({
           >
             <span className="flex items-center gap-2">
               <Info className="w-3.5 h-3.5" />
-              Detail Tambahan
+              {t.transactionDetail.additionalInfo}
             </span>
             <ChevronDown
               className={`w-4 h-4 transition-transform ${showAdditionalInfo ? 'rotate-180' : ''}`}
@@ -1836,23 +1835,23 @@ export function TransactionDetailModal({
           {showAdditionalInfo && (
             <div className="mt-3 space-y-2.5 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">No. Transaksi</span>
+                <span className="text-gray-500 dark:text-gray-400">{t.transactionDetail.txId}</span>
                 <span className="text-gray-700 dark:text-gray-300 font-mono text-xs">
                   {transaction.transaction_number ?? `${transaction.id.slice(0, 8)}...`}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Status</span>
+                <span className="text-gray-500 dark:text-gray-400">{t.transactionDetail.status}</span>
                 <span className={`font-medium ${isDraft ? 'text-gray-500 dark:text-gray-400' : 'text-emerald-500 dark:text-emerald-400'}`}>
-                  {isDraft ? 'Draft' : 'Posted'}
+                  {isDraft ? t.transactionDetail.draft : t.transactionDetail.posted}
                   {transaction.posted_at && ` (${formatDateTime(transaction.posted_at)})`}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Dibuat oleh</span>
+                <span className="text-gray-500 dark:text-gray-400">{t.transactionDetail.createdBy}</span>
                 <span className="text-gray-700 dark:text-gray-300">
                   {loadingCreator ? (
-                    <span className="text-gray-400 dark:text-gray-500">Memuat...</span>
+                    <span className="text-gray-400 dark:text-gray-500">{t.transactionDetail.loadingName}</span>
                   ) : creatorName ? (
                     creatorName
                   ) : (
@@ -1861,23 +1860,23 @@ export function TransactionDetailModal({
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Dibuat pada</span>
+                <span className="text-gray-500 dark:text-gray-400">{t.transactionDetail.createdAt}</span>
                 <span className="text-gray-700 dark:text-gray-300">
                   {formatDateTime(transaction.created_at)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Terakhir diupdate</span>
+                <span className="text-gray-500 dark:text-gray-400">{t.transactionDetail.lastUpdated}</span>
                 <span className="text-gray-700 dark:text-gray-300">
                   {formatDateTime(transaction.updated_at)}
                 </span>
               </div>
               {transaction.updated_by && (
                 <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Diupdate oleh</span>
+                  <span className="text-gray-500 dark:text-gray-400">{t.transactionDetail.updatedBy}</span>
                   <span className="text-gray-700 dark:text-gray-300">
                     {loadingUpdater ? (
-                      <span className="text-gray-400 dark:text-gray-500">Memuat...</span>
+                      <span className="text-gray-400 dark:text-gray-500">{t.transactionDetail.loadingName}</span>
                     ) : updaterName ? (
                       updaterName
                     ) : (
@@ -1898,7 +1897,7 @@ export function TransactionDetailModal({
           >
             <span className="flex items-center gap-2">
               <History className="w-3.5 h-3.5" />
-              Riwayat Perubahan
+              {t.transactionDetail.changeHistory}
             </span>
             <ChevronDown
               className={`w-4 h-4 transition-transform ${showAuditHistory ? 'rotate-180' : ''}`}
@@ -1909,20 +1908,20 @@ export function TransactionDetailModal({
             <div className="mt-4 space-y-3">
               {loadingAudit ? (
                 <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                  Memuat riwayat...
+                  {t.transactionDetail.loadingHistory}
                 </div>
               ) : auditHistory.length === 0 ? (
                 <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                  Tidak ada riwayat perubahan
+                  {t.transactionDetail.noHistory}
                 </div>
               ) : (
                 <div className="space-y-4">
                   {auditHistory.map((log) => {
                     const changes = getFieldChanges(log);
                     const operationLabel = {
-                      INSERT: 'Dibuat',
-                      UPDATE: 'Diupdate',
-                      DELETE: 'Dihapus',
+                      INSERT: t.transactionDetail.opCreated,
+                      UPDATE: t.transactionDetail.opUpdated,
+                      DELETE: t.transactionDetail.opDeleted,
                     }[log.operation];
                     const operationColor = {
                       INSERT: 'text-emerald-500 dark:text-emerald-400',
@@ -1946,7 +1945,7 @@ export function TransactionDetailModal({
                           </div>
                           {log.changed_by_name && (
                             <span className="text-xs text-gray-600 dark:text-gray-400">
-                              oleh {log.changed_by_name}
+                              {t.transactionDetail.by} {log.changed_by_name}
                             </span>
                           )}
                         </div>
@@ -1965,7 +1964,7 @@ export function TransactionDetailModal({
                                   {change.oldValue !== null && (
                                     <div className="flex-1">
                                       <span className="text-red-500 dark:text-red-400 font-semibold">
-                                        Sebelum:
+                                        {t.transactionDetail.before}
                                       </span>
                                       <div className="mt-1 p-2 bg-red-50 dark:bg-red-900/20 rounded text-red-500 dark:text-red-300 font-mono">
                                         {formatAuditValue(change.oldValue)}
@@ -1975,7 +1974,7 @@ export function TransactionDetailModal({
                                   {change.newValue !== null && (
                                     <div className="flex-1">
                                       <span className="text-emerald-500 dark:text-emerald-400 font-semibold">
-                                        Sesudah:
+                                        {t.transactionDetail.after}
                                       </span>
                                       <div className="mt-1 p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded text-emerald-500 dark:text-emerald-300 font-mono">
                                         {formatAuditValue(change.newValue)}
@@ -2004,7 +2003,7 @@ export function TransactionDetailModal({
         onClick={closeAttachmentPreview}
         role="dialog"
         aria-modal="true"
-        aria-label={`Preview ${previewAttachment.filename}`}
+        aria-label={t.transactionDetail.previewOf.replace('{filename}', previewAttachment.filename)}
       >
         <div
           className="flex items-center justify-between gap-3 px-4 py-3 text-white"
@@ -2031,8 +2030,8 @@ export function TransactionDetailModal({
                     setPreviewScale((scale) => Math.max(0.5, Number((scale - 0.25).toFixed(2))));
                   }}
                   className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
-                  title="Perkecil"
-                  aria-label="Perkecil"
+                  title={t.transactionDetail.zoomOut}
+                  aria-label={t.transactionDetail.zoomOut}
                 >
                   <ZoomOut className="w-5 h-5" />
                 </button>
@@ -2043,7 +2042,7 @@ export function TransactionDetailModal({
                     setPreviewScale(1);
                   }}
                   className="hidden sm:inline-flex h-10 px-3 items-center justify-center gap-1.5 rounded-lg text-xs font-semibold text-white/80 hover:bg-white/10 hover:text-white transition-colors"
-                  title="Reset zoom"
+                  title={t.transactionDetail.resetZoom}
                 >
                   <RotateCcw className="w-4 h-4" />
                   {Math.round(previewScale * 100)}%
@@ -2055,8 +2054,8 @@ export function TransactionDetailModal({
                     setPreviewScale((scale) => Math.min(3, Number((scale + 0.25).toFixed(2))));
                   }}
                   className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
-                  title="Perbesar"
-                  aria-label="Perbesar"
+                  title={t.transactionDetail.zoomIn}
+                  aria-label={t.transactionDetail.zoomIn}
                 >
                   <ZoomIn className="w-5 h-5" />
                 </button>
@@ -2065,7 +2064,7 @@ export function TransactionDetailModal({
             <SignedAttachmentDownloadButton
               attachment={previewAttachment}
               className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
-              title="Unduh file"
+              title={t.transactionDetail.downloadFile}
             >
               <Download className="w-5 h-5" />
             </SignedAttachmentDownloadButton>
@@ -2076,8 +2075,8 @@ export function TransactionDetailModal({
                 closeAttachmentPreview();
               }}
               className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors"
-              title="Tutup"
-              aria-label="Tutup"
+              title={t.transactionDetail.closeAria}
+              aria-label={t.transactionDetail.closeAria}
             >
               <X className="w-6 h-6" />
             </button>
@@ -2097,8 +2096,8 @@ export function TransactionDetailModal({
                   goToAttachment(-1);
                 }}
                 className="absolute left-4 top-1/2 -translate-y-1/2 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-white/90 backdrop-blur-sm hover:bg-black/70 hover:text-white transition-colors"
-                title="Sebelumnya"
-                aria-label="Attachment sebelumnya"
+                title={t.transactionDetail.prevAttachment}
+                aria-label={t.transactionDetail.prevAttachmentAria}
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
@@ -2109,8 +2108,8 @@ export function TransactionDetailModal({
                   goToAttachment(1);
                 }}
                 className="absolute right-4 top-1/2 -translate-y-1/2 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-white/90 backdrop-blur-sm hover:bg-black/70 hover:text-white transition-colors"
-                title="Berikutnya"
-                aria-label="Attachment berikutnya"
+                title={t.transactionDetail.nextAttachment}
+                aria-label={t.transactionDetail.nextAttachmentAria}
               >
                 <ChevronRight className="w-6 h-6" />
               </button>
@@ -2120,7 +2119,7 @@ export function TransactionDetailModal({
             <div className="h-full min-h-[60vh] overflow-hidden rounded-lg bg-white shadow-2xl">
               <SignedAttachmentPdf
                 attachment={previewAttachment}
-                title={`Preview ${previewAttachment.filename}`}
+                title={t.transactionDetail.previewOf.replace('{filename}', previewAttachment.filename)}
                 className="h-full w-full"
               />
             </div>
@@ -2167,6 +2166,7 @@ function AttachmentPreviewItem({
   attachment: TransactionAttachment;
   onOpenPreview: (att: TransactionAttachment) => void;
 }) {
+  const { t } = useLanguage();
   const url = useDeliverableAttachmentUrl(attachment);
   const ready = !!url;
   const isImg = isImageType(attachment.mime_type);
@@ -2205,7 +2205,7 @@ function AttachmentPreviewItem({
         onClick={() => ready && onOpenPreview(attachment)}
         disabled={!ready}
         className="block w-full text-left group disabled:opacity-60 disabled:cursor-not-allowed"
-        aria-label={`Lihat ${attachment.filename}`}
+        aria-label={t.transactionDetail.viewOf.replace('{filename}', attachment.filename)}
       >
         <div className="relative min-h-[8rem] overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
           {ready && (
@@ -2221,7 +2221,7 @@ function AttachmentPreviewItem({
           )}
           {(!ready || !contentLoaded) && (
             <div className="absolute inset-0 animate-pulse bg-gray-100 dark:bg-gray-800">
-              <AttachmentLoading label="Memuat gambar…" />
+              <AttachmentLoading label={t.transactionDetail.loadingImage} />
             </div>
           )}
           {ready && contentLoaded && (
@@ -2245,14 +2245,14 @@ function AttachmentPreviewItem({
           {ready && (
             <PdfViewerFrame
               url={url}
-              title={`Preview ${attachment.filename}`}
+              title={t.transactionDetail.previewOf.replace('{filename}', attachment.filename)}
               onLoad={() => setContentLoaded(true)}
               className={`h-full w-full transition-opacity duration-300 ${contentLoaded ? 'opacity-100' : 'opacity-0'}`}
             />
           )}
           {(!ready || !contentLoaded) && (
             <div className="absolute inset-0">
-              <AttachmentLoading label="Memuat PDF…" />
+              <AttachmentLoading label={t.transactionDetail.loadingPdf} />
             </div>
           )}
           <button
@@ -2260,8 +2260,8 @@ function AttachmentPreviewItem({
             onClick={() => ready && onOpenPreview(attachment)}
             disabled={!ready}
             className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-gray-600 shadow-sm ring-1 ring-gray-200 hover:bg-white hover:text-indigo-600 disabled:cursor-not-allowed dark:bg-gray-800/90 dark:text-gray-300 dark:ring-gray-700 dark:hover:bg-gray-700 dark:hover:text-indigo-300 transition-colors"
-            title="Perbesar preview"
-            aria-label={`Perbesar preview ${attachment.filename}`}
+            title={t.transactionDetail.enlargePreview}
+            aria-label={t.transactionDetail.enlargePreviewOf.replace('{filename}', attachment.filename)}
           >
             <Maximize2 className="h-4 w-4" />
           </button>
@@ -2281,8 +2281,8 @@ function AttachmentPreviewItem({
             onClick={() => ready && onOpenPreview(attachment)}
             disabled={!ready}
             className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-indigo-500 disabled:cursor-not-allowed dark:hover:bg-gray-700 dark:hover:text-indigo-400 transition-colors"
-            title="Perbesar preview"
-            aria-label={`Perbesar preview ${attachment.filename}`}
+            title={t.transactionDetail.enlargePreview}
+            aria-label={t.transactionDetail.enlargePreviewOf.replace('{filename}', attachment.filename)}
           >
             <Maximize2 className="h-4 w-4" />
           </button>
@@ -2291,8 +2291,8 @@ function AttachmentPreviewItem({
             onClick={handleDownload}
             disabled={!ready || downloading}
             className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-gray-700 dark:hover:text-indigo-400 transition-colors"
-            title="Unduh file"
-            aria-label={`Unduh ${attachment.filename}`}
+            title={t.transactionDetail.downloadFile}
+            aria-label={t.transactionDetail.downloadOf.replace('{filename}', attachment.filename)}
           >
             <Download className="h-4 w-4" />
           </button>
@@ -2306,7 +2306,7 @@ function AttachmentPreviewItem({
       type="button"
       onClick={handleDownload}
       disabled={!ready || downloading}
-      aria-label={`Unduh ${attachment.filename}`}
+      aria-label={t.transactionDetail.downloadOf.replace('{filename}', attachment.filename)}
       className={`flex w-full items-center gap-3 p-3 text-left bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors group ${ready && !downloading ? 'hover:bg-gray-100 dark:hover:bg-gray-800' : 'cursor-not-allowed opacity-60'}`}
     >
       <FileText className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
@@ -2339,12 +2339,13 @@ function PdfViewerFrame({
 }
 
 /** Indikator loading lampiran (saat menunggu signed URL + file termuat). */
-function AttachmentLoading({ dark, label = 'Memuat…' }: { dark?: boolean; label?: string }) {
+function AttachmentLoading({ dark, label }: { dark?: boolean; label?: string }) {
+  const { t } = useLanguage();
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-2">
       <Loader2 className={`h-7 w-7 animate-spin ${dark ? 'text-white/80' : 'text-indigo-500'}`} />
       <span className={`text-[11px] font-medium ${dark ? 'text-white/60' : 'text-gray-400 dark:text-gray-500'}`}>
-        {label}
+        {label ?? t.transactionDetail.loadingGeneric}
       </span>
     </div>
   );
@@ -2359,6 +2360,7 @@ function SignedAttachmentPdf({
   className,
   ...rest
 }: { attachment: TransactionAttachment; title: string } & React.IframeHTMLAttributes<HTMLIFrameElement>) {
+  const { t } = useLanguage();
   const url = useDeliverableAttachmentUrl(attachment);
   const [loaded, setLoaded] = useState(false);
   useEffect(() => setLoaded(false), [url]);
@@ -2375,7 +2377,7 @@ function SignedAttachmentPdf({
       )}
       {(!url || !loaded) && (
         <div className="absolute inset-0">
-          <AttachmentLoading dark label="Memuat PDF…" />
+          <AttachmentLoading dark label={t.transactionDetail.loadingPdf} />
         </div>
       )}
     </div>
@@ -2435,6 +2437,7 @@ function SignedAttachmentImage({
   className,
   ...rest
 }: { attachment: TransactionAttachment; alt: string } & React.ImgHTMLAttributes<HTMLImageElement>) {
+  const { t } = useLanguage();
   const url = useDeliverableAttachmentUrl(attachment);
   const [loaded, setLoaded] = useState(false);
   const imgRef = useRef<HTMLImageElement | null>(null);
@@ -2461,7 +2464,7 @@ function SignedAttachmentImage({
       )}
       {(!url || !loaded) && (
         <div className="absolute inset-0">
-          <AttachmentLoading dark label="Memuat gambar…" />
+          <AttachmentLoading dark label={t.transactionDetail.loadingImage} />
         </div>
       )}
     </div>

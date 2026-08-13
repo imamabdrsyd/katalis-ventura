@@ -16,7 +16,7 @@ import type { OcrResult } from '@/lib/ocr/types';
 import { createClient } from '@/lib/supabase';
 import { useLanguage } from '@/context/LanguageContext';
 import { useBusinessContext } from '@/context/BusinessContext';
-import { CATEGORY_BADGE_CLASSES, CATEGORY_LABELS } from '@/lib/categoryColors';
+import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
 import { MODEL_LABELS } from '@/lib/ai/provider';
 import { toast } from 'sonner';
 
@@ -188,13 +188,6 @@ interface AIChatPanelProps {
   onQuickAdd?: () => void;
 }
 
-const SUGGESTED_QUESTIONS = [
-  'Kenapa bulan ini rugi?',
-  'Kategori beban terbesar apa?',
-  'Bagaimana tren revenue 3 bulan terakhir?',
-  'Berapa burn rate saat ini?',
-];
-
 // Persona sub-agent keuangan yang dikirim ke /api/ai/agent-query.
 // Pembukuan tidak ada di sini karena tab Entry pakai parser (bukan chat agent);
 // identitas "Bianca" di Entry murni labeling header/greeting.
@@ -217,13 +210,6 @@ interface PersonaMeta {
 
 type Translations = ReturnType<typeof useLanguage>['t'];
 
-// Contoh pertanyaan pajak (Sri Mulyani) — dipakai di buildAskPersonas.
-const TAX_SUGGESTIONS = [
-  'Berapa estimasi PPh final saya bulan ini?',
-  'Apa saja kewajiban pajak bisnis saya?',
-  'Bagaimana cara hitung PPh final UMKM 0,5%?',
-];
-
 // Persona tab Ask — role/greeting/tagline dari i18n; name/avatar tetap.
 function buildAskPersonas(t: Translations): Record<AskPersona, PersonaMeta> {
   const p = t.aiChat.persona;
@@ -234,7 +220,7 @@ function buildAskPersonas(t: Translations): Record<AskPersona, PersonaMeta> {
       role: p.analystRole,
       greeting: p.analystGreeting,
       tagline: p.analystTagline,
-      suggestions: SUGGESTED_QUESTIONS,
+      suggestions: t.aiChat.panel.suggestionsAnalyst,
     },
     pajak: {
       name: 'Sri Mulyani',
@@ -242,7 +228,7 @@ function buildAskPersonas(t: Translations): Record<AskPersona, PersonaMeta> {
       role: p.taxRole,
       greeting: p.taxGreeting,
       tagline: p.taxTagline,
-      suggestions: TAX_SUGGESTIONS,
+      suggestions: t.aiChat.panel.suggestionsTax,
     },
   };
 }
@@ -256,7 +242,7 @@ function buildEntryPersona(t: Translations): PersonaMeta {
     role: p.bookkeeperRole,
     greeting: p.bookkeeperGreeting,
     tagline: p.bookkeeperTagline,
-    suggestions: ['bayar listrik 500rb', 'jual kopi ke Budi 2.5jt', 'beli bahan baku 750.000'],
+    suggestions: t.aiChat.panel.suggestionsEntry,
   };
 }
 
@@ -273,15 +259,16 @@ const SMALL_TALK = new Set([
 ]);
 
 /** Balasan ramah untuk small talk — bervariasi supaya tidak terasa robotik. */
-function smallTalkReply(text: string): string {
-  const t = text.toLowerCase().replace(/[^a-z\s]/g, '').trim();
-  if (/(makasih|thanks|thank|^tq$|^thx$|trims)/.test(t)) {
-    return 'Sama-sama! Ada lagi yang mau ditanyakan soal keuangan bisnismu?';
+function smallTalkReply(text: string, t: Translations): string {
+  const cleaned = text.toLowerCase().replace(/[^a-z\s]/g, '').trim();
+  const p = t.aiChat.panel;
+  if (/(makasih|thanks|thank|^tq$|^thx$|trims)/.test(cleaned)) {
+    return p.smallTalkThanks;
   }
-  if (/^(oi|hai|halo|hallo|hi|hello|hey|p|pp|woi|oy)$/.test(t)) {
-    return 'Halo! 👋 Mau tanya apa soal keuangan bisnismu? Misalnya tren revenue, beban terbesar, atau kondisi laba rugi bulan ini.';
+  if (/^(oi|hai|halo|hallo|hi|hello|hey|p|pp|woi|oy)$/.test(cleaned)) {
+    return p.smallTalkGreeting;
   }
-  return 'Siap! Kalau ada yang mau dianalisis dari keuangan bisnismu, tinggal tanya ya. 😊';
+  return p.smallTalkDefault;
 }
 
 /** Apakah teks ini small talk murni (≤3 kata & semua token ada di SMALL_TALK)? */
@@ -420,7 +407,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
     // Small talk ("oi", "ok", "makasih") di-balas lokal — tidak panggil LLM
     // maupun fetch transaksi. Hemat kuota Gemini & mempercepat respons.
     if (isSmallTalk(trimmed)) {
-      setMessages(prev => [...prev, { role: 'assistant', content: smallTalkReply(trimmed) }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: smallTalkReply(trimmed, t) }]);
       return;
     }
 
@@ -444,8 +431,8 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
       });
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Gagal menghubungi AI' }));
-        throw new Error(err.error ?? 'Gagal menghubungi AI');
+        const err = await res.json().catch(() => ({ error: t.aiChat.panel.failedContactAI }));
+        throw new Error(err.error ?? t.aiChat.panel.failedContactAI);
       }
 
       // Baca provider/model dari header untuk ditampilkan di UI
@@ -497,7 +484,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
         if (last?.streaming) {
           updated[updated.length - 1] = {
             role: 'assistant',
-            content: accumulated || '_(tidak ada respons)_',
+            content: accumulated || t.aiChat.panel.noResponse,
             thinking: thinking || undefined,
           };
         }
@@ -505,7 +492,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
       });
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
-      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan';
+      const msg = err instanceof Error ? err.message : t.aiChat.panel.genericError;
       setMessages(prev => {
         const updated = [...prev];
         const last = updated[updated.length - 1];
@@ -533,7 +520,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
     setInput('');
 
     if (isSmallTalk(trimmed)) {
-      setMessages(prev => [...prev, { role: 'assistant', content: smallTalkReply(trimmed) }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: smallTalkReply(trimmed, t) }]);
       return;
     }
 
@@ -553,8 +540,8 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
       });
 
       if (!res.ok || !res.body) {
-        const err = await res.json().catch(() => ({ error: 'Gagal menghubungi agent' }));
-        throw new Error((err as { error?: string }).error ?? 'Gagal menghubungi agent');
+        const err = await res.json().catch(() => ({ error: t.aiChat.panel.failedContactAgent }));
+        throw new Error((err as { error?: string }).error ?? t.aiChat.panel.failedContactAgent);
       }
 
       // Consume SSE stream — sama persis dengan sendMessage
@@ -631,14 +618,14 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
         if (last?.streaming) {
           updated[updated.length - 1] = {
             ...last,
-            content: accumulatedAnswer || '_(tidak ada respons)_',
+            content: accumulatedAnswer || t.aiChat.panel.noResponse,
             streaming: false,
           };
         }
         return updated;
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan';
+      const msg = err instanceof Error ? err.message : t.aiChat.panel.genericError;
       setMessages(prev => {
         const updated = [...prev];
         const last = updated[updated.length - 1];
@@ -685,7 +672,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? 'Gagal memproses transaksi');
+      if (!res.ok) throw new Error(json.error ?? t.aiChat.panel.failedProcessTransaction);
 
       if (json.model) setActiveModel(json.model);
 
@@ -695,7 +682,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
           const updated = [...prev];
           updated[updated.length - 1] = {
             role: 'assistant',
-            content: json.message ?? 'Ada yang bisa aku bantu catat?',
+            content: json.message ?? t.aiChat.panel.chatFallback,
           };
           return updated;
         });
@@ -713,7 +700,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
           const updated = [...prev];
           updated[updated.length - 1] = {
             role: 'assistant',
-            content: json.message ?? 'Berapa nominalnya?',
+            content: json.message ?? t.aiChat.panel.askAmount,
           };
           return updated;
         });
@@ -725,14 +712,14 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
         const updated = [...prev];
         updated[updated.length - 1] = {
           role: 'assistant',
-          content: 'Cek dulu detail transaksinya, lalu simpan kalau sudah benar:',
+          content: t.aiChat.panel.draftIntro,
           draft,
           draftStatus: 'pending',
         };
         return updated;
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan';
+      const msg = err instanceof Error ? err.message : t.aiChat.panel.genericError;
       setMessages(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = { role: 'assistant', content: `⚠️ ${msg}` };
@@ -773,7 +760,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? 'Gagal menyimpan transaksi');
+      if (!res.ok) throw new Error(json.error ?? t.aiChat.panel.failedSaveTransaction);
 
       setMessages(prev => {
         const updated = [...prev];
@@ -783,7 +770,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
       // Beri tahu halaman lain (transactions, dashboard) untuk refresh
       window.dispatchEvent(new Event('transaction-saved'));
     } catch (err) {
-      const errMsg = err instanceof Error ? err.message : 'Gagal menyimpan';
+      const errMsg = err instanceof Error ? err.message : t.aiChat.panel.failedSave;
       setMessages(prev => {
         const updated = [...prev];
         updated[msgIndex] = { ...updated[msgIndex], draftStatus: 'pending' };
@@ -823,7 +810,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
       const data = res.ok ? await res.json() : null;
       if (!data) {
         const err = await res.json().catch(() => null);
-        throw new Error(err?.error ?? 'LLM gagal memproses file');
+        throw new Error(err?.error ?? t.aiChat.panel.llmFileFailed);
       }
 
       const llmTxs = (data.transactions ?? []) as Array<{
@@ -897,14 +884,14 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
           role: 'assistant',
           content: ready.length > 0
             ? `${summary ? summary + ' ' : ''}${ready.length} transaksi siap-impor. Cek & konfirmasi:`
-            : (summary || 'Tidak ada transaksi valid yang bisa diimpor dari file ini.'),
+            : (summary || t.aiChat.panel.noValidRows),
           importPreview: ready.length > 0 ? preview : undefined,
           importStatus: ready.length > 0 ? 'pending' : undefined,
         };
         return updated;
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Gagal memproses file';
+      const msg = err instanceof Error ? err.message : t.aiChat.panel.failedProcessFile;
       setPendingLLMImport(null);
       setMessages(prev => {
         const updated = [...prev];
@@ -941,7 +928,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
     const fileCheck = validateFile(file);
     setMessages(prev => [...prev, { role: 'user', content: `📎 ${file.name}` }]);
     if (!fileCheck.valid) {
-      setMessages(prev => [...prev, { role: 'assistant', content: `⚠️ ${fileCheck.error ?? 'File tidak valid'}` }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: `⚠️ ${fileCheck.error ?? t.aiChat.panel.invalidFile}` }]);
       return;
     }
 
@@ -951,13 +938,13 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
       try {
         const raw = await parseExcelRaw(file);
         if (raw.rows.length === 0) {
-          setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ File kosong atau tidak terbaca.' }]);
+          setMessages(prev => [...prev, { role: 'assistant', content: `⚠️ ${t.aiChat.panel.emptyFile}` }]);
           return;
         }
         await runLLMImport(file.name, raw.rows, selectedProvider);
         return;
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Gagal membaca file';
+        const msg = err instanceof Error ? err.message : t.aiChat.panel.failedReadFile;
         setMessages(prev => [...prev, { role: 'assistant', content: `⚠️ ${msg}` }]);
         return;
       }
@@ -1074,15 +1061,15 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
         updated[updated.length - 1] = {
           role: 'assistant',
           content: ready.length > 0
-            ? `Aku menemukan ${ready.length} transaksi siap-impor dari file. Cek ringkasannya:`
-            : 'Tidak ada baris yang bisa diimpor dari file ini. Pastikan ada kolom tanggal, deskripsi, dan jumlah.',
+            ? t.aiChat.panel.importFound(ready.length)
+            : t.aiChat.panel.noImportableRows,
           importPreview: ready.length > 0 ? preview : undefined,
           importStatus: ready.length > 0 ? 'pending' : undefined,
         };
         return updated;
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Gagal membaca file';
+      const msg = err instanceof Error ? err.message : t.aiChat.panel.failedReadFile;
       setMessages(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = { role: 'assistant', content: `⚠️ ${msg}` };
@@ -1114,7 +1101,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
         body: form,
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? 'OCR gagal memproses gambar');
+      if (!res.ok) throw new Error(json.error ?? t.aiChat.panel.ocrFailed);
 
       const ocr = json.data as OcrResult;
       const p = ocr.parsed;
@@ -1125,7 +1112,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
           const updated = [...prev];
           updated[updated.length - 1] = {
             role: 'assistant',
-            content: 'Aku tidak menemukan nominal yang jelas di struk ini. Coba foto yang lebih jelas, atau catat manual.',
+            content: t.aiChat.panel.receiptNoAmount,
           };
           return updated;
         });
@@ -1137,7 +1124,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
       const accByCode = new Map(accounts.map(a => [a.account_code, a]));
       const today = new Date().toISOString().split('T')[0];
 
-      const description = p.vendor || p.line_items?.[0]?.description || 'Transaksi dari struk';
+      const description = p.vendor || p.line_items?.[0]?.description || t.aiChat.panel.receiptTransaction;
       const categoryHint = p.category;
       // Coba match akun dari keyword OCR dulu; kalau tidak ada, pakai smart resolver.
       const matchedAccount = matchAccountByKeywords(accounts, [
@@ -1187,14 +1174,14 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
           role: 'assistant',
           content: ready.length > 0
             ? `Struk terbaca: **${p.vendor || description}** sebesar ${formatCurrency(amountNum)}. Cek & konfirmasi:`
-            : 'Struk terbaca tapi aku belum bisa menentukan akunnya. Coba catat manual.',
+            : t.aiChat.panel.receiptNoAccount,
           importPreview: ready.length > 0 ? preview : undefined,
           importStatus: ready.length > 0 ? 'pending' : undefined,
         };
         return updated;
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Gagal memproses gambar';
+      const msg = err instanceof Error ? err.message : t.aiChat.panel.failedProcessImage;
       setMessages(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = { role: 'assistant', content: `⚠️ ${msg}` };
@@ -1224,7 +1211,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ Sesi habis, silakan login ulang.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: `⚠️ ${t.aiChat.panel.sessionExpired}` }]);
       return;
     }
     const toInsert = preview.ready.map(t => ({ ...t, created_by: user.id }));
@@ -1248,7 +1235,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
       });
       window.dispatchEvent(new Event('transaction-saved'));
     } catch (err) {
-      const errMsg = err instanceof Error ? err.message : 'Gagal impor';
+      const errMsg = err instanceof Error ? err.message : t.aiChat.panel.failedImport;
       setMessages(prev => {
         const updated = [...prev];
         updated[msgIndex] = { ...updated[msgIndex], importStatus: 'pending' };
@@ -1317,10 +1304,10 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
         })
       });
       
-      if (!res.ok) throw new Error('Gagal menyimpan ingatan');
-      toast.success('Ingatan berhasil disimpan ke Orchestrator!');
+      if (!res.ok) throw new Error(t.aiChat.panel.memorizeFailed);
+      toast.success(t.aiChat.panel.memorized);
     } catch (err) {
-      toast.error('Gagal menyimpan ingatan');
+      toast.error(t.aiChat.panel.memorizeFailed);
       console.error(err);
     } finally {
       setIsMemorizing(false);
@@ -1383,14 +1370,14 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
                       onClick={handleMemorize}
                       disabled={isMemorizing}
                       className="p-1.5 rounded-lg text-gray-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
-                      title="Ingat percakapan ini (kirim ke Orchestrator)"
+                      title={t.aiChat.panel.memorizeTitle}
                     >
                       {isMemorizing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Brain className="w-3.5 h-3.5" />}
                     </button>
                     <button
                       onClick={handleReset}
                       className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                      title="Reset percakapan"
+                      title={t.aiChat.panel.resetTitle}
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
                     </button>
@@ -1399,7 +1386,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
                 <button
                   onClick={onClose}
                   className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  title="Tutup"
+                  title={t.aiChat.panel.closeTitle}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -1538,7 +1525,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
                     type="button"
                     onClick={() => setProviderDropdownOpen(o => !o)}
                     className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors max-w-[140px]"
-                    title="Pilih model AI"
+                    title={t.aiChat.panel.pickModel}
                   >
                     <span className="truncate">
                       {activeModel ? (MODEL_LABELS[activeModel] ?? activeModel) : (selectedProvider === 'claude' ? 'Claude' : selectedProvider === 'gemini-vertex' ? 'Gemini Vertex' : 'AXION Auto')}
@@ -1561,9 +1548,9 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
                           className="absolute bottom-full right-0 mb-1.5 z-20 w-52 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg overflow-hidden"
                         >
                           {([
-                            { id: 'auto' as const, label: 'AXION Auto', desc: 'Gemini · Llama · Qwen', logo: '/images/meta.png', disabled: false },
-                            { id: 'gemini-vertex' as const, label: 'Gemini Vertex', desc: claudeAvailable ? '3.5 Flash via Vertex AI' : 'Perlu Vertex credentials', logo: '/images/gemini.png', disabled: !claudeAvailable },
-                            { id: 'claude' as const, label: 'Claude', desc: claudeAvailable ? 'Sonnet 4.6 via Vertex' : 'Belum dikonfigurasi', logo: '/images/claude.png', disabled: !claudeAvailable },
+                            { id: 'auto' as const, label: 'AXION Auto', desc: t.aiChat.panel.autoModelDesc, logo: '/images/meta.png', disabled: false },
+                            { id: 'gemini-vertex' as const, label: 'Gemini Vertex', desc: claudeAvailable ? '3.5 Flash via Vertex AI' : t.aiChat.panel.vertexMissing, logo: '/images/gemini.png', disabled: !claudeAvailable },
+                            { id: 'claude' as const, label: 'Claude', desc: claudeAvailable ? 'Sonnet 4.6 via Vertex' : t.aiChat.panel.claudeNotConfigured, logo: '/images/claude.png', disabled: !claudeAvailable },
                           ]).map(opt => (
                             <button
                               key={opt.id}
@@ -1620,9 +1607,9 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
                   placeholder={
                     mode === 'record'
                       ? pendingTx
-                        ? `Berapa nominal "${pendingTx.name}"?`
-                        : 'Ketik transaksi atau lampirkan file...'
-                      : 'Tanya soal keuangan bisnismu...'
+                        ? t.aiChat.panel.askAmountFor(pendingTx.name)
+                        : t.aiChat.panel.inputRecordPlaceholder
+                      : t.aiChat.panel.inputAskPlaceholder
                   }
                   rows={1}
                   disabled={loading}
@@ -1650,7 +1637,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         disabled={loading}
-                        title="Impor Excel/CSV atau scan struk (gambar)"
+                        title={t.aiChat.panel.attachTitle}
                         className="w-8 h-8 rounded-full text-gray-400 dark:text-gray-500 hover:text-primary-500 dark:hover:text-primary-400 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all"
                       >
                         <Paperclip className="w-4 h-4" />
@@ -1671,7 +1658,7 @@ export function AIChatPanel({ isOpen, onClose, businessId, businessName, onQuick
                 </div>
               </div>
               <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1.5 text-center">
-                {mode === 'record' ? 'Ketik transaksi, lampirkan Excel/CSV, atau scan struk' : 'Enter kirim · Shift+Enter baris baru'}
+                {mode === 'record' ? t.aiChat.panel.hintRecord : t.aiChat.panel.hintAsk}
               </p>
             </div>
           </motion.div>
@@ -1692,6 +1679,7 @@ function EmptyState({
   direction: number;
   onSuggest: (q: string) => void;
 }) {
+  const { t } = useLanguage();
   const isRecord = mode === 'record';
   return (
     <div className="flex flex-col items-center justify-center h-full gap-4 py-4">
@@ -1720,7 +1708,7 @@ function EmptyState({
             </p>
             <div className="w-full space-y-1.5">
               <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 text-center mb-2">
-                {isRecord ? 'Contoh' : 'Coba tanya ini'}
+                {isRecord ? t.aiChat.panel.examplesLabel : t.aiChat.panel.trySomething}
               </p>
               {persona.suggestions.map((q) => (
                 <button
@@ -1839,6 +1827,7 @@ function ChatBubble({
 function ThinkingAccordion({ text, streaming }: { text: string; streaming: boolean }) {
   // Default tertutup. Saat streaming thinking, auto-buka biar user lihat live;
   // begitu jawaban mulai mengalir (streaming=false), user bisa tutup manual.
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const wasStreaming = useRef(false);
 
@@ -1856,7 +1845,7 @@ function ThinkingAccordion({ text, streaming }: { text: string; streaming: boole
       >
         <Brain className={`w-3 h-3 shrink-0 ${streaming ? 'text-primary-500 dark:text-primary-400' : ''}`} />
         <span className="flex-1 text-left">
-          {streaming ? 'Sedang menganalisis…' : 'Proses berpikir'}
+          {streaming ? t.aiChat.panel.thinkingStreaming : t.aiChat.panel.thinkingDone}
         </span>
         {streaming && (
           <span className="inline-flex gap-0.5">
@@ -1886,19 +1875,6 @@ function ThinkingAccordion({ text, streaming }: { text: string; streaming: boole
   );
 }
 
-// Page labels untuk navigate_to
-const PAGE_LABELS: Record<string, string> = {
-  transactions: 'Halaman Transaksi',
-  'income-statement': 'Laporan Laba Rugi',
-  'balance-sheet': 'Neraca',
-  'cash-flow': 'Arus Kas',
-  'general-ledger': 'Buku Besar',
-  'trial-balance': 'Neraca Saldo',
-  accounts: 'Akun (CoA)',
-  reports: 'Laporan',
-  dashboard: 'Dashboard',
-};
-
 function NavigateActionCard({
   action,
   onNavigate,
@@ -1906,13 +1882,14 @@ function NavigateActionCard({
   action: { page: string; filters?: Record<string, string>; message: string; url: string };
   onNavigate: (url: string) => void;
 }) {
+  const { t } = useLanguage();
   const filterEntries = Object.entries(action.filters ?? {}).filter(([, v]) => v);
   return (
     <div className="mt-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/40 p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-0.5">
-            {PAGE_LABELS[action.page] ?? action.page}
+            {t.aiChat.panel.pageLabels[action.page] ?? action.page}
           </p>
           {filterEntries.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1">
@@ -1932,7 +1909,7 @@ function NavigateActionCard({
           className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-900 dark:bg-gray-100 dark:hover:bg-white text-white dark:text-gray-900 text-xs font-medium transition-colors"
         >
           <ExternalLink className="w-3 h-3" />
-          Buka
+          {t.aiChat.panel.openPage}
         </button>
       </div>
     </div>
@@ -1950,6 +1927,7 @@ function DraftCard({
   onSave: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <div className="mt-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
       <div className="px-3 py-2.5 space-y-1.5">
@@ -1963,11 +1941,11 @@ function DraftCard({
           <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md font-medium ${
             CATEGORY_BADGE_CLASSES[draft.category] ?? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
           }`}>
-            {CATEGORY_LABELS[draft.category] ?? draft.category}
+            {t.categories[draft.category as keyof typeof t.categories] ?? draft.category}
           </span>
           <span className="text-gray-400 dark:text-gray-500">{draft.date}</span>
           {draft.confidence === 'low' && (
-            <span className="text-amber-600 dark:text-amber-400">· perlu dicek</span>
+            <span className="text-amber-600 dark:text-amber-400">{t.aiChat.panel.needsCheck}</span>
           )}
         </div>
         <div className="text-[10px] text-gray-400 dark:text-gray-500 tabular-nums">
@@ -1987,23 +1965,23 @@ function DraftCard({
             onClick={onCancel}
             className="flex-1 inline-flex items-center justify-center gap-1 py-2 text-[12px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
-            <X className="w-3.5 h-3.5" /> Batal
+            <X className="w-3.5 h-3.5" /> {t.common.cancel}
           </button>
         </div>
       )}
       {status === 'saving' && (
         <div className="flex items-center justify-center gap-1.5 py-2 text-[12px] text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700">
-          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Menyimpan...
+          <Loader2 className="w-3.5 h-3.5 animate-spin" /> {t.common.saving}
         </div>
       )}
       {status === 'saved' && (
         <div className="flex items-center justify-center gap-1.5 py-2 text-[12px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50/60 dark:bg-emerald-900/15 border-t border-emerald-100 dark:border-emerald-900/30">
-          <Check className="w-3.5 h-3.5" /> Tersimpan
+          <Check className="w-3.5 h-3.5" /> {t.aiChat.panel.saved}
         </div>
       )}
       {status === 'cancelled' && (
         <div className="flex items-center justify-center py-2 text-[12px] text-gray-400 dark:text-gray-500 border-t border-gray-100 dark:border-gray-700">
-          Dibatalkan
+          {t.aiChat.panel.cancelled}
         </div>
       )}
     </div>
@@ -2023,6 +2001,7 @@ function ImportPreviewCard({
   onImport: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <div className="mt-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
       <div className="px-3 py-2.5">
@@ -2033,20 +2012,20 @@ function ImportPreviewCard({
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded-lg bg-emerald-50/70 dark:bg-emerald-900/15 py-1.5">
             <div className="text-[15px] font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{preview.ready.length}</div>
-            <div className="text-[9px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Siap</div>
+            <div className="text-[9px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{t.aiChat.panel.readyCount}</div>
           </div>
           <div className="rounded-lg bg-gray-50 dark:bg-gray-800 py-1.5">
             <div className="text-[15px] font-bold text-gray-700 dark:text-gray-300 tabular-nums">{preview.totalRows}</div>
-            <div className="text-[9px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Total</div>
+            <div className="text-[9px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{t.common.total}</div>
           </div>
           <div className="rounded-lg bg-amber-50/70 dark:bg-amber-900/15 py-1.5">
             <div className="text-[15px] font-bold text-amber-600 dark:text-amber-400 tabular-nums">{preview.errorCount}</div>
-            <div className="text-[9px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Error</div>
+            <div className="text-[9px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{t.aiChat.panel.errorCount}</div>
           </div>
         </div>
         {preview.lowConfidenceCount > 0 && status === 'pending' && (
           <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-2 leading-snug">
-            {preview.lowConfidenceCount} baris kategori/akun ditebak otomatis — cek setelah impor.
+            {t.aiChat.panel.lowConfidenceHint(preview.lowConfidenceCount)}
           </p>
         )}
       </div>
@@ -2056,7 +2035,7 @@ function ImportPreviewCard({
             onClick={onImport}
             className="flex-1 inline-flex items-center justify-center gap-1 py-2 text-[12px] font-semibold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
           >
-            <Check className="w-3.5 h-3.5" /> Impor {preview.ready.length} transaksi
+            <Check className="w-3.5 h-3.5" /> {t.aiChat.panel.importCta(preview.ready.length)}
           </button>
           <div className="w-px bg-gray-100 dark:bg-gray-700" />
           <button
@@ -2069,17 +2048,17 @@ function ImportPreviewCard({
       )}
       {status === 'importing' && (
         <div className="flex items-center justify-center gap-1.5 py-2 text-[12px] text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700">
-          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Mengimpor...
+          <Loader2 className="w-3.5 h-3.5 animate-spin" /> {t.aiChat.panel.importing}
         </div>
       )}
       {status === 'done' && result && (
         <div className="flex items-center justify-center gap-1.5 py-2 text-[12px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50/60 dark:bg-emerald-900/15 border-t border-emerald-100 dark:border-emerald-900/30">
-          <Check className="w-3.5 h-3.5" /> {result.inserted} tersimpan{result.failed > 0 ? `, ${result.failed} gagal` : ''}
+          <Check className="w-3.5 h-3.5" /> {t.aiChat.panel.importDone(result.inserted, result.failed)}
         </div>
       )}
       {status === 'cancelled' && (
         <div className="flex items-center justify-center py-2 text-[12px] text-gray-400 dark:text-gray-500 border-t border-gray-100 dark:border-gray-700">
-          Dibatalkan
+          {t.aiChat.panel.cancelled}
         </div>
       )}
     </div>

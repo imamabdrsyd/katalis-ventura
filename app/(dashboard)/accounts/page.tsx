@@ -535,6 +535,7 @@ function SubAccountRow({
   onDeactivate?: (account: Account) => void;
   onActivate?: (account: Account) => void;
 }) {
+  const { t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -573,21 +574,21 @@ function SubAccountRow({
         {account.is_stock && (
           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded bg-indigo-50 dark:bg-indigo-900/30 text-gray-500 dark:text-gray-400">
             <BadgeDollarSign className="w-3 h-3 text-gray-400 dark:text-gray-500" />
-            Share
+            {t.accounts.badgeShare}
           </span>
         )}
         {account.account_type === 'ASSET' && account.default_category === 'CAPEX' && (
           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded bg-indigo-50 dark:bg-indigo-900/30 text-gray-500 dark:text-gray-400">
             <Building2 className="w-3 h-3 text-gray-400 dark:text-gray-500" />
-            Fixed Asset
+            {t.accounts.badgeFixedAsset}
           </span>
         )}
         {isSystem && (
-          <span title="Akun sistem — nama boleh diubah, struktur tetap"><Lock className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" /></span>
+          <span title={t.accounts.systemAccountTooltip}><Lock className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" /></span>
         )}
         {isInactive && (
           <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded">
-            Nonaktif
+            {t.accounts.inactiveBadge}
           </span>
         )}
       </div>
@@ -614,7 +615,7 @@ function SubAccountRow({
                     onClick={() => { setMenuOpen(false); onEdit!(account); }}
                     className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
-                    Edit akun
+                    {t.accounts.editAccountMenu}
                   </button>
                 )}
                 {canToggle && account.is_active && onDeactivate && (
@@ -622,7 +623,7 @@ function SubAccountRow({
                     onClick={() => { setMenuOpen(false); onDeactivate(account); }}
                     className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                   >
-                    Nonaktifkan
+                    {t.accounts.deactivate}
                   </button>
                 )}
                 {canToggle && !account.is_active && onActivate && (
@@ -631,7 +632,7 @@ function SubAccountRow({
                     className="w-full text-left px-3 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5 inline mr-1.5" />
-                    Aktifkan
+                    {t.accounts.activate}
                   </button>
                 )}
               </div>
@@ -640,7 +641,7 @@ function SubAccountRow({
         )}
 
         {isSystem && !hasMenu && (
-          <div className="p-1.5 text-gray-300 dark:text-gray-600" title="Akun sistem tidak bisa diubah">
+          <div className="p-1.5 text-gray-300 dark:text-gray-600" title={t.accounts.systemAccountHint}>
             <Lock className="w-4 h-4" />
           </div>
         )}

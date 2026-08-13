@@ -49,7 +49,7 @@ function AgingTable({ summary, type }: { summary: ArApSummary; type: 'ar' | 'ap'
         </tbody>
         <tfoot>
           <tr className="border-t-2 border-gray-300 dark:border-gray-600 font-bold">
-            <td className="py-3 px-4">Total</td>
+            <td className="py-3 px-4">{t.common.total}</td>
             <td className="py-3 px-3 text-right">{formatCurrency(summary.totalCurrent)}</td>
             <td className="py-3 px-3 text-right">{formatCurrency(summary.total30)}</td>
             <td className="py-3 px-3 text-right">{formatCurrency(summary.total60)}</td>
@@ -281,7 +281,7 @@ function ArApPageInner() {
   if (!activeBusiness) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-gray-500 dark:text-gray-400">Pilih bisnis terlebih dahulu.</p>
+        <p className="text-gray-500 dark:text-gray-400">{t.common.selectBusinessFirst}</p>
       </div>
     );
   }

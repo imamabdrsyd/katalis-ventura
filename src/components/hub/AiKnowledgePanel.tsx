@@ -437,7 +437,7 @@ export function AiKnowledgePanel() {
                             type="text"
                             value={newImageTitle}
                             onChange={(e) => setNewImageTitle(e.target.value)}
-                            placeholder="Cth. Menu Makanan Utama, Brosur Kamar..."
+                            placeholder={th.imageTitlePlaceholder}
                             className="w-full px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500"
                           />
                         </div>
@@ -468,7 +468,7 @@ export function AiKnowledgePanel() {
                                 );
                                 if (!cloudRes.ok) {
                                   const err = await cloudRes.json();
-                                  throw new Error(err.error?.message || 'Gagal upload ke Cloudinary');
+                                  throw new Error(err.error?.message || th.cloudinaryUploadFailed);
                                 }
                                 const { secure_url, public_id } = await cloudRes.json();
                                 const displayUrl = secure_url.replace(/\/upload\//, '/upload/f_jpg/');
@@ -490,9 +490,9 @@ export function AiKnowledgePanel() {
 
                                 setNewImageFile(null);
                                 setNewImageTitle('');
-                                toast.success('Gambar berhasil diunggah');
+                                toast.success(th.imageUploaded);
                               } catch (err: any) {
-                                toast.error(err.message || 'Gagal upload gambar');
+                                toast.error(err.message || th.imageUploadFailed);
                               } finally {
                                 setUploadingImage(false);
                               }
@@ -547,7 +547,7 @@ export function AiKnowledgePanel() {
             <button
               onClick={() => setSelectedImage(null)}
               className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors z-10"
-              title="Tutup"
+              title={t.common.close}
             >
               <X className="w-6 h-6" />
             </button>

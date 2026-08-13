@@ -66,14 +66,6 @@ interface QuickTransactionFormProps {
   pendingOcrApply?: OcrResult | null;
 }
 
-const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
-  ASSET: 'Aset',
-  LIABILITY: 'Liabilitas',
-  EQUITY: 'Ekuitas',
-  REVENUE: 'Pendapatan',
-  EXPENSE: 'Beban',
-};
-
 const ACCOUNT_TYPE_COLORS: Record<AccountType, string> = {
   ASSET: 'text-blue-600 dark:text-blue-400',
   LIABILITY: 'text-amber-500 dark:text-amber-400',
@@ -454,14 +446,14 @@ export function QuickTransactionForm({
   // Validate
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (amount <= 0) newErrors.amount = 'Amount must be greater than 0';
+    if (amount <= 0) newErrors.amount = t.quickForm.amountMustBePositive;
     if (currencyCode !== BASE_CURRENCY && (!fxRate || fxRate <= 0)) {
-      newErrors.fxRate = 'Exchange rate must be greater than 0';
+      newErrors.fxRate = t.quickForm.fxRateMustBePositive;
     }
-    if (!selectedAccountId) newErrors.selectedAccountId = 'Account is required';
-    if (!date) newErrors.date = 'Date is required';
+    if (!selectedAccountId) newErrors.selectedAccountId = t.quickForm.accountRequired;
+    if (!date) newErrors.date = t.quickForm.dateRequired;
     if (selectedAccount && isDividendChoiceAccount(selectedAccount) && !dividendEntryMode) {
-      newErrors.selectedAccountId = 'Select dividend entry method (Declare or Cashout)';
+      newErrors.selectedAccountId = t.quickForm.dividendModeRequired;
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -480,7 +472,7 @@ export function QuickTransactionForm({
         return uploaded;
       } catch (err: any) {
         setUploadingAttachments(false);
-        setErrors({ submit: err?.message || 'Gagal mengupload lampiran' });
+        setErrors({ submit: err?.message || t.quickForm.uploadAttachmentFailed });
         return null;
       }
     }
@@ -539,7 +531,7 @@ export function QuickTransactionForm({
       try {
         await onConvertStockToCOGS(selectedStockIds);
       } catch (err: any) {
-        setErrors({ submit: err.message || 'Gagal mengkonversi persediaan ke HPP' });
+        setErrors({ submit: err.message || t.quickForm.failedConvertStock });
         return;
       }
     }
@@ -564,11 +556,11 @@ export function QuickTransactionForm({
 
     // Minimal tetap butuh amount > 0 (batas bawah DB & tujuan "sudah diisi").
     if (amount <= 0) {
-      setErrors({ amount: 'Amount must be greater than 0' });
+      setErrors({ amount: t.quickForm.amountMustBePositive });
       return;
     }
     if (currencyCode !== BASE_CURRENCY && (!fxRate || fxRate <= 0)) {
-      setErrors({ fxRate: 'Exchange rate must be greater than 0' });
+      setErrors({ fxRate: t.quickForm.fxRateMustBePositive });
       return;
     }
 
@@ -613,7 +605,7 @@ export function QuickTransactionForm({
     date,
     category: 'OPEX',
     // name wajib min 1 di server — fallback ke placeholder saat semua kosong.
-    name: resolvedName || 'Draft transaksi',
+    name: resolvedName || t.quickForm.draftFallbackName,
     description: notes || selectedAccount?.description || selectedAccount?.account_name || '',
     amount: baseAmount,
     account: '',
@@ -634,7 +626,7 @@ export function QuickTransactionForm({
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-              Amount
+              {t.quickForm.amountLabel}
             </span>
             <CurrencyPill
               currencyCode={currencyCode}
@@ -714,7 +706,7 @@ export function QuickTransactionForm({
       {/* 2. CATEGORY */}
       <div>
         <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
-          Category
+          {t.quickForm.category}
         </label>
 
         {/* Combobox trigger — search happens inline */}
@@ -728,7 +720,7 @@ export function QuickTransactionForm({
           {dropdownOpen ? (
             <input
               type="text"
-              placeholder={selectedAccount ? selectedAccount.account_name : 'Search account code or name...'}
+              placeholder={selectedAccount ? selectedAccount.account_name : t.quickForm.searchAccountPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1 bg-transparent outline-none ring-0 focus:ring-0 focus:outline-none border-none text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
@@ -747,7 +739,7 @@ export function QuickTransactionForm({
               <span className="truncate">{selectedAccount.account_name}</span>
             </div>
           ) : (
-            <span className="text-gray-400 dark:text-gray-500">Search account code or name...</span>
+            <span className="text-gray-400 dark:text-gray-500">{t.quickForm.searchAccountPlaceholder}</span>
           )}
           <ChevronDown
             className={`w-5 h-5 flex-shrink-0 ml-2 transition-transform ${
@@ -789,7 +781,7 @@ export function QuickTransactionForm({
                       <div key={type}>
                         <div className="px-3 py-1.5 bg-gray-50 dark:bg-gray-700/50 text-xs font-semibold uppercase tracking-wide sticky top-0">
                           <span className={ACCOUNT_TYPE_COLORS[type]}>
-                            {ACCOUNT_TYPE_LABELS[type]}
+                            {t.quickForm.accountTypeLabels[type]}
                           </span>
                         </div>
                         {accs.map((account) => (
@@ -825,7 +817,7 @@ export function QuickTransactionForm({
 
                 {Object.values(groupedAccounts).every((accs) => accs.length === 0) && (
                   <div className="px-3 py-4 text-center text-gray-500 dark:text-gray-400 text-sm">
-                    Tidak ada akun yang cocok
+                    {t.quickForm.noMatchingAccounts}
                   </div>
                 )}
               </div>
@@ -840,7 +832,7 @@ export function QuickTransactionForm({
             <div className="mt-2 flex items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-300">
-                  Declare Dividen
+                  {t.quickForm.declareDividend}
                 </span>
                 <span className="truncate">
                   → {dividendPayableAccount.account_name}
@@ -851,7 +843,7 @@ export function QuickTransactionForm({
                 onClick={() => setShowDividendModeModal(true)}
                 className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 underline hover:no-underline flex-shrink-0"
               >
-                Ganti
+                {t.quickForm.change}
               </button>
             </div>
           ) : (
@@ -867,7 +859,7 @@ export function QuickTransactionForm({
                   onClick={() => setShowDividendModeModal(true)}
                   className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 underline hover:no-underline flex-shrink-0"
                 >
-                  Ganti
+                  {t.quickForm.change}
                 </button>
               )}
             </div>
@@ -907,13 +899,13 @@ export function QuickTransactionForm({
           />
           {pickedCatalogItem && (
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <span className="text-[10px] text-gray-400 dark:text-gray-500">Dipilih:</span>
+              <span className="text-[10px] text-gray-400 dark:text-gray-500">{t.quickForm.selectedLabel}</span>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
                 {pickedCatalogItem.name}
                 <button
                   type="button"
                   onClick={() => setPickedCatalogItem(null)}
-                  aria-label="Hapus item katalog"
+                  aria-label={t.quickForm.removeCatalogItem}
                   className="hover:text-indigo-900 dark:hover:text-indigo-100"
                 >
                   <X className="w-3 h-3" />
@@ -928,7 +920,7 @@ export function QuickTransactionForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
-            Date
+            {t.quickForm.dateLabel}
           </label>
           <input
             type="date"
@@ -951,14 +943,14 @@ export function QuickTransactionForm({
         </div>
         <div>
           <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
-            Related Party
+            {t.quickForm.relatedParty}
           </label>
           <ContactAutocomplete
             businessId={businessId}
             value={name}
             onChange={(val) => { setName(val); setContactId(null); }}
             onSelectContact={(contact) => setContactId(contact.id)}
-            placeholder="Search contact..."
+            placeholder={t.quickForm.searchContact}
             onSaveAsContact={async (contactName) => {
               if (!businessId || !user) return;
               try {
@@ -981,7 +973,7 @@ export function QuickTransactionForm({
       <div className="space-y-2">
         <div
           role="tablist"
-          aria-label="Transaction note and attachment"
+          aria-label={t.quickForm.tablistAria}
           className={[
             'flex items-center justify-start transition-colors',
             activeSupplementaryTab
@@ -990,8 +982,8 @@ export function QuickTransactionForm({
           ].join(' ')}
         >
           {([
-            { value: 'note' as const, label: 'Add note', icon: StickyNote },
-            ...(businessId ? [{ value: 'attachment' as const, label: 'Attach', icon: Paperclip }] : []),
+            { value: 'note' as const, label: t.quickForm.addNote, icon: StickyNote },
+            ...(businessId ? [{ value: 'attachment' as const, label: t.quickForm.attach, icon: Paperclip }] : []),
           ]).map((tab, index) => {
             const Icon = tab.icon;
             const isActive = activeSupplementaryTab === tab.value;
@@ -1043,8 +1035,8 @@ export function QuickTransactionForm({
                 onChange={(e) => setNotes(e.target.value)}
                 className="input"
                 rows={2}
-                placeholder="Brief description..."
-                aria-label="Note"
+                placeholder={t.quickForm.briefDescription}
+                aria-label={t.quickForm.noteAria}
                 autoFocus
               />
             ) : businessId ? (
@@ -1069,13 +1061,13 @@ export function QuickTransactionForm({
           disabled={loading || loadingAccounts || uploadingAttachments}
         >
           {uploadingAttachments ? (
-            'Mengupload lampiran...'
+            t.quickForm.uploadingAttachments
           ) : loading ? (
-            'Saving...'
+            t.quickForm.savingLabel
           ) : (
             <>
               <Zap className="w-4 h-4" />
-              Save Transaction
+              {t.quickForm.saveTransaction}
             </>
           )}
         </button>
@@ -1084,10 +1076,10 @@ export function QuickTransactionForm({
             type="button"
             onClick={handleSaveDraft}
             disabled={loading || uploadingAttachments}
-            title="Simpan yang sudah diisi sebagai draft — lanjutkan nanti sebelum di-posting"
+            title={t.quickForm.saveDraftTooltip}
             className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium transition-colors disabled:opacity-50"
           >
-            Save Draft
+            {t.quickForm.saveDraft}
           </button>
         ) : (
           <button
@@ -1096,7 +1088,7 @@ export function QuickTransactionForm({
             disabled={loading || uploadingAttachments}
             className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium transition-colors disabled:opacity-50"
           >
-            Cancel
+            {t.common.cancel}
           </button>
         )}
       </div>

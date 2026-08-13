@@ -23,26 +23,24 @@ import {
 } from 'lucide-react';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 
-const SUPPORTED_CHANNELS = [
-  { value: 'airbnb', label: 'Airbnb', badges: ['airbnb'], description: 'CSV dari Airbnb Host dashboard', available: true, businessTypes: ['jasa'] },
-  { value: 'tiktok_tokopedia', label: 'TikTok Shop / Tokopedia', badges: ['tiktok', 'tokopedia'], description: 'Ekspor pesanan Seller Center (gabungan)', available: true, businessTypes: ['produk', 'dagang'] },
-  { value: 'shopee', label: 'Shopee', badges: ['shopee'], description: 'Laporan transaksi Shopee', available: false, businessTypes: ['produk', 'dagang'] },
-] satisfies Array<SupportedChannel & { businessTypes?: BusinessTypeKey[] }>;
+type AgentPageStrings = ReturnType<typeof useLanguage>['t']['aiChat']['agentPage'];
 
-function channelHint(channel: string): string {
-  if (channel === 'airbnb') {
-    return 'Jurnal 3-baris per booking: Dr Bank · Dr Komisi · Cr Pendapatan Sewa (gross). Bianca menerjemahkan instruksi jadi filter & akun — angka tetap deterministik.';
-  }
-  if (channel === 'tiktok_tokopedia') {
-    return '1 transaksi per pesanan selesai; duplikat Order ID dilewati otomatis. Bianca menerjemahkan instruksi jadi filter & akun — angka tetap deterministik.';
-  }
-  return 'Channel ini belum didukung. Pilih channel lain.';
+function buildSupportedChannels(ap: AgentPageStrings) {
+  return [
+    { value: 'airbnb', label: 'Airbnb', badges: ['airbnb'], description: ap.channelDescAirbnb, available: true, businessTypes: ['jasa'] },
+    { value: 'tiktok_tokopedia', label: 'TikTok Shop / Tokopedia', badges: ['tiktok', 'tokopedia'], description: ap.channelDescTiktok, available: true, businessTypes: ['produk', 'dagang'] },
+    { value: 'shopee', label: 'Shopee', badges: ['shopee'], description: ap.channelDescShopee, available: false, businessTypes: ['produk', 'dagang'] },
+  ] satisfies Array<SupportedChannel & { businessTypes?: BusinessTypeKey[] }>;
 }
 
-function instructionPlaceholder(channel: string): string {
-  return channel === 'airbnb'
-    ? '"hanya bulan Mei" · "masukkan ke piutang dulu" · "jadikan draft"'
-    : '"hanya TikTok bulan Mei" · "masukkan ke piutang dulu" · "jadikan draft"';
+function channelHint(channel: string, ap: AgentPageStrings): string {
+  if (channel === 'airbnb') return ap.channelHintAirbnb;
+  if (channel === 'tiktok_tokopedia') return ap.channelHintTiktok;
+  return ap.channelHintUnsupported;
+}
+
+function instructionPlaceholder(channel: string, ap: AgentPageStrings): string {
+  return channel === 'airbnb' ? ap.instructionExampleAirbnb : ap.instructionExampleTiktok;
 }
 
 // Ekstrak judul-judul tahap dari proses berpikir (mis. "**Confirming Settlements**").
@@ -111,16 +109,18 @@ export default function AgentPage() {
   const canManage = isManagerRole(userRole);
   const businessType = activeBusiness?.business_type;
 
+  const supportedChannels = useMemo(() => buildSupportedChannels(t.aiChat.agentPage), [t]);
+
   const availableChannels = useMemo(
     () =>
-      SUPPORTED_CHANNELS.filter(
+      supportedChannels.filter(
         (ch) => !ch.businessTypes || !businessType || (ch.businessTypes as readonly BusinessTypeKey[]).includes(businessType as BusinessTypeKey)
       ),
-    [businessType]
+    [businessType, supportedChannels]
   );
 
   const [selectedChannel, setSelectedChannel] = useState(
-    () => availableChannels[0]?.value ?? SUPPORTED_CHANNELS[0].value
+    () => availableChannels[0]?.value ?? supportedChannels[0].value
   );
   const [channelDropdownOpen, setChannelDropdownOpen] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -197,7 +197,7 @@ export default function AgentPage() {
   // dibuka, reset ke sesi baru kosong.
   const handleDeleteSession = useCallback(async (sid: string) => {
     if (!activeBusinessId) return;
-    if (!window.confirm('Hapus riwayat percakapan ini? Tindakan ini tidak bisa dibatalkan.')) return;
+    if (!window.confirm(t.aiChat.agentPage.deleteSessionConfirm)) return;
     // Optimistic: buang dari daftar dulu.
     setPastSessions(prev => prev.filter(s => s.session_id !== sid));
     try {
@@ -213,7 +213,7 @@ export default function AgentPage() {
     } catch {
       // Rollback kalau gagal.
       fetchSessions();
-      alert('Gagal menghapus riwayat sesi.');
+      alert(t.aiChat.agentPage.deleteSessionFailed);
     }
   }, [activeBusinessId, sessionId, userName, fetchSessions]);
 
@@ -307,7 +307,7 @@ export default function AgentPage() {
     // tidak menimpa history dengan jawaban palsu saat respons model kosong/gagal.
     const messagesToSave = messages
       .filter((m): m is Extract<ChatMessage, { kind: 'text' | 'answer' }> => m.kind === 'text' || m.kind === 'answer')
-      .filter(m => (m.kind === 'answer' ? !m.streaming && !!m.text && m.text !== '_(tidak ada respons)_' : true))
+      .filter(m => (m.kind === 'answer' ? !m.streaming && !!m.text && m.text !== t.aiChat.agentPage.noResponse : true))
       .map(m => ({
         role: m.role,
         content: m.text,
@@ -372,7 +372,7 @@ export default function AgentPage() {
   }, []);
   // ----------------------------------------------
 
-  const channel = SUPPORTED_CHANNELS.find(c => c.value === selectedChannel) ?? availableChannels[0] ?? SUPPORTED_CHANNELS[0];
+  const channel = supportedChannels.find(c => c.value === selectedChannel) ?? availableChannels[0] ?? supportedChannels[0];
 
   // Bila business_type baru termuat (async) dan channel terpilih jadi tak relevan,
   // pindahkan pilihan ke channel pertama yang tersedia.
@@ -531,7 +531,7 @@ export default function AgentPage() {
         await reader.cancel().catch(() => {});
       }
     } catch (err) {
-      pushStepToRun(runId, { type: 'error', message: err instanceof Error ? err.message : 'Gagal menghubungi server' });
+      pushStepToRun(runId, { type: 'error', message: err instanceof Error ? err.message : t.aiChat.agentPage.serverContactFailed });
       updateRun(runId, { isRunning: false });
       updateAgentImportSession(activeBusinessId, { status: 'error' });
     } finally {
@@ -651,7 +651,7 @@ export default function AgentPage() {
             } else if (json.kind === 'model') {
               if (json.text) patchAnswer({ model: json.text });
             } else if (json.kind === 'error') {
-              accumulated += `${accumulated ? '\n\n' : ''}⚠️ ${json.text || 'Terjadi kesalahan'}`;
+              accumulated += `${accumulated ? '\n\n' : ''}⚠️ ${json.text || t.aiChat.agentPage.genericError}`;
               patchAnswer({ text: accumulated, thinking: thinking || undefined });
             } else if (json.text) {
               if (json.kind === 'thinking') thinking += json.text;
@@ -663,14 +663,14 @@ export default function AgentPage() {
       }
 
       patchAnswer({
-        text: accumulated || '_(tidak ada respons)_',
+        text: accumulated || t.aiChat.agentPage.noResponse,
         thinking: thinking || undefined,
         sources: sources.length ? sources : undefined,
         streaming: false,
       });
     } catch (err) {
       if ((err as Error).name === 'AbortError') { patchAnswer({ streaming: false }); return; }
-      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan';
+      const msg = err instanceof Error ? err.message : t.aiChat.agentPage.genericError;
       patchAnswer({ text: `⚠️ ${msg}`, streaming: false });
     } finally {
       setIsChatting(false);
@@ -701,7 +701,7 @@ export default function AgentPage() {
         });
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || 'Upload gagal');
+          throw new Error(errData.error || t.aiChat.agentPage.uploadFailed);
         }
         
         const fileName = ragFile.name;
@@ -711,7 +711,7 @@ export default function AgentPage() {
         finalInput = finalInput.trim() ? finalInput + attachmentNote : `Tolong pelajari file ini: ${fileName}${attachmentNote}`;
       } catch (err) {
         setIsChatting(false);
-        alert(`Gagal mengunggah dokumen: ${err instanceof Error ? err.message : 'Terjadi kesalahan'}`);
+        alert(t.aiChat.agentPage.uploadDocFailed(err instanceof Error ? err.message : t.aiChat.agentPage.genericError));
         return;
       }
       setIsChatting(false);
@@ -724,8 +724,8 @@ export default function AgentPage() {
     return (
       <div className="p-6 flex flex-col items-center justify-center min-h-[60vh] text-center">
         <AlertCircle className="w-12 h-12 text-amber-400 mb-4" />
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Akses Terbatas</h2>
-        <p className="text-gray-500 dark:text-gray-400 mt-2">Hanya Business Manager yang dapat menggunakan Agentic Workspace.</p>
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">{t.aiChat.agentPage.accessDeniedTitle}</h2>
+        <p className="text-gray-500 dark:text-gray-400 mt-2">{t.aiChat.agentPage.accessDeniedDesc}</p>
       </div>
     );
   }
@@ -755,7 +755,7 @@ export default function AgentPage() {
       dragOver={dragOver}
       onDragStateChange={setDragOver}
       disabled={isRunning}
-      hint={channelHint(selectedChannel)}
+      hint={channelHint(selectedChannel, t.aiChat.agentPage)}
     />
   );
 
@@ -772,7 +772,7 @@ export default function AgentPage() {
               height={36}
               className="w-9 h-9 rounded-full object-contain p-1 ring-2 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-100 shrink-0"
             />
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight shrink-0">Agentic Workspace</h1>
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight shrink-0">{t.nav.agenticWorkspace}</h1>
             {/* Avatar sub-agent yang dikoordinasi, sembunyi di layar kecil */}
             <div className="hidden sm:flex items-center gap-2 pl-2">
               {SUB_AGENT_AVATARS.map(src => (
@@ -849,7 +849,7 @@ export default function AgentPage() {
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors border border-indigo-200/50 dark:border-indigo-800/50 shrink-0"
             >
               <Brain className="w-3.5 h-3.5" />
-              <span>Memory Vault</span>
+              <span>{t.aiChat.agentPage.memoryVault}</span>
             </button>
             <AgentCapabilitiesBadge />
           </div>
@@ -880,8 +880,8 @@ export default function AgentPage() {
             <div className="mb-3 flex justify-center">
               <SegmentedToggle
                 options={[
-                  { value: 'business', label: 'Konteks Bisnis', icon: <Briefcase className="w-3.5 h-3.5" /> },
-                  { value: 'general', label: 'Topik Umum', icon: <MessagesSquare className="w-3.5 h-3.5" /> },
+                  { value: 'business', label: t.aiChat.agentPage.contextBusiness, icon: <Briefcase className="w-3.5 h-3.5" /> },
+                  { value: 'general', label: t.aiChat.agentPage.contextGeneral, icon: <MessagesSquare className="w-3.5 h-3.5" /> },
                 ]}
                 value={chatMode}
                 onChange={setChatMode}
@@ -924,18 +924,18 @@ export default function AgentPage() {
                 placeholder={
                   importMode
                     ? !channel.available
-                      ? 'Channel belum didukung — pilih channel lain'
-                      : `Instruksi (opsional): ${instructionPlaceholder(selectedChannel)}`
+                      ? t.aiChat.agentPage.channelUnsupportedPlaceholder
+                      : t.aiChat.agentPage.instructionPrefix(instructionPlaceholder(selectedChannel, t.aiChat.agentPage))
                     : chatMode === 'business'
-                      ? 'Tanya seputar keuangan bisnis, laporan, atau unggah dokumen…'
-                      : 'Tanya apa saja layaknya asisten umum…'
+                      ? t.aiChat.agentPage.askBusinessPlaceholder
+                      : t.aiChat.agentPage.askGeneralPlaceholder
                 }
                 className="flex-1 min-w-0 bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-[13px] leading-[1.5] focus:outline-none disabled:opacity-50"
               />
               <button
                 onClick={handleSubmit}
                 disabled={!canSend}
-                title={importMode ? 'Panggil Bianca' : 'Kirim'}
+                title={importMode ? t.aiChat.agentPage.callBianca : t.aiChat.agentPage.send}
                 className="shrink-0 inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full font-semibold text-[13px] text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
                 style={canSend ? { background: 'radial-gradient(circle at 30% 25%, #a5b4fc 0%, #6366f1 45%, #3730a3 100%)' } : { background: '#9ca3af' }}
               >
@@ -944,7 +944,7 @@ export default function AgentPage() {
                 ) : importMode ? (
                   <>
                     <Send className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Panggil Bianca</span>
+                    <span className="hidden sm:inline">{t.aiChat.agentPage.callBianca}</span>
                   </>
                 ) : (
                   <ArrowUp className="w-4 h-4" />
@@ -953,8 +953,8 @@ export default function AgentPage() {
             </div>
             <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1.5 text-center">
               {importMode
-                ? 'Bianca menerjemahkan instruksi jadi filter & akun — angka tetap deterministik.'
-                : 'Chat bebas topik · Unggah CSV di panel kanan untuk impor revenue channel'}
+                ? t.aiChat.agentPage.hintImport
+                : t.aiChat.agentPage.hintChat}
             </p>
           </div>
         </div>
@@ -969,14 +969,14 @@ export default function AgentPage() {
             <div className="p-4 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 font-semibold text-sm">
                 <Clock className="w-4 h-4" />
-                <h3>Riwayat Sesi</h3>
+                <h3>{t.aiChat.agentPage.sessionHistory}</h3>
               </div>
               <button 
                 onClick={() => {
                   setSessionId(typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `sess_${Date.now()}`);
                 }}
                 className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
-                title="Sesi Baru"
+                title={t.aiChat.agentPage.newSession}
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -986,7 +986,7 @@ export default function AgentPage() {
               {pastSessions.length === 0 ? (
                 <div className="text-center py-6 px-4">
                   <MessageCircle className="w-8 h-8 text-gray-300 dark:text-gray-700 mx-auto mb-2" />
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Belum ada riwayat percakapan.</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t.aiChat.agentPage.noSessions}</p>
                 </div>
               ) : (
                 pastSessions.map((s) => (
@@ -1000,7 +1000,7 @@ export default function AgentPage() {
                     }`}
                   >
                     <span className="text-[13px] font-medium text-gray-800 dark:text-gray-200 truncate w-full pr-6">
-                      {s.content ? s.content : 'Percakapan Kosong'}
+                      {s.content ? s.content : t.aiChat.agentPage.emptyConversation}
                     </span>
                     <span className="text-[10px] text-gray-500 dark:text-gray-500">
                       {new Date(s.created_at).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}
@@ -1008,8 +1008,8 @@ export default function AgentPage() {
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.session_id); }}
-                      title="Hapus riwayat"
-                      aria-label="Hapus riwayat"
+                      title={t.aiChat.agentPage.deleteHistory}
+                      aria-label={t.aiChat.agentPage.deleteHistory}
                       className="absolute top-2 right-2 p-1.5 rounded-lg text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-all"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -1045,8 +1045,8 @@ export default function AgentPage() {
                     <Brain className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Memory Vault</h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Ingatan yang Anda simpan dari percakapan.</p>
+                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t.aiChat.agentPage.memoryVault}</h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.aiChat.agentPage.memoryVaultDesc}</p>
                   </div>
                 </div>
                 <button
@@ -1061,8 +1061,8 @@ export default function AgentPage() {
                 {vaultMemories.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Brain className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-3" />
-                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Belum ada memori tersimpan</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-500 mt-1 max-w-xs">Gunakan tombol Memorize di panel obrolan kanan bawah untuk menyimpan konteks penting.</p>
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t.aiChat.agentPage.memoryVaultEmpty}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-500 mt-1 max-w-xs">{t.aiChat.agentPage.memoryVaultEmptyHint}</p>
                   </div>
                 ) : (
                   vaultMemories.map((mem, i) => (
@@ -1070,7 +1070,7 @@ export default function AgentPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] uppercase tracking-wider font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">
-                            {mem.metadata?.source || 'System'}
+                            {mem.metadata?.source || t.aiChat.agentPage.systemSource}
                           </span>
                         </div>
                         <span className="text-xs text-slate-400 dark:text-slate-500">
@@ -1165,6 +1165,7 @@ function renderInline(text: string): ReactNode[] {
 }
 
 function AnswerBubble({ message, agentIdentity }: { message: Extract<ChatMessage, { kind: 'answer' }>; agentIdentity: { name: string; role: string } }) {
+  const { t } = useLanguage();
   // Hanya tampilkan dot-typing kalau benar-benar belum ada apa-apa (teks & thinking).
   const isEmpty = message.streaming && !message.text && !message.thinking;
   return (
@@ -1234,7 +1235,7 @@ function AnswerBubble({ message, agentIdentity }: { message: Extract<ChatMessage
             <div className="mt-2.5 pt-2 border-t border-gray-100 dark:border-gray-700">
               <div className="flex items-center gap-1 mb-1 text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
                 <Globe className="w-3 h-3" />
-                Sumber
+                {t.aiChat.agentPage.sources}
               </div>
               <div className="flex flex-wrap gap-1">
                 {message.sources.map((s, i) => (
@@ -1300,7 +1301,7 @@ function personaFromAvatar(src: string): string | null {
   return PERSONA_BY_AVATAR[src] ?? null;
 }
 
-type AgentPageT = ReturnType<typeof useLanguage>['t']['aiChat']['agentPage'];
+type AgentPageT = AgentPageStrings;
 
 // Nama & avatar tetap (tak diterjemahkan); role/desc/access dari i18n.
 function buildSubAgents(ap: AgentPageT): {
@@ -1377,7 +1378,7 @@ function AgentCapabilitiesBadge() {
                   type="button"
                   onClick={() => setOpen(false)}
                   className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shrink-0"
-                  aria-label="Tutup"
+                  aria-label={t.common.close}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -1435,6 +1436,7 @@ function AgentCapabilitiesBadge() {
 // Accordion proses berpikir (reasoning model). Default tertutup; auto-buka saat
 // thinking sedang mengalir (sebelum jawaban muncul), auto-tutup begitu selesai.
 function ThinkingAccordion({ text, streaming }: { text: string; streaming: boolean }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const wasStreaming = useRef(false);
 
@@ -1451,7 +1453,7 @@ function ThinkingAccordion({ text, streaming }: { text: string; streaming: boole
         className="w-full flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100/60 dark:hover:bg-gray-700/40 transition-colors"
       >
         <Brain className={`w-3 h-3 shrink-0 ${streaming ? 'text-primary-500 dark:text-primary-400' : ''}`} />
-        <span className="flex-1 text-left">{streaming ? 'Sedang berpikir…' : 'Proses berpikir'}</span>
+        <span className="flex-1 text-left">{streaming ? t.aiChat.agentPage.thinkingStreaming : t.aiChat.agentPage.thinkingDone}</span>
         {streaming && (
           <span className="inline-flex gap-0.5">
             <span className="w-1 h-1 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -1481,6 +1483,7 @@ function ThinkingAccordion({ text, streaming }: { text: string; streaming: boole
 }
 
 function RunBubble({ run }: { run: Extract<ChatMessage, { kind: 'run' }> }) {
+  const { t } = useLanguage();
   const progressStep = [...run.steps].reverse().find(s => s.type === 'progress' && s.total);
   const lastIsError = run.steps[run.steps.length - 1]?.type === 'error';
 
@@ -1499,7 +1502,7 @@ function RunBubble({ run }: { run: Extract<ChatMessage, { kind: 'run' }> }) {
           <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
         )}
         <span className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">
-          {run.isRunning ? 'Bianca sedang membukukan…' : lastIsError ? 'Bianca berhenti' : 'Bianca selesai'}
+          {run.isRunning ? t.aiChat.agentPage.biancaRunning : lastIsError ? t.aiChat.agentPage.biancaStopped : t.aiChat.agentPage.biancaDone}
         </span>
         <span className="ml-auto text-[11px] text-gray-400 dark:text-gray-500 truncate max-w-[120px]">{run.fileName}</span>
       </div>
@@ -1508,7 +1511,7 @@ function RunBubble({ run }: { run: Extract<ChatMessage, { kind: 'run' }> }) {
       {progressStep && progressStep.total ? (
         <div className="px-3.5 py-2 border-b border-gray-100 dark:border-gray-700">
           <div className="flex justify-between text-[11px] text-gray-500 dark:text-gray-400 mb-1">
-            <span>Progres import</span>
+            <span>{t.aiChat.agentPage.importProgress}</span>
             <span className="tabular-nums">{progressStep.current}/{progressStep.total}</span>
           </div>
           <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -1575,10 +1578,10 @@ function RunBubble({ run }: { run: Extract<ChatMessage, { kind: 'run' }> }) {
             ? 'bg-amber-50 dark:bg-amber-900/15 border-amber-100 dark:border-amber-900/30'
             : 'bg-emerald-50 dark:bg-emerald-900/15 border-emerald-100 dark:border-emerald-900/30'
         }`}>
-          <p className="text-gray-700 dark:text-gray-200">✓ <strong>{run.result.inserted}</strong> transaksi diimpor sebagai <em>posted</em></p>
-          {run.result.skipped > 0 && <p className="text-gray-500 dark:text-gray-400">⊘ <strong>{run.result.skipped}</strong> dilewati (bukan pesanan selesai)</p>}
-          {(run.result.duplicate ?? 0) > 0 && <p className="text-gray-500 dark:text-gray-400">⊘ <strong>{run.result.duplicate}</strong> duplikat dilewati</p>}
-          {run.result.failed > 0 && <p className="text-amber-700 dark:text-amber-400">✗ <strong>{run.result.failed}</strong> gagal</p>}
+          <p className="text-gray-700 dark:text-gray-200">✓ <strong>{run.result.inserted}</strong> {t.aiChat.agentPage.resultImported} <em>posted</em></p>
+          {run.result.skipped > 0 && <p className="text-gray-500 dark:text-gray-400">⊘ <strong>{run.result.skipped}</strong> {t.aiChat.agentPage.resultSkipped}</p>}
+          {(run.result.duplicate ?? 0) > 0 && <p className="text-gray-500 dark:text-gray-400">⊘ <strong>{run.result.duplicate}</strong> {t.aiChat.agentPage.resultDuplicate}</p>}
+          {run.result.failed > 0 && <p className="text-amber-700 dark:text-amber-400">✗ <strong>{run.result.failed}</strong> {t.aiChat.agentPage.resultFailed}</p>}
           {run.result.errors.length > 0 && (
             <div className="mt-1 space-y-0.5">
               {run.result.errors.map((e, i) => (

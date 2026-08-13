@@ -56,6 +56,9 @@ export interface Translations {
     unsavedMessage: string;
     keepEditing: string;
     discardChanges: string;
+    noActiveBusiness: string;
+    selectOrCreateBusiness: string;
+    noTransactions: string;
   };
 
   // Label 6 kategori transaksi (+ SETTLE untuk pelunasan)
@@ -241,10 +244,33 @@ export interface Translations {
     googleSheetsRevokedHint: string;
     googleSheetsInvestorOnly: string;
     googleSheetsScopeNote: string;
+    // Telegram — toast & konfirmasi
+    telegramTokenFailed: string;
+    telegramDisconnectConfirm: string;
+    telegramDisconnectFailed: string;
+    telegramPrefsSaved: string;
+    telegramPrefsFailed: string;
+    // Integrasi Database (GCP)
+    gcpTitle: string;
+    gcpSubtitle: string;
+    gcpInitConfirm: string;
+    gcpInitButton: string;
+    gcpInitProcessing: string;
+    gcpInitHint: string;
+    gcpInitSuccess: string;
+    gcpInitFailed: string;
+    gcpSyncButton: string;
+    gcpSyncing: string;
+    gcpSyncHint: string;
+    gcpSyncSuccess: (n: number) => string;
+    gcpSyncFailed: string;
   };
 
   // Dashboard Page
   dashboard: {
+    unnamed: string;
+    viewTransactionDetail: string;
+    remainingCapitalRoiTooltip: string;
     yearly: string;
     months: string[];
     revenue: string;
@@ -288,6 +314,25 @@ export interface Translations {
 
   // Transactions
   transactions: {
+    transactionListTitle: string;
+    createInvoiceFromSelected: string;
+    createInvoice: string;
+    exportToPdf: string;
+    multiItemJournal: string;
+    updateJournal: string;
+    pdfSelectedCount: string;   // "{n} transaksi terpilih akan diekspor ke PDF."
+    pdfTitleLabel: string;
+    pdfSubtitleLabel: string;
+    pdfSubtitlePlaceholder: string;
+    pdfProcessing: string;
+    pdfExportButton: string;
+    unknownAccount: string;
+    hasAttachment: string;
+    columnResizeHint: string;
+    selectRow: string;
+    alreadyInvoiced: string;
+    selectMany: string;
+    viewDetail: string;
     manageTransactions: string;
     importExcel: string;
     journalEntry: string;
@@ -341,6 +386,31 @@ export interface Translations {
 
   // Quick Transaction Form
   quickForm: {
+    fxRateMustBePositive: string;
+    accountRequired: string;
+    dividendModeRequired: string;
+    uploadAttachmentFailed: string;
+    draftFallbackName: string;
+    amountLabel: string;
+    searchAccountPlaceholder: string;
+    noMatchingAccounts: string;
+    declareDividend: string;
+    change: string;
+    selectedLabel: string;
+    removeCatalogItem: string;
+    dateLabel: string;
+    relatedParty: string;
+    searchContact: string;
+    tablistAria: string;
+    addNote: string;
+    attach: string;
+    noteAria: string;
+    uploadingAttachments: string;
+    savingLabel: string;
+    saveTransaction: string;
+    saveDraftTooltip: string;
+    saveDraft: string;
+    accountTypeLabels: Record<'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENSE', string>;
     amount: string;
     category: string;
     date: string;
@@ -362,6 +432,11 @@ export interface Translations {
 
   // Accounts Page
   accounts: {
+    badgeShare: string;
+    badgeFixedAsset: string;
+    systemAccountTooltip: string;
+    inactiveBadge: string;
+    editAccountMenu: string;
     title: string;
     subtitle: string;
     addAccount: string;
@@ -496,6 +571,10 @@ export interface Translations {
     kasirComingSoon: string;
     kasirComingSoonDesc: string;
     aiInfoTitle: string;
+    imageTitlePlaceholder: string;
+    cloudinaryUploadFailed: string;
+    imageUploaded: string;
+    imageUploadFailed: string;
     aiInfoDesc: string;
     aiInfoPlaceholder: string;
     aiInfoReadonly: string;
@@ -703,6 +782,9 @@ export interface Translations {
 
   // Businesses Page
   businesses: {
+    createFailed: string;
+    updateFailed: string;
+    deleteFailed: string;
     portfolio: string;
     manageBusiness: string;
     addBusiness: string;
@@ -768,6 +850,43 @@ export interface Translations {
     grossMargin: string;
     operatingMargin: string;
     netMargin: string;
+    pageTitle: string;
+    summary: string;
+    profit: string;
+    loss: string;
+    breakEven: string;
+    statementTitle: string;
+    configureTooltip: string;
+    revenue: string;
+    totalRevenue: string;
+    costOfRevenue: string;
+    totalCostOfRevenue: string;
+    opex: string;
+    opexShort: string;
+    totalOpex: string;
+    ebitda: string;
+    depreciation: string;
+    depreciationLine: string;
+    totalDepreciation: string;
+    operatingIncomeShort: string;
+    operatingIncomeTooltip: string;
+    financingCosts: string;
+    financing: string;
+    totalFinancingCosts: string;
+    ebt: string;
+    ebtTooltip: string;
+    taxExpense: string;
+    tax: string;
+    totalTax: string;
+    formulaLabel: string;
+    formulaGrossProfit: string;
+    formulaEbitda: string;
+    formulaOperatingIncomeWithDep: string;
+    formulaOperatingIncome: string;
+    formulaEbt: string;
+    formulaNetIncome: string;
+    netIncomeTooltipTitle: string;
+    transactionsCount: (n: number) => string;
   };
 
   // Balance Sheet
@@ -792,6 +911,10 @@ export interface Translations {
     totalLiabilities: string;
     debtRatio: string;
     debtRatioFormula: string;
+    debtToAssetRatio: string;
+    debtToEquityRatio: string;
+    debtToEquityFormula: string;
+    viewChangesInEquity: string;
     equity: string;
     paidInCapital: string;
     dividends: string;
@@ -859,17 +982,26 @@ export interface Translations {
     operatingInvestingFinancing: string;
     closingBalance: string;
     openingPlusNet: string;
-    transactionsCount: string;
+    transactionsCount: (n: number) => string;
     noTransactions: string;
     openingBalanceTooltipTitle: string;
     openingBalanceTooltipDesc: string;
     transactionsCalculated: string;
     capitalInjection: string;
     ownerWithdrawal: string;
+    openingBalance: string;
+    openingBalanceDesc: string;
+    closingBalanceLabel: string;
+    fallbackHint: string;   // "... fallback ke {capital} ..."
+    initialCapital: string;
   };
 
   // General Ledger
   generalLedger: {
+    selectBusinessHint: string;
+    hideTransactions: string;
+    viewTransactions: string;
+    noEntriesForPeriod: string;
     title: string;
     subtitle: string;
     allTime: string;
@@ -954,10 +1086,23 @@ export interface Translations {
     avgMonthlyNetIncome: string;
     comparisonTable: string;
     metric: string;
+    marginGross: string;
+    marginOperating: string;
+    marginNet: string;
+    noProjectionData: string;
+    periodMonth: string;
+    periodQuarter: string;
+    periodYear: string;
+    periodCustom: string;
+    startDate: string;
+    endDate: string;
+    revShort: string;
+    netShort: string;
   };
 
   // Invoices
   invoices: {
+    pickFromReceivablesTooltip: string;
     title: string;
     settings: string;
     createInvoice: string;
@@ -1008,6 +1153,13 @@ export interface Translations {
 
   // Reconciliation
   reconciliation: {
+    bankGeneric: string;
+    parseFailed: string;
+    commitFailed: string;
+    noCashAccounts: string;
+    colCounterparty: string;
+    periodLabel: string;
+    colTransaction: string;
     title: string;
     subtitle: string;
     bookBalance: string;
@@ -1129,6 +1281,9 @@ export interface Translations {
     overBudget: string;
     underBudget: string;
     noOverBudget: string;
+    noUnderBudget: string;
+    monthsUnit: string;
+    noBudgetData: string;
     totalProjection: string;
     totalBudgetTarget: string;
     avgPerMonth: string;
@@ -1183,6 +1338,70 @@ export interface Translations {
       analystDesc: string;
       taxDesc: string;
     };
+    // Panel chat mengambang (AIChatPanel)
+    panel: {
+      suggestionsAnalyst: string[];
+      suggestionsTax: string[];
+      suggestionsEntry: string[];
+      smallTalkThanks: string;
+      smallTalkGreeting: string;
+      smallTalkDefault: string;
+      noResponse: string;
+      genericError: string;
+      failedContactAI: string;
+      failedContactAgent: string;
+      failedProcessTransaction: string;
+      failedSaveTransaction: string;
+      failedSave: string;
+      failedImport: string;
+      failedProcessFile: string;
+      failedReadFile: string;
+      failedProcessImage: string;
+      llmFileFailed: string;
+      ocrFailed: string;
+      sessionExpired: string;
+      invalidFile: string;
+      emptyFile: string;
+      noValidRows: string;
+      noImportableRows: string;
+      importFound: (n: number) => string;
+      receiptNoAmount: string;
+      receiptNoAccount: string;
+      receiptTransaction: string;
+      chatFallback: string;
+      askAmount: string;
+      askAmountFor: (name: string) => string;
+      draftIntro: string;
+      memorized: string;
+      memorizeFailed: string;
+      memorizeTitle: string;
+      resetTitle: string;
+      closeTitle: string;
+      pickModel: string;
+      autoModelDesc: string;
+      vertexMissing: string;
+      claudeNotConfigured: string;
+      inputRecordPlaceholder: string;
+      inputAskPlaceholder: string;
+      attachTitle: string;
+      hintRecord: string;
+      hintAsk: string;
+      examplesLabel: string;
+      trySomething: string;
+      thinkingStreaming: string;
+      thinkingDone: string;
+      openPage: string;
+      needsCheck: string;
+      cancelled: string;
+      saved: string;
+      importing: string;
+      readyCount: string;
+      errorCount: string;
+      lowConfidenceHint: (n: number) => string;
+      importCta: (n: number) => string;
+      importDone: (inserted: number, failed: number) => string;
+      pageLabels: Record<string, string>;
+    };
     // Halaman /agent (rumah orchestrator)
     agentPage: {
       capabilitiesChip: string;
@@ -1208,6 +1427,55 @@ export interface Translations {
       toolContacts: string;
       toolBusinessInfo: string;
       toolNavigate: string;
+      // Workspace UI
+      accessDeniedTitle: string;
+      accessDeniedDesc: string;
+      memoryVault: string;
+      memoryVaultDesc: string;
+      memoryVaultEmpty: string;
+      memoryVaultEmptyHint: string;
+      systemSource: string;
+      contextBusiness: string;
+      contextGeneral: string;
+      channelUnsupportedPlaceholder: string;
+      instructionPrefix: (example: string) => string;
+      askBusinessPlaceholder: string;
+      askGeneralPlaceholder: string;
+      callBianca: string;
+      send: string;
+      hintImport: string;
+      hintChat: string;
+      sessionHistory: string;
+      newSession: string;
+      noSessions: string;
+      emptyConversation: string;
+      deleteHistory: string;
+      deleteSessionConfirm: string;
+      deleteSessionFailed: string;
+      sources: string;
+      thinkingStreaming: string;
+      thinkingDone: string;
+      biancaRunning: string;
+      biancaStopped: string;
+      biancaDone: string;
+      importProgress: string;
+      resultImported: string;
+      resultSkipped: string;
+      resultDuplicate: string;
+      resultFailed: string;
+      channelHintAirbnb: string;
+      channelHintTiktok: string;
+      channelHintUnsupported: string;
+      instructionExampleAirbnb: string;
+      instructionExampleTiktok: string;
+      channelDescAirbnb: string;
+      channelDescTiktok: string;
+      channelDescShopee: string;
+      uploadFailed: string;
+      uploadDocFailed: (msg: string) => string;
+      serverContactFailed: string;
+      genericError: string;
+      noResponse: string;
     };
   };
 
@@ -1328,6 +1596,45 @@ export interface Translations {
     by: string;
     before: string;
     after: string;
+    // Dividen (declare → bayar)
+    dividendPaidInFull: string;
+    dividendPaidInFullDesc: string;
+    dividendDeclared: string;
+    dividendDeclaredDesc: string;
+    payDividendFull: string;
+    payDividendPartial: string;
+    confirmFullDividendPayment: string;
+    dividendRemaining: string;      // "Sisa dividen yang perlu dibayar: {amount}"
+    dividendMustBeLessThan: string; // "Jumlah harus kurang dari {amount}"
+    paymentAmountLabel: string;
+    totalPaidShort: string;
+    partialPaymentGeneric: string;
+    paymentFallbackName: string;
+    // Header & baris atas
+    manageContacts: string;
+    prevTransaction: string;
+    nextTransaction: string;
+    printLoanReceipt: string;
+    alreadyInvoiced: string;
+    removeTag: string;              // "Hapus tag {tag}"
+    addTag: string;
+    // Preview lampiran
+    zoomOut: string;
+    resetZoom: string;
+    zoomIn: string;
+    downloadFile: string;
+    prevAttachment: string;
+    nextAttachment: string;
+    prevAttachmentAria: string;
+    nextAttachmentAria: string;
+    previewOf: string;              // "Preview {filename}"
+    viewOf: string;                 // "Lihat {filename}"
+    downloadOf: string;             // "Unduh {filename}"
+    enlargePreview: string;
+    enlargePreviewOf: string;       // "Perbesar preview {filename}"
+    loadingImage: string;
+    loadingPdf: string;
+    loadingGeneric: string;
     // Warning panel
     cogsAmountHint: string;
     createCogsEntry: string;
@@ -1346,6 +1653,36 @@ export interface Translations {
     tabOmnichannel: string;
     tabIntegrations: string;
     inviteMember: string;
+    notSet: string;
+    saveFailed: string;
+    changeField: string;   // "Ubah {label}"
+    fillField: string;     // "Isi {label}"
+    selectPlaceholder: string;
+    done: string;
+    optionsMenu: string;
+    optionsMenuAria: string;
+    editInfo: string;
+    legalIdentity: string;
+    legalName: string;
+    legalEntityType: string;
+    financeAndLocation: string;
+    businessCapital: string;
+    operationalLocation: string;
+    registeredAddress: string;
+    timeline: string;
+    createdAt: string;
+    operationsStart: string;
+    operationsStartHint: string;
+    leaveBusiness: string;
+    leaveFailed: string;
+    backToBusiness: string;
+    addContact: string;
+    joinRequests: string;
+    leaveConfirm: string;      // "Apakah Anda yakin ingin keluar dari bisnis {name}?"
+    leaveConfirmHint: string;
+    leaving: string;
+    leave: string;
+    legalEntityTypes: Record<string, string>;
   };
 
   // Channel Integration (Pesan & Sosial)
@@ -1678,6 +2015,27 @@ export interface Translations {
       errSameAccount: string;
       errNoCogsAccount: string;
       errSaveFailed: string;
+      // Form jurnal multi-baris berdiri sendiri (MultiLineJournalForm)
+      dateRequiredLabel: string;
+      categoryRequiredLabel: string;
+      salesChannel: string;
+      noChannel: string;
+      nameRefRequired: string;
+      descriptionRequiredLabel: string;
+      descriptionShortPlaceholder: string;
+      journalLinesRequired: string;
+      mustBalance: string;
+      loadingAccounts: string;
+      colLineDescription: string;
+      balancedShort: string;
+      differenceShort: (amount: string) => string;
+      notesOptional: string;
+      notesPlaceholder: string;
+      attachmentsOptional: string;
+      saveJournal: string;
+      errDescriptionRequired: string;
+      salesReceiptLine: string;
+      catalogItemsSummary: (n: number) => string;
     };
     entitlement: {
       title: string;      // "Hak Bagi Hasil {year}"

@@ -200,7 +200,7 @@ export default function DashboardPage() {
       else if (days <= 120) buckets.b90 += amount;
       else buckets.over90 += amount;
 
-      const contactName = tx.name || 'Tanpa Nama';
+      const contactName = tx.name || t.dashboard.unnamed;
       byContact.set(contactName, (byContact.get(contactName) || 0) + amount);
     }
 
@@ -576,7 +576,7 @@ export default function DashboardPage() {
               {!transactionsLoading && investedCapital.remainingInvestedCapital > 0 && (
                 <div
                   className="text-[11px] font-semibold"
-                  title="ROI atas modal yang masih tertanam"
+                  title={t.dashboard.remainingCapitalRoiTooltip}
                 >
                   <span className="text-gray-500 dark:text-gray-400">
                     {t.dashboard.remainingCapitalRoi.replace('{n}', '').trim()}{' '}
@@ -915,7 +915,7 @@ export default function DashboardPage() {
                         }
                       }}
                       className="cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800"
-                      title="Lihat detail transaksi"
+                      title={t.dashboard.viewTransactionDetail}
                     >
                       <td className="py-3 pr-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                         {formatRelativeTime(transaction.created_at, transaction.date)}

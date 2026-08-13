@@ -1394,7 +1394,7 @@ export default function JournalEntryPage() {
 
                   <div>
                     <FloatingField
-                      label="Tanggal"
+                      label={t.common.date}
                       type="date"
                       value={date}
                       onChange={(e) => {
@@ -1499,7 +1499,7 @@ export default function JournalEntryPage() {
                 {/* Date field in multi-line mode */}
                 <div className="max-w-xs">
                   <FloatingField
-                    label="Tanggal"
+                    label={t.common.date}
                     type="date"
                     value={date}
                     onChange={(e) => {

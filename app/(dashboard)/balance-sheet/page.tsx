@@ -163,8 +163,8 @@ function BalanceSheetPageInner() {
               <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">DAR</span>
               <span className={`text-[11px] font-semibold tabular-nums ${darTone}`}>{darLabel}</span>
               <div className="absolute right-0 bottom-full mb-2 hidden group-hover:flex flex-col whitespace-nowrap bg-gray-800 dark:bg-gray-700 text-white text-xs rounded-md px-3 py-2 shadow-lg z-10 gap-0.5 pointer-events-none">
-                <span className="font-semibold">Debt to Asset Ratio</span>
-                <span className="text-gray-300">Total Liabilities / Total Assets</span>
+                <span className="font-semibold">{t.balanceSheetPage.debtToAssetRatio}</span>
+                <span className="text-gray-300">{t.balanceSheetPage.debtRatioFormula}</span>
                 <div className="absolute right-3 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-gray-800 dark:border-t-gray-700" />
               </div>
             </div>
@@ -265,8 +265,8 @@ function BalanceSheetPageInner() {
               <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">DER</span>
               <span className={`text-[11px] font-semibold tabular-nums ${derTone}`}>{derLabel}</span>
               <div className="absolute right-0 bottom-full mb-2 hidden group-hover:flex flex-col whitespace-nowrap bg-gray-800 dark:bg-gray-700 text-white text-xs rounded-md px-3 py-2 shadow-lg z-10 gap-0.5 pointer-events-none">
-                <span className="font-semibold">Debt to Equity Ratio</span>
-                <span className="text-gray-300">Total Liabilities / Total Equity</span>
+                <span className="font-semibold">{t.balanceSheetPage.debtToEquityRatio}</span>
+                <span className="text-gray-300">{t.balanceSheetPage.debtToEquityFormula}</span>
                 <div className="absolute right-3 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-gray-800 dark:border-t-gray-700" />
               </div>
             </div>
@@ -300,7 +300,7 @@ function BalanceSheetPageInner() {
                 <Link
                   href="/statement-of-changes-in-equity"
                   className="group inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors"
-                  title="Lihat Laporan Perubahan Ekuitas"
+                  title={t.balanceSheetPage.viewChangesInEquity}
                 >
                   {t.balanceSheetPage.equity}
                   <ArrowUpRight className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity" />

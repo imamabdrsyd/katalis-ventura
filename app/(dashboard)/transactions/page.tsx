@@ -398,7 +398,7 @@ function TransactionsPageInner() {
 
   // PDF export config for selected transactions
   const [showPdfConfigModal, setShowPdfConfigModal] = useState(false);
-  const [pdfTitle, setPdfTitle] = useState('Daftar Transaksi');
+  const [pdfTitle, setPdfTitle] = useState(t.transactions.transactionListTitle);
   const [pdfSubtitle, setPdfSubtitle] = useState('');
   const [pdfExporting, setPdfExporting] = useState(false);
 
@@ -763,7 +763,7 @@ function TransactionsPageInner() {
             <button
               onClick={() => router.push(`/businesses/${businessId}/config?tab=contacts`)}
               className="ml-2 mb-1 flex-shrink-0 p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
-              title="Kelola kontak"
+              title={t.transactionDetail.manageContacts}
             >
               <ContactIcon className="w-4 h-4" />
             </button>
@@ -851,10 +851,10 @@ function TransactionsPageInner() {
                       onClick={handleBulkCreateInvoice}
                       disabled={saving || invoiceFromTxns.saving}
                       className="btn-secondary flex items-center gap-1.5 border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
-                      title="Buat invoice dari transaksi piutang terpilih"
+                      title={t.transactions.createInvoiceFromSelected}
                     >
                       <Receipt className="w-3.5 h-3.5" />
-                      Buat Invoice
+                      {t.transactions.createInvoice}
                     </button>
                   )}
                   <button
@@ -867,7 +867,7 @@ function TransactionsPageInner() {
                   <button
                     onClick={() => setShowPdfConfigModal(true)}
                     className="p-1.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-lg transition-colors"
-                    title="Ekspor ke PDF"
+                    title={t.transactions.exportToPdf}
                   >
                     <Printer className="w-3.5 h-3.5" />
                   </button>
@@ -941,7 +941,7 @@ function TransactionsPageInner() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                Previous
+                {t.common.previous}
               </button>
 
               <div className="flex items-center gap-1">
@@ -986,7 +986,7 @@ function TransactionsPageInner() {
                 disabled={currentPage === totalPages}
                 className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
               >
-                Next
+                {t.common.next}
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
@@ -1013,7 +1013,7 @@ function TransactionsPageInner() {
       <Modal
         isOpen={showQuickAddModal}
         onClose={() => { setShowQuickAddModal(false); setMultiLineOcrPrefill(null); setOcrPreviewResult(null); setPendingOcrApply(null); }}
-        title={multiLineOcrPrefill ? 'Jurnal Multi-Item (dari Struk)' : t.transactions.addTransaction}
+        title={multiLineOcrPrefill ? t.transactions.multiItemJournal : t.transactions.addTransaction}
         size={multiLineOcrPrefill ? '3xl' : 'md'}
         sidePanel={ocrSidePanel}
         confirmOnClose
@@ -1028,7 +1028,7 @@ function TransactionsPageInner() {
             onCancel={() => { setShowQuickAddModal(false); setMultiLineOcrPrefill(null); }}
             loading={saving}
             businessId={businessId || undefined}
-            submitLabel="Simpan Jurnal"
+            submitLabel={t.journalEntry.form.saveJournal}
           />
         ) : (
           <QuickTransactionForm
@@ -1050,7 +1050,7 @@ function TransactionsPageInner() {
         onClose={() => { setShowAddModal(false); setTransactionMode(null); setFollowUpPrefill(null); setMultiLineOcrPrefill(null); setOcrPreviewResult(null); setPendingOcrApply(null); setIsDuplicateMode(false); }}
         title={
           isDuplicateMode ? t.transactions.duplicateTransaction :
-          multiLineOcrPrefill ? 'Jurnal Multi-Item (dari Struk)' :
+          multiLineOcrPrefill ? t.transactions.multiItemJournal :
           followUpPrefill ? t.transactions.createCOGSEntry :
           transactionMode === 'in' ? t.transactions.moneyIn :
           transactionMode === 'out' ? t.transactions.moneyOut :
@@ -1071,7 +1071,7 @@ function TransactionsPageInner() {
             onCancel={() => { setShowAddModal(false); setTransactionMode(null); setMultiLineOcrPrefill(null); setIsDuplicateMode(false); }}
             loading={saving}
             businessId={businessId || undefined}
-            submitLabel="Simpan Jurnal"
+            submitLabel={t.journalEntry.form.saveJournal}
           />
         ) : (
           <TransactionForm
@@ -1121,7 +1121,7 @@ function TransactionsPageInner() {
             onCancel={() => setEditTransaction(null)}
             loading={saving}
             businessId={businessId || undefined}
-            submitLabel="Update Jurnal"
+            submitLabel={t.transactions.updateJournal}
           />
         ) : (
           <TransactionForm
@@ -1188,34 +1188,34 @@ function TransactionsPageInner() {
       <Modal
         isOpen={showPdfConfigModal}
         onClose={() => { if (!pdfExporting) setShowPdfConfigModal(false); }}
-        title="Ekspor ke PDF"
+        title={t.transactions.exportToPdf}
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {selectedIds.size} transaksi terpilih akan diekspor ke PDF.
+            {t.transactions.pdfSelectedCount.replace('{n}', String(selectedIds.size))}
           </p>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Judul <span className="text-red-500">*</span>
+              {t.transactions.pdfTitleLabel} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={pdfTitle}
               onChange={(e) => setPdfTitle(e.target.value)}
-              placeholder="Daftar Transaksi"
+              placeholder={t.transactions.transactionListTitle}
               disabled={pdfExporting}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Sub judul <span className="text-gray-400 text-xs">(opsional)</span>
+              {t.transactions.pdfSubtitleLabel} <span className="text-gray-400 text-xs">({t.common.optional})</span>
             </label>
             <input
               type="text"
               value={pdfSubtitle}
               onChange={(e) => setPdfSubtitle(e.target.value)}
-              placeholder="Contoh: Periode Januari 2026"
+              placeholder={t.transactions.pdfSubtitlePlaceholder}
               disabled={pdfExporting}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
             />
@@ -1226,7 +1226,7 @@ function TransactionsPageInner() {
               disabled={pdfExporting}
               className="btn-secondary"
             >
-              Batal
+              {t.common.cancel}
             </button>
             <button
               onClick={handleExportSelectedPdf}
@@ -1236,12 +1236,12 @@ function TransactionsPageInner() {
               {pdfExporting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Memproses...
+                  {t.transactions.pdfProcessing}
                 </>
               ) : (
                 <>
                   <Printer className="w-4 h-4" />
-                  Ekspor PDF
+                  {t.transactions.pdfExportButton}
                 </>
               )}
             </button>

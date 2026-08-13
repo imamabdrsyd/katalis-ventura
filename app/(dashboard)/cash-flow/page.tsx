@@ -13,11 +13,6 @@ import { PeriodFilterCard } from '@/components/reports/PeriodFilterCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ReportSkeleton } from '@/components/ui/PageSkeleton';
 
-function formatTransactionCount(count: number, locale: string): string {
-  if (locale === 'id') return `${count} transaksi`;
-  return `${count} ${count === 1 ? 'transaction' : 'transactions'}`;
-}
-
 function TransactionRow({ tx, onClick }: { tx: CashFlowTransaction; onClick: (tx: CashFlowTransaction) => void }) {
   const isIn = tx.amount >= 0;
   return (
@@ -77,6 +72,8 @@ interface ActivitySectionProps {
 }
 
 function ActivitySection({ title, subtitle, total, totalLabel, transactions, transactionLink, onTransactionClick, transactionCountLabel }: ActivitySectionProps) {
+  const { t } = useLanguage();
+  const noTransactionsLabel = t.cashFlowPage.noTransactions;
   const [open, setOpen] = useState(false);
   const sorted = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -114,7 +111,7 @@ function ActivitySection({ title, subtitle, total, totalLabel, transactions, tra
       {open && (
         <div className="ml-6 my-1 border-l-2 border-gray-100 dark:border-gray-700 max-h-[400px] overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700/60">
           {sorted.length === 0 ? (
-            <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">Tidak ada transaksi</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">{noTransactionsLabel}</p>
           ) : (
             sorted.map(tx => <TransactionRow key={tx.id} tx={tx} onClick={onTransactionClick} />)
           )}
@@ -158,7 +155,7 @@ function CashFlowPageInner() {
     handleExportExcel,
   } = useCashFlow();
 
-  const { locale, t } = useLanguage();
+  const { t } = useLanguage();
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   const handleTransactionClick = (tx: CashFlowTransaction) => {
@@ -197,8 +194,8 @@ function CashFlowPageInner() {
       <div className="p-8">
         <EmptyState
           icon={Building2}
-          title="Tidak ada bisnis aktif"
-          description="Pilih atau buat bisnis terlebih dahulu"
+          title={t.common.noActiveBusiness}
+          description={t.common.selectOrCreateBusiness}
           className="bg-gray-50 dark:bg-gray-800 rounded-xl"
         />
       </div>
@@ -211,10 +208,10 @@ function CashFlowPageInner() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
           <ArrowLeftRight className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
-          Cash Flow Statement
+          {t.cashFlowPage.title}
         </h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
-          Laporan Arus Kas - {activeBusiness.business_name}
+          {t.cashFlowPage.reportTitle.replace('{name}', activeBusiness.business_name)}
         </p>
       </div>
 
@@ -238,24 +235,24 @@ function CashFlowPageInner() {
           {/* Summary */}
           <div className="card-static space-y-4">
             <h4 className="font-semibold text-gray-700 dark:text-gray-300 text-sm uppercase">
-              Cash Flow Summary
+              {t.cashFlowPage.summary}
             </h4>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Beginning Cash Balance:</span>
+                <span className="text-gray-600 dark:text-gray-400">{t.cashFlowPage.beginningBalance}</span>
                 <span className="font-medium text-gray-800 dark:text-gray-200">
                   {formatCurrency(cashFlow.openingBalance)}
                 </span>
               </div>
               {[
-                { label: 'Operating', value: cashFlow.operating, count: cashFlow.operatingTransactions.length },
-                { label: 'Investing', value: cashFlow.investing, count: cashFlow.investingTransactions.length },
-                { label: 'Financing', value: cashFlow.financing, count: cashFlow.financingTransactions.length },
+                { label: t.cashFlowPage.operating, value: cashFlow.operating, count: cashFlow.operatingTransactions.length },
+                { label: t.cashFlowPage.investing, value: cashFlow.investing, count: cashFlow.investingTransactions.length },
+                { label: t.cashFlowPage.financingLabel, value: cashFlow.financing, count: cashFlow.financingTransactions.length },
               ].map((item) => (
                 <div key={item.label} className="flex justify-between items-center pl-2">
                   <div>
                     <span className="text-gray-600 dark:text-gray-400">+ {item.label}:</span>
-                    <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-1">({formatTransactionCount(item.count, locale)})</span>
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-1">({t.cashFlowPage.transactionsCount(item.count)})</span>
                   </div>
                   <span className={`font-medium ${item.value >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                     {formatCurrency(item.value)}
@@ -263,7 +260,7 @@ function CashFlowPageInner() {
                 </div>
               ))}
               <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-600">
-                <span className="font-semibold text-gray-800 dark:text-gray-200">Ending Cash:</span>
+                <span className="font-semibold text-gray-800 dark:text-gray-200">{t.cashFlowPage.endingCash}</span>
                 <span className="font-bold text-gray-800 dark:text-gray-100">
                   <AnimatedNumber value={cashFlow.closingBalance} formatter={formatCurrency} replayKey={cfAnimationKey} />
                 </span>
@@ -278,7 +275,7 @@ function CashFlowPageInner() {
             <div className="flex items-center justify-between pb-5 mb-6 border-b border-gray-200 dark:border-gray-700/60">
               <div>
                 <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
-                  Cash Flow Statement
+                  {t.cashFlowPage.title}
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 tabular-nums">
                   {startDateLabel} — {endDateLabel}
@@ -294,10 +291,10 @@ function CashFlowPageInner() {
                     <Wallet className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0 mb-0.5" />
                     <div>
                       <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-200 flex items-center gap-1">
-                        Opening Balance
+                        {t.cashFlowPage.openingBalance}
                         <Info className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
                       </h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Saldo kas awal periode</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t.cashFlowPage.openingBalanceDesc}</p>
                     </div>
                   </div>
                   <Link
@@ -310,24 +307,30 @@ function CashFlowPageInner() {
                 </div>
                 {/* Tooltip */}
                 <div className="absolute left-0 right-0 sm:left-4 sm:right-auto bottom-full mb-2 z-50 hidden group-hover:block max-w-[calc(100vw-2rem)] sm:w-96 bg-gray-900 dark:bg-gray-950 text-white text-xs rounded-lg p-3 shadow-xl pointer-events-none ring-1 ring-white/10">
-                  <p className="font-semibold mb-2 text-blue-300">Opening Balance — Cara Hitung</p>
+                  <p className="font-semibold mb-2 text-blue-300">{t.cashFlowPage.openingBalanceTooltipTitle}</p>
                   <p className="text-gray-300 mb-3 leading-relaxed">
-                    Saldo kas pada awal periode, dihitung dari transaksi double-entry sebelum <span className="text-blue-300 font-medium">{startDateLabel}</span>. Klik nominal untuk melihat transaksinya.
+                    {(() => {
+                      const [before, after] = t.cashFlowPage.openingBalanceTooltipDesc.split('{date}');
+                      return (<>{before}<span className="text-blue-300 font-medium">{startDateLabel}</span>{after}</>);
+                    })()}
                   </p>
                   <div className="space-y-2 text-[11px] border-t border-gray-700 pt-2">
-                    <p className="text-gray-400 font-semibold uppercase tracking-wide">Transaksi yang dihitung:</p>
+                    <p className="text-gray-400 font-semibold uppercase tracking-wide">{t.cashFlowPage.transactionsCalculated}</p>
                     <div className="space-y-1.5">
                       <div className="flex gap-2">
                         <span className="text-green-400 flex-shrink-0">+</span>
-                        <span className="text-gray-300"><span className="text-white font-medium">Injeksi modal</span> — Dr Kas (1100/1200) / Cr Ekuitas (3xxx)</span>
+                        <span className="text-gray-300"><span className="text-white font-medium">{t.cashFlowPage.capitalInjection}</span> — Dr Kas (1100/1200) / Cr Ekuitas (3xxx)</span>
                       </div>
                       <div className="flex gap-2">
                         <span className="text-red-400 flex-shrink-0">−</span>
-                        <span className="text-gray-300"><span className="text-white font-medium">Prive / penarikan</span> — Dr Ekuitas (3xxx) / Cr Kas (1100/1200)</span>
+                        <span className="text-gray-300"><span className="text-white font-medium">{t.cashFlowPage.ownerWithdrawal}</span> — Dr Ekuitas (3xxx) / Cr Kas (1100/1200)</span>
                       </div>
                     </div>
                     <div className="border-t border-gray-700 pt-2 text-gray-400 leading-relaxed">
-                      Jika belum ada transaksi ekuitas sama sekali, nilai fallback ke <span className="text-yellow-300 font-medium">Modal Awal Bisnis</span> yang diisi saat setup bisnis.
+                      {(() => {
+                        const [before, after] = t.cashFlowPage.fallbackHint.split('{capital}');
+                        return (<>{before}<span className="text-yellow-300 font-medium">{t.cashFlowPage.initialCapital}</span>{after}</>);
+                      })()}
                     </div>
                   </div>
                   <div className="absolute left-4 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-900 dark:border-t-gray-950"></div>
@@ -336,36 +339,36 @@ function CashFlowPageInner() {
 
               {/* Activity sections */}
               <ActivitySection
-                title="Cash Flow from Operating Activities"
-                subtitle="Net Cash from Operations"
+                title={t.cashFlowPage.operatingActivities}
+                subtitle={t.cashFlowPage.netCashOperations}
                 total={cashFlow.operating}
-                totalLabel="Total Operating Cash Flow"
+                totalLabel={t.cashFlowPage.totalOperating}
                 transactions={cashFlow.operatingTransactions}
                 transactionLink={`/transactions?start=${startDate}&end=${endDate}&category=EARN`}
                 onTransactionClick={handleTransactionClick}
-                transactionCountLabel={formatTransactionCount(cashFlow.operatingTransactions.length, locale)}
+                transactionCountLabel={t.cashFlowPage.transactionsCount(cashFlow.operatingTransactions.length)}
               />
 
               <ActivitySection
-                title="Cash Flow from Investing Activities"
-                subtitle="Capital Expenditure"
+                title={t.cashFlowPage.investingActivities}
+                subtitle={t.cashFlowPage.capitalExpenditure}
                 total={cashFlow.investing}
-                totalLabel="Total Investing Cash Flow"
+                totalLabel={t.cashFlowPage.totalInvesting}
                 transactions={cashFlow.investingTransactions}
                 transactionLink={`/transactions?start=${startDate}&end=${endDate}&category=CAPEX`}
                 onTransactionClick={handleTransactionClick}
-                transactionCountLabel={formatTransactionCount(cashFlow.investingTransactions.length, locale)}
+                transactionCountLabel={t.cashFlowPage.transactionsCount(cashFlow.investingTransactions.length)}
               />
 
               <ActivitySection
-                title="Cash Flow from Financing Activities"
-                subtitle="Finance/Interest & Loans"
+                title={t.cashFlowPage.financingActivities}
+                subtitle={t.cashFlowPage.financeInterestLoans}
                 total={cashFlow.financing}
-                totalLabel="Total Financing Cash Flow"
+                totalLabel={t.cashFlowPage.totalFinancing}
                 transactions={cashFlow.financingTransactions}
                 transactionLink={`/transactions?start=${startDate}&end=${endDate}&category=FIN`}
                 onTransactionClick={handleTransactionClick}
-                transactionCountLabel={formatTransactionCount(cashFlow.financingTransactions.length, locale)}
+                transactionCountLabel={t.cashFlowPage.transactionsCount(cashFlow.financingTransactions.length)}
               />
 
               {/* NET CASH FLOW — Hero */}
@@ -377,9 +380,9 @@ function CashFlowPageInner() {
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl pointer-events-none" />
                 <div className="relative flex justify-between items-center gap-4">
                   <div>
-                    <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-white/80 mb-1">Net Cash Flow</h3>
+                    <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-white/80 mb-1">{t.cashFlowPage.netCashFlow}</h3>
                     <p className={`text-sm ${cashFlow.netCashFlow >= 0 ? 'text-emerald-50' : 'text-red-50'}`}>
-                      Operating + Investing + Financing
+                      {t.cashFlowPage.operatingInvestingFinancing}
                     </p>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
@@ -401,10 +404,10 @@ function CashFlowPageInner() {
                     <div className="flex items-center gap-2 mb-1">
                       <Wallet className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                       <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-200">
-                        Closing Balance
+                        {t.cashFlowPage.closingBalanceLabel}
                       </h3>
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Opening Balance + Net Cash Flow</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{t.cashFlowPage.openingPlusNet}</p>
                   </div>
                   <span className="text-2xl font-bold tabular-nums text-gray-800 dark:text-gray-100 flex-shrink-0">
                     <AnimatedNumber value={cashFlow.closingBalance} formatter={formatCurrency} replayKey={cfAnimationKey} />

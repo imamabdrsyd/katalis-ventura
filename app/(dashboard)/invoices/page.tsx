@@ -66,9 +66,9 @@ function InvoicesPageInner() {
     return (
       <div className="p-8">
         <div className="max-w-md mx-auto text-center">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">Bisnis Tidak Ditemukan</h2>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">{t.common.businessNotFound}</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">{businessError}</p>
-          <a href="/setup-business" className="btn-primary">Setup Bisnis</a>
+          <a href="/setup-business" className="btn-primary">{t.common.setupBusiness}</a>
         </div>
       </div>
     );
@@ -81,7 +81,7 @@ function InvoicesPageInner() {
         <div>
           <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
             <FileText className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
-            Invoice
+            {t.invoices.title}
           </h1>
         </div>
         {canManageInvoices && (
@@ -89,7 +89,7 @@ function InvoicesPageInner() {
             <button
               onClick={() => setShowPickerModal(true)}
               className="btn-ghost"
-              title="Pilih transaksi piutang untuk dijadikan invoice"
+              title={t.invoices.pickFromReceivablesTooltip}
             >
               {t.invoices.createFromTransaction}
             </button>
@@ -117,7 +117,7 @@ function InvoicesPageInner() {
         <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl">
           <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
           <button onClick={fetchInvoices} className="text-red-500 dark:text-red-400 underline text-sm mt-2">
-            Coba lagi
+            {t.common.retry}
           </button>
         </div>
       )}
@@ -210,7 +210,7 @@ function InvoicesPageInner() {
       <Modal
         isOpen={!!deleteInvoiceTarget}
         onClose={() => setDeleteInvoiceTarget(null)}
-        title="Hapus Invoice"
+        title={t.invoices.deleteInvoice}
       >
         <div className="p-2">
           <div className="flex items-center gap-3 mb-4">
@@ -219,10 +219,13 @@ function InvoicesPageInner() {
             </div>
             <div>
               <p className="text-sm text-gray-700 dark:text-gray-300">
-                Yakin ingin menghapus invoice <strong>{deleteInvoiceTarget?.invoice_number}</strong>?
+                {(() => {
+                  const [before, after] = t.invoices.deleteConfirm.split('{number}');
+                  return (<>{before}<strong>{deleteInvoiceTarget?.invoice_number}</strong>{after}</>);
+                })()}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Invoice untuk {deleteInvoiceTarget?.customer_name} akan dihapus.
+                {t.invoices.deleteHint.replace('{name}', deleteInvoiceTarget?.customer_name ?? '')}
               </p>
             </div>
           </div>
@@ -232,14 +235,14 @@ function InvoicesPageInner() {
               className="btn-secondary flex-1"
               disabled={saving}
             >
-              Batal
+              {t.common.cancel}
             </button>
             <button
               onClick={handleDeleteInvoice}
               className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors font-medium disabled:opacity-50"
               disabled={saving}
             >
-              {saving ? 'Menghapus...' : 'Hapus'}
+              {saving ? t.common.deleting : t.common.delete}
             </button>
           </div>
         </div>

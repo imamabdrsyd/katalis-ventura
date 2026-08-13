@@ -112,7 +112,7 @@ function GeneralLedgerPageInner() {
         <EmptyState
           className="card-static"
           icon={AlertCircle}
-          title="Pilih bisnis terlebih dahulu untuk melihat General Ledger."
+          title="{t.generalLedger.selectBusinessHint}"
         />
       </div>
     );
@@ -394,7 +394,7 @@ function GeneralLedgerPageInner() {
                           onClick={() => setLegacyExpanded(!legacyExpanded)}
                           className="inline-flex items-center gap-0.5 text-indigo-500 dark:text-indigo-400 hover:underline font-medium"
                         >
-                          {legacyExpanded ? 'Sembunyikan' : 'Lihat transaksi'}
+                          {legacyExpanded ? t.generalLedger.hideTransactions : t.generalLedger.viewTransactions}
                           {legacyExpanded
                             ? <ChevronDown className="w-3 h-3" />
                             : <ChevronRight className="w-3 h-3" />}
@@ -438,7 +438,7 @@ function GeneralLedgerPageInner() {
                   <EmptyState
                     size="sm"
                     icon={FileText}
-                    title="Tidak ada transaksi untuk akun ini pada periode yang dipilih"
+                    title={t.generalLedger.noEntriesForPeriod}
                   />
                 ) : (
                   <div className="overflow-x-auto">
@@ -453,7 +453,7 @@ function GeneralLedgerPageInner() {
                               aria-label={sortOrder === 'asc' ? t.generalLedger.sortNewest : t.generalLedger.sortOldest}
                               className="inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                             >
-                              Tanggal
+                              {t.common.date}
                               {sortOrder === 'asc' ? (
                                 <ArrowUpNarrowWide className="w-3 h-3" />
                               ) : (
@@ -462,19 +462,19 @@ function GeneralLedgerPageInner() {
                             </button>
                           </th>
                           <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            Keterangan
+                            {t.common.description}
                           </th>
                           <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             {t.generalLedger.counterAccount}
                           </th>
                           <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
-                            Debit
+                            {t.generalLedger.debit}
                           </th>
                           <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
-                            Kredit
+                            {t.generalLedger.credit}
                           </th>
                           <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-36">
-                            Saldo
+                            {t.generalLedger.balance}
                           </th>
                         </tr>
                       </thead>

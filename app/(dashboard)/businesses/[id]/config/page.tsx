@@ -40,16 +40,7 @@ const BUSINESS_TYPE_LABELS: Record<string, string> = {
   dagang: 'Dagang',
 };
 
-const LEGAL_ENTITY_TYPES: { value: string; label: string }[] = [
-  { value: 'PT', label: 'PT (Perseroan Terbatas)' },
-  { value: 'PT Perorangan', label: 'PT Perorangan' },
-  { value: 'CV', label: 'CV (Persekutuan Komanditer)' },
-  { value: 'UD', label: 'UD (Usaha Dagang)' },
-  { value: 'Firma', label: 'Firma' },
-  { value: 'Koperasi', label: 'Koperasi' },
-  { value: 'Yayasan', label: 'Yayasan' },
-  { value: 'Perorangan', label: 'Perorangan / Individu' },
-];
+const LEGAL_ENTITY_VALUES = ['PT', 'PT Perorangan', 'CV', 'UD', 'Firma', 'Koperasi', 'Yayasan', 'Perorangan'] as const;
 
 const BUSINESS_TYPE_ICONS: Record<string, React.ReactNode> = {
   agribusiness: <Wheat className="w-6 h-6" />,
@@ -68,7 +59,7 @@ function InlineEditableField({
   label,
   value,
   displayValue,
-  emptyText = 'Belum di-set',
+  emptyText,
   canEdit,
   inputType = 'text',
   options,
@@ -88,6 +79,7 @@ function InlineEditableField({
   allowClear?: boolean;
   onSave: (value: string | null) => Promise<void>;
 }) {
+  const { t } = useLanguage();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value ?? '');
   const [saving, setSaving] = useState(false);
@@ -119,7 +111,7 @@ function InlineEditableField({
       await onSave(val);
       setEditing(false);
     } catch (err: any) {
-      setError(err?.message || 'Gagal menyimpan');
+      setError(err?.message || t.businessConfig.saveFailed);
     } finally {
       setSaving(false);
     }
@@ -136,7 +128,7 @@ function InlineEditableField({
               type="button"
               onClick={startEdit}
               className="text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
-              title={value ? `Ubah ${label}` : `Isi ${label}`}
+              title={(value ? t.businessConfig.changeField : t.businessConfig.fillField).replace('{label}', label)}
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
@@ -178,7 +170,7 @@ function InlineEditableField({
                 autoFocus
                 className="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                <option value="">— Pilih —</option>
+                <option value="">{t.businessConfig.selectPlaceholder}</option>
                 {options?.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
@@ -194,7 +186,7 @@ function InlineEditableField({
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors"
               >
                 <Check className="w-3.5 h-3.5" />
-                {saving ? 'Menyimpan...' : 'Simpan'}
+                {saving ? t.common.saving : t.common.save}
               </button>
               {allowClear && value && (
                 <button
@@ -203,7 +195,7 @@ function InlineEditableField({
                   disabled={saving}
                   className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
-                  Hapus
+                  {t.common.delete}
                 </button>
               )}
               <button
@@ -213,7 +205,7 @@ function InlineEditableField({
                 className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               >
                 <X className="w-3.5 h-3.5" />
-                Batal
+                {t.common.cancel}
               </button>
             </div>
           </div>
@@ -222,7 +214,7 @@ function InlineEditableField({
             {value ? (
               displayValue ?? value
             ) : (
-              <span className="italic text-gray-400 dark:text-gray-500">{emptyText}</span>
+              <span className="italic text-gray-400 dark:text-gray-500">{emptyText ?? t.businessConfig.notSet}</span>
             )}
           </div>
         )}
@@ -242,6 +234,8 @@ function BusinessDetailCard({
   onLeave?: () => void;
   onBusinessUpdated?: (updated: Business) => void;
 }) {
+  const { t } = useLanguage();
+  const legalEntityTypes = LEGAL_ENTITY_VALUES.map((v) => ({ value: v, label: t.businessConfig.legalEntityTypes[v] ?? v }));
   const icon = BUSINESS_TYPE_ICONS[business.business_sector ?? ''] || <Building2 className="w-6 h-6" />;
   const sectorLabel = BUSINESS_SECTOR_LABELS[business.business_sector ?? ''] || business.business_sector;
   const typeLabel = business.business_type ? BUSINESS_TYPE_LABELS[business.business_type] : null;
@@ -270,7 +264,7 @@ function BusinessDetailCard({
   };
 
   const entityLabel = business.legal_entity_type
-    ? LEGAL_ENTITY_TYPES.find((t) => t.value === business.legal_entity_type)?.label ?? business.legal_entity_type
+    ? legalEntityTypes.find((o) => o.value === business.legal_entity_type)?.label ?? business.legal_entity_type
     : null;
 
   const fieldEditable = editMode && canManage;
@@ -315,7 +309,7 @@ function BusinessDetailCard({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded-lg transition-colors"
             >
               <Check className="w-3.5 h-3.5" />
-              Selesai
+              {t.businessConfig.done}
             </button>
           ) : (
             <div ref={kebabRef} className="relative">
@@ -323,8 +317,8 @@ function BusinessDetailCard({
                 type="button"
                 onClick={() => setKebabOpen((v) => !v)}
                 className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                title="Opsi"
-                aria-label="Opsi card detail bisnis"
+                title={t.businessConfig.optionsMenu}
+                aria-label={t.businessConfig.optionsMenuAria}
               >
                 <MoreVertical className="w-4 h-4" />
               </button>
@@ -336,7 +330,7 @@ function BusinessDetailCard({
                     className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                   >
                     <Pencil className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    Edit informasi
+                    {t.businessConfig.editInfo}
                   </button>
                 </div>
               )}
@@ -349,12 +343,12 @@ function BusinessDetailCard({
       {(fieldEditable || business.legal_name || business.legal_entity_type) && (
         <section className="mb-6">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
-            Identitas Legal
+            {t.businessConfig.legalIdentity}
           </p>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-x-6 gap-y-4">
             <InlineEditableField
               icon={<FileText className="w-4 h-4" />}
-              label="Nama Legal"
+              label={t.businessConfig.legalName}
               value={business.legal_name}
               canEdit={fieldEditable}
               inputType="text"
@@ -362,12 +356,12 @@ function BusinessDetailCard({
             />
             <InlineEditableField
               icon={<Landmark className="w-4 h-4" />}
-              label="Bentuk Badan Usaha"
+              label={t.businessConfig.legalEntityType}
               value={business.legal_entity_type}
               displayValue={entityLabel}
               canEdit={fieldEditable}
               inputType="select"
-              options={LEGAL_ENTITY_TYPES}
+              options={legalEntityTypes}
               onSave={(v) => saveField({ legal_entity_type: v })}
             />
           </div>
@@ -377,13 +371,13 @@ function BusinessDetailCard({
       {/* Section: Keuangan & Lokasi */}
       <section className="mb-6">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
-          Keuangan & Lokasi
+          {t.businessConfig.financeAndLocation}
         </p>
         <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-x-6 gap-y-4">
           <div className="flex items-start gap-3">
             <Banknote className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <p className="text-xs text-gray-500 dark:text-gray-400">Modal Bisnis</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t.businessConfig.businessCapital}</p>
               <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
                 {formatCurrency(business.capital_investment)}
               </p>
@@ -394,7 +388,7 @@ function BusinessDetailCard({
             <div className="flex items-start gap-3">
               <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
               <div className="min-w-0">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Lokasi Operasional</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t.businessConfig.operationalLocation}</p>
                 <p className="text-sm text-gray-800 dark:text-gray-200 leading-snug truncate">
                   {business.city || business.property_address}
                 </p>
@@ -405,7 +399,7 @@ function BusinessDetailCard({
           <div className="col-span-full">
             <InlineEditableField
               icon={<MapPinned className="w-4 h-4" />}
-              label="Alamat Terdaftar"
+              label={t.businessConfig.registeredAddress}
               value={business.registered_address}
               canEdit={fieldEditable}
               inputType="textarea"
@@ -418,14 +412,14 @@ function BusinessDetailCard({
       {/* Section: Timeline */}
       <section>
         <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
-          Timeline
+          {t.businessConfig.timeline}
         </p>
         <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-x-6 gap-y-4">
           {business.created_at && (
             <div className="flex items-start gap-3">
               <CalendarDays className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
               <div className="min-w-0">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Dibuat</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t.businessConfig.createdAt}</p>
                 <p className="text-sm text-gray-800 dark:text-gray-200">
                   {formatDateID(business.created_at)}
                 </p>
@@ -435,7 +429,7 @@ function BusinessDetailCard({
 
           <InlineEditableField
             icon={<Rocket className="w-4 h-4" />}
-            label="Mulai Beroperasi"
+            label={t.businessConfig.operationsStart}
             value={business.operations_start_date}
             displayValue={business.operations_start_date ? formatDateID(business.operations_start_date) : undefined}
             canEdit={fieldEditable}
@@ -444,7 +438,7 @@ function BusinessDetailCard({
             helper={
               <p className="flex items-start gap-1.5 text-xs text-gray-500 dark:text-gray-400 leading-snug">
                 <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                <span>Jika di-set, ROI di dashboard dihitung sejak tanggal ini (operating ROI). Jika kosong, dihitung sejak transaksi pertama (holding period return).</span>
+                <span>{t.businessConfig.operationsStartHint}</span>
               </p>
             }
             onSave={(v) => saveField({ operations_start_date: v })}
@@ -459,7 +453,7 @@ function BusinessDetailCard({
             className="w-full px-4 py-2.5 text-sm font-medium text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors flex items-center justify-center gap-2"
           >
             <LogOut className="w-4 h-4" />
-            Keluar dari Bisnis
+            {t.businessConfig.leaveBusiness}
           </button>
         </div>
       )}
@@ -538,7 +532,7 @@ export default function BusinessMembersPage() {
       router.push('/businesses');
     } catch (err) {
       console.error('Failed to leave business:', err);
-      toast.error('Gagal keluar dari bisnis. Silakan coba lagi.');
+      toast.error(t.businessConfig.leaveFailed);
     } finally {
       setLeaveLoading(false);
     }
@@ -551,7 +545,7 @@ export default function BusinessMembersPage() {
         <button
           onClick={() => router.push('/businesses')}
           className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0"
-          title="Kembali ke Business"
+          title={t.businessConfig.backToBusiness}
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
@@ -608,7 +602,7 @@ export default function BusinessMembersPage() {
             className="btn-primary-glow flex items-center justify-center gap-2 flex-shrink-0"
           >
             <Plus className="h-4 w-4" />
-            Tambah
+            {t.businessConfig.addContact}
           </button>
         )}
       </div>
@@ -631,7 +625,7 @@ export default function BusinessMembersPage() {
                 <div className="flex items-center gap-2 mb-4">
                   <div className="h-7 w-1 rounded-full bg-gradient-to-b from-indigo-400 to-indigo-600" />
                   <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100">
-                    Permintaan Bergabung
+                    {t.businessConfig.joinRequests}
                   </h2>
                 </div>
                 <JoinRequestList
@@ -706,15 +700,17 @@ export default function BusinessMembersPage() {
       <Modal
         isOpen={isLeaveConfirmOpen}
         onClose={() => setIsLeaveConfirmOpen(false)}
-        title="Keluar dari Bisnis"
+        title={t.businessConfig.leaveBusiness}
       >
         <div className="space-y-4">
           <p className="text-gray-600 dark:text-gray-300">
-            Apakah Anda yakin ingin keluar dari bisnis{' '}
-            <strong>{business?.business_name}</strong>?
+            {(() => {
+              const [before, after] = t.businessConfig.leaveConfirm.split('{name}');
+              return (<>{before}<strong>{business?.business_name}</strong>{after}</>);
+            })()}
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Anda tidak akan bisa mengakses data bisnis ini lagi. Untuk bergabung kembali, Anda memerlukan undangan baru dari pemilik bisnis.
+            {t.businessConfig.leaveConfirmHint}
           </p>
           <div className="flex gap-3 pt-4">
             <button
@@ -722,14 +718,14 @@ export default function BusinessMembersPage() {
               className="btn-secondary flex-1"
               disabled={leaveLoading}
             >
-              Batal
+              {t.common.cancel}
             </button>
             <button
               onClick={handleLeaveBusiness}
               className="btn-danger flex-1"
               disabled={leaveLoading}
             >
-              {leaveLoading ? 'Keluar...' : 'Keluar'}
+              {leaveLoading ? t.businessConfig.leaving : t.businessConfig.leave}
             </button>
           </div>
         </div>

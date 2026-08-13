@@ -59,7 +59,7 @@ function BudgetForecastPageInner() {
   if (!activeBusiness) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-gray-500 dark:text-gray-400">Pilih bisnis terlebih dahulu.</p>
+        <p className="text-gray-500 dark:text-gray-400">{t.common.selectBusinessFirst}</p>
       </div>
     );
   }
@@ -77,7 +77,7 @@ function BudgetForecastPageInner() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
             <Target className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
-            Budget & Forecast
+            {t.budget.title}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{activeBusiness.business_name}</p>
         </div>
@@ -114,7 +114,7 @@ function BudgetForecastPageInner() {
         <EmptyState
           icon={Target}
           title={t.budget.noBudget}
-          description="Buat budget pertama untuk mulai merencanakan keuangan bisnis."
+          description={t.budget.noBudgetDesc}
           action={
             canManage ? (
               <button
@@ -152,14 +152,14 @@ function BudgetForecastPageInner() {
                 <button
                   onClick={() => setShowEditModal(true)}
                   className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  title="Edit budget"
+                  title={t.budget.editBudget}
                 >
                   <Pencil className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
                   className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-                  title="Hapus budget"
+                  title={t.budget.deleteBudget}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -222,7 +222,7 @@ function BudgetForecastPageInner() {
                           .sort((a, b) => a.variance - b.variance)
                           .slice(0, 3);
                         if (sorted.length === 0) {
-                          return <p className="text-xs text-gray-400">Tidak ada akun over budget</p>;
+                          return <p className="text-xs text-gray-400">{t.budget.noOverBudget}</p>;
                         }
                         return sorted.map((r) => (
                           <div key={r.code} className="flex items-center justify-between py-1.5">
@@ -256,7 +256,7 @@ function BudgetForecastPageInner() {
                           .sort((a, b) => b.variance - a.variance)
                           .slice(0, 3);
                         if (sorted.length === 0) {
-                          return <p className="text-xs text-gray-400">Tidak ada akun under budget</p>;
+                          return <p className="text-xs text-gray-400">{t.budget.noUnderBudget}</p>;
                         }
                         return sorted.map((r) => (
                           <div key={r.code} className="flex items-center justify-between py-1.5">
@@ -278,7 +278,7 @@ function BudgetForecastPageInner() {
                   <EmptyState
                     size="sm"
                     icon={Target}
-                    title={`Belum ada data budget. Masukkan target di tab "${t.budget.inputBudget}".`}
+                    title={t.budget.noBudgetData.replace('{tab}', t.budget.inputBudget)}
                     className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700"
                   />
                 )}
@@ -333,10 +333,10 @@ function BudgetForecastPageInner() {
                       const avgMonthly = futureMonths.length > 0 ? totalProjectedRevenue / futureMonths.length : 0;
 
                       const cards = [
-                        { label: 'Total {t.budget.projection}', value: formatCurrency(totalProjectedRevenue) },
-                        { label: 'Total Budget Target', value: formatCurrency(totalBudgeted) },
-                        { label: 'Rata-rata/Bulan', value: formatCurrency(avgMonthly) },
-                        { label: 'Periode {t.budget.projection}', value: `${futureMonths.length} bulan` },
+                        { label: t.budget.totalProjection, value: formatCurrency(totalProjectedRevenue) },
+                        { label: t.budget.totalBudgetTarget, value: formatCurrency(totalBudgeted) },
+                        { label: t.budget.avgPerMonth, value: formatCurrency(avgMonthly) },
+                        { label: t.budget.projectionPeriod, value: `${futureMonths.length} ${t.budget.monthsUnit}` },
                       ];
 
                       return cards.map((card) => (
@@ -376,23 +376,23 @@ function BudgetForecastPageInner() {
         onClose={() => setShowDeleteConfirm(false)}
         panelClassName="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-sm w-full p-6"
       >
-        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">Hapus Budget?</h3>
+        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">{t.budget.deleteConfirm}</h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-          Budget &quot;{selectedBudget?.name}&quot; akan dihapus beserta semua data budget lines-nya. Tindakan ini tidak bisa dibatalkan.
+          {t.budget.deleteHint.replace('{name}', selectedBudget?.name ?? '')}
         </p>
         <div className="flex justify-end gap-3">
           <button
             onClick={() => setShowDeleteConfirm(false)}
             className="btn-secondary"
           >
-            Batal
+            {t.common.cancel}
           </button>
           <button
             onClick={handleDeleteBudget}
             disabled={saving}
             className="px-4 py-2.5 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
           >
-            {saving ? 'Menghapus...' : 'Hapus'}
+            {saving ? t.common.deleting : t.common.delete}
           </button>
         </div>
       </AnimatedDialog>

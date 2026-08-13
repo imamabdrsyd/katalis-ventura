@@ -39,7 +39,7 @@ const BANK_OPTIONS: { value: BankCode; label: string }[] = [
   { value: 'MANDIRI', label: 'Mandiri' },
   { value: 'BRI', label: 'BRI' },
   { value: 'BNI', label: 'BNI' },
-  { value: 'GENERIC', label: 'Generic / Lainnya' },
+  { value: 'GENERIC', label: 'Generic' },
 ];
 
 interface Props {
@@ -109,12 +109,12 @@ export function BankStatementImportModal({ businessId, isOpen, onClose, onSucces
       const res = await fetch('/api/bank-statements/parse', { method: 'POST', body: form });
       const json = await res.json();
       if (!res.ok) {
-        throw new Error(json.error ?? 'Parse gagal');
+        throw new Error(json.error ?? t.reconciliation.parseFailed);
       }
       setParseResult((json as ParseResponse).data);
       setStep('preview');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Parse gagal');
+      setError(err instanceof Error ? err.message : t.reconciliation.parseFailed);
     } finally {
       setParsing(false);
     }
@@ -140,13 +140,13 @@ export function BankStatementImportModal({ businessId, isOpen, onClose, onSucces
       });
       const json = await res.json();
       if (!res.ok) {
-        throw new Error(json.error ?? 'Commit gagal');
+        throw new Error(json.error ?? t.reconciliation.commitFailed);
       }
       setCommitResult((json as CommitResponse).data);
       setStep('success');
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Commit gagal');
+      setError(err instanceof Error ? err.message : t.reconciliation.commitFailed);
     } finally {
       setCommitting(false);
     }
@@ -267,7 +267,7 @@ function FormStep({
           onChange={(e) => onAccountChange(e.target.value)}
           className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
         >
-          {accounts.length === 0 && <option value="">(Tidak ada akun kas/bank)</option>}
+          {accounts.length === 0 && <option value="">{t.reconciliation.noCashAccounts}</option>}
           {accounts.map(acc => (
             <option key={acc.id} value={acc.id}>
               {acc.account_code} — {acc.account_name}
@@ -286,7 +286,7 @@ function FormStep({
           className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
         >
           {BANK_OPTIONS.map(opt => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
+            <option key={opt.value} value={opt.value}>{opt.value === 'GENERIC' ? t.reconciliation.bankGeneric : opt.label}</option>
           ))}
         </select>
       </div>
@@ -371,10 +371,10 @@ function PreviewStep({ parsed, error }: { parsed: BankStatementParsed; error: st
           <table className="w-full text-xs">
             <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
               <tr>
-                <th className="text-left px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Tanggal</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Keterangan</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Counterparty</th>
-                <th className="text-right px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Jumlah</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-600 dark:text-gray-400">{t.common.date}</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-600 dark:text-gray-400">{t.common.description}</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-600 dark:text-gray-400">{t.reconciliation.colCounterparty}</th>
+                <th className="text-right px-3 py-2 font-medium text-gray-600 dark:text-gray-400">{t.common.amount}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">

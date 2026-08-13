@@ -10,7 +10,6 @@ import { resolveContactTypeFromCategory, saveContactFromTransaction } from '@/li
 import { useParams } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { CATEGORY_LABELS } from '@/lib/calculations';
 import type { TransactionCategory, JournalLineInput, Account, TransactionAttachment, SalesChannel } from '@/types';
 import { getSalesChannelOptions, SALES_CHANNEL_CONFIG } from '@/lib/salesChannels';
 import { FileUpload } from '@/components/ui/FileUpload';
@@ -183,7 +182,7 @@ export function MultiLineJournalForm({
       account_id: '',
       debit_amount: total,
       credit_amount: 0,
-      description: 'Penerimaan penjualan',
+      description: t.journalEntry.form.salesReceiptLine,
       sort_order: 0,
     };
 
@@ -205,7 +204,7 @@ export function MultiLineJournalForm({
     setFormData((p) => {
       const summary = picked.length === 1
         ? (picked[0].qty > 1 ? `${picked[0].item.name} ×${picked[0].qty}` : picked[0].item.name)
-        : `${picked.length} item dari katalog`;
+        : t.journalEntry.form.catalogItemsSummary(picked.length);
       return {
         ...p,
         description: p.description.trim() || summary,
@@ -218,21 +217,21 @@ export function MultiLineJournalForm({
   function validate(): boolean {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.date) newErrors.date = 'Tanggal harus diisi';
-    if (!formData.name.trim()) newErrors.name = 'Nama harus diisi';
-    if (!formData.description.trim()) newErrors.description = 'Keterangan harus diisi';
+    if (!formData.date) newErrors.date = t.journalEntry.form.errDateRequired;
+    if (!formData.name.trim()) newErrors.name = t.journalEntry.form.errNameRequired;
+    if (!formData.description.trim()) newErrors.description = t.journalEntry.form.errDescriptionRequired;
 
     lines.forEach((line, idx) => {
       if (!line.account_id) {
-        newErrors[`line_${idx}_account`] = 'Pilih akun';
+        newErrors[`line_${idx}_account`] = t.journalEntry.form.errSelectAccount;
       }
       if (line.debit_amount === 0 && line.credit_amount === 0) {
-        newErrors[`line_${idx}_amount`] = 'Masukkan jumlah debit atau kredit';
+        newErrors[`line_${idx}_amount`] = t.journalEntry.form.errEnterDebitOrCredit;
       }
     });
 
     if (totalDebit === 0) {
-      newErrors.balance = 'Jumlah transaksi tidak boleh 0';
+      newErrors.balance = t.journalEntry.form.errAmountZero;
     } else if (!isBalanced) {
       newErrors.balance = `Jurnal tidak seimbang. Selisih: ${Math.abs(difference).toLocaleString('id-ID')}`;
     }
@@ -262,7 +261,7 @@ export function MultiLineJournalForm({
       <div className="grid grid-cols-2 gap-4">
         <div>
           <FloatingField
-            label="Tanggal *"
+            label={t.journalEntry.form.dateRequiredLabel}
             type="date"
             value={formData.date}
             onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
@@ -271,12 +270,12 @@ export function MultiLineJournalForm({
           {errors.date && <p className="text-sm text-red-500 mt-1">{errors.date}</p>}
         </div>
         <FloatingSelect
-          label="Kategori *"
+          label={t.journalEntry.form.categoryRequiredLabel}
           value={formData.category}
           onChange={(e) => setFormData((p) => ({ ...p, category: e.target.value as TransactionCategory }))}
         >
           {ALL_CATEGORIES.map((cat) => (
-            <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
+            <option key={cat} value={cat}>{t.categories[cat]}</option>
           ))}
         </FloatingSelect>
       </div>
@@ -284,7 +283,7 @@ export function MultiLineJournalForm({
       {/* Sales channel — hanya untuk EARN */}
       {formData.category === 'EARN' && (
         <FloatingSelect
-          label="Channel Penjualan"
+          label={t.journalEntry.form.salesChannel}
           value={formData.sales_channel ?? ''}
           onChange={(e) =>
             setFormData((p) => ({
@@ -293,7 +292,7 @@ export function MultiLineJournalForm({
             }))
           }
         >
-          <option value="">— Tanpa channel —</option>
+          <option value="">{t.journalEntry.form.noChannel}</option>
           {(() => {
               const saved = formData.sales_channel;
               const opts =
@@ -313,7 +312,7 @@ export function MultiLineJournalForm({
       )}
 
       <div>
-        <label className="label">Nama / Referensi *</label>
+        <label className="label">{t.journalEntry.form.nameRefRequired}</label>
         <ContactAutocomplete
           businessId={businessId}
           value={formData.name}
@@ -339,13 +338,13 @@ export function MultiLineJournalForm({
       </div>
 
       <div>
-        <label className="label">Keterangan *</label>
+        <label className="label">{t.journalEntry.form.descriptionRequiredLabel}</label>
         <textarea
           value={formData.description}
           onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
           className="input"
           rows={2}
-          placeholder="Deskripsi singkat jurnal ini"
+          placeholder={t.journalEntry.form.descriptionShortPlaceholder}
         />
         {errors.description && <p className="text-sm text-red-500 mt-1">{errors.description}</p>}
       </div>
@@ -354,7 +353,7 @@ export function MultiLineJournalForm({
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Baris Jurnal *
+            {t.journalEntry.form.journalLinesRequired}
           </label>
           {formData.category === 'EARN' ? (
             <button
@@ -367,23 +366,23 @@ export function MultiLineJournalForm({
             </button>
           ) : (
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              Total harus seimbang (Debit = Kredit)
+              {t.journalEntry.form.mustBalance}
             </span>
           )}
         </div>
 
         {loadingAccounts ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">Memuat akun...</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t.journalEntry.form.loadingAccounts}</p>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
                   <th className="text-left px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 w-8">#</th>
-                  <th className="text-left px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">Akun</th>
-                  <th className="text-right px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 w-36">Debit (Rp)</th>
-                  <th className="text-right px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 w-36">Kredit (Rp)</th>
-                  <th className="text-left px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">Keterangan Baris</th>
+                  <th className="text-left px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t.journalEntry.form.colAccount}</th>
+                  <th className="text-right px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 w-36">{t.journalEntry.form.colDebitRp}</th>
+                  <th className="text-right px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 w-36">{t.journalEntry.form.colCreditRp}</th>
+                  <th className="text-left px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t.journalEntry.form.colLineDescription}</th>
                   <th className="w-8"></th>
                 </tr>
               </thead>
@@ -397,7 +396,7 @@ export function MultiLineJournalForm({
                         accounts={accounts}
                         value={line.account_id || undefined}
                         onChange={(accountId) => updateLineAccount(idx, accountId)}
-                        placeholder="Pilih akun"
+                        placeholder={t.journalEntry.form.selectAccount}
                         error={errors[`line_${idx}_account`]}
                       />
                     </td>
@@ -430,7 +429,7 @@ export function MultiLineJournalForm({
                         value={line.description ?? ''}
                         onChange={(e) => updateLineDescription(idx, e.target.value)}
                         className="input text-sm py-1"
-                        placeholder="Opsional"
+                        placeholder={t.journalEntry.form.optionalPlaceholder}
                       />
                     </td>
                     <td className="px-1 py-1.5 text-center">
@@ -439,7 +438,7 @@ export function MultiLineJournalForm({
                         onClick={() => removeLine(idx)}
                         disabled={lines.length <= 2}
                         className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                        title="Hapus baris"
+                        title={t.journalEntry.form.deleteLine}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -461,10 +460,10 @@ export function MultiLineJournalForm({
                   </td>
                   <td colSpan={2} className="px-3 py-2">
                     {isBalanced && totalDebit > 0 ? (
-                      <span className="text-xs font-medium text-green-600 dark:text-green-400">Seimbang</span>
+                      <span className="text-xs font-medium text-green-600 dark:text-green-400">{t.journalEntry.form.balancedShort}</span>
                     ) : totalDebit > 0 ? (
                       <span className="text-xs font-medium text-red-500 dark:text-red-400">
-                        Selisih: {Math.abs(difference).toLocaleString('id-ID')}
+                        {t.journalEntry.form.differenceShort(Math.abs(difference).toLocaleString('id-ID'))}
                       </span>
                     ) : null}
                   </td>
@@ -480,7 +479,7 @@ export function MultiLineJournalForm({
           className="mt-2 flex items-center gap-1.5 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 transition-colors"
         >
           <PlusCircle className="w-4 h-4" />
-          Tambah Baris
+          {t.journalEntry.form.addLine}
         </button>
 
         {errors.balance && (
@@ -493,19 +492,19 @@ export function MultiLineJournalForm({
 
       {/* Notes */}
       <div>
-        <label className="label">Catatan (opsional)</label>
+        <label className="label">{t.journalEntry.form.notesOptional}</label>
         <textarea
           value={formData.notes ?? ''}
           onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
           className="input"
           rows={2}
-          placeholder="Catatan tambahan"
+          placeholder={t.journalEntry.form.notesPlaceholder}
         />
       </div>
 
       {/* Attachment */}
       <div>
-        <label className="label">Lampiran (opsional)</label>
+        <label className="label">{t.journalEntry.form.attachmentsOptional}</label>
         <FileUpload
           businessId={businessId}
           value={attachments}
@@ -522,14 +521,14 @@ export function MultiLineJournalForm({
           className="btn-secondary flex-1"
           disabled={loading}
         >
-          Batal
+          {t.common.cancel}
         </button>
         <button
           type="submit"
           className="btn-primary-glow flex-1"
           disabled={loading || !isBalanced || totalDebit === 0}
         >
-          {loading ? 'Menyimpan...' : (submitLabel ?? 'Simpan Jurnal')}
+          {loading ? t.common.saving : (submitLabel ?? t.journalEntry.form.saveJournal)}
         </button>
       </div>
 

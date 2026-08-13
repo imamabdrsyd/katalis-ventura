@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Lock, TextSearch, Search, X, CalendarSearch, Eye, FileText } from 'lucide-react';
 import { ContactTypeIcon, CONTACT_TYPE_LABELS } from '@/components/ui/ContactTypeIcon';
 import { useLanguage } from '@/context/LanguageContext';
+import type { Translations } from '@/lib/i18n';
 import type { Transaction, TransactionCategory, Contact } from '@/types';
 import { SalesChannelBadge } from './SalesChannelBadge';
 import { isStockTransaction } from '@/lib/utils/inventoryHelper';
@@ -97,13 +98,14 @@ function ColumnResizeHandle({
   onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
   onDoubleClick: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <div
       onPointerDown={onPointerDown}
       onDoubleClick={onDoubleClick}
       onClick={(e) => e.stopPropagation()}
       className="group/resize absolute top-0 -right-1 z-20 flex h-full w-2 cursor-col-resize touch-none select-none items-center justify-center"
-      title="Geser untuk atur lebar kolom · klik 2x untuk reset"
+      title={t.transactions.columnResizeHint}
     >
       <div
         className={`h-full w-0.5 rounded-full transition-colors ${
@@ -138,6 +140,7 @@ function DescriptionCell({
   /** Transaksi punya lampiran dokumen sumber → tampilkan icon dokumen */
   hasAttachment?: boolean;
 }) {
+  const { t } = useLanguage();
   const ref = useRef<HTMLSpanElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
 
@@ -157,7 +160,7 @@ function DescriptionCell({
         {hasAttachment && (
           <FileText
             className="inline-block w-3.5 h-3.5 mr-1.5 text-gray-400 dark:text-gray-500 align-middle flex-shrink-0"
-            aria-label="Ada lampiran dokumen"
+            aria-label={t.transactions.hasAttachment}
           />
         )}
         {text}
@@ -182,7 +185,8 @@ function DescriptionCell({
 // Returns null only when neither applies (e.g. multiple cash accounts) so the
 // caller can fall back to the generic "Multi-line journal" label.
 function getMultiLineCashDisplay(
-  transaction: Transaction
+  transaction: Transaction,
+  t: Translations
 ): { accountName: string; isInflow: boolean; tooltip: string } | null {
   const lines = transaction.journal_lines ?? [];
   const cashLines = lines.filter(l => l.account?.is_cash_equivalent === true);
@@ -190,12 +194,12 @@ function getMultiLineCashDisplay(
   // Case 1: single cash account — direction follows actual cash movement
   if (cashLines.length === 1) {
     const cash = cashLines[0];
-    const accountName = cash.account?.account_name || 'Unknown';
+    const accountName = cash.account?.account_name || t.transactions.unknownAccount;
     const isInflow = cash.debit_amount > 0; // cash debited → money in
     return {
       accountName,
       isInflow,
-      tooltip: isInflow ? `Masuk ke akun ${accountName}` : `Keluar dari akun ${accountName}`,
+      tooltip: (isInflow ? t.transactions.inToAccount : t.transactions.outFromAccount).replace('{name}', accountName),
     };
   }
 
@@ -206,12 +210,12 @@ function getMultiLineCashDisplay(
     const largest = debitLines.reduce((max, l) =>
       l.debit_amount > max.debit_amount ? l : max
     );
-    const accountName = largest.account?.account_name || 'Unknown';
+    const accountName = largest.account?.account_name || t.transactions.unknownAccount;
     const isInflow = transaction.category === 'EARN';
     return {
       accountName,
       isInflow,
-      tooltip: isInflow ? `Masuk ke akun ${accountName}` : `Keluar dari akun ${accountName}`,
+      tooltip: (isInflow ? t.transactions.inToAccount : t.transactions.outFromAccount).replace('{name}', accountName),
     };
   }
 
@@ -220,26 +224,26 @@ function getMultiLineCashDisplay(
 }
 
 // Helper function to format account display based on transaction type
-function getAccountDisplay(transaction: Transaction): { accountName: string; isInflow: boolean; tooltip: string } {
+function getAccountDisplay(transaction: Transaction, t: Translations): { accountName: string; isInflow: boolean; tooltip: string } {
   const isInflow = transaction.category === 'EARN';
 
   // For double-entry transactions
   if (transaction.is_double_entry && (transaction.debit_account || transaction.credit_account)) {
     if (isInflow) {
-      const accountName = transaction.debit_account?.account_name || 'Unknown';
-      return { accountName, isInflow, tooltip: `Masuk ke akun ${accountName}` };
+      const accountName = transaction.debit_account?.account_name || t.transactions.unknownAccount;
+      return { accountName, isInflow, tooltip: t.transactions.inToAccount.replace('{name}', accountName) };
     } else {
-      const accountName = transaction.credit_account?.account_name || 'Unknown';
-      return { accountName, isInflow, tooltip: `Keluar dari akun ${accountName}` };
+      const accountName = transaction.credit_account?.account_name || t.transactions.unknownAccount;
+      return { accountName, isInflow, tooltip: t.transactions.outFromAccount.replace('{name}', accountName) };
     }
   }
 
   // For legacy transactions
-  const accountName = transaction.account || 'Unknown';
+  const accountName = transaction.account || t.transactions.unknownAccount;
   if (isInflow) {
-    return { accountName, isInflow, tooltip: `Masuk ke akun ${accountName}` };
+    return { accountName, isInflow, tooltip: t.transactions.inToAccount.replace('{name}', accountName) };
   } else {
-    return { accountName, isInflow, tooltip: `Keluar dari akun ${accountName}` };
+    return { accountName, isInflow, tooltip: t.transactions.outFromAccount.replace('{name}', accountName) };
   }
 }
 
@@ -857,7 +861,7 @@ export function TransactionList({
                         onClick={() => { onDateRangeChange?.({ start: '', end: '' }); setShowDateDropdown(false); }}
                         className="w-full text-center text-xs text-red-500 hover:text-red-600 py-1"
                       >
-                        Reset
+                        {t.common.reset}
                       </button>
                     )}
                   </div>
@@ -952,7 +956,7 @@ export function TransactionList({
                         onEnterSelectMode(transaction.id);
                       }}
                       className="hidden group-hover/row:inline-flex p-1 -m-1 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                      title="Pilih"
+                      title={t.transactions.selectRow}
                     >
                       <ListChecks className="w-4 h-4" />
                     </button>
@@ -988,7 +992,7 @@ export function TransactionList({
                   {invoicedTransactionIds?.has(transaction.id) && (
                     <span
                       className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
-                      title="Sudah dibuatkan invoice"
+                      title={t.transactions.alreadyInvoiced}
                     >
                       INV
                     </span>
@@ -1051,16 +1055,16 @@ export function TransactionList({
                   // does. Falls back to a generic label for pure-accrual or
                   // multi-cash entries where a single cash account isn't clear.
                   if (transaction.is_multi_line) {
-                    const cashDisplay = getMultiLineCashDisplay(transaction);
+                    const cashDisplay = getMultiLineCashDisplay(transaction, t);
                     if (!cashDisplay) {
                       return (
                         <div className="group/transfer relative flex items-center gap-1.5">
                           <ArrowLeftRight className="w-3.5 h-3.5 flex-shrink-0 text-indigo-500 dark:text-indigo-400" />
-                          <span className="truncate font-medium">Multi-line journal</span>
+                          <span className="truncate font-medium">{t.transactions.multiLineJournal}</span>
                           <div className="pointer-events-none absolute top-full left-0 mt-1.5 hidden group-hover/transfer:block z-30">
                             <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-md px-2.5 py-1.5 whitespace-nowrap shadow-lg">
                               <div className="absolute bottom-full left-3 border-4 border-transparent border-b-gray-900 dark:border-b-gray-700" />
-                              Jurnal multi-line (beberapa akun)
+                              {t.transactions.journalMultiLine}
                             </div>
                           </div>
                         </div>
@@ -1084,7 +1088,7 @@ export function TransactionList({
                     );
                   }
 
-                  const { accountName, isInflow, tooltip } = getAccountDisplay(transaction);
+                  const { accountName, isInflow, tooltip } = getAccountDisplay(transaction, t);
                   return (
                     <div className="group/transfer relative flex items-center gap-1.5">
                       {isInflow ? (
@@ -1114,7 +1118,7 @@ export function TransactionList({
                       if (isLocked) {
                         return (
                           <span
-                            title={`Periode terkunci hingga ${closedUntilDate}`}
+                            title={t.transactions.periodLockedUntil.replace('{date}', closedUntilDate ?? '')}
                             className="p-1.5 text-amber-400 dark:text-amber-500"
                           >
                             <Lock className="w-4 h-4" />
@@ -1130,7 +1134,7 @@ export function TransactionList({
                                 onEdit(transaction);
                               }}
                               className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
-                              title="Edit"
+                              title={t.common.edit}
                             >
                               <Pencil className="w-4 h-4" />
                             </button>
@@ -1142,7 +1146,7 @@ export function TransactionList({
                                 onDelete(transaction);
                               }}
                               className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-                              title="Hapus"
+                              title={t.common.delete}
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -1185,14 +1189,14 @@ export function TransactionList({
                   className={`${itemClass} text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50`}
                 >
                   <Eye className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                  Lihat Detail
+                  {t.transactions.viewDetail}
                 </button>
               )}
               {onEdit && !selectMode && (
                 isLocked ? (
-                  <span className={disabledClass} title={`Periode terkunci hingga ${closedUntilDate}`}>
+                  <span className={disabledClass} title={t.transactions.periodLockedUntil.replace('{date}', closedUntilDate ?? '')}>
                     <Pencil className="w-4 h-4" />
-                    Edit
+                    {t.common.edit}
                     <Lock className="w-3.5 h-3.5 ml-auto text-amber-400 dark:text-amber-500" />
                   </span>
                 ) : (
@@ -1202,15 +1206,15 @@ export function TransactionList({
                     className={`${itemClass} text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50`}
                   >
                     <Pencil className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    Edit
+                    {t.common.edit}
                   </button>
                 )
               )}
               {onDelete && !selectMode && (
                 isLocked ? (
-                  <span className={disabledClass} title={`Periode terkunci hingga ${closedUntilDate}`}>
+                  <span className={disabledClass} title={t.transactions.periodLockedUntil.replace('{date}', closedUntilDate ?? '')}>
                     <Trash2 className="w-4 h-4" />
-                    Hapus
+                    {t.common.delete}
                     <Lock className="w-3.5 h-3.5 ml-auto text-amber-400 dark:text-amber-500" />
                   </span>
                 ) : (
@@ -1220,7 +1224,7 @@ export function TransactionList({
                     className={`${itemClass} text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20`}
                   >
                     <Trash2 className="w-4 h-4" />
-                    Hapus
+                    {t.common.delete}
                   </button>
                 )
               )}
@@ -1233,7 +1237,7 @@ export function TransactionList({
                     className={`${itemClass} text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50`}
                   >
                     <ListChecks className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    Pilih Banyak
+                    {t.transactions.selectMany}
                   </button>
                 </>
               )}

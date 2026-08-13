@@ -143,7 +143,7 @@ export default function BusinessesPage() {
     } catch (err: any) {
       console.error('Failed to create business:', err);
       const errorMessage = err?.message || err?.error?.message || JSON.stringify(err) || 'Unknown error';
-      toast.error(`Gagal menambahkan bisnis: ${errorMessage}`);
+      toast.error(t.businesses.createFailed.replace('{msg}', errorMessage));
     } finally {
       setLoading(false);
     }
@@ -167,7 +167,7 @@ export default function BusinessesPage() {
     } catch (err: any) {
       console.error('Failed to update business:', err);
       const errorMessage = err?.message || err?.error?.message || JSON.stringify(err) || 'Unknown error';
-      toast.error(`Gagal mengupdate bisnis: ${errorMessage}`);
+      toast.error(t.businesses.updateFailed.replace('{msg}', errorMessage));
     } finally {
       setLoading(false);
     }
@@ -216,7 +216,7 @@ export default function BusinessesPage() {
     } catch (err: any) {
       console.error('Failed to hard delete business:', err);
       const errorMessage = err?.message || err?.error?.message || JSON.stringify(err) || 'Unknown error';
-      toast.error(`Gagal menghapus bisnis: ${errorMessage}`);
+      toast.error(t.businesses.deleteFailed.replace('{msg}', errorMessage));
     } finally {
       setLoading(false);
     }
