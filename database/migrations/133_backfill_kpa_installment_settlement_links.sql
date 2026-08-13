@@ -1,4 +1,4 @@
--- Migration 132: Tautkan cicilan KPA lama ke transaksi pencairannya
+-- Migration 133: Tautkan cicilan KPA lama ke transaksi pencairannya
 --
 -- KONTEKS
 -- Sebelum fitur pelunasan hutang ada (§14.8/§14.9), cicilan pinjaman dicatat
