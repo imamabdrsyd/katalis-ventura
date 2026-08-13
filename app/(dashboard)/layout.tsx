@@ -89,19 +89,6 @@ type ApiSearchResult = {
   date?: string;
 };
 
-const DATA_SOURCE_LABELS: Record<DataSearchSource, string> = {
-  business: 'Business',
-  transaction: 'Transaction',
-  account: 'Account',
-  contact: 'Contact',
-  invoice: 'Invoice',
-  budget: 'Budget',
-  recurring: 'Recurring',
-  template: 'Template',
-  import_batch: 'Import',
-  knowledge: 'Knowledge',
-};
-
 const DATA_SOURCE_ICONS: Record<DataSearchSource, LucideIcon> = {
   business: Building2,
   transaction: CreditCard,
@@ -156,7 +143,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
       ...(isAssetConsoleEnabled(activeBusiness?.business_sector)
         ? [getAssetConsoleNavItem(t.nav)]
         : []),
-      { href: '/leads', label: 'Leads', icon: MessagesSquare },
+      { href: '/leads', label: t.nav.leads, icon: MessagesSquare },
       { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
       ...navSections.flatMap((s) => s.items),
       { href: '/settings', label: t.nav.settings, icon: Settings },
@@ -167,7 +154,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
       // (mencegah duplikat key di SearchDialog).
       pages.splice(isAssetConsoleEnabled(activeBusiness?.business_sector) ? 3 : 2, 0,
         getPosNavItem(activeBusiness?.business_type, t.nav, activeBusiness?.business_sector),
-        { href: '/agent', label: 'Agentic Workspace', icon: Bot },
+        { href: '/agent', label: t.nav.agenticWorkspace, icon: Bot },
         { href: '/transactions', label: t.nav.transactions, icon: CreditCard },
         { href: '/transactions/journal-entry', label: t.nav.journalEntry, icon: Plus }
       );
@@ -405,7 +392,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
                           )}
                           {item.source && (
                             <span className="hidden sm:inline text-xs text-gray-400">
-                              {DATA_SOURCE_LABELS[item.source]}
+                              {t.nav.searchSources[item.source]}
                             </span>
                           )}
                         </div>
@@ -481,7 +468,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
       {/* Mobile Menu Button */}
       <button
         onClick={onMenuClick}
-        aria-label="Buka menu"
+        aria-label={t.nav.openMenu}
         className="md:hidden min-w-[44px] min-h-[44px] -ml-2 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-600 dark:text-gray-400"
       >
         <Menu className="w-6 h-6" />
@@ -594,7 +581,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
                       { value: 'id', label: 'ID' },
                       { value: 'en', label: 'EN' },
                     ]}
-                    ariaLabel="Language"
+                    ariaLabel={t.nav.language}
                   />
                 </div>
                 <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
@@ -718,7 +705,7 @@ function Sidebar({
           {/* Mobile close button */}
           <button
             onClick={onClose}
-            aria-label="Tutup menu"
+            aria-label={t.nav.closeMenu}
             className="ml-auto min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 md:hidden"
           >
             <X className="w-5 h-5" />
@@ -817,7 +804,7 @@ function Sidebar({
               ? [getAssetConsoleNavItem(t.nav)]
               : []),
             { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
-            ...(canManage ? [{ href: '/agent', label: 'Agentic Workspace', icon: Bot }] : []),
+            ...(canManage ? [{ href: '/agent', label: t.nav.agenticWorkspace, icon: Bot }] : []),
           ].map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
@@ -926,7 +913,7 @@ function Sidebar({
               Saat collapsed, kembali jadi 2 baris ikon biasa (grid 2 kolom tak muat). */}
           <div className={isCollapsed ? 'space-y-1.5' : 'grid grid-cols-2 gap-1.5'}>
             {[
-              { href: '/leads', label: 'Leads', icon: MessagesSquare },
+              { href: '/leads', label: t.nav.leads, icon: MessagesSquare },
               ...(canManage ? [getPosNavItem(activeBusiness?.business_type, t.nav, activeBusiness?.business_sector)] : []),
             ].map((item) => {
               const Icon = item.icon;

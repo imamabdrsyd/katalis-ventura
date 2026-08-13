@@ -377,14 +377,42 @@ export function OutstandingSettlementPicker({
                   <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
                     {t.description || t.name || tp.untitled}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {formatDate(t.date)}
-                    {t.description && t.name ? ` · ${t.name}` : ''}
-                    {counter.code ? ` · ${counter.code} ${counter.name}` : ''}
-                    {partialCount > 0
-                      ? ` · ${tp.installmentCount.replace('{count}', String(partialCount))}`
-                      : ''}
-                  </p>
+                  <div className="flex items-center gap-1.5 min-w-0 text-xs text-gray-500 dark:text-gray-400">
+                    <span className="shrink-0">{formatDate(t.date)}</span>
+
+                    {t.description && t.name && (
+                      <>
+                        <span className="text-gray-300 dark:text-gray-600">·</span>
+                        {/* Chip netral — nama kontak dibaca sebagai entitas, bukan
+                            bagian dari kalimat metadata di sebelahnya. */}
+                        <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-medium">
+                          {t.name}
+                        </span>
+                      </>
+                    )}
+
+                    {counter.code && (
+                      <>
+                        <span className="text-gray-300 dark:text-gray-600">·</span>
+                        <span className="truncate">
+                          {/* Kode akun mono seperti di keterangan jurnal & buku besar */}
+                          <span className="font-mono text-gray-400 dark:text-gray-500">
+                            {counter.code}
+                          </span>{' '}
+                          {counter.name}
+                        </span>
+                      </>
+                    )}
+
+                    {partialCount > 0 && (
+                      <>
+                        <span className="text-gray-300 dark:text-gray-600">·</span>
+                        <span className="shrink-0">
+                          {tp.installmentCount.replace('{count}', String(partialCount))}
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-3 shrink-0">

@@ -58,6 +58,17 @@ export interface Translations {
     discardChanges: string;
   };
 
+  // Label 6 kategori transaksi (+ SETTLE untuk pelunasan)
+  categories: {
+    EARN: string;
+    OPEX: string;
+    VAR: string;
+    CAPEX: string;
+    TAX: string;
+    FIN: string;
+    SETTLE: string;
+  };
+
   // Navigation & Layout
   nav: {
     dashboard: string;
@@ -98,10 +109,28 @@ export interface Translations {
     selectBusiness: string;
     expandSidebar: string;
     collapseSidebar: string;
+    openMenu: string;
+    closeMenu: string;
+    language: string;
+    leads: string;
+    agenticWorkspace: string;
     searchingTransactions: string;
     searchingData: string;
     /** Pengumuman jumlah hasil untuk screen reader (aria-live). */
     searchResultsCount: (n: number) => string;
+    /** Label grup hasil pencarian data (per sumber tabel). */
+    searchSources: {
+      business: string;
+      transaction: string;
+      account: string;
+      contact: string;
+      invoice: string;
+      budget: string;
+      recurring: string;
+      template: string;
+      import_batch: string;
+      knowledge: string;
+    };
   };
 
   // Nav hub pages (landing grid Akuntansi / Laporan Keuangan / Analitik)
@@ -1588,6 +1617,68 @@ export interface Translations {
     showMore: string;
     hide: string;
     entryTypes: Record<JournalEntryTypeKey, JournalEntryTypeStrings>;
+    /** Form jurnal: header, field, mode multi-baris, template, berulang, error. */
+    form: {
+      backToTransactions: string;
+      createInvoice: string;
+      useTemplate: string;
+      templateLines: (n: number) => string;
+      deleteTemplate: string;
+      amountRp: string;
+      debitAccount: string;
+      selectDebitAccount: string;
+      creditAccount: string;
+      selectCreditAccount: string;
+      debit: string;
+      credit: string;
+      addLine: string;
+      journalLines: string;
+      debitMustEqualCredit: string;
+      colAccount: string;
+      colDebitRp: string;
+      colCreditRp: string;
+      selectAccount: string;
+      optionalPlaceholder: string;
+      deleteLine: string;
+      balanced: string;
+      difference: (amount: string) => string;
+      cancelMultiLine: string;
+      exitMultiLineConfirm: string;
+      categoryLabel: string;
+      categoryLocked: string;
+      categoryAuto: string;
+      descriptionLabel: string;
+      optionalSuffix: string;
+      descriptionPlaceholder: string;
+      attachmentsLabel: string;
+      saveAsTemplate: string;
+      templateNamePlaceholder: string;
+      makeRecurring: string;
+      frequency: string;
+      weekly: string;
+      monthly: string;
+      yearly: string;
+      every: string;
+      weeksUnit: string;
+      monthsUnit: string;
+      yearsUnit: string;
+      untilOptional: string;
+      noLimit: string;
+      saveTransaction: string;
+      savedToast: string;
+      errNameRequired: string;
+      errDateRequired: string;
+      errSelectAccount: string;
+      errEnterDebitOrCredit: string;
+      errAmountZero: string;
+      errUnbalanced: (amount: string) => string;
+      errAmountPositive: string;
+      errDebitRequired: string;
+      errCreditRequired: string;
+      errSameAccount: string;
+      errNoCogsAccount: string;
+      errSaveFailed: string;
+    };
     entitlement: {
       title: string;      // "Hak Bagi Hasil {year}"
       subtitle: string;   // "Laba tahun berjalan {netIncome}"
