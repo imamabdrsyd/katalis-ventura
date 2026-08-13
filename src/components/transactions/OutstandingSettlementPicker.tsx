@@ -43,6 +43,12 @@ import {
   getPartialSettlementIds,
   buildSettlementPrefill,
   buildPartialSettlementPrefill,
+  isDividendDeclaration,
+  isDividendSettled,
+  getDividendOutstandingAmount,
+  getDividendPartialSettlementIds,
+  buildDividendSettlementPrefill,
+  buildDividendPartialSettlementPrefill,
 } from '@/lib/accounting/guidance';
 import {
   isAdvanceReceivableAccount,
@@ -54,8 +60,12 @@ import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import { useLanguage } from '@/context/LanguageContext';
 import { Search, PenLine, ChevronRight } from 'lucide-react';
 
-/** Sisi neraca yang dilunasi: hutang (AP) atau piutang (AR). */
-export type SettlementSide = 'payable' | 'receivable';
+/**
+ * Sisi yang dilunasi. `dividend` = dividen yang sudah di-declare tapi belum
+ * dibayar — arah jurnalnya sama dengan hutang (Dr kewajiban / Cr kas), tapi
+ * deteksi & meta-nya lewat helper dividendSettlement.
+ */
+export type SettlementSide = 'payable' | 'receivable' | 'dividend';
 
 /** Sub-jenis piutang — dipakai sebagai tab di sisi AR. */
 export type ReceivableKind = 'trade' | 'advance';
@@ -91,6 +101,9 @@ export function getOutstandingTransactions(
 ): Transaction[] {
   const rows = transactions.filter((t) => {
     if (t.status === 'draft') return false;
+    if (side === 'dividend') {
+      return isDividendDeclaration(t) && !isDividendSettled(t) && !isSettlementEntry(t);
+    }
     if (side === 'payable') {
       return isPayableTransaction(t) && !isPayableSettled(t) && !isPayableSettlementEntry(t);
     }
@@ -112,17 +125,20 @@ export function OutstandingSettlementPicker({
   const { t: i18n } = useLanguage();
   const tp = i18n.journalEntry.picker;
 
-  const isPayable = side === 'payable';
+  const isReceivable = side === 'receivable';
+  const isDividend = side === 'dividend';
+  // Arah jurnal: hutang & dividen sama-sama Dr kewajiban / Cr kas.
+  const isPayable = !isReceivable;
 
   // Tab piutang: default ke tab yang ada isinya supaya user tidak mendarat di
   // daftar kosong padahal tab sebelah penuh.
   const tradeRows = useMemo(
-    () => (isPayable ? [] : getOutstandingTransactions('receivable', transactions, 'trade')),
-    [isPayable, transactions]
+    () => (isReceivable ? getOutstandingTransactions('receivable', transactions, 'trade') : []),
+    [isReceivable, transactions]
   );
   const advanceRows = useMemo(
-    () => (isPayable ? [] : getOutstandingTransactions('receivable', transactions, 'advance')),
-    [isPayable, transactions]
+    () => (isReceivable ? getOutstandingTransactions('receivable', transactions, 'advance') : []),
+    [isReceivable, transactions]
   );
   const [receivableTab, setReceivableTab] = useState<ReceivableKind>(() =>
     tradeRows.length > 0 ? 'trade' : advanceRows.length > 0 ? 'advance' : 'trade'
@@ -139,9 +155,9 @@ export function OutstandingSettlementPicker({
   const cashAccount = useMemo(() => findDefaultCashAccount(accounts), [accounts]);
 
   const rows = useMemo(() => {
-    if (isPayable) return getOutstandingTransactions('payable', transactions);
+    if (!isReceivable) return getOutstandingTransactions(side, transactions);
     return receivableTab === 'advance' ? advanceRows : tradeRows;
-  }, [isPayable, transactions, receivableTab, advanceRows, tradeRows]);
+  }, [isReceivable, side, transactions, receivableTab, advanceRows, tradeRows]);
 
   const filtered = useMemo(() => {
     const kw = search.trim().toLowerCase();
@@ -153,15 +169,18 @@ export function OutstandingSettlementPicker({
     );
   }, [rows, search]);
 
+  const partialIdsOf = (t: Transaction): string[] => {
+    if (isDividend) return getDividendPartialSettlementIds(t);
+    if (isReceivable) return getPartialSettlementIds(t);
+    return getPayablePartialSettlementIds(t);
+  };
+
   /** Sisa outstanding sebuah transaksi, memperhitungkan cicilan sebelumnya. */
   const outstandingOf = (t: Transaction): number => {
-    const partialIds = isPayable
-      ? getPayablePartialSettlementIds(t)
-      : getPartialSettlementIds(t);
-    const payments = transactions.filter((p) => partialIds.includes(p.id));
-    return isPayable
-      ? getPayableOutstandingAmount(t, payments)
-      : getOutstandingAmount(t, payments);
+    const payments = transactions.filter((p) => partialIdsOf(t).includes(p.id));
+    if (isDividend) return getDividendOutstandingAmount(t, payments);
+    if (isReceivable) return getOutstandingAmount(t, payments);
+    return getPayableOutstandingAmount(t, payments);
   };
 
   const resetRowState = () => {
@@ -202,19 +221,20 @@ export function OutstandingSettlementPicker({
       }
     }
 
-    const partialIds = isPayable
-      ? getPayablePartialSettlementIds(original)
-      : getPartialSettlementIds(original);
-    const payments = transactions.filter((p) => partialIds.includes(p.id));
+    const payments = transactions.filter((p) => partialIdsOf(original).includes(p.id));
 
     const settlementData =
       mode === 'partial'
-        ? isPayable
-          ? buildPayablePartialSettlementPrefill(original, partialAmount, accounts, payments)
-          : buildPartialSettlementPrefill(original, partialAmount, accounts, payments)
-        : isPayable
-          ? buildPayableSettlementPrefill(original, accounts, payments)
-          : buildSettlementPrefill(original, accounts, payments);
+        ? isDividend
+          ? buildDividendPartialSettlementPrefill(original, partialAmount, accounts)
+          : isReceivable
+            ? buildPartialSettlementPrefill(original, partialAmount, accounts, payments)
+            : buildPayablePartialSettlementPrefill(original, partialAmount, accounts, payments)
+        : isDividend
+          ? buildDividendSettlementPrefill(original, accounts, payments)
+          : isReceivable
+            ? buildSettlementPrefill(original, accounts, payments)
+            : buildPayableSettlementPrefill(original, accounts, payments);
 
     setSubmitting(true);
     setError('');
@@ -227,12 +247,16 @@ export function OutstandingSettlementPicker({
       });
       toast.success(
         mode === 'partial'
-          ? isPayable
-            ? tp.paidPartialSuccess
-            : tp.receivedPartialSuccess
-          : isPayable
-            ? tp.paidFullSuccess
-            : tp.receivedFullSuccess
+          ? isDividend
+            ? tp.dividendPartialSuccess
+            : isReceivable
+              ? tp.receivedPartialSuccess
+              : tp.paidPartialSuccess
+          : isDividend
+            ? tp.dividendFullSuccess
+            : isReceivable
+              ? tp.receivedFullSuccess
+              : tp.paidFullSuccess
       );
       setSelectedId(null);
       resetRowState();
@@ -273,10 +297,14 @@ export function OutstandingSettlementPicker({
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">
-            {isPayable ? tp.payableTitle : tp.receivableTitle}
+            {isDividend ? tp.dividendTitle : isPayable ? tp.payableTitle : tp.receivableTitle}
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            {isPayable ? tp.payableSubtitle : tp.receivableSubtitle}
+            {isDividend
+              ? tp.dividendSubtitle
+              : isPayable
+                ? tp.payableSubtitle
+                : tp.receivableSubtitle}
           </p>
         </div>
         <button
@@ -291,7 +319,7 @@ export function OutstandingSettlementPicker({
 
       {/* Tab piutang usaha vs talangan — jurnalnya beda kategori (EARN vs FIN),
           jadi memisahkannya membantu user memastikan tagihan yang benar. */}
-      {!isPayable && (
+      {isReceivable && (
         <SegmentedToggle
           options={[
             { value: 'trade', label: `${tp.tabTrade} (${tradeRows.length})` },
@@ -329,10 +357,7 @@ export function OutstandingSettlementPicker({
           const outstanding = outstandingOf(t);
           const counter = counterAccountOf(t);
           const isSelected = selectedId === t.id;
-          const partialCount = (isPayable
-            ? getPayablePartialSettlementIds(t)
-            : getPartialSettlementIds(t)
-          ).length;
+          const partialCount = partialIdsOf(t).length;
 
           return (
             <div key={t.id}>

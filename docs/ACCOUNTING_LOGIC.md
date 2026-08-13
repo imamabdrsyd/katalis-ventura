@@ -1523,6 +1523,7 @@ Beberapa jenis transaksi di Journal Entry sebenarnya bukan entry baru, melainkan
 |-----------------|-------------------------|------|
 | `bayar_hutang` | Hutang belum lunas (`isPayableTransaction` & belum settled, bukan entry pelunasan, bukan draft) | **Bayar Lunas** atau **Cicil** via `settle_transaction` |
 | `terima_pelunasan` | Piutang belum lunas, dipisah 2 tab: **Piutang Usaha** & **Piutang Talangan** (`isAdvanceReceivableAccount` pada baris debit) | **Terima Lunas** atau **Sebagian** via `settle_transaction` |
+| `tarik_dividen` | Dividen yang sudah di-declare tapi belum dibayar (`isDividendDeclaration` & belum settled) | **Bayar Lunas** atau **Cicil** via `settle_transaction` |
 | `penjualan` | Katalog produk/jasa aktif (`catalog_items`, `asset_class` NULL) | Prefill form: nominal = harga × qty, deskripsi = nama item, akun kredit = `revenue_account_id` |
 
 Penuh vs sebagian dipilih **di dalam baris** (dua tombol di setiap baris daftar), bukan lewat jenis transaksi terpisah — sebelumnya `bayar_hutang`/`cicil_hutang` dan `terima_kembali_talangan` adalah tiga kartu berbeda. Dari sisi user kejadiannya sama ("bayar ke kreditur" / "orang bayar balik ke saya"); yang membedakan hanya nominal, dan kategori jurnalnya (EARN untuk piutang usaha, FIN untuk talangan) sudah diturunkan otomatis oleh `getSettlementCategory()` dari akun piutang transaksi asal — user tidak pernah diminta memilih itu.
@@ -1531,7 +1532,9 @@ Tab default di sisi piutang jatuh ke tab yang ada isinya, supaya user tidak mend
 
 Aturan fallback: kalau daftarnya kosong (belum ada hutang/piutang outstanding, atau katalog masih kosong), form manual langsung ditampilkan seperti sebelumnya. Tiap picker juga punya escape hatch **"Catat manual"** untuk kasus yang memang tidak ada di daftar.
 
-Dua jenis pertama menulis lewat RPC `settle_transaction` — bukan `createTransaction` — sehingga `meta.settled_by_transaction_id` / `partial_settlements` / `remaining_amount` konsisten dengan tombol pelunasan di modal detail.
+Tiga jenis pertama menulis lewat RPC `settle_transaction` — bukan `createTransaction` — sehingga `meta.settled_by_transaction_id` / `partial_settlements` / `remaining_amount` konsisten dengan tombol pelunasan di modal detail.
+
+`tarik_dividen` sekaligus menutup pitfall yang dicatat di §14.6: kalau ada dividen ter-declare dan user memakai form mentah dengan pola `Dr Dividen / Cr Bank`, ekuitas berkurang **dua kali** dan Hutang Dividen nyangkut di neraca selamanya. Dengan daftar tampil lebih dulu, jalur default-nya jadi `Dr Hutang Dividen / Cr Kas` yang benar; cashout langsung (belum pernah di-declare) tetap bisa lewat "Catat manual" + popup `DividendEntryModeModal`.
 
 Seluruh teks panel jenis transaksi + picker sudah dwibahasa (`t.journalEntry` di `src/lib/i18n/{id,en}.ts`); `ENTRY_TYPE_CONFIGS` hanya menyimpan konfigurasi non-teks (ikon, filter akun, kategori), label diambil lewat `buildEntryTypes(t)`. Form jurnalnya sendiri masih hardcoded Bahasa Indonesia.
 

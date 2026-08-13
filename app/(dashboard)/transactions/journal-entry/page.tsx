@@ -529,6 +529,7 @@ export default function JournalEntryPage() {
   //
   //   bayar_hutang      → daftar hutang belum lunas (lunas/cicil, settle via RPC)
   //   terima_pelunasan  → daftar piutang belum lunas: usaha & talangan (2 tab)
+  //   tarik_dividen     → daftar dividen yang sudah di-declare tapi belum dibayar
   //   penjualan         → katalog produk/jasa (prefill form)
   //
   // Kalau daftarnya kosong (belum ada hutang / katalog masih kosong), form
@@ -538,7 +539,9 @@ export default function JournalEntryPage() {
       ? 'payable'
       : selectedEntryType?.id === 'terima_pelunasan'
         ? 'receivable'
-        : null;
+        : selectedEntryType?.id === 'tarik_dividen'
+          ? 'dividend'
+          : null;
 
   const outstandingRows = useMemo(
     () => (settlementSide ? getOutstandingTransactions(settlementSide, allTransactions) : []),

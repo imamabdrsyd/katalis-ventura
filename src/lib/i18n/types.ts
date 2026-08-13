@@ -1608,6 +1608,11 @@ export interface Translations {
       receivePartial: string;
       receivedFullSuccess: string;
       receivedPartialSuccess: string;
+      // Dividen yang sudah di-declare
+      dividendTitle: string;
+      dividendSubtitle: string;
+      dividendFullSuccess: string;
+      dividendPartialSuccess: string;
       // Input cicilan
       amountLabel: string;
       recordPayment: string;
