@@ -969,11 +969,15 @@ function Sidebar({
           {currentTime && (
             <div className={`flex items-center gap-2 px-2.5 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-gray-700 dark:text-gray-200 transition-all duration-300 ease-in-out ${isCollapsed ? 'justify-center' : ''}`}>
               <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
-              <div className={`text-[10px] leading-tight overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
-                <p className="font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap">
-                  {currentTime.toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+              <div className={`leading-tight overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+                {/* Format singkat "Thu, 13 Aug 2026" / "Kam, 13 Agu 2026" — versi
+                    panjang tak muat dibaca sekilas di sidebar. Locale Inggris
+                    sengaja 'en-GB' (bukan 'en-US') supaya urutannya hari-bulan,
+                    bukan "Thu, Aug 13". Jam tetap en-US agar tampil 12 jam. */}
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                  {currentTime.toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
                 </p>
-                <p className="text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                <p className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                   {currentTime.toLocaleTimeString(locale === 'id' ? 'id-ID' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>

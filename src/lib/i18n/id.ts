@@ -1928,8 +1928,11 @@ export const id: Translations = {
 
   journalEntry: {
     sectionLabel: 'Jenis Transaksi',
-    showMore: 'Tampilkan Lainnya',
-    hide: 'Sembunyikan',
+    addEntryType: 'Tambah Jenis',
+    entryTypePickerTitle: 'Tambah Jenis Transaksi',
+    entryTypePickerHint: 'Pilih jenis yang ingin ditampilkan di panel. Klik lagi untuk melepas — bisa diubah kapan saja.',
+    entryTypePickerEmpty: 'Semua jenis transaksi sudah ada di panel.',
+    entryTypeShown: 'Di panel',
     form: {
       backToTransactions: 'Kembali ke Transaksi',
       createInvoice: 'Buat Invoice',

@@ -1951,8 +1951,12 @@ export interface Translations {
 
   journalEntry: {
     sectionLabel: string;
-    showMore: string;
-    hide: string;
+    /** Panel jenis transaksi: tombol + modal "tambah jenis ke panel". */
+    addEntryType: string;
+    entryTypePickerTitle: string;
+    entryTypePickerHint: string;
+    entryTypePickerEmpty: string;
+    entryTypeShown: string;
     entryTypes: Record<JournalEntryTypeKey, JournalEntryTypeStrings>;
     /** Form jurnal: header, field, mode multi-baris, template, berulang, error. */
     form: {

@@ -65,10 +65,11 @@ import {
   HandCoins,
   Receipt,
   ChevronDown,
-  ChevronUp,
+  Plus,
   PlusCircle,
   Trash2,
   X,
+  Check,
   CheckCircle,
   AlertCircle,
   BookTemplate,
@@ -322,16 +323,15 @@ function EntryTypeCard({
 
 const ALL_CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
-// Kartu yang tampil tanpa perlu "Tampilkan Lainnya", BERURUTAN.
+// Kartu yang SELALU tampil di panel, BERURUTAN.
 //
 // Kriterianya: jenis yang tidak sekadar membuka form mentah — melainkan
 // menampilkan daftar/pilihan lebih dulu (katalog, tagihan outstanding, hak bagi
 // hasil) — ditaruh paling atas, karena di situlah sistem benar-benar membantu.
 // Pengeluaran adalah pengecualian: formnya polos, tapi paling sering dipakai.
 // Sisanya (pinjaman, talangan, akrual, uang muka, reklasifikasi) jarang dipakai
-// dan disembunyikan di balik toggle.
-//
-// TODO: make default visible types user-configurable per business
+// dan tidak ikut tampil sampai user menambahkannya sendiri lewat tombol
+// "Tambah Jenis" (disimpan per bisnis, lihat STORAGE_KEY_PINNED_ENTRY_TYPES).
 const DEFAULT_VISIBLE_ORDER: EntryTypeId[] = [
   'penjualan',        // katalog produk/jasa
   'pengeluaran',      // form polos, tapi paling sering
@@ -342,7 +342,14 @@ const DEFAULT_VISIBLE_ORDER: EntryTypeId[] = [
 
 const DEFAULT_VISIBLE_IDS: Set<EntryTypeId> = new Set(DEFAULT_VISIBLE_ORDER);
 
+/** Jenis tambahan yang dipilih user untuk ikut tampil — per bisnis, karena
+ *  kebutuhannya beda (trading butuh talangan, F&B butuh akrual). */
+const STORAGE_KEY_PINNED_ENTRY_TYPES = 'katalis_journal_pinned_entry_types';
+/** Key lama (toggle "Tampilkan Lainnya"). Dibaca sekali untuk migrasi: yang
+ *  dulu memilih expand langsung dapat semua jenis ter-pin, lalu key dihapus. */
 const STORAGE_KEY_ENTRY_TYPES_EXPANDED = 'katalis_journal_entry_types_expanded';
+
+const ALL_ENTRY_TYPE_IDS: Set<string> = new Set(ENTRY_TYPE_CONFIGS.map(c => c.id));
 
 // ─── multi-line helpers ───────────────────────────────────────────────────
 
@@ -402,24 +409,66 @@ export default function JournalEntryPage() {
   const [dividendEntryMode, setDividendEntryMode] = useState<DividendEntryMode | null>(null);
   const [showDividendModeModal, setShowDividendModeModal] = useState(false);
 
-  // entry type grid expand/collapse — persisted to localStorage
-  const [entryTypesExpanded, setEntryTypesExpanded] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    try { return localStorage.getItem(STORAGE_KEY_ENTRY_TYPES_EXPANDED) === 'true'; } catch { return false; }
-  });
-  const toggleEntryTypesExpanded = () => {
-    setEntryTypesExpanded(prev => {
-      const next = !prev;
-      try { localStorage.setItem(STORAGE_KEY_ENTRY_TYPES_EXPANDED, String(next)); } catch { /* noop */ }
-      return next;
-    });
+  // Jenis tambahan yang dipilih user untuk ikut tampil di panel — disimpan per
+  // bisnis di localStorage, urutannya = urutan penambahan.
+  const [pinnedEntryTypeIds, setPinnedEntryTypeIds] = useState<EntryTypeId[]>([]);
+  const [showEntryTypePicker, setShowEntryTypePicker] = useState(false);
+
+  const pinnedStorageKey = businessId ? `${STORAGE_KEY_PINNED_ENTRY_TYPES}_${businessId}` : null;
+
+  useEffect(() => {
+    if (!pinnedStorageKey) return;
+    const sanitize = (ids: unknown): EntryTypeId[] =>
+      Array.isArray(ids)
+        ? (ids.filter(
+            (id): id is EntryTypeId =>
+              typeof id === 'string' && ALL_ENTRY_TYPE_IDS.has(id) && !DEFAULT_VISIBLE_IDS.has(id as EntryTypeId)
+          ))
+        : [];
+    try {
+      const raw = localStorage.getItem(pinnedStorageKey);
+      if (raw !== null) {
+        setPinnedEntryTypeIds(sanitize(JSON.parse(raw)));
+        return;
+      }
+      // Migrasi dari toggle lama: pernah expand = semua jenis dianggap dipilih.
+      const wasExpanded = localStorage.getItem(STORAGE_KEY_ENTRY_TYPES_EXPANDED) === 'true';
+      const migrated = wasExpanded
+        ? ENTRY_TYPE_CONFIGS.map(c => c.id).filter(id => !DEFAULT_VISIBLE_IDS.has(id))
+        : [];
+      setPinnedEntryTypeIds(migrated);
+      localStorage.setItem(pinnedStorageKey, JSON.stringify(migrated));
+    } catch {
+      setPinnedEntryTypeIds([]);
+    }
+  }, [pinnedStorageKey]);
+
+  const togglePinnedEntryType = (id: EntryTypeId) => {
+    const removing = pinnedEntryTypeIds.includes(id);
+    const next = removing ? pinnedEntryTypeIds.filter(x => x !== id) : [...pinnedEntryTypeIds, id];
+    setPinnedEntryTypeIds(next);
+    if (pinnedStorageKey) {
+      try { localStorage.setItem(pinnedStorageKey, JSON.stringify(next)); } catch { /* noop */ }
+    }
+    // Melepas jenis yang sedang dipilih akan menyisakan form tanpa kartu aktif —
+    // kembalikan ke jenis pertama. Menambah jenis TIDAK ikut memilihnya: form
+    // yang sedang diisi user tidak boleh ter-reset hanya karena buka picker.
+    if (removing && selectedEntryTypeId === id) {
+      const fallback = entryTypes.find(et => et.id === DEFAULT_VISIBLE_ORDER[0]);
+      if (fallback) handleSelectEntryType(fallback);
+    }
   };
 
-  // Urutan kartu atas mengikuti DEFAULT_VISIBLE_ORDER, bukan urutan konfigurasi.
+  // Urutan kartu mengikuti DEFAULT_VISIBLE_ORDER (bukan urutan konfigurasi),
+  // lalu jenis tambahan sesuai urutan user menambahkannya.
   const defaultEntryTypes = DEFAULT_VISIBLE_ORDER
     .map((id) => entryTypes.find((et) => et.id === id))
     .filter((et): et is EntryType => !!et);
   const extraEntryTypes = entryTypes.filter(et => !DEFAULT_VISIBLE_IDS.has(et.id));
+  const pinnedEntryTypes = pinnedEntryTypeIds
+    .map((id) => extraEntryTypes.find((et) => et.id === id))
+    .filter((et): et is EntryType => !!et);
+  const visibleEntryTypes = [...defaultEntryTypes, ...pinnedEntryTypes];
 
   // form state
   const [amount, setAmount] = useState(0);
@@ -1191,9 +1240,9 @@ export default function JournalEntryPage() {
         {/* Left Panel: Transaction Types */}
         <div className="w-72 overflow-y-auto scrollbar-hide flex-shrink-0">
           <div className="pl-8 pr-3 pb-6 space-y-4">
-            {/* Default visible entry types */}
+            {/* Jenis default + jenis tambahan pilihan user (satu daftar) */}
             <div className="space-y-2">
-              {defaultEntryTypes.map((et) => (
+              {visibleEntryTypes.map((et) => (
                 <EntryTypeCard
                   key={et.id}
                   entryType={et}
@@ -1203,37 +1252,14 @@ export default function JournalEntryPage() {
               ))}
             </div>
 
-            {/* Expandable extra entry types */}
-            {entryTypesExpanded && (
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 space-y-2">
-                {extraEntryTypes.map((et) => (
-                  <EntryTypeCard
-                    key={et.id}
-                    entryType={et}
-                    isSelected={selectedEntryType?.id === et.id}
-                    onSelect={handleSelectEntryType}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Toggle button */}
+            {/* Tambah jenis — gaya dashed sama seperti tombol "Buat Invoice" */}
             <button
               type="button"
-              onClick={toggleEntryTypesExpanded}
-              className="w-full mt-4 flex items-center justify-center gap-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors py-2"
+              onClick={() => setShowEntryTypePicker(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border border-dashed border-indigo-300 dark:border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all text-sm font-semibold"
             >
-              {entryTypesExpanded ? (
-                <>
-                  <ChevronUp className="w-3.5 h-3.5" />
-                  {t.journalEntry.hide}
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="w-3.5 h-3.5" />
-                  {t.journalEntry.showMore}
-                </>
-              )}
+              <Plus className="w-4 h-4" />
+              {t.journalEntry.addEntryType}
             </button>
           </div>
         </div>
@@ -1940,6 +1966,64 @@ export default function JournalEntryPage() {
         selectedAccount={accounts.find(a => a.id === debitAccountId) ?? null}
         accounts={accounts}
       />
+
+      {/* Picker jenis transaksi — pilih jenis tambahan yang ikut tampil di panel.
+          Efeknya langsung (panel di belakang ikut berubah), jadi tidak ada
+          tombol simpan; klik ulang kartu = melepasnya dari panel. */}
+      <Modal
+        isOpen={showEntryTypePicker}
+        onClose={() => setShowEntryTypePicker(false)}
+        title={t.journalEntry.entryTypePickerTitle}
+        size="lg"
+      >
+        {extraEntryTypes.length === 0 ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
+            {t.journalEntry.entryTypePickerEmpty}
+          </p>
+        ) : (
+          <>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              {t.journalEntry.entryTypePickerHint}
+            </p>
+            <div className="space-y-2">
+              {extraEntryTypes.map((et) => {
+                const isPinned = pinnedEntryTypeIds.includes(et.id);
+                return (
+                  <button
+                    key={et.id}
+                    type="button"
+                    onClick={() => togglePinnedEntryType(et.id)}
+                    aria-pressed={isPinned}
+                    className={`w-full flex items-center gap-3 text-left p-3 rounded-xl border transition-colors ${
+                      isPinned
+                        ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
+                        : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                    }`}
+                  >
+                    <span className={isPinned ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}>
+                      {et.icon}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-sm font-semibold ${isPinned ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                        {et.label}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{et.description}</div>
+                    </div>
+                    {isPinned ? (
+                      <span className="flex items-center gap-1 flex-shrink-0 text-xs font-medium text-indigo-600 dark:text-indigo-400">
+                        <Check className="w-3.5 h-3.5" />
+                        {t.journalEntry.entryTypeShown}
+                      </span>
+                    ) : (
+                      <Plus className="w-4 h-4 flex-shrink-0 text-gray-400 dark:text-gray-500" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </Modal>
 
       {/* Create Invoice Modal — di-trigger dari button "Buat Invoice" di header */}
       <Modal

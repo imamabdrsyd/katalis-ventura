@@ -1924,8 +1924,11 @@ export const en: Translations = {
 
   journalEntry: {
     sectionLabel: 'Transaction Type',
-    showMore: 'Show More',
-    hide: 'Hide',
+    addEntryType: 'Add Type',
+    entryTypePickerTitle: 'Add Transaction Type',
+    entryTypePickerHint: 'Pick the types you want on the panel. Tap again to remove — you can change this anytime.',
+    entryTypePickerEmpty: 'All transaction types are already on the panel.',
+    entryTypeShown: 'On panel',
     form: {
       backToTransactions: 'Back to Transactions',
       createInvoice: 'Create Invoice',
