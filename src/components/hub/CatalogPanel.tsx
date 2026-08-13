@@ -561,6 +561,7 @@ export function CatalogPanel({
             revenueAccounts={revenueAccounts}
             existingSkus={existingSkus}
             businessType={activeBusiness?.business_type}
+            businessSector={activeBusiness?.business_sector}
             isAccommodation={scopeToUnit && isAccommodation}
             onSubmit={handleSubmit}
             onCancel={() => { setShowForm(false); setEditItem(null); }}

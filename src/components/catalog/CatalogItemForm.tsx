@@ -8,6 +8,7 @@ import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 import NumberStepperField from '@/components/ui/NumberStepperField';
 import { useLanguage } from '@/context/LanguageContext';
 import { CATALOG_ASSET_CLASSES, ASSET_CLASS_META, assetClassLabelKey } from '@/lib/assetClasses';
+import { isAssetCatalogBusiness } from '@/lib/businessSectors';
 
 export interface CatalogItemFormData {
   name: string;
@@ -40,6 +41,9 @@ interface CatalogItemFormProps {
   /** businesses.business_type — menentukan tipe item yang tersedia:
    *  'jasa' → service saja; 'produk'/'dagang' → product saja; null → keduanya. */
   businessType?: string | null;
+  /** businesses.business_sector — bersama `businessType` menentukan apakah
+   *  field kelas aset investasi ditampilkan (lihat `isAssetCatalogBusiness`). */
+  businessSector?: string | null;
   /** Bisnis sektor akomodasi → tampilkan pilihan main/addon + kategori tarif
    *  (weekday/weekend/monthly) yang menyetir base price kalender (migr 124). */
   isAccommodation?: boolean;
@@ -59,6 +63,7 @@ export function CatalogItemForm({
   revenueAccounts,
   existingSkus = [],
   businessType,
+  businessSector,
   isAccommodation = false,
   onSubmit,
   onCancel,
@@ -223,6 +228,13 @@ export function CatalogItemForm({
 
   const isProduct = formData.item_type === 'product';
 
+  // Kelas aset investasi hanya relevan untuk bisnis dagang sektor finance —
+  // katalog F&B/personal care tak pernah menjual saham. Item lama yang terlanjur
+  // punya kelas aset tetap menampilkan field (escape hatch) supaya nilainya
+  // masih bisa diubah/dilepas walau bisnisnya kini di luar gate.
+  const canMarkAsset =
+    isProduct && (isAssetCatalogBusiness(businessType, businessSector) || !!item?.asset_class);
+
   function validate(): boolean {
     const next: Record<string, string> = {};
     if (!formData.name.trim()) {
@@ -259,11 +271,12 @@ export function CatalogItemForm({
       sku: isProduct ? formData.sku?.trim() || null : null,
       track_stock: isProduct ? (formData.track_stock ?? false) : false,
       stock_qty: isProduct && formData.track_stock ? Math.max(0, formData.stock_qty ?? 0) : 0,
-      // Instrumen investasi hanya masuk akal untuk item produk. Melepas kelas
-      // aset mengembalikan lot size ke 1 supaya tidak ada sisa nilai menggantung.
-      asset_class: isProduct ? (formData.asset_class ?? null) : null,
+      // Instrumen investasi hanya masuk akal untuk item produk di bisnis dagang
+      // sektor finance. Melepas kelas aset mengembalikan lot size ke 1 supaya
+      // tidak ada sisa nilai menggantung.
+      asset_class: canMarkAsset ? (formData.asset_class ?? null) : null,
       asset_lot_size:
-        isProduct && formData.asset_class ? Math.max(Number(formData.asset_lot_size) || 1, 0.00000001) : 1,
+        canMarkAsset && formData.asset_class ? Math.max(Number(formData.asset_lot_size) || 1, 0.00000001) : 1,
       image_url: hasImage ? formData.image_url : null,
       image_fit: hasImage ? (formData.image_fit ?? 'cover') : null,
       image_position_x: hasImage && formData.image_fit === 'cover' ? (formData.image_position_x ?? 50) : null,
@@ -571,66 +584,69 @@ export function CatalogItemForm({
 
           {/* Kelas aset investasi (migr 125) — opt-in ke Asset Console.
               Kosong = produk biasa. Kelas aset & lot size sengaja di sini
-              (bukan tabel terpisah) supaya katalog tetap satu master data. */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">
-            <div>
-              <FloatingSelect
-                label={tc.assetClassLabel}
-                value={formData.asset_class ?? ''}
-                onChange={(e) => {
-                  const next = (e.target.value || null) as AssetClass | null;
-                  setFormData(prev => ({
-                    ...prev,
-                    asset_class: next,
-                    // Saat kelas dipilih pertama kali, tawarkan lot size wajar
-                    // (saham IDX 100). Nilai yang sudah disetel user dihormati.
-                    asset_lot_size:
-                      next && !prev.asset_class
-                        ? ASSET_CLASS_META[next].suggestedLotSize
-                        : (prev.asset_lot_size ?? 1),
-                  }));
-                }}
-              >
-                <option value="">{tc.assetClassNone}</option>
-                {/* 'venture' sengaja tidak ditawarkan di sini — kelas itu tidak
-                    menandai barang/jasa, melainkan menautkan bisnis lain, dan
-                    dibuat lewat tombol "Hubungkan Venture" di Asset Console. */}
-                {CATALOG_ASSET_CLASSES.map(cls => (
-                  <option key={cls} value={cls}>
-                    {t.assetConsole[assetClassLabelKey(cls)]}
-                  </option>
-                ))}
-              </FloatingSelect>
-              <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
-                {tc.assetClassHint}
-              </p>
-            </div>
-
-            {formData.asset_class && (
+              (bukan tabel terpisah) supaya katalog tetap satu master data.
+              Hanya untuk bisnis dagang sektor finance (lihat `canMarkAsset`). */}
+          {canMarkAsset && (
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">
               <div>
-                {/* Crypto: field ini adalah TOTAL UNIT yang dipegang (canon
-                    Asset Console, bukan rasio konversi) — label & hint beda
-                    dari stock/gold/property, di mana field yang sama berarti
-                    "berapa satuan harga per 1 kuantitas transaksi". */}
-                <NumberStepperField
-                  label={
-                    formData.asset_class === 'crypto'
-                      ? tc.assetCryptoUnitLabel
-                      : tc.assetLotSizeLabel
-                  }
-                  min={0}
-                  value={formData.asset_lot_size ?? 1}
-                  onValueChange={(v) =>
-                    setFormData(prev => ({ ...prev, asset_lot_size: v }))
-                  }
-                  unit={formData.unit?.trim() || undefined}
-                />
+                <FloatingSelect
+                  label={tc.assetClassLabel}
+                  value={formData.asset_class ?? ''}
+                  onChange={(e) => {
+                    const next = (e.target.value || null) as AssetClass | null;
+                    setFormData(prev => ({
+                      ...prev,
+                      asset_class: next,
+                      // Saat kelas dipilih pertama kali, tawarkan lot size wajar
+                      // (saham IDX 100). Nilai yang sudah disetel user dihormati.
+                      asset_lot_size:
+                        next && !prev.asset_class
+                          ? ASSET_CLASS_META[next].suggestedLotSize
+                          : (prev.asset_lot_size ?? 1),
+                    }));
+                  }}
+                >
+                  <option value="">{tc.assetClassNone}</option>
+                  {/* 'venture' sengaja tidak ditawarkan di sini — kelas itu tidak
+                      menandai barang/jasa, melainkan menautkan bisnis lain, dan
+                      dibuat lewat tombol "Hubungkan Venture" di Asset Console. */}
+                  {CATALOG_ASSET_CLASSES.map(cls => (
+                    <option key={cls} value={cls}>
+                      {t.assetConsole[assetClassLabelKey(cls)]}
+                    </option>
+                  ))}
+                </FloatingSelect>
                 <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
-                  {formData.asset_class === 'crypto' ? tc.assetCryptoUnitHint : tc.assetLotSizeHint}
+                  {tc.assetClassHint}
                 </p>
               </div>
-            )}
-          </div>
+
+              {formData.asset_class && (
+                <div>
+                  {/* Crypto: field ini adalah TOTAL UNIT yang dipegang (canon
+                      Asset Console, bukan rasio konversi) — label & hint beda
+                      dari stock/gold/property, di mana field yang sama berarti
+                      "berapa satuan harga per 1 kuantitas transaksi". */}
+                  <NumberStepperField
+                    label={
+                      formData.asset_class === 'crypto'
+                        ? tc.assetCryptoUnitLabel
+                        : tc.assetLotSizeLabel
+                    }
+                    min={0}
+                    value={formData.asset_lot_size ?? 1}
+                    onValueChange={(v) =>
+                      setFormData(prev => ({ ...prev, asset_lot_size: v }))
+                    }
+                    unit={formData.unit?.trim() || undefined}
+                  />
+                  <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+                    {formData.asset_class === 'crypto' ? tc.assetCryptoUnitHint : tc.assetLotSizeHint}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
 

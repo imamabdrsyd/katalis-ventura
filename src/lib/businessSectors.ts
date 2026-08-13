@@ -57,3 +57,21 @@ export function isAssetConsoleSector(sector: string | null | undefined): boolean
   const normalized = sector.trim().toLowerCase();
   return (ASSET_CONSOLE_SECTORS as readonly string[]).includes(normalized);
 }
+
+/**
+ * Bisnis yang boleh menandai item katalog sebagai instrumen investasi (field
+ * "Kelas Aset Investasi" + lot size di `CatalogItemForm`).
+ *
+ * Sengaja LEBIH SEMPIT dari `isAssetConsoleSector`: butuh sektor finance DAN
+ * kategori usaha dagang. Bisnis produk/jasa biasa (F&B, personal care, agency)
+ * tidak pernah memperjualbelikan saham/kripto lewat katalog — field itu cuma
+ * memperpanjang form dan bikin bingung. Gating akses halaman Asset Console
+ * tetap pakai `isAssetConsoleSector` (sektor saja) — dua pertanyaan berbeda:
+ * "boleh lihat portofolio?" vs "boleh mendefinisikan instrumen baru?".
+ */
+export function isAssetCatalogBusiness(
+  businessType: string | null | undefined,
+  sector: string | null | undefined
+): boolean {
+  return isAssetConsoleSector(sector) && businessType?.trim().toLowerCase() === 'dagang';
+}
