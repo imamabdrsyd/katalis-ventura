@@ -1221,8 +1221,11 @@ export default function JournalEntryPage() {
       </div>
 
       {/* Baris label — di LUAR area scroll kedua panel supaya ikut ter-pin
-          bersama header halaman saat isi panel di-scroll. */}
-      <div className="flex flex-shrink-0 pt-8 pb-3">
+          bersama header halaman saat isi panel di-scroll.
+          pt-4 (bukan pt-8): jatah 16px-nya dipindah ke `pt-4` di DALAM kedua
+          area scroll, jadi kartu yang ter-lift saat hover tidak kepotong tepi
+          atas tanpa menggeser posisi konten maupun merusak kesejajaran panel. */}
+      <div className="flex flex-shrink-0 pt-4 pb-3">
         <div className="w-72 flex-shrink-0 pl-8 pr-3">
           <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide h-5">
             {t.journalEntry.sectionLabel}
@@ -1241,7 +1244,8 @@ export default function JournalEntryPage() {
         <div className="w-72 overflow-y-auto scrollbar-hide flex-shrink-0">
           {/* pt-4: kartu `.card` naik 4px saat hover + shadow-card-hover
               menyembul ~10px ke atas. Tanpa ruang ini, kartu teratas kepotong
-              tepi atas area scroll dan hover-nya terlihat gompal. */}
+              tepi atas area scroll dan hover-nya terlihat gompal. Panel kanan
+              diberi pt yang sama supaya kedua panel tetap sejajar. */}
           <div className="pl-8 pr-3 pt-4 pb-6 space-y-4">
             {/* Jenis default + jenis tambahan pilihan user (satu daftar) */}
             <div className="space-y-2">
@@ -1269,8 +1273,8 @@ export default function JournalEntryPage() {
 
         {/* Right Panel: Form */}
         <div className="flex-1 overflow-y-auto flex flex-col min-w-0">
-          {/* Form */}
-          <div className="flex-1 pl-3 pr-8 pb-8">
+          {/* Form — pt-4 menyamai panel kiri (lihat catatan di baris label). */}
+          <div className="flex-1 pl-3 pr-8 pt-4 pb-8">
             {/* Hak bagi hasil per pemilik — ditampilkan sebelum penarikan dicatat
                 supaya user tidak perlu bolak-balik ke halaman SCE untuk tahu
                 berapa yang boleh ditarik. Angkanya dari fungsi SCE yang sama. */}
