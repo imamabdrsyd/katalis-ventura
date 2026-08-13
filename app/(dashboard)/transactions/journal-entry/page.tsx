@@ -302,7 +302,7 @@ function EntryTypeCard({
     <button
       type="button"
       onClick={() => onSelect(entryType)}
-      className={`card !p-3 w-full flex items-center gap-3 text-left ${
+      className={`card !py-4 !px-3.5 w-full flex items-center gap-3 text-left ${
         isSelected
           ? '!bg-indigo-50 dark:!bg-indigo-900/20 !border-indigo-500 dark:!border-indigo-400'
           : ''
@@ -1248,7 +1248,7 @@ export default function JournalEntryPage() {
               diberi pt yang sama supaya kedua panel tetap sejajar. */}
           <div className="pl-8 pr-3 pt-4 pb-6 space-y-4">
             {/* Jenis default + jenis tambahan pilihan user (satu daftar) */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               {visibleEntryTypes.map((et) => (
                 <EntryTypeCard
                   key={et.id}
