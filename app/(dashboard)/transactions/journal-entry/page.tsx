@@ -331,15 +331,25 @@ const CATEGORY_LABELS: Record<TransactionCategory, string> = {
 
 const ALL_CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
+// Kartu yang tampil tanpa perlu "Tampilkan Lainnya", BERURUTAN.
+//
+// Kriterianya: jenis yang tidak sekadar membuka form mentah — melainkan
+// menampilkan daftar/pilihan lebih dulu (katalog, tagihan outstanding, hak bagi
+// hasil) — ditaruh paling atas, karena di situlah sistem benar-benar membantu.
+// Pengeluaran adalah pengecualian: formnya polos, tapi paling sering dipakai.
+// Sisanya (pinjaman, talangan, akrual, uang muka, reklasifikasi) jarang dipakai
+// dan disembunyikan di balik toggle.
+//
 // TODO: make default visible types user-configurable per business
-const DEFAULT_VISIBLE_IDS: Set<EntryTypeId> = new Set([
-  'penjualan',
-  'pengeluaran',
-  'catat_talangan',
-  'terima_pelunasan',
-  'suntik_modal',
-  'tarik_dividen',
-]);
+const DEFAULT_VISIBLE_ORDER: EntryTypeId[] = [
+  'penjualan',        // katalog produk/jasa
+  'pengeluaran',      // form polos, tapi paling sering
+  'terima_pelunasan', // daftar piutang usaha & talangan
+  'bayar_hutang',     // daftar hutang outstanding
+  'tarik_dividen',    // hak bagi hasil + daftar dividen ter-declare
+];
+
+const DEFAULT_VISIBLE_IDS: Set<EntryTypeId> = new Set(DEFAULT_VISIBLE_ORDER);
 
 const STORAGE_KEY_ENTRY_TYPES_EXPANDED = 'katalis_journal_entry_types_expanded';
 
@@ -414,7 +424,10 @@ export default function JournalEntryPage() {
     });
   };
 
-  const defaultEntryTypes = entryTypes.filter(et => DEFAULT_VISIBLE_IDS.has(et.id));
+  // Urutan kartu atas mengikuti DEFAULT_VISIBLE_ORDER, bukan urutan konfigurasi.
+  const defaultEntryTypes = DEFAULT_VISIBLE_ORDER
+    .map((id) => entryTypes.find((et) => et.id === id))
+    .filter((et): et is EntryType => !!et);
   const extraEntryTypes = entryTypes.filter(et => !DEFAULT_VISIBLE_IDS.has(et.id));
 
   // form state
