@@ -26,6 +26,7 @@ import {
   type SettlementSide,
 } from '@/components/transactions/OutstandingSettlementPicker';
 import { CatalogQuickPicker } from '@/components/transactions/CatalogQuickPicker';
+import { ShareholderEntitlementPanel } from '@/components/transactions/ShareholderEntitlementPanel';
 import { getCatalogItems } from '@/lib/api/catalog';
 import { AccountDropdown } from '@/components/transactions/AccountDropdown';
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
@@ -1237,6 +1238,27 @@ export default function JournalEntryPage() {
         <div className="flex-1 overflow-y-auto flex flex-col min-w-0">
           {/* Form */}
           <div className="flex-1 pl-3 pr-8 pb-8">
+            {/* Hak bagi hasil per pemilik — ditampilkan sebelum penarikan dicatat
+                supaya user tidak perlu bolak-balik ke halaman SCE untuk tahu
+                berapa yang boleh ditarik. Angkanya dari fungsi SCE yang sama. */}
+            {selectedEntryType?.id === 'tarik_dividen' && (
+              <div className="mb-4">
+                <ShareholderEntitlementPanel
+                  transactions={allTransactions}
+                  accounts={accounts}
+                  capital={activeBusiness?.capital_investment ?? 0}
+                  onPickOwner={({ ownerName, dividendAccountId, remaining }) => {
+                    setManualEntryOverride(true);
+                    if (dividendAccountId) setDebitAccountId(dividendAccountId);
+                    setAmount(remaining);
+                    setDisplayAmount(remaining.toLocaleString('id-ID'));
+                    setName(ownerName);
+                    setErrors({});
+                  }}
+                />
+              </div>
+            )}
+
             {/* Pilih-dulu: daftar hutang/talangan outstanding (settle langsung) */}
             {showSettlementPicker && settlementSide && (
               <OutstandingSettlementPicker

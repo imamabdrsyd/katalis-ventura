@@ -1585,6 +1585,20 @@ export interface Translations {
     showMore: string;
     hide: string;
     entryTypes: Record<JournalEntryTypeKey, JournalEntryTypeStrings>;
+    entitlement: {
+      title: string;      // "Hak Bagi Hasil {year}"
+      subtitle: string;   // "Laba tahun berjalan {netIncome}"
+      owner: string;
+      share: string;
+      entitled: string;
+      taken: string;
+      remaining: string;
+      pctFromCapital: string;
+      stillPayable: string;   // "{amount} belum dibayar"
+      overdrawn: string;      // "Lebih {amount}"
+      noProfitWarning: string;
+      footnote: string;
+    };
     picker: {
       manualEntry: string;
       searchPlaceholder: string;
