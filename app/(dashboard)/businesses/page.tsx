@@ -44,7 +44,7 @@ export default function BusinessesPage() {
   const [periodLockBusiness, setPeriodLockBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
-  const [capexByBusiness, setCapexByBusiness] = useState<Map<string, number>>(new Map());
+  const [totalAssetsByBusiness, setTotalAssetsByBusiness] = useState<Map<string, number>>(new Map());
   const [creatorNames, setCreatorNames] = useState<Map<string, string>>(new Map());
 
   const fetchBusinesses = useCallback(async () => {
@@ -54,7 +54,14 @@ export default function BusinessesPage() {
       const data = await businessesApi.getUserBusinesses(user.id, true);
       setAllBusinesses(data);
 
-      // Business Capital di tiap card = capital_investment + total CAPEX.
+      // Business Capital di tiap card = TOTAL ASET bisnis (kas + piutang +
+      // persediaan + aset tetap neto), bukan CAPEX. "Modal usaha" mencakup modal
+      // kerja; card yang cuma menghitung belanja aset tetap bikin bisnis dagang
+      // tampil Rp 0 padahal modalnya berputar di persediaan (migrasi 132).
+      // RPC-nya sudah menangani fallback ke capital_investment untuk bisnis yang
+      // belum punya transaksi, jadi jangan ditambahkan lagi di sini — modal awal
+      // otomatis dibukukan sebagai transaksi dan akan double-count.
+      //
       // Agregasi dilakukan via RPC supaya hanya 1 baris per bisnis yang dikirim,
       // bukan seluruh transaksi (sebelumnya bikin halaman lambat saat data banyak).
       // Sekalian batch ambil nama creator untuk semua bisnis — sebelumnya tiap
@@ -65,26 +72,23 @@ export default function BusinessesPage() {
           new Set(data.map(b => b.created_by).filter((v): v is string => !!v))
         );
 
-        const [capexResult, profilesResult] = await Promise.all([
-          supabase.rpc('get_capex_by_business'),
+        const [assetsResult, profilesResult] = await Promise.all([
+          supabase.rpc('get_total_assets_by_business'),
           creatorIds.length > 0
             ? supabase.from('profiles').select('id, full_name').in('id', creatorIds)
             : Promise.resolve({ data: [], error: null }),
         ]);
 
-        if (capexResult.error) throw capexResult.error;
+        if (assetsResult.error) throw assetsResult.error;
 
-        const totalCapexByBusiness = new Map<string, number>(
-          (capexResult.data ?? []).map((row: { business_id: string; total_capex: number | string }) => [
-            row.business_id,
-            Number(row.total_capex) || 0,
-          ])
+        setTotalAssetsByBusiness(
+          new Map<string, number>(
+            (assetsResult.data ?? []).map((row: { business_id: string; total_assets: number | string }) => [
+              row.business_id,
+              Number(row.total_assets) || 0,
+            ])
+          )
         );
-        const capexMap = new Map<string, number>();
-        data.forEach(b => {
-          capexMap.set(b.id, (b.capital_investment || 0) + (totalCapexByBusiness.get(b.id) || 0));
-        });
-        setCapexByBusiness(capexMap);
 
         const namesMap = new Map<string, string>();
         (profilesResult.data ?? []).forEach((p: { id: string; full_name: string | null }) => {
@@ -321,7 +325,7 @@ export default function BusinessesPage() {
             <BusinessCard
               key={business.id}
               business={business}
-              totalCapex={capexByBusiness.get(business.id) || 0}
+              totalAssets={totalAssetsByBusiness.get(business.id) || 0}
               creatorName={business.created_by ? creatorNames.get(business.created_by) : undefined}
               isActive={activeBusiness?.id === business.id}
               onSelect={() => {

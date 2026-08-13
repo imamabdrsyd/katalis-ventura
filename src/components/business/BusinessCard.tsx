@@ -9,7 +9,14 @@ import { getSectorIcon } from '@/lib/sectorIcons';
 
 interface BusinessCardProps {
   business: Business;
-  totalCapex: number; // NEW: Calculated business capital from MODEL layer
+  /**
+   * Business capital = TOTAL ASET bisnis (kas + piutang + persediaan + aset
+   * tetap neto), dihitung parent via RPC `get_total_assets_by_business`.
+   * Sengaja bukan CAPEX: modal usaha mencakup modal kerja, bukan cuma belanja
+   * aset tetap — lihat migrasi 132. Bisa negatif kalau pembukuan bisnis punya
+   * celah (mis. belanja tercatat tapi sumber dananya belum).
+   */
+  totalAssets: number;
   /**
    * Nama creator yang sudah di-fetch parent (batch) untuk menghindari
    * N+1 ke /api/users/profile dari tiap card. Kalau undefined, card akan
@@ -43,7 +50,7 @@ const BUSINESS_TYPE_LABELS: Record<string, string> = {
 
 export function BusinessCard({
   business,
-  totalCapex,
+  totalAssets,
   creatorName: creatorNameProp,
   isActive = false,
   onSelect,
@@ -268,7 +275,7 @@ export function BusinessCard({
         <div className="flex justify-between text-sm">
           <span className="text-gray-500 dark:text-gray-400">Business Capital</span>
           <span className="font-semibold text-gray-800 dark:text-gray-100">
-            {formatCurrency(totalCapex)}
+            {formatCurrency(totalAssets)}
           </span>
         </div>
         {business.property_address && (
