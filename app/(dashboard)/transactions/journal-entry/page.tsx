@@ -1239,7 +1239,10 @@ export default function JournalEntryPage() {
       <div className="flex flex-1 overflow-hidden">
         {/* Left Panel: Transaction Types */}
         <div className="w-72 overflow-y-auto scrollbar-hide flex-shrink-0">
-          <div className="pl-8 pr-3 pb-6 space-y-4">
+          {/* pt-4: kartu `.card` naik 4px saat hover + shadow-card-hover
+              menyembul ~10px ke atas. Tanpa ruang ini, kartu teratas kepotong
+              tepi atas area scroll dan hover-nya terlihat gompal. */}
+          <div className="pl-8 pr-3 pt-4 pb-6 space-y-4">
             {/* Jenis default + jenis tambahan pilihan user (satu daftar) */}
             <div className="space-y-2">
               {visibleEntryTypes.map((et) => (
