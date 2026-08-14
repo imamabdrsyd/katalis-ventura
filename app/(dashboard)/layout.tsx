@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { BusinessProvider, useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { createClient } from '@/lib/supabase';
@@ -52,6 +53,7 @@ import {
   isAssetConsoleEnabled,
   getAssetConsoleNavItem,
   type NavItem,
+  type NavSection,
 } from '@/lib/navigation';
 
 type SearchResult = {
@@ -605,6 +607,130 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
   );
 }
 
+/**
+ * Flyout quick-access sub-menu untuk menu hub (Akuntansi, Laporan Keuangan, Analytics).
+ * Di-render via portal ke <body> dengan `position: fixed` supaya lolos dari
+ * `overflow-hidden`/`overflow-y-auto` milik <aside> & nav container saat sidebar
+ * sedang expanded (posisi absolute biasa akan ke-clip di situ).
+ */
+function SectionFlyout({
+  section,
+  anchorRect,
+  pathname,
+  onNavigate,
+}: {
+  section: NavSection;
+  anchorRect: DOMRect;
+  pathname: string;
+  onNavigate: () => void;
+}) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  return createPortal(
+    <div
+      className="fixed bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg whitespace-nowrap z-[70] overflow-hidden shadow-xl"
+      style={{ left: anchorRect.right + 8, top: anchorRect.top + anchorRect.height / 2, transform: 'translateY(-50%)' }}
+    >
+      <Link
+        href={section.href}
+        onClick={onNavigate}
+        className="block px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-300 hover:text-white border-b border-gray-700 dark:border-gray-600 transition-colors"
+      >
+        {section.label}
+      </Link>
+      {section.items.map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          onClick={onNavigate}
+          className={`flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors ${
+            pathname === item.href || pathname.startsWith(item.href + '/')
+              ? 'text-indigo-400 font-semibold'
+              : 'text-gray-100'
+          }`}
+        >
+          {item.label}
+        </Link>
+      ))}
+      <div className="absolute right-full top-5 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
+    </div>,
+    document.body
+  );
+}
+
+/**
+ * Satu baris menu hub (Akuntansi, Laporan Keuangan, Analytics) di sidebar.
+ * Trigger hover di-track lewat ref + state (bukan CSS group-hover) karena
+ * flyout-nya di-portal keluar dari <aside> — CSS sibling selector tak lagi
+ * berlaku setelah node dipindah ke <body>.
+ */
+function SidebarHubSection({
+  section,
+  pathname,
+  isCollapsed,
+  onNavigate,
+}: {
+  section: NavSection;
+  pathname: string;
+  isCollapsed: boolean;
+  onNavigate: () => void;
+}) {
+  const SectionIcon = section.icon;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
+  const isActive =
+    pathname === section.href ||
+    pathname.startsWith(section.href + '/') ||
+    section.items.some((item) => pathname === item.href || pathname.startsWith(item.href + '/'));
+
+  const handleMouseEnter = useCallback(() => {
+    if (containerRef.current) setAnchorRect(containerRef.current.getBoundingClientRect());
+  }, []);
+  const handleMouseLeave = useCallback(() => setAnchorRect(null), []);
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <Link
+        href={section.href}
+        onClick={onNavigate}
+        className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl transition-colors ${
+          isActive
+            ? 'bg-indigo-50 dark:bg-indigo-900/30'
+            : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+        } ${isCollapsed ? 'justify-center' : ''}`}
+      >
+        <SectionIcon className={`w-5 h-5 flex-shrink-0 transition-colors ${
+          isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'
+        }`} />
+        {/* Chevron-right menandai section ini masuk ke halaman hub dulu
+            (beda dari menu biasa yang langsung ke tujuannya). */}
+        <span className={`items-center justify-between flex-1 overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'hidden w-0 opacity-0' : 'flex w-auto opacity-100'}`}>
+          <span className={`text-xs font-semibold uppercase tracking-wider whitespace-nowrap ${
+            isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'
+          }`}>
+            {section.label}
+          </span>
+          <ChevronRight className={`w-4 h-4 flex-shrink-0 transition-colors ${
+            isActive ? 'text-indigo-400 dark:text-indigo-400' : anchorRect ? 'text-indigo-400 dark:text-indigo-400' : 'text-gray-300 dark:text-gray-600'
+          }`} />
+        </span>
+      </Link>
+      {/* Flyout quick-access sub-menu — muncul saat hover baik collapsed maupun expanded.
+          Di-portal ke <body> supaya lolos dari overflow-hidden/overflow-y-auto sidebar. */}
+      {anchorRect && (
+        <SectionFlyout section={section} anchorRect={anchorRect} pathname={pathname} onNavigate={onNavigate} />
+      )}
+    </div>
+  );
+}
+
 function Sidebar({
   isOpen,
   onClose,
@@ -840,67 +966,15 @@ function Sidebar({
         {/* Navigation — tiap section kini link langsung ke halaman hub (kartu sub-menu),
             bukan lagi drill-down accordion. Sub-menu ditampilkan sebagai kotak di hub. */}
         <nav className="py-4 px-2 space-y-1.5">
-          {navSections.map((section) => {
-            const SectionIcon = section.icon;
-            const isActive =
-              pathname === section.href ||
-              pathname.startsWith(section.href + '/') ||
-              section.items.some((item) => pathname === item.href || pathname.startsWith(item.href + '/'));
-            return (
-              <div key={section.key} className="relative group/section">
-                <Link
-                  href={section.href}
-                  onClick={onClose}
-                  className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl transition-colors ${
-                    isActive
-                      ? 'bg-indigo-50 dark:bg-indigo-900/30'
-                      : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                  } ${isCollapsed ? 'justify-center' : ''}`}
-                >
-                  <SectionIcon className={`w-5 h-5 flex-shrink-0 transition-colors ${
-                    isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'
-                  }`} />
-                  {/* Chevron-right menandai section ini masuk ke halaman hub dulu
-                      (beda dari menu biasa yang langsung ke tujuannya). */}
-                  <span className={`items-center justify-between flex-1 overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'hidden w-0 opacity-0' : 'flex w-auto opacity-100'}`}>
-                    <span className={`text-xs font-semibold uppercase tracking-wider whitespace-nowrap ${
-                      isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'
-                    }`}>
-                      {section.label}
-                    </span>
-                    <ChevronRight className={`w-4 h-4 flex-shrink-0 transition-colors ${
-                      isActive ? 'text-indigo-400 dark:text-indigo-400' : 'text-gray-300 dark:text-gray-600 group-hover/section:text-indigo-400 dark:group-hover/section:text-indigo-400'
-                    }`} />
-                  </span>
-                </Link>
-                {/* Flyout quick-access sub-menu — muncul saat hover baik collapsed maupun expanded */}
-                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 invisible group-hover/section:opacity-100 group-hover/section:visible transition-all duration-150 z-[60] overflow-hidden">
-                  <Link
-                    href={section.href}
-                    onClick={onClose}
-                    className="block px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-300 hover:text-white border-b border-gray-700 dark:border-gray-600 transition-colors"
-                  >
-                    {section.label}
-                  </Link>
-                  {section.items.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={onClose}
-                      className={`flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors ${
-                        pathname === item.href || pathname.startsWith(item.href + '/')
-                          ? 'text-indigo-400 font-semibold'
-                          : 'text-gray-100'
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                  <div className="absolute right-full top-5 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
-                </div>
-              </div>
-            );
-          })}
+          {navSections.map((section) => (
+            <SidebarHubSection
+              key={section.key}
+              section={section}
+              pathname={pathname}
+              isCollapsed={isCollapsed}
+              onNavigate={onClose}
+            />
+          ))}
         </nav>
 
         {/* Line pembatas di atas section Leads/Calendar-POS */}
