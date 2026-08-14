@@ -1948,7 +1948,7 @@ export const en: Translations = {
 
   journalEntry: {
     sectionLabel: 'Transaction Type',
-    addEntryType: 'Add Type',
+    addEntryType: 'Transaction Type',
     entryTypePickerTitle: 'Add Transaction Type',
     entryTypePickerHint: 'Pick the types you want on the panel. Tap again to remove — you can change this anytime.',
     entryTypePickerEmpty: 'All transaction types are already on the panel.',

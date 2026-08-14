@@ -1952,7 +1952,7 @@ export const id: Translations = {
 
   journalEntry: {
     sectionLabel: 'Jenis Transaksi',
-    addEntryType: 'Tambah Jenis',
+    addEntryType: 'Jenis Transaksi',
     entryTypePickerTitle: 'Tambah Jenis Transaksi',
     entryTypePickerHint: 'Pilih jenis yang ingin ditampilkan di panel. Klik lagi untuk melepas — bisa diubah kapan saja.',
     entryTypePickerEmpty: 'Semua jenis transaksi sudah ada di panel.',

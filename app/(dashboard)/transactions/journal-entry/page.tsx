@@ -315,7 +315,7 @@ function EntryTypeCard({
         <div className={`text-sm font-semibold ${isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300'}`}>
           {entryType.label}
         </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{entryType.description}</div>
+        <div className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{entryType.description}</div>
       </div>
     </button>
   );
@@ -1198,8 +1198,11 @@ export default function JournalEntryPage() {
         </button>
       </div>
 
-      {/* Baris label — di LUAR area scroll kedua panel supaya ikut ter-pin
-          bersama header halaman saat isi panel di-scroll.
+      {/* Label "TRANSACTION TYPE" — hanya di atas panel kiri. Subtitle jenis
+          terpilih (dulu di kanan) dihapus; keterangannya sekarang tampil
+          langsung di masing-masing card (lihat EntryTypeCard, deskripsi
+          diizinkan 2 baris). Baris ini di LUAR area scroll kedua panel supaya
+          ikut ter-pin bersama header halaman saat isi panel di-scroll.
           pt-4 (bukan pt-8): jatah 16px-nya dipindah ke `pt-4` di DALAM kedua
           area scroll, jadi kartu yang ter-lift saat hover tidak kepotong tepi
           atas tanpa menggeser posisi konten maupun merusak kesejajaran panel. */}
@@ -1209,11 +1212,7 @@ export default function JournalEntryPage() {
             {t.journalEntry.sectionLabel}
           </p>
         </div>
-        <div className="flex-1 min-w-0 pl-3 pr-8">
-          <p className="text-sm text-gray-500 dark:text-gray-400 h-5 truncate">
-            {selectedEntryType?.description ?? ''}
-          </p>
-        </div>
+        <div className="flex-1 min-w-0 pl-3 pr-8" />
       </div>
 
       {/* Main Content: 2-Panel Layout */}
