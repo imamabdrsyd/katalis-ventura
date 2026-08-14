@@ -858,13 +858,13 @@ function Sidebar({
                   } ${isCollapsed ? 'justify-center' : ''}`}
                 >
                   <SectionIcon className={`w-5 h-5 flex-shrink-0 transition-colors ${
-                    isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500 group-hover/section:text-indigo-500 dark:group-hover/section:text-indigo-400'
+                    isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'
                   }`} />
                   {/* Chevron-right menandai section ini masuk ke halaman hub dulu
                       (beda dari menu biasa yang langsung ke tujuannya). */}
                   <span className={`items-center justify-between flex-1 overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'hidden w-0 opacity-0' : 'flex w-auto opacity-100'}`}>
                     <span className={`text-xs font-semibold uppercase tracking-wider whitespace-nowrap ${
-                      isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500 group-hover/section:text-indigo-500 dark:group-hover/section:text-indigo-400'
+                      isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'
                     }`}>
                       {section.label}
                     </span>
@@ -873,33 +873,31 @@ function Sidebar({
                     }`} />
                   </span>
                 </Link>
-                {/* Flyout saat collapsed — quick access ke tiap sub-menu tanpa buka hub */}
-                {isCollapsed && (
-                  <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 invisible group-hover/section:opacity-100 group-hover/section:visible transition-all duration-150 z-[60] overflow-hidden">
+                {/* Flyout quick-access sub-menu — muncul saat hover baik collapsed maupun expanded */}
+                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 invisible group-hover/section:opacity-100 group-hover/section:visible transition-all duration-150 z-[60] overflow-hidden">
+                  <Link
+                    href={section.href}
+                    onClick={onClose}
+                    className="block px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-300 hover:text-white border-b border-gray-700 dark:border-gray-600 transition-colors"
+                  >
+                    {section.label}
+                  </Link>
+                  {section.items.map((item) => (
                     <Link
-                      href={section.href}
+                      key={item.href}
+                      href={item.href}
                       onClick={onClose}
-                      className="block px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-300 hover:text-white border-b border-gray-700 dark:border-gray-600 transition-colors"
+                      className={`flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors ${
+                        pathname === item.href || pathname.startsWith(item.href + '/')
+                          ? 'text-indigo-400 font-semibold'
+                          : 'text-gray-100'
+                      }`}
                     >
-                      {section.label}
+                      {item.label}
                     </Link>
-                    {section.items.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={onClose}
-                        className={`flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors ${
-                          pathname === item.href || pathname.startsWith(item.href + '/')
-                            ? 'text-indigo-400 font-semibold'
-                            : 'text-gray-100'
-                        }`}
-                      >
-                        {item.label}
-                      </Link>
-                    ))}
-                    <div className="absolute right-full top-5 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
-                  </div>
-                )}
+                  ))}
+                  <div className="absolute right-full top-5 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
+                </div>
               </div>
             );
           })}
