@@ -35,7 +35,7 @@ import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
 import { isAdvanceReceivableAccount } from '@/lib/accounting/classification';
 import { exportLoanReceivablePDF } from '@/lib/export';
 import { useBusinessContext } from '@/context/BusinessContext';
-import { AlertTriangle, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, RotateCcw, ZoomIn, ZoomOut, Receipt, CirclePlus, ChevronLeft, ChevronRight, Maximize2, Loader2, Copy, Printer } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, RotateCcw, ZoomIn, ZoomOut, Receipt, CirclePlus, ChevronLeft, ChevronRight, Maximize2, Loader2, Copy, Printer } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { updateTransaction } from '@/lib/api/transactions';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
@@ -72,6 +72,16 @@ interface TransactionDetailModalProps {
 }
 
 const CATEGORY_COLORS = CATEGORY_BADGE_CLASSES;
+
+/**
+ * Tooltip nilai mentah di riwayat perubahan — nilai yang tampil sudah dipendekkan
+ * (UUID dipotong, objek diringkas), jadi aslinya disimpan di `title`. Objek wajib
+ * lewat JSON: `String()` hanya menghasilkan "[object Object]".
+ */
+function rawValueTitle(value: unknown): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  return typeof value === 'object' ? JSON.stringify(value) : String(value);
+}
 
 const STOCK_COLOR = 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300';
 
@@ -351,6 +361,40 @@ export function TransactionDetailModal({
     if (!transaction || !accounts || accounts.length === 0) return null;
     return detectMatchingPrincipleWarning(transaction, accounts);
   }, [transaction, accounts]);
+
+  // Konteks format riwayat perubahan — tanpa ini nilai mentah DB (UUID akun,
+  // ISO timestamp, enum huruf kecil) bocor apa adanya ke layar.
+  const auditValueOptions = useMemo(() => {
+    const accountById = new Map((accounts ?? []).map((a) => [a.id, a]));
+    return {
+      resolveAccount: (id: string) => {
+        const acc = accountById.get(id);
+        return acc ? `${acc.account_code} · ${acc.account_name}` : undefined;
+      },
+      labels: {
+        empty: t.transactionDetail.auditEmpty,
+        yes: t.transactionDetail.auditYes,
+        no: t.transactionDetail.auditNo,
+        structured: t.transactionDetail.auditStructured,
+        values: {
+          draft: t.transactionDetail.draft,
+          posted: t.transactionDetail.posted,
+        } as Record<string, string>,
+      },
+    };
+  }, [accounts, t]);
+
+  // Entri UPDATE yang seluruh perubahannya field tersembunyi (mis. hanya
+  // updated_at/updated_by yang bergerak) akan tampil sebagai entri kosong —
+  // kepala tanpa isi. Saring di sini supaya tidak ada baris hantu di timeline,
+  // sekalian jadi dasar cek "tidak ada riwayat".
+  const visibleAuditHistory = useMemo(
+    () =>
+      auditHistory
+        .map((log) => ({ log, changes: getFieldChanges(log) }))
+        .filter(({ log, changes }) => log.operation !== 'UPDATE' || changes.length > 0),
+    [auditHistory]
+  );
 
   // Look up sold stock transactions from meta.sold_stock_ids
   const soldStockTransactions = useMemo(() => {
@@ -1910,86 +1954,109 @@ export function TransactionDetailModal({
                 <div className="text-center py-4 text-gray-500 dark:text-gray-400">
                   {t.transactionDetail.loadingHistory}
                 </div>
-              ) : auditHistory.length === 0 ? (
+              ) : visibleAuditHistory.length === 0 ? (
                 <div className="text-center py-4 text-gray-500 dark:text-gray-400">
                   {t.transactionDetail.noHistory}
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {auditHistory.map((log) => {
-                    const changes = getFieldChanges(log);
+                <ol className="space-y-5">
+                  {visibleAuditHistory.map(({ log, changes }, index) => {
                     const operationLabel = {
                       INSERT: t.transactionDetail.opCreated,
                       UPDATE: t.transactionDetail.opUpdated,
                       DELETE: t.transactionDetail.opDeleted,
                     }[log.operation];
                     const operationColor = {
-                      INSERT: 'text-emerald-500 dark:text-emerald-400',
-                      UPDATE: 'text-blue-600 dark:text-blue-400',
-                      DELETE: 'text-red-500 dark:text-red-400',
+                      INSERT: 'text-emerald-600 dark:text-emerald-400',
+                      UPDATE: 'text-primary-600 dark:text-primary-400',
+                      DELETE: 'text-red-600 dark:text-red-400',
                     }[log.operation];
+                    const dotColor = {
+                      INSERT: 'bg-emerald-500',
+                      UPDATE: 'bg-primary-500',
+                      DELETE: 'bg-red-500',
+                    }[log.operation];
+                    const isLast = index === visibleAuditHistory.length - 1;
 
                     return (
-                      <div
-                        key={log.id}
-                        className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-800/50"
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <span className={`font-semibold ${operationColor}`}>
-                              {operationLabel}
-                            </span>
-                            <span className="text-gray-500 dark:text-gray-400 text-xs ml-2">
-                              {formatDateTime(log.changed_at)}
-                            </span>
-                          </div>
+                      <li key={log.id} className="relative pl-5">
+                        {/* Rel timeline — disembunyikan di entri terakhir supaya
+                            garisnya tidak menjuntai ke ruang kosong. */}
+                        {!isLast && (
+                          <span
+                            aria-hidden
+                            className="absolute left-[3px] top-4 -bottom-5 w-px bg-gray-200 dark:bg-gray-700"
+                          />
+                        )}
+                        <span
+                          aria-hidden
+                          className={`absolute left-0 top-[7px] w-[7px] h-[7px] rounded-full ${dotColor}`}
+                        />
+
+                        <div className="flex flex-wrap items-baseline gap-x-2">
+                          <span className={`text-sm font-semibold ${operationColor}`}>
+                            {operationLabel}
+                          </span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums">
+                            {formatDateTime(log.changed_at)}
+                          </span>
                           {log.changed_by_name && (
-                            <span className="text-xs text-gray-600 dark:text-gray-400">
+                            <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
                               {t.transactionDetail.by} {log.changed_by_name}
                             </span>
                           )}
                         </div>
 
                         {changes.length > 0 && (
-                          <div className="space-y-2 mt-3">
-                            {changes.map((change) => (
-                              <div
-                                key={change.field}
-                                className="text-sm border-l-2 border-gray-300 dark:border-gray-600 pl-3"
-                              >
-                                <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                  {formatFieldName(change.field)}
+                          <dl className="mt-2 grid grid-cols-[6rem_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-xs">
+                            {changes.map((change) => {
+                              const hasOld =
+                                change.oldValue !== null && change.oldValue !== undefined;
+                              const oldText = formatAuditValue(change.oldValue, {
+                                ...auditValueOptions,
+                                field: change.field,
+                              });
+                              const newText = formatAuditValue(change.newValue, {
+                                ...auditValueOptions,
+                                field: change.field,
+                              });
+
+                              return (
+                                <div key={change.field} className="contents">
+                                  <dt className="text-gray-500 dark:text-gray-400 leading-5 break-words">
+                                    {formatFieldName(change.field, t.transactionDetail.auditField)}
+                                  </dt>
+                                  <dd className="min-w-0 leading-5 flex flex-wrap items-baseline gap-x-1.5">
+                                    {hasOld && (
+                                      <>
+                                        <span
+                                          className="text-gray-400 dark:text-gray-500 line-through decoration-gray-300 dark:decoration-gray-600 break-words"
+                                          title={rawValueTitle(change.oldValue)}
+                                        >
+                                          {oldText}
+                                        </span>
+                                        <ArrowRight
+                                          aria-hidden
+                                          className="w-3 h-3 shrink-0 text-gray-300 dark:text-gray-600 translate-y-[1px]"
+                                        />
+                                      </>
+                                    )}
+                                    <span
+                                      className="font-medium text-gray-800 dark:text-gray-100 break-words"
+                                      title={rawValueTitle(change.newValue)}
+                                    >
+                                      {newText}
+                                    </span>
+                                  </dd>
                                 </div>
-                                <div className="flex items-start gap-2 text-xs">
-                                  {change.oldValue !== null && (
-                                    <div className="flex-1">
-                                      <span className="text-red-500 dark:text-red-400 font-semibold">
-                                        {t.transactionDetail.before}
-                                      </span>
-                                      <div className="mt-1 p-2 bg-red-50 dark:bg-red-900/20 rounded text-red-500 dark:text-red-300 font-mono">
-                                        {formatAuditValue(change.oldValue)}
-                                      </div>
-                                    </div>
-                                  )}
-                                  {change.newValue !== null && (
-                                    <div className="flex-1">
-                                      <span className="text-emerald-500 dark:text-emerald-400 font-semibold">
-                                        {t.transactionDetail.after}
-                                      </span>
-                                      <div className="mt-1 p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded text-emerald-500 dark:text-emerald-300 font-mono">
-                                        {formatAuditValue(change.newValue)}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                              );
+                            })}
+                          </dl>
                         )}
-                      </div>
+                      </li>
                     );
                   })}
-                </div>
+                </ol>
               )}
             </div>
           )}

@@ -1594,8 +1594,12 @@ export interface Translations {
     opUpdated: string;
     opDeleted: string;
     by: string;
-    before: string;
-    after: string;
+    /** Label kolom di riwayat perubahan, dikunci nama kolom DB (mis. `debit_account_id`). */
+    auditField: Record<string, string>;
+    auditEmpty: string;
+    auditYes: string;
+    auditNo: string;
+    auditStructured: string;
     // Dividen (declare → bayar)
     dividendPaidInFull: string;
     dividendPaidInFullDesc: string;

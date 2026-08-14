@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase';
+import { formatCurrency, formatDateShort, formatDateTime } from '@/lib/utils';
 import type { AuditLog } from '@/types';
 
 /**
@@ -68,9 +69,13 @@ export function getFieldChanges(auditLog: AuditLog): Array<{
 
   // For INSERT operations, all new_values are changes (from NULL)
   if (auditLog.operation === 'INSERT' && auditLog.new_values) {
-    for (const [field, newValue] of Object.entries(auditLog.new_values)) {
-      // Skip internal fields
-      if (field === 'id' || field === 'created_at' || field === 'updated_at') continue;
+    const newValues = auditLog.new_values;
+    // Hanya field ringkasan — seluruh kolom baris baru terlalu panjang dan
+    // keadaan terkini transaksi sudah tampil di bagian atas modal.
+    for (const field of INSERT_SUMMARY_FIELDS) {
+      if (!(field in newValues)) continue;
+      const newValue = newValues[field];
+      if (newValue === null || newValue === undefined || newValue === '') continue;
 
       changes.push({
         field,
@@ -85,8 +90,7 @@ export function getFieldChanges(auditLog: AuditLog): Array<{
   // For DELETE operations, all old_values are changes (to NULL)
   if (auditLog.operation === 'DELETE' && auditLog.old_values) {
     for (const [field, oldValue] of Object.entries(auditLog.old_values)) {
-      // Skip internal fields
-      if (field === 'id' || field === 'created_at' || field === 'updated_at') continue;
+      if (HIDDEN_AUDIT_FIELDS.has(field)) continue;
 
       changes.push({
         field,
@@ -106,8 +110,7 @@ export function getFieldChanges(auditLog: AuditLog): Array<{
     ]);
 
     for (const field of allFields) {
-      // Skip internal fields
-      if (field === 'id' || field === 'created_at' || field === 'updated_at') continue;
+      if (HIDDEN_AUDIT_FIELDS.has(field)) continue;
 
       const oldValue = auditLog.old_values[field];
       const newValue = auditLog.new_values[field];
@@ -149,11 +152,44 @@ export async function getDeletedTransactions(businessId: string) {
 }
 
 /**
+ * Field yang selalu disembunyikan dari daftar perubahan.
+ *
+ * `updated_by` / `updated_at` cuma jejak mekanis yang ikut berubah di SETIAP
+ * update — pelakunya sudah ditampilkan di kepala entri ("oleh Nama") dan
+ * waktunya sudah jadi timestamp entri, jadi menampilkannya lagi hanya
+ * memanjangkan daftar dengan UUID dan ISO string yang tak terbaca manusia.
+ */
+export const HIDDEN_AUDIT_FIELDS = new Set(['updated_by', 'updated_at', 'created_at', 'id']);
+
+/**
+ * Field yang ditampilkan untuk operasi INSERT. Tanpa daftar ini, `getFieldChanges`
+ * mengembalikan SELURUH kolom baris baru — belasan baris termasuk business_id dan
+ * flag internal, padahal keadaan terkini transaksi sudah tampil di atas modal.
+ */
+export const INSERT_SUMMARY_FIELDS = [
+  'date',
+  'name',
+  'description',
+  'amount',
+  'category',
+  'status',
+] as const;
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const ISO_DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+
+/**
  * Format field name to human-readable label
  * @param field - Field name (e.g., 'debit_account_id')
+ * @param labels - Peta label terlokalisasi (opsional); dipakai lebih dulu bila ada
  * @returns Human-readable label (e.g., 'Debit Account')
  */
-export function formatFieldName(field: string): string {
+export function formatFieldName(field: string, labels?: Record<string, string>): string {
+  if (labels?.[field]) {
+    return labels[field];
+  }
+
   // Handle common field patterns
   const fieldMap: Record<string, string> = {
     business_id: 'Business',
@@ -188,28 +224,79 @@ export function formatFieldName(field: string): string {
     .join(' ');
 }
 
+export interface AuditValueOptions {
+  /** Nama field asal — dipakai memilih format (tanggal, mata uang, akun). */
+  field?: string;
+  /** Resolusi UUID akun jadi nama akun. */
+  resolveAccount?: (id: string) => string | undefined;
+  /** Label terlokalisasi untuk nilai non-teks. */
+  labels?: {
+    empty?: string;
+    yes?: string;
+    no?: string;
+    /** Peta nilai enum, mis. { draft: 'Draft', posted: 'Posted' }. */
+    values?: Record<string, string>;
+    /** Pengganti dump JSON untuk kolom terstruktur seperti `meta`. */
+    structured?: string;
+  };
+}
+
 /**
- * Format value for display in audit trail
+ * Format value for display in audit trail.
+ *
+ * Tanpa konteks field, nilai mentah dari database bocor apa adanya ke UI —
+ * UUID 36 karakter, ISO timestamp, enum huruf kecil. Semua itu benar secara
+ * data tapi tak terbaca pengguna, jadi `options.field` dipakai untuk memilih
+ * format yang tepat.
+ *
  * @param value - Any value from audit log
+ * @param options - Konteks opsional; tanpa ini perilakunya sama seperti dulu
  * @returns Formatted string for display
  */
-export function formatAuditValue(value: any): string {
-  if (value === null || value === undefined) {
-    return '(empty)';
+export function formatAuditValue(value: unknown, options: AuditValueOptions = {}): string {
+  const { field, resolveAccount, labels } = options;
+
+  if (value === null || value === undefined || value === '') {
+    return labels?.empty ?? '(empty)';
   }
 
   if (typeof value === 'boolean') {
-    return value ? 'Yes' : 'No';
+    return value ? (labels?.yes ?? 'Yes') : (labels?.no ?? 'No');
   }
 
   if (typeof value === 'number') {
-    return value.toLocaleString('id-ID');
+    return field === 'amount'
+      ? formatCurrency(value)
+      : value.toLocaleString('id-ID');
   }
 
   if (typeof value === 'object') {
-    // For objects/arrays, show JSON representation
-    return JSON.stringify(value, null, 2);
+    // Dump JSON penuh (mis. kolom `meta`) tidak terbaca dan merusak tata letak.
+    return labels?.structured ?? '(data terstruktur)';
   }
 
-  return String(value);
+  const text = String(value);
+
+  if (labels?.values?.[text]) {
+    return labels.values[text];
+  }
+
+  if (field?.endsWith('_account_id') && UUID_RE.test(text)) {
+    return resolveAccount?.(text) ?? `${text.slice(0, 8)}…`;
+  }
+
+  if (ISO_DATETIME_RE.test(text)) {
+    return formatDateTime(text);
+  }
+
+  if (ISO_DATE_RE.test(text)) {
+    return formatDateShort(text);
+  }
+
+  // UUID sisa (business_id, created_by, dll) — potong supaya tidak memakan baris.
+  if (UUID_RE.test(text)) {
+    return `${text.slice(0, 8)}…`;
+  }
+
+  return text;
 }

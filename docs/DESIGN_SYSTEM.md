@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 12 Agustus 2026 (§4.3 skeleton: bentuk Form/CardForm/CardGrid/List + `SkeletonRoot` a11y)
+> Terakhir diupdate: 14 Agustus 2026 (§4.5 timeline riwayat / diff audit)
 
 ---
 
@@ -611,6 +611,36 @@ Semua skeleton dibungkus `SkeletonRoot`: `role="status"` + `aria-busy` + teks `s
   <p className="text-xs text-gray-500 dark:text-gray-400">Deskripsi...</p>
 </div>
 ```
+
+### 4.5 Timeline Riwayat (audit / diff)
+
+Untuk daftar kejadian berurutan waktu — riwayat perubahan transaksi, jejak audit.
+Referensi: bagian *Riwayat Perubahan* di [`TransactionDetailModal.tsx`](../src/components/transactions/TransactionDetailModal.tsx).
+
+```tsx
+<ol className="space-y-5">
+  {entries.map((e, i) => (
+    <li key={e.id} className="relative pl-5">
+      {/* rel: -bottom-5 harus sama dengan space-y-5 induknya; sembunyikan di entri terakhir */}
+      {i < entries.length - 1 && (
+        <span aria-hidden className="absolute left-[3px] top-4 -bottom-5 w-px bg-gray-200 dark:bg-gray-700" />
+      )}
+      <span aria-hidden className="absolute left-0 top-[7px] w-[7px] h-[7px] rounded-full bg-primary-500" />
+      {/* kepala: aksi + waktu + pelaku */}
+      {/* isi: <dl className="grid grid-cols-[6rem_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-xs"> */}
+    </li>
+  ))}
+</ol>
+```
+
+**Aturan diff nilai lama → baru:**
+
+- Satu baris per field: label (kolom kiri, `text-gray-500`) + nilai. Jangan pakai blok "Before:"/"After:" bertumpuk — tinggi tiga kali lipat untuk informasi yang sama.
+- Nilai lama `text-gray-400 dark:text-gray-500 line-through`, panah `ArrowRight` `w-3 h-3 text-gray-300 dark:text-gray-600`, nilai baru `font-medium text-gray-800 dark:text-gray-100`.
+- **Tanpa latar merah/hijau.** Arah perubahan sudah terbaca dari urutan + coretan + panah; blok warna di sini melanggar aturan §7 (warna untuk kategori, bukan dekorasi). Warna hanya di titik & label aksi: dibuat `emerald`, diubah `primary`, dihapus `red`.
+- Baris memakai `display: contents` (`<div className="contents">`) supaya tetap satu grid dua kolom walau dibungkus elemen ber-`key`.
+
+**Nilai yang ditampilkan wajib sudah diformat.** Nilai mentah dari DB (UUID akun, ISO timestamp, enum huruf kecil, dump JSON) tidak boleh sampai ke layar — pakai `formatAuditValue(value, { field, resolveAccount, labels })` di [`src/lib/api/audit.ts`](../src/lib/api/audit.ts), dan simpan nilai asli di `title` untuk yang dipendekkan.
 
 ---
 
