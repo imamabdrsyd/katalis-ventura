@@ -858,18 +858,18 @@ function Sidebar({
                   } ${isCollapsed ? 'justify-center' : ''}`}
                 >
                   <SectionIcon className={`w-5 h-5 flex-shrink-0 transition-colors ${
-                    isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'
+                    isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500 group-hover/section:text-indigo-500 dark:group-hover/section:text-indigo-400'
                   }`} />
                   {/* Chevron-right menandai section ini masuk ke halaman hub dulu
                       (beda dari menu biasa yang langsung ke tujuannya). */}
-                  <span className={`flex items-center justify-between flex-1 overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+                  <span className={`items-center justify-between flex-1 overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'hidden w-0 opacity-0' : 'flex w-auto opacity-100'}`}>
                     <span className={`text-xs font-semibold uppercase tracking-wider whitespace-nowrap ${
-                      isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'
+                      isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500 group-hover/section:text-indigo-500 dark:group-hover/section:text-indigo-400'
                     }`}>
                       {section.label}
                     </span>
                     <ChevronRight className={`w-4 h-4 flex-shrink-0 transition-colors ${
-                      isActive ? 'text-indigo-400 dark:text-indigo-400' : 'text-gray-300 dark:text-gray-600'
+                      isActive ? 'text-indigo-400 dark:text-indigo-400' : 'text-gray-300 dark:text-gray-600 group-hover/section:text-indigo-400 dark:group-hover/section:text-indigo-400'
                     }`} />
                   </span>
                 </Link>
