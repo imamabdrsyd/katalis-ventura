@@ -133,7 +133,7 @@ export function PublicOmniChannelPage({ channel, business }: Props) {
           {/* Widget reservasi hanya untuk bisnis jasa */}
           {showWidget && isJasa && (
             <div>
-              <OmnichannelWidget business={business} index={0} />
+              <OmnichannelWidget business={business} index={0} buttonColor={business.button_color} />
             </div>
           )}
         </div>

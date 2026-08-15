@@ -300,7 +300,7 @@ function StorefrontPreview({ publicBiz, isPublicInLanding }: { publicBiz: Public
 
         <div className="scale-[0.85] origin-top-left">
           {isJasa ? (
-            <OmnichannelWidget business={publicBiz} index={0} businesses={[publicBiz]} />
+            <OmnichannelWidget business={publicBiz} index={0} businesses={[publicBiz]} buttonColor={publicBiz.button_color} />
           ) : (
             <OmnichannelLinkCards business={publicBiz} index={0} businesses={[publicBiz]} />
           )}

@@ -17,6 +17,7 @@ interface Props {
   index: number;
   businesses?: PublicBusiness[];
   onSelectBusiness?: (index: number) => void;
+  buttonColor?: string | null;
 }
 
 function formatDate(dateStr: string): string {
@@ -33,7 +34,8 @@ function WhatsAppIcon() {
   );
 }
 
-export function OmnichannelWidget({ business, index, businesses = [], onSelectBusiness }: Props) {
+export function OmnichannelWidget({ business, index, businesses = [], onSelectBusiness, buttonColor }: Props) {
+  const primaryBg = buttonColor ?? '#6366f1';
   const [date, setDate] = useState('');
   const [checkin, setCheckin] = useState('');
   const [checkout, setCheckout] = useState('');
@@ -342,7 +344,8 @@ export function OmnichannelWidget({ business, index, businesses = [], onSelectBu
           <button
             onClick={handleSend}
             disabled={!hasWhatsApp}
-            className="w-full flex items-center justify-center gap-2 bg-indigo-500 hover:bg-indigo-600 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-all"
+            className="w-full flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-all hover:opacity-90"
+            style={{ backgroundColor: primaryBg }}
           >
             <WhatsAppIcon />
             {ctaLabel}
