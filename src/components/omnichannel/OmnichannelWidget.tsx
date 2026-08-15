@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, MapPin } from 'lucide-react';
 import { BusinessInitialsAvatar } from './BusinessInitialsAvatar';
+import FloatingField from '@/components/ui/FloatingField';
 import { PublicBusiness, formatCategory, formatSector } from './types';
 import {
   computeRangePricing,
@@ -36,6 +37,9 @@ function WhatsAppIcon() {
 
 export function OmnichannelWidget({ business, index, businesses = [], onSelectBusiness, buttonColor }: Props) {
   const primaryBg = buttonColor ?? '#6366f1';
+  // Gradien glow diturunkan dari warna tombol pilihan owner (bukan indigo mati
+  // seperti .btn-primary-glow), jadi setelan Warna Tombol Utama tetap kepakai.
+  const primaryGradient = `linear-gradient(to bottom, ${primaryBg}, color-mix(in srgb, ${primaryBg} 82%, #000))`;
   const [date, setDate] = useState('');
   const [checkin, setCheckin] = useState('');
   const [checkout, setCheckout] = useState('');
@@ -156,13 +160,8 @@ export function OmnichannelWidget({ business, index, businesses = [], onSelectBu
     window.open(url, '_blank');
   }
 
-  const metaLine = [
-    formatCategory(business.business_type),
-    formatSector(business.business_sector),
-    business.city,
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  // Tipe & sektor jadi chip ghost; kota berdiri sendiri di samping nama bisnis.
+  const chips = [formatCategory(business.business_type), formatSector(business.business_sector)].filter(Boolean);
 
   return (
     <div className="rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-5 shadow-lg shadow-gray-200/60 dark:shadow-gray-900/60 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
@@ -183,25 +182,43 @@ export function OmnichannelWidget({ business, index, businesses = [], onSelectBu
           <BusinessInitialsAvatar name={business.business_name} index={index} />
         )}
         <div className="min-w-0 flex-1 relative" ref={dropdownRef}>
-          {businesses.length > 1 && onSelectBusiness ? (
-            <button
-              type="button"
-              onClick={() => setDropdownOpen((v) => !v)}
-              className="flex items-center gap-1 text-sm font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors max-w-full"
-            >
-              <span className="truncate">{business.business_name}</span>
-              <ChevronDown
-                className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`}
-              />
-            </button>
-          ) : (
-            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-              {business.business_name}
-            </p>
+          <div className="flex items-baseline gap-1.5 min-w-0">
+            {businesses.length > 1 && onSelectBusiness ? (
+              <button
+                type="button"
+                onClick={() => setDropdownOpen((v) => !v)}
+                className="flex items-center gap-1 text-sm font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors min-w-0"
+              >
+                <span className="truncate">{business.business_name}</span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+            ) : (
+              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                {business.business_name}
+              </p>
+            )}
+            {business.city && (
+              <span className="flex items-center gap-0.5 shrink-0 text-[11px] text-gray-400 dark:text-gray-500">
+                <MapPin className="w-3 h-3" aria-hidden="true" />
+                {business.city}
+              </span>
+            )}
+          </div>
+
+          {chips.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+              {chips.map((chip) => (
+                <span
+                  key={chip}
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium text-gray-500 dark:text-gray-400 ring-1 ring-inset ring-gray-200 dark:ring-gray-700"
+                >
+                  {chip}
+                </span>
+              ))}
+            </div>
           )}
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 truncate">
-            {metaLine}
-          </p>
 
           {/* Business switcher dropdown */}
           {dropdownOpen && businesses.length > 1 && (
@@ -233,66 +250,54 @@ export function OmnichannelWidget({ business, index, businesses = [], onSelectBu
       {isJasa ? (
         <>
           {dateMode === 'single' ? (
-            <div className="mb-3">
-              <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1">
-                {dateLabel}
-              </label>
-              <input
+            <div className="mb-4">
+              <FloatingField
                 type="date"
+                label={dateLabel}
                 min={today}
                 value={date}
                 onChange={(e) => {
                   setDate(e.target.value);
                   setError('');
                 }}
-                className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                className="text-sm"
               />
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <div>
-                <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1">
-                  {checkinLabel}
-                </label>
-                <input
-                  type="date"
-                  min={today}
-                  value={checkin}
-                  onChange={(e) => {
-                    setCheckin(e.target.value);
-                    setError('');
-                  }}
-                  className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1">
-                  {checkoutLabel}
-                </label>
-                <input
-                  type="date"
-                  min={checkin || today}
-                  value={checkout}
-                  onChange={(e) => {
-                    setCheckout(e.target.value);
-                    setError('');
-                  }}
-                  className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                />
-              </div>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <FloatingField
+                type="date"
+                label={checkinLabel}
+                min={today}
+                value={checkin}
+                onChange={(e) => {
+                  setCheckin(e.target.value);
+                  setError('');
+                }}
+                className="text-sm"
+              />
+              <FloatingField
+                type="date"
+                label={checkoutLabel}
+                min={checkin || today}
+                value={checkout}
+                onChange={(e) => {
+                  setCheckout(e.target.value);
+                  setError('');
+                }}
+                className="text-sm"
+              />
             </div>
           )}
 
           <div className="mb-4">
-            <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1">
-              {noteLabel}
-            </label>
-            <input
+            <FloatingField
               type="text"
+              label={noteLabel}
               placeholder={notePlaceholder}
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+              className="text-sm"
             />
           </div>
 
@@ -344,8 +349,8 @@ export function OmnichannelWidget({ business, index, businesses = [], onSelectBu
           <button
             onClick={handleSend}
             disabled={!hasWhatsApp}
-            className="w-full flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-all hover:opacity-90"
-            style={{ backgroundColor: primaryBg }}
+            className="w-full flex items-center justify-center gap-2 active:scale-[0.98] motion-reduce:transform-none disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 disabled:shadow-none text-white text-sm font-semibold py-2.5 px-4 rounded-xl shadow-sm hover:shadow-md hover:brightness-110 transition-all duration-150"
+            style={{ backgroundImage: primaryGradient, boxShadow: `0 1px 3px ${primaryBg}33` }}
           >
             <WhatsAppIcon />
             {ctaLabel}
