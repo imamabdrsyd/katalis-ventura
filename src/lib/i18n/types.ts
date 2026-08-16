@@ -1954,7 +1954,6 @@ export interface Translations {
   };
 
   journalEntry: {
-    sectionLabel: string;
     /** Panel jenis transaksi: tombol + modal "tambah jenis ke panel". */
     addEntryType: string;
     entryTypePickerTitle: string;

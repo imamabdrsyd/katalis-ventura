@@ -347,7 +347,11 @@ export function OutstandingSettlementPicker({
         </div>
       )}
 
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 overflow-hidden">
+      {/* max-h + overflow-y-auto: daftar tagihan yang mengurus scroll-nya
+          sendiri, bukan panel form-nya. Halaman Journal Entry scroll normal
+          mengikuti dokumen, jadi tanpa batas tinggi di sini daftar panjang
+          akan mendorong tombol simpan jauh ke bawah layar. */}
+      <div className="max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
         {filtered.length === 0 && (
           <p className="px-4 py-6 text-sm text-center text-gray-500 dark:text-gray-400">
             {tp.noResults.replace('{keyword}', search)}
