@@ -6,6 +6,8 @@ import { AlertCircle, Check } from 'lucide-react';
 import * as accountsApi from '@/lib/api/accounts';
 import * as contactsApi from '@/lib/api/contacts';
 import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
+import { renderWithStrong } from '@/components/ui/RichText';
+import { useLanguage } from '@/context/LanguageContext';
 
 export interface AccountFormData {
   account_code: string;
@@ -58,6 +60,8 @@ export function AccountForm({
   parentAccounts,
   parentAccountId,
 }: AccountFormProps) {
+  const { t } = useLanguage();
+  const af = t.accountForm;
   const isEditMode = !!account;
   const isSystemAccount = !!account?.is_system;
 
@@ -128,14 +132,14 @@ export function AccountForm({
         }));
       } catch (err: any) {
         console.error('Failed to generate code:', err);
-        setCodeRangeError(err?.message || 'Gagal membuat kode akun');
+        setCodeRangeError(err?.message || af.errCodeGenerate);
       } finally {
         setLoadingCode(false);
       }
     }
 
     generateCode();
-  }, [formData.parent_account_id, businessId, isEditMode]);
+  }, [formData.parent_account_id, businessId, isEditMode, af]);
 
   // Auto-set type and normal balance when parent changes
   useEffect(() => {
@@ -160,7 +164,7 @@ export function AccountForm({
 
     // Must be 4-digit numeric
     if (!/^\d{4}$/.test(code)) {
-      setCodeValidation({ valid: false, message: 'Kode harus 4 digit angka' });
+      setCodeValidation({ valid: false, message: af.errCodeFormat });
       return;
     }
 
@@ -178,12 +182,12 @@ export function AccountForm({
 
     // Must not be already taken
     if (existingCodes.includes(code)) {
-      setCodeValidation({ valid: false, message: 'Kode sudah digunakan oleh akun lain' });
+      setCodeValidation({ valid: false, message: af.codeTakenLive });
       return;
     }
 
-    setCodeValidation({ valid: true, message: 'Kode tersedia' });
-  }, [selectedParent, existingCodes]);
+    setCodeValidation({ valid: true, message: af.codeValid });
+  }, [selectedParent, existingCodes, af]);
 
   // Handle manual account code input
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -208,32 +212,32 @@ export function AccountForm({
     const newErrors: Record<string, string> = {};
 
     if (!formData.parent_account_id && !isEditMode) {
-      newErrors.parent_account_id = 'Pilih kategori induk';
+      newErrors.parent_account_id = af.errParentRequired;
     }
 
     if (!formData.account_name.trim()) {
-      newErrors.account_name = 'Nama akun wajib diisi';
+      newErrors.account_name = af.errNameRequired;
     } else if (formData.account_name.length < 3) {
-      newErrors.account_name = 'Nama minimal 3 karakter';
+      newErrors.account_name = af.errNameMin;
     } else if (formData.account_name.length > 100) {
-      newErrors.account_name = 'Nama maksimal 100 karakter';
+      newErrors.account_name = af.errNameMax;
     }
 
     if (!formData.account_code) {
-      newErrors.account_code = 'Kode akun belum dibuat';
+      newErrors.account_code = af.errCodeMissing;
     } else if (!isEditMode) {
       if (!/^\d{4}$/.test(formData.account_code)) {
-        newErrors.account_code = 'Kode harus 4 digit angka';
+        newErrors.account_code = af.errCodeFormat;
       } else if (selectedParent) {
         const baseCode = parseInt(selectedParent.account_code);
         const codeNum = parseInt(formData.account_code);
         if (codeNum < baseCode + 1 || codeNum > baseCode + 999) {
           newErrors.account_code = `Kode harus dalam rentang ${baseCode + 1}–${baseCode + 999}`;
         } else if (existingCodes.includes(formData.account_code)) {
-          newErrors.account_code = 'Kode akun sudah digunakan';
+          newErrors.account_code = af.errCodeTaken;
         }
       } else if (existingCodes.includes(formData.account_code)) {
-        newErrors.account_code = 'Kode akun sudah digunakan';
+        newErrors.account_code = af.errCodeTaken;
       }
     }
 
@@ -282,7 +286,7 @@ export function AccountForm({
   return (
     <form onSubmit={handleSubmit} className="p-6 space-y-7">
       <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-        {isEditMode ? 'Edit Akun' : 'Tambah Sub-Akun Baru'}
+        {isEditMode ? af.titleEdit : af.titleCreate}
       </h2>
 
       {/* Warning for edit mode */}
@@ -291,8 +295,8 @@ export function AccountForm({
           <AlertCircle className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-gray-500 dark:text-gray-400">
             {isSystemAccount
-              ? 'Akun sistem — kode, tipe, dan kategori tidak dapat diubah. Anda boleh mengubah nama (mis. "Bank" → "BCA Rekening Usaha") dan deskripsi.'
-              : 'Kode dan tipe akun tidak dapat diubah.'}
+              ? af.editWarnSystem
+              : af.editWarnNormal}
           </p>
         </div>
       )}
@@ -301,7 +305,7 @@ export function AccountForm({
       {!isEditMode && (
         <div>
           <FloatingSelect
-            label="Kategori Induk *"
+            label={af.parentLabel}
             name="parent_account_id"
             value={formData.parent_account_id}
             onChange={handleChange}
@@ -334,22 +338,22 @@ export function AccountForm({
             onClick={() => setGuideOpen((v) => !v)}
             className="w-full flex items-center justify-between px-3 py-2.5 text-left"
           >
-            <span className="font-semibold text-blue-700 dark:text-blue-400">Panduan Pembuatan Akun Aset</span>
+            <span className="font-semibold text-blue-700 dark:text-blue-400">{af.guideTitle}</span>
             <span className="text-gray-400 dark:text-gray-500">{guideOpen ? '▲' : '▼'}</span>
           </button>
           {guideOpen && (
             <div className="px-3 pb-3 space-y-1.5 text-gray-700 dark:text-gray-300">
-              <p><strong>Aset Lancar</strong> (bisa dicairkan &lt;12 bulan):</p>
+              <p><strong>{af.guideCurrentAssets}</strong> {af.guideCurrentAssetsNote}</p>
               <ul className="list-disc list-inside pl-2 space-y-0.5">
-                <li>Persediaan / Inventory &rarr; kategori default: <strong>VAR</strong></li>
-                <li>Piutang Usaha &rarr; kategori default: <strong>EARN</strong></li>
-                <li>Uang Muka, Sewa Dibayar di Muka &rarr; kosongkan kategori</li>
+                <li>{af.guideInventory} <strong>VAR</strong></li>
+                <li>{af.guideReceivable} <strong>EARN</strong></li>
+                <li>{af.guidePrepaid}</li>
               </ul>
-              <p><strong>Aset Tetap</strong> (digunakan &gt;12 bulan):</p>
+              <p><strong>{af.guideFixedAssets}</strong> {af.guideFixedAssetsNote}</p>
               <ul className="list-disc list-inside pl-2 space-y-0.5">
-                <li>Peralatan, Kendaraan, Properti &rarr; kategori default: <strong>CAPEX</strong></li>
+                <li>{af.guideFixedAssetsItems} <strong>CAPEX</strong></li>
               </ul>
-              <p className="text-gray-500 dark:text-gray-400 italic">Kategori akan terdeteksi otomatis dari nama akun.</p>
+              <p className="text-gray-500 dark:text-gray-400 italic">{af.guideAutoDetect}</p>
             </div>
           )}
         </div>
@@ -359,11 +363,11 @@ export function AccountForm({
       <div className="grid grid-cols-2 gap-4">
         <div>
           <FloatingField
-            label="Kode Akun"
+            label={af.codeLabel}
             name="account_code"
             value={loadingCode ? '' : formData.account_code}
             onChange={handleCodeChange}
-            placeholder={loadingCode ? 'Generating...' : suggestedCode || undefined}
+            placeholder={loadingCode ? af.codeGenerating : suggestedCode || undefined}
             className={`${
               !isEditMode && codeValidation
                 ? codeValidation.valid
@@ -393,7 +397,7 @@ export function AccountForm({
           )}
           {!isEditMode && !codeValidation && formData.account_code && !codeRangeError && !loadingCode && (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Kode otomatis — bisa diubah manual
+              {af.codeAutoHint}
             </p>
           )}
           {codeRangeError && (
@@ -407,14 +411,14 @@ export function AccountForm({
         {/* Account Type (auto from parent, read-only) */}
         <div>
           <FloatingField
-            label="Tipe Akun"
+            label={af.typeLabel}
             value={formData.account_type}
             disabled
             readOnly
           />
           {selectedParent && (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Otomatis dari: {selectedParent.account_name}
+              {af.typeFromParent} {selectedParent.account_name}
             </p>
           )}
         </div>
@@ -423,11 +427,11 @@ export function AccountForm({
       {/* Account Name */}
       <div>
         <FloatingField
-          label="Nama Akun *"
+          label={af.nameLabel}
           name="account_name"
           value={formData.account_name}
           onChange={handleChange}
-          placeholder="Contoh: Bank BCA, Listrik, Gaji Karyawan"
+          placeholder={af.namePlaceholder}
           maxLength={100}
           disabled={loading}
           required
@@ -439,14 +443,14 @@ export function AccountForm({
 
       {/* Description */}
       <div>
-        <label className="label">Deskripsi (Opsional)</label>
+        <label className="label">{af.descriptionLabel}</label>
         <textarea
           name="description"
           value={formData.description}
           onChange={handleChange}
           className="input"
           rows={2}
-          placeholder="Catatan tambahan tentang akun ini"
+          placeholder={af.descriptionPlaceholder}
           disabled={loading}
         />
       </div>
@@ -454,8 +458,8 @@ export function AccountForm({
       {/* Default Category */}
       <div>
         <label className="label">
-          Kategori Transaksi Default
-          <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">(Opsional)</span>
+          {af.defaultCategoryLabel}
+          <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">({t.common.optional})</span>
         </label>
         <select
           name="default_category"
@@ -469,18 +473,18 @@ export function AccountForm({
           }}
           className="input"
           disabled={loading || isSystemAccount}
-          title={isSystemAccount ? 'Kategori akun sistem dikelola otomatis' : undefined}
+          title={isSystemAccount ? af.defaultCategorySystemTooltip : undefined}
         >
-          <option value="">Deteksi otomatis dari tipe akun</option>
-          <option value="EARN">EARN - Pendapatan/Penjualan</option>
-          <option value="OPEX">OPEX - Beban Operasional</option>
-          <option value="VAR">VAR - Biaya Variabel/COGS</option>
-          <option value="CAPEX">CAPEX - Belanja Modal</option>
-          <option value="TAX">TAX - Beban Pajak</option>
-          <option value="FIN">FIN - Aktivitas Pendanaan</option>
+          <option value="">{af.defaultCategoryAuto}</option>
+          <option value="EARN">{af.optEarn}</option>
+          <option value="OPEX">{af.optOpex}</option>
+          <option value="VAR">{af.optVar}</option>
+          <option value="CAPEX">{af.optCapex}</option>
+          <option value="TAX">{af.optTax}</option>
+          <option value="FIN">{af.optFin}</option>
         </select>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          Kategori transaksi default ketika akun ini dipilih. Kosongkan untuk deteksi otomatis berdasarkan tipe akun.
+          {af.defaultCategoryHint}
         </p>
       </div>
 
@@ -488,16 +492,16 @@ export function AccountForm({
       {(formData.account_type === 'ASSET' && formData.default_category === 'CAPEX') && (
         <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3 bg-gray-50 dark:bg-gray-800/50">
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-            Penyusutan Aset Tetap
-            <span className="text-xs font-normal text-gray-500 dark:text-gray-400 ml-2">(Opsional — PSAK 16)</span>
+            {af.depreciationTitle}
+            <span className="text-xs font-normal text-gray-500 dark:text-gray-400 ml-2">{af.depreciationBadge}</span>
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Isi jika ingin sistem menghitung penyusutan otomatis di laporan keuangan. Kosongkan jika tidak perlu.
+            {af.depreciationHint}
           </p>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label">Tanggal Perolehan</label>
+              <label className="label">{af.acquisitionDate}</label>
               <input
                 type="date"
                 name="acquisition_date"
@@ -508,7 +512,7 @@ export function AccountForm({
               />
             </div>
             <div>
-              <label className="label">Masa Manfaat (bulan)</label>
+              <label className="label">{af.usefulLifeMonths}</label>
               <input
                 type="number"
                 name="useful_life_months"
@@ -518,7 +522,7 @@ export function AccountForm({
                   setFormData(prev => ({ ...prev, useful_life_months: val }));
                 }}
                 className="input"
-                placeholder="Contoh: 60"
+                placeholder={af.usefulLifePlaceholder}
                 min={1}
                 disabled={loading}
               />
@@ -529,7 +533,7 @@ export function AccountForm({
           </div>
 
           <div>
-            <label className="label">Nilai Residu (Rp)</label>
+            <label className="label">{af.residualValue}</label>
             <input
               type="number"
               name="residual_value"
@@ -556,10 +560,10 @@ export function AccountForm({
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                Akun Saham / Modal Pemilik
+                {af.flagStockTitle}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Tandai akun ini sebagai modal disetor pemilik/investor (share capital). Kredit ke akun ini masuk gross invested capital untuk ROI dashboard.
+                {af.flagStockHint}
               </p>
             </div>
             <button
@@ -609,7 +613,7 @@ export function AccountForm({
                     }))
                   }
                   disabled={loading}
-                  placeholder="Kosongkan = ikut % modal disetor"
+                  placeholder={af.profitSharePlaceholder}
                   className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -618,7 +622,7 @@ export function AccountForm({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Tautkan ke Kontak Pemilik
+                  {af.linkOwnerContact}
                 </label>
                 <select
                   value={formData.contact_id ?? ''}
@@ -655,15 +659,15 @@ export function AccountForm({
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                Akun Kas / Setara Kas
+                {af.flagCashTitle}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Tandai akun ini sebagai kas atau setara kas (mis. Kas Kecil, BCA, Mandiri). Akun yang ditandai akan masuk Cash Flow report, Bank Reconciliation, dan jadi counter-account otomatis di Quick Transaction.
+                {af.flagCashHint}
               </p>
               {isSystemAccount && (
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 flex items-center gap-1">
                   <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                  Status untuk akun sistem dikelola otomatis dan tidak dapat diubah.
+                  {af.flagSystemLocked}
                 </p>
               )}
             </div>
@@ -699,15 +703,15 @@ export function AccountForm({
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                Akun Piutang Usaha (Trade Receivable)
+                {af.flagReceivableTitle}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Tandai akun ini sebagai piutang usaha (mis. &ldquo;Tagihan Pelanggan&rdquo;, &ldquo;Outstanding Bills&rdquo;). Pelunasan akun ini akan masuk Cash Flow sebagai aktivitas <strong>Operasional</strong>, bukan Investing. Khusus piutang dari penjualan — jangan tandai untuk talangan/pinjaman.
+                {renderWithStrong(af.flagReceivableHint, { strong: af.wordOperating })}
               </p>
               {isSystemAccount && (
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 flex items-center gap-1">
                   <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                  Status untuk akun sistem dikelola otomatis dan tidak dapat diubah.
+                  {af.flagSystemLocked}
                 </p>
               )}
             </div>
@@ -743,10 +747,10 @@ export function AccountForm({
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                Akun Dividen / Prive (Penarikan Pemilik)
+                {af.flagDividendTitle}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Tandai akun ini sebagai Dividen / Prive / Drawing. Saat dipilih di transaksi, sistem menawarkan mode <strong>Declare</strong> (vs Hutang Dividen) atau <strong>Cashout</strong> langsung (vs Kas/Bank).
+                {renderWithStrong(af.flagDividendHint, { declare: 'Declare', cashout: 'Cashout' })}
               </p>
             </div>
             <button
@@ -779,7 +783,7 @@ export function AccountForm({
           {formData.is_dividend && (
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Dividen / Prive untuk Pemilik
+                {af.dividendOwnerLabel}
               </label>
               <select
                 value={formData.owner_stock_account_id ?? ''}
@@ -802,7 +806,7 @@ export function AccountForm({
               {stockAccounts.length === 0 && (
                 <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
                   <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                  Belum ada akun modal pemilik (is_stock). Tandai akun modal dulu agar bisa dipetakan.
+                  {af.dividendOwnerEmpty}
                 </p>
               )}
             </div>
@@ -816,10 +820,10 @@ export function AccountForm({
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                Akun Hutang Dividen (Dividend Payable)
+                {af.flagDividendPayableTitle}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Tandai akun ini sebagai tujuan kredit otomatis saat dividen di-<em>declare</em> (commitment). Hanya satu akun per bisnis.
+                {renderWithStrong(af.flagDividendPayableHint, { declare: 'declare' }, 'em')}
               </p>
             </div>
             <button
@@ -846,7 +850,7 @@ export function AccountForm({
           {formData.is_dividend_payable && (
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 flex items-center gap-1">
               <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-              Jika bisnis sudah memiliki akun Hutang Dividen lain, penanda tersebut akan dipindah ke akun ini.
+              {af.dividendPayableMoveNote}
             </p>
           )}
         </div>
@@ -858,15 +862,15 @@ export function AccountForm({
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                Akun Hutang Operasional (Trade Payable / Accrued)
+                {af.flagPayableTitle}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Tandai akun ini sebagai hutang operasional (mis. &ldquo;Hutang Supplier&rdquo;, &ldquo;Accrued Expenses&rdquo;). Pelunasan akun ini akan masuk Cash Flow sebagai aktivitas <strong>Operasional</strong>, bukan Financing. Khusus hutang dari operasional — jangan tandai untuk pinjaman bank/kredit.
+                {renderWithStrong(af.flagPayableHint, { strong: af.wordOperating })}
               </p>
               {isSystemAccount && (
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 flex items-center gap-1">
                   <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                  Status untuk akun sistem dikelola otomatis dan tidak dapat diubah.
+                  {af.flagSystemLocked}
                 </p>
               )}
             </div>
@@ -904,14 +908,14 @@ export function AccountForm({
           className="btn-secondary flex-1"
           disabled={loading}
         >
-          Batal
+          {t.common.cancel}
         </button>
         <button
           type="submit"
           className="btn-primary-glow flex-1"
           disabled={loading || loadingCode || !!codeRangeError || (!isEditMode && !formData.parent_account_id) || (codeValidation !== null && !codeValidation.valid)}
         >
-          {loading ? 'Menyimpan...' : isEditMode ? 'Simpan Perubahan' : 'Buat Akun'}
+          {loading ? t.common.saving : isEditMode ? af.submitUpdate : af.submitCreate}
         </button>
       </div>
     </form>

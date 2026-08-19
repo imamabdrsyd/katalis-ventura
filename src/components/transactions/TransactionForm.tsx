@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import type { Transaction, TransactionCategory, TransactionMeta, TransactionAttachment, Account, TransactionTemplate, SalesChannel } from '@/types';
-import { CATEGORY_LABELS } from '@/lib/calculations';
 import { getAccounts } from '@/lib/api/accounts';
 import { AccountDropdown } from './AccountDropdown';
 import { useParams } from 'next/navigation';
+import { useLanguage } from '@/context/LanguageContext';
 import { detectCategory } from '@/lib/utils/transactionHelpers';
 import { useAccountingGuidance } from '@/hooks/useAccountingGuidance';
 import { AlertCircle, Lightbulb, AlertTriangle, BookTemplate, ChevronDown, Trash2, X, RefreshCw } from 'lucide-react';
@@ -168,6 +168,8 @@ export function TransactionForm({
   onConvertToMultiLine,
 }: TransactionFormProps) {
   const params = useParams();
+  const { t } = useLanguage();
+  const tf = t.transactionForm;
   const businessId = businessIdProp || (params?.businessId as string);
   const { user, activeBusiness } = useBusinessContext();
   const baseChannelOptions = getSalesChannelOptions(activeBusiness?.business_type);
@@ -377,8 +379,8 @@ export function TransactionForm({
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.date) newErrors.date = 'Tanggal harus diisi';
-    if (!formData.name.trim()) newErrors.name = 'Nama harus diisi';
+    if (!formData.date) newErrors.date = tf.errDateRequired;
+    if (!formData.name.trim()) newErrors.name = tf.errNameRequired;
 
     // Auto-fill description if empty and using double-entry
     if (!formData.description.trim() && isDoubleEntry) {
@@ -389,28 +391,28 @@ export function TransactionForm({
           description: oppositeAccount,
         }));
       } else {
-        newErrors.description = 'Deskripsi harus diisi';
+        newErrors.description = tf.errDescriptionRequired;
       }
     } else if (!formData.description.trim()) {
-      newErrors.description = 'Deskripsi harus diisi';
+      newErrors.description = tf.errDescriptionRequired;
     }
 
-    if (originalAmount <= 0 || formData.amount <= 0) newErrors.amount = 'Jumlah harus lebih dari 0';
+    if (originalAmount <= 0 || formData.amount <= 0) newErrors.amount = tf.errAmountPositive;
     if (isForeignCurrency && (!fxRate || fxRate <= 0)) {
-      newErrors.fx_rate = 'Kurs harus lebih dari 0';
+      newErrors.fx_rate = tf.errFxRatePositive;
     }
 
     // Validate accounts based on format
     if (isDoubleEntry) {
       // Double-entry validation
-      if (!formData.debit_account_id) newErrors.debit_account_id = 'Akun debit harus diisi';
-      if (!formData.credit_account_id) newErrors.credit_account_id = 'Akun kredit harus diisi';
+      if (!formData.debit_account_id) newErrors.debit_account_id = tf.errDebitRequired;
+      if (!formData.credit_account_id) newErrors.credit_account_id = tf.errCreditRequired;
       if (formData.debit_account_id === formData.credit_account_id) {
-        newErrors.debit_account_id = 'Akun debit dan kredit harus berbeda';
+        newErrors.debit_account_id = tf.errDebitCreditSame;
       }
     } else {
       // Legacy validation
-      if (!formData.account.trim()) newErrors.account = 'Akun harus diisi';
+      if (!formData.account.trim()) newErrors.account = tf.errAccountRequired;
     }
 
     setErrors(newErrors);
@@ -430,7 +432,7 @@ export function TransactionForm({
           setAttachments(finalAttachments);
         } catch (err: any) {
           setUploadingAttachments(false);
-          setErrors((prev) => ({ ...prev, submit: err?.message || 'Gagal mengupload lampiran' }));
+          setErrors((prev) => ({ ...prev, submit: err?.message || tf.errUploadAttachment }));
           return;
         }
         setUploadingAttachments(false);
@@ -773,13 +775,13 @@ export function TransactionForm({
         <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20">
           <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300 min-w-0">
             <Lightbulb className="w-4 h-4 flex-shrink-0" />
-            <span className="truncate">Punya foto struk? Scan otomatis untuk isi form.</span>
+            <span className="truncate">{tf.ocrHint}</span>
           </div>
           <OCRScanButton
             businessId={businessId}
             onParsed={handleOcrParsed}
             variant="secondary"
-            label="Scan Struk"
+            label={tf.ocrScanLabel}
           />
         </div>
       )}
@@ -794,7 +796,7 @@ export function TransactionForm({
           >
             <div className="flex items-center gap-2">
               <BookTemplate className="w-4 h-4" />
-              <span>Gunakan Template</span>
+              <span>{tf.useTemplate}</span>
             </div>
             <ChevronDown className={`w-4 h-4 transition-transform ${templateDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
@@ -810,14 +812,14 @@ export function TransactionForm({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{tmpl.name}</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500">
-                      {CATEGORY_LABELS[tmpl.category]}{tmpl.default_amount ? ` · Rp ${tmpl.default_amount.toLocaleString('id-ID')}` : ''}
+                      {t.categories[tmpl.category]}{tmpl.default_amount ? ` · Rp ${tmpl.default_amount.toLocaleString('id-ID')}` : ''}
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={(e) => handleDeleteTemplate(tmpl.id, e)}
                     className="ml-2 p-1 rounded text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Hapus template"
+                    title={tf.deleteTemplate}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -832,7 +834,7 @@ export function TransactionForm({
       {mode !== 'full' && (
         <>
           <CurrencyInputWithCalculator
-            label="Jumlah"
+            label={t.common.amount}
             displayValue={displayAmount}
             onChange={handleOriginalAmountChange}
             inputClassName="text-2xl font-bold"
@@ -873,7 +875,7 @@ export function TransactionForm({
           >
             {categories.map((cat) => (
               <option key={cat} value={cat}>
-                {CATEGORY_LABELS[cat]}
+                {t.categories[cat]}
               </option>
             ))}
           </FloatingSelect>
@@ -888,7 +890,7 @@ export function TransactionForm({
       {/* 1b. SALES CHANNEL — hanya untuk EARN (semua mode) */}
       {formData.category === 'EARN' && (
         <FloatingSelect
-          label="Channel Penjualan"
+          label={tf.salesChannelLabel}
           name="sales_channel"
           value={formData.sales_channel ?? ''}
           onChange={(e) =>
@@ -923,7 +925,7 @@ export function TransactionForm({
       {mode === 'full' && (
         <>
           <CurrencyInputWithCalculator
-            label="Jumlah"
+            label={t.common.amount}
             displayValue={displayAmount}
             onChange={handleOriginalAmountChange}
             error={errors.amount}
@@ -953,7 +955,7 @@ export function TransactionForm({
       {/* 3. NAMA Customer/Vendor */}
       <div>
         <label className="label">
-          {mode === 'in' ? 'Nama Customer' : mode === 'out' ? 'Nama Vendor' : 'Nama'} *
+          {mode === 'in' ? tf.nameCustomer : mode === 'out' ? tf.nameVendor : tf.nameGeneric} *
         </label>
         <ContactAutocomplete
           businessId={businessId}
@@ -961,7 +963,7 @@ export function TransactionForm({
           onChange={(val) => setFormData((prev) => ({ ...prev, name: val, contact_id: null }))}
           onSelectContact={(contact) => setFormData((prev) => ({ ...prev, contact_id: contact.id }))}
           className="input-underline"
-          placeholder={mode === 'in' ? 'Nama customer' : mode === 'out' ? 'Nama vendor/penerima' : 'Customer atau vendor terkait'}
+          placeholder={mode === 'in' ? tf.namePlaceholderCustomer : mode === 'out' ? tf.namePlaceholderVendor : tf.namePlaceholderGeneric}
           required
           onSaveAsContact={async (name) => {
             if (!businessId || !user) return;
@@ -983,7 +985,7 @@ export function TransactionForm({
 
       {/* 4. KETERANGAN */}
       <div>
-        <label className="label">Keterangan {mode !== 'full' && '(opsional)'}</label>
+        <label className="label">{tf.descriptionLabel} {mode !== 'full' && `(${t.common.optional})`}</label>
         <textarea
           name="description"
           value={formData.description}
@@ -993,8 +995,8 @@ export function TransactionForm({
           rows={3}
           placeholder={
             isDoubleEntry
-              ? 'Masukkan keterangan transaksi (kosongkan untuk auto-fill dengan deskripsi akun)'
-              : 'Masukkan keterangan transaksi'
+              ? tf.descriptionPlaceholderAuto
+              : tf.descriptionPlaceholder
           }
         />
         {errors.description && (
@@ -1035,22 +1037,22 @@ export function TransactionForm({
           {mode === 'in' && (
             <>
               <AccountDropdown
-                label="Uang Masuk Ke"
+                label={tf.inflowTo}
                 accounts={accounts}
                 value={formData.debit_account_id}
                 onChange={handleAccountChange('debit')}
-                placeholder="Pilih rekening tujuan"
+                placeholder={tf.selectDestinationAccount}
                 suggestedCode={suggestedAccounts?.debit}
                 error={errors.debit_account_id}
                 filterMode="in-destination"
                 required
               />
               <AccountDropdown
-                label="Dari (Sumber)"
+                label={tf.sourceFrom}
                 accounts={accounts}
                 value={formData.credit_account_id}
                 onChange={handleAccountChange('credit')}
-                placeholder="Pilih sumber pendapatan"
+                placeholder={tf.selectRevenueSource}
                 suggestedCode={suggestedAccounts?.credit}
                 error={errors.credit_account_id}
                 filterMode="in-source"
@@ -1062,22 +1064,22 @@ export function TransactionForm({
           {mode === 'out' && (
             <>
               <AccountDropdown
-                label="Bayar Dari"
+                label={tf.payFrom}
                 accounts={accounts}
                 value={formData.credit_account_id}
                 onChange={handleAccountChange('credit')}
-                placeholder="Pilih rekening sumber"
+                placeholder={tf.selectSourceAccount}
                 suggestedCode={suggestedAccounts?.credit}
                 error={errors.credit_account_id}
                 filterMode="out-source"
                 required
               />
               <AccountDropdown
-                label="Untuk (Jenis Beban)"
+                label={tf.expenseFor}
                 accounts={accounts}
                 value={formData.debit_account_id}
                 onChange={handleAccountChange('debit')}
-                placeholder="Pilih jenis beban"
+                placeholder={tf.selectExpenseType}
                 suggestedCode={suggestedAccounts?.debit}
                 error={errors.debit_account_id}
                 filterMode="out-destination"
@@ -1141,28 +1143,28 @@ export function TransactionForm({
           {mode === 'full' && (
             <>
               <div className="pt-2 pb-1 border-t border-gray-200 dark:border-gray-700">
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Account</p>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{tf.accountSectionTitle}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Gunakan akun debit/kredit untuk pencatatan yang lebih detail.
+                  {tf.accountSectionHint}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <AccountDropdown
-                  label="Debit"
+                  label={tf.debitLabel}
                   accounts={accounts}
                   value={formData.debit_account_id}
                   onChange={handleAccountChange('debit')}
-                  placeholder="Pilih akun Debit"
+                  placeholder={tf.selectDebitAccount}
                   suggestedCode={suggestedAccounts?.debit}
                   error={errors.debit_account_id}
                 />
                 <AccountDropdown
-                  label="Kredit"
+                  label={tf.creditLabel}
                   accounts={accounts}
                   value={formData.credit_account_id}
                   onChange={handleAccountChange('credit')}
-                  placeholder="Pilih akun Kredit"
+                  placeholder={tf.selectCreditAccount}
                   suggestedCode={suggestedAccounts?.credit}
                   error={errors.credit_account_id}
                 />
@@ -1252,7 +1254,7 @@ export function TransactionForm({
       {debitInventorySelected && businessId && (
         <div className="rounded-xl border border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/40 dark:bg-indigo-900/10 p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-500 dark:text-indigo-400 mb-2">
-            Hubungkan ke Katalog
+            {tf.linkToCatalog}
           </p>
           {pickedCatalogItem ? (
             <div className="flex flex-wrap items-center gap-1.5">
@@ -1261,7 +1263,7 @@ export function TransactionForm({
                 <button
                   type="button"
                   onClick={() => setPickedCatalogItem(null)}
-                  aria-label="Hapus item katalog"
+                  aria-label={tf.removeCatalogItem}
                   className="hover:text-indigo-900 dark:hover:text-indigo-100"
                 >
                   <X className="w-3 h-3" />
@@ -1283,12 +1285,12 @@ export function TransactionForm({
       {mode === 'full' && !isDoubleEntry && (
         <div>
           <FloatingField
-            label="Akun"
+            label={tf.accountLabel}
             type="text"
             name="account"
             value={formData.account}
             onChange={handleChange}
-            placeholder="cth: BCA, Cash, OVO, GoPay"
+            placeholder={tf.accountPlaceholder}
             required={!isDoubleEntry}
           />
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -1308,7 +1310,7 @@ export function TransactionForm({
               className="flex items-center gap-1.5 text-xs text-indigo-500 dark:text-indigo-400 hover:underline"
             >
               <BookTemplate className="w-3.5 h-3.5" />
-              Simpan sebagai Template
+              {tf.saveAsTemplate}
             </button>
           ) : (
             <div className="flex items-center gap-2 p-2.5 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-700">
@@ -1317,7 +1319,7 @@ export function TransactionForm({
                 type="text"
                 value={templateName}
                 onChange={e => setTemplateName(e.target.value)}
-                placeholder="Nama template, e.g. Bayar Gaji Bulanan"
+                placeholder={tf.templateNamePlaceholder}
                 className="flex-1 text-sm bg-transparent outline-none text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
                 autoFocus
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSaveTemplate(); } }}
@@ -1328,7 +1330,7 @@ export function TransactionForm({
                 disabled={!templateName.trim() || savingTemplate}
                 className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 disabled:opacity-40"
               >
-                {savingTemplate ? 'Menyimpan...' : 'Simpan'}
+                {savingTemplate ? t.common.saving : t.common.save}
               </button>
               <button
                 type="button"
@@ -1354,26 +1356,26 @@ export function TransactionForm({
             />
             <RefreshCw className="w-3.5 h-3.5 text-indigo-400" />
             <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-              Jadikan Berulang
+              {tf.makeRecurring}
             </span>
           </label>
 
           {recurringEnabled && (
             <div className="mt-3 grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Frekuensi</label>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{tf.frequency}</label>
                 <select
                   value={recurringFrequency}
                   onChange={(e) => setRecurringFrequency(e.target.value as 'weekly' | 'monthly' | 'yearly')}
                   className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
                 >
-                  <option value="weekly">Mingguan</option>
-                  <option value="monthly">Bulanan</option>
-                  <option value="yearly">Tahunan</option>
+                  <option value="weekly">{tf.weekly}</option>
+                  <option value="monthly">{tf.monthly}</option>
+                  <option value="yearly">{tf.yearly}</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Setiap</label>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{tf.every}</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
@@ -1384,20 +1386,20 @@ export function TransactionForm({
                     className="w-16 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
                   />
                   <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {recurringFrequency === 'weekly' ? 'minggu' : recurringFrequency === 'monthly' ? 'bulan' : 'tahun'}
+                    {recurringFrequency === 'weekly' ? tf.unitWeek : recurringFrequency === 'monthly' ? tf.unitMonth : tf.unitYear}
                   </span>
                 </div>
               </div>
               <div className="col-span-2">
                 <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                  Sampai (opsional)
+                  {tf.until}
                 </label>
                 <input
                   type="date"
                   value={recurringEndDate}
                   onChange={(e) => setRecurringEndDate(e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-                  placeholder="Tanpa batas"
+                  placeholder={tf.noEndDate}
                 />
               </div>
             </div>
@@ -1431,10 +1433,10 @@ export function TransactionForm({
           className="btn-secondary flex-1"
           disabled={loading || uploadingAttachments}
         >
-          Batal
+          {t.common.cancel}
         </button>
         <button type="submit" className="btn-primary-glow flex-1" disabled={loading || uploadingAttachments}>
-          {uploadingAttachments ? 'Mengupload lampiran...' : loading ? 'Menyimpan...' : transaction ? 'Update Transaksi' : 'Simpan'}
+          {uploadingAttachments ? tf.uploadingAttachments : loading ? t.common.saving : transaction ? tf.updateTransaction : t.common.save}
         </button>
       </div>
     </form>
