@@ -664,7 +664,7 @@ export const id: Translations = {
     stockQtyLabel: 'Jumlah stok',
     stockQtyHintEdit: 'Mengubah angka di sini = koreksi manual. Untuk barang masuk, pakai tombol Tambah Stok di daftar katalog.',
     costPriceLabel: 'Harga pokok per satuan',
-    costPriceHint: 'Saat item ini terjual di kasir, HPP-nya otomatis dijurnal: Debit HPP / Kredit Persediaan. Kosongkan (0) bila tidak ingin dijurnal otomatis.',
+    costPriceHint: 'Saat item ini terjual di kasir, HPP-nya otomatis dijurnal: Debit HPP / Kredit Persediaan. Syaratnya pembelian stok dicatat ke akun Persediaan — bila pembelian langsung dibebankan ke HPP, mengisi harga pokok di sini membuat beban terhitung dua kali. Kosongkan (0) bila tidak ingin dijurnal otomatis.',
     costPriceNoInventoryHint: 'Bisnis ini belum punya akun Persediaan, jadi HPP tidak dijurnal otomatis — pembelian stok sudah dibebankan saat beli. Buat akun Persediaan (ASSET) di Chart of Accounts bila ingin HPP diakui saat barang terjual.',
     marginLabel: 'Margin',
     marginNegative: 'Harga pokok melebihi harga jual',

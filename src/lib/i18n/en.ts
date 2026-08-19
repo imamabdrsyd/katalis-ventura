@@ -663,7 +663,7 @@ export const en: Translations = {
     stockQtyLabel: 'Stock quantity',
     stockQtyHintEdit: 'Editing this number = manual correction. For incoming goods, use the Add Stock button in the catalog list.',
     costPriceLabel: 'Cost price per unit',
-    costPriceHint: 'When this item sells at the register, its cost is journaled automatically: Debit COGS / Credit Inventory. Leave at 0 to skip automatic journaling.',
+    costPriceHint: 'When this item sells at the register, its cost is journaled automatically: Debit COGS / Credit Inventory. This requires stock purchases to be booked to the Inventory account — if purchases are expensed straight to COGS, filling in a cost price here double-counts the expense. Leave at 0 to skip automatic journaling.',
     costPriceNoInventoryHint: 'This business has no Inventory account yet, so cost is not journaled automatically — stock purchases are already expensed at purchase time. Create an Inventory (ASSET) account in the Chart of Accounts to recognize cost when goods are sold.',
     marginLabel: 'Margin',
     marginNegative: 'Cost price exceeds selling price',
