@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -9,6 +10,8 @@ import { createClient } from '@/lib/supabase';
 import FloatingField from '@/components/ui/FloatingField';
 
 export default function LoginPage() {
+  const { t } = useLanguage();
+  const ta = t.auth;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -42,7 +45,7 @@ export default function LoginPage() {
       });
       if (oauthError) throw oauthError;
     } catch (err: any) {
-      setError(err.message || 'An error occurred during Google sign in');
+      setError(err.message || ta.errGoogleSignIn);
       setLoading(false);
     }
   };
@@ -63,7 +66,7 @@ export default function LoginPage() {
       router.push('/dashboard');
       router.refresh();
     } catch (err: any) {
-      setError(err.message || 'An error occurred during sign in');
+      setError(err.message || ta.errSignIn);
     } finally {
       setLoading(false);
     }
@@ -75,8 +78,8 @@ export default function LoginPage() {
       <Image src="/images/axion-dark.png" alt="AXION" width={120} height={40} className="object-contain hidden dark:block" />
       <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8">
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Welcome Back</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">Sign in to manage, structure, and scale</p>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{ta.loginTitle}</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">{ta.loginSubtitle}</p>
       </div>
 
       {error && (
@@ -87,7 +90,7 @@ export default function LoginPage() {
 
       <form onSubmit={handleLogin} className="space-y-5">
         <FloatingField
-          label="Email"
+          label={ta.emailLabel}
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -96,7 +99,7 @@ export default function LoginPage() {
         />
 
         <FloatingField
-          label="Password"
+          label={ta.passwordLabel}
           type={showPassword ? 'text' : 'password'}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -117,24 +120,24 @@ export default function LoginPage() {
         <div className="flex items-center justify-between">
           <label className="flex items-center">
             <input type="checkbox" className="mr-2 w-4 h-4 text-indigo-500 rounded" />
-            <span className="text-sm text-gray-600 dark:text-gray-300">Remember me</span>
+            <span className="text-sm text-gray-600 dark:text-gray-300">{ta.rememberMe}</span>
           </label>
           <Link
             href="/forgot-password"
             className="text-sm text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 font-semibold"
           >
-            Forgot password?
+            {ta.forgotPassword}
           </Link>
         </div>
 
         <button type="submit" disabled={loading} className="btn-primary-glow w-full py-3">
-          {loading ? 'Enter AXION...' : 'Sign In'}
+          {loading ? ta.signingIn : ta.signInButton}
         </button>
       </form>
 
       <div className="flex items-center my-5">
         <div className="flex-1 border-t border-gray-200 dark:border-gray-600" />
-        <span className="px-3 text-sm text-gray-400 dark:text-gray-500">or</span>
+        <span className="px-3 text-sm text-gray-400 dark:text-gray-500">{t.common.or}</span>
         <div className="flex-1 border-t border-gray-200 dark:border-gray-600" />
       </div>
 
@@ -150,13 +153,13 @@ export default function LoginPage() {
           <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
           <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
         </svg>
-        Continue with Google
+        {ta.continueWithGoogle}
       </button>
 
       <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
-        Don&apos;t have an account?{' '}
+        {ta.noAccountYet}{' '}
         <Link href="/signup" className="text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 font-semibold">
-          Create account
+          {ta.createAccountLink}
         </Link>
       </p>
     </div>

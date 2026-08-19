@@ -162,6 +162,35 @@ export interface Translations {
   };
 
   // Roles
+  auth: {
+    loginTitle: string;
+    loginSubtitle: string;
+    emailLabel: string;
+    passwordLabel: string;
+    rememberMe: string;
+    forgotPassword: string;
+    signInButton: string;
+    signingIn: string;
+    continueWithGoogle: string;
+    noAccountYet: string;
+    createAccountLink: string;
+    errGoogleSignIn: string;
+    errSignIn: string;
+    signupTitle: string;
+    signupEnter: string;
+    fullNameLabel: string;
+    registerAsLabel: string;
+    roleManagerDesc: string;
+    roleInvestorDesc: string;
+    createAccountButton: string;
+    creatingAccount: string;
+    signUpWithGoogle: string;
+    haveAccount: string;
+    signInLink: string;
+    errGoogleSignUp: string;
+    errSignUp: string;
+  };
+
   roles: {
     businessManager: string;
     investor: string;
@@ -695,6 +724,51 @@ export interface Translations {
   };
 
   // Hub (Point of Sales / Calendar) — wadah Katalog + Info AI + panel operasional
+  cashier: {
+    launcherTitle: string;
+    launcherDesc: string;
+    launcherButton: string;
+    launcherManagerOnly: string;
+    errNoCatalogItems: string;
+    errLoadFailed: string;
+    screenTitle: string;
+    exitCashier: string;
+    searchPlaceholder: string;
+    tabAll: string;
+    unitService: string;
+    unitProduct: string;
+    noMatchingProducts: string;
+    customerPlaceholder: string;
+    decrease: string;
+    increase: string;
+    removeItem: string;
+    emptyCart: string;
+    subtotalItems: (n: number) => string;
+    total: string;
+    paymentMethod: string;
+    methodCash: string;
+    methodQris: string;
+    clearCart: string;
+    payButton: string;
+    saleRecorded: string;
+    saleFailed: string;
+    contactSaveFailed: string;
+    titleQris: string;
+    titleCash: string;
+    billTotal: string;
+    qrisScanHint: string;
+    qrisEmptyHint: string;
+    qrisUploadButton: string;
+    qrisSaved: string;
+    qrisUploadFailed: string;
+    cloudinaryUploadFailed: string;
+    cashReceived: string;
+    exactAmount: string;
+    change: string;
+    cashShort: string;
+    confirmPay: string;
+  };
+
   hub: {
     posTitle: string;
     posSubtitle: string;

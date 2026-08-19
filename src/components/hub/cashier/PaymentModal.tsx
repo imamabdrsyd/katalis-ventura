@@ -13,6 +13,7 @@
 import { useEffect, useState } from 'react';
 import { QrCode, Banknote, Loader2, Upload, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
@@ -40,6 +41,8 @@ export function PaymentModal({
   submitting,
   onConfirm,
 }: PaymentModalProps) {
+  const { t } = useLanguage();
+  const tk = t.cashier;
   const [cashReceived, setCashReceived] = useState<number>(0);
   const [cashDisplay, setCashDisplay] = useState<string>('');
   const [localQris, setLocalQris] = useState<string | null>(qrisImageUrl);
@@ -78,15 +81,15 @@ export function PaymentModal({
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error?.message || 'Gagal upload ke Cloudinary');
+        throw new Error(err.error?.message || tk.cloudinaryUploadFailed);
       }
       const { secure_url } = await res.json();
       const displayUrl = secure_url.replace(/\/upload\//, '/upload/f_jpg/');
       await updateBusiness(businessId, { qris_image_url: displayUrl });
       setLocalQris(displayUrl);
-      toast.success('QRIS tersimpan');
+      toast.success(tk.qrisSaved);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal upload QRIS');
+      toast.error(err instanceof Error ? err.message : tk.qrisUploadFailed);
     } finally {
       setUploading(false);
     }
@@ -108,13 +111,13 @@ export function PaymentModal({
           ) : (
             <Banknote className="w-5 h-5 text-primary-500 dark:text-primary-400" />
           )}
-          {method === 'qris' ? 'Pembayaran QRIS' : 'Pembayaran Tunai'}
+          {method === 'qris' ? tk.titleQris : tk.titleCash}
         </span>
       }
       footer={
         <div className="flex gap-2 justify-end">
           <button type="button" onClick={onClose} className="btn-secondary px-4">
-            Batal
+            {t.common.cancel}
           </button>
           <button
             type="button"
@@ -127,7 +130,7 @@ export function PaymentModal({
             ) : (
               <CheckCircle2 className="w-4 h-4" />
             )}
-            Konfirmasi Bayar
+            {tk.confirmPay}
           </button>
         </div>
       }
@@ -135,7 +138,7 @@ export function PaymentModal({
       <div className="space-y-4">
         {/* Total */}
         <div className="flex items-center justify-between rounded-xl bg-gray-50 dark:bg-gray-800 px-4 py-3">
-          <span className="text-sm text-gray-500 dark:text-gray-400">Total tagihan</span>
+          <span className="text-sm text-gray-500 dark:text-gray-400">{tk.billTotal}</span>
           <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
             {formatCurrency(total)}
           </span>
@@ -146,7 +149,7 @@ export function PaymentModal({
             {localQris ? (
               <div className="flex flex-col items-center gap-2">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Minta pelanggan scan kode di bawah:
+                  {tk.qrisScanHint}
                 </p>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -159,7 +162,7 @@ export function PaymentModal({
               <div className="rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-6 text-center">
                 <QrCode className="w-10 h-10 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                  Belum ada foto QRIS. Upload sekali untuk dipakai di semua transaksi.
+                  {tk.qrisEmptyHint}
                 </p>
                 <label className="btn-secondary inline-flex items-center gap-2 cursor-pointer">
                   {uploading ? (
@@ -167,7 +170,7 @@ export function PaymentModal({
                   ) : (
                     <Upload className="w-4 h-4" />
                   )}
-                  Upload QRIS
+                  {tk.qrisUploadButton}
                   <input
                     type="file"
                     accept="image/*"
@@ -186,7 +189,7 @@ export function PaymentModal({
           <div className="space-y-3">
             <div>
               <CurrencyInputWithCalculator
-                label="Uang diterima"
+                label={tk.cashReceived}
                 displayValue={cashDisplay}
                 onChange={(numeric, display) => {
                   setCashReceived(numeric);
@@ -198,7 +201,7 @@ export function PaymentModal({
             </div>
             {/* Tombol nominal cepat */}
             <div className="flex flex-wrap gap-2">
-              <QuickAmount label="Uang pas" amount={total} onPick={pickCash} />
+              <QuickAmount label={tk.exactAmount} amount={total} onPick={pickCash} />
               {[50000, 100000, 150000, 200000]
                 .filter((n) => n > total)
                 .slice(0, 3)
@@ -207,7 +210,7 @@ export function PaymentModal({
                 ))}
             </div>
             <div className="flex items-center justify-between rounded-xl bg-gray-50 dark:bg-gray-800 px-4 py-3">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Kembalian</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{tk.change}</span>
               <span
                 className={[
                   'text-lg font-bold',
@@ -221,7 +224,7 @@ export function PaymentModal({
             </div>
             {!cashEnough && cashReceived > 0 && (
               <p className="text-sm text-red-500 dark:text-red-400">
-                Uang diterima kurang dari total.
+                {tk.cashShort}
               </p>
             )}
           </div>

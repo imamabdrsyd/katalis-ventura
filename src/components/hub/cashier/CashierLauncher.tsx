@@ -11,6 +11,7 @@
 import { useState, useCallback } from 'react';
 import { ShoppingCart, ArrowRight, Loader2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLanguage } from '@/context/LanguageContext';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { isManagerRole } from '@/lib/roles';
 import { getCatalogItems } from '@/lib/api/catalog';
@@ -19,6 +20,8 @@ import type { Account, CatalogItem } from '@/types';
 import { CashierScreen } from './CashierScreen';
 
 export function CashierLauncher() {
+  const { t } = useLanguage();
+  const tk = t.cashier;
   const { activeBusiness, activeBusinessId, user, userRole } = useBusinessContext();
   const canManage = isManagerRole(userRole);
 
@@ -36,18 +39,18 @@ export function CashierLauncher() {
         getAccounts(activeBusinessId),
       ]);
       if (catalog.length === 0) {
-        toast.error('Belum ada produk di katalog. Tambahkan dulu di tab Catalog.');
+        toast.error(tk.errNoCatalogItems);
         return;
       }
       setItems(catalog);
       setAccounts(accs);
       setOpen(true);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal memuat data kasir');
+      toast.error(err instanceof Error ? err.message : tk.errLoadFailed);
     } finally {
       setLoading(false);
     }
-  }, [activeBusinessId]);
+  }, [activeBusinessId, tk]);
 
   // Refresh stok katalog setelah checkout sukses
   const refreshItems = useCallback(async () => {
@@ -68,7 +71,7 @@ export function CashierLauncher() {
         </div>
         <p className="font-semibold text-gray-700 dark:text-gray-200">Akses terbatas</p>
         <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-          Hanya manager bisnis yang dapat menggunakan kasir.
+          {tk.launcherManagerOnly}
         </p>
       </div>
     );
@@ -80,10 +83,9 @@ export function CashierLauncher() {
         <div className="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center mx-auto mb-5">
           <ShoppingCart className="w-8 h-8 text-primary-500 dark:text-primary-400" />
         </div>
-        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Kasir cepat</h3>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{tk.launcherTitle}</h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 mb-6">
-          Pilih produk dari katalog, terima pembayaran tunai atau QRIS, dan transaksi
-          penjualan tercatat otomatis di pembukuan.
+          {tk.launcherDesc}
         </p>
         <button
           type="button"
@@ -96,7 +98,7 @@ export function CashierLauncher() {
           ) : (
             <ArrowRight className="w-4 h-4" />
           )}
-          Buka Mode Kasir
+          {tk.launcherButton}
         </button>
       </div>
 

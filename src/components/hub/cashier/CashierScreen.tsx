@@ -24,6 +24,7 @@ import {
   Package,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLanguage } from '@/context/LanguageContext';
 import type { Account, CatalogItem } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { ContactAutocomplete } from '@/components/transactions/ContactAutocomplete';
@@ -54,6 +55,8 @@ export function CashierScreen({
   onClose,
   onCheckoutDone,
 }: CashierScreenProps) {
+  const { t } = useLanguage();
+  const tk = t.cashier;
   const [mounted, setMounted] = useState(false);
   const [search, setSearch] = useState('');
   const [activeUnit, setActiveUnit] = useState<string>(ALL_CATEGORY);
@@ -81,22 +84,22 @@ export function CashierScreen({
   const categories = useMemo(() => {
     const set = new Set<string>();
     for (const it of items) {
-      const key = it.unit?.trim() || (it.item_type === 'service' ? 'Jasa' : 'Produk');
+      const key = it.unit?.trim() || (it.item_type === 'service' ? tk.unitService : tk.unitProduct);
       set.add(key);
     }
     return Array.from(set).sort();
-  }, [items]);
+  }, [items, tk]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return items.filter((it) => {
       if (!it.is_active) return false;
-      const key = it.unit?.trim() || (it.item_type === 'service' ? 'Jasa' : 'Produk');
+      const key = it.unit?.trim() || (it.item_type === 'service' ? tk.unitService : tk.unitProduct);
       if (activeUnit !== ALL_CATEGORY && key !== activeUnit) return false;
       if (q && !it.name.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [items, search, activeUnit]);
+  }, [items, search, activeUnit, tk]);
 
   const qtyInCart = (itemId: string) =>
     cashier.cart.find((l) => l.item.id === itemId)?.qty ?? 0;
@@ -104,14 +107,14 @@ export function CashierScreen({
   async function handleCheckoutConfirmed() {
     try {
       const { cogsWarning } = await cashier.checkout();
-      toast.success('Penjualan tercatat');
+      toast.success(tk.saleRecorded);
       // Penjualan sudah masuk; HPP-nya yang gagal. Ditampilkan terpisah supaya
       // kasir tidak mengira checkout gagal lalu mengulang (= penjualan dobel).
       if (cogsWarning) toast.warning(cogsWarning, { duration: 8000 });
       setShowPayment(false);
       onCheckoutDone?.();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal menyimpan penjualan');
+      toast.error(err instanceof Error ? err.message : tk.saleFailed);
     }
   }
 
@@ -125,15 +128,15 @@ export function CashierScreen({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/favicon-48.png" alt="AXION" className="w-8 h-8 rounded-lg shrink-0" />
           <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
-            Point of Sales
+            {tk.screenTitle}
           </h2>
         </div>
         <button
           type="button"
           onClick={onClose}
           className="group relative w-9 h-9 rounded-xl flex items-center justify-center hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
-          aria-label="Keluar dari mode kasir"
-          title="Keluar dari mode kasir"
+          aria-label={tk.exitCashier}
+          title={tk.exitCashier}
         >
           <SquareArrowRight
             strokeWidth={1.5}
@@ -154,7 +157,7 @@ export function CashierScreen({
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari produk…"
+                placeholder={tk.searchPlaceholder}
                 className="input-search pl-9 w-full"
               />
             </div>
@@ -162,7 +165,7 @@ export function CashierScreen({
 
           <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-1 px-1">
             <CategoryChip
-              label="Semua"
+              label={tk.tabAll}
               active={activeUnit === ALL_CATEGORY}
               onClick={() => setActiveUnit(ALL_CATEGORY)}
             />
@@ -182,7 +185,7 @@ export function CashierScreen({
             {filtered.length === 0 ? (
               <div className="text-center py-16 text-gray-400 dark:text-gray-500">
                 <Package className="w-10 h-10 mx-auto mb-3 opacity-50" />
-                <p className="text-sm">Tidak ada produk yang cocok.</p>
+                <p className="text-sm">{tk.noMatchingProducts}</p>
               </div>
             ) : (
               <div className="grid auto-rows-fr grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -214,10 +217,10 @@ export function CashierScreen({
                   await saveContactFromTransaction(businessId, name, 'customer', userId);
                   toast.success(`Kontak "${name}" disimpan`);
                 } catch (err) {
-                  toast.error(err instanceof Error ? err.message : 'Gagal simpan kontak');
+                  toast.error(err instanceof Error ? err.message : tk.contactSaveFailed);
                 }
               }}
-              placeholder="Nama pelanggan"
+              placeholder={tk.customerPlaceholder}
             />
           </div>
 
@@ -226,7 +229,7 @@ export function CashierScreen({
             {cashier.cart.length === 0 ? (
               <div className="text-center py-12 px-4 text-gray-400 dark:text-gray-500">
                 <ShoppingCart className="w-9 h-9 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Keranjang kosong. Pilih produk di kiri.</p>
+                <p className="text-sm">{tk.emptyCart}</p>
               </div>
             ) : (
               <ul className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -245,7 +248,7 @@ export function CashierScreen({
                         type="button"
                         onClick={() => cashier.setQty(line.item.id, line.qty - 1)}
                         className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                        aria-label="Kurangi"
+                        aria-label={tk.decrease}
                       >
                         <Minus className="w-3.5 h-3.5" />
                       </button>
@@ -256,7 +259,7 @@ export function CashierScreen({
                         type="button"
                         onClick={() => cashier.addItem(line.item)}
                         className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                        aria-label="Tambah"
+                        aria-label={tk.increase}
                       >
                         <Plus className="w-3.5 h-3.5" />
                       </button>
@@ -268,7 +271,7 @@ export function CashierScreen({
                       type="button"
                       onClick={() => cashier.removeItem(line.item.id)}
                       className="text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400"
-                      aria-label="Hapus"
+                      aria-label={tk.removeItem}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -282,14 +285,14 @@ export function CashierScreen({
           <div className="border-t border-gray-100 dark:border-gray-800 p-4 space-y-3">
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-500 dark:text-gray-400">
-                Subtotal · {cashier.itemCount} item
+                {tk.subtotalItems(cashier.itemCount)}
               </span>
               <span className="font-medium text-gray-700 dark:text-gray-200">
                 {formatCurrency(cashier.subtotal)}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-base font-bold text-gray-900 dark:text-gray-100">Total</span>
+              <span className="text-base font-bold text-gray-900 dark:text-gray-100">{tk.total}</span>
               <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
                 {formatCurrency(cashier.total)}
               </span>
@@ -297,12 +300,12 @@ export function CashierScreen({
 
             <SegmentedToggle
               fullWidth
-              ariaLabel="Metode pembayaran"
+              ariaLabel={tk.paymentMethod}
               value={cashier.paymentMethod}
               onChange={cashier.setPaymentMethod}
               options={[
-                { value: 'cash', label: 'Tunai' },
-                { value: 'qris', label: 'QRIS' },
+                { value: 'cash', label: tk.methodCash },
+                { value: 'qris', label: tk.methodQris },
               ]}
             />
 
@@ -313,7 +316,7 @@ export function CashierScreen({
                 disabled={cashier.cart.length === 0}
                 className="btn-secondary px-4 disabled:opacity-40"
               >
-                Bersihkan
+                {tk.clearCart}
               </button>
               <button
                 type="button"
@@ -322,7 +325,7 @@ export function CashierScreen({
                 className="btn-primary-glow flex-1 flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {cashier.submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                Bayar · {formatCurrency(cashier.total)}
+                {tk.payButton} · {formatCurrency(cashier.total)}
               </button>
             </div>
           </div>
