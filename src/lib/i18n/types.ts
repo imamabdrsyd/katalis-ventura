@@ -991,6 +991,55 @@ export interface Translations {
   };
 
   // Businesses Page
+  contacts: {
+    typeCustomer: string;
+    typeVendor: string;
+    typePartner: string;
+    typeStaff: string;
+    typeInvestor: string;
+    typeOther: string;
+    loadErrorTitle: string;
+    loadErrorHint: string;
+    searchPlaceholder: string;
+    clearSearch: string;
+    clearSearchTitle: string;
+    filterAllTypes: string;
+    countLabel: (shown: number) => string;
+    countOfTotal: (total: number) => string;
+    emptyTitle: string;
+    emptyHint: string;
+    addContact: string;
+    noMatch: string;
+    chatWhatsApp: string;
+    editContact: string;
+    deleteContact: string;
+    statTransactions: string;
+    statIn: string;
+    statOut: string;
+    loadingTransactions: string;
+    noTransactionsYet: string;
+    modalTitleEdit: string;
+    modalTitleAdd: string;
+    nameLabel: string;
+    namePlaceholder: string;
+    typeLabel: string;
+    phoneLabel: string;
+    phonePlaceholder: string;
+    emailLabel: string;
+    emailPlaceholder: string;
+    addressLabel: string;
+    addressPlaceholder: string;
+    idCardLabel: string;
+    notesLabel: string;
+    notesPlaceholder: string;
+    savingContact: string;
+    submitAdd: string;
+    deleteTitle: string;
+    errNameRequired: string;
+    errDuplicateName: string;
+    errSaveFailed: string;
+  };
+
   businesses: {
     createFailed: string;
     updateFailed: string;

@@ -99,15 +99,6 @@ function isInterestKeyword(name: string, description: string): boolean {
 // Constants
 export const CAPITAL = 350_000_000; // Default capital investment (fallback only)
 
-export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
-  EARN: 'Revenue',
-  OPEX: 'Operating Expenses',
-  VAR: 'Variable Costs',
-  CAPEX: 'Capital Expenditure',
-  TAX: 'Taxes',
-  FIN: 'Financing',
-};
-
 export const CATEGORY_COLORS: Record<TransactionCategory, string> = {
   EARN: '#059669', // emerald
   OPEX: '#dc2626', // red

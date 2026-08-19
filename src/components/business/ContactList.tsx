@@ -9,40 +9,36 @@ import FloatingField from '@/components/ui/FloatingField';
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal';
 import * as contactsApi from '@/lib/api/contacts';
 import { formatCurrency, formatDate, whatsappUrl } from '@/lib/utils';
-import { CATEGORY_LABELS } from '@/lib/calculations';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
 import { isImageType, isPendingAttachment, uploadPendingAttachments, deleteAttachment } from '@/lib/storage/attachments';
 import { useDeliverableAttachmentUrl, triggerAttachmentDownload } from '@/lib/storage/signedUrl';
 import type { Contact as ContactType, ContactType as ContactTypeEnum, Transaction, TransactionAttachment } from '@/types';
+import { useLanguage } from '@/context/LanguageContext';
 
-const CONTACT_TYPE_CONFIG: Record<ContactTypeEnum, { label: string; icon: React.ReactNode; className: string }> = {
+// Label sengaja TIDAK di sini: konstanta modul-level tak bisa membaca hook
+// bahasa. Ikon & warna tetap statis, teksnya diambil lewat `typeLabel()`.
+const CONTACT_TYPE_CONFIG: Record<ContactTypeEnum, { icon: React.ReactNode; className: string }> = {
   customer: {
-    label: 'Customer',
     icon: <User className="w-3.5 h-3.5" />,
     className: 'text-gray-500 dark:text-gray-400',
   },
   vendor: {
-    label: 'Vendor',
     icon: <Building className="w-3.5 h-3.5" />,
     className: 'text-gray-500 dark:text-gray-400',
   },
   partner: {
-    label: 'Partner',
     icon: <Handshake className="w-3.5 h-3.5" />,
     className: 'text-gray-500 dark:text-gray-400',
   },
   staff: {
-    label: 'Staff',
     icon: <UserCog className="w-3.5 h-3.5" />,
     className: 'text-gray-500 dark:text-gray-400',
   },
   investor: {
-    label: 'Investor',
     icon: <TrendingUp className="w-3.5 h-3.5" />,
     className: 'text-gray-500 dark:text-gray-400',
   },
   other: {
-    label: 'Lainnya',
     icon: <Users2 className="w-3.5 h-3.5" />,
     className: 'text-gray-500 dark:text-gray-400',
   },
@@ -152,6 +148,20 @@ function IdCardImage({ attachment, contactName }: { attachment: TransactionAttac
 }
 
 export const ContactList = forwardRef<ContactListHandle, ContactListProps>(function ContactList({ businessId, userId, canManage }, ref) {
+  const { t } = useLanguage();
+  const tcn = t.contacts;
+  // Label tipe kontak dipisah dari CONTACT_TYPE_CONFIG (ikon & warna) karena
+  // konstanta modul-level tak bisa membaca hook bahasa.
+  const typeLabel = (type: ContactTypeEnum): string =>
+    ({
+      customer: tcn.typeCustomer,
+      vendor: tcn.typeVendor,
+      partner: tcn.typePartner,
+      staff: tcn.typeStaff,
+      investor: tcn.typeInvestor,
+      other: tcn.typeOther,
+    })[type];
+
   const searchParams = useSearchParams();
   const contactParam = searchParams.get('contact');
   const contactSearchParam = searchParams.get('search') ?? '';
@@ -336,7 +346,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
-      setFormError('Nama kontak wajib diisi');
+      setFormError(tcn.errNameRequired);
       return;
     }
 
@@ -409,9 +419,9 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
       fetchContacts();
     } catch (err: any) {
       if (err.message?.includes('idx_business_contacts_unique_name')) {
-        setFormError('Kontak dengan nama ini sudah ada');
+        setFormError(tcn.errDuplicateName);
       } else {
-        setFormError(err.message || 'Gagal menyimpan kontak');
+        setFormError(err.message || tcn.errSaveFailed);
       }
     } finally {
       setSaving(false);
@@ -506,10 +516,10 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
   if (loadError) {
     return (
       <div className="text-center py-12">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Gagal memuat kontak</h3>
-        <p className="text-gray-500 dark:text-gray-400 mb-4">Periksa koneksi internet Anda, lalu coba lagi.</p>
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">{tcn.loadErrorTitle}</h3>
+        <p className="text-gray-500 dark:text-gray-400 mb-4">{tcn.loadErrorHint}</p>
         <button onClick={fetchContacts} className="btn-secondary">
-          Coba lagi
+          {t.common.retry}
         </button>
       </div>
     );
@@ -533,7 +543,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
                 else if (e.key === 'ArrowUp') { e.preventDefault(); navigateList('up'); }
                 else if (e.key === 'Escape' && search) { e.preventDefault(); setSearch(''); }
               }}
-              placeholder="Cari nama, telepon, email..."
+              placeholder={tcn.searchPlaceholder}
               className="input-search pl-9 pr-10 w-full"
             />
             {search && (
@@ -541,8 +551,8 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
                 type="button"
                 onClick={() => setSearch('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors"
-                aria-label="Batalkan pencarian kontak"
-                title="Batalkan pencarian"
+                aria-label={tcn.clearSearch}
+                title={tcn.clearSearchTitle}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -553,19 +563,19 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
             onChange={(e) => setFilterType(e.target.value as ContactTypeEnum | 'all')}
             className="input-search sm:w-auto"
           >
-            <option value="all">Semua Tipe</option>
-            <option value="customer">Customer</option>
-            <option value="vendor">Vendor</option>
-            <option value="partner">Partner</option>
-            <option value="staff">Staff</option>
-            <option value="investor">Investor</option>
-            <option value="other">Lainnya</option>
+            <option value="all">{tcn.filterAllTypes}</option>
+            <option value="customer">{tcn.typeCustomer}</option>
+            <option value="vendor">{tcn.typeVendor}</option>
+            <option value="partner">{tcn.typePartner}</option>
+            <option value="staff">{tcn.typeStaff}</option>
+            <option value="investor">{tcn.typeInvestor}</option>
+            <option value="other">{tcn.typeOther}</option>
           </select>
         </div>
 
         {/* Contact count */}
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          {filteredContacts.length} kontak{search || filterType !== 'all' ? ` (dari ${contacts.length} total)` : ''}
+          {tcn.countLabel(filteredContacts.length)}{search || filterType !== 'all' ? tcn.countOfTotal(contacts.length) : ''}
         </p>
 
         {/* Empty state */}
@@ -574,9 +584,9 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
             <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
               <Contact className="w-8 h-8 text-gray-400 dark:text-gray-500" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Belum ada kontak</h3>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">{tcn.emptyTitle}</h3>
             <p className="text-gray-500 dark:text-gray-400 mb-4">
-              Simpan customer dan vendor agar mudah digunakan saat input transaksi
+              {tcn.emptyHint}
             </p>
             {canManage && (
               <button
@@ -584,13 +594,13 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
                 className="btn-primary inline-flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
-                Tambah Kontak
+                {tcn.addContact}
               </button>
             )}
           </div>
         ) : filteredContacts.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-gray-500 dark:text-gray-400">Tidak ada kontak yang cocok</p>
+            <p className="text-gray-500 dark:text-gray-400">{tcn.noMatch}</p>
           </div>
         ) : (
           /* Contact list */
@@ -638,7 +648,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
                       {showTypeLabel && (
                         <span className={`inline-flex items-center gap-1 text-xs font-medium flex-shrink-0 ${typeConfig.className}`}>
                           {typeConfig.icon}
-                          {typeConfig.label}
+                          {typeLabel(contact.type)}
                         </span>
                       )}
                     </div>
@@ -653,7 +663,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
                             className="inline-flex items-center gap-1 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
-                            title="Chat via WhatsApp"
+                            title={tcn.chatWhatsApp}
                           >
                             <Phone className="w-3 h-3" />
                             {contact.phone}
@@ -680,14 +690,14 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
                       <button
                         onClick={() => openEditForm(contact)}
                         className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                        title="Edit kontak"
+                        title={tcn.editContact}
                       >
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setDeleteTarget(contact)}
                         className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                        title="Hapus kontak"
+                        title={tcn.deleteContact}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -721,7 +731,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
                       {selectedContact.type !== 'other' && (
                         <span className={`inline-flex items-center gap-1 text-xs font-medium flex-shrink-0 ${CONTACT_TYPE_CONFIG[selectedContact.type].className}`}>
                           {CONTACT_TYPE_CONFIG[selectedContact.type].icon}
-                          {CONTACT_TYPE_CONFIG[selectedContact.type].label}
+                          {typeLabel(selectedContact.type)}
                         </span>
                       )}
                     </div>
@@ -734,7 +744,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
-                            title="Chat via WhatsApp"
+                            title={tcn.chatWhatsApp}
                           >
                             <Phone className="w-3 h-3" />
                             {selectedContact.phone}
@@ -768,15 +778,15 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
               {!loadingTransactions && contactTransactions.length > 0 && (
                 <div className="flex gap-4 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
                   <div className="flex-1">
-                    <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">Transaksi</p>
+                    <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">{tcn.statTransactions}</p>
                     <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{txnSummary.count}</p>
                   </div>
                   <div className="flex-1">
-                    <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">Masuk</p>
+                    <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">{tcn.statIn}</p>
                     <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(txnSummary.totalIn)}</p>
                   </div>
                   <div className="flex-1">
-                    <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">Keluar</p>
+                    <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">{tcn.statOut}</p>
                     <p className="text-sm font-bold text-red-600 dark:text-red-400">{formatCurrency(txnSummary.totalOut)}</p>
                   </div>
                 </div>
@@ -793,11 +803,11 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
               {loadingTransactions ? (
                 <div className="flex items-center justify-center py-16 text-gray-400">
                   <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  <span className="text-sm">Memuat transaksi...</span>
+                  <span className="text-sm">{tcn.loadingTransactions}</span>
                 </div>
               ) : contactTransactions.length === 0 ? (
                 <div className="text-center py-16">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Belum ada transaksi dengan kontak ini</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{tcn.noTransactionsYet}</p>
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -829,7 +839,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
                               {txn.description || txn.name}
                             </p>
                             <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold flex-shrink-0 ${txn.meta?.settlement_of_transaction_id ? CATEGORY_BADGE_COLORS['SETTLE'] : (CATEGORY_BADGE_COLORS[txn.category] || '')}`}>
-                              {txn.meta?.settlement_of_transaction_id ? 'SETTLE' : CATEGORY_LABELS[txn.category]}
+                              {txn.meta?.settlement_of_transaction_id ? t.categories.SETTLE : t.categories[txn.category]}
                             </span>
                           </div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -880,29 +890,29 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
       <Modal
         isOpen={showForm}
         onClose={() => setShowForm(false)}
-        title={editingContact ? 'Edit Kontak' : 'Tambah Kontak'}
+        title={editingContact ? tcn.modalTitleEdit : tcn.modalTitleAdd}
       >
         <div className="space-y-5">
           <FloatingField
-            label="Nama *"
+            label={tcn.nameLabel}
             type="text"
             value={formData.name}
             onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-            placeholder="Nama customer/vendor"
+            placeholder={tcn.namePlaceholder}
             autoFocus
           />
 
           <div>
-            <label className="label">Tipe</label>
+            <label className="label">{tcn.typeLabel}</label>
             <div className="flex gap-2 overflow-x-auto overflow-y-hidden pb-1">
-              {(['customer', 'vendor', 'partner', 'staff', 'investor', 'other'] as ContactTypeEnum[]).map((t) => {
-                const config = CONTACT_TYPE_CONFIG[t];
-                const isActive = formData.type === t;
+              {(['customer', 'vendor', 'partner', 'staff', 'investor', 'other'] as ContactTypeEnum[]).map((ct) => {
+                const config = CONTACT_TYPE_CONFIG[ct];
+                const isActive = formData.type === ct;
                 return (
                   <button
-                    key={t}
+                    key={ct}
                     type="button"
-                    onClick={() => setFormData((prev) => ({ ...prev, type: t }))}
+                    onClick={() => setFormData((prev) => ({ ...prev, type: ct }))}
                     className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
                       isActive
                         ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
@@ -910,7 +920,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
                     }`}
                   >
                     {config.icon}
-                    {config.label}
+                    {typeLabel(ct)}
                   </button>
                 );
               })}
@@ -918,34 +928,34 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
           </div>
 
           <FloatingField
-            label="Telepon"
+            label={tcn.phoneLabel}
             type="tel"
             value={formData.phone}
             onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
-            placeholder="08xxxxxxxxxx"
+            placeholder={tcn.phonePlaceholder}
           />
 
           <FloatingField
-            label="Email"
+            label={tcn.emailLabel}
             type="email"
             value={formData.email}
             onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-            placeholder="email@example.com"
+            placeholder={tcn.emailPlaceholder}
           />
 
           <div>
-            <label className="label">Alamat</label>
+            <label className="label">{tcn.addressLabel}</label>
             <textarea
               value={formData.address}
               onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
               className="input"
               rows={2}
-              placeholder="Alamat lengkap"
+              placeholder={tcn.addressPlaceholder}
             />
           </div>
 
           <div>
-            <label className="label">Foto ID Card</label>
+            <label className="label">{tcn.idCardLabel}</label>
             <FileUpload
               businessId={businessId}
               value={formData.id_card_attachments}
@@ -957,13 +967,13 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
           </div>
 
           <div>
-            <label className="label">Catatan</label>
+            <label className="label">{tcn.notesLabel}</label>
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
               className="input"
               rows={2}
-              placeholder="Catatan tambahan (opsional)"
+              placeholder={tcn.notesPlaceholder}
             />
           </div>
 
@@ -976,7 +986,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
             <div className="flex items-center gap-3 px-3 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
               <Loader2 className="w-4 h-4 text-indigo-500 animate-spin flex-shrink-0" />
               <p className="text-xs font-medium text-indigo-700 dark:text-indigo-300">
-                Menyimpan kontak...
+                {tcn.savingContact}
               </p>
             </div>
           )}
@@ -995,7 +1005,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
               disabled={saving}
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-              {saving ? 'Menyimpan...' : editingContact ? 'Simpan' : 'Tambah'}
+              {saving ? t.common.saving : editingContact ? t.common.save : tcn.submitAdd}
             </button>
           </div>
         </div>
@@ -1008,7 +1018,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
       <Modal
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        title="Hapus Kontak"
+        title={tcn.deleteTitle}
       >
         <div className="space-y-4">
           <p className="text-gray-600 dark:text-gray-300">
@@ -1027,7 +1037,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
               className="btn-danger flex-1"
               disabled={deleting}
             >
-              {deleting ? 'Menghapus...' : 'Hapus'}
+              {deleting ? t.common.deleting : t.common.delete}
             </button>
           </div>
         </div>
