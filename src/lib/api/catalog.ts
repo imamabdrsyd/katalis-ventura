@@ -21,6 +21,7 @@ export interface CatalogItemInsert {
   link_label?: string | null;
   track_stock?: boolean;
   stock_qty?: number;
+  cost_price?: number;
   asset_class?: AssetClass | null;
   asset_lot_size?: number;
   is_active?: boolean;
@@ -47,6 +48,7 @@ export interface CatalogItemUpdate {
   link_label?: string | null;
   track_stock?: boolean;
   stock_qty?: number;
+  cost_price?: number;
   asset_class?: AssetClass | null;
   asset_lot_size?: number;
   is_active?: boolean;

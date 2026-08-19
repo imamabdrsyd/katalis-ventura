@@ -103,8 +103,11 @@ export function CashierScreen({
 
   async function handleCheckoutConfirmed() {
     try {
-      await cashier.checkout();
+      const { cogsWarning } = await cashier.checkout();
       toast.success('Penjualan tercatat');
+      // Penjualan sudah masuk; HPP-nya yang gagal. Ditampilkan terpisah supaya
+      // kasir tidak mengira checkout gagal lalu mengulang (= penjualan dobel).
+      if (cogsWarning) toast.warning(cogsWarning, { duration: 8000 });
       setShowPayment(false);
       onCheckoutDone?.();
     } catch (err) {

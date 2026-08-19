@@ -7,6 +7,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import type { CatalogItem, Account } from '@/types';
 import * as catalogApi from '@/lib/api/catalog';
 import { getAccounts } from '@/lib/api/accounts';
+import { resolveInventoryAccount } from '@/lib/accounting/salesCheckout';
 import { isManagerRole } from '@/lib/roles';
 import { isAccommodationSector } from '@/lib/businessSectors';
 import { useCalendarUnit } from './calendar/CalendarUnitContext';
@@ -130,6 +131,14 @@ export function CatalogPanel({
 
   const revenueAccounts = useMemo(
     () => accounts.filter(a => a.account_type === 'REVENUE' && a.is_active),
+    [accounts]
+  );
+
+  // Tanpa akun Persediaan, checkout POS tidak menjurnal HPP (pembelian stok
+  // sudah dibebankan saat beli). Form harga pokok memakai ini untuk memberi
+  // tahu pemilik alih-alih diam-diam tak berefek. Lihat `planCogsPosting`.
+  const hasInventoryAccount = useMemo(
+    () => resolveInventoryAccount(accounts) !== null,
     [accounts]
   );
 
@@ -563,6 +572,7 @@ export function CatalogPanel({
             businessType={activeBusiness?.business_type}
             businessSector={activeBusiness?.business_sector}
             isAccommodation={scopeToUnit && isAccommodation}
+            hasInventoryAccount={hasInventoryAccount}
             onSubmit={handleSubmit}
             onCancel={() => { setShowForm(false); setEditItem(null); }}
             loading={saving}

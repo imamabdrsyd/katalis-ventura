@@ -22,6 +22,7 @@ export interface CatalogItemFormData {
   sku?: string | null;
   track_stock?: boolean;
   stock_qty?: number;
+  cost_price?: number;
   asset_class?: AssetClass | null;
   asset_lot_size?: number;
   is_active: boolean;
@@ -47,6 +48,10 @@ interface CatalogItemFormProps {
   /** Bisnis sektor akomodasi → tampilkan pilihan main/addon + kategori tarif
    *  (weekday/weekend/monthly) yang menyetir base price kalender (migr 124). */
   isAccommodation?: boolean;
+  /** Ada akun Persediaan (ASSET) aktif di CoA. Menentukan apakah harga pokok
+   *  benar-benar bisa dijurnal saat checkout POS — tanpa akun itu pembelian
+   *  stok sudah dibebankan saat beli, jadi HPP tidak dijurnal lagi (migr 134). */
+  hasInventoryAccount?: boolean;
   onSubmit: (data: CatalogItemFormData) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
@@ -65,6 +70,7 @@ export function CatalogItemForm({
   businessType,
   businessSector,
   isAccommodation = false,
+  hasInventoryAccount = false,
   onSubmit,
   onCancel,
   loading = false,
@@ -101,6 +107,7 @@ export function CatalogItemForm({
     sku: item?.sku ?? '',
     track_stock: item?.track_stock ?? false,
     stock_qty: item?.stock_qty ?? 0,
+    cost_price: item?.cost_price ?? 0,
     asset_class: item?.asset_class ?? null,
     asset_lot_size: item?.asset_lot_size ?? 1,
     is_active: item?.is_active ?? true,
@@ -112,9 +119,22 @@ export function CatalogItemForm({
     link_label: item?.link_label ?? '',
   });
 
+  // Margin ditampilkan langsung di form supaya harga pokok punya nilai bagi
+  // pemilik walau bisnisnya belum menjurnal HPP otomatis (belum punya akun
+  // Persediaan). null = belum ada angka yang layak dibandingkan.
+  const margin = useMemo(() => {
+    const price = formData.default_price ?? 0;
+    const cost = formData.cost_price ?? 0;
+    if (price <= 0 || cost <= 0) return null;
+    return { value: price - cost, pct: ((price - cost) / price) * 100 };
+  }, [formData.default_price, formData.cost_price]);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [priceDisplay, setPriceDisplay] = useState<string>(
     item?.default_price ? item.default_price.toLocaleString('id-ID') : ''
+  );
+  const [costDisplay, setCostDisplay] = useState<string>(
+    item?.cost_price ? item.cost_price.toLocaleString('id-ID') : ''
   );
 
   // ── Image upload + focal point state ──────────────────────────────────────
@@ -143,6 +163,7 @@ export function CatalogItemForm({
       sku: item?.sku ?? '',
       track_stock: item?.track_stock ?? false,
       stock_qty: item?.stock_qty ?? 0,
+      cost_price: item?.cost_price ?? 0,
       asset_class: item?.asset_class ?? null,
       asset_lot_size: item?.asset_lot_size ?? 1,
       is_active: item?.is_active ?? true,
@@ -154,6 +175,7 @@ export function CatalogItemForm({
       link_label: item?.link_label ?? '',
     });
     setPriceDisplay(item?.default_price ? item.default_price.toLocaleString('id-ID') : '');
+    setCostDisplay(item?.cost_price ? item.cost_price.toLocaleString('id-ID') : '');
     setErrors({});
     setUploadError('');
   }, [item, defaultItemType, isAccommodation]);
@@ -271,6 +293,9 @@ export function CatalogItemForm({
       sku: isProduct ? formData.sku?.trim() || null : null,
       track_stock: isProduct ? (formData.track_stock ?? false) : false,
       stock_qty: isProduct && formData.track_stock ? Math.max(0, formData.stock_qty ?? 0) : 0,
+      // Harga pokok hanya bermakna bila stok dilacak — melepas pelacakan
+      // membersihkannya supaya tak ada nilai menggantung yang ikut terjurnal.
+      cost_price: isProduct && formData.track_stock ? Math.max(0, formData.cost_price ?? 0) : 0,
       // Instrumen investasi hanya masuk akal untuk item produk di bisnis dagang
       // sektor finance. Melepas kelas aset mengembalikan lot size ke 1 supaya
       // tidak ada sisa nilai menggantung.
@@ -565,20 +590,59 @@ export function CatalogItemForm({
               {tc.trackStockHint}
             </p>
             {formData.track_stock && (
-              <div>
-                <NumberStepperField
-                  label={tc.stockQtyLabel}
-                  min={0}
-                  value={formData.stock_qty ?? 0}
-                  onValueChange={(v) => setFormData(prev => ({ ...prev, stock_qty: v }))}
-                  unit={formData.unit?.trim() || undefined}
-                />
-                {isEditMode && (
+              <>
+                <div>
+                  <NumberStepperField
+                    label={tc.stockQtyLabel}
+                    min={0}
+                    value={formData.stock_qty ?? 0}
+                    onValueChange={(v) => setFormData(prev => ({ ...prev, stock_qty: v }))}
+                    unit={formData.unit?.trim() || undefined}
+                  />
+                  {isEditMode && (
+                    <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+                      {tc.stockQtyHintEdit}
+                    </p>
+                  )}
+                </div>
+
+                {/* Harga pokok (migr 134) — menutup jembatan stok ke ledger:
+                    checkout kasir memakainya untuk menjurnal Dr HPP / Cr
+                    Persediaan di hari penjualan. */}
+                <div>
+                  <CurrencyInputWithCalculator
+                    label={tc.costPriceLabel}
+                    displayValue={costDisplay}
+                    onChange={(val, display) => {
+                      setFormData(prev => ({ ...prev, cost_price: val }));
+                      setCostDisplay(display);
+                    }}
+                  />
                   <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
-                    {tc.stockQtyHintEdit}
+                    {hasInventoryAccount ? tc.costPriceHint : tc.costPriceNoInventoryHint}
                   </p>
-                )}
-              </div>
+                  {margin !== null && (
+                    <p
+                      className={`mt-1.5 text-xs font-medium ${
+                        margin.value < 0
+                          ? 'text-red-500'
+                          : 'text-gray-500 dark:text-gray-400'
+                      }`}
+                    >
+                      {margin.value < 0 ? (
+                        tc.marginNegative
+                      ) : (
+                        <>
+                          {tc.marginLabel}: Rp {margin.value.toLocaleString('id-ID')}{' '}
+                          <span className="text-gray-400 dark:text-gray-500">
+                            ({margin.pct.toFixed(1)}%)
+                          </span>
+                        </>
+                      )}
+                    </p>
+                  )}
+                </div>
+              </>
             )}
           </div>
 

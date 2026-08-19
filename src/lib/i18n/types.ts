@@ -512,6 +512,11 @@ export interface Translations {
     trackStockHint: string;
     stockQtyLabel: string;
     stockQtyHintEdit: string;
+    costPriceLabel: string;
+    costPriceHint: string;
+    costPriceNoInventoryHint: string;
+    marginLabel: string;
+    marginNegative: string;
     // Asset Console (migr 125) — tandai item katalog sebagai instrumen investasi
     assetClassLabel: string;
     assetClassHint: string;

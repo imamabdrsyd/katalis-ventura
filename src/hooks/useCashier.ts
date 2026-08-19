@@ -10,17 +10,25 @@
  * Lalu mengurangi stok item yang track_stock=true (best-effort, tak membatalkan
  * transaksi bila gagal) dan menyimpan customer sebagai kontak tipe 'customer'.
  *
+ * Jembatan stok → ledger (migr 134): bila bisnis mengkapitalisasi pembelian ke
+ * akun Persediaan DAN item punya `cost_price`, checkout juga menjurnal HPP-nya
+ * sebagai transaksi VAR terpisah (Dr HPP / Cr Persediaan) bertanggal sama.
+ * Terpisah, bukan baris tambahan di transaksi penjualan, karena `amount`
+ * transaksi multi-line = total debit — menumpuk HPP di sana akan membuat
+ * nominal penjualan terbaca sebesar harga jual + harga pokok.
+ *
  * Akun di-resolve otomatis (pola Quick Entry) — kasir tak perlu memilih akun.
  */
 
 import { useState, useMemo, useCallback } from 'react';
 import type { Account, CatalogItem } from '@/types';
-import { createMultiLineTransaction } from '@/lib/api/transactions';
+import { createMultiLineTransaction, createTransaction } from '@/lib/api/transactions';
 import { decrementStock } from '@/lib/api/catalog';
 import { saveContactFromTransaction } from '@/lib/api/contacts';
 import {
   resolveCashAccount,
   resolveDefaultRevenueAccount,
+  planCogsPosting,
   type PaymentMethod,
 } from '@/lib/accounting/salesCheckout';
 
@@ -30,6 +38,16 @@ export type { PaymentMethod };
 export interface CartLine {
   item: CatalogItem;
   qty: number;
+}
+
+/**
+ * Hasil checkout. `cogsWarning` terisi bila penjualan SUDAH tercatat tapi jurnal
+ * HPP-nya gagal — kasir perlu tahu supaya bisa mencatat manual. Sengaja tidak
+ * dilempar sebagai error: melempar setelah penjualan tersimpan membuat kasir
+ * mengira checkout gagal lalu mengulang, dan itu menghasilkan penjualan dobel.
+ */
+export interface CheckoutResult {
+  cogsWarning?: string;
 }
 
 interface CheckoutContext {
@@ -91,7 +109,7 @@ export function useCashier({ businessId, userId, accounts }: CheckoutContext) {
    * Rakit & simpan transaksi penjualan. Mengembalikan transaksi yang dibuat.
    * Melempar error bila keranjang kosong atau akun kas/pendapatan tak ditemukan.
    */
-  const checkout = useCallback(async (): Promise<void> => {
+  const checkout = useCallback(async (): Promise<CheckoutResult> => {
     if (cart.length === 0) throw new Error('Keranjang kosong');
 
     const cashAccount = resolveCashAccount(accounts, paymentMethod);
@@ -99,6 +117,11 @@ export function useCashier({ businessId, userId, accounts }: CheckoutContext) {
       throw new Error('Akun Kas/Bank tidak ditemukan. Periksa Chart of Accounts.');
     }
     const defaultRevenue = resolveDefaultRevenueAccount(accounts);
+
+    // Rencana HPP dihitung SEBELUM apa pun disimpan. null = memang tak ada yang
+    // perlu dijurnal (bisnis tanpa akun Persediaan / item tanpa cost_price) —
+    // jalur normal, bukan kegagalan. Lihat `planCogsPosting`.
+    const cogsPlan = planCogsPosting(cart, accounts);
 
     // Grup kredit pendapatan per akun (beberapa item bisa berbagi akun yang sama)
     const revenueByAccount = new Map<string, number>();
@@ -133,8 +156,9 @@ export function useCashier({ businessId, userId, accounts }: CheckoutContext) {
     const itemsLabel = cart.map((l) => `${l.item.name} x${l.qty}`).join(', ');
 
     setSubmitting(true);
+    let cogsWarning: string | undefined;
     try {
-      await createMultiLineTransaction({
+      const sale = await createMultiLineTransaction({
         business_id: businessId,
         created_by: userId,
         date: new Date().toISOString().slice(0, 10),
@@ -155,6 +179,37 @@ export function useCashier({ businessId, userId, accounts }: CheckoutContext) {
         },
         journal_lines: [debitLine, ...creditLines],
       });
+
+      // Jurnal HPP: Dr HPP / Cr Persediaan, tanggal sama dengan penjualan.
+      // Dibuat SESUDAH penjualan supaya `cogs_of_transaction_id` bisa menunjuk
+      // transaksi yang sudah pasti ada — urutan sebaliknya berisiko meninggalkan
+      // beban HPP yatim bila penyimpanan penjualan gagal.
+      if (cogsPlan) {
+        try {
+          await createTransaction({
+            business_id: businessId,
+            created_by: userId,
+            date: new Date().toISOString().slice(0, 10),
+            category: 'VAR',
+            name: 'Penjualan POS',
+            description: `HPP — ${itemsLabel}`,
+            amount: cogsPlan.total,
+            account: '',
+            status: 'posted',
+            is_double_entry: true,
+            debit_account_id: cogsPlan.cogsAccountId,
+            credit_account_id: cogsPlan.inventoryAccountId,
+            meta: {
+              cogs_of_transaction_id: sale.id,
+              cogs_items: cogsPlan.items,
+            },
+          });
+        } catch (err) {
+          console.error('Gagal mencatat jurnal HPP penjualan POS:', err);
+          cogsWarning =
+            'Penjualan tercatat, tapi jurnal HPP gagal disimpan. Catat manual: Debit HPP / Kredit Persediaan.';
+        }
+      }
 
       // Wire customer ke kelola kontak (tipe customer). Diam-diam abaikan bila
       // sudah ada / gagal — tak boleh membatalkan penjualan yang sudah tercatat.
@@ -178,6 +233,7 @@ export function useCashier({ businessId, userId, accounts }: CheckoutContext) {
       );
 
       clearCart();
+      return { cogsWarning };
     } finally {
       setSubmitting(false);
     }

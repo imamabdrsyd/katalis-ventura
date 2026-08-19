@@ -90,6 +90,10 @@ export interface TransactionMeta {
   attachments?: TransactionAttachment[];
   /** ID recurring template yang men-generate transaksi ini */
   recurring_template_id?: string;
+  /** POS (migr 134): ID transaksi penjualan yang HPP-nya dilepas oleh entry ini */
+  cogs_of_transaction_id?: string;
+  /** POS (migr 134): rincian harga pokok per item pada entry HPP otomatis */
+  cogs_items?: { catalog_item_id: string; name: string; qty: number; unit_cost: number }[];
   /** OCR scan payload captured when a transaction was filled from receipt OCR */
   ocr?: {
     provider: 'google_vision' | 'ocr_space';
@@ -168,6 +172,10 @@ export interface CatalogItem {
   // Stok sederhana POS (opt-in). Hanya item track_stock=true yang dikurangi saat checkout.
   track_stock?: boolean;
   stock_qty?: number;
+  // Harga pokok per satuan (migr 134) — jembatan stok ke ledger. Checkout POS
+  // memakainya untuk menjurnal HPP (Dr HPP / Cr Persediaan) di hari penjualan,
+  // bukan memutasi jurnal pembelian lama. 0 = tidak dijurnal otomatis.
+  cost_price?: number;
   // Asset Console (migr 125). asset_class NULL = item katalog biasa (tidak ikut
   // ke Asset Console). asset_lot_size menjembatani satuan: transaksi mencatat
   // kuantitas dalam lot, sedangkan `unit`/`default_price` dikutip per lembar —
