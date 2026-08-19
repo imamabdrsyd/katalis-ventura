@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 import Image from 'next/image';
 import { Camera, X, Loader2 } from 'lucide-react';
 import type { Business } from '@/types';
@@ -44,6 +45,14 @@ export function BusinessForm({
   onCancel,
   loading = false,
 }: BusinessFormProps) {
+  const { t } = useLanguage();
+  const bf = t.businessForm;
+  // Label kategori usaha diambil dari i18n, bukan dari label di
+  // BUSINESS_TYPE_PRESETS — konstanta itu dipakai bersama modul lain dan tak
+  // bisa membaca hook bahasa. Nilainya tetap satu sumber (presets).
+  const categoryLabel = (value: string): string =>
+    ({ jasa: bf.categoryJasa, produk: bf.categoryProduk, dagang: bf.categoryDagang })[value] ?? value;
+
   // Check if existing business_sector is custom (not in predefined list)
   const isCustomSector = business?.business_sector &&
     !BUSINESS_SECTORS.some(s => s.value === business.business_sector);
@@ -70,11 +79,11 @@ export function BusinessForm({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      setUploadError('Hanya file gambar yang diperbolehkan');
+      setUploadError(bf.imageOnly);
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      setUploadError('Ukuran file maksimal 2MB');
+      setUploadError(bf.maxFileSize);
       return;
     }
 
@@ -90,10 +99,10 @@ export function BusinessForm({
           body: formData,
         });
         const json = await res.json();
-        if (!res.ok) throw new Error(json.error || 'Gagal upload logo');
+        if (!res.ok) throw new Error(json.error || bf.logoUploadFailed);
         setFormData((prev) => ({ ...prev, logo_url: json.url }));
       } catch (err: any) {
-        setUploadError(err.message || 'Gagal upload logo');
+        setUploadError(err.message || bf.logoUploadFailed);
       } finally {
         setUploading(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -115,10 +124,10 @@ export function BusinessForm({
     const newErrors: Partial<Record<keyof BusinessFormData, string>> = {};
 
     if (!formData.business_name.trim()) {
-      newErrors.business_name = 'Nama bisnis harus diisi';
+      newErrors.business_name = bf.nameRequired;
     }
     if (formData.business_sector === 'other' && !customSector.trim()) {
-      newErrors.business_sector = 'Sektor bisnis harus diisi';
+      newErrors.business_sector = bf.sectorRequired;
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -186,7 +195,7 @@ export function BusinessForm({
           </div>
           <div className="flex flex-col gap-2">
             <div className="text-sm text-gray-500 dark:text-gray-400">
-              <p>Klik untuk upload logo</p>
+              <p>{bf.clickToUploadLogo}</p>
               <p className="text-xs mt-0.5">JPG, PNG, WebP, GIF. Maks 2MB</p>
             </div>
             {formData.logo_url && (
@@ -202,7 +211,7 @@ export function BusinessForm({
                         : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                     }`}
                   >
-                    {fit === 'cover' ? 'Penuh' : 'Fit'}
+                    {fit === 'cover' ? bf.logoFitFull : bf.logoFitContain}
                   </button>
                 ))}
               </div>
@@ -224,12 +233,12 @@ export function BusinessForm({
       {/* Nama Bisnis */}
       <div>
         <FloatingField
-          label="Nama Bisnis *"
+          label={bf.businessName}
           type="text"
           name="business_name"
           value={formData.business_name}
           onChange={handleChange}
-          placeholder="cth: Katalis Studio"
+          placeholder={bf.namePlaceholder}
           required
         />
         {errors.business_name && (
@@ -240,14 +249,14 @@ export function BusinessForm({
       {/* Tipe Bisnis */}
       <div>
         <FloatingSelect
-          label="Tipe Bisnis"
+          label={bf.businessType}
           name="business_type"
           value={formData.business_type}
           onChange={handleChange}
         >
           {BUSINESS_CATEGORIES.map((cat) => (
             <option key={cat.value} value={cat.value}>
-              {cat.label}
+              {categoryLabel(cat.value)}
             </option>
           ))}
         </FloatingSelect>
@@ -256,21 +265,21 @@ export function BusinessForm({
       {/* Sektor */}
       <div>
         <FloatingSelect
-          label="Sektor"
+          label={bf.sector}
           name="business_sector"
           value={formData.business_sector}
           onChange={handleChange}
         >
           {BUSINESS_SECTORS.map((sector) => (
             <option key={sector.value} value={sector.value}>
-              {sector.label}
+              {sector.value === 'other' ? bf.sectorCustom : sector.label}
             </option>
           ))}
         </FloatingSelect>
         {formData.business_sector === 'other' && (
           <div className="mt-3">
             <FloatingField
-              label="Sektor Bisnis Custom"
+              label={bf.sectorCustomLabel}
               type="text"
               value={customSector}
               onChange={(e) => {
@@ -279,7 +288,7 @@ export function BusinessForm({
                   setErrors((prev) => ({ ...prev, business_sector: undefined }));
                 }
               }}
-              placeholder="Masukkan sektor bisnis"
+              placeholder={bf.sectorPlaceholder}
             />
           </div>
         )}
@@ -290,21 +299,21 @@ export function BusinessForm({
 
       {/* Alamat */}
       <div>
-        <label className="label">Alamat Usaha</label>
+        <label className="label">{bf.address}</label>
         <textarea
           name="property_address"
           value={formData.property_address}
           onChange={handleChange}
           className="input"
           rows={3}
-          placeholder="cth: Galeri Ciumbuleuit Apartment 2, Bandung"
+          placeholder={bf.addressPlaceholder}
         />
       </div>
 
       {/* Modal Investasi / Capital Investment */}
       <div>
         <FloatingField
-          label="Modal Investasi (Rp)"
+          label={bf.capitalInvestment}
           type="number"
           name="capital_investment"
           value={formData.capital_investment || ''}
@@ -315,10 +324,10 @@ export function BusinessForm({
               capital_investment: value,
             }));
           }}
-          placeholder="cth: 350000000"
+          placeholder={bf.capitalPlaceholder}
           min="0"
         />
-        <p className="text-xs text-gray-500 mt-1">Jumlah modal yang Anda investasikan ke bisnis ini</p>
+        <p className="text-xs text-gray-500 mt-1">{bf.capitalHint}</p>
       </div>
 
       {/* Omnichannel Widget — Landing Page */}
@@ -340,10 +349,10 @@ export function BusinessForm({
               htmlFor="is_public"
               className="text-sm font-medium text-gray-900 dark:text-white cursor-pointer"
             >
-              Tampilkan di Landing Page
+              {bf.showOnLanding}
             </label>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              Bisnis akan muncul di halaman publik Axion
+              {bf.showOnLandingHint}
             </p>
           </div>
           <input
@@ -360,12 +369,12 @@ export function BusinessForm({
         {/* Kota */}
         <div>
           <FloatingField
-            label="Kota"
+            label={bf.city}
             type="text"
             name="city"
             value={formData.city || ''}
             onChange={handleChange}
-            placeholder="cth: Bandung"
+            placeholder={bf.cityPlaceholder}
           />
         </div>
 
@@ -380,10 +389,10 @@ export function BusinessForm({
           className="btn-secondary flex-1"
           disabled={loading}
         >
-          Batal
+          {t.common.cancel}
         </button>
         <button type="submit" className="btn-primary-glow flex-1" disabled={loading}>
-          {loading ? 'Menyimpan...' : business ? 'Update Bisnis' : 'Tambah Bisnis'}
+          {loading ? t.common.saving : business ? bf.updateBusiness : bf.addBusiness}
         </button>
       </div>
     </form>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 import { X, Upload, FileText, AlertCircle, CheckCircle, Download, Sparkles, Table2, Bot } from 'lucide-react';
 import { ChannelImportTab } from '@/components/agent/ChannelImportTab';
 import { Tabs } from '@/components/ui/Tabs';
@@ -22,25 +23,10 @@ import { formatCurrency } from '@/lib/utils';
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
-const CATEGORY_LABELS: Record<TransactionCategory, string> = {
-  EARN: 'Pendapatan',
-  OPEX: 'Beban Ops',
-  VAR: 'HPP/Variabel',
-  CAPEX: 'Belanja Modal',
-  TAX: 'Pajak',
-  FIN: 'Pembiayaan',
-};
-
 const CONFIDENCE_STYLES = {
   high: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400',
   medium: 'bg-amber-50 dark:bg-amber-900/20 text-amber-500 dark:text-amber-400',
   low: 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400',
-};
-
-const CONFIDENCE_LABELS = {
-  high: 'Auto',
-  medium: 'Review',
-  low: 'Manual',
 };
 
 type TransactionImportMode = ImportMode | 'channel';
@@ -60,6 +46,12 @@ export default function TransactionImportModal({
   userId,
   onImportComplete,
 }: TransactionImportModalProps) {
+  const { t } = useLanguage();
+  const ti = t.importModal;
+  // Label kepercayaan hasil smart-resolve. Dulu konstanta modul-level; dipindah
+  // ke dalam komponen supaya ikut berganti bahasa.
+  const confidenceLabel = (c: 'high' | 'medium' | 'low'): string =>
+    ({ high: ti.confidenceHigh, medium: ti.confidenceMedium, low: ti.confidenceLow })[c];
   const [file, setFile] = useState<File | null>(null);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [progress, setProgress] = useState<ImportProgress>({
@@ -67,7 +59,7 @@ export default function TransactionImportModal({
     current: 0,
     total: 0,
     percentage: 0,
-    message: 'Choose an Excel file to import',
+    message: ti.msgChooseFile,
   });
   const [importing, setImporting] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -178,7 +170,7 @@ export default function TransactionImportModal({
       current: 0,
       total: 0,
       percentage: 0,
-      message: 'Validating file...',
+      message: ti.msgValidating,
     });
 
     const fileValidation = validateFile(selectedFile);
@@ -188,7 +180,7 @@ export default function TransactionImportModal({
         current: 0,
         total: 0,
         percentage: 0,
-        message: fileValidation.error || 'Invalid file',
+        message: fileValidation.error || ti.msgInvalidFile,
       });
       return;
     }
@@ -201,7 +193,7 @@ export default function TransactionImportModal({
         current: 0,
         total: 0,
         percentage: 30,
-        message: 'Reading Excel file...',
+        message: ti.msgReadingFile,
       });
 
       const data = await parseExcelFile(selectedFile);
@@ -212,7 +204,7 @@ export default function TransactionImportModal({
           current: 0,
           total: 0,
           percentage: 0,
-          message: 'No data found in Excel file',
+          message: ti.msgNoData,
         });
         return;
       }
@@ -296,7 +288,7 @@ export default function TransactionImportModal({
         current: 0,
         total: 0,
         percentage: 0,
-        message: error instanceof Error ? error.message : 'Failed to parse file',
+        message: error instanceof Error ? error.message : ti.msgParseFailed,
       });
     }
   };
@@ -374,7 +366,7 @@ export default function TransactionImportModal({
         current: 0,
         total: smartRows.length,
         percentage: 0,
-        message: 'Importing transactions...',
+        message: ti.msgImporting,
       });
 
       const transactions: TransactionInsert[] = smartRows.map((row) => {
@@ -483,7 +475,7 @@ export default function TransactionImportModal({
           id: batchId,
           inserted_count: 0,
           failed_count: smartRows.length,
-          errors: [{ message: error instanceof Error ? error.message : 'Import failed' }],
+          errors: [{ message: error instanceof Error ? error.message : ti.msgImportFailed }],
           status: 'failed',
         }).catch((err) => console.error('Failed to finalize import batch:', err));
       }
@@ -492,7 +484,7 @@ export default function TransactionImportModal({
         current: 0,
         total: 0,
         percentage: 0,
-        message: error instanceof Error ? error.message : 'Import failed',
+        message: error instanceof Error ? error.message : ti.msgImportFailed,
       });
       setImporting(false);
     }
@@ -527,7 +519,7 @@ export default function TransactionImportModal({
         current: 0,
         total: validationResult.validCount,
         percentage: 0,
-        message: 'Importing transactions...',
+        message: ti.msgImporting,
       });
 
       const transactions: TransactionInsert[] = validationResult.validRows.map((row) => {
@@ -623,7 +615,7 @@ export default function TransactionImportModal({
           id: batchId,
           inserted_count: 0,
           failed_count: validationResult?.validCount ?? 0,
-          errors: [{ message: error instanceof Error ? error.message : 'Import failed' }],
+          errors: [{ message: error instanceof Error ? error.message : ti.msgImportFailed }],
           status: 'failed',
         }).catch((err) => console.error('Failed to finalize import batch:', err));
       }
@@ -632,7 +624,7 @@ export default function TransactionImportModal({
         current: 0,
         total: 0,
         percentage: 0,
-        message: error instanceof Error ? error.message : 'Import failed',
+        message: error instanceof Error ? error.message : ti.msgImportFailed,
       });
       setImporting(false);
     }
@@ -671,7 +663,7 @@ export default function TransactionImportModal({
       current: 0,
       total: 0,
       percentage: 0,
-      message: 'Choose an Excel file to import',
+      message: ti.msgChooseFile,
     });
     setImporting(false);
     setImportMode('smart');
@@ -698,7 +690,7 @@ export default function TransactionImportModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Import Transaksi dari Excel</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{ti.title}</h2>
           <button
             onClick={handleClose}
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
@@ -717,9 +709,9 @@ export default function TransactionImportModal({
               onChange={setImportMode}
               scrollable
               tabs={[
-                { value: 'smart', label: 'Smart Import', icon: <Sparkles className="h-4 w-4" /> },
-                { value: 'full', label: 'Import Lengkap', icon: <Table2 className="h-4 w-4" /> },
-                { value: 'channel', label: 'Channel CSV', icon: <Bot className="h-4 w-4" /> },
+                { value: 'smart', label: ti.tabSmart, icon: <Sparkles className="h-4 w-4" /> },
+                { value: 'full', label: ti.tabFull, icon: <Table2 className="h-4 w-4" /> },
+                { value: 'channel', label: ti.tabChannel, icon: <Bot className="h-4 w-4" /> },
               ]}
             />
           )}
@@ -740,12 +732,12 @@ export default function TransactionImportModal({
                   <FileText className="h-5 w-5 text-gray-500 dark:text-gray-400 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-800 dark:text-gray-200">
-                      {importMode === 'smart' ? 'Template Smart Import' : 'Template Import Lengkap'}
+                      {importMode === 'smart' ? ti.templateSmartTitle : ti.templateFullTitle}
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                       {importMode === 'smart'
-                        ? 'Upload file Excel apapun — AXION AI otomatis mendeteksi kolom dan mengisi kategori, akun, serta breakdown unit'
-                        : 'Download template Excel dengan semua kolom untuk import manual'}
+                        ? ti.templateSmartHint
+                        : ti.templateFullHint}
                     </p>
                   </div>
                 </div>
@@ -754,7 +746,7 @@ export default function TransactionImportModal({
                   className="btn-primary-glow flex items-center justify-center gap-2 w-full sm:w-auto whitespace-nowrap"
                 >
                   <Download className="h-4 w-4" />
-                  <span>Download Template</span>
+                  <span>{ti.downloadTemplate}</span>
                 </button>
               </div>
             </div>
@@ -770,10 +762,10 @@ export default function TransactionImportModal({
             >
               <Upload className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
               <p className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Drop file Excel di sini atau klik untuk pilih file
+                {ti.dropzone}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Format: .xlsx, .xls, .csv (max 5MB, 5000 rows)
+                {ti.dropzoneFormat}
               </p>
               <input
                 ref={fileInputRef}
@@ -794,7 +786,7 @@ export default function TransactionImportModal({
               <div className="flex items-start gap-3">
                 <AlertCircle className="h-5 w-5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="font-semibold text-red-900 dark:text-red-100">Error</h3>
+                  <h3 className="font-semibold text-red-900 dark:text-red-100">{ti.errorHeading}</h3>
                   <p className="text-sm text-red-500 dark:text-red-300 mt-1">{progress.message}</p>
                 </div>
               </div>
@@ -826,20 +818,20 @@ export default function TransactionImportModal({
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3 text-center">
                   <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{smartRows.length}</div>
-                  <div className="text-xs text-emerald-600 dark:text-emerald-400">Total Rows</div>
+                  <div className="text-xs text-emerald-600 dark:text-emerald-400">{ti.statTotalRows}</div>
                 </div>
                 <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3 text-center">
                   <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
                     {smartRows.filter((r) => r._smart.confidence === 'high').length}
                   </div>
-                  <div className="text-xs text-emerald-600 dark:text-emerald-400">Auto-detected</div>
+                  <div className="text-xs text-emerald-600 dark:text-emerald-400">{ti.statAutoDetected}</div>
                 </div>
                 <div className={`border rounded-lg p-3 text-center ${reviewCount > 0 ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' : 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'}`}>
                   <div className={`text-xl font-bold ${reviewCount > 0 ? 'text-amber-500 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                     {reviewCount}
                   </div>
                   <div className={`text-xs ${reviewCount > 0 ? 'text-amber-500 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                    Perlu Review
+                    {ti.statNeedsReview}
                   </div>
                 </div>
               </div>
@@ -850,7 +842,7 @@ export default function TransactionImportModal({
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1">
                       <h3 className="font-semibold text-red-900 dark:text-red-100 mb-2">
-                        {validationResult.errorCount} baris tidak valid (dilewati)
+                        {ti.invalidRowsSkipped(validationResult.errorCount)}
                       </h3>
                       <div className="max-h-24 overflow-y-auto space-y-1">
                         {validationResult.invalidRows.slice(0, 5).map((row) => (
@@ -883,7 +875,7 @@ export default function TransactionImportModal({
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
                   }`}
                 >
-                  Semua ({smartRows.length})
+                  {ti.filterAll(smartRows.length)}
                 </button>
                 {reviewCount > 0 && (
                   <button
@@ -894,7 +886,7 @@ export default function TransactionImportModal({
                         : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'
                     }`}
                   >
-                    Perlu Review ({reviewCount})
+                    {ti.filterReview(reviewCount)}
                   </button>
                 )}
               </div>
@@ -912,19 +904,19 @@ export default function TransactionImportModal({
                         <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">
                           <span className="flex items-center gap-1">
                             <Sparkles className="h-3 w-3 text-primary-500" />
-                            Kategori
+                            {ti.colCategory}
                           </span>
                         </th>
                         <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">
                           <span className="flex items-center gap-1">
                             <Sparkles className="h-3 w-3 text-primary-500" />
-                            Debit
+                            {ti.colDebit}
                           </span>
                         </th>
                         <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">
                           <span className="flex items-center gap-1">
                             <Sparkles className="h-3 w-3 text-primary-500" />
-                            Kredit
+                            {ti.colCredit}
                           </span>
                         </th>
                         <th className="px-3 py-2 text-center font-medium text-gray-600 dark:text-gray-400 w-16">Status</th>
@@ -960,7 +952,7 @@ export default function TransactionImportModal({
                                 className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded px-2 py-1 text-xs font-medium text-primary-700 dark:text-primary-300 cursor-pointer"
                               >
                                 {CATEGORIES.map((cat) => (
-                                  <option key={cat} value={cat}>{cat} — {CATEGORY_LABELS[cat]}</option>
+                                  <option key={cat} value={cat}>{cat} — {t.categories[cat]}</option>
                                 ))}
                               </select>
                             </td>
@@ -1001,12 +993,12 @@ export default function TransactionImportModal({
                                   className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${CONFIDENCE_STYLES[row._smart.confidence]}`}
                                   title={row._smart.resolve_source}
                                 >
-                                  {row._smart.user_edited ? 'Edited' : CONFIDENCE_LABELS[row._smart.confidence]}
+                                  {row._smart.user_edited ? ti.edited : confidenceLabel(row._smart.confidence)}
                                 </span>
                                 {row._smart.resolve_source === 'ai_assist' && !row._smart.user_edited && (
                                   <span
                                     className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400"
-                                    title="Kategori dibantu AXION AI"
+                                    title={ti.aiAssistedCategory}
                                   >
                                     <Sparkles className="w-2.5 h-2.5" /> AI
                                   </span>
@@ -1021,7 +1013,7 @@ export default function TransactionImportModal({
                 </div>
                 {filteredSmartRows.length === 0 && (
                   <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">
-                    Tidak ada baris yang perlu direview
+                    {ti.noRowsToReview}
                   </div>
                 )}
               </div>
@@ -1039,7 +1031,7 @@ export default function TransactionImportModal({
                       <div className="text-2xl font-bold text-green-900 dark:text-green-100">
                         {validationResult.validCount}
                       </div>
-                      <div className="text-sm text-green-700 dark:text-green-300">Valid Rows</div>
+                      <div className="text-sm text-green-700 dark:text-green-300">{ti.statValidRows}</div>
                     </div>
                   </div>
                 </div>
@@ -1051,7 +1043,7 @@ export default function TransactionImportModal({
                       <div className="text-2xl font-bold text-red-900 dark:text-red-100">
                         {validationResult.errorCount}
                       </div>
-                      <div className="text-sm text-red-500 dark:text-red-300">Errors</div>
+                      <div className="text-sm text-red-500 dark:text-red-300">{ti.statErrors}</div>
                     </div>
                   </div>
                 </div>
@@ -1063,7 +1055,7 @@ export default function TransactionImportModal({
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1">
                       <h3 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
-                        {validationResult.errorCount} baris memiliki error
+                        {ti.rowsHaveErrors(validationResult.errorCount)}
                       </h3>
                       <div className="max-h-40 overflow-y-auto space-y-1">
                         {validationResult.invalidRows.slice(0, 10).map((row) => (
@@ -1084,7 +1076,7 @@ export default function TransactionImportModal({
                       className="px-3 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm flex items-center gap-2 flex-shrink-0"
                     >
                       <Download className="h-4 w-4" />
-                      Download Errors
+                      {ti.downloadErrors}
                     </button>
                   </div>
                 </div>
@@ -1094,23 +1086,23 @@ export default function TransactionImportModal({
               {validationResult.validCount > 0 && (
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
-                    Preview (10 baris pertama)
+                    {ti.previewFirstRows}
                   </h3>
                   <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead className="bg-gray-50 dark:bg-gray-900">
                           <tr>
-                            <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Date</th>
-                            <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Category</th>
-                            <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Name</th>
-                            <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Description</th>
-                            <th className="px-4 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Amount</th>
-                            <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Account</th>
+                            <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">{ti.colDate}</th>
+                            <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">{ti.colCategory}</th>
+                            <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">{ti.colName}</th>
+                            <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">{ti.colDescription}</th>
+                            <th className="px-4 py-2 text-right font-medium text-gray-700 dark:text-gray-300">{ti.colAmount}</th>
+                            <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">{ti.colAccount}</th>
                             {validationResult.validRows.some((r) => r.data.debit_account || r.data.credit_account) && (
                               <>
-                                <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Debit</th>
-                                <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Credit</th>
+                                <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">{ti.colDebit}</th>
+                                <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">{ti.colCredit}</th>
                               </>
                             )}
                           </tr>
@@ -1167,7 +1159,7 @@ export default function TransactionImportModal({
               {importMode === 'smart' && (
                 <span className="flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5 text-primary-500" />
-                  Smart Import — {smartRows.filter((r) => r._smart.confidence === 'high').length} auto-detected
+                  {ti.smartFooter(smartRows.filter((r) => r._smart.confidence === 'high').length)}
                 </span>
               )}
             </div>
@@ -1177,14 +1169,14 @@ export default function TransactionImportModal({
                 className="btn-ghost"
                 disabled={importing}
               >
-                Batal
+                {t.common.cancel}
               </button>
               <button
                 onClick={handleImport}
                 disabled={importCount === 0 || importing}
                 className="btn-primary"
               >
-                {importing ? 'Importing...' : `Import ${importCount} Transaksi`}
+                {importing ? ti.importing : ti.importButton(importCount)}
               </button>
             </div>
           </div>

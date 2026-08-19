@@ -469,6 +469,57 @@ export interface Translations {
     errUploadAttachment: string;
   };
 
+  importModal: {
+    title: string;
+    tabSmart: string;
+    tabFull: string;
+    tabChannel: string;
+    templateSmartTitle: string;
+    templateFullTitle: string;
+    templateSmartHint: string;
+    templateFullHint: string;
+    downloadTemplate: string;
+    dropzone: string;
+    dropzoneFormat: string;
+    errorHeading: string;
+    confidenceHigh: string;
+    confidenceMedium: string;
+    confidenceLow: string;
+    edited: string;
+    aiAssistedCategory: string;
+    statTotalRows: string;
+    statAutoDetected: string;
+    statNeedsReview: string;
+    filterAll: (n: number) => string;
+    filterReview: (n: number) => string;
+    invalidRowsSkipped: (n: number) => string;
+    colCategory: string;
+    colDebit: string;
+    colCredit: string;
+    colDate: string;
+    colName: string;
+    colDescription: string;
+    colAmount: string;
+    colAccount: string;
+    noRowsToReview: string;
+    statValidRows: string;
+    statErrors: string;
+    rowsHaveErrors: (n: number) => string;
+    downloadErrors: string;
+    previewFirstRows: string;
+    smartFooter: (n: number) => string;
+    importing: string;
+    importButton: (n: number) => string;
+    msgChooseFile: string;
+    msgValidating: string;
+    msgInvalidFile: string;
+    msgReadingFile: string;
+    msgNoData: string;
+    msgParseFailed: string;
+    msgImporting: string;
+    msgImportFailed: string;
+  };
+
   quickForm: {
     fxRateMustBePositive: string;
     accountRequired: string;
@@ -1095,6 +1146,13 @@ export interface Translations {
     categoryJasa: string;
     categoryProduk: string;
     categoryDagang: string;
+    sectorCustomLabel: string;
+    logoFitFull: string;
+    logoFitContain: string;
+    showOnLanding: string;
+    showOnLandingHint: string;
+    city: string;
+    cityPlaceholder: string;
   };
 
   // Income Statement
