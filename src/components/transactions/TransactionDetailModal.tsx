@@ -33,7 +33,6 @@ import { useInvoiceFromTransactions } from '@/hooks/useInvoiceFromTransactions';
 import { CreateInvoiceFromTransactionsModal } from '@/components/invoices/CreateInvoiceFromTransactionsModal';
 import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
 import { isAdvanceReceivableAccount } from '@/lib/accounting/classification';
-import { exportLoanReceivablePDF } from '@/lib/export';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { AlertTriangle, ArrowRight, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, RotateCcw, ZoomIn, ZoomOut, Receipt, CirclePlus, ChevronLeft, ChevronRight, Maximize2, Loader2, Copy, Printer } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
@@ -507,6 +506,10 @@ export function TransactionDetailModal({
         }
       }
 
+      // Import dinamis: '@/lib/export' menarik jsPDF + autotable (~440 KB) yang
+      // hanya dipakai tombol cetak ini. Static import membuat setiap halaman
+      // yang merender modal detail ikut mengunduhnya di initial load.
+      const { exportLoanReceivablePDF } = await import('@/lib/export');
       await exportLoanReceivablePDF({
         businessName: activeBusiness?.business_name ?? '',
         transactionNumber: transaction.transaction_number ?? transaction.id.slice(0, 8),

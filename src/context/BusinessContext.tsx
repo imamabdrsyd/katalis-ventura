@@ -73,8 +73,11 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
 
       setUser(user);
 
-      // Batch profile + membership queries in parallel
-      const [profileResult, rolesResult] = await Promise.all([
+      // Batch profile + membership + bisnis-yang-dibuat dalam satu gelombang.
+      // Ketiganya cuma butuh user.id, jadi tak ada alasan menunggu bergantian —
+      // tiap round-trip Supabase di sini menahan SELURUH dashboard tetap di
+      // skeleton, karena semua halaman menunggu context ini selesai.
+      const [profileResult, rolesResult, createdBusinessesResult] = await Promise.all([
         supabase
           .from('profiles')
           .select('default_role')
@@ -84,20 +87,20 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
           .from('user_business_roles')
           .select('role, business_id')
           .eq('user_id', user.id),
+        // select('*') supaya setiap kolom (termasuk business_type) selalu ada —
+        // join yang menyeleksi kolom pernah bikin field diam-diam hilang.
+        supabase
+          .from('businesses')
+          .select('*')
+          .eq('created_by', user.id),
       ]);
 
       const { data: profile } = profileResult;
       const { data: rolesData, error: rolesError } = rolesResult;
+      const { data: createdBusinessesData } = createdBusinessesResult;
 
       // Collect all business IDs the user is linked to (member or creator)
       const memberBusinessIds = (rolesData || []).map((r) => r.business_id);
-
-      // Fetch all businesses in one query with select('*') so every column
-      // (including business_type) is always present — avoids join stripping columns
-      const { data: createdBusinessesData } = await supabase
-        .from('businesses')
-        .select('*')
-        .eq('created_by', user.id);
 
       const allBusinessIds = Array.from(
         new Set([...memberBusinessIds, ...(createdBusinessesData || []).map((b) => b.id)])

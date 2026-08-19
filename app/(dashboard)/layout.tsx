@@ -1,9 +1,9 @@
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { BusinessProvider, useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -27,6 +27,8 @@ import {
   Zap,
   Plus,
   UserPlus,
+  Users,
+  Contact,
   Target,
   Calendar,
   Languages,
@@ -731,6 +733,122 @@ function SidebarHubSection({
   );
 }
 
+/**
+ * Kotak shortcut paling bawah sidebar: Leads, Point of Sales/Calendar, lalu
+ * Anggota & Kontak. Empat-empatnya pola kotak yang sama (grid 2 kolom), dan
+ * kembali jadi baris ikon biasa saat sidebar collapsed.
+ *
+ * Anggota & Kontak menunjuk ke DUA TAB pada satu halaman yang sama
+ * (/businesses/[id]/config?tab=...), jadi highlight aktifnya tak cukup dari
+ * pathname — perlu useSearchParams. Karena itu blok ini dipisah jadi komponen
+ * sendiri dan dibungkus <Suspense> di Sidebar: tanpa boundary, useSearchParams
+ * di dalam layout membatalkan prerender SELURUH halaman dashboard saat build
+ * (mayoritas route dashboard masih static ○).
+ */
+function SidebarQuickBoxes({
+  isCollapsed,
+  onClose,
+  canManage,
+}: {
+  isCollapsed: boolean;
+  onClose: () => void;
+  canManage: boolean;
+}) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { t } = useNavData();
+  const { activeBusiness, activeBusinessId, leadCounts } = useBusinessContext();
+
+  // Badge unread lead untuk bisnis yang sedang aktif (sidebar scoped ke 1 bisnis).
+  const activeLeadCount = activeBusinessId ? leadCounts.byBusiness[activeBusinessId] ?? 0 : 0;
+
+  const configHref = activeBusinessId ? `/businesses/${activeBusinessId}/config` : null;
+  const onConfigPage = configHref !== null && pathname === configHref;
+  const configTab = searchParams.get('tab') ?? 'members';
+
+  const startsWith = (href: string) => pathname === href || pathname.startsWith(href + '/');
+
+  const posItem = canManage
+    ? getPosNavItem(activeBusiness?.business_type, t.nav, activeBusiness?.business_sector)
+    : null;
+
+  const boxes = [
+    {
+      // Klik badge Leads (ada unread) → buka lead unread terlama otomatis.
+      href: activeLeadCount > 0 ? '/leads?openUnread=1' : '/leads',
+      label: t.nav.leads,
+      icon: MessagesSquare,
+      badge: activeLeadCount,
+      isActive: startsWith('/leads'),
+    },
+    ...(posItem
+      ? [{ href: posItem.href, label: posItem.label, icon: posItem.icon, badge: 0, isActive: startsWith(posItem.href) }]
+      : []),
+    ...(configHref
+      ? [
+          {
+            href: `${configHref}?tab=members`,
+            label: t.businessConfig.tabMembers,
+            icon: Users,
+            badge: 0,
+            isActive: onConfigPage && configTab === 'members',
+          },
+          {
+            href: `${configHref}?tab=contacts`,
+            label: t.businessConfig.tabContacts,
+            icon: Contact,
+            badge: 0,
+            isActive: onConfigPage && configTab === 'contacts',
+          },
+        ]
+      : []),
+  ];
+
+  return (
+    <div className="px-2 pt-5 pb-3 space-y-1.5">
+      <div className={isCollapsed ? 'space-y-1.5' : 'grid grid-cols-2 gap-1.5'}>
+        {boxes.map(({ href, label, icon: Icon, badge, isActive }) => (
+          <div key={href} className="relative group">
+            <Link
+              href={href}
+              onClick={onClose}
+              className={`flex items-center rounded-xl text-sm font-medium transition-colors
+                ${isCollapsed ? 'gap-3 px-3 py-2.5' : 'flex-col gap-1.5 px-2 py-3 text-center border'}
+                ${isActive
+                  ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800'
+                  : `text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-indigo-500 dark:hover:text-indigo-400 ${!isCollapsed ? 'border-gray-200 dark:border-gray-700' : ''}`
+                }`}
+            >
+              <span className="relative flex-shrink-0">
+                <Icon className={`w-5 h-5 ${isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`} />
+                {/* Saat collapsed label tersembunyi — pakai dot kecil di ikon sbg indikator unread. */}
+                {badge > 0 && isCollapsed && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-indigo-500 rounded-full ring-2 ring-white dark:ring-gray-800" />
+                )}
+              </span>
+              <span className={`overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'whitespace-nowrap w-0 opacity-0' : 'w-auto opacity-100 text-xs leading-tight'}`}>
+                {label}
+              </span>
+              {badge > 0 && !isCollapsed && (
+                <span className="min-w-[18px] h-[18px] flex items-center justify-center bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold rounded-full px-1.5 leading-none">
+                  {badge > 99 ? '99+' : badge}
+                </span>
+              )}
+            </Link>
+            {isCollapsed && (
+              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg px-3 py-2 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-[60]">
+                {label}
+                {badge > 0 && ` (${badge > 99 ? '99+' : badge})`}
+                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Sidebar({
   isOpen,
   onClose,
@@ -751,11 +869,8 @@ function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
   const { navSections, t } = useNavData();
-  const { activeBusiness, activeBusinessId, leadCounts } = useBusinessContext();
+  const { activeBusiness } = useBusinessContext();
   const canManage = isManagerRole(userRole);
-
-  // Badge unread lead untuk bisnis yang sedang aktif (sidebar scoped ke 1 bisnis).
-  const activeLeadCount = activeBusinessId ? leadCounts.byBusiness[activeBusinessId] ?? 0 : 0;
 
   // Saat ganti bisnis sambil berada di hub (Calendar/Point of Sales), route bisa
   // jadi tak cocok dengan tipe bisnis baru (mis. tetap di /calendar padahal bisnis
@@ -980,60 +1095,15 @@ function Sidebar({
         {/* Line pembatas di atas section Leads/Calendar-POS */}
         <div className="mx-4 mt-2 border-t border-gray-200 dark:border-gray-700" />
 
-        <div className="px-2 pt-5 pb-3 space-y-1.5">
-          {/* Leads & Point of Sales/Calendar — section sendiri paling bawah, 2 kotak sejajar.
-              Saat collapsed, kembali jadi 2 baris ikon biasa (grid 2 kolom tak muat). */}
-          <div className={isCollapsed ? 'space-y-1.5' : 'grid grid-cols-2 gap-1.5'}>
-            {[
-              { href: '/leads', label: t.nav.leads, icon: MessagesSquare },
-              ...(canManage ? [getPosNavItem(activeBusiness?.business_type, t.nav, activeBusiness?.business_sector)] : []),
-            ].map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-              const badge = item.href === '/leads' ? activeLeadCount : 0;
-              // Klik badge Leads (ada unread) → buka lead unread terlama otomatis.
-              const href =
-                item.href === '/leads' && badge > 0 ? '/leads?openUnread=1' : item.href;
-              return (
-                <div key={item.href} className="relative group">
-                  <Link
-                    href={href}
-                    onClick={onClose}
-                    className={`flex items-center rounded-xl text-sm font-medium transition-colors
-                      ${isCollapsed ? 'gap-3 px-3 py-2.5' : 'flex-col gap-1.5 px-2 py-3 text-center border'}
-                      ${isActive
-                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800'
-                        : `text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-indigo-500 dark:hover:text-indigo-400 ${!isCollapsed ? 'border-gray-200 dark:border-gray-700' : ''}`
-                      }`}
-                  >
-                    <span className="relative flex-shrink-0">
-                      <Icon className={`w-5 h-5 ${isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`} />
-                      {/* Saat collapsed label tersembunyi — pakai dot kecil di ikon sbg indikator unread. */}
-                      {badge > 0 && isCollapsed && (
-                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-indigo-500 rounded-full ring-2 ring-white dark:ring-gray-800" />
-                      )}
-                    </span>
-                    <span className={`overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'whitespace-nowrap w-0 opacity-0' : 'w-auto opacity-100 text-xs leading-tight'}`}>
-                      {item.label}
-                    </span>
-                    {badge > 0 && !isCollapsed && (
-                      <span className="min-w-[18px] h-[18px] flex items-center justify-center bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold rounded-full px-1.5 leading-none">
-                        {badge > 99 ? '99+' : badge}
-                      </span>
-                    )}
-                  </Link>
-                  {isCollapsed && (
-                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg px-3 py-2 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-[60]">
-                      {item.label}
-                      {badge > 0 && ` (${badge > 99 ? '99+' : badge})`}
-                      <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        {/* Shortcut kotak — dipisah ke komponen + <Suspense> karena pakai
+            useSearchParams (lihat catatan di SidebarQuickBoxes). */}
+        <Suspense fallback={<div className="px-2 pt-5 pb-3 h-[152px]" />}>
+          <SidebarQuickBoxes
+            isCollapsed={isCollapsed}
+            onClose={onClose}
+            canManage={canManage}
+          />
+        </Suspense>
         </div>
 
         {/* Footer — Date & Time Widget */}

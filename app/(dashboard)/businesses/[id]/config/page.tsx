@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
@@ -13,14 +14,35 @@ import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, W
 import { formatCurrency } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { Tabs } from '@/components/ui/Tabs';
-import { OmniChannelManager } from '@/components/business/OmniChannelManager';
 import * as businessesApi from '@/lib/api/businesses';
-import { EcommerceIntegration } from '@/components/ecommerce/EcommerceIntegration';
-import { ChannelIntegration } from '@/components/integrations/ChannelIntegration';
 import { ContactList, type ContactListHandle } from '@/components/business/ContactList';
 import { useLanguage } from '@/context/LanguageContext';
 import { isManagerRole } from '@/lib/roles';
 import type { Business } from '@/types';
+
+// Tab Omni-Channel & Integrasi berat (form, uploader, OAuth flow) tapi jarang
+// dibuka — tab default halaman ini Anggota. Static import membuat kodenya ikut
+// terunduh sebelum daftar anggota bisa tampil, jadi dipisah ke chunk sendiri
+// yang baru diambil saat tab-nya benar-benar diklik.
+const OmniChannelManager = dynamic(
+  () => import('@/components/business/OmniChannelManager').then((m) => m.OmniChannelManager),
+  { loading: () => <TabChunkLoader /> }
+);
+const ChannelIntegration = dynamic(
+  () => import('@/components/integrations/ChannelIntegration').then((m) => m.ChannelIntegration),
+  { loading: () => <TabChunkLoader /> }
+);
+const EcommerceIntegration = dynamic(
+  () => import('@/components/ecommerce/EcommerceIntegration').then((m) => m.EcommerceIntegration)
+);
+
+function TabChunkLoader() {
+  return (
+    <div className="flex items-center justify-center py-16">
+      <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+    </div>
+  );
+}
 
 const BUSINESS_SECTOR_LABELS: Record<string, string> = {
   agribusiness: 'Agribusiness',
@@ -39,6 +61,8 @@ const BUSINESS_TYPE_LABELS: Record<string, string> = {
   produk: 'Produk',
   dagang: 'Dagang',
 };
+
+type BusinessConfigTab = 'members' | 'contacts' | 'omni-channel' | 'integrations';
 
 const LEGAL_ENTITY_VALUES = ['PT', 'PT Perorangan', 'CV', 'UD', 'Firma', 'Koperasi', 'Yayasan', 'Perorangan'] as const;
 
@@ -475,8 +499,30 @@ export default function BusinessMembersPage() {
   const isCreator = business?.created_by === user?.id || isSuperadmin;
 
   const searchParams = useSearchParams();
-  const initialTab = (searchParams.get('tab') as 'members' | 'contacts' | 'omni-channel' | 'integrations') || 'members';
-  const [activeTab, setActiveTab] = useState<'members' | 'contacts' | 'omni-channel' | 'integrations'>(initialTab);
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState<BusinessConfigTab>(
+    (tabParam as BusinessConfigTab) || 'members'
+  );
+
+  // Tab hidup di query string supaya bisa di-deep-link (shortcut Anggota &
+  // Kontak di sidebar menunjuk ke halaman yang sama, beda `?tab=`). Tanpa sync
+  // ini, klik shortcut saat SUDAH di halaman config tidak mengganti tab —
+  // komponen tak remount, jadi initial state lama tetap menang.
+  useEffect(() => {
+    if (tabParam) setActiveTab(tabParam as BusinessConfigTab);
+  }, [tabParam]);
+
+  // Klik tab dari dalam halaman ikut menulis URL agar highlight sidebar tetap
+  // cocok. Pakai history.replaceState (bukan router.replace) supaya tidak ada
+  // round-trip RSC — ini murni perubahan state UI.
+  const handleTabChange = useCallback((tab: BusinessConfigTab) => {
+    setActiveTab(tab);
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      params.set('tab', tab);
+      window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+    }
+  }, []);
   const [members, setMembers] = useState<BusinessMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInviteManager, setShowInviteManager] = useState(false);
@@ -550,9 +596,9 @@ export default function BusinessMembersPage() {
           <ArrowLeft className="w-5 h-5" />
         </button>
 
-        <Tabs<'members' | 'contacts' | 'omni-channel' | 'integrations'>
+        <Tabs<BusinessConfigTab>
           value={activeTab}
-          onChange={setActiveTab}
+          onChange={handleTabChange}
           scrollable
           className="flex-1 min-w-0"
           tabs={[
