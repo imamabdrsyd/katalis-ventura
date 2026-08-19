@@ -1,38 +1,20 @@
 import gcpSql from './gcp';
 
+/**
+ * Bootstrap skema GCP Cloud SQL untuk knowledge base AXION Agent.
+ *
+ * Dulu file ini juga membuat `agent_memories` (semantic memory / recall_memory)
+ * dan lima tabel `olap_*` (replika analitik). Keduanya DICABUT 19 Agustus 2026
+ * bersama instance Cloud SQL `axion-agents` yang dihapus 10 Agustus 2026 untuk
+ * menolkan tagihan — lihat docs §26. Yang tersisa hanya tabel embedding yang
+ * masih dipakai `search_knowledge_base` + `/api/ai/upload-knowledge`.
+ */
 export async function initGcpSchema() {
   console.log('Initializing GCP SQL Schema...');
-  
+
   // Enable vector extension
   await gcpSql`CREATE EXTENSION IF NOT EXISTS vector;`;
 
-  // 1. Agent Memories
-  await gcpSql`
-    CREATE TABLE IF NOT EXISTS agent_memories (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      business_id UUID NOT NULL,
-      user_id UUID,
-      session_id TEXT NOT NULL,
-      role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
-      content TEXT NOT NULL,
-      embedding vector(768),
-      metadata JSONB,
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-    );
-  `;
-  
-  await gcpSql`CREATE INDEX IF NOT EXISTS idx_agent_memories_business ON agent_memories(business_id);`;
-  await gcpSql`CREATE INDEX IF NOT EXISTS idx_agent_memories_session ON agent_memories(session_id);`;
-
-  // ANN index untuk pencarian cosine (operator <=>) yang dipakai recall_memory.
-  // Tanpa ini, tiap recall = sequential scan eksak yang melambat linear seiring memori
-  // bertambah. HNSW butuh pgvector >= 0.5 (tersedia di Cloud SQL Postgres terkini).
-  await gcpSql`
-    CREATE INDEX IF NOT EXISTS idx_agent_memories_embedding
-    ON agent_memories USING hnsw (embedding vector_cosine_ops);
-  `;
-
-  // 2. Business Knowledge Embeddings
   await gcpSql`
     CREATE TABLE IF NOT EXISTS business_knowledge_embeddings (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -47,90 +29,12 @@ export async function initGcpSchema() {
 
   await gcpSql`CREATE INDEX IF NOT EXISTS idx_knowledge_business ON business_knowledge_embeddings(business_id);`;
 
-  // ANN index cosine untuk RAG search_knowledge_base (lihat catatan HNSW di atas).
+  // ANN index cosine untuk RAG search_knowledge_base. Tanpa ini tiap pencarian =
+  // sequential scan eksak yang melambat linear. HNSW butuh pgvector >= 0.5.
   await gcpSql`
     CREATE INDEX IF NOT EXISTS idx_knowledge_embedding
     ON business_knowledge_embeddings USING hnsw (embedding vector_cosine_ops);
   `;
-
-  // 3. OLAP Businesses
-  await gcpSql`
-    CREATE TABLE IF NOT EXISTS olap_businesses (
-      id UUID PRIMARY KEY,
-      business_name TEXT NOT NULL,
-      business_sector TEXT,
-      business_type TEXT,
-      capital_investment NUMERIC,
-      created_at TIMESTAMP WITH TIME ZONE,
-      updated_at TIMESTAMP WITH TIME ZONE,
-      synced_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-    );
-  `;
-
-  // 4. OLAP Accounts
-  await gcpSql`
-    CREATE TABLE IF NOT EXISTS olap_accounts (
-      id UUID PRIMARY KEY,
-      business_id UUID NOT NULL,
-      account_code TEXT,
-      account_name TEXT NOT NULL,
-      account_type TEXT,
-      normal_balance TEXT,
-      is_active BOOLEAN,
-      is_system BOOLEAN,
-      created_at TIMESTAMP WITH TIME ZONE,
-      updated_at TIMESTAMP WITH TIME ZONE,
-      synced_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-    );
-  `;
-
-  await gcpSql`CREATE INDEX IF NOT EXISTS idx_olap_accounts_business ON olap_accounts(business_id);`;
-
-  // 5. OLAP Transactions
-  await gcpSql`
-    CREATE TABLE IF NOT EXISTS olap_transactions (
-      id UUID PRIMARY KEY,
-      business_id UUID NOT NULL,
-      date DATE NOT NULL,
-      category TEXT,
-      name TEXT,
-      description TEXT,
-      amount NUMERIC,
-      account TEXT,
-      status TEXT,
-      sales_channel TEXT,
-      is_double_entry BOOLEAN,
-      is_multi_line BOOLEAN,
-      debit_account_id UUID,
-      credit_account_id UUID,
-      contact_id UUID,
-      notes TEXT,
-      meta JSONB,
-      created_at TIMESTAMP WITH TIME ZONE,
-      updated_at TIMESTAMP WITH TIME ZONE,
-      deleted_at TIMESTAMP WITH TIME ZONE,
-      synced_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-    );
-  `;
-
-  await gcpSql`CREATE INDEX IF NOT EXISTS idx_olap_tx_business_date ON olap_transactions(business_id, date DESC);`;
-
-  // 6. OLAP Journal Lines
-  await gcpSql`
-    CREATE TABLE IF NOT EXISTS olap_journal_lines (
-      id UUID PRIMARY KEY,
-      transaction_id UUID NOT NULL,
-      account_id UUID NOT NULL,
-      debit_amount NUMERIC NOT NULL,
-      credit_amount NUMERIC NOT NULL,
-      description TEXT,
-      sort_order INTEGER,
-      created_at TIMESTAMP WITH TIME ZONE,
-      synced_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-    );
-  `;
-
-  await gcpSql`CREATE INDEX IF NOT EXISTS idx_olap_journal_tx ON olap_journal_lines(transaction_id);`;
 
   console.log('GCP SQL Schema initialization complete.');
   return { success: true };

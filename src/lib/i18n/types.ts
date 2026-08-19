@@ -259,11 +259,6 @@ export interface Translations {
     gcpInitHint: string;
     gcpInitSuccess: string;
     gcpInitFailed: string;
-    gcpSyncButton: string;
-    gcpSyncing: string;
-    gcpSyncHint: string;
-    gcpSyncSuccess: (n: number) => string;
-    gcpSyncFailed: string;
   };
 
   // Dashboard Page

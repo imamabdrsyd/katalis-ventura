@@ -65,7 +65,6 @@ export default function SettingsPage() {
 
   // GCP Sync State
   const [gcpLoading, setGcpLoading] = useState(false);
-  const [gcpSyncing, setGcpSyncing] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -183,28 +182,6 @@ export default function SettingsPage() {
       toast.error(err.message || t.settings.gcpInitFailed);
     } finally {
       setGcpLoading(false);
-    }
-  };
-
-  const handleSyncGcp = async () => {
-    if (!activeBusinessId) {
-      toast.error(t.common.selectBusinessFirst);
-      return;
-    }
-    setGcpSyncing(true);
-    try {
-      const res = await fetch('/api/admin/gcp/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ business_id: activeBusinessId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed');
-      toast.success(t.settings.gcpSyncSuccess(data.details.transactions));
-    } catch (err: any) {
-      toast.error(err.message || t.settings.gcpSyncFailed);
-    } finally {
-      setGcpSyncing(false);
     }
   };
 
@@ -649,8 +626,10 @@ export default function SettingsPage() {
           {/* Google Sheets — integrasi per-USER, sejajar dengan Telegram */}
           <GoogleSheetsCard canManage={isManagerRole(userRole) || isSuperadmin} />
 
-          {/* Integrasi Database (GCP) */}
-          {(isManagerRole(userRole) || isSuperadmin) && (
+          {/* Integrasi Database (GCP) — tinggal bootstrap skema knowledge base.
+              Sinkronisasi OLAP dicabut 19 Agt 2026 bersama instance Cloud SQL-nya,
+              jadi kartu ini superadmin-only; manager tak punya aksi di sini lagi. */}
+          {isSuperadmin && (
             <div className="card">
               <div className="flex items-center gap-3 mb-5">
                 <Database className="w-5 h-5 text-gray-900 dark:text-gray-100" />
@@ -659,29 +638,15 @@ export default function SettingsPage() {
                   <p className="text-xs text-gray-500 dark:text-gray-400">{t.settings.gcpSubtitle}</p>
                 </div>
               </div>
-              <div className="space-y-4">
-                {isSuperadmin && (
-                  <div>
-                    <button
-                      onClick={handleInitGcpSchema}
-                      disabled={gcpLoading}
-                      className="btn-secondary w-full justify-start text-sm"
-                    >
-                      {gcpLoading ? t.settings.gcpInitProcessing : t.settings.gcpInitButton}
-                    </button>
-                    <p className="text-xs text-gray-500 mt-1">{t.settings.gcpInitHint}</p>
-                  </div>
-                )}
-                <div>
-                  <button
-                    onClick={handleSyncGcp}
-                    disabled={gcpSyncing || !activeBusinessId}
-                    className="btn-primary-glow w-full justify-start text-sm"
-                  >
-                    {gcpSyncing ? t.settings.gcpSyncing : t.settings.gcpSyncButton}
-                  </button>
-                  <p className="text-xs text-gray-500 mt-1">{t.settings.gcpSyncHint}</p>
-                </div>
+              <div>
+                <button
+                  onClick={handleInitGcpSchema}
+                  disabled={gcpLoading}
+                  className="btn-secondary w-full justify-start text-sm"
+                >
+                  {gcpLoading ? t.settings.gcpInitProcessing : t.settings.gcpInitButton}
+                </button>
+                <p className="text-xs text-gray-500 mt-1">{t.settings.gcpInitHint}</p>
               </div>
             </div>
           )}

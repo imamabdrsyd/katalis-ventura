@@ -321,7 +321,7 @@ ATURAN PENTING:
           // Eksekusi semua tool calls
           const toolResponseParts: FunctionResponsePart[] = [];
           for (const fc of functionCalls) {
-            const result = await executeTool(fc.name, fc.args, business_id, user.id);
+            const result = await executeTool(fc.name, fc.args, business_id);
 
             if (fc.name === 'navigate_to' && result.data) {
               navigateAction = result.data as NavigateAction;

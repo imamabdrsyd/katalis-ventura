@@ -1,5 +1,4 @@
 import { createServerClient } from '@/lib/supabase-server';
-import { deleteSessionMemories } from '@/lib/ai/semanticMemory';
 
 export interface AgentMemory {
   id?: string;
@@ -178,15 +177,6 @@ export async function deleteSession(businessId: string, userId: string, sessionI
       .eq('user_id', userId)
       .eq('session_id', sessionId);
     if (error) throw error;
-
-    // Hapus juga copy GCP (ringkasan sesi + embedding) supaya percakapan yang
-    // dihapus tidak muncul lagi lewat recall_memory. Supabase = primary store,
-    // jadi kegagalan GCP tidak membatalkan penghapusan — hanya dicatat.
-    try {
-      await deleteSessionMemories(businessId, userId, sessionId);
-    } catch (gcpErr) {
-      console.error('[memory.ts] Gagal hapus memori GCP untuk sesi:', gcpErr);
-    }
 
     return true;
   } catch (err) {

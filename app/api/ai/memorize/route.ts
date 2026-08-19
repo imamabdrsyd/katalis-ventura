@@ -1,9 +1,8 @@
-import { NextResponse, after } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase-server';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
 
 import { saveManualMemory } from '@/lib/ai/memory';
-import { ingestVaultMemory } from '@/lib/ai/semanticMemory';
 
 export async function POST(req: Request) {
   try {
@@ -41,9 +40,6 @@ export async function POST(req: Request) {
       source: 'aichatpanel',
       message_count: messages.length
     });
-
-    // Embed + simpan ke GCP untuk recall semantik (non-blocking, best-effort).
-    after(() => ingestVaultMemory(businessId, user.id, transcript, { source: 'aichatpanel' }));
 
     return NextResponse.json({ success: true });
   } catch (err) {

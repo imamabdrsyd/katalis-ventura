@@ -2,8 +2,8 @@
  * /api/cron/sync-ical — Cron (Vercel) impor kalender OTA (Airbnb/Booking.com).
  *
  * Untuk setiap bisnis yang punya unit dengan `ical_import_url`, tarik feed .ics
- * dan sinkronkan blok ketersediaan (`bookings.is_external=true`). Keamanan sama
- * dengan sync-olap: hanya Vercel Cron via header `Authorization: Bearer CRON_SECRET`.
+ * dan sinkronkan blok ketersediaan (`bookings.is_external=true`). Otorisasi:
+ * hanya Vercel Cron via header `Authorization: Bearer CRON_SECRET`.
  * Jadwal di vercel.json.
  */
 
