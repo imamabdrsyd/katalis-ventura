@@ -23,7 +23,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays, Check, ChevronRight, Instagram, Loader2, MessageCircle, Trophy, UserPlus } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Check, ChevronRight, Gamepad2, Instagram, Loader2, MessageCircle, Trophy, UserPlus } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import FloatingField from '@/components/ui/FloatingField';
 import { contactFieldHint, contactFieldLabel, normalizeEventContact } from '@/lib/events/contact';
@@ -270,7 +270,11 @@ export function EventLobby({ session: initialSession, business }: Props) {
             </h1>
           ) : (
             <>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Players Lobby</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                {/* Ikon ikut warna brand — satu-satunya aksen di baris judul */}
+                <Gamepad2 className="w-5 h-5 shrink-0" style={{ color: accent }} />
+                Players Lobby
+              </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{session.title}</p>
             </>
           )}
