@@ -397,6 +397,53 @@
   [style*="axion-ssot-"] { animation: none !important; }
 }
 
+/* ─── Lobby event (halaman publik) — transisi drill-down ───
+   Sengaja CSS murni, bukan framer-motion: cabang publik belum memuat library
+   animasi sama sekali dan halaman ini dibuka dari in-app browser Instagram di
+   jaringan seluler — puluhan KB JS untuk transisi 260ms bukan tukar-tambah yang
+   sepadan. Semua kelas memakai fill-mode `both`, jadi elemen berdelay tetap
+   tersembunyi sampai gilirannya tiba. */
+@keyframes axion-screen-in-forward {
+  from { opacity: 0; transform: translate3d(18px, 0, 0); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes axion-screen-in-back {
+  from { opacity: 0; transform: translate3d(-18px, 0, 0); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes axion-rise-in {
+  from { opacity: 0; transform: translate3d(0, 10px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes axion-pop-in {
+  0%   { opacity: 0; transform: scale(0.96) translate3d(0, -6px, 0); }
+  60%  { opacity: 1; transform: scale(1.01); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes axion-bar-grow {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+.animate-screen-in-forward { animation: axion-screen-in-forward 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-screen-in-back    { animation: axion-screen-in-back 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-rise-in           { animation: axion-rise-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-pop-in            { animation: axion-pop-in 340ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+/* Bar terisi tumbuh dari kiri. Pakai scaleX (bukan animasi width) supaya
+   jalannya di compositor; perubahan width berikutnya dari polling tetap
+   ditangani `transition-all` di elemennya. */
+.animate-bar-grow          { transform-origin: left center; animation: axion-bar-grow 640ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-screen-in-forward,
+  .animate-screen-in-back,
+  .animate-rise-in,
+  .animate-pop-in,
+  .animate-bar-grow {
+    animation: none;
+  }
+}
+
 /* ─── Mobile viewport utilities ───
    dvh = tinggi viewport dinamis (mengikuti URL bar mobile yang muncul/hilang).
    Deklarasi vh di baris pertama = fallback untuk browser lama. */

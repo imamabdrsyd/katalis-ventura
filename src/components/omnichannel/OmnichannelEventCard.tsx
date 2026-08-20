@@ -49,7 +49,7 @@ export function OmnichannelEventCard({ event, slug, buttonColor }: Props) {
 
       {/* Daftar tanggal + sisa kuota: alasan utama orang menekan kartu ini */}
       <div className="mt-4 space-y-2">
-        {event.dates.slice(0, 4).map((date) => {
+        {event.dates.slice(0, 4).map((date, index) => {
           const isFull = date.taken >= event.capacity;
           const pct = event.capacity > 0 ? Math.min(100, (date.taken / event.capacity) * 100) : 0;
 
@@ -61,8 +61,12 @@ export function OmnichannelEventCard({ event, slug, buttonColor }: Props) {
               </span>
               <div className="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
                 <div
-                  className="h-full rounded-full"
-                  style={{ width: `${pct}%`, backgroundColor: isFull ? '#10b981' : accent }}
+                  className="animate-bar-grow h-full rounded-full"
+                  style={{
+                    width: `${pct}%`,
+                    backgroundColor: isFull ? '#10b981' : accent,
+                    animationDelay: `${index * 70}ms`,
+                  }}
                 />
               </div>
               <span className="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums shrink-0">

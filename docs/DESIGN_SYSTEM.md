@@ -556,6 +556,34 @@ Props: `label`, `description`, `size` (`md`/`sm`), `showPresets`, `presets`,
 
 ---
 
+### 3.11 Motion — transisi drill-down & entrance (halaman publik)
+
+Utility di `app/globals.css`, dipakai Lobby event dan kartu omnichannel:
+
+| Kelas | Untuk |
+|-------|-------|
+| `.animate-screen-in-forward` / `.animate-screen-in-back` | Layar yang menggantikan layar lain (drill-down). Arahnya mengikuti perjalanan: masuk lebih dalam bergeser dari kanan, kembali dari kiri. |
+| `.animate-rise-in` | Item daftar yang muncul bersama layarnya. Beri `style={{ animationDelay }}` bertingkat (40–60ms) untuk stagger. |
+| `.animate-pop-in` | Konfirmasi setelah aksi berhasil (banner "slot terkunci", sel yang baru terisi). |
+| `.animate-bar-grow` | Bar progres tumbuh dari kiri saat pertama tampil (`scaleX`, jalan di compositor). Perubahan nilai berikutnya tetap ditangani `transition-all` di elemennya. |
+
+Aturan:
+
+- **Ganti `key` elemen untuk memutar ulang animasi.** Animasi CSS hanya jalan saat
+  elemen mount; `<section key={step}>` memberi replay tiap pindah layar tanpa
+  state animasi apa pun.
+- Semua kelas memakai fill-mode `both`, jadi item ber-delay tetap tersembunyi
+  sampai gilirannya — jangan menambahkan `opacity-0` sendiri di call-site.
+- Semuanya dimatikan di `@media (prefers-reduced-motion: reduce)`. Untuk
+  transform berbasis Tailwind (mis. `active:scale`), tetap pasangkan
+  `motion-reduce:transform-none`.
+- **Di cabang publik, animasi = CSS, bukan framer-motion.** Halaman publik belum
+  memuat library animasi sama sekali dan dibuka dari in-app browser di jaringan
+  seluler; puluhan KB JS untuk transisi 260ms tidak sepadan. Framer tetap dipakai
+  di dashboard (Tabs, SegmentedToggle) yang bundle-nya memang sudah memuatnya.
+
+---
+
 ---
 
 ## 4. Layout Patterns

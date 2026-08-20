@@ -91,6 +91,8 @@ export function EventLobby({ session: initialSession, business }: Props) {
   const [mySlots, setMySlots] = useState<string[]>([]);
   /** Slot yang baru saja dikunci — dipakai untuk banner konfirmasi di layar slot. */
   const [justLocked, setJustLocked] = useState<{ team: number; player: number } | null>(null);
+  /** Arah animasi layar: masuk lebih dalam (kanan→kiri) atau kembali. */
+  const [navDirection, setNavDirection] = useState<'forward' | 'back'>('forward');
 
   const selectedDate: PublicEventDate | null =
     visibleDates.find((d) => d.id === selectedDateId) ?? null;
@@ -104,6 +106,10 @@ export function EventLobby({ session: initialSession, business }: Props) {
   const isOpen = session.status === 'open';
   const wonDate = session.dates.find((d) => d.status === 'won') ?? null;
   const isDateStep = selectedDate == null;
+  // Ganti key <section> = elemennya remount, jadi animasi CSS-nya terputar ulang
+  // tiap berpindah layar tanpa perlu state animasi apa pun.
+  const screenAnimation =
+    navDirection === 'forward' ? 'animate-screen-in-forward' : 'animate-screen-in-back';
   // Tanggal tunggal tidak punya "tanggal lain" untuk dituju — jangan tawarkan
   // jalan kembali ke daftar yang isinya cuma satu baris.
   const canChangeDate = visibleDates.length > 1;
@@ -150,8 +156,14 @@ export function EventLobby({ session: initialSession, business }: Props) {
   }, [selectedDate]);
 
   function backToDates() {
+    setNavDirection('back');
     setSelectedDateId(null);
     setJustLocked(null);
+  }
+
+  function openDate(dateId: string) {
+    setNavDirection('forward');
+    setSelectedDateId(dateId);
   }
 
   function openForm(team: number, player: number) {
@@ -297,7 +309,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
             mana yang paling cepat penuh" itu inti fiturnya, dan perbandingan
             tidak terjadi kalau harus scroll. */}
         {isDateStep && visibleDates.length > 0 && (
-          <section>
+          <section key="dates" className={screenAnimation}>
             <div className="flex items-center gap-2 mb-3">
               <CalendarDays className="w-4 h-4 text-gray-400 dark:text-gray-500" />
               <h2 className="text-sm font-bold text-gray-800 dark:text-gray-100">
@@ -306,7 +318,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
             </div>
 
             <div className="space-y-2">
-              {visibleDates.map((date) => {
+              {visibleDates.map((date, index) => {
                 const taken = date.slots.length;
                 const isFull = taken >= capacity;
                 const pct = capacity > 0 ? Math.min(100, (taken / capacity) * 100) : 0;
@@ -315,8 +327,9 @@ export function EventLobby({ session: initialSession, business }: Props) {
                   <button
                     key={date.id}
                     type="button"
-                    onClick={() => setSelectedDateId(date.id)}
-                    className="w-full flex items-center gap-3 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3.5 text-left transition-all hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm active:scale-[0.99] motion-reduce:transform-none"
+                    onClick={() => openDate(date.id)}
+                    className="group animate-rise-in w-full flex items-center gap-3 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3.5 text-left transition-all hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm active:scale-[0.99] motion-reduce:transform-none"
+                    style={{ animationDelay: `${index * 45}ms` }}
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-[11px] uppercase tracking-wide text-gray-400 dark:text-gray-500">
@@ -331,8 +344,12 @@ export function EventLobby({ session: initialSession, business }: Props) {
                       <div className="mt-2 flex items-center gap-2.5">
                         <div className="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
                           <div
-                            className="h-full rounded-full transition-all"
-                            style={{ width: `${pct}%`, backgroundColor: isFull ? '#10b981' : accent }}
+                            className="animate-bar-grow h-full rounded-full transition-all"
+                            style={{
+                              width: `${pct}%`,
+                              backgroundColor: isFull ? '#10b981' : accent,
+                              animationDelay: `${index * 45 + 120}ms`,
+                            }}
                           />
                         </div>
                         <span
@@ -347,7 +364,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
                       </div>
                     </div>
 
-                    <ChevronRight className="w-5 h-5 shrink-0 text-gray-300 dark:text-gray-600" />
+                    <ChevronRight className="w-5 h-5 shrink-0 text-gray-300 dark:text-gray-600 transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none" />
                   </button>
                 );
               })}
@@ -357,7 +374,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
 
         {/* Layar 2 — grid slot untuk tanggal terpilih */}
         {selectedDate ? (
-          <section>
+          <section key={`slots-${selectedDate.id}`} className={screenAnimation}>
             {/* Header lengket: tanggal yang sedang dilihat tetap terlihat sambil
                 menggulir daftar tim, dan jalan kembali selalu terjangkau ibu jari.
                 -mx-4 membuatnya menepi ke tepi layar seperti app bar. */}
@@ -399,7 +416,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
                 sekarang?" yang sebelumnya cuma dijawab modal yang menutup diri. */}
             {justLocked && (
               <div
-                className="rounded-2xl border px-4 py-3.5 mb-4 flex items-start gap-3"
+                className="animate-pop-in rounded-2xl border px-4 py-3.5 mb-4 flex items-start gap-3"
                 style={{ borderColor: tint(accent, 35), backgroundColor: tint(accent, 10) }}
               >
                 <span
@@ -427,7 +444,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
             </h2>
 
             <div className="space-y-3">
-              {Array.from({ length: session.team_count }, (_, i) => i + 1).map((teamNumber) => {
+              {Array.from({ length: session.team_count }, (_, i) => i + 1).map((teamNumber, teamIndex) => {
                 const label = session.team_labels?.[String(teamNumber)]?.trim() || `Tim ${teamNumber}`;
                 const players = Array.from({ length: session.players_per_team }, (_, i) => i + 1);
                 const takenCount = players.filter((p) => takenMap.has(`${teamNumber}-${p}`)).length;
@@ -437,7 +454,8 @@ export function EventLobby({ session: initialSession, business }: Props) {
                 return (
                   <div
                     key={teamNumber}
-                    className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4"
+                    className="animate-rise-in rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4"
+                    style={{ animationDelay: `${teamIndex * 55}ms` }}
                   >
                     <div className="flex items-center justify-between gap-2 mb-3">
                       {/* Nama tim tampil sebagai chip berwarna timnya — inilah
@@ -464,7 +482,9 @@ export function EventLobby({ session: initialSession, business }: Props) {
                           return (
                             <div
                               key={playerNumber}
-                              className="flex items-center gap-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50 px-3 py-2.5"
+                              className={`flex items-center gap-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50 px-3 py-2.5 ${
+                                isMine ? 'animate-pop-in' : ''
+                              }`}
                             >
                               <span
                                 className="w-8 h-8 shrink-0 grid place-items-center rounded-full text-[11px] font-bold"
