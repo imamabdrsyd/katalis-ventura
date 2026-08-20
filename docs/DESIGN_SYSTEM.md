@@ -553,12 +553,22 @@ Props: `label`, `description`, `size` (`md`/`sm`), `showPresets`, `presets`,
   string alpha hex (`${hex}0f`) karena patah kalau hex-nya 3 digit.
 - Ketikan hex dinormalisasi saat **blur**, bukan tiap keystroke: `#9b6` adalah
   langkah sah menuju `#9b6a8f`.
-- `readableTextColor()` punya **bias 8% ke teks gelap** saat kontras putih vs
-  gelap berdekatan (`DARK_TEXT_BIAS` di `colorUtils.ts`). Warna pastel medium
-  seperti plum `#9b6a8f` "menang tipis" secara angka murni untuk putih
-  (4.33:1 vs 4.10:1) tapi tetap terasa buram di layar HP karena mepet ambang
-  AA (4.5:1) — bias ini yang bikin kasus semacam itu jatuh ke gelap tanpa
-  membalik kasus yang memang jelas condong terang (indigo, hitam pekat).
+- `readableTextColor(hex)` mengevaluasi SATU titik warna — dipakai saat teks
+  duduk di atas `backgroundColor` solid (chip tim, badge). Punya bias 8% ke
+  teks gelap saat kontras putih vs gelap berdekatan (`DARK_TEXT_BIAS`), karena
+  warna pastel medium seperti plum `#9b6a8f` "menang tipis" secara angka murni
+  untuk putih (4.33:1 vs 4.10:1) tapi tetap terasa buram di layar HP — kontras
+  segitu mepet ambang AA (4.5:1).
+- `readableTextColorOnGradient(hex)` **wajib** dipakai saat teks duduk di atas
+  `brandGradient(hex)` (bukan `readableTextColor` biasa). Gradiennya turun ke
+  82% campur hitam di bagian bawah, dan untuk warna gelap-medium titik BAWAH
+  itu bisa membalik keputusan yang benar untuk titik ATAS — bug nyata:
+  `#b3729d` menang tipis ke teks gelap di titik atas (4.91:1 vs 3.61:1), tapi
+  di titik bawah (`#935d81`) teks gelap jatuh ke 3.48:1 (gagal AA) sementara
+  putih 5.09:1, sehingga tombolnya buram meski logika titik-tunggal "benar".
+  Fungsi ini mengambil kontras TERLEMAH dari kedua ujung gradien — **tanpa**
+  `DARK_TEXT_BIAS` (menambahkannya di sini membalik keputusan yang sudah benar
+  karena worst-case sudah lebih ketat daripada evaluasi satu titik).
 
 ---
 

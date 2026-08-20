@@ -27,7 +27,7 @@ import { ArrowLeft, CalendarDays, Check, ChevronRight, Gamepad2, Instagram, Load
 import { Modal } from '@/components/ui/Modal';
 import FloatingField from '@/components/ui/FloatingField';
 import { contactFieldHint, contactFieldLabel, normalizeEventContact } from '@/lib/events/contact';
-import { DEFAULT_BRAND_COLOR, brandGradient, readableTextColor, tint } from '@/lib/colorUtils';
+import { DEFAULT_BRAND_COLOR, brandGradient, readableTextColor, readableTextColorOnGradient, tint } from '@/lib/colorUtils';
 import type { PublicEventDate, PublicEventSession } from '@/types';
 
 interface Props {
@@ -584,7 +584,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
               onClick={handleSubmit}
               disabled={submitting}
               className="inline-flex items-center justify-center gap-2 text-white text-sm font-semibold py-2.5 px-4 rounded-xl shadow-sm hover:shadow-md hover:brightness-110 active:scale-[0.98] motion-reduce:transform-none transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: brandGradient(accent), color: readableTextColor(accent) }}
+              style={{ background: brandGradient(accent), color: readableTextColorOnGradient(accent) }}
             >
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {submitting ? 'Menyimpan...' : 'Kunci slot'}

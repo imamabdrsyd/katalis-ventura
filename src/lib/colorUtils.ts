@@ -89,6 +89,45 @@ export function readableTextColor(hex: string): typeof TEXT_LIGHT | typeof TEXT_
   return vsLight >= vsDark * DARK_TEXT_BIAS ? TEXT_LIGHT : TEXT_DARK;
 }
 
+/** Campur `hex` dengan hitam sebesar `percent` (0–100, sama seperti color-mix in srgb). */
+function mixWithBlack(hex: string, percent: number): string {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  const mix = (channel: number) => Math.round((channel * percent) / 100);
+  const toHex = (channel: number) => channel.toString(16).padStart(2, '0');
+  return `#${toHex(mix(rgb.r))}${toHex(mix(rgb.g))}${toHex(mix(rgb.b))}`;
+}
+
+/**
+ * Sama seperti `readableTextColor`, tapi untuk teks yang duduk di atas SELURUH
+ * `brandGradient(hex)` — bukan cuma titik atasnya.
+ *
+ * Bug nyata yang ditutup fungsi ini: untuk warna gelap-medium (mis. plum
+ * `#b3729d`), titik ATAS gradien menang tipis ke teks gelap (4.91:1 vs
+ * 3.61:1), tapi titik BAWAH gradien (82% campur hitam → `#935d81`, lebih
+ * gelap dari titik atas) membalik keputusannya — teks gelap di situ cuma
+ * 3.48:1 (gagal AA), sementara putih 5.09:1. `readableTextColor(hex)` yang
+ * cuma menghitung dari titik atas memilih gelap dan tombolnya jadi buram di
+ * bagian bawah, persis kasus yang dilaporkan user.
+ *
+ * Keputusannya diambil dari titik yang KONTRASNYA PALING BURUK terhadap
+ * kandidat teks — bukan rata-rata, karena teks tetap harus terbaca di titik
+ * terlemahnya, bukan cuma "cukup terbaca secara rata-rata".
+ */
+export function readableTextColorOnGradient(hex: string): typeof TEXT_LIGHT | typeof TEXT_DARK {
+  const bottom = mixWithBlack(hex, 82);
+  // TANPA DARK_TEXT_BIAS di sini — itu bias untuk kasus warna SOLID (satu
+  // titik), dan justru salah dipakai di sini: mengambil titik TERLEMAH dari
+  // dua ujung gradien sudah dengan sendirinya lebih ketat daripada mengevaluasi
+  // satu warna, jadi menambah bias 8% lagi bisa MEMBALIK keputusan yang benar.
+  // Kasus nyata: #b3729d worst-case putih 3.61 vs worst-case gelap 3.48 (putih
+  // menang) — dengan bias 8% syaratnya jadi 3.61 >= 3.76 (gagal), jatuh ke
+  // gelap yang salah, persis bug yang dilaporkan user di tombol event card.
+  const worstVsLight = Math.min(contrastRatio(hex, TEXT_LIGHT), contrastRatio(bottom, TEXT_LIGHT));
+  const worstVsDark = Math.min(contrastRatio(hex, TEXT_DARK), contrastRatio(bottom, TEXT_DARK));
+  return worstVsLight >= worstVsDark ? TEXT_LIGHT : TEXT_DARK;
+}
+
 /** Versi transparan sebuah warna brand — untuk latar chip/banner lembut. */
 export function tint(hex: string, percent: number): string {
   return `color-mix(in srgb, ${hex} ${percent}%, transparent)`;
