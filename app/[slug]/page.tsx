@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createAdminClient } from '@/lib/supabase-server';
 import { isReservedSlug } from '@/lib/utils/slugUtils';
+import { supportsEventRegistration } from '@/lib/businessSectors';
+import { loadOpenSessions } from '@/lib/events/publicSession';
 import {
   groupIntoRanges,
   buildUnitBaseRates,
@@ -15,6 +17,7 @@ import type { CatalogItem } from '@/types';
 import { PublicOmniChannelPage } from '@/components/public/PublicOmniChannelPage';
 import type { BusinessOmniChannel, OmniChannelLink } from '@/types';
 import type {
+  PublicEventSummary,
   PublicBusiness,
   PublicGalleryImage,
   PublicShowcaseImage,
@@ -147,6 +150,13 @@ export default async function PublicSlugPage({ params }: Props) {
         link_label: c.link_label ?? null,
       }));
   }
+
+  // Event yang sedang dibuka (gating §2: jasa + creative_agency). Angka slot di
+  // kartu ini ikut `revalidate` halaman — cukup untuk teaser; Lobby-nya sendiri
+  // force-dynamic + polling, jadi keputusan "ambil slot" selalu pakai data segar.
+  const events: PublicEventSummary[] = supportsEventRegistration(biz?.business_type, biz?.business_sector)
+    ? await loadOpenSessions(oc.business_id)
+    : [];
 
   const channel = ocData as unknown as BusinessOmniChannel;
   const activeLinks = ((oc.links ?? []) as OmniChannelLink[])
@@ -294,6 +304,7 @@ export default async function PublicSlugPage({ params }: Props) {
     <PublicOmniChannelPage
       channel={channel}
       business={publicBusiness}
+      events={events}
     />
   );
 }

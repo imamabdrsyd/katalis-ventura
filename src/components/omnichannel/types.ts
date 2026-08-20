@@ -53,6 +53,21 @@ export interface PublicWidgetLabels {
   reservation_subtitle?: string;
 }
 
+/**
+ * Ringkasan sesi event yang sedang dibuka — dipakai kartu "Book Your Spot" di
+ * halaman publik. Sengaja hanya angka terisi per tanggal: cukup untuk
+ * menunjukkan sisa kuota tanpa membawa data pendaftar apa pun.
+ */
+export interface PublicEventSummary {
+  id: string;
+  title: string;
+  description: string | null;
+  contact_method: 'whatsapp' | 'instagram';
+  /** team_count × players_per_team — kapasitas TIAP tanggal. */
+  capacity: number;
+  dates: Array<{ id: string; event_date: string; taken: number }>;
+}
+
 export interface PublicPricingRule {
   id: string;
   date_from: string;

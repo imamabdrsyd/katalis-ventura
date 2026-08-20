@@ -520,6 +520,42 @@ Warna sama dengan garis horizontal antar baris (`gray-200`/`gray-700`) agar grid
 - Untuk kolom **di kanan** kolom fleksibel, handle di boundary me-resize kolom kanan dengan delta **dibalik** (invert) supaya garis yang di-drag mengikuti kursor.
 - Lebar di-clamp min/max per kolom, dipersist ke `localStorage` setelah drag selesai, double-click handle = reset ke default.
 
+### 3.10 Color Picker (Warna Brand)
+
+Komponen: [`src/components/ui/ColorPickerField.tsx`](../src/components/ui/ColorPickerField.tsx).
+Dipakai untuk warna yang **ditentukan pemilik bisnis** — warna tombol halaman
+publik (`business_omni_channels.button_color`) dan warna tim event (migr 137).
+
+```tsx
+<ColorPickerField value={brandColor} onChange={setBrandColor} />
+<ColorPickerField value={teamColor} onChange={setTeamColor} size="sm" showPresets={false} trailing={resetBtn} />
+```
+
+Anatomi: swatch `w-10 h-10 rounded-xl` (input `type="color"` transparan ditumpuk
+di atasnya, jadi klik membuka picker OS termasuk eyedropper) · isian hex
+`font-mono` · deret preset bulat `w-6 h-6` dengan `Check` di preset aktif.
+Props: `label`, `description`, `size` (`md`/`sm`), `showPresets`, `presets`,
+`trailing`, `disabled`.
+
+**Aturan penting — jangan campur dua sistem warna:**
+
+- Warna brand **bukan token UI**. Nilainya hex bebas dari owner, jadi diterapkan
+  lewat `style={{ ... }}`, bukan kelas Tailwind. Sebaliknya UI aplikasi (tombol
+  dashboard, badge, tab) TETAP pakai `primary-*` / `gray-*` — jangan diwarnai
+  brand hanya karena bisa.
+- Teks di atas warna brand **wajib** lewat `readableTextColor()` di
+  [`src/lib/colorUtils.ts`](../src/lib/colorUtils.ts), yang memilih putih atau
+  near-black berdasarkan rasio kontras. Menebak (`text-white` hardcoded) membuat
+  chip kuning tak terbaca — kasus nyata: `#eab308` luminansinya 0,50 sehingga
+  aturan ambang memberinya teks putih dengan kontras 1,9:1.
+- Latar lembut dari warna brand pakai `tint(hex, persen)` (`color-mix` ke
+  transparan), gradien tombol pakai `brandGradient(hex)` — jangan menempel
+  string alpha hex (`${hex}0f`) karena patah kalau hex-nya 3 digit.
+- Ketikan hex dinormalisasi saat **blur**, bukan tiap keystroke: `#9b6` adalah
+  langkah sah menuju `#9b6a8f`.
+
+---
+
 ---
 
 ## 4. Layout Patterns

@@ -2,25 +2,30 @@
 
 import Image from 'next/image';
 import type { BusinessOmniChannel } from '@/types';
-import type { PublicBusiness } from '@/components/omnichannel/types';
+import type { PublicBusiness, PublicEventSummary } from '@/components/omnichannel/types';
 import { OmnichannelGalleryCarousel } from '@/components/omnichannel/OmnichannelGalleryCarousel';
 import { OmnichannelShowcase } from '@/components/omnichannel/OmnichannelShowcase';
 import { OmnichannelWidget } from '@/components/omnichannel/OmnichannelWidget';
 import { OmnichannelLinks } from '@/components/omnichannel/OmnichannelLinks';
 import { OmnichannelFeaturedProduct } from '@/components/omnichannel/OmnichannelFeaturedProduct';
+import { OmnichannelEventCard } from '@/components/omnichannel/OmnichannelEventCard';
 
 interface Props {
   channel: BusinessOmniChannel;
   business: PublicBusiness;
+  /** Sesi event yang sedang dibuka (kosong utk bisnis di luar gating event). */
+  events?: PublicEventSummary[];
 }
 
-export function PublicOmniChannelPage({ channel, business }: Props) {
+export function PublicOmniChannelPage({ channel, business, events = [] }: Props) {
   const isJasa = (business.business_type ?? 'jasa') === 'jasa';
   const hasGallery = business.show_gallery && business.gallery.length > 0;
   const hasShowcase = business.show_showcase && business.showcase.length > 0;
   const featuredProducts = business.featured_products ?? [];
   const hasFeaturedProduct = featuredProducts.length > 0;
   const showWidget = business.show_widget;
+  const eventSlug = business.slug;
+  const hasEvents = events.length > 0 && !!eventSlug;
   const showLinks = business.show_links && business.links.length > 0;
   const layout = business.layout_mode;
   const showLogo = layout !== 'clean';
@@ -130,12 +135,25 @@ export function PublicOmniChannelPage({ channel, business }: Props) {
             </div>
           )}
 
-          {/* Widget reservasi hanya untuk bisnis jasa */}
-          {showWidget && isJasa && (
-            <div>
-              <OmnichannelWidget business={business} index={0} buttonColor={business.button_color} />
+          {/* Kolom aksi: widget reservasi (jasa) + kartu event yang sedang dibuka.
+              Keduanya berbagi kolom yang sama supaya CTA tetap satu tempat, baik
+              di layout bergaleri (2 kolom) maupun tanpa galeri (1 kolom sempit). */}
+          {(showWidget && isJasa) || hasEvents ? (
+            <div className="space-y-6">
+              {showWidget && isJasa && (
+                <OmnichannelWidget business={business} index={0} buttonColor={business.button_color} />
+              )}
+              {hasEvents &&
+                events.map((ev) => (
+                  <OmnichannelEventCard
+                    key={ev.id}
+                    event={ev}
+                    slug={eventSlug as string}
+                    buttonColor={business.button_color}
+                  />
+                ))}
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Featured product — full width jika tidak ada gallery */}

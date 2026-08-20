@@ -75,3 +75,22 @@ export function isAssetCatalogBusiness(
 ): boolean {
   return isAssetConsoleSector(sector) && businessType?.trim().toLowerCase() === 'dagang';
 }
+
+/**
+ * Sektor yang memakai modul Event Registration ("Book Your Spot", migr 136) —
+ * pendaftaran event komunitas dengan tanggal kandidat & grid slot per tim.
+ * Sengaja DIPASANGKAN dengan business_type 'jasa': sektor kreatif yang berjualan
+ * produk tidak memakai model ini, dan bisnis jasa akomodasi tetap pakai kalender
+ * booking per malam (isAccommodationSector) — dua model itu tidak boleh
+ * bertabrakan di hub /calendar yang sama.
+ */
+export const EVENT_REGISTRATION_SECTORS = ['creative_agency'] as const;
+
+export function supportsEventRegistration(
+  businessType: string | null | undefined,
+  sector: string | null | undefined
+): boolean {
+  if (!sector) return false;
+  if ((businessType ?? '').trim().toLowerCase() !== 'jasa') return false;
+  return (EVENT_REGISTRATION_SECTORS as readonly string[]).includes(sector.trim().toLowerCase());
+}

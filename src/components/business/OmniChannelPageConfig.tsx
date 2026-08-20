@@ -5,6 +5,7 @@ import { Check, X, Loader2, Eye, EyeOff, Camera, ImageIcon, LayoutTemplate } fro
 import type { BusinessOmniChannel, OmniChannelLayoutMode } from '@/types';
 import { upsertOmniChannel, checkSlugAvailability, fetchAvailableSlugSuggestions } from '@/lib/api/omniChannel';
 import { generateSlugFromName, isValidSlugFormat, isReservedSlug, generateSlugSuggestions } from '@/lib/utils/slugUtils';
+import { ColorPickerField } from '@/components/ui/ColorPickerField';
 
 interface Props {
   businessId: string;
@@ -582,42 +583,10 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
           Warna Tombol Utama
         </label>
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-          Warna tombol primary di halaman publik (link yang ditandai bintang).
+          Menyetir seluruh aksen halaman publik: tombol primary, widget reservasi,
+          dan kartu/Lobby event — termasuk label & bar progresnya.
         </p>
-        <div className="flex items-center gap-3">
-          <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 shrink-0">
-            <input
-              type="color"
-              value={buttonColor}
-              onChange={(e) => setButtonColor(e.target.value)}
-              className="absolute inset-0 w-full h-full cursor-pointer opacity-0"
-            />
-            <div className="w-full h-full rounded-xl" style={{ backgroundColor: buttonColor }} />
-          </div>
-          <input
-            type="text"
-            value={buttonColor}
-            onChange={(e) => {
-              const v = e.target.value;
-              if (/^#[0-9A-Fa-f]{0,6}$/.test(v)) setButtonColor(v);
-            }}
-            maxLength={7}
-            className="w-28 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
-          />
-          {/* Preset swatches */}
-          <div className="flex gap-1.5 flex-wrap">
-            {['#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#0ea5e9', '#64748b', '#1e293b'].map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setButtonColor(c)}
-                className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${buttonColor === c ? 'border-gray-800 dark:border-white scale-110' : 'border-transparent'}`}
-                style={{ backgroundColor: c }}
-                title={c}
-              />
-            ))}
-          </div>
-        </div>
+        <ColorPickerField value={buttonColor} onChange={setButtonColor} />
       </div>
 
       {/* Konfigurasi Widget Reservasi telah dipisah ke OmniChannelWidgetConfig */}

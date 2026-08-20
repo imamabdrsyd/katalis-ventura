@@ -1287,3 +1287,116 @@ export interface RepaymentSummary {
   totalApRepaidNonSettlement: number;
   totalArCollectedNonSettlement: number;
 }
+
+// ============================================================
+// Event Registration — "Book Your Spot" (migr 136)
+// ============================================================
+// Pendaftaran event komunitas untuk bisnis jasa sektor creative_agency.
+// Satu sesi membuka BEBERAPA tanggal kandidat sekaligus; tanggal yang duluan
+// penuh cuma jadi sinyal — manager yang memutuskan pemenangnya manual.
+
+export type EventSessionStatus = 'draft' | 'open' | 'closed' | 'cancelled';
+export type EventDateStatus = 'candidate' | 'won' | 'discarded';
+export type EventRegistrationStatus = 'new' | 'contacted' | 'confirmed' | 'cancelled';
+/** Cara follow-up manual manager — BUKAN integrasi API luar. */
+export type EventContactMethod = 'whatsapp' | 'instagram';
+
+export interface EventSession {
+  id: string;
+  business_id: string;
+  title: string;
+  description: string | null;
+  team_count: number;
+  players_per_team: number;
+  /** Nama tim opsional per nomor tim: { "1": "Tim Elang" }. */
+  team_labels: Record<string, string>;
+  /** Warna tim opsional per nomor tim (migr 137). Kosong = ikut warna brand. */
+  team_colors: Record<string, string>;
+  contact_method: EventContactMethod;
+  status: EventSessionStatus;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  // Hydrated saat join
+  dates?: EventSessionDate[];
+}
+
+export interface EventSessionDate {
+  id: string;
+  session_id: string;
+  business_id: string;
+  event_date: string; // ISO date
+  status: EventDateStatus;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EventRegistration {
+  id: string;
+  session_date_id: string;
+  business_id: string;
+  team_number: number;
+  player_number: number;
+  name: string;
+  /** Nomor WA (internasional tanpa +) atau username IG (tanpa @) — dinormalisasi di DB. */
+  contact_value: string;
+  lead_id: string | null;
+  status: EventRegistrationStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EventSessionInsert {
+  business_id: string;
+  title: string;
+  description?: string | null;
+  team_count: number;
+  players_per_team: number;
+  team_labels?: Record<string, string>;
+  team_colors?: Record<string, string>;
+  contact_method: EventContactMethod;
+  status?: EventSessionStatus;
+  created_by?: string | null;
+}
+
+export interface EventSessionUpdate {
+  title?: string;
+  description?: string | null;
+  team_count?: number;
+  players_per_team?: number;
+  team_labels?: Record<string, string>;
+  team_colors?: Record<string, string>;
+  contact_method?: EventContactMethod;
+  status?: EventSessionStatus;
+}
+
+/** Slot versi publik — TANPA contact_value (tidak pernah keluar dari server). */
+export interface PublicEventSlot {
+  team_number: number;
+  player_number: number;
+  name: string;
+}
+
+export interface PublicEventDate {
+  id: string;
+  event_date: string;
+  status: EventDateStatus;
+  sort_order: number;
+  slots: PublicEventSlot[];
+}
+
+export interface PublicEventSession {
+  id: string;
+  title: string;
+  description: string | null;
+  team_count: number;
+  players_per_team: number;
+  team_labels: Record<string, string>;
+  team_colors: Record<string, string>;
+  contact_method: EventContactMethod;
+  status: EventSessionStatus;
+  dates: PublicEventDate[];
+}

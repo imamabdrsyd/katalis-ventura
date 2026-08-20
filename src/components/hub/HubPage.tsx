@@ -1,14 +1,17 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { Box, ShoppingCart, CalendarDays } from 'lucide-react';
+import { Box, ShoppingCart, CalendarDays, PartyPopper } from 'lucide-react';
+import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { supportsEventRegistration } from '@/lib/businessSectors';
 import { Tabs } from '@/components/ui/Tabs';
 import { CatalogPanel } from './CatalogPanel';
 import { AiKnowledgePanel } from './AiKnowledgePanel';
 import { StockLogPanel } from './StockLogPanel';
 import { CashierLauncher } from './cashier/CashierLauncher';
 import { CalendarLauncher } from './calendar/CalendarLauncher';
+import { EventManagerLauncher } from './events/EventManagerLauncher';
 import { UnitManagerButton } from './calendar/UnitManagerButton';
 import { CalendarUnitProvider } from './calendar/CalendarUnitContext';
 
@@ -28,6 +31,12 @@ type HubVariant = 'pos' | 'calendar' | 'finance';
  *
  * Tab Katalog = 2 panel: kiri (lebar) grid produk/jasa + kanan (lebih sempit)
  * Info AI — fakta bisnis yang dibaca AI saat membalas lead di semua channel.
+ *
+ * Variant 'calendar' punya DUA isi tab operasional yang berbeda, dipilih dari
+ * sektor bisnis: akomodasi dapat kalender booking per malam, creative agency
+ * dapat Event Manager ("Book Your Spot", migr 136). Keduanya menempati slot yang
+ * sama karena sama-sama menjawab "kapan orang datang" — cuma modelnya beda
+ * (tanggal pasti vs tanggal yang masih diperebutkan).
  */
 export function HubPage({ variant }: { variant: HubVariant }) {
   // Hub kalender: bungkus dgn provider unit supaya tab Kalender & Services berbagi
@@ -38,6 +47,7 @@ export function HubPage({ variant }: { variant: HubVariant }) {
 
 function HubPageInner({ variant }: { variant: HubVariant }): ReactNode {
   const { t } = useLanguage();
+  const { activeBusiness } = useBusinessContext();
   const th = t.hub;
   // Kalender tampil duluan (tab operasional) — Katalog tetap default utk POS/finance.
   const [tab, setTab] = useState<HubTab>(variant === 'calendar' ? 'operational' : 'catalog');
@@ -46,8 +56,12 @@ function HubPageInner({ variant }: { variant: HubVariant }): ReactNode {
 
   const isPos = variant === 'pos';
   const isFinance = variant === 'finance';
-  const OperationalIcon = isPos ? ShoppingCart : CalendarDays;
-  const operationalLabel = isPos ? th.tabKasir : th.tabKalender;
+  // Hub jasa sektor creative agency: tab operasionalnya Event, bukan kalender.
+  const isEventHub =
+    variant === 'calendar' &&
+    supportsEventRegistration(activeBusiness?.business_type, activeBusiness?.business_sector);
+  const OperationalIcon = isPos ? ShoppingCart : isEventHub ? PartyPopper : CalendarDays;
+  const operationalLabel = isPos ? th.tabKasir : isEventHub ? t.events.hubTitle : th.tabKalender;
   // Hub jasa (kalender): tab katalog di-brand "Layanan"/"Services". POS/finance tetap "Katalog".
   const catalogLabel = isPos || isFinance ? th.tabCatalog : th.tabServices;
   const catalogSubtitle = isPos || isFinance ? th.posSubtitle : th.servicesSubtitle;
@@ -57,7 +71,13 @@ function HubPageInner({ variant }: { variant: HubVariant }): ReactNode {
   const isCatalog = isFinance || tab === 'catalog';
   const HeaderIcon = isCatalog ? Box : OperationalIcon;
   const title = isCatalog ? catalogLabel : operationalLabel;
-  const subtitle = isCatalog ? catalogSubtitle : (isPos ? th.posSubtitle : th.calendarSubtitle);
+  const subtitle = isCatalog
+    ? catalogSubtitle
+    : isPos
+      ? th.posSubtitle
+      : isEventHub
+        ? t.events.hubSubtitle
+        : th.calendarSubtitle;
 
   // Slot header untuk kontrol kalender (pemilih unit + "Perlu tindak lanjut") —
   // di-portal dari CalendarLauncher supaya sejajar dgn judul & tab, bukan baris terpisah.
@@ -117,7 +137,15 @@ function HubPageInner({ variant }: { variant: HubVariant }): ReactNode {
         />
       )}
 
-      {!isFinance && tab === 'operational' && (isPos ? <CashierLauncher /> : <CalendarLauncher headerSlot={calendarHeaderEl} />)}
+      {!isFinance &&
+        tab === 'operational' &&
+        (isPos ? (
+          <CashierLauncher />
+        ) : isEventHub ? (
+          <EventManagerLauncher headerSlot={calendarHeaderEl} />
+        ) : (
+          <CalendarLauncher headerSlot={calendarHeaderEl} />
+        ))}
     </div>
   );
 }
