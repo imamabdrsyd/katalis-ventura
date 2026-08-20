@@ -261,13 +261,19 @@ export function EventLobby({ session: initialSession, business }: Props) {
               Book Your Spot
             </p>
           )}
-          <h1
-            className={`font-bold text-gray-900 dark:text-gray-100 ${
-              isDateStep ? 'text-2xl sm:text-3xl mt-1' : 'text-xl'
-            }`}
-          >
-            {session.title}
-          </h1>
+          {/* Layar tanggal: nama event yang jadi judul. Layar slot: judulnya
+              "Players Lobby" — di titik ini pengunjung sudah tahu event apa yang
+              dia buka, yang perlu ditegaskan adalah dia sedang berada di mana. */}
+          {isDateStep ? (
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 mt-1">
+              {session.title}
+            </h1>
+          ) : (
+            <>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Players Lobby</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{session.title}</p>
+            </>
+          )}
           {isDateStep && (
             <>
               {session.description && (
@@ -276,7 +282,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
                 </p>
               )}
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
-                {session.team_count} tim × {session.players_per_team} pemain · {capacity} slot per tanggal
+                {session.team_count} tim × {session.players_per_team} player · {capacity} slot per tanggal
               </p>
             </>
           )}
@@ -428,7 +434,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-gray-900 dark:text-gray-100">Slot kamu terkunci</p>
                   <p className="text-sm text-gray-700 dark:text-gray-200">
-                    {session.team_labels?.[String(justLocked.team)]?.trim() || `Tim ${justLocked.team}`} · Pemain{' '}
+                    {session.team_labels?.[String(justLocked.team)]?.trim() || `Tim ${justLocked.team}`} · Player{' '}
                     {justLocked.player}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -440,7 +446,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
             )}
 
             <h2 className="text-sm font-bold text-gray-800 dark:text-gray-100 mb-3">
-              {isOpen ? 'Pilih slot kamu' : 'Daftar pemain'}
+              {isOpen ? 'Pilih slot kamu' : 'Daftar player'}
             </h2>
 
             <div className="space-y-3">
@@ -501,7 +507,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
                                   {takenName}
                                 </p>
                                 <p className="text-[11px] text-gray-400 dark:text-gray-500">
-                                  {isMine ? 'Slot kamu' : `Pemain ${playerNumber}`}
+                                  {isMine ? 'Slot kamu' : `Player ${playerNumber}`}
                                 </p>
                               </div>
                               {isMine && <Check className="w-4 h-4 ml-auto shrink-0" style={{ color: accent }} />}
@@ -541,7 +547,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
                                 Ambil slot ini
                               </p>
                               <p className="text-[11px] text-gray-400 dark:text-gray-500">
-                                Pemain {playerNumber}
+                                Player {playerNumber}
                               </p>
                             </div>
                           </button>
@@ -595,7 +601,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
                 >
                   {session.team_labels?.[String(formSlot.team)]?.trim() || `Tim ${formSlot.team}`}
                 </span>
-                Pemain {formSlot.player}
+                Player {formSlot.player}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                 {formatFullDate(selectedDate.event_date)}

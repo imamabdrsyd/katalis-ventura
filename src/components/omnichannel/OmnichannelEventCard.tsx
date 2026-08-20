@@ -87,7 +87,7 @@ export function OmnichannelEventCard({ event, slug, buttonColor }: Props) {
         className="mt-4 w-full flex items-center justify-center gap-2 text-sm font-semibold py-2.5 px-4 rounded-xl shadow-sm hover:shadow-md hover:brightness-110 active:scale-[0.98] motion-reduce:transform-none transition-all duration-150"
         style={{ background: brandGradient(accent), color: readableTextColor(accent) }}
       >
-        {allFull ? 'Lihat daftar pemain' : 'Pilih tanggal & kunci slot'}
+        {allFull ? 'Lihat daftar player' : 'Pilih tanggal & kunci slot'}
         <ArrowRight className="w-4 h-4" />
       </Link>
     </div>
