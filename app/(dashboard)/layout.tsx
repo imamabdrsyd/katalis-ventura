@@ -821,19 +821,25 @@ function SidebarQuickBoxes({
             >
               <span className="relative flex-shrink-0">
                 <Icon className={`w-5 h-5 ${isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`} />
-                {/* Saat collapsed label tersembunyi — pakai dot kecil di ikon sbg indikator unread. */}
-                {badge > 0 && isCollapsed && (
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-indigo-500 rounded-full ring-2 ring-white dark:ring-gray-800" />
+                {/* Badge count sebagai overlay di ikon (bukan baris ketiga di bawah
+                    label) — tanpa ini kotak Leads jadi lebih tinggi dari kotak
+                    sebelahnya dan grid 2 kolom timpang. Sama persis dengan pola dot
+                    collapsed, cuma tampil angka di layar expanded. */}
+                {badge > 0 && (
+                  <span
+                    className={`absolute -top-1.5 flex items-center justify-center bg-indigo-500 text-white font-bold leading-none rounded-full ring-2 ring-white dark:ring-gray-800 ${
+                      isCollapsed
+                        ? '-right-1 w-2.5 h-2.5'
+                        : '-right-2 min-w-[16px] h-4 px-1 text-[9px]'
+                    }`}
+                  >
+                    {!isCollapsed && (badge > 99 ? '99+' : badge)}
+                  </span>
                 )}
               </span>
               <span className={`overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'whitespace-nowrap w-0 opacity-0' : 'w-auto opacity-100 text-xs leading-tight'}`}>
                 {label}
               </span>
-              {badge > 0 && !isCollapsed && (
-                <span className="min-w-[18px] h-[18px] flex items-center justify-center bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold rounded-full px-1.5 leading-none">
-                  {badge > 99 ? '99+' : badge}
-                </span>
-              )}
             </Link>
             {isCollapsed && (
               <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg px-3 py-2 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-[60]">

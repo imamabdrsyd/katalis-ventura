@@ -553,6 +553,12 @@ Props: `label`, `description`, `size` (`md`/`sm`), `showPresets`, `presets`,
   string alpha hex (`${hex}0f`) karena patah kalau hex-nya 3 digit.
 - Ketikan hex dinormalisasi saat **blur**, bukan tiap keystroke: `#9b6` adalah
   langkah sah menuju `#9b6a8f`.
+- `readableTextColor()` punya **bias 8% ke teks gelap** saat kontras putih vs
+  gelap berdekatan (`DARK_TEXT_BIAS` di `colorUtils.ts`). Warna pastel medium
+  seperti plum `#9b6a8f` "menang tipis" secara angka murni untuk putih
+  (4.33:1 vs 4.10:1) tapi tetap terasa buram di layar HP karena mepet ambang
+  AA (4.5:1) — bias ini yang bikin kasus semacam itu jatuh ke gelap tanpa
+  membalik kasus yang memang jelas condong terang (indigo, hitam pekat).
 
 ---
 

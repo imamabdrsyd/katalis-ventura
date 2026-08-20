@@ -12,6 +12,7 @@ import {
   LEAD_STATUS_LABELS,
 } from '@/lib/leadColors';
 import { SalesChannelBadge } from '@/components/transactions/SalesChannelBadge';
+import { LeadChannelBadge } from '@/components/leads/LeadChannelBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { ChannelStatus } from '@/lib/api/leads';
 import type { Lead, LeadChannel, LeadMessage, LeadStatus } from '@/types';
@@ -103,7 +104,7 @@ function LeadListItem({
         )}
       </div>
       <div className="flex items-center gap-1.5">
-        <SalesChannelBadge channel={LEAD_CHANNEL_TO_SALES_CHANNEL[lead.channel]} />
+        <LeadChannelBadge lead={lead} />
         <span className={`badge text-[10px] ${LEAD_STATUS_BADGE_CLASSES[lead.status]}`}>
           {LEAD_STATUS_LABELS[lead.status]}
         </span>
@@ -466,7 +467,7 @@ function LeadsPageInner() {
                     {selectedLead.name || selectedLead.external_id}
                   </p>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <SalesChannelBadge channel={LEAD_CHANNEL_TO_SALES_CHANNEL[selectedLead.channel]} />
+                    <LeadChannelBadge lead={selectedLead} />
                     {selectedLead.phone && (
                       <span className="text-[11px] text-gray-400 dark:text-gray-500">{selectedLead.phone}</span>
                     )}

@@ -60,8 +60,22 @@ const TEXT_LIGHT = '#ffffff';
 const TEXT_DARK = '#111827';
 
 /**
+ * Bias ke arah teks gelap saat kedua pilihan sama-sama lemah. Warna pastel
+ * medium (mis. plum #9b6a8f) memberi ~4.3:1 vs putih dan ~4.1:1 vs gelap —
+ * "menang tipis" secara angka, tapi tetap buram di layar HP karena kontrasnya
+ * mepet ambang AA (4.5:1). Teks GELAP di warna borderline seperti itu masih
+ * terasa jauh lebih tajam meski kalah tipis di hitungan murni, karena mata
+ * lebih toleran pada teks gelap-di-warna dibanding teks terang-di-warna pada
+ * kontras yang setara. 1.08 dipilih empiris: cukup untuk memenangkan gelap
+ * pada rentang 4.0–4.5 tanpa membalik kasus yang memang jelas condong terang
+ * (mis. hitam pekat, di mana margin kontrasnya jauh lebih besar dari 8%).
+ */
+const DARK_TEXT_BIAS = 1.08;
+
+/**
  * Warna teks yang paling terbaca di atas `hex`: pilih yang rasio kontrasnya
- * lebih tinggi antara putih dan near-black.
+ * lebih tinggi antara putih dan near-black, dengan bias tipis ke gelap saat
+ * keduanya berdekatan (lihat DARK_TEXT_BIAS).
  *
  * Sengaja BUKAN ambang luminansi sederhana. Kuning #eab308 luminansinya 0,50 —
  * di bawah ambang 0,5-an mana pun yang wajar, jadi aturan ambang memberinya teks
@@ -70,7 +84,9 @@ const TEXT_DARK = '#111827';
  * ini harus dihitung per warna, bukan ditebak.
  */
 export function readableTextColor(hex: string): typeof TEXT_LIGHT | typeof TEXT_DARK {
-  return contrastRatio(hex, TEXT_LIGHT) >= contrastRatio(hex, TEXT_DARK) ? TEXT_LIGHT : TEXT_DARK;
+  const vsLight = contrastRatio(hex, TEXT_LIGHT);
+  const vsDark = contrastRatio(hex, TEXT_DARK);
+  return vsLight >= vsDark * DARK_TEXT_BIAS ? TEXT_LIGHT : TEXT_DARK;
 }
 
 /** Versi transparan sebuah warna brand — untuk latar chip/banner lembut. */
