@@ -27,7 +27,14 @@ import { ArrowLeft, CalendarDays, Check, ChevronRight, Gamepad2, Instagram, Load
 import { Modal } from '@/components/ui/Modal';
 import FloatingField from '@/components/ui/FloatingField';
 import { contactFieldHint, contactFieldLabel, normalizeEventContact } from '@/lib/events/contact';
-import { DEFAULT_BRAND_COLOR, brandGradient, readableTextColor, readableTextColorOnGradient, tint } from '@/lib/colorUtils';
+import {
+  DEFAULT_BRAND_COLOR,
+  brandGradient,
+  readableTextColor,
+  readableTextColorOnGradient,
+  resolveTeamTextColor,
+  tint,
+} from '@/lib/colorUtils';
 import type { PublicEventDate, PublicEventSession } from '@/types';
 
 interface Props {
@@ -103,6 +110,10 @@ export function EventLobby({ session: initialSession, business }: Props) {
   const accent = business.buttonColor ?? DEFAULT_BRAND_COLOR;
   const teamColorOf = (teamNumber: number) =>
     session.team_colors?.[String(teamNumber)]?.trim() || accent;
+  // Override manual owner (klik chip di form Event Manager) — chip di sini
+  // WAJIB memakai warna yang persis sama, bukan hitung ulang kontrasnya sendiri.
+  const teamTextColorOf = (teamNumber: number) =>
+    resolveTeamTextColor(teamColorOf(teamNumber), session.team_text_colors?.[String(teamNumber)]);
   const isOpen = session.status === 'open';
   const wonDate = session.dates.find((d) => d.status === 'won') ?? null;
   const isDateStep = selectedDate == null;
@@ -472,7 +483,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
                           identitas yang dipakai owner di poster/story mereka. */}
                       <span
                         className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold max-w-full truncate"
-                        style={{ backgroundColor: teamColor, color: readableTextColor(teamColor) }}
+                        style={{ backgroundColor: teamColor, color: teamTextColorOf(teamNumber) }}
                       >
                         {label}
                       </span>
@@ -500,7 +511,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
                                 className="w-8 h-8 shrink-0 grid place-items-center rounded-full text-[11px] font-bold"
                                 style={{
                                   backgroundColor: teamColor,
-                                  color: readableTextColor(teamColor),
+                                  color: teamTextColorOf(teamNumber),
                                   boxShadow: isMine ? `0 0 0 2px ${accent}` : undefined,
                                 }}
                               >
@@ -600,7 +611,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
                   className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold"
                   style={{
                     backgroundColor: teamColorOf(formSlot.team),
-                    color: readableTextColor(teamColorOf(formSlot.team)),
+                    color: teamTextColorOf(formSlot.team),
                   }}
                 >
                   {session.team_labels?.[String(formSlot.team)]?.trim() || `Tim ${formSlot.team}`}

@@ -157,7 +157,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
       // /invoices & /reconciliation sudah ada via navSections — jangan di-splice lagi
       // (mencegah duplikat key di SearchDialog).
       pages.splice(isAssetConsoleEnabled(activeBusiness?.business_sector) ? 3 : 2, 0,
-        getPosNavItem(activeBusiness?.business_type, t.nav, activeBusiness?.business_sector),
+        getPosNavItem(activeBusiness?.business_type, { ...t.nav, events: t.events.hubTitle }, activeBusiness?.business_sector),
         { href: '/agent', label: t.nav.agenticWorkspace, icon: Bot },
         { href: '/transactions', label: t.nav.transactions, icon: CreditCard },
         { href: '/transactions/journal-entry', label: t.nav.journalEntry, icon: Plus }
@@ -769,7 +769,7 @@ function SidebarQuickBoxes({
   const startsWith = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
   const posItem = canManage
-    ? getPosNavItem(activeBusiness?.business_type, t.nav, activeBusiness?.business_sector)
+    ? getPosNavItem(activeBusiness?.business_type, { ...t.nav, events: t.events.hubTitle }, activeBusiness?.business_sector)
     : null;
 
   const boxes = [
@@ -884,12 +884,12 @@ function Sidebar({
   // tak ikut pindah. Redirect ke route hub yang benar agar tab/variant ikut ganti.
   useEffect(() => {
     if (!activeBusiness) return;
-    const correctHubHref = getPosNavItem(activeBusiness.business_type, t.nav, activeBusiness.business_sector).href;
+    const correctHubHref = getPosNavItem(activeBusiness.business_type, { ...t.nav, events: t.events.hubTitle }, activeBusiness.business_sector).href;
     const wrongHubHref = correctHubHref === '/calendar' ? '/point-of-sales' : '/calendar';
     if (pathname === wrongHubHref || pathname.startsWith(wrongHubHref + '/')) {
       router.replace(correctHubHref);
     }
-  }, [activeBusiness, pathname, router, t.nav]);
+  }, [activeBusiness, pathname, router, t]);
 
   return (
     <>

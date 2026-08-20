@@ -569,6 +569,15 @@ Props: `label`, `description`, `size` (`md`/`sm`), `showPresets`, `presets`,
   Fungsi ini mengambil kontras TERLEMAH dari kedua ujung gradien — **tanpa**
   `DARK_TEXT_BIAS` (menambahkannya di sini membalik keputusan yang sudah benar
   karena worst-case sudah lebih ketat daripada evaluasi satu titik).
+- **Override manual warna teks (migr 138)**: `resolveTeamTextColor(bg, override)`
+  memakai override `'light'|'dark'` bila owner sudah menentukannya (klik chip
+  pratinjau tim di `EventSessionModal` — `toggleTextColorOverride()` membalik
+  dari warna yang SEDANG tampil, bukan dari hitungan ulang), kalau kosong baru
+  jatuh ke `readableTextColor(bg)` otomatis. Override sengaja dibatasi ke dua
+  nilai itu saja (bukan hex bebas) — pilihannya cuma "hitam atau putih", bukan
+  warna teks arbitrer yang bisa tak terbaca sama sekali. Dipakai konsisten di
+  3 tempat yang menampilkan chip nama tim: form admin, grid slot admin, dan
+  Lobby publik — ketiganya membaca `event_sessions.team_text_colors` yang sama.
 
 ---
 

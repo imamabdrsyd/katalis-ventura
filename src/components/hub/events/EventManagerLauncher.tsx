@@ -66,12 +66,16 @@ interface Props {
   headerSlot?: HTMLDivElement | null;
 }
 
+// Ghost chip (DESIGN_SYSTEM §3.4): border + teks berwarna, tanpa fill —
+// status sesi bukan aksi yang perlu menonjol berat, cukup sinyal ringan
+// di samping judul.
 const STATUS_BADGE: Record<EventSessionStatus, string> = {
-  draft: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300',
-  open: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
-  closed: 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400',
-  cancelled: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400',
+  draft: 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400',
+  open: 'border-emerald-200 dark:border-emerald-800/60 text-emerald-600 dark:text-emerald-400',
+  closed: 'border-primary-200 dark:border-primary-800/60 text-primary-600 dark:text-primary-400',
+  cancelled: 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500',
 };
+const STATUS_BADGE_GHOST_BASE = 'px-2 py-0.5 rounded-full text-xs font-semibold border';
 
 function formatDayName(iso: string): string {
   return new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(new Date(`${iso}T00:00:00`));
@@ -439,7 +443,7 @@ export function EventManagerLauncher({ headerSlot }: Props) {
                       <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
                         {s.title}
                       </p>
-                      <span className={`badge shrink-0 ${STATUS_BADGE[s.status]}`}>{statusLabel(s.status)}</span>
+                      <span className={`${STATUS_BADGE_GHOST_BASE} shrink-0 ${STATUS_BADGE[s.status]}`}>{statusLabel(s.status)}</span>
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       {s.team_count} × {s.players_per_team} ·{' '}
@@ -461,7 +465,7 @@ export function EventManagerLauncher({ headerSlot }: Props) {
                       <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate">
                         {selectedSession.title}
                       </h2>
-                      <span className={`badge ${STATUS_BADGE[selectedSession.status]}`}>
+                      <span className={`${STATUS_BADGE_GHOST_BASE} ${STATUS_BADGE[selectedSession.status]}`}>
                         {statusLabel(selectedSession.status)}
                       </span>
                     </div>

@@ -31,7 +31,7 @@ export async function loadPublicSession(sessionId: string): Promise<PublicSessio
 
   const { data: sessionRow } = await admin
     .from('event_sessions')
-    .select('id, business_id, title, description, team_count, players_per_team, team_labels, team_colors, contact_method, status')
+    .select('id, business_id, title, description, team_count, players_per_team, team_labels, team_colors, team_text_colors, contact_method, status')
     .eq('id', sessionId)
     .is('deleted_at', null)
     .in('status', ['open', 'closed'])
@@ -86,6 +86,7 @@ export async function loadPublicSession(sessionId: string): Promise<PublicSessio
       players_per_team: s.players_per_team as number,
       team_labels: (s.team_labels as Record<string, string>) ?? {},
       team_colors: (s.team_colors as Record<string, string>) ?? {},
+      team_text_colors: (s.team_text_colors as Record<string, 'light' | 'dark'>) ?? {},
       contact_method: s.contact_method as PublicEventSession['contact_method'],
       status: s.status as PublicEventSession['status'],
       dates: publicDates,

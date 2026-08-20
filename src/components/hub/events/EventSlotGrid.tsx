@@ -10,7 +10,7 @@
 
 import { Instagram, MessageCircle, X } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import { DEFAULT_BRAND_COLOR, readableTextColor } from '@/lib/colorUtils';
+import { DEFAULT_BRAND_COLOR, resolveTeamTextColor } from '@/lib/colorUtils';
 import type { EventContactMethod, EventRegistration, EventSession } from '@/types';
 
 interface Props {
@@ -59,6 +59,7 @@ export function EventSlotGrid({
         // Warna tim = identitas yang sama persis dengan yang dilihat pendaftar
         // di Lobby, supaya manager tidak perlu menerjemahkan "Tim 2 itu yang mana".
         const teamColor = session.team_colors?.[String(teamNumber)]?.trim() || brandColor;
+        const teamTextColor = resolveTeamTextColor(teamColor, session.team_text_colors?.[String(teamNumber)]);
         const players = Array.from({ length: session.players_per_team }, (_, i) => i + 1);
         const taken = players.filter((p) => bySlot.has(`${teamNumber}-${p}`)).length;
         const isFull = taken === players.length;
@@ -113,7 +114,7 @@ export function EventSlotGrid({
                   >
                     <span
                       className="w-6 h-6 shrink-0 grid place-items-center rounded-full text-[11px] font-bold"
-                      style={{ backgroundColor: teamColor, color: readableTextColor(teamColor) }}
+                      style={{ backgroundColor: teamColor, color: teamTextColor }}
                     >
                       {playerNumber}
                     </span>

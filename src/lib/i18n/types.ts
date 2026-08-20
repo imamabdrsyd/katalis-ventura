@@ -1072,6 +1072,7 @@ export interface Translations {
     fieldTeams: string;
     teamsHint: string;
     teamColorReset: string;
+    teamTextColorToggle: string;
     brandColorTitle: string;
     brandColorHint: string;
     brandColorSave: string;

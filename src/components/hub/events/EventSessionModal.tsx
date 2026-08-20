@@ -16,7 +16,12 @@ import { NumberStepperField } from '@/components/ui/NumberStepperField';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import FloatingField from '@/components/ui/FloatingField';
 import { ColorPickerField } from '@/components/ui/ColorPickerField';
-import { DEFAULT_BRAND_COLOR, readableTextColor } from '@/lib/colorUtils';
+import {
+  DEFAULT_BRAND_COLOR,
+  resolveTeamTextColor,
+  toggleTextColorOverride,
+  type TextColorOverride,
+} from '@/lib/colorUtils';
 import { useLanguage } from '@/context/LanguageContext';
 import { createEventSession, updateEventSession } from '@/lib/api/events';
 import type { EventContactMethod, EventSession } from '@/types';
@@ -50,6 +55,9 @@ export function EventSessionModal({ isOpen, onClose, businessId, userId, session
   // Kosong = tim ikut warna brand. Nilai hanya masuk map saat owner benar-benar
   // memilih warna, jadi "belum diatur" tetap bisa dibedakan dari "kebetulan indigo".
   const [teamColors, setTeamColors] = useState<Record<string, string>>({});
+  // Kosong = teks chip dihitung otomatis dari kontras. Klik chip pratinjau
+  // men-toggle-nya jadi eksplisit 'light'/'dark' — lihat resolveTeamTextColor.
+  const [teamTextColors, setTeamTextColors] = useState<Record<string, TextColorOverride>>({});
   const [saving, setSaving] = useState(false);
 
   // Muat ulang isian tiap modal dibuka supaya sisa ketikan sesi sebelumnya
@@ -63,6 +71,7 @@ export function EventSessionModal({ isOpen, onClose, businessId, userId, session
     setContactMethod(session?.contact_method ?? 'whatsapp');
     setTeamLabels(session?.team_labels ?? {});
     setTeamColors(session?.team_colors ?? {});
+    setTeamTextColors(session?.team_text_colors ?? {});
   }, [isOpen, session]);
 
   const capacity = teamCount * playersPerTeam;
@@ -81,11 +90,15 @@ export function EventSessionModal({ isOpen, onClose, businessId, userId, session
       // mengecilkan jumlah tim meninggalkan nama tim hantu di JSONB.
       const labels: Record<string, string> = {};
       const colors: Record<string, string> = {};
+      const textColors: Record<string, TextColorOverride> = {};
       for (const n of teamNumbers) {
-        const label = (teamLabels[String(n)] ?? '').trim();
-        if (label) labels[String(n)] = label;
-        const color = teamColors[String(n)];
-        if (color) colors[String(n)] = color;
+        const key = String(n);
+        const label = (teamLabels[key] ?? '').trim();
+        if (label) labels[key] = label;
+        const color = teamColors[key];
+        if (color) colors[key] = color;
+        const textColor = teamTextColors[key];
+        if (textColor) textColors[key] = textColor;
       }
 
       const saved = isEdit
@@ -96,6 +109,7 @@ export function EventSessionModal({ isOpen, onClose, businessId, userId, session
             players_per_team: playersPerTeam,
             team_labels: labels,
             team_colors: colors,
+            team_text_colors: textColors,
             contact_method: contactMethod,
           })
         : await createEventSession({
@@ -106,6 +120,7 @@ export function EventSessionModal({ isOpen, onClose, businessId, userId, session
             players_per_team: playersPerTeam,
             team_labels: labels,
             team_colors: colors,
+            team_text_colors: textColors,
             contact_method: contactMethod,
             status: 'draft',
             created_by: userId,
@@ -214,6 +229,7 @@ export function EventSessionModal({ isOpen, onClose, businessId, userId, session
               const custom = teamColors[key];
               const color = custom ?? brandColor ?? DEFAULT_BRAND_COLOR;
               const name = (teamLabels[key] ?? '').trim() || e.teamLabel.replace('{n}', key);
+              const textColor = resolveTeamTextColor(color, teamTextColors[key]);
 
               return (
                 <div key={n} className="flex items-end gap-3">
@@ -249,13 +265,20 @@ export function EventSessionModal({ isOpen, onClose, businessId, userId, session
                     maxLength={40}
                     onChange={(ev) => setTeamLabels((prev) => ({ ...prev, [key]: ev.target.value }))}
                   />
-                  {/* Pratinjau chip tim persis seperti yang dilihat pendaftar */}
-                  <span
-                    className="hidden sm:inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shrink-0 max-w-[140px] truncate"
-                    style={{ backgroundColor: color, color: readableTextColor(color) }}
+                  {/* Pratinjau chip tim persis seperti yang dilihat pendaftar. Klik
+                      untuk memaksa teksnya hitam/putih — kontras otomatis kadang
+                      "benar secara angka" tapi tidak sesuai selera owner. */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setTeamTextColors((prev) => ({ ...prev, [key]: toggleTextColorOverride(textColor) }))
+                    }
+                    title={e.teamTextColorToggle}
+                    className="hidden sm:inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shrink-0 max-w-[140px] transition-transform active:scale-95 motion-reduce:transform-none"
+                    style={{ backgroundColor: color, color: textColor }}
                   >
-                    {name}
-                  </span>
+                    <span className="truncate">{name}</span>
+                  </button>
                 </div>
               );
             })}

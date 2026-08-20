@@ -158,3 +158,31 @@ export const BRAND_COLOR_PRESETS = [
   '#111827', // near-black
   '#000000', // black
 ] as const;
+
+
+/** Override manual "hitam atau putih" untuk teks chip — lihat resolveTeamTextColor. */
+export type TextColorOverride = 'light' | 'dark';
+
+/**
+ * Warna teks chip tim: pakai override manual owner bila ada (klik chip untuk
+ * toggle — lihat EventSessionModal), kalau tidak hitung otomatis dari kontras
+ * warna latarnya (readableTextColor).
+ *
+ * Override HANYA menyimpan 'light'|'dark', bukan hex bebas — pilihannya
+ * tetap dibatasi ke dua opsi yang sudah pasti terbaca (putih murni / near-
+ * black), owner cuma memilih yang mana, bukan mengetik warna arbitrer yang
+ * bisa tak terbaca sama sekali.
+ */
+export function resolveTeamTextColor(
+  backgroundHex: string,
+  override: TextColorOverride | undefined
+): typeof TEXT_LIGHT | typeof TEXT_DARK {
+  if (override === 'light') return TEXT_LIGHT;
+  if (override === 'dark') return TEXT_DARK;
+  return readableTextColor(backgroundHex);
+}
+
+/** Toggle: dari warna teks yang SEDANG tampil, pindah ke lawannya. */
+export function toggleTextColorOverride(currentTextColor: string): TextColorOverride {
+  return currentTextColor === TEXT_LIGHT ? 'dark' : 'light';
+}

@@ -19,11 +19,12 @@ import {
   Store,
   Box,
   Gamepad2,
+  PartyPopper,
   Plus,
   LucideIcon,
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import { isAssetConsoleSector } from '@/lib/businessSectors';
+import { isAssetConsoleSector, supportsEventRegistration } from '@/lib/businessSectors';
 
 export type NavItem = {
   href: string;
@@ -59,20 +60,28 @@ export type NavSection = {
 
 /**
  * Menu "Catalog" lama kini swap by tipe bisnis (hub Point of Sales / Calendar):
- * - jasa → "Calendar" (/calendar)
+ * - jasa sektor creative_agency → "Events" (/calendar, hub-nya render Event
+ *   Manager — lihat supportsEventRegistration & EventManagerLauncher)
+ * - jasa lainnya → "Calendar" (/calendar, booking per malam)
  * - sektor finance → "Catalog" (masih /point-of-sales, tapi hub-nya cuma render
  *   tab Katalog tanpa Kasir — bisnis finance tidak jualan lewat checkout,
  *   Katalog di sana dipakai untuk set kelas aset per instrumen Asset Console)
  * - produk/dagang/legacy (tipe kosong) → "Point of Sales" (/point-of-sales)
  * Dipakai DUA situs (Sidebar + SearchDialog) — keduanya wajib panggil helper ini
- * agar tidak drift.
+ * agar tidak drift. Href-nya SAMA (/calendar) utk kedua varian jasa — HubPage
+ * yang men-swap isinya dari businessSector, sidebar cuma perlu ikut label/ikon
+ * yang sama supaya user tidak melihat "Calendar" di sidebar lalu masuk ke
+ * halaman yang isinya "Events".
  */
 export function getPosNavItem(
   businessType: string | undefined,
-  nav: { pointOfSales: string; calendar: string; catalog: string },
+  nav: { pointOfSales: string; calendar: string; catalog: string; events: string },
   businessSector?: string | null
 ): NavItem {
   if (businessType === 'jasa') {
+    if (supportsEventRegistration(businessType, businessSector)) {
+      return { href: '/calendar', label: nav.events, icon: PartyPopper };
+    }
     return { href: '/calendar', label: nav.calendar, icon: CalendarDays };
   }
   if (isAssetConsoleSector(businessSector)) {

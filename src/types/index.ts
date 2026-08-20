@@ -1312,6 +1312,8 @@ export interface EventSession {
   team_labels: Record<string, string>;
   /** Warna tim opsional per nomor tim (migr 137). Kosong = ikut warna brand. */
   team_colors: Record<string, string>;
+  /** Override manual warna teks chip tim per nomor tim (migr 138): 'light'|'dark'. Kosong = otomatis dari kontras. */
+  team_text_colors: Record<string, 'light' | 'dark'>;
   contact_method: EventContactMethod;
   status: EventSessionStatus;
   created_by: string | null;
@@ -1357,6 +1359,7 @@ export interface EventSessionInsert {
   players_per_team: number;
   team_labels?: Record<string, string>;
   team_colors?: Record<string, string>;
+  team_text_colors?: Record<string, 'light' | 'dark'>;
   contact_method: EventContactMethod;
   status?: EventSessionStatus;
   created_by?: string | null;
@@ -1369,6 +1372,7 @@ export interface EventSessionUpdate {
   players_per_team?: number;
   team_labels?: Record<string, string>;
   team_colors?: Record<string, string>;
+  team_text_colors?: Record<string, 'light' | 'dark'>;
   contact_method?: EventContactMethod;
   status?: EventSessionStatus;
 }
@@ -1396,6 +1400,7 @@ export interface PublicEventSession {
   players_per_team: number;
   team_labels: Record<string, string>;
   team_colors: Record<string, string>;
+  team_text_colors: Record<string, 'light' | 'dark'>;
   contact_method: EventContactMethod;
   status: EventSessionStatus;
   dates: PublicEventDate[];
