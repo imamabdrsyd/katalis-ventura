@@ -3,10 +3,18 @@
 /**
  * Lobby publik "Book Your Spot" — halaman yang dibuka audience dari link bio.
  *
- * Alurnya sengaja dua langkah supaya terbaca di layar HP: pilih tanggal dulu
- * (di sinilah crowdtesting-nya: tiap tanggal punya kuota sendiri), baru pilih
- * slot player di dalam tim. Slot yang sudah diambil menampilkan NAMA saja —
- * kontak pendaftar tidak pernah dikirim ke browser (lihat loadPublicSession).
+ * Alurnya dua langkah DRILL-DOWN, bukan dua daftar yang menumpuk di satu layar:
+ * layar 1 memilih tanggal (di sinilah crowdtesting-nya — tiap tanggal punya
+ * kuota sendiri), layar 2 menggantikannya dengan grid slot tim × player.
+ *
+ * Kenapa mengganti, bukan menambah: versi pertama menampilkan grid slot DI BAWAH
+ * daftar tanggal, jadi di HP ketukan pada tanggal tidak menghasilkan perubahan
+ * apa pun di layar — responsnya ada ratusan piksel di bawah lipatan dan terbaca
+ * seperti tombol rusak. Sekarang satu ketukan = satu layar baru, dengan header
+ * lengket berisi tanggal terpilih + jalan kembali.
+ *
+ * Slot yang sudah diambil menampilkan NAMA saja — kontak pendaftar tidak pernah
+ * dikirim ke browser (lihat loadPublicSession).
  *
  * Isi grid di-refresh berkala selama halaman terbuka supaya slot yang baru
  * diambil orang lain terlihat terkunci sebelum ditekan. Kalau tetap bentrok,
@@ -15,7 +23,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { CalendarDays, Check, Instagram, Loader2, MessageCircle, Trophy, UserPlus } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Check, ChevronRight, Instagram, Loader2, MessageCircle, Trophy, UserPlus } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import FloatingField from '@/components/ui/FloatingField';
 import { contactFieldHint, contactFieldLabel, normalizeEventContact } from '@/lib/events/contact';
@@ -81,6 +89,8 @@ export function EventLobby({ session: initialSession, business }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [mySlots, setMySlots] = useState<string[]>([]);
+  /** Slot yang baru saja dikunci — dipakai untuk banner konfirmasi di layar slot. */
+  const [justLocked, setJustLocked] = useState<{ team: number; player: number } | null>(null);
 
   const selectedDate: PublicEventDate | null =
     visibleDates.find((d) => d.id === selectedDateId) ?? null;
@@ -93,6 +103,10 @@ export function EventLobby({ session: initialSession, business }: Props) {
     session.team_colors?.[String(teamNumber)]?.trim() || accent;
   const isOpen = session.status === 'open';
   const wonDate = session.dates.find((d) => d.status === 'won') ?? null;
+  const isDateStep = selectedDate == null;
+  // Tanggal tunggal tidak punya "tanggal lain" untuk dituju — jangan tawarkan
+  // jalan kembali ke daftar yang isinya cuma satu baris.
+  const canChangeDate = visibleDates.length > 1;
 
   const refresh = useCallback(async () => {
     try {
@@ -114,6 +128,19 @@ export function EventLobby({ session: initialSession, business }: Props) {
     return () => clearInterval(id);
   }, [isOpen]);
 
+  // Pindah layar = ganti konten seluruh halaman, jadi posisi scroll lama tidak
+  // relevan lagi. Tanpa ini, membuka slot dari tanggal terakhir mendarat di
+  // tengah-tengah daftar tim. Lewati saat render pertama (tanggal tunggal yang
+  // terpilih otomatis) supaya halaman tidak "melompat" begitu dibuka.
+  const firstRenderRef = useRef(true);
+  useEffect(() => {
+    if (firstRenderRef.current) {
+      firstRenderRef.current = false;
+      return;
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [selectedDateId]);
+
   const takenMap = useMemo(() => {
     const map = new Map<string, string>();
     for (const slot of selectedDate?.slots ?? []) {
@@ -121,6 +148,11 @@ export function EventLobby({ session: initialSession, business }: Props) {
     }
     return map;
   }, [selectedDate]);
+
+  function backToDates() {
+    setSelectedDateId(null);
+    setJustLocked(null);
+  }
 
   function openForm(team: number, player: number) {
     setFormSlot({ team, player });
@@ -169,6 +201,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
       }
 
       setMySlots((prev) => [...prev, `${selectedDate.id}-${formSlot.team}-${formSlot.player}`]);
+      setJustLocked({ team: formSlot.team, player: formSlot.player });
       setFormSlot(null);
       setName('');
       setContact('');
@@ -183,10 +216,10 @@ export function EventLobby({ session: initialSession, business }: Props) {
   const ContactIcon = session.contact_method === 'whatsapp' ? MessageCircle : Instagram;
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900 px-4 py-10">
+    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900 px-4 py-6 sm:py-10">
       <div className="w-full max-w-2xl mx-auto">
         {/* Identitas bisnis — sekaligus jalan balik ke halaman utamanya */}
-        <Link href={`/${business.slug}`} className="flex items-center gap-3 mb-8 group w-fit">
+        <Link href={`/${business.slug}`} className="flex items-center gap-3 mb-6 group w-fit">
           {business.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -207,22 +240,34 @@ export function EventLobby({ session: initialSession, business }: Props) {
           </span>
         </Link>
 
-        {/* Judul event */}
-        <div className="mb-6">
-          <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: accent }}>
-            Book Your Spot
-          </p>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 mt-1">
-            {session.title}
-          </h1>
-          {session.description && (
-            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
-              {session.description}
+        {/* Judul event. Di layar slot, deskripsi & rincian format disembunyikan —
+            ruang layar HP dipakai untuk slotnya sendiri, bukan mengulang brief
+            yang sudah dibaca di layar sebelumnya. */}
+        <div className="mb-5">
+          {isDateStep && (
+            <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: accent }}>
+              Book Your Spot
             </p>
           )}
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
-            {session.team_count} tim × {session.players_per_team} pemain · {capacity} slot per tanggal
-          </p>
+          <h1
+            className={`font-bold text-gray-900 dark:text-gray-100 ${
+              isDateStep ? 'text-2xl sm:text-3xl mt-1' : 'text-xl'
+            }`}
+          >
+            {session.title}
+          </h1>
+          {isDateStep && (
+            <>
+              {session.description && (
+                <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
+                  {session.description}
+                </p>
+              )}
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
+                {session.team_count} tim × {session.players_per_team} pemain · {capacity} slot per tanggal
+              </p>
+            </>
+          )}
         </div>
 
         {/* Pengumuman tanggal pemenang */}
@@ -247,9 +292,12 @@ export function EventLobby({ session: initialSession, business }: Props) {
           </div>
         )}
 
-        {/* Langkah 1 — pilih tanggal */}
-        {visibleDates.length > 0 && (
-          <section className="mb-6">
+        {/* Layar 1 — pilih tanggal. Barisnya sengaja ringkas (bukan kartu tinggi)
+            supaya semua tanggal muat dalam satu layar HP: perbandingan "tanggal
+            mana yang paling cepat penuh" itu inti fiturnya, dan perbandingan
+            tidak terjadi kalau harus scroll. */}
+        {isDateStep && visibleDates.length > 0 && (
+          <section>
             <div className="flex items-center gap-2 mb-3">
               <CalendarDays className="w-4 h-4 text-gray-400 dark:text-gray-500" />
               <h2 className="text-sm font-bold text-gray-800 dark:text-gray-100">
@@ -257,11 +305,10 @@ export function EventLobby({ session: initialSession, business }: Props) {
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-2">
               {visibleDates.map((date) => {
                 const taken = date.slots.length;
                 const isFull = taken >= capacity;
-                const isSelected = date.id === selectedDateId;
                 const pct = capacity > 0 ? Math.min(100, (taken / capacity) * 100) : 0;
 
                 return (
@@ -269,33 +316,38 @@ export function EventLobby({ session: initialSession, business }: Props) {
                     key={date.id}
                     type="button"
                     onClick={() => setSelectedDateId(date.id)}
-                    className={`rounded-2xl border p-4 text-left transition-all ${
-                      isSelected
-                        ? 'border-transparent shadow-md ring-2'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'
-                    }`}
-                    style={
-                      isSelected
-                        ? ({ '--tw-ring-color': accent, backgroundColor: tint(accent, 8) } as React.CSSProperties)
-                        : undefined
-                    }
+                    className="w-full flex items-center gap-3 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3.5 text-left transition-all hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm active:scale-[0.99] motion-reduce:transform-none"
                   >
-                    <p className="text-[11px] uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                      {formatDayName(date.event_date)}
-                    </p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                      {formatDayMonth(date.event_date)}
-                    </p>
-
-                    <div className="mt-3 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{ width: `${pct}%`, backgroundColor: isFull ? '#10b981' : accent }}
-                      />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                        {formatDayName(date.event_date)}
+                      </p>
+                      <p className="text-base font-bold text-gray-900 dark:text-gray-100 truncate">
+                        {formatDayMonth(date.event_date)}
+                      </p>
+                      {/* Bar & hitungan disatukan dalam satu baris: tiap baris teks
+                          tambahan di sini berarti satu tanggal terdorong ke bawah
+                          lipatan, dan perbandingan antar tanggal jadi hilang. */}
+                      <div className="mt-2 flex items-center gap-2.5">
+                        <div className="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{ width: `${pct}%`, backgroundColor: isFull ? '#10b981' : accent }}
+                          />
+                        </div>
+                        <span
+                          className={`text-[11px] shrink-0 tabular-nums ${
+                            isFull
+                              ? 'font-semibold text-emerald-600 dark:text-emerald-400'
+                              : 'text-gray-500 dark:text-gray-400'
+                          }`}
+                        >
+                          {isFull ? 'Penuh' : `${taken}/${capacity} slot`}
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 tabular-nums">
-                      {isFull ? 'Penuh' : `${taken}/${capacity} slot terisi`}
-                    </p>
+
+                    <ChevronRight className="w-5 h-5 shrink-0 text-gray-300 dark:text-gray-600" />
                   </button>
                 );
               })}
@@ -303,15 +355,76 @@ export function EventLobby({ session: initialSession, business }: Props) {
           </section>
         )}
 
-        {/* Langkah 2 — grid slot */}
+        {/* Layar 2 — grid slot untuk tanggal terpilih */}
         {selectedDate ? (
           <section>
-            <h2 className="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">
+            {/* Header lengket: tanggal yang sedang dilihat tetap terlihat sambil
+                menggulir daftar tim, dan jalan kembali selalu terjangkau ibu jari.
+                -mx-4 membuatnya menepi ke tepi layar seperti app bar. */}
+            <div className="sticky top-0 z-10 -mx-4 px-4 py-3 mb-4 bg-gray-50/90 dark:bg-gray-950/90 backdrop-blur border-b border-gray-200 dark:border-gray-800">
+              <div className="max-w-2xl mx-auto flex items-center gap-3">
+                {canChangeDate && (
+                  <button
+                    type="button"
+                    onClick={backToDates}
+                    className="w-9 h-9 shrink-0 grid place-items-center rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-transform active:scale-95 motion-reduce:transform-none"
+                    aria-label="Kembali ke pilihan tanggal"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
+                    {formatFullDate(selectedDate.event_date)}
+                  </p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 tabular-nums">
+                    {selectedDate.slots.length >= capacity
+                      ? 'Semua slot penuh'
+                      : `${selectedDate.slots.length}/${capacity} slot terisi`}
+                  </p>
+                </div>
+                {canChangeDate && (
+                  <button
+                    type="button"
+                    onClick={backToDates}
+                    className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300"
+                  >
+                    Ganti tanggal
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Konfirmasi setelah slot terkunci — jawaban atas "terus, gue ngapain
+                sekarang?" yang sebelumnya cuma dijawab modal yang menutup diri. */}
+            {justLocked && (
+              <div
+                className="rounded-2xl border px-4 py-3.5 mb-4 flex items-start gap-3"
+                style={{ borderColor: tint(accent, 35), backgroundColor: tint(accent, 10) }}
+              >
+                <span
+                  className="w-8 h-8 shrink-0 grid place-items-center rounded-full"
+                  style={{ backgroundColor: accent, color: readableTextColor(accent) }}
+                >
+                  <Check className="w-4 h-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100">Slot kamu terkunci</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-200">
+                    {session.team_labels?.[String(justLocked.team)]?.trim() || `Tim ${justLocked.team}`} · Pemain{' '}
+                    {justLocked.player}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Panitia akan menghubungi kamu lewat{' '}
+                    {session.contact_method === 'whatsapp' ? 'WhatsApp' : 'Instagram'} untuk detail acaranya.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <h2 className="text-sm font-bold text-gray-800 dark:text-gray-100 mb-3">
               {isOpen ? 'Pilih slot kamu' : 'Daftar pemain'}
             </h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-              {formatFullDate(selectedDate.event_date)}
-            </p>
 
             <div className="space-y-3">
               {Array.from({ length: session.team_count }, (_, i) => i + 1).map((teamNumber) => {
@@ -420,13 +533,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
               })}
             </div>
           </section>
-        ) : (
-          visibleDates.length > 0 && (
-            <p className="text-sm text-center text-gray-400 dark:text-gray-500 py-8">
-              Pilih salah satu tanggal di atas untuk melihat slot yang masih kosong.
-            </p>
-          )
-        )}
+        ) : null}
 
         <p className="text-xs text-center text-gray-400 dark:text-gray-600 mt-12">Made with AXION</p>
       </div>
