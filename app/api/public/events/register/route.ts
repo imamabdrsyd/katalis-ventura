@@ -19,13 +19,6 @@ import type { EventContactMethod } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * Batas slot per kontak per tanggal. Kapten tim yang mendaftarkan seluruh
- * timnya sekaligus itu wajar, memborong dua tim penuh tidak — angka ini
- * memberi ruang untuk yang pertama tanpa membiarkan satu orang mengunci Lobby.
- */
-const MAX_SLOTS_PER_CONTACT = 6;
-
 export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => null)) as {
     sessionDateId?: string;
@@ -88,17 +81,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: contactError ?? 'Kontak tidak valid' }, { status: 400 });
   }
 
-  const { count } = await admin
+  // Satu kontak = satu slot per tanggal (migr 141) — pre-check ini cuma UX
+  // (pesan error cepat, hindari roundtrip RPC yang pasti gagal); wasit
+  // sesungguhnya adalah index unik parsial event_registrations_contact_per_date_unique,
+  // ditangkap lewat kode 23505 di bawah kalau ada race 2 submit hampir bersamaan.
+  const { data: existingForContact } = await admin
     .from('event_registrations')
-    .select('id', { count: 'exact', head: true })
+    .select('id')
     .eq('session_date_id', sessionDateId)
     .eq('contact_value', contact)
-    .neq('status', 'cancelled');
+    .neq('status', 'cancelled')
+    .maybeSingle();
 
-  if ((count ?? 0) >= MAX_SLOTS_PER_CONTACT) {
+  if (existingForContact) {
     return NextResponse.json(
-      { error: 'Kontak ini sudah mengambil banyak slot di tanggal tersebut.' },
-      { status: 429 }
+      {
+        error: 'Kontak ini sudah terdaftar di tanggal ini. Satu kontak cuma bisa mengisi satu slot per tanggal.',
+        code: 'contact_already_registered',
+      },
+      { status: 409 }
     );
   }
 
@@ -112,9 +113,23 @@ export async function POST(req: NextRequest) {
   });
 
   if (error) {
-    // 23505 = index unik parsial event_registrations_slot_unique — dua orang
-    // menekan slot yang sama nyaris bersamaan. DB-lah wasit akhirnya.
+    // 23505 bisa datang dari DUA index unik parsial berbeda — bedakan lewat
+    // nama constraint di pesan errornya, supaya pesan ke pengguna akurat:
     if (error.code === '23505') {
+      // event_registrations_contact_per_date_unique (migr 141): kontak ini
+      // baru saja terdaftar di slot LAIN pada tanggal yang sama (race dgn
+      // pre-check di atas — jendela sempit antara SELECT dan INSERT).
+      if (error.message?.includes('contact_per_date')) {
+        return NextResponse.json(
+          {
+            error: 'Kontak ini sudah terdaftar di tanggal ini. Satu kontak cuma bisa mengisi satu slot per tanggal.',
+            code: 'contact_already_registered',
+          },
+          { status: 409 }
+        );
+      }
+      // event_registrations_slot_unique (migr 136): dua orang menekan slot
+      // yang sama nyaris bersamaan.
       return NextResponse.json(
         { error: 'Slot ini baru saja diambil orang lain. Pilih slot lain ya.', code: 'slot_taken' },
         { status: 409 }
