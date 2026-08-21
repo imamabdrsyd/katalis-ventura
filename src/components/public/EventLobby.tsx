@@ -450,9 +450,15 @@ export function EventLobby({ session: initialSession, business }: Props) {
               // Sengaja HIJAU, bukan warna brand: ini pesan status "berhasil",
               // bukan elemen branding. Warna brand dipakai untuk aksi & identitas;
               // memakainya di sini membuat "berhasil" dan "tombol biasa" terlihat
-              // sama. Latar netral tanpa outline supaya hijaunya yang menonjol.
-              <div className="animate-pop-in rounded-2xl bg-gray-50 dark:bg-gray-800 px-4 py-3.5 mb-4 flex items-start gap-3">
-                <span className="w-8 h-8 shrink-0 grid place-items-center rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400">
+              // sama. Latar abu netral tanpa outline supaya hijaunya yang menonjol.
+              //
+              // gray-100, BUKAN gray-50: latar halaman ini sendiri `from-gray-50`,
+              // jadi gray-50 membuat kotaknya menyatu dengan halaman dan banner-nya
+              // tidak terbaca sebagai kotak sama sekali.
+              <div className="animate-pop-in rounded-2xl bg-gray-100 dark:bg-gray-800 px-4 py-3.5 mb-4 flex items-start gap-3">
+                {/* Lingkaran hijau penuh + ceklis putih — hijaunya disamakan dengan
+                    warna judul banner supaya terbaca satu kesatuan. */}
+                <span className="w-8 h-8 shrink-0 grid place-items-center rounded-full bg-emerald-600 dark:bg-emerald-500 text-white">
                   <Check className="w-4 h-4" />
                 </span>
                 <div className="min-w-0">
