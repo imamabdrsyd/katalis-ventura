@@ -611,6 +611,11 @@ export function EventLobby({ session: initialSession, business }: Props) {
         onClose={() => setFormSlot(null)}
         title="Kunci slot kamu"
         size="sm"
+        // Halaman publik ini latarnya sudah terang & dikunci light mode —
+        // peredam gelap ala modal dashboard membuatnya terlihat "berubah tema"
+        // saat form muncul. Cukup bayangan tipis untuk memisahkan lapisan.
+        backdropClassName="bg-black/10"
+        hideScrollbar
         footer={
           <div className="flex items-center justify-end gap-2">
             <button type="button" onClick={() => setFormSlot(null)} className="btn-ghost">

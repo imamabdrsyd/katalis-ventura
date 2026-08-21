@@ -4,14 +4,17 @@
  * render ulang avatar terpilih di grid slot admin & publik.
  *
  * File sumbernya `public/persona/*.png` — sebagian SAMA PERSIS dengan avatar
- * karakter AXION Agent (Bianca, Sri Mulyani, Stanley, Concierge) yang dipakai
- * di fitur Agent (keputusan eksplisit user, bukan aset baru dibuat khusus),
- * plus `persona-1..7` yang generik/khusus avatar. `agent.png` (orchestrator
- * AXION Agent) SENGAJA TIDAK dipakai di sini — user menolaknya (21 Agt 2026):
- * ikon orchestrator tidak cocok jadi wajah pemain event.
+ * karakter AXION Agent (Bianca, Sri Mulyani, Concierge) yang dipakai di fitur
+ * Agent (keputusan eksplisit user, bukan aset baru dibuat khusus), plus
+ * `persona-1..7` yang generik/khusus avatar.
+ *
+ * Dua yang SENGAJA tidak dipakai di sini, keduanya atas permintaan user:
+ * `agent.png` (orchestrator AXION Agent — tidak cocok jadi wajah pemain) dan
+ * `stanley.png` (dicabut agar jumlahnya pas 10 = 2 baris × 5 di picker,
+ * sehingga modal pendaftaran tidak terlalu tinggi di layar HP).
  *
  * Kalau nanti user berubah pikiran soal daftar ini, cukup ganti di sini +
- * migrasi baru untuk CHECK constraint-nya (lihat migr 140 & 142).
+ * migrasi baru untuk CHECK constraint-nya (lihat migr 140, 142 & 143).
  *
  * `key` adalah SATU-SATUNYA nilai yang boleh disimpan ke
  * `event_registrations.avatar_key` — divalidasi di server (route publik) DAN
@@ -26,6 +29,10 @@ export interface EventAvatarOption {
   src: string;
 }
 
+/**
+ * Avatar yang BISA DIPILIH pendaftar. Sengaja 10 (2 baris × 5 di picker) —
+ * jumlahnya dijaga supaya modal pendaftaran tidak jadi terlalu tinggi di layar HP.
+ */
 export const EVENT_AVATAR_OPTIONS: EventAvatarOption[] = [
   { key: 'persona-1', label: 'Avatar 1', src: '/persona/persona-1.png' },
   { key: 'persona-2', label: 'Avatar 2', src: '/persona/persona-2.png' },
@@ -36,7 +43,6 @@ export const EVENT_AVATAR_OPTIONS: EventAvatarOption[] = [
   { key: 'persona-7', label: 'Avatar 7', src: '/persona/persona-7.png' },
   { key: 'bianca', label: 'Bianca', src: '/persona/bianca.png' },
   { key: 'sri-mulyani', label: 'Sri Mulyani', src: '/persona/sri-mulyani.png' },
-  { key: 'stanley', label: 'Stanley', src: '/persona/stanley.png' },
   { key: 'concierge', label: 'Concierge', src: '/persona/concierge.png' },
 ];
 

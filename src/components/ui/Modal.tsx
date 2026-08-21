@@ -45,6 +45,21 @@ interface ModalProps {
    * `isOpen=false` (bukan lewat guard ini), jadi tidak terganggu.
    */
   confirmOnClose?: boolean;
+  /**
+   * Kelas latar overlay. Default `bg-black/50` — modal dashboard perlu meredam
+   * halaman di belakangnya. Halaman publik yang latarnya sudah terang bisa
+   * memakai peredam yang jauh lebih ringan (mis. `bg-black/10`) supaya
+   * halamannya tidak berubah gelap saat modal muncul.
+   */
+  backdropClassName?: string;
+  /**
+   * Bila true, scrollbar di badan modal disembunyikan SECARA VISUAL — isinya
+   * tetap bisa di-scroll (roda, sentuh, keyboard) dan tetap fokusable. Dipakai
+   * di permukaan publik yang tampilannya harus bersih; jangan dipakai di form
+   * dashboard yang panjang, di sana scrollbar itu petunjuk "masih ada isi di
+   * bawah" yang berguna.
+   */
+  hideScrollbar?: boolean;
 }
 
 const SIZE_CLASSES: Record<ModalSize, string> = {
@@ -56,7 +71,7 @@ const SIZE_CLASSES: Record<ModalSize, string> = {
   '3xl': 'sm:max-w-3xl',
 };
 
-export function Modal({ isOpen, onClose, title, children, footer, size = 'md', sideNavPrev, sideNavNext, sidePanel, headerAction, closeButtonClassName = '', zIndexClassName = 'z-50', confirmOnClose = false }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, footer, size = 'md', sideNavPrev, sideNavNext, sidePanel, headerAction, closeButtonClassName = '', zIndexClassName = 'z-50', confirmOnClose = false, backdropClassName = 'bg-black/50', hideScrollbar = false }: ModalProps) {
   const { t } = useLanguage();
   const [mounted, setMounted] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
@@ -126,7 +141,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', s
 
   const modalContent = (
     <div
-      className={`fixed inset-0 bg-black/50 ${zIndexClassName} flex items-center justify-center p-4 transition-opacity duration-200 ease-out ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+      className={`fixed inset-0 ${backdropClassName} ${zIndexClassName} flex items-center justify-center p-4 transition-opacity duration-200 ease-out ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       onClick={requestClose}
     >
       {/* Side nav — prev */}
@@ -198,7 +213,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', s
             memanggil stopPropagation di handler-nya sendiri.
           */}
           <div
-            className="px-5 py-4 overflow-y-auto flex-1 min-h-0"
+            className={`px-5 py-4 overflow-y-auto flex-1 min-h-0 ${hideScrollbar ? 'scrollbar-hide' : ''}`}
             onInputCapture={confirmOnClose ? () => { isDirtyRef.current = true; } : undefined}
             onChangeCapture={confirmOnClose ? () => { isDirtyRef.current = true; } : undefined}
           >
