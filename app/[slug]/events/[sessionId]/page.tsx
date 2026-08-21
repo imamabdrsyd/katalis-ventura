@@ -10,6 +10,7 @@
  * milik mereka.
  */
 
+import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createAdminClient } from '@/lib/supabase-server';
@@ -30,7 +31,12 @@ interface ChannelRow {
   button_color: string | null;
 }
 
-async function loadChannel(slug: string): Promise<ChannelRow | null> {
+/**
+ * Dibungkus React `cache()` dengan alasan yang sama seperti `loadPublicSession`:
+ * `generateMetadata` dan komponen halaman sama-sama memanggilnya di request yang
+ * sama. Tanpa dedup, tiap kali Lobby dibuka query ini jalan dua kali.
+ */
+const loadChannel = cache(async (slug: string): Promise<ChannelRow | null> => {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from('business_omni_channels')
@@ -39,7 +45,7 @@ async function loadChannel(slug: string): Promise<ChannelRow | null> {
     .eq('is_published', true)
     .maybeSingle();
   return (data as ChannelRow | null) ?? null;
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, sessionId } = await params;

@@ -8,6 +8,7 @@
  * memastikan kolomnya aman dilihat siapa pun yang punya link Lobby.
  */
 
+import { cache } from 'react';
 import { createAdminClient } from '@/lib/supabase-server';
 import type { PublicEventSummary } from '@/components/omnichannel/types';
 import type { PublicEventDate, PublicEventSession, PublicEventSlot } from '@/types';
@@ -18,36 +19,45 @@ export interface PublicSessionResult {
 }
 
 /**
+ * Dibungkus React `cache()`: `generateMetadata` DAN komponen halaman sama-sama
+ * memanggilnya di request yang sama, jadi tanpa dedup seluruh query di sini
+ * jalan DUA KALI tiap kali Lobby dibuka.
+ *
  * Sesi 'draft' & 'cancelled' → null (tidak pernah tampil publik).
  * Sesi 'closed' TETAP dilayani supaya link yang sudah tersebar tidak jadi 404
  * setelah manager memilih tanggal pemenang — pengunjung malah melihat
  * pengumuman tanggalnya. Pendaftaran baru tetap ditolak di sisi DB.
  */
-export async function loadPublicSession(sessionId: string): Promise<PublicSessionResult | null> {
+export const loadPublicSession = cache(async (sessionId: string): Promise<PublicSessionResult | null> => {
   // Guard: sessionId datang dari URL. Bukan UUID → jangan sentuh DB.
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sessionId)) return null;
 
   const admin = createAdminClient();
 
-  const { data: sessionRow } = await admin
-    .from('event_sessions')
-    .select('id, business_id, title, description, eyebrow_text, team_count, players_per_team, team_labels, team_colors, team_text_colors, contact_method, status')
-    .eq('id', sessionId)
-    .is('deleted_at', null)
-    .in('status', ['open', 'closed'])
-    .maybeSingle();
+  // Sesi & tanggal sama-sama cuma butuh `sessionId` — tidak saling bergantung,
+  // jadi jalan bareng. Cuma daftar registrasi yang harus menunggu (butuh id
+  // tanggalnya). Memangkas jalur kritis dari 3 round trip berurutan jadi 2.
+  const [sessionResult, dateResult] = await Promise.all([
+    admin
+      .from('event_sessions')
+      .select('id, business_id, title, description, eyebrow_text, team_count, players_per_team, team_labels, team_colors, team_text_colors, contact_method, status')
+      .eq('id', sessionId)
+      .is('deleted_at', null)
+      .in('status', ['open', 'closed'])
+      .maybeSingle(),
+    admin
+      .from('event_session_dates')
+      .select('id, event_date, status, sort_order')
+      .eq('session_id', sessionId)
+      .order('sort_order', { ascending: true })
+      .order('event_date', { ascending: true }),
+  ]);
 
+  const sessionRow = sessionResult.data;
   if (!sessionRow) return null;
   const s = sessionRow as Record<string, unknown>;
 
-  const { data: dateRows } = await admin
-    .from('event_session_dates')
-    .select('id, event_date, status, sort_order')
-    .eq('session_id', sessionId)
-    .order('sort_order', { ascending: true })
-    .order('event_date', { ascending: true });
-
-  const dates = (dateRows ?? []) as Array<{ id: string; event_date: string; status: string; sort_order: number }>;
+  const dates = (dateResult.data ?? []) as Array<{ id: string; event_date: string; status: string; sort_order: number }>;
   const dateIds = dates.map((d) => d.id);
 
   // Hanya kolom aman. Pendaftar 'cancelled' dibuang: slotnya sudah bebas lagi.
@@ -104,7 +114,7 @@ export async function loadPublicSession(sessionId: string): Promise<PublicSessio
       dates: publicDates,
     },
   };
-}
+});
 
 /**
  * Sesi berstatus 'open' milik satu bisnis — untuk kartu "Book Your Spot" di

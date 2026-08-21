@@ -411,7 +411,11 @@ export function EventLobby({ session: initialSession, business }: Props) {
                   <button
                     type="button"
                     onClick={backToDates}
-                    className="w-9 h-9 shrink-0 grid place-items-center rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-transform active:scale-95 motion-reduce:transform-none"
+                    // Warna brand datang sebagai hex runtime, bukan kelas Tailwind —
+                    // dilewatkan sebagai custom property supaya state hover/active
+                    // tetap deklaratif di className, tanpa perlu state JS.
+                    style={{ '--brand': accent } as React.CSSProperties}
+                    className="w-9 h-9 shrink-0 grid place-items-center rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-all active:scale-95 motion-reduce:transform-none hover:border-[var(--brand)] hover:text-[var(--brand)] active:border-[var(--brand)] active:text-[var(--brand)]"
                     aria-label="Kembali ke pilihan tanggal"
                   >
                     <ArrowLeft className="w-4 h-4" />
@@ -431,7 +435,8 @@ export function EventLobby({ session: initialSession, business }: Props) {
                   <button
                     type="button"
                     onClick={backToDates}
-                    className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300"
+                    style={{ '--brand': accent } as React.CSSProperties}
+                    className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-all active:scale-95 motion-reduce:transform-none hover:border-[var(--brand)] hover:text-[var(--brand)] active:border-[var(--brand)] active:text-[var(--brand)]"
                   >
                     Ganti tanggal
                   </button>
@@ -442,18 +447,16 @@ export function EventLobby({ session: initialSession, business }: Props) {
             {/* Konfirmasi setelah slot terkunci — jawaban atas "terus, gue ngapain
                 sekarang?" yang sebelumnya cuma dijawab modal yang menutup diri. */}
             {justLocked && (
-              <div
-                className="animate-pop-in rounded-2xl border px-4 py-3.5 mb-4 flex items-start gap-3"
-                style={{ borderColor: tint(accent, 35), backgroundColor: tint(accent, 10) }}
-              >
-                <span
-                  className="w-8 h-8 shrink-0 grid place-items-center rounded-full"
-                  style={{ backgroundColor: accent, color: readableTextColor(accent) }}
-                >
+              // Sengaja HIJAU, bukan warna brand: ini pesan status "berhasil",
+              // bukan elemen branding. Warna brand dipakai untuk aksi & identitas;
+              // memakainya di sini membuat "berhasil" dan "tombol biasa" terlihat
+              // sama. Latar netral tanpa outline supaya hijaunya yang menonjol.
+              <div className="animate-pop-in rounded-2xl bg-gray-50 dark:bg-gray-800 px-4 py-3.5 mb-4 flex items-start gap-3">
+                <span className="w-8 h-8 shrink-0 grid place-items-center rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400">
                   <Check className="w-4 h-4" />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100">Slot kamu terkunci</p>
+                  <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Slot kamu terkunci</p>
                   <p className="text-sm text-gray-700 dark:text-gray-200">
                     {session.team_labels?.[String(justLocked.team)]?.trim() || `Tim ${justLocked.team}`} · Player{' '}
                     {justLocked.player}
