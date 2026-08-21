@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { canManageBusiness, getAuthenticatedUser, createAdminClient, createServerClient } from '@/lib/supabase-server';
 import { isReservedSlug, isValidSlugFormat } from '@/lib/utils/slugUtils';
+import { publicSlugCacheTag } from '@/lib/publicPageCache';
 import { z } from 'zod';
 
 const widgetLabelsSchema = z.object({
@@ -129,6 +131,19 @@ export async function PUT(
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Data halaman publik di-cache 60 detik (app/[slug]/page.tsx). Tanpa ini,
+  // owner yang baru menyimpan perubahan bisa membuka halamannya dan masih
+  // melihat versi lama sampai satu menit — persis momen yang bikin orang
+  // mengira fitur simpannya rusak lalu menyimpan berulang kali.
+  //
+  // Catatan: kalau slug-nya BARU SAJA diganti, alamat LAMA masih menyajikan
+  // versi cache sampai maksimal 60 detik. Tidak di-handle di sini karena
+  // butuh query tambahan di tiap penyimpanan cuma untuk kasus rename yang
+  // jarang, dan jendelanya sudah pendek.
+  // Next 16: argumen kedua wajib. 'max' = buang seluruh entri bertag ini
+  // (updateTag khusus Server Action, tidak sah di Route Handler).
+  revalidateTag(publicSlugCacheTag(slug), 'max');
 
   return NextResponse.json({ data });
 }

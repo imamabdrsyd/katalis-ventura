@@ -12,9 +12,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase-server';
 import { normalizeEventContact } from '@/lib/events/contact';
 import { isValidEventAvatarKey } from '@/lib/events/avatars';
+import { publicSlugCacheTag } from '@/lib/publicPageCache';
 import type { EventContactMethod } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -144,8 +146,36 @@ export async function POST(req: NextRequest) {
   }
 
   const registration = data as
-    | { team_number: number; player_number: number; name: string; avatar_key: string | null }
+    | {
+        team_number: number;
+        player_number: number;
+        name: string;
+        avatar_key: string | null;
+        business_id: string;
+      }
     | null;
+
+  // Kartu event di halaman publik menampilkan hitungan slot terisi — sinyal
+  // crowdtesting yang jadi inti fitur ini (§29.1). Data halaman itu di-cache 60
+  // detik, jadi tanpa revalidasi manual hitungannya bisa tertinggal semenit
+  // setelah ada pendaftar baru. Dibungkus try/catch dan TIDAK pernah
+  // menggagalkan respons: slotnya sudah benar-benar terkunci di DB, kegagalan
+  // membersihkan cache bukan alasan memberi tahu pendaftar bahwa dia gagal.
+  if (registration?.business_id) {
+    try {
+      const { data: oc } = await admin
+        .from('business_omni_channels')
+        .select('slug')
+        .eq('business_id', registration.business_id)
+        .eq('is_published', true)
+        .maybeSingle();
+
+      const slug = (oc as { slug?: string } | null)?.slug;
+      if (slug) revalidateTag(publicSlugCacheTag(slug), 'max');
+    } catch (revalidateError) {
+      console.error('revalidate slug after registration failed:', revalidateError);
+    }
+  }
 
   return NextResponse.json({
     ok: true,
