@@ -47,6 +47,7 @@ export function EventSessionModal({ isOpen, onClose, businessId, userId, session
   const isEdit = session != null;
 
   const [title, setTitle] = useState('');
+  const [eyebrowText, setEyebrowText] = useState('');
   const [description, setDescription] = useState('');
   const [teamCount, setTeamCount] = useState(2);
   const [playersPerTeam, setPlayersPerTeam] = useState(2);
@@ -65,6 +66,7 @@ export function EventSessionModal({ isOpen, onClose, businessId, userId, session
   useEffect(() => {
     if (!isOpen) return;
     setTitle(session?.title ?? '');
+    setEyebrowText(session?.eyebrow_text ?? '');
     setDescription(session?.description ?? '');
     setTeamCount(session?.team_count ?? 2);
     setPlayersPerTeam(session?.players_per_team ?? 2);
@@ -104,6 +106,7 @@ export function EventSessionModal({ isOpen, onClose, businessId, userId, session
       const saved = isEdit
         ? await updateEventSession(session.id, {
             title: title.trim(),
+            eyebrow_text: eyebrowText.trim() || null,
             description: description.trim() || null,
             team_count: teamCount,
             players_per_team: playersPerTeam,
@@ -115,6 +118,7 @@ export function EventSessionModal({ isOpen, onClose, businessId, userId, session
         : await createEventSession({
             business_id: businessId,
             title: title.trim(),
+            eyebrow_text: eyebrowText.trim() || null,
             description: description.trim() || null,
             team_count: teamCount,
             players_per_team: playersPerTeam,
@@ -162,6 +166,17 @@ export function EventSessionModal({ isOpen, onClose, businessId, userId, session
           maxLength={120}
           onChange={(ev) => setTitle(ev.target.value)}
         />
+
+        <div>
+          <FloatingField
+            label={e.fieldEyebrowText}
+            placeholder={e.eyebrowTextPlaceholder}
+            value={eyebrowText}
+            maxLength={40}
+            onChange={(ev) => setEyebrowText(ev.target.value)}
+          />
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{e.eyebrowTextHint}</p>
+        </div>
 
         <div>
           <label className="label" htmlFor="event-description">

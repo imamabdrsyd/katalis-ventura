@@ -269,7 +269,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
         <div className="mb-5">
           {isDateStep && (
             <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: accent }}>
-              Book Your Spot
+              {session.eyebrow_text?.trim() || 'Book Your Spot'}
             </p>
           )}
           {/* Layar tanggal: nama event yang jadi judul. Layar slot: judulnya

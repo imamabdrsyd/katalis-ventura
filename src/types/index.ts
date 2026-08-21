@@ -1306,6 +1306,8 @@ export interface EventSession {
   business_id: string;
   title: string;
   description: string | null;
+  /** Label kecil di atas judul kartu & Lobby publik (migr 139). Kosong = "Book Your Spot". */
+  eyebrow_text: string | null;
   team_count: number;
   players_per_team: number;
   /** Nama tim opsional per nomor tim: { "1": "Tim Elang" }. */
@@ -1355,6 +1357,7 @@ export interface EventSessionInsert {
   business_id: string;
   title: string;
   description?: string | null;
+  eyebrow_text?: string | null;
   team_count: number;
   players_per_team: number;
   team_labels?: Record<string, string>;
@@ -1368,6 +1371,7 @@ export interface EventSessionInsert {
 export interface EventSessionUpdate {
   title?: string;
   description?: string | null;
+  eyebrow_text?: string | null;
   team_count?: number;
   players_per_team?: number;
   team_labels?: Record<string, string>;
@@ -1396,6 +1400,7 @@ export interface PublicEventSession {
   id: string;
   title: string;
   description: string | null;
+  eyebrow_text: string | null;
   team_count: number;
   players_per_team: number;
   team_labels: Record<string, string>;

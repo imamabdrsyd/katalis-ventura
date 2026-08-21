@@ -144,9 +144,13 @@ function MessageBubble({
 
   return (
     <div className={`flex ${inbound ? 'justify-start' : 'justify-end'}`}>
-      <div className={`max-w-[85%] md:max-w-[70%] ${inbound ? '' : 'items-end'}`}>
+      {/* min-w-0 WAJIB di sini: item flex defaultnya min-width:auto, jadi
+          tanpa ini pesan berisi kata panjang tanpa spasi (URL, username,
+          deret angka) menolak menyusut ke max-w dan mendorong bubble sampai
+          keluar layar ke kanan alih-alih membungkus teksnya. */}
+      <div className={`min-w-0 max-w-[85%] md:max-w-[70%] ${inbound ? '' : 'items-end'}`}>
         <div
-          className={`rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap break-words ${
+          className={`rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere] ${
             inbound
               ? 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-bl-md'
               : draft
@@ -380,7 +384,11 @@ function LeadsPageInner() {
       </div>
 
       {/* Inbox 2 panel */}
-      <div className="grid md:grid-cols-[320px,1fr] gap-4 md:h-[calc(100vh-280px)] md:min-h-[420px]">
+      {/* minmax(0,1fr) bukan cuma 1fr — kolom grid juga min-width:auto by
+          default, jadi tanpa ini konten lebar di panel kanan (mis. pesan
+          sebelum min-w-0 di MessageBubble diperbaiki) bisa mendorong kolomnya
+          sendiri melebihi jatah 1fr dan halaman ikut scroll ke samping. */}
+      <div className="grid md:grid-cols-[320px,minmax(0,1fr)] gap-4 md:h-[calc(100vh-280px)] md:min-h-[420px]">
         {/* Panel kiri: list leads — di mobile disembunyikan saat thread terbuka */}
         <div
           className={`bg-white dark:bg-gray-800 rounded-xl shadow-card border border-transparent dark:border-gray-700 flex flex-col min-h-0 ${

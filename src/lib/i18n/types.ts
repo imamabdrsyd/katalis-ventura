@@ -1062,6 +1062,9 @@ export interface Translations {
     fieldTitle: string;
     fieldTitlePlaceholder: string;
     fieldDescription: string;
+    fieldEyebrowText: string;
+    eyebrowTextPlaceholder: string;
+    eyebrowTextHint: string;
     fieldDescriptionPlaceholder: string;
     fieldTeamCount: string;
     fieldPlayersPerTeam: string;

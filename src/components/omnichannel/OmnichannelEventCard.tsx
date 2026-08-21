@@ -38,7 +38,7 @@ export function OmnichannelEventCard({ event, slug, buttonColor }: Props) {
   return (
     <div className="rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-5 shadow-lg shadow-gray-200/60 dark:shadow-gray-900/60">
       <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: accent }}>
-        Book Your Spot
+        {event.eyebrow_text?.trim() || 'Book Your Spot'}
       </p>
       <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mt-1">{event.title}</h3>
       {event.description && (

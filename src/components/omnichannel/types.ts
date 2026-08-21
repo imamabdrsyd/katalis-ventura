@@ -62,6 +62,7 @@ export interface PublicEventSummary {
   id: string;
   title: string;
   description: string | null;
+  eyebrow_text: string | null;
   contact_method: 'whatsapp' | 'instagram';
   /** team_count × players_per_team — kapasitas TIAP tanggal. */
   capacity: number;

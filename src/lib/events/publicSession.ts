@@ -31,7 +31,7 @@ export async function loadPublicSession(sessionId: string): Promise<PublicSessio
 
   const { data: sessionRow } = await admin
     .from('event_sessions')
-    .select('id, business_id, title, description, team_count, players_per_team, team_labels, team_colors, team_text_colors, contact_method, status')
+    .select('id, business_id, title, description, eyebrow_text, team_count, players_per_team, team_labels, team_colors, team_text_colors, contact_method, status')
     .eq('id', sessionId)
     .is('deleted_at', null)
     .in('status', ['open', 'closed'])
@@ -82,6 +82,7 @@ export async function loadPublicSession(sessionId: string): Promise<PublicSessio
       id: s.id as string,
       title: s.title as string,
       description: (s.description as string | null) ?? null,
+      eyebrow_text: (s.eyebrow_text as string | null) ?? null,
       team_count: s.team_count as number,
       players_per_team: s.players_per_team as number,
       team_labels: (s.team_labels as Record<string, string>) ?? {},
@@ -104,7 +105,7 @@ export async function loadOpenSessions(businessId: string): Promise<PublicEventS
 
   const { data: sessionRows } = await admin
     .from('event_sessions')
-    .select('id, title, description, team_count, players_per_team, contact_method')
+    .select('id, title, description, eyebrow_text, team_count, players_per_team, contact_method')
     .eq('business_id', businessId)
     .eq('status', 'open')
     .is('deleted_at', null)
@@ -114,6 +115,7 @@ export async function loadOpenSessions(businessId: string): Promise<PublicEventS
     id: string;
     title: string;
     description: string | null;
+    eyebrow_text: string | null;
     team_count: number;
     players_per_team: number;
     contact_method: 'whatsapp' | 'instagram';
@@ -147,6 +149,7 @@ export async function loadOpenSessions(businessId: string): Promise<PublicEventS
       id: s.id,
       title: s.title,
       description: s.description,
+      eyebrow_text: s.eyebrow_text,
       contact_method: s.contact_method,
       capacity: s.team_count * s.players_per_team,
       dates: dates
