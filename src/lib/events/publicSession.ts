@@ -51,11 +51,17 @@ export async function loadPublicSession(sessionId: string): Promise<PublicSessio
   const dateIds = dates.map((d) => d.id);
 
   // Hanya kolom aman. Pendaftar 'cancelled' dibuang: slotnya sudah bebas lagi.
-  let slotRows: Array<{ session_date_id: string; team_number: number; player_number: number; name: string }> = [];
+  let slotRows: Array<{
+    session_date_id: string;
+    team_number: number;
+    player_number: number;
+    name: string;
+    avatar_key: string | null;
+  }> = [];
   if (dateIds.length > 0) {
     const { data } = await admin
       .from('event_registrations')
-      .select('session_date_id, team_number, player_number, name')
+      .select('session_date_id, team_number, player_number, name, avatar_key')
       .in('session_date_id', dateIds)
       .neq('status', 'cancelled');
     slotRows = (data ?? []) as typeof slotRows;
@@ -64,7 +70,12 @@ export async function loadPublicSession(sessionId: string): Promise<PublicSessio
   const slotsByDate = new Map<string, PublicEventSlot[]>();
   for (const row of slotRows) {
     const list = slotsByDate.get(row.session_date_id) ?? [];
-    list.push({ team_number: row.team_number, player_number: row.player_number, name: row.name });
+    list.push({
+      team_number: row.team_number,
+      player_number: row.player_number,
+      name: row.name,
+      avatar_key: row.avatar_key,
+    });
     slotsByDate.set(row.session_date_id, list);
   }
 

@@ -1,6 +1,6 @@
 /**
  * POST /api/public/events/register
- * { sessionDateId, teamNumber, playerNumber, name, contact, website? }
+ * { sessionDateId, teamNumber, playerNumber, name, contact, avatarKey?, website? }
  *
  * PUBLIK (tanpa auth) — dipanggil Lobby saat audience mengunci satu slot.
  * Menulis lewat `register_event_slot` (migr 136) dengan service role, jadi
@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { normalizeEventContact } from '@/lib/events/contact';
+import { isValidEventAvatarKey } from '@/lib/events/avatars';
 import type { EventContactMethod } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -32,6 +33,8 @@ export async function POST(req: NextRequest) {
     playerNumber?: number;
     name?: string;
     contact?: string;
+    /** Opsional — key dari galeri avatar tetap (migr 140), lihat src/lib/events/avatars.ts. */
+    avatarKey?: string;
     /** Honeypot: field tersembunyi yang cuma diisi bot. */
     website?: string;
   } | null;
@@ -52,6 +55,13 @@ export async function POST(req: NextRequest) {
   if (name.length < 2 || name.length > 80) {
     return NextResponse.json({ error: 'Nama harus 2–80 karakter' }, { status: 400 });
   }
+  // Dobel validasi dgn CHECK constraint di DB (migr 140) — bukan cuma jaring
+  // pengaman terakhir, tapi juga pesan error yang jelas sebelum sempat ke RPC.
+  const avatarKeyRaw = body?.avatarKey?.trim();
+  if (avatarKeyRaw && !isValidEventAvatarKey(avatarKeyRaw)) {
+    return NextResponse.json({ error: 'Avatar tidak valid' }, { status: 400 });
+  }
+  const avatarKey = avatarKeyRaw || null;
 
   const admin = createAdminClient();
 
@@ -98,6 +108,7 @@ export async function POST(req: NextRequest) {
     p_player_number: playerNumber,
     p_name: name,
     p_contact_value: contact,
+    p_avatar_key: avatarKey,
   });
 
   if (error) {
@@ -117,7 +128,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Gagal menyimpan pendaftaran' }, { status: 500 });
   }
 
-  const registration = data as { team_number: number; player_number: number; name: string } | null;
+  const registration = data as
+    | { team_number: number; player_number: number; name: string; avatar_key: string | null }
+    | null;
 
   return NextResponse.json({
     ok: true,
@@ -126,6 +139,7 @@ export async function POST(req: NextRequest) {
           team_number: registration.team_number,
           player_number: registration.player_number,
           name: registration.name,
+          avatar_key: registration.avatar_key,
         }
       : null,
   });

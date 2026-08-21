@@ -27,6 +27,7 @@ import { ArrowLeft, CalendarDays, Check, ChevronRight, Gamepad2, Instagram, Load
 import { Modal } from '@/components/ui/Modal';
 import FloatingField from '@/components/ui/FloatingField';
 import { contactFieldHint, contactFieldLabel, normalizeEventContact } from '@/lib/events/contact';
+import { EVENT_AVATAR_OPTIONS, resolveEventAvatarSrc } from '@/lib/events/avatars';
 import {
   DEFAULT_BRAND_COLOR,
   brandGradient,
@@ -91,6 +92,8 @@ export function EventLobby({ session: initialSession, business }: Props) {
   );
   const [formSlot, setFormSlot] = useState<{ team: number; player: number } | null>(null);
   const [name, setName] = useState('');
+  /** Opsional — kosong = fallback ke inisial nama, seperti sebelum fitur ini ada. */
+  const [avatarKey, setAvatarKey] = useState<string | null>(null);
   const [contact, setContact] = useState('');
   const [honeypot, setHoneypot] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -159,9 +162,9 @@ export function EventLobby({ session: initialSession, business }: Props) {
   }, [selectedDateId]);
 
   const takenMap = useMemo(() => {
-    const map = new Map<string, string>();
+    const map = new Map<string, { name: string; avatarKey: string | null }>();
     for (const slot of selectedDate?.slots ?? []) {
-      map.set(`${slot.team_number}-${slot.player_number}`, slot.name);
+      map.set(`${slot.team_number}-${slot.player_number}`, { name: slot.name, avatarKey: slot.avatar_key });
     }
     return map;
   }, [selectedDate]);
@@ -179,6 +182,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
 
   function openForm(team: number, player: number) {
     setFormSlot({ team, player });
+    setAvatarKey(null);
     setError('');
   }
 
@@ -208,6 +212,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
           playerNumber: formSlot.player,
           name: trimmedName,
           contact,
+          avatarKey,
           website: honeypot,
         }),
       });
@@ -228,6 +233,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
       setFormSlot(null);
       setName('');
       setContact('');
+      setAvatarKey(null);
       await refresh();
     } catch {
       setError('Jaringan bermasalah. Coba lagi ya.');
@@ -494,12 +500,13 @@ export function EventLobby({ session: initialSession, business }: Props) {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {players.map((playerNumber) => {
-                        const takenName = takenMap.get(`${teamNumber}-${playerNumber}`);
+                        const taken = takenMap.get(`${teamNumber}-${playerNumber}`);
                         const isMine = mySlots.includes(
                           `${selectedDate.id}-${teamNumber}-${playerNumber}`
                         );
 
-                        if (takenName) {
+                        if (taken) {
+                          const avatarSrc = resolveEventAvatarSrc(taken.avatarKey);
                           return (
                             <div
                               key={playerNumber}
@@ -507,19 +514,29 @@ export function EventLobby({ session: initialSession, business }: Props) {
                                 isMine ? 'animate-pop-in' : ''
                               }`}
                             >
-                              <span
-                                className="w-8 h-8 shrink-0 grid place-items-center rounded-full text-[11px] font-bold"
-                                style={{
-                                  backgroundColor: teamColor,
-                                  color: teamTextColorOf(teamNumber),
-                                  boxShadow: isMine ? `0 0 0 2px ${accent}` : undefined,
-                                }}
-                              >
-                                {initials(takenName)}
-                              </span>
+                              {avatarSrc ? (
+                                <span
+                                  className="w-8 h-8 shrink-0 rounded-full overflow-hidden"
+                                  style={{ boxShadow: isMine ? `0 0 0 2px ${accent}` : undefined }}
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={avatarSrc} alt="" className="w-full h-full object-cover" />
+                                </span>
+                              ) : (
+                                <span
+                                  className="w-8 h-8 shrink-0 grid place-items-center rounded-full text-[11px] font-bold"
+                                  style={{
+                                    backgroundColor: teamColor,
+                                    color: teamTextColorOf(teamNumber),
+                                    boxShadow: isMine ? `0 0 0 2px ${accent}` : undefined,
+                                  }}
+                                >
+                                  {initials(taken.name)}
+                                </span>
+                              )}
                               <div className="min-w-0">
                                 <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
-                                  {takenName}
+                                  {taken.name}
                                 </p>
                                 <p className="text-[11px] text-gray-400 dark:text-gray-500">
                                   {isMine ? 'Slot kamu' : `Player ${playerNumber}`}
@@ -623,6 +640,43 @@ export function EventLobby({ session: initialSession, business }: Props) {
               </p>
             </div>
           )}
+
+          {/* Avatar opsional — galeri tetap, bukan upload. Sengaja tanpa label
+              wajib "pilih salah satu": kosong tetap valid, fallback ke inisial
+              nama seperti sebelum fitur ini ada. */}
+          <div>
+            <p className="label mb-2">
+              Avatar <span className="font-normal text-gray-400">(opsional)</span>
+            </p>
+            <div className="flex flex-wrap gap-2.5">
+              {EVENT_AVATAR_OPTIONS.map((opt) => {
+                const isSelected = avatarKey === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setAvatarKey(isSelected ? null : opt.key)}
+                    title={opt.label}
+                    aria-label={opt.label}
+                    aria-pressed={isSelected}
+                    className="relative w-12 h-12 rounded-full overflow-hidden shrink-0 transition-transform active:scale-95 motion-reduce:transform-none"
+                    style={isSelected ? { boxShadow: `0 0 0 2.5px ${accent}` } : undefined}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={opt.src} alt={opt.label} className="w-full h-full object-cover" />
+                    {isSelected && (
+                      <span
+                        className="absolute inset-0 grid place-items-center bg-black/25"
+                        aria-hidden="true"
+                      >
+                        <Check className="w-5 h-5 text-white drop-shadow" />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           <FloatingField
             label="Nama kamu"

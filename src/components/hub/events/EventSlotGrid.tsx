@@ -11,6 +11,7 @@
 import { Instagram, MessageCircle, X } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { DEFAULT_BRAND_COLOR, resolveTeamTextColor } from '@/lib/colorUtils';
+import { resolveEventAvatarSrc } from '@/lib/events/avatars';
 import type { EventContactMethod, EventRegistration, EventSession } from '@/types';
 
 interface Props {
@@ -107,17 +108,36 @@ export function EventSlotGrid({
                   );
                 }
 
+                const avatarSrc = resolveEventAvatarSrc(reg.avatar_key);
+
                 return (
                   <div
                     key={playerNumber}
                     className="group flex items-center gap-2.5 rounded-lg bg-gray-50 dark:bg-gray-700/50 px-3 py-2"
                   >
-                    <span
-                      className="w-6 h-6 shrink-0 grid place-items-center rounded-full text-[11px] font-bold"
-                      style={{ backgroundColor: teamColor, color: teamTextColor }}
-                    >
-                      {playerNumber}
-                    </span>
+                    {avatarSrc ? (
+                      // Avatar pilihan pendaftar (migr 140) — persis yang tampil di Lobby
+                      // publik. Nomor player tetap ditandai lewat chip kecil di pojok,
+                      // supaya info itu tidak hilang begitu avatar menggantikan lingkaran
+                      // bernomor (satu-satunya penanda nomor player di baris ini).
+                      <span className="relative w-6 h-6 shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={avatarSrc} alt="" className="w-full h-full rounded-full object-cover" />
+                        <span
+                          className="absolute -bottom-1 -right-1 w-3.5 h-3.5 grid place-items-center rounded-full text-[8px] font-bold ring-2 ring-white dark:ring-gray-800"
+                          style={{ backgroundColor: teamColor, color: teamTextColor }}
+                        >
+                          {playerNumber}
+                        </span>
+                      </span>
+                    ) : (
+                      <span
+                        className="w-6 h-6 shrink-0 grid place-items-center rounded-full text-[11px] font-bold"
+                        style={{ backgroundColor: teamColor, color: teamTextColor }}
+                      >
+                        {playerNumber}
+                      </span>
+                    )}
 
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">

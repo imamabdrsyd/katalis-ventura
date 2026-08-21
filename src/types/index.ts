@@ -1347,6 +1347,8 @@ export interface EventRegistration {
   name: string;
   /** Nomor WA (internasional tanpa +) atau username IG (tanpa @) — dinormalisasi di DB. */
   contact_value: string;
+  /** Key avatar opsional dari galeri tetap (migr 140) — lihat src/lib/events/avatars.ts. Null = fallback inisial nama. */
+  avatar_key: string | null;
   lead_id: string | null;
   status: EventRegistrationStatus;
   created_at: string;
@@ -1386,6 +1388,7 @@ export interface PublicEventSlot {
   team_number: number;
   player_number: number;
   name: string;
+  avatar_key: string | null;
 }
 
 export interface PublicEventDate {
