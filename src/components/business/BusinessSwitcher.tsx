@@ -87,6 +87,28 @@ export function BusinessSwitcher() {
           onClick={() => setIsOpen((open) => !open)}
           className="flex items-center gap-2 text-gray-800 dark:text-gray-200 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
         >
+          {activeBusiness && (
+            <div
+              className={`w-7 h-7 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0 ${
+                activeBusiness.logo_url
+                  ? 'bg-white'
+                  : 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'
+              }`}
+            >
+              {activeBusiness.logo_url ? (
+                <Image
+                  src={activeBusiness.logo_url}
+                  alt={activeBusiness.business_name}
+                  width={28}
+                  height={28}
+                  className={`w-full h-full ${activeBusiness.logo_fit === 'contain' ? 'object-contain p-0.5' : 'object-cover'}`}
+                  unoptimized
+                />
+              ) : (
+                (() => { const SectorIcon = getSectorIcon(activeBusiness.business_sector); return <SectorIcon className="w-3.5 h-3.5" />; })()
+              )}
+            </div>
+          )}
           <span className="font-semibold">
             {activeBusiness?.business_name || t.nav.selectBusiness}
           </span>
