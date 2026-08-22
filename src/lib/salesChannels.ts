@@ -132,8 +132,8 @@ export const SALES_CHANNEL_CONFIG: Record<SalesChannel, SalesChannelConfig> = {
     textColor: 'text-white',
     svgFill: '#ffffff',
     svgPath: null,
-    // Logo aslinya lingkaran hitam berlambang kuning — di atas badge hitam yang
-    // tersisa hanya lambangnya, sama seperti perlakuan TikTok.
+    // Lambangnya kuning transparan tanpa latar, jadi badge WAJIB gelap — di atas
+    // badge kuning khas Binance justru lambangnya yang hilang.
     imagePath: '/sales channel/binance.png',
     businessTypes: ['dagang'],
   },
