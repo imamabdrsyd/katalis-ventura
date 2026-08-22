@@ -16,6 +16,7 @@ export type SalesChannel =
   | 'instagram'
   | 'whatsapp'
   | 'sinarmas'
+  | 'binance'
   | 'website'
   | 'offline'
   | 'other';

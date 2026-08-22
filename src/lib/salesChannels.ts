@@ -126,6 +126,17 @@ export const SALES_CHANNEL_CONFIG: Record<SalesChannel, SalesChannelConfig> = {
     imagePath: '/sales channel/sinarmas-icon.png',
     businessTypes: ['dagang'],
   },
+  binance: {
+    label: 'Binance',
+    bgColor: 'bg-black',
+    textColor: 'text-white',
+    svgFill: '#ffffff',
+    svgPath: null,
+    // Logo aslinya lingkaran hitam berlambang kuning — di atas badge hitam yang
+    // tersisa hanya lambangnya, sama seperti perlakuan TikTok.
+    imagePath: '/sales channel/binance.png',
+    businessTypes: ['dagang'],
+  },
   website: {
     label: 'Website',
     bgColor: 'bg-[#6366f1]',
