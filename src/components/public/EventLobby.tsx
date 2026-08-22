@@ -334,9 +334,18 @@ export function EventLobby({ session: initialSession, business }: Props) {
                   supaya baris ini tidak pernah kosong dan header tidak
                   "melompat" tingginya antar event. */}
               {schedule ? (
-                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
-                  <span className="truncate">{schedule}</span>
+                // Chip abu netral, BUKAN warna brand: ini keterangan praktis
+                // (di mana & jam berapa), bukan elemen identitas — warna brand
+                // di halaman ini dipakai untuk aksi & chip tim. Dibungkus chip
+                // supaya terbaca sebagai satu keping info, bukan anak kalimat
+                // dari judul di atasnya. inline-flex + max-w-full: chip
+                // memeluk isinya, tapi teks panjang tetap dipotong truncate
+                // alih-alih mendorong lebar header.
+                <p className="mt-1.5">
+                  <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-300">
+                    <MapPin className="w-3.5 h-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
+                    <span className="truncate">{schedule}</span>
+                  </span>
                 </p>
               ) : (
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{session.title}</p>
