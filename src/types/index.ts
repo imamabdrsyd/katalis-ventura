@@ -1316,6 +1316,12 @@ export interface EventSession {
   team_colors: Record<string, string>;
   /** Override manual warna teks chip tim per nomor tim (migr 138): 'light'|'dark'. Kosong = otomatis dari kontras. */
   team_text_colors: Record<string, 'light' | 'dark'>;
+  /** Jam mulai event "HH:MM[:SS]" (migr 144). NULL = jam tidak ditampilkan di Lobby. */
+  start_time: string | null;
+  /** Jam selesai, opsional (migr 144). NULL = tampil jam mulai saja. */
+  end_time: string | null;
+  /** Nama lokasi event (migr 144), mis. "GOR Sukapura". */
+  location: string | null;
   contact_method: EventContactMethod;
   status: EventSessionStatus;
   created_by: string | null;
@@ -1365,6 +1371,9 @@ export interface EventSessionInsert {
   team_labels?: Record<string, string>;
   team_colors?: Record<string, string>;
   team_text_colors?: Record<string, 'light' | 'dark'>;
+  start_time?: string | null;
+  end_time?: string | null;
+  location?: string | null;
   contact_method: EventContactMethod;
   status?: EventSessionStatus;
   created_by?: string | null;
@@ -1379,6 +1388,9 @@ export interface EventSessionUpdate {
   team_labels?: Record<string, string>;
   team_colors?: Record<string, string>;
   team_text_colors?: Record<string, 'light' | 'dark'>;
+  start_time?: string | null;
+  end_time?: string | null;
+  location?: string | null;
   contact_method?: EventContactMethod;
   status?: EventSessionStatus;
 }
@@ -1389,6 +1401,8 @@ export interface PublicEventSlot {
   player_number: number;
   name: string;
   avatar_key: string | null;
+  /** Waktu slot dikunci — dipakai Lobby mengurutkan tim "yang baru terisi di atas". */
+  created_at: string;
 }
 
 export interface PublicEventDate {
@@ -1409,6 +1423,9 @@ export interface PublicEventSession {
   team_labels: Record<string, string>;
   team_colors: Record<string, string>;
   team_text_colors: Record<string, 'light' | 'dark'>;
+  start_time: string | null;
+  end_time: string | null;
+  location: string | null;
   contact_method: EventContactMethod;
   status: EventSessionStatus;
   dates: PublicEventDate[];

@@ -23,11 +23,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays, Check, ChevronRight, Gamepad2, Instagram, Loader2, MessageCircle, Trophy, UserPlus } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Check, ChevronRight, Gamepad2, Instagram, Loader2, MapPin, MessageCircle, Trophy, UserPlus } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import FloatingField from '@/components/ui/FloatingField';
 import { contactFieldHint, contactFieldLabel, normalizeEventContact } from '@/lib/events/contact';
 import { EVENT_AVATAR_OPTIONS, resolveEventAvatarSrc } from '@/lib/events/avatars';
+import { formatEventSchedule } from '@/lib/events/schedule';
 import {
   DEFAULT_BRAND_COLOR,
   brandGradient,
@@ -118,6 +119,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
   const teamTextColorOf = (teamNumber: number) =>
     resolveTeamTextColor(teamColorOf(teamNumber), session.team_text_colors?.[String(teamNumber)]);
   const isOpen = session.status === 'open';
+  const schedule = formatEventSchedule(session.location, session.start_time, session.end_time);
   const wonDate = session.dates.find((d) => d.status === 'won') ?? null;
   const isDateStep = selectedDate == null;
   // Ganti key <section> = elemennya remount, jadi animasi CSS-nya terputar ulang
@@ -168,6 +170,38 @@ export function EventLobby({ session: initialSession, business }: Props) {
     }
     return map;
   }, [selectedDate]);
+
+  /**
+   * Urutan kotak tim: tim yang PALING BARU terisi naik ke atas, tim yang masih
+   * kosong turun ke bawah dengan urutan nomor aslinya.
+   *
+   * Alasannya sosial, bukan teknis: yang bikin orang ikut mendaftar adalah
+   * melihat orang lain sudah mendaftar. Urutan nomor tim yang tetap membuat
+   * tim yang ramai bisa terdampar di bawah lipatan, dan pengunjung pertama
+   * kali melihat tiga kotak kosong berturut-turut — persis sinyal sebaliknya.
+   *
+   * Kuncinya waktu pendaftaran TERAKHIR di tim itu, bukan jumlah pendaftar,
+   * jadi tiap slot baru langsung menaikkan timnya ke puncak.
+   */
+  const orderedTeamNumbers = useMemo(() => {
+    const lastFilledAt = new Map<number, number>();
+    for (const slot of selectedDate?.slots ?? []) {
+      const at = new Date(slot.created_at).getTime();
+      // created_at tak terbaca (0/NaN) tidak boleh menang atas waktu asli —
+      // perlakukan sebagai "paling lama" alih-alih membuang slotnya.
+      const stamp = Number.isFinite(at) ? at : 0;
+      lastFilledAt.set(slot.team_number, Math.max(lastFilledAt.get(slot.team_number) ?? 0, stamp));
+    }
+    return Array.from({ length: session.team_count }, (_, i) => i + 1).sort((a, b) => {
+      const aAt = lastFilledAt.get(a);
+      const bAt = lastFilledAt.get(b);
+      if (aAt == null && bAt == null) return a - b; // dua-duanya kosong → nomor tim
+      if (aAt == null) return 1;
+      if (bAt == null) return -1;
+      if (aAt !== bAt) return bAt - aAt; // terbaru di atas
+      return a - b;
+    });
+  }, [selectedDate, session.team_count]);
 
   function backToDates() {
     setNavDirection('back');
@@ -292,7 +326,21 @@ export function EventLobby({ session: initialSession, business }: Props) {
                 <Gamepad2 className="w-5 h-5 shrink-0" style={{ color: accent }} />
                 Players Lobby
               </h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{session.title}</p>
+              {/* Baris kedua = jam & lokasi kalau owner mengisinya (migr 144).
+                  Di titik ini pengunjung sudah tahu event apa yang dia buka —
+                  mengulang judulnya tidak menambah apa pun, sementara "di mana"
+                  dan "jam berapa" justru yang menentukan dia jadi ambil slot
+                  atau tidak. Belum diisi → judul event tetap jadi cadangan,
+                  supaya baris ini tidak pernah kosong dan header tidak
+                  "melompat" tingginya antar event. */}
+              {schedule ? (
+                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
+                  <span className="truncate">{schedule}</span>
+                </p>
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{session.title}</p>
+              )}
             </>
           )}
           {isDateStep && (
@@ -480,7 +528,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
             </h2>
 
             <div className="space-y-3">
-              {Array.from({ length: session.team_count }, (_, i) => i + 1).map((teamNumber, teamIndex) => {
+              {orderedTeamNumbers.map((teamNumber, teamIndex) => {
                 const label = session.team_labels?.[String(teamNumber)]?.trim() || `Tim ${teamNumber}`;
                 const players = Array.from({ length: session.players_per_team }, (_, i) => i + 1);
                 const takenCount = players.filter((p) => takenMap.has(`${teamNumber}-${p}`)).length;

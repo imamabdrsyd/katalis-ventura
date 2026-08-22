@@ -40,7 +40,7 @@ export const loadPublicSession = cache(async (sessionId: string): Promise<Public
   const [sessionResult, dateResult] = await Promise.all([
     admin
       .from('event_sessions')
-      .select('id, business_id, title, description, eyebrow_text, team_count, players_per_team, team_labels, team_colors, team_text_colors, contact_method, status')
+      .select('id, business_id, title, description, eyebrow_text, team_count, players_per_team, team_labels, team_colors, team_text_colors, start_time, end_time, location, contact_method, status')
       .eq('id', sessionId)
       .is('deleted_at', null)
       .in('status', ['open', 'closed'])
@@ -67,11 +67,14 @@ export const loadPublicSession = cache(async (sessionId: string): Promise<Public
     player_number: number;
     name: string;
     avatar_key: string | null;
+    created_at: string;
   }> = [];
   if (dateIds.length > 0) {
+    // `created_at` bukan data pribadi — cuma stempel waktu slot dikunci; Lobby
+    // memakainya untuk menaikkan tim yang baru saja terisi ke atas.
     const { data } = await admin
       .from('event_registrations')
-      .select('session_date_id, team_number, player_number, name, avatar_key')
+      .select('session_date_id, team_number, player_number, name, avatar_key, created_at')
       .in('session_date_id', dateIds)
       .neq('status', 'cancelled');
     slotRows = (data ?? []) as typeof slotRows;
@@ -85,6 +88,7 @@ export const loadPublicSession = cache(async (sessionId: string): Promise<Public
       player_number: row.player_number,
       name: row.name,
       avatar_key: row.avatar_key,
+      created_at: row.created_at,
     });
     slotsByDate.set(row.session_date_id, list);
   }
@@ -109,6 +113,9 @@ export const loadPublicSession = cache(async (sessionId: string): Promise<Public
       team_labels: (s.team_labels as Record<string, string>) ?? {},
       team_colors: (s.team_colors as Record<string, string>) ?? {},
       team_text_colors: (s.team_text_colors as Record<string, 'light' | 'dark'>) ?? {},
+      start_time: (s.start_time as string | null) ?? null,
+      end_time: (s.end_time as string | null) ?? null,
+      location: (s.location as string | null) ?? null,
       contact_method: s.contact_method as PublicEventSession['contact_method'],
       status: s.status as PublicEventSession['status'],
       dates: publicDates,

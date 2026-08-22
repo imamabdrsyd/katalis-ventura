@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { Instagram, MessageCircle, Users, X } from 'lucide-react';
+import { Clock, Instagram, MapPin, MessageCircle, Users, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Modal } from '@/components/ui/Modal';
 import { NumberStepperField } from '@/components/ui/NumberStepperField';
@@ -41,6 +41,13 @@ interface Props {
 const MAX_TEAMS = 20;
 const MAX_PLAYERS = 20;
 
+/** "19:00:00" (Postgres TIME) → "19:00" (nilai yang diterima <input type="time">). */
+function toTimeInput(time: string | null | undefined): string {
+  const trimmed = time?.trim();
+  if (!trimmed) return '';
+  return trimmed.slice(0, 5);
+}
+
 export function EventSessionModal({ isOpen, onClose, businessId, userId, session, brandColor, onSaved }: Props) {
   const { t } = useLanguage();
   const e = t.events;
@@ -51,6 +58,11 @@ export function EventSessionModal({ isOpen, onClose, businessId, userId, session
   const [description, setDescription] = useState('');
   const [teamCount, setTeamCount] = useState(2);
   const [playersPerTeam, setPlayersPerTeam] = useState(2);
+  const [location, setLocation] = useState('');
+  // "HH:MM" dari <input type="time">. Postgres mengirim "HH:MM:SS" — dipotong
+  // saat memuat, kalau tidak input time menolak nilainya dan tampil kosong.
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [contactMethod, setContactMethod] = useState<EventContactMethod>('whatsapp');
   const [teamLabels, setTeamLabels] = useState<Record<string, string>>({});
   // Kosong = tim ikut warna brand. Nilai hanya masuk map saat owner benar-benar
@@ -68,6 +80,9 @@ export function EventSessionModal({ isOpen, onClose, businessId, userId, session
     setTitle(session?.title ?? '');
     setEyebrowText(session?.eyebrow_text ?? '');
     setDescription(session?.description ?? '');
+    setLocation(session?.location ?? '');
+    setStartTime(toTimeInput(session?.start_time));
+    setEndTime(toTimeInput(session?.end_time));
     setTeamCount(session?.team_count ?? 2);
     setPlayersPerTeam(session?.players_per_team ?? 2);
     setContactMethod(session?.contact_method ?? 'whatsapp');
@@ -103,6 +118,13 @@ export function EventSessionModal({ isOpen, onClose, businessId, userId, session
         if (textColor) textColors[key] = textColor;
       }
 
+      const trimmedLocation = location.trim();
+      // Jam selesai tanpa jam mulai ditolak constraint DB (migr 144) dan memang
+      // tidak bisa dirender — buang diam-diam, jangan jadikan error yang
+      // menghentikan penyimpanan lokasi & sisanya.
+      const normalizedStart = startTime.trim() || null;
+      const normalizedEnd = normalizedStart ? endTime.trim() || null : null;
+
       const saved = isEdit
         ? await updateEventSession(session.id, {
             title: title.trim(),
@@ -113,6 +135,9 @@ export function EventSessionModal({ isOpen, onClose, businessId, userId, session
             team_labels: labels,
             team_colors: colors,
             team_text_colors: textColors,
+            location: trimmedLocation || null,
+            start_time: normalizedStart,
+            end_time: normalizedEnd,
             contact_method: contactMethod,
           })
         : await createEventSession({
@@ -125,6 +150,9 @@ export function EventSessionModal({ isOpen, onClose, businessId, userId, session
             team_labels: labels,
             team_colors: colors,
             team_text_colors: textColors,
+            location: trimmedLocation || null,
+            start_time: normalizedStart,
+            end_time: normalizedEnd,
             contact_method: contactMethod,
             status: 'draft',
             created_by: userId,
@@ -176,6 +204,45 @@ export function EventSessionModal({ isOpen, onClose, businessId, userId, session
             onChange={(ev) => setEyebrowText(ev.target.value)}
           />
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{e.eyebrowTextHint}</p>
+        </div>
+
+        {/* Jam & lokasi (migr 144) — inilah yang mengisi baris kedua Lobby,
+            menggantikan pengulangan nama event. Lokasi diberi baris sendiri
+            karena namanya bisa panjang; dua jam berbagi satu baris karena
+            keduanya sempit dan memang dibaca sebagai satu rentang. */}
+        <div>
+          <FloatingField
+            label={e.fieldLocation}
+            placeholder={e.fieldLocationPlaceholder}
+            icon={<MapPin className="w-4 h-4" />}
+            value={location}
+            maxLength={120}
+            onChange={(ev) => setLocation(ev.target.value)}
+          />
+          <div className="grid grid-cols-2 gap-4 mt-5">
+            <FloatingField
+              label={e.fieldStartTime}
+              type="time"
+              icon={<Clock className="w-4 h-4" />}
+              value={startTime}
+              onChange={(ev) => {
+                setStartTime(ev.target.value);
+                // Mengosongkan jam mulai membuat jam selesai tak berarti lagi.
+                // Ikut dibersihkan supaya yang terlihat = yang tersimpan.
+                if (!ev.target.value) setEndTime('');
+              }}
+            />
+            <FloatingField
+              label={e.fieldEndTime}
+              type="time"
+              value={endTime}
+              // Jam selesai tanpa jam mulai tidak punya arti — matikan sampai
+              // jam mulai diisi, alih-alih menolaknya saat menyimpan.
+              disabled={!startTime}
+              onChange={(ev) => setEndTime(ev.target.value)}
+            />
+          </div>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{e.scheduleHint}</p>
         </div>
 
         <div>
