@@ -355,7 +355,7 @@ export function EventLobby({ session: initialSession, business }: Props) {
           {isDateStep && (
             <>
               {session.description && (
-                <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
+                <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 leading-relaxed whitespace-pre-line">
                   {session.description}
                 </p>
               )}

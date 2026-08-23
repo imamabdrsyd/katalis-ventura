@@ -470,7 +470,7 @@ export function EventManagerLauncher({ headerSlot }: Props) {
                       </span>
                     </div>
                     {selectedSession.description && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 whitespace-pre-line">
                         {selectedSession.description}
                       </p>
                     )}

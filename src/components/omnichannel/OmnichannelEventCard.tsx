@@ -42,7 +42,7 @@ export function OmnichannelEventCard({ event, slug, buttonColor }: Props) {
       </p>
       <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mt-1">{event.title}</h3>
       {event.description && (
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 leading-relaxed line-clamp-2">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 leading-relaxed whitespace-pre-line line-clamp-3">
           {event.description}
         </p>
       )}

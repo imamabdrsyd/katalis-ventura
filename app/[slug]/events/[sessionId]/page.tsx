@@ -57,8 +57,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const title = `${result.session.title} — ${channel.title}`;
+  // Meta description dirender satu baris oleh mesin pencari & preview link —
+  // enter yang ditulis pemilik dipadatkan jadi spasi, bukan dibiarkan menganga.
   const description =
-    result.session.description ?? `Pilih tanggal dan kunci slot kamu untuk ${result.session.title}.`;
+    result.session.description?.replace(/\s*\n+\s*/g, ' ').trim() ||
+    `Pilih tanggal dan kunci slot kamu untuk ${result.session.title}.`;
 
   return {
     title,
