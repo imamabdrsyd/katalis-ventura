@@ -951,6 +951,8 @@ export interface Translations {
     bmNotesPlaceholder: string;
     bmReceivePayment: string;
     bmReceivePaymentDesc: string;
+    bmLedgerLinked: string;
+    bmLedgerLinkedDesc: string;
     bmCash: string;
     bmQris: string;
     bmPaymentMethod: string;

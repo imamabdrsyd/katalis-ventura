@@ -939,6 +939,8 @@ export const id: Translations = {
     bmNotesPlaceholder: 'Permintaan khusus, jam kedatangan, dll.',
     bmReceivePayment: 'Terima pembayaran',
     bmReceivePaymentDesc: 'Membuat transaksi pendapatan otomatis di pembukuan.',
+    bmLedgerLinked: 'Sudah tercatat di pembukuan',
+    bmLedgerLinkedDesc: 'Pendapatan booking ini sudah diakui sebagai piutang. Lunasi lewat tombol Tandai Lunas di transaksinya, bukan dari sini — biar tidak dobel dicatat.',
     bmCash: 'Tunai',
     bmQris: 'QRIS',
     bmPaymentMethod: 'Metode pembayaran',

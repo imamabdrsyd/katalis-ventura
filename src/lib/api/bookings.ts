@@ -304,8 +304,17 @@ export async function markBookingPaid(
   if (!fresh) throw new Error('Booking tidak ditemukan (mungkin sudah dihapus).');
 
   if (fresh.is_external) throw new Error('Booking impor OTA tidak bisa ditandai lunas.');
-  if (fresh.payment_status === 'paid' && fresh.transaction_id) {
-    throw new Error('Booking sudah lunas.');
+  // Penjaga ganda-catat: cukup ADA transaksi tertaut untuk menolak, tidak perlu
+  // menunggu payment_status='paid'. Booking yang pendapatannya sudah diakui
+  // sebagai PIUTANG (mis. payout OTA belum cair) tetap berstatus 'unpaid' —
+  // merakit transaksi EARN baru di sini akan menggandakan pendapatan sekaligus
+  // memutus tautan ke jurnal aslinya. Pelunasannya lewat settle piutang.
+  if (fresh.transaction_id) {
+    throw new Error(
+      fresh.payment_status === 'paid'
+        ? 'Booking sudah lunas.'
+        : 'Booking ini sudah tercatat di buku besar sebagai piutang. Lunasi lewat "Tandai Lunas" di transaksinya supaya pendapatan tidak dobel dicatat.'
+    );
   }
   if (!fresh.check_in || !fresh.check_out) {
     throw new Error('Isi tanggal check-in/check-out dulu sebelum menandai lunas.');

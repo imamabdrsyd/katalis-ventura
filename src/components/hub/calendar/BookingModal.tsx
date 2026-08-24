@@ -99,9 +99,20 @@ export function BookingModal({
   const c = t.calendar;
   const isExternal = !!booking?.is_external;
   const isPaid = booking?.payment_status === 'paid';
-  // Booking LUNAS = revenue sudah terkunci di ledger → harga/total tak boleh
-  // diubah. Tapi TANGGAL tetap boleh diedit (koreksi) selama non-eksternal.
-  const priceLocked = isExternal || isPaid;
+  /**
+   * Booking sudah punya transaksi di buku besar — entah lunas (Dr Kas) maupun
+   * masih piutang (Dr Piutang Usaha, mis. payout OTA yang belum cair).
+   *
+   * Yang menentukan bukan `payment_status` melainkan ADA/TIDAKNYA jurnal:
+   * begitu pendapatan diakui, angkanya sudah jadi angka buku. Menghitung ulang
+   * dari kalender harga akan memunculkan total yang bertentangan dengan jurnal
+   * (kasus nyata: booking Airbnb Rp1.173.379 tampil Rp850.000 karena di-quote
+   * ulang dari rate weekday/weekend).
+   */
+  const hasLedgerEntry = !!booking?.transaction_id;
+  // Revenue sudah terkunci di ledger → harga/total tak boleh diubah maupun
+  // dihitung ulang. Tapi TANGGAL tetap boleh diedit (koreksi) selama non-eksternal.
+  const priceLocked = isExternal || isPaid || hasLedgerEntry;
   const datesLocked = isExternal;
 
   // ── Form state ────────────────────────────────────────────────────────────
@@ -154,8 +165,18 @@ export function BookingModal({
 
   const price = Number(pricePerNight) || 0;
   const datesValid = nights > 0;
-  // Total: quote kalender harga bila aktif; selain itu flat harga × malam.
-  const total = autoQuote ? autoQuote.total : nights * price;
+  /**
+   * Total: booking yang sudah masuk ledger memakai `total_amount` APA ADANYA —
+   * bukan `nights × price_per_night`. Keduanya bisa berbeda karena
+   * `price_per_night` cuma turunan rata-rata yang dibulatkan, sedangkan
+   * `total_amount` adalah angka yang benar-benar dijurnal.
+   * Selain itu: quote kalender harga bila aktif, atau flat harga × malam.
+   */
+  const total = priceLocked && booking
+    ? Number(booking.total_amount) || 0
+    : autoQuote
+      ? autoQuote.total
+      : nights * price;
 
   // ── Auto-quote kalender harga (migr 124) — hanya untuk booking BELUM lunas (mis.
   // tentatif dari website) yang harganya masih boleh dihitung ulang. Base rates
@@ -588,7 +609,14 @@ export function BookingModal({
 
         {/* Pembayaran (existing, unpaid, non-external) — muncul di view & edit
             karena ini AKSI (menandai lunas), bukan field yg diedit. */}
-        {booking && !isExternal && !isPaid && (
+        {booking && !isExternal && !isPaid && hasLedgerEntry && (
+          <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{c.bmLedgerLinked}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{c.bmLedgerLinkedDesc}</p>
+          </div>
+        )}
+
+        {booking && !isExternal && !isPaid && !hasLedgerEntry && (
           <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>

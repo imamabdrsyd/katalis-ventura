@@ -935,6 +935,8 @@ export const en: Translations = {
     bmNotesPlaceholder: 'Special requests, arrival time, etc.',
     bmReceivePayment: 'Receive payment',
     bmReceivePaymentDesc: 'Creates a revenue transaction in the books automatically.',
+    bmLedgerLinked: 'Already in the books',
+    bmLedgerLinkedDesc: 'This booking\u2019s revenue is already recognised as a receivable. Settle it from the transaction\u2019s Mark as Paid button, not here \u2014 otherwise it gets recorded twice.',
     bmCash: 'Cash',
     bmQris: 'QRIS',
     bmPaymentMethod: 'Payment method',
