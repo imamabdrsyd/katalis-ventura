@@ -1132,7 +1132,7 @@ function Sidebar({
             </div>
           )}
           <p className={`text-[10px] text-gray-400 dark:text-gray-500 whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out mt-2 ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
-            Engine by Imam Abdurasyid
+            PT Imam Katalis Ventura
           </p>
         </div>
       </aside>
