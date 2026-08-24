@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -67,6 +68,7 @@ export function CatalogPanel({
 }) {
   const { activeBusiness, userRole, user } = useBusinessContext();
   const { t } = useLanguage();
+  const queryClient = useQueryClient();
   const tc = t.catalog;
   const businessId = activeBusiness?.id;
   const canManage = isManagerRole(userRole);
@@ -177,6 +179,14 @@ export function CatalogPanel({
       if (editItem) {
         const updated = await catalogApi.updateCatalogItem(editItem.id, data);
         setItems(prev => prev.map(i => (i.id === updated.id ? updated : i)));
+        // Chip katalog di daftar transaksi memakai nama TERKINI (di-resolve saat
+        // baca oleh resolveCatalogNames di src/lib/api/transactions.ts), jadi
+        // cache transaksi yang masih "fresh" (staleTime 5 menit) harus dibuang
+        // setelah rename — kalau tidak, nama lama bertahan sampai cache basi.
+        if (editItem.name !== updated.name) {
+          queryClient.invalidateQueries({ queryKey: ['transactions'] });
+          queryClient.invalidateQueries({ queryKey: ['transactions-paginated'] });
+        }
         // Koreksi stok lewat form juga tercatat di riwayat
         if (Number(editItem.stock_qty ?? 0) !== Number(updated.stock_qty ?? 0)) {
           onStockChanged?.();

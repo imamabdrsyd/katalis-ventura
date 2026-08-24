@@ -97,6 +97,52 @@ export interface BulkDeleteResult {
   errors: string[];
 }
 
+/**
+ * Sinkronkan `meta.catalog_item.name` dengan nama TERKINI di `catalog_items`.
+ *
+ * `meta.catalog_item` adalah snapshot { id, name } yang dibekukan saat transaksi
+ * dibuat, jadi rename item di Katalog (mis. "Bitcoin" → "BTC") tidak menyentuh
+ * transaksi lama — daftar transaksi jadi menampilkan dua nama untuk satu item
+ * yang sama. Alih-alih menulis ulang baris ledger (plus banjir audit_log) setiap
+ * rename, nama di-resolve saat baca: `id` yang jadi sumber kebenaran, `name`
+ * hanya label tampilan.
+ *
+ * Item yang sudah di-soft-delete tetap ikut di-resolve (tanpa filter
+ * `deleted_at`) supaya histori tidak kehilangan label. Best-effort: id yang
+ * tidak ditemukan — atau query yang gagal — mempertahankan snapshot lama.
+ */
+async function resolveCatalogNames(rows: Transaction[]): Promise<Transaction[]> {
+  const ids = Array.from(
+    new Set(
+      rows
+        .map((r) => r.meta?.catalog_item?.id)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+  if (ids.length === 0) return rows;
+
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('catalog_items')
+    .select('id, name')
+    .in('id', ids);
+
+  if (error || !data) return rows;
+
+  const nameById = new Map(data.map((i) => [i.id as string, i.name as string]));
+
+  return rows.map((row) => {
+    const item = row.meta?.catalog_item;
+    if (!item) return row;
+    const freshName = nameById.get(item.id);
+    if (!freshName || freshName === item.name) return row;
+    return {
+      ...row,
+      meta: { ...row.meta, catalog_item: { ...item, name: freshName } },
+    };
+  });
+}
+
 // Get all transactions for a business (used by dashboard & reports that need full dataset)
 export async function getTransactions(businessId: string): Promise<Transaction[]> {
   const supabase = createClient();
@@ -114,7 +160,7 @@ export async function getTransactions(businessId: string): Promise<Transaction[]
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);
-  return data as Transaction[];
+  return resolveCatalogNames(data as Transaction[]);
 }
 
 // Create a multi-line journal entry (routes through POST /api/transactions
@@ -296,7 +342,7 @@ export async function getTransactionsPaginated(
 
   const totalCount = count ?? 0;
   return {
-    data: data as Transaction[],
+    data: await resolveCatalogNames(data as Transaction[]),
     totalCount,
     page,
     pageSize,
@@ -326,7 +372,7 @@ export async function getTransactionsByDateRange(
     .order('date', { ascending: false });
 
   if (error) throw new Error(error.message);
-  return data as Transaction[];
+  return resolveCatalogNames(data as Transaction[]);
 }
 
 // Validate double-entry transaction rules
