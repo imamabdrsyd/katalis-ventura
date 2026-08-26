@@ -132,3 +132,21 @@ export function isOperatingPayableAccount(account: Account | null | undefined): 
   // Name-based fallback
   return OPERATING_PAYABLE_NAME_PATTERN.test(name);
 }
+
+/**
+ * Returns true if the account is ANY kind of liability that can be settled by
+ * paying cash — baik hutang operasional (hutang usaha, accrued) maupun hutang
+ * pembiayaan (pinjaman, Flexi Cash, kartu kredit).
+ *
+ * Mirror dari isAnyReceivableAccount() di sisi piutang, dipakai oleh deteksi
+ * pelunasan hutang (isPayableTransaction).
+ *
+ * Sengaja TIDAK menguji nama akun: sebuah liabilitas bisa dilunasi karena
+ * account_type-nya LIABILITY, bukan karena kebetulan dinamai "hutang".
+ * Penyempitan berbasis nama membuat pinjaman seperti "Flexi Cash" atau
+ * "Credit Card" hilang diam-diam dari picker pelunasan.
+ */
+export function isAnyPayableAccount(account: Account | null | undefined): boolean {
+  if (!account) return false;
+  return account.account_type === 'LIABILITY';
+}

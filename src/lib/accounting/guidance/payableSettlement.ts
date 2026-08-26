@@ -6,28 +6,32 @@
 
 import type { Transaction, TransactionCategory, Account } from '@/types';
 import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
+import { isAnyPayableAccount } from '@/lib/accounting/classification';
 
 /**
- * Returns true if the transaction represents a payable (hutang):
- * - is double-entry: credit account is LIABILITY type with "hutang/utang/payable" name
- * - OR is multi-line: any credit journal line hits a LIABILITY account with matching name
+ * Returns true if the transaction represents a payable (hutang) yang bisa dilunasi:
+ * - is double-entry: akun kredit adalah LIABILITY
+ * - OR is multi-line: ada baris kredit yang mengenai akun LIABILITY
+ *
+ * Kedua jalur memakai classifier yang sama (isAnyPayableAccount). Sebelumnya jalur
+ * double-entry menambah tes nama /hutang|utang|payable/, sementara jalur multi-line
+ * tidak — akibatnya pinjaman dengan nama akun seperti "Flexi Cash" atau "Credit Card"
+ * hanya terdeteksi kalau kebetulan dicatat multi-line, dan hilang dari picker
+ * pelunasan kalau dicatat sebagai double-entry biasa.
  */
 export function isPayableTransaction(transaction: Transaction): boolean {
   // Multi-line dicek lebih dulu: transaksi multi-line punya is_double_entry = TRUE
   // (lihat update_multi_line_transaction RPC) tapi credit_account-nya NULL karena
   // akun ada di journal_lines. Cek struktur multi-line dulu agar tidak salah jalur.
-  // Multi-line path — any credit line to a LIABILITY account counts as payable
   if (transaction.is_multi_line && transaction.journal_lines) {
     return transaction.journal_lines.some(
-      (line) => line.credit_amount > 0 && line.account?.account_type === 'LIABILITY'
+      (line) => line.credit_amount > 0 && isAnyPayableAccount(line.account)
     );
   }
 
   // Single double-entry path
   if (transaction.is_double_entry) {
-    if (!transaction.credit_account) return false;
-    if (transaction.credit_account.account_type !== 'LIABILITY') return false;
-    return /hutang|utang|payable/i.test(transaction.credit_account.account_name);
+    return isAnyPayableAccount(transaction.credit_account);
   }
 
   return false;
@@ -123,7 +127,7 @@ export interface PayableSettlementPrefill {
 function getPayableAccountId(original: Transaction): string {
   if (original.is_multi_line && original.journal_lines) {
     const line = original.journal_lines.find(
-      (l) => l.credit_amount > 0 && l.account?.account_type === 'LIABILITY'
+      (l) => l.credit_amount > 0 && isAnyPayableAccount(l.account)
     );
     if (line) return line.account_id;
   }
