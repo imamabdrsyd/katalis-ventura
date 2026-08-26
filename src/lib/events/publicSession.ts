@@ -49,8 +49,10 @@ export const loadPublicSession = cache(async (sessionId: string): Promise<Public
       .from('event_session_dates')
       .select('id, event_date, status, sort_order')
       .eq('session_id', sessionId)
-      .order('sort_order', { ascending: true })
-      .order('event_date', { ascending: true }),
+      // Kronologis: yang paling dekat di atas. `sort_order` cuma urutan
+      // penambahan oleh manager (tidak ada UI reorder), jadi bukan niat urutan.
+      .order('event_date', { ascending: true })
+      .order('sort_order', { ascending: true }),
   ]);
 
   const sessionRow = sessionResult.data;
@@ -155,8 +157,9 @@ export async function loadOpenSessions(businessId: string): Promise<PublicEventS
     .select('id, session_id, event_date, sort_order')
     .in('session_id', sessions.map((s) => s.id))
     .eq('status', 'candidate')
-    .order('sort_order', { ascending: true })
-    .order('event_date', { ascending: true });
+    // Kronologis — sama seperti Lobby: tanggal terdekat lebih dulu.
+    .order('event_date', { ascending: true })
+    .order('sort_order', { ascending: true });
 
   const dates = (dateRows ?? []) as Array<{ id: string; session_id: string; event_date: string; sort_order: number }>;
 

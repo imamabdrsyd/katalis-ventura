@@ -24,8 +24,10 @@ const SESSION_WITH_DATES = `
 `;
 
 function sortDates(session: EventSession): EventSession {
+  // Kronologis (terdekat dulu), sama seperti halaman publik. `sort_order` cuma
+  // urutan penambahan — dipakai sekadar tie-break bila tanggalnya sama.
   const dates = [...(session.dates ?? [])].sort(
-    (a, b) => a.sort_order - b.sort_order || a.event_date.localeCompare(b.event_date)
+    (a, b) => a.event_date.localeCompare(b.event_date) || a.sort_order - b.sort_order
   );
   return { ...session, dates };
 }
