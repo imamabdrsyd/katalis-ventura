@@ -129,9 +129,10 @@ function HubPageInner({ variant }: { variant: HubVariant }): ReactNode {
           onStockChanged={() => setStockLogKey((k) => k + 1)}
           aside={
             <div className="space-y-6">
-              <AiKnowledgePanel />
-              {/* Riwayat stok hanya relevan untuk hub produk (POS) */}
+              {/* Riwayat stok hanya relevan untuk hub produk (POS); ditaruh paling
+                  atas karena lebih sering dipantau daripada brief concierge. */}
               {isPos && <StockLogPanel refreshKey={stockLogKey} />}
+              <AiKnowledgePanel />
             </div>
           }
         />
