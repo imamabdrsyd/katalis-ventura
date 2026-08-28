@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
-import { X, Upload, FileText, AlertCircle, CheckCircle, Download, Sparkles, Table2, Bot } from 'lucide-react';
+import { X, Upload, FileText, AlertCircle, CheckCircle, Download, Sparkles, Table2, Bot, FileDown } from 'lucide-react';
 import { ChannelImportTab } from '@/components/agent/ChannelImportTab';
 import { Tabs } from '@/components/ui/Tabs';
 import { parseExcelFile, validateFile, detectImportMode } from '@/lib/import/excelParser';
@@ -17,6 +17,7 @@ import {
 } from '@/lib/api/importBatches';
 import { getAccounts } from '@/lib/api/accounts';
 import type { ValidationResult, ImportProgress, SmartResolvedRow, ImportMode } from '@/lib/import/types';
+import { TransactionExportTab } from './TransactionExportTab';
 import type { Account, TransactionCategory } from '@/types';
 import { parseDate } from '@/lib/import/excelParser';
 import { formatCurrency } from '@/lib/utils';
@@ -29,12 +30,13 @@ const CONFIDENCE_STYLES = {
   low: 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400',
 };
 
-type TransactionImportMode = ImportMode | 'channel';
+type TransactionImportMode = ImportMode | 'channel' | 'export';
 
 interface TransactionImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   businessId: string;
+  businessName: string;
   userId: string;
   onImportComplete: (importedAt?: string) => void;
 }
@@ -43,6 +45,7 @@ export default function TransactionImportModal({
   isOpen,
   onClose,
   businessId,
+  businessName,
   userId,
   onImportComplete,
 }: TransactionImportModalProps) {
@@ -678,6 +681,8 @@ export default function TransactionImportModal({
   const reviewCount = smartRows.filter((r) => r._smart.confidence !== 'high').length;
 
   const importCount = importMode === 'smart' ? smartRows.length : (validationResult?.validCount || 0);
+  // Panel unggah/template hanya milik alur import berkas; channel & export punya panelnya sendiri.
+  const isFileImportMode = importMode === 'smart' || importMode === 'full';
 
   return (
     <div
@@ -703,7 +708,7 @@ export default function TransactionImportModal({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-[480px] transition-[min-height] duration-300 ease-out">
           {/* Mode Toggle */}
-          {(progress.stage === 'idle' || progress.stage === 'error' || importMode === 'channel') && (
+          {(progress.stage === 'idle' || progress.stage === 'error' || importMode === 'channel' || importMode === 'export') && (
             <Tabs<TransactionImportMode>
               value={importMode}
               onChange={setImportMode}
@@ -712,6 +717,7 @@ export default function TransactionImportModal({
                 { value: 'smart', label: ti.tabSmart, icon: <Sparkles className="h-4 w-4" /> },
                 { value: 'full', label: ti.tabFull, icon: <Table2 className="h-4 w-4" /> },
                 { value: 'channel', label: ti.tabChannel, icon: <Bot className="h-4 w-4" /> },
+                { value: 'export', label: ti.tabExport, icon: <FileDown className="h-4 w-4" /> },
               ]}
             />
           )}
@@ -724,8 +730,13 @@ export default function TransactionImportModal({
             />
           )}
 
+          {/* Export Tab */}
+          {importMode === 'export' && (
+            <TransactionExportTab businessId={businessId} businessName={businessName} />
+          )}
+
           {/* Template Download — only for smart/full modes */}
-          {importMode !== 'channel' && (
+          {isFileImportMode && (
             <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
               <div className="flex flex-col sm:flex-row sm:items-start gap-3">
                 <div className="flex items-start gap-3 flex-1">
@@ -753,7 +764,7 @@ export default function TransactionImportModal({
           )}
 
           {/* File Upload — only for smart/full modes */}
-          {importMode !== 'channel' && (progress.stage === 'idle' || progress.stage === 'error') && (
+          {isFileImportMode && (progress.stage === 'idle' || progress.stage === 'error') && (
             <div
               onDrop={handleDrop}
               onDragOver={handleDragOver}

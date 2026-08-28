@@ -474,6 +474,26 @@ export interface Translations {
     tabSmart: string;
     tabFull: string;
     tabChannel: string;
+    tabExport: string;
+    exportTitle: string;
+    exportHint: string;
+    exportPeriod: string;
+    exportPeriodAll: string;
+    exportPeriodRange: string;
+    exportDateFrom: string;
+    exportDateTo: string;
+    exportRangeInverted: string;
+    exportStatus: string;
+    exportStatusAll: string;
+    exportStatusPosted: string;
+    exportStatusDraft: string;
+    exportCounting: string;
+    exportCount: string;        // "{n} transaksi akan diekspor"
+    exportCountUnknown: string;
+    exportEmpty: string;
+    exportExcel: string;
+    exportCsv: string;
+    exportCsvNote: string;
     templateSmartTitle: string;
     templateFullTitle: string;
     templateSmartHint: string;

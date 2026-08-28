@@ -144,6 +144,94 @@ async function resolveCatalogNames(rows: Transaction[]): Promise<Transaction[]> 
 }
 
 // Get all transactions for a business (used by dashboard & reports that need full dataset)
+/** Batas baris per response PostgREST — pengambilan penuh wajib dipaginasi. */
+const EXPORT_PAGE_SIZE = 1000;
+
+export interface TransactionExportFilters {
+  /** Inklusif, format YYYY-MM-DD. */
+  dateFrom?: string;
+  dateTo?: string;
+  status?: TransactionStatus;
+}
+
+/**
+ * Ambil SELURUH transaksi sebuah bisnis untuk keperluan ekspor.
+ *
+ * Beda dari `getTransactions()`: di sini paginasinya eksplisit. Response
+ * PostgREST terpotong di 1000 baris, dan bisnis dengan ribuan transaksi akan
+ * menghasilkan file ekspor yang tampak sukses padahal tidak lengkap — persis
+ * jenis kegagalan yang paling sulit disadari pada fitur backup.
+ *
+ * `.order('date')` + `.order('id')` menjaga halaman tetap stabil: tanpa kunci
+ * pemecah seri yang unik, dua baris bertanggal sama boleh berpindah urutan
+ * antar halaman sehingga ada yang terlewat atau terhitung dua kali.
+ */
+/**
+ * Hitung transaksi yang cocok dengan filter ekspor, tanpa menarik datanya.
+ *
+ * Pratinjau jumlah dipanggil ulang setiap filter berubah. Memakai
+ * `getTransactionsForExport()` untuk itu berarti mengunduh ribuan baris lengkap
+ * dengan join akun & baris jurnal hanya untuk menampilkan satu angka.
+ */
+export async function countTransactionsForExport(
+  businessId: string,
+  filters: TransactionExportFilters = {}
+): Promise<number> {
+  const supabase = createClient();
+
+  let query = supabase
+    .from('transactions')
+    .select('id', { count: 'exact', head: true })
+    .eq('business_id', businessId)
+    .is('deleted_at', null);
+
+  if (filters.dateFrom) query = query.gte('date', filters.dateFrom);
+  if (filters.dateTo) query = query.lte('date', filters.dateTo);
+  if (filters.status) query = query.eq('status', filters.status);
+
+  const { count, error } = await query;
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+export async function getTransactionsForExport(
+  businessId: string,
+  filters: TransactionExportFilters = {}
+): Promise<Transaction[]> {
+  const supabase = createClient();
+  const rows: Transaction[] = [];
+
+  for (let offset = 0; ; offset += EXPORT_PAGE_SIZE) {
+    let query = supabase
+      .from('transactions')
+      .select(`
+        *,
+        debit_account:accounts!transactions_debit_account_id_fkey(*),
+        credit_account:accounts!transactions_credit_account_id_fkey(*),
+        journal_lines(*, account:accounts(*))
+      `)
+      .eq('business_id', businessId)
+      .is('deleted_at', null);
+
+    if (filters.dateFrom) query = query.gte('date', filters.dateFrom);
+    if (filters.dateTo) query = query.lte('date', filters.dateTo);
+    if (filters.status) query = query.eq('status', filters.status);
+
+    const { data, error } = await query
+      .order('date', { ascending: true })
+      .order('id', { ascending: true })
+      .range(offset, offset + EXPORT_PAGE_SIZE - 1);
+
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) break;
+
+    rows.push(...(data as Transaction[]));
+    if (data.length < EXPORT_PAGE_SIZE) break;
+  }
+
+  return resolveCatalogNames(rows);
+}
+
 export async function getTransactions(businessId: string): Promise<Transaction[]> {
   const supabase = createClient();
   const { data, error } = await supabase

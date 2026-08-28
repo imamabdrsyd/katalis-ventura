@@ -17,7 +17,7 @@ import type { TransactionCategory, Transaction } from '@/types';
 import { QuickTransactionForm } from '@/components/transactions/QuickTransactionForm';
 import { RecurringList } from '@/components/transactions/RecurringList';
 import { useRecurringTransactions } from '@/hooks/useRecurringTransactions';
-import { Upload, Plus, X, Trash2, CreditCard, CheckCircle2, Calculator, RefreshCw, Printer, Loader2, Contact as ContactIcon, Receipt } from 'lucide-react';
+import { Plus, X, Trash2, CreditCard, CheckCircle2, Calculator, RefreshCw, Printer, Loader2, Contact as ContactIcon, Receipt, ArrowDownUp } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, Suspense, useMemo, useId } from 'react';
 import { motion } from 'framer-motion';
@@ -634,7 +634,7 @@ function TransactionsPageInner() {
               onClick={() => setShowImportModal(true)}
               className="btn-ghost flex items-center gap-2"
             >
-              <Upload className="h-4 w-4" />
+              <ArrowDownUp className="h-4 w-4" />
               {t.transactions.importExcel}
             </button>
 
@@ -1179,6 +1179,7 @@ function TransactionsPageInner() {
           isOpen={showImportModal}
           onClose={() => setShowImportModal(false)}
           businessId={businessId}
+          businessName={activeBusiness?.business_name ?? 'Bisnis'}
           userId={user.id}
           onImportComplete={handleImportComplete}
         />
