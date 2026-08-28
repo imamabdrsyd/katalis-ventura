@@ -77,6 +77,25 @@ describe('kolom ekspor transaksi', () => {
     expect(row.Kontak).toBe('Warung Bu Tini');
   });
 
+  it('membedakan "belum ditautkan" dari "tidak ada kontak sama sekali"', () => {
+    // 2/3 transaksi masih pakai name teks bebas tanpa contact_id. Sel kosong
+    // terbaca ambigu — pembacanya harus tahu ini soal penautan, bukan data hilang.
+    const [belumTaut] = toTransactionRows([
+      mkTx({ contact: undefined, name: 'Warung Bu Tini' }),
+    ]);
+    expect(belumTaut['Tipe Kontak']).toBe('(belum ditautkan)');
+
+    const [tanpaNama] = toTransactionRows([mkTx({ contact: undefined, name: '' })]);
+    expect(tanpaNama['Tipe Kontak']).toBe('');
+  });
+
+  it('memakai tipe asli saat transaksi tertaut ke kontak', () => {
+    const [row] = toTransactionRows([
+      mkTx({ contact: mkContact({ type: 'vendor' }), name: 'Gojek' }),
+    ]);
+    expect(row['Tipe Kontak']).toBe('vendor');
+  });
+
   it('mengeluarkan nomor transaksi, status, dan rekonsiliasi apa adanya', () => {
     const [row] = toTransactionRows([
       mkTx({

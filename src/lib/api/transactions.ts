@@ -206,6 +206,7 @@ export async function getTransactionsForExport(
       .from('transactions')
       .select(`
         *,
+        contact:business_contacts!transactions_contact_id_fkey(*),
         debit_account:accounts!transactions_debit_account_id_fkey(*),
         credit_account:accounts!transactions_credit_account_id_fkey(*),
         journal_lines(*, account:accounts(*))
@@ -238,6 +239,7 @@ export async function getTransactions(businessId: string): Promise<Transaction[]
     .from('transactions')
     .select(`
       *,
+      contact:business_contacts!transactions_contact_id_fkey(*),
       debit_account:accounts!transactions_debit_account_id_fkey(*),
       credit_account:accounts!transactions_credit_account_id_fkey(*),
       journal_lines(*, account:accounts(*))
@@ -380,6 +382,7 @@ export async function getTransactionsPaginated(
     .from('transactions')
     .select(`
       *,
+      contact:business_contacts!transactions_contact_id_fkey(*),
       debit_account:accounts!transactions_debit_account_id_fkey${debitJoin}(*),
       credit_account:accounts!transactions_credit_account_id_fkey(*),
       journal_lines(*, account:accounts(*))
@@ -449,6 +452,7 @@ export async function getTransactionsByDateRange(
     .from('transactions')
     .select(`
       *,
+      contact:business_contacts!transactions_contact_id_fkey(*),
       debit_account:accounts!transactions_debit_account_id_fkey(*),
       credit_account:accounts!transactions_credit_account_id_fkey(*),
       journal_lines(*, account:accounts(*))

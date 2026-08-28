@@ -81,13 +81,26 @@ function contactName(tx: Transaction): string {
   return text(tx.contact?.name ?? tx.name);
 }
 
+/**
+ * Tipe kontak — hanya ada kalau transaksi benar-benar tertaut ke kontak.
+ *
+ * Sebagian besar transaksi masih memakai `name` teks bebas tanpa `contact_id`,
+ * jadi tipenya memang tidak ada. Sel kosong akan terbaca ambigu ("datanya hilang?"),
+ * padahal jawabannya "transaksi ini belum ditautkan ke kontak" — dan itu yang
+ * ditulis, supaya pembacanya tahu ini soal penautan, bukan data yang lenyap.
+ */
+function contactTypeLabel(tx: Transaction): string {
+  if (tx.contact?.type) return text(tx.contact.type);
+  return tx.name?.trim() ? '(belum ditautkan)' : '';
+}
+
 export function toTransactionRows(transactions: Transaction[]): Record<string, unknown>[] {
   return transactions.map((tx) => ({
     'No Transaksi': text(tx.transaction_number),
     Tanggal: tx.date,
     Kategori: tx.category,
     Kontak: contactName(tx),
-    'Tipe Kontak': text(tx.contact?.type),
+    'Tipe Kontak': contactTypeLabel(tx),
     Deskripsi: text(tx.description),
     Jumlah: tx.amount,
     'Mata Uang': text(tx.currency_code) || 'IDR',
