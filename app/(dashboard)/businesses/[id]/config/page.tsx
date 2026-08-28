@@ -10,7 +10,7 @@ import { InviteCodeManager } from '@/components/business/InviteCodeManager';
 import { JoinRequestList } from '@/components/business/JoinRequestList';
 import { getBusinessMembers, type BusinessMember } from '@/lib/api/members';
 import Image from 'next/image';
-import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut, Blocks, Contact, CalendarDays, Rocket, Pencil, Check, X, Info, FileText, Landmark, MapPinned, MoreVertical, Loader2, Plus } from 'lucide-react';
+import { ArrowLeft, UserPlus, Users, Globe, MapPin, Building2, Palette, Heart, Wheat, UtensilsCrossed, Coins, Home, Banknote, LogOut, Blocks, Contact, CalendarDays, Rocket, Pencil, Check, X, Info, FileText, Landmark, MapPinned, MoreVertical, Loader2, Plus, DatabaseBackup } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { Tabs } from '@/components/ui/Tabs';
@@ -34,6 +34,10 @@ const ChannelIntegration = dynamic(
 );
 const EcommerceIntegration = dynamic(
   () => import('@/components/ecommerce/EcommerceIntegration').then((m) => m.EcommerceIntegration)
+);
+const BackupCard = dynamic(
+  () => import('@/components/business/BackupCard').then((m) => m.BackupCard),
+  { loading: () => <TabChunkLoader /> }
 );
 
 function TabChunkLoader() {
@@ -62,7 +66,7 @@ const BUSINESS_TYPE_LABELS: Record<string, string> = {
   dagang: 'Dagang',
 };
 
-type BusinessConfigTab = 'members' | 'contacts' | 'omni-channel' | 'integrations';
+type BusinessConfigTab = 'members' | 'contacts' | 'omni-channel' | 'integrations' | 'data';
 
 const LEGAL_ENTITY_VALUES = ['PT', 'PT Perorangan', 'CV', 'UD', 'Firma', 'Koperasi', 'Yayasan', 'Perorangan'] as const;
 
@@ -629,6 +633,12 @@ export default function BusinessMembersPage() {
               icon: <Blocks className="w-4 h-4" />,
               hidden: isInvestor,
             },
+            {
+              value: 'data',
+              label: t.businessConfig.tabData,
+              icon: <DatabaseBackup className="w-4 h-4" />,
+              hidden: isInvestor,
+            },
           ]}
         />
 
@@ -729,6 +739,11 @@ export default function BusinessMembersPage() {
               }
             />
           </div>
+        </div>
+      )}
+      {activeTab === 'data' && business && (
+        <div className="w-full lg:max-w-2xl">
+          <BackupCard businessId={business.id} canManage={canManage} />
         </div>
       )}
 

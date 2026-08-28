@@ -2058,11 +2058,23 @@ export interface Translations {
   };
 
   // Business Config Page (tabs)
+  backup: {
+    title: string;
+    subtitle: string;
+    description: string;
+    credentialNote: string;
+    downloadJson: string;
+    downloadExcel: string;
+    preparing: string;
+    lastResult: string;      // "{rows} baris dari {tables} tabel"
+    investorOnly: string;
+  };
   businessConfig: {
     tabMembers: string;
     tabContacts: string;
     tabOmnichannel: string;
     tabIntegrations: string;
+    tabData: string;
     inviteMember: string;
     notSet: string;
     saveFailed: string;

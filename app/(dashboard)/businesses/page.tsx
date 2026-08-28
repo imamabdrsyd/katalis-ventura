@@ -10,7 +10,7 @@ import { BusinessCard } from '@/components/business/BusinessCard';
 import { BusinessForm, type BusinessFormData } from '@/components/business/BusinessForm';
 import { InviteCodeManager } from '@/components/business/InviteCodeManager';
 import { PeriodLockManager } from '@/components/business/PeriodLockManager';
-import { Building2, Archive, Lock, Users, Contact, Globe, Blocks } from 'lucide-react';
+import { Building2, Archive, Lock, Users, Contact, Globe, Blocks, DatabaseBackup } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { Tabs } from '@/components/ui/Tabs';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -256,6 +256,7 @@ export default function BusinessesPage() {
                 { value: 'contacts', label: t.businessConfig.tabContacts, Icon: Contact, show: true },
                 { value: 'omni-channel', label: t.businessConfig.tabOmnichannel, Icon: Globe, show: !isInvestor },
                 { value: 'integrations', label: t.businessConfig.tabIntegrations, Icon: Blocks, show: !isInvestor },
+                { value: 'data', label: t.businessConfig.tabData, Icon: DatabaseBackup, show: !isInvestor },
               ]
                 .filter((s) => s.show)
                 .map(({ value, label, Icon }, idx) => (

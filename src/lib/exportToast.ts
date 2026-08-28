@@ -2,7 +2,7 @@
 
 import { toast } from 'sonner';
 
-type ExportKind = 'pdf' | 'excel' | 'sheets';
+type ExportKind = 'pdf' | 'excel' | 'sheets' | 'backup';
 
 const LABELS: Record<ExportKind, { loading: string; success: string; error: string }> = {
   pdf: {
@@ -21,6 +21,13 @@ const LABELS: Record<ExportKind, { loading: string; success: string; error: stri
     loading: 'Membuat Google Sheets…',
     success: 'Google Sheets berhasil dibuat',
     error: 'Gagal membuat Google Sheets',
+  },
+  backup: {
+    // Backup menarik puluhan tabel sekaligus, jadi fase loading-nya bisa terasa
+    // lama — teksnya menyebut proses, bukan cuma format file.
+    loading: 'Mengumpulkan data bisnis…',
+    success: 'Backup berhasil diunduh',
+    error: 'Gagal membuat backup',
   },
 };
 

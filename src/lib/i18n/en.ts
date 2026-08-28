@@ -2038,11 +2038,25 @@ export const en: Translations = {
     deleteBtn: 'Delete',
     duplicateBtn: 'Duplicate',
   },
+  backup: {
+    title: 'Data Backup',
+    subtitle: 'Download a copy of all data for this business',
+    description:
+      'The backup contains all data for this business — transactions, journal lines, accounts, contacts, catalog, bookings, invoices, and more. JSON preserves the data in full; Excel is easier to read but flattens nested columns into text.',
+    credentialNote:
+      'For security, integration tokens (WhatsApp, Instagram, Telegram, Google) are not included.',
+    downloadJson: 'Download JSON',
+    downloadExcel: 'Download Excel',
+    preparing: 'Preparing…',
+    lastResult: 'Last backup: {rows} rows across {tables} tables',
+    investorOnly: 'Only business managers can download a data backup.',
+  },
   businessConfig: {
     tabMembers: 'Members',
     tabContacts: 'Contacts',
     tabOmnichannel: 'Omnichannel',
     tabIntegrations: 'Integrations',
+    tabData: 'Data',
     inviteMember: 'Invite Member',
     notSet: 'Not set',
     saveFailed: 'Failed to save',

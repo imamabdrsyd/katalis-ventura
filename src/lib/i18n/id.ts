@@ -2042,11 +2042,25 @@ export const id: Translations = {
     deleteBtn: 'Hapus',
     duplicateBtn: 'Duplikat',
   },
+  backup: {
+    title: 'Backup Data',
+    subtitle: 'Unduh salinan seluruh data bisnis ini',
+    description:
+      'Backup berisi seluruh data bisnis ini — transaksi, jurnal, akun, kontak, katalog, booking, invoice, dan lainnya. JSON menyimpan data secara utuh; Excel lebih enak dibaca tapi kolom bertingkat diringkas jadi teks.',
+    credentialNote:
+      'Demi keamanan, token integrasi (WhatsApp, Instagram, Telegram, Google) tidak ikut disertakan.',
+    downloadJson: 'Unduh JSON',
+    downloadExcel: 'Unduh Excel',
+    preparing: 'Menyiapkan…',
+    lastResult: 'Backup terakhir: {rows} baris dari {tables} tabel',
+    investorOnly: 'Hanya pengelola bisnis yang bisa mengunduh backup data.',
+  },
   businessConfig: {
     tabMembers: 'Anggota',
     tabContacts: 'Kontak',
     tabOmnichannel: 'Omnichannel',
     tabIntegrations: 'Integrasi',
+    tabData: 'Data',
     inviteMember: 'Undang Anggota',
     notSet: 'Belum di-set',
     saveFailed: 'Gagal menyimpan',
