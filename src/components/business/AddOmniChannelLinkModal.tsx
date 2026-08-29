@@ -21,6 +21,7 @@ import { Modal } from '@/components/ui/Modal';
 import type { OmniChannelLink, OmniChannelType } from '@/types';
 import { addOmniChannelLink, updateOmniChannelLink } from '@/lib/api/omniChannel';
 import { CHANNEL_META, CHANNEL_CATEGORIES, getChannelsByCategory } from '@/lib/omniChannelMeta';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface Props {
   businessId: string;
@@ -30,80 +31,82 @@ interface Props {
   onSaved: () => void;
 }
 
-// Daftar icon Lucide bertema bisnis — name yang ditampilkan + komponen icon
-const LUCIDE_ICONS: { name: string; label: string; Icon: React.ElementType }[] = [
-  { name: 'ShoppingBag', label: 'Belanja', Icon: ShoppingBag },
-  { name: 'ShoppingCart', label: 'Keranjang', Icon: ShoppingCart },
-  { name: 'Store', label: 'Toko', Icon: Store },
-  { name: 'Package', label: 'Paket', Icon: Package },
-  { name: 'Tag', label: 'Label Harga', Icon: Tag },
-  { name: 'Gift', label: 'Hadiah', Icon: Gift },
-  { name: 'Truck', label: 'Pengiriman', Icon: Truck },
-  { name: 'Boxes', label: 'Stok', Icon: Boxes },
-  { name: 'Utensils', label: 'Restoran', Icon: Utensils },
-  { name: 'Coffee', label: 'Kafe', Icon: Coffee },
-  { name: 'UtensilsCrossed', label: 'Makan', Icon: UtensilsCrossed },
-  { name: 'Pizza', label: 'Pizza', Icon: Pizza },
-  { name: 'Salad', label: 'Salad', Icon: Salad },
-  { name: 'Scissors', label: 'Salon', Icon: Scissors },
-  { name: 'Sparkles', label: 'Kecantikan', Icon: Sparkles },
-  { name: 'Heart', label: 'Favorit', Icon: Heart },
-  { name: 'Star', label: 'Bintang', Icon: Star },
-  { name: 'Smile', label: 'Ramah', Icon: Smile },
-  { name: 'Home', label: 'Rumah', Icon: Home },
-  { name: 'Building2', label: 'Gedung', Icon: Building2 },
-  { name: 'Hotel', label: 'Hotel', Icon: Hotel },
-  { name: 'MapPin', label: 'Lokasi', Icon: MapPin },
-  { name: 'Key', label: 'Properti', Icon: Key },
-  { name: 'Briefcase', label: 'Bisnis', Icon: Briefcase },
-  { name: 'Users', label: 'Tim', Icon: Users },
-  { name: 'UserCheck', label: 'Member', Icon: UserCheck },
-  { name: 'Handshake', label: 'Kemitraan', Icon: Handshake },
-  { name: 'Award', label: 'Penghargaan', Icon: Award },
-  { name: 'Trophy', label: 'Prestasi', Icon: Trophy },
-  { name: 'Instagram', label: 'Instagram', Icon: Instagram },
-  { name: 'Facebook', label: 'Facebook', Icon: Facebook },
-  { name: 'Twitter', label: 'X / Twitter', Icon: Twitter },
-  { name: 'Youtube', label: 'YouTube', Icon: Youtube },
-  { name: 'Linkedin', label: 'LinkedIn', Icon: Linkedin },
-  { name: 'Github', label: 'GitHub', Icon: Github },
-  { name: 'Twitch', label: 'Twitch', Icon: Twitch },
-  { name: 'Phone', label: 'Telepon', Icon: Phone },
-  { name: 'MessageCircle', label: 'WhatsApp / Chat', Icon: MessageCircle },
-  { name: 'MessageSquare', label: 'Pesan', Icon: MessageSquare },
-  { name: 'Send', label: 'Telegram', Icon: Send },
-  { name: 'AtSign', label: 'Mention', Icon: AtSign },
-  { name: 'Mail', label: 'Email', Icon: Mail },
-  { name: 'Globe', label: 'Website', Icon: Globe },
-  { name: 'Link2', label: 'Tautan', Icon: Link2 },
-  { name: 'Share2', label: 'Bagikan', Icon: Share2 },
-  { name: 'Camera', label: 'Foto', Icon: CameraIcon },
-  { name: 'Image', label: 'Gambar', Icon: Image },
-  { name: 'Video', label: 'Video', Icon: Video },
-  { name: 'Mic', label: 'Podcast', Icon: Mic },
-  { name: 'Music', label: 'Musik', Icon: Music },
-  { name: 'Palette', label: 'Desain', Icon: Palette },
-  { name: 'Leaf', label: 'Organik', Icon: Leaf },
-  { name: 'Flower2', label: 'Bunga', Icon: Flower2 },
-  { name: 'Sun', label: 'Segar', Icon: Sun },
-  { name: 'Zap', label: 'Cepat', Icon: Zap },
-  { name: 'Flame', label: 'Populer', Icon: Flame },
-  { name: 'Droplets', label: 'Minuman', Icon: Droplets },
-  { name: 'BookOpen', label: 'Buku', Icon: BookOpen },
-  { name: 'GraduationCap', label: 'Edukasi', Icon: GraduationCap },
-  { name: 'Lightbulb', label: 'Ide', Icon: Lightbulb },
-  { name: 'PenLine', label: 'Tulis', Icon: PenLine },
-  { name: 'Car', label: 'Kendaraan', Icon: Car },
-  { name: 'Bike', label: 'Sepeda', Icon: Bike },
-  { name: 'Plane', label: 'Travel', Icon: Plane },
-  { name: 'Anchor', label: 'Nautik', Icon: Anchor },
-  { name: 'Dumbbell', label: 'Olahraga', Icon: Dumbbell },
-  { name: 'Activity', label: 'Kesehatan', Icon: Activity },
-  { name: 'Stethoscope', label: 'Medis', Icon: Stethoscope },
-  { name: 'CreditCard', label: 'Pembayaran', Icon: CreditCard },
-  { name: 'DollarSign', label: 'Harga', Icon: DollarSign },
-  { name: 'PiggyBank', label: 'Tabungan', Icon: PiggyBank },
-  { name: 'BarChart2', label: 'Statistik', Icon: BarChart2 },
+// Daftar icon Lucide bertema bisnis — labelnya ada di kamus i18n
+// (`omniLink.icons`, dikunci nama icon) karena konstanta modul-level tak bisa
+// memanggil hook. Label dipakai dua kali: teks di bawah icon dan kata kunci pencarian.
+const LUCIDE_ICONS: { name: string; Icon: React.ElementType }[] = [
+  { name: 'ShoppingBag', Icon: ShoppingBag },
+  { name: 'ShoppingCart', Icon: ShoppingCart },
+  { name: 'Store', Icon: Store },
+  { name: 'Package', Icon: Package },
+  { name: 'Tag', Icon: Tag },
+  { name: 'Gift', Icon: Gift },
+  { name: 'Truck', Icon: Truck },
+  { name: 'Boxes', Icon: Boxes },
+  { name: 'Utensils', Icon: Utensils },
+  { name: 'Coffee', Icon: Coffee },
+  { name: 'UtensilsCrossed', Icon: UtensilsCrossed },
+  { name: 'Pizza', Icon: Pizza },
+  { name: 'Salad', Icon: Salad },
+  { name: 'Scissors', Icon: Scissors },
+  { name: 'Sparkles', Icon: Sparkles },
+  { name: 'Heart', Icon: Heart },
+  { name: 'Star', Icon: Star },
+  { name: 'Smile', Icon: Smile },
+  { name: 'Home', Icon: Home },
+  { name: 'Building2', Icon: Building2 },
+  { name: 'Hotel', Icon: Hotel },
+  { name: 'MapPin', Icon: MapPin },
+  { name: 'Key', Icon: Key },
+  { name: 'Briefcase', Icon: Briefcase },
+  { name: 'Users', Icon: Users },
+  { name: 'UserCheck', Icon: UserCheck },
+  { name: 'Handshake', Icon: Handshake },
+  { name: 'Award', Icon: Award },
+  { name: 'Trophy', Icon: Trophy },
+  { name: 'Instagram', Icon: Instagram },
+  { name: 'Facebook', Icon: Facebook },
+  { name: 'Twitter', Icon: Twitter },
+  { name: 'Youtube', Icon: Youtube },
+  { name: 'Linkedin', Icon: Linkedin },
+  { name: 'Github', Icon: Github },
+  { name: 'Twitch', Icon: Twitch },
+  { name: 'Phone', Icon: Phone },
+  { name: 'MessageCircle', Icon: MessageCircle },
+  { name: 'MessageSquare', Icon: MessageSquare },
+  { name: 'Send', Icon: Send },
+  { name: 'AtSign', Icon: AtSign },
+  { name: 'Mail', Icon: Mail },
+  { name: 'Globe', Icon: Globe },
+  { name: 'Link2', Icon: Link2 },
+  { name: 'Share2', Icon: Share2 },
+  { name: 'Camera', Icon: CameraIcon },
+  { name: 'Image', Icon: Image },
+  { name: 'Video', Icon: Video },
+  { name: 'Mic', Icon: Mic },
+  { name: 'Music', Icon: Music },
+  { name: 'Palette', Icon: Palette },
+  { name: 'Leaf', Icon: Leaf },
+  { name: 'Flower2', Icon: Flower2 },
+  { name: 'Sun', Icon: Sun },
+  { name: 'Zap', Icon: Zap },
+  { name: 'Flame', Icon: Flame },
+  { name: 'Droplets', Icon: Droplets },
+  { name: 'BookOpen', Icon: BookOpen },
+  { name: 'GraduationCap', Icon: GraduationCap },
+  { name: 'Lightbulb', Icon: Lightbulb },
+  { name: 'PenLine', Icon: PenLine },
+  { name: 'Car', Icon: Car },
+  { name: 'Bike', Icon: Bike },
+  { name: 'Plane', Icon: Plane },
+  { name: 'Anchor', Icon: Anchor },
+  { name: 'Dumbbell', Icon: Dumbbell },
+  { name: 'Activity', Icon: Activity },
+  { name: 'Stethoscope', Icon: Stethoscope },
+  { name: 'CreditCard', Icon: CreditCard },
+  { name: 'DollarSign', Icon: DollarSign },
+  { name: 'PiggyBank', Icon: PiggyBank },
+  { name: 'BarChart2', Icon: BarChart2 },
 ];
 
 function IconPickerModal({
@@ -115,16 +118,18 @@ function IconPickerModal({
   onSelect: (name: string) => void;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   const [query, setQuery] = useState('');
+  const iconLabel = (name: string) => t.omniLink.icons[name] ?? name;
   const filtered = query.trim()
     ? LUCIDE_ICONS.filter((i) =>
-        i.label.toLowerCase().includes(query.toLowerCase()) ||
+        iconLabel(i.name).toLowerCase().includes(query.toLowerCase()) ||
         i.name.toLowerCase().includes(query.toLowerCase())
       )
     : LUCIDE_ICONS;
 
   return (
-    <Modal isOpen={true} onClose={onClose} title="Pilih Icon">
+    <Modal isOpen={true} onClose={onClose} title={t.omniLink.iconPickerTitle}>
       <div className="space-y-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -132,18 +137,18 @@ function IconPickerModal({
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cari icon..."
+            placeholder={t.omniLink.iconSearchPlaceholder}
             className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
             autoFocus
           />
         </div>
         <div className="grid grid-cols-5 gap-2 max-h-72 overflow-y-auto pr-1">
-          {filtered.map(({ name, label, Icon }) => (
+          {filtered.map(({ name, Icon }) => (
             <button
               key={name}
               type="button"
               onClick={() => { onSelect(name); onClose(); }}
-              title={label}
+              title={iconLabel(name)}
               className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${
                 selected === name
                   ? 'bg-primary-50 dark:bg-primary-900/25 ring-1 ring-primary-300 dark:ring-primary-600'
@@ -151,11 +156,11 @@ function IconPickerModal({
               }`}
             >
               <Icon className={`w-5 h-5 ${selected === name ? 'text-primary-500' : 'text-gray-600 dark:text-gray-300'}`} />
-              <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate w-full text-center">{label}</span>
+              <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate w-full text-center">{iconLabel(name)}</span>
             </button>
           ))}
           {filtered.length === 0 && (
-            <p className="col-span-5 text-center text-sm text-gray-400 py-6">Tidak ada icon yang cocok.</p>
+            <p className="col-span-5 text-center text-sm text-gray-400 py-6">{t.omniLink.iconNoMatch}</p>
           )}
         </div>
         {selected && (
@@ -164,7 +169,7 @@ function IconPickerModal({
             onClick={() => { onSelect(''); onClose(); }}
             className="w-full text-xs text-gray-400 hover:text-red-500 transition-colors text-center py-1"
           >
-            Hapus pilihan icon
+            {t.omniLink.iconClear}
           </button>
         )}
       </div>
@@ -173,6 +178,7 @@ function IconPickerModal({
 }
 
 export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink, onClose, onSaved }: Props) {
+  const { t } = useLanguage();
   const [channelType, setChannelType] = useState<OmniChannelType>(editingLink?.channel_type ?? 'instagram');
   const [label, setLabel] = useState(editingLink?.label ?? CHANNEL_META.instagram.defaultLabel);
   const [subtitle, setSubtitle] = useState(editingLink?.subtitle ?? '');
@@ -201,15 +207,15 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      setIconError('Hanya file gambar yang diperbolehkan');
+      setIconError(t.omniLink.imageOnly);
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      setIconError('Ukuran file maksimal 2MB');
+      setIconError(t.omniLink.maxFileSize.replace('{size}', '2MB'));
       return;
     }
     if (!isEditing) {
-      setIconError('Simpan link dulu sebelum upload icon kustom');
+      setIconError(t.omniLink.iconSaveFirst);
       return;
     }
     setUploadingIcon(true);
@@ -222,11 +228,11 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
         body: formData,
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Gagal upload icon');
+      if (!res.ok) throw new Error(json.error || t.omniLink.iconUploadFailed);
       setCustomIconUrl(json.url);
       setLucideIcon(''); // clear lucide if custom image uploaded
     } catch (err: any) {
-      setIconError(err.message || 'Gagal upload icon');
+      setIconError(err.message || t.omniLink.iconUploadFailed);
     } finally {
       setUploadingIcon(false);
       if (iconInputRef.current) iconInputRef.current.value = '';
@@ -234,8 +240,8 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
   };
 
   const handleSave = async () => {
-    if (!url.trim()) { setError('URL wajib diisi'); return; }
-    if (!label.trim()) { setError('Label wajib diisi'); return; }
+    if (!url.trim()) { setError(t.omniLink.urlRequired); return; }
+    if (!label.trim()) { setError(t.omniLink.labelRequired); return; }
 
     const normalizedUrl = /^https?:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
 
@@ -271,13 +277,22 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
       onSaved();
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Gagal menyimpan link');
+      setError(err.message || t.omniLink.saveFailed);
     } finally {
       setSaving(false);
     }
   };
 
   const meta = CHANNEL_META[channelType];
+
+  // `omniChannelMeta.ts` sengaja dibiarkan data murni (dipakai juga oleh halaman
+  // publik), jadi label chrome-nya diterjemahkan di sini.
+  const CATEGORY_LABEL: Record<string, string> = {
+    social: t.omniLink.categorySocial,
+    ecommerce: t.omniLink.categoryEcommerce,
+    messaging: t.omniLink.categoryMessaging,
+    custom: t.omniLink.categoryCustom,
+  };
 
   // Lucide icon component untuk preview
   const SelectedLucideIcon = lucideIcon
@@ -297,12 +312,12 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
         />
       )}
 
-      <Modal isOpen={true} onClose={onClose} title={isEditing ? 'Edit Link' : 'Tambah Link'}>
+      <Modal isOpen={true} onClose={onClose} title={isEditing ? t.omniLink.editTitle : t.omniLink.addTitle}>
         <div className="space-y-4">
           {/* Channel Type */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Jenis Saluran
+              {t.omniLink.channelType}
             </label>
             <div className="space-y-3">
               {CHANNEL_CATEGORIES.map((cat) => {
@@ -310,7 +325,7 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
                 return (
                   <div key={cat.key}>
                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">
-                      {cat.label}
+                      {CATEGORY_LABEL[cat.key] ?? cat.label}
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {channels.map(({ type, meta: m }) => (
@@ -323,7 +338,7 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
                               : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                           }`}
                         >
-                          {m.label}
+                          {type === 'custom' ? t.omniLink.customChannel : m.label}
                         </button>
                       ))}
                     </div>
@@ -336,19 +351,19 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
           {/* Label */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Label{channelType === 'custom' && <span className="text-red-400 ml-1">*</span>}
+              {t.omniLink.labelField}{channelType === 'custom' && <span className="text-red-400 ml-1">*</span>}
             </label>
             <input
               type="text"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder={channelType === 'custom' ? 'misal: Website kami, Katalog, Blog...' : meta.defaultLabel}
+              placeholder={channelType === 'custom' ? t.omniLink.labelCustomPlaceholder : meta.defaultLabel}
               maxLength={200}
               className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
             {channelType === 'custom' && (
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                Tulis nama link sesuka kamu — ini yang akan tampil di halaman publik.
+                {t.omniLink.labelCustomHint}
               </p>
             )}
           </div>
@@ -356,25 +371,25 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
           {/* Subtitle */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Keterangan <span className="text-gray-400 font-normal">(opsional)</span>
+              {t.omniLink.subtitleField} <span className="text-gray-400 font-normal">({t.common.optional})</span>
             </label>
             <input
               type="text"
               value={subtitle}
               onChange={(e) => setSubtitle(e.target.value)}
-              placeholder="misal: Pesan langsung, Cek koleksi, Hubungi kami..."
+              placeholder={t.omniLink.subtitlePlaceholder}
               maxLength={200}
               className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-              Teks kecil di bawah label — tampil sebagai baris kedua di halaman publik.
+              {t.omniLink.subtitleHint}
             </p>
           </div>
 
           {/* URL */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              URL
+              {t.omniLink.urlField}
             </label>
             <input
               type="url"
@@ -388,7 +403,7 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
           {/* Icon — Lucide picker + custom upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Icon <span className="text-gray-400 font-normal">(opsional)</span>
+              {t.omniLink.iconField} <span className="text-gray-400 font-normal">({t.common.optional})</span>
             </label>
             <div className="flex items-center gap-3">
               {/* Preview area */}
@@ -427,13 +442,11 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
                 >
                   <Search className="w-3.5 h-3.5 text-gray-400" />
                   {lucideIcon
-                    ? LUCIDE_ICONS.find((i) => i.name === lucideIcon)?.label ?? lucideIcon
-                    : 'Pilih icon dari galeri...'}
+                    ? t.omniLink.icons[lucideIcon] ?? lucideIcon
+                    : t.omniLink.iconPick}
                 </button>
                 <p className="text-xs text-gray-400 dark:text-gray-500">
-                  {isEditing
-                    ? 'Atau hover gambar untuk upload foto kustom (JPG, PNG, WebP · Maks. 2MB)'
-                    : 'Simpan link dulu untuk upload foto kustom.'}
+                  {isEditing ? t.omniLink.iconUploadHint : t.omniLink.iconSaveFirst}
                 </p>
                 {iconError && <p className="text-xs text-red-500">{iconError}</p>}
               </div>
@@ -443,8 +456,8 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
           {/* Display mode */}
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-sm text-gray-700 dark:text-gray-300">Icon saja</span>
-              <p className="text-xs text-gray-400 dark:text-gray-500">Tampil sebagai icon kecil tanpa kotak & label</p>
+              <span className="text-sm text-gray-700 dark:text-gray-300">{t.omniLink.displayIconOnly}</span>
+              <p className="text-xs text-gray-400 dark:text-gray-500">{t.omniLink.displayIconOnlyHint}</p>
             </div>
             <button
               type="button"
@@ -461,7 +474,7 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
 
           {/* Active toggle */}
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-700 dark:text-gray-300">Aktif</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">{t.omniLink.activeToggle}</span>
             <button
               type="button"
               role="switch"
@@ -480,15 +493,15 @@ export function AddOmniChannelLinkModal({ businessId, nextSortOrder, editingLink
 
           {/* Actions */}
           <div className="flex gap-3 pt-2">
-            <button onClick={onClose} className="btn-ghost flex-1">Batal</button>
+            <button onClick={onClose} className="btn-ghost flex-1">{t.common.cancel}</button>
             <button
               onClick={handleSave}
               disabled={saving || !url.trim() || !label.trim()}
               className="btn-primary flex-1 flex items-center justify-center gap-2"
             >
               {saving ? (
-                <><Loader2 className="w-4 h-4 animate-spin" />Menyimpan...</>
-              ) : isEditing ? 'Simpan' : 'Tambah'}
+                <><Loader2 className="w-4 h-4 animate-spin" />{t.common.saving}</>
+              ) : isEditing ? t.common.save : t.common.add}
             </button>
           </div>
         </div>

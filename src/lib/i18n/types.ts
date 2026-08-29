@@ -1274,6 +1274,84 @@ export interface Translations {
     cityPlaceholder: string;
   };
 
+  // Omni-Channel — konfigurasi halaman publik (admin-side)
+  omniChannel: {
+    publicPageOn: string;
+    publicPageOff: string;
+    logoLabel: string;
+    clickToUploadPhoto: string;
+    photoFormats: string;
+    pageUrl: string;
+    slugPlaceholder: string;
+    slugTry: string;
+    slugFormat: string;
+    slugReserved: string;
+    slugInvalid: string;
+    slugTaken: string;
+    titleLabel: string;
+    titlePlaceholder: string;
+    taglineLabel: string;
+    taglinePlaceholder: string;
+    bioLabel: string;
+    bioPlaceholder: string;
+    bannerLabel: string;
+    bannerEmpty: string;
+    bannerDragHint: string;
+    bannerFormats: string;
+    layoutTitle: string;
+    layoutHint: string;
+    layoutClassic: string;
+    layoutModern: string;
+    layoutClean: string;
+    buttonColorLabel: string;
+    buttonColorHint: string;
+    saveChanges: string;
+    createPage: string;
+    removeLogo: string;
+    imageOnly: string;
+    maxFileSize: string;
+    uploadPhotoFailed: string;
+    uploadBannerFailed: string;
+    saveFailed: string;
+  };
+
+  // Omni-Channel — modal tambah/edit link
+  omniLink: {
+    addTitle: string;
+    editTitle: string;
+    channelType: string;
+    categorySocial: string;
+    categoryEcommerce: string;
+    categoryMessaging: string;
+    categoryCustom: string;
+    customChannel: string;
+    labelField: string;
+    labelCustomPlaceholder: string;
+    labelCustomHint: string;
+    subtitleField: string;
+    subtitlePlaceholder: string;
+    subtitleHint: string;
+    urlField: string;
+    urlRequired: string;
+    labelRequired: string;
+    iconField: string;
+    iconPick: string;
+    iconUploadHint: string;
+    iconSaveFirst: string;
+    iconUploadFailed: string;
+    iconPickerTitle: string;
+    iconSearchPlaceholder: string;
+    iconNoMatch: string;
+    iconClear: string;
+    displayIconOnly: string;
+    displayIconOnlyHint: string;
+    activeToggle: string;
+    saveFailed: string;
+    imageOnly: string;
+    maxFileSize: string;
+    icons: Record<string, string>;
+  };
+
   // Income Statement
   incomeStatement: {
     title: string;

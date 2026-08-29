@@ -6,6 +6,7 @@ import type { BusinessOmniChannel, OmniChannelLayoutMode } from '@/types';
 import { upsertOmniChannel, checkSlugAvailability, fetchAvailableSlugSuggestions } from '@/lib/api/omniChannel';
 import { generateSlugFromName, isValidSlugFormat, isReservedSlug, generateSlugSuggestions } from '@/lib/utils/slugUtils';
 import { ColorPickerField } from '@/components/ui/ColorPickerField';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface Props {
   businessId: string;
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export function OmniChannelPageConfig({ businessId, businessName, userId, channel, onSaved }: Props) {
+  const { t } = useLanguage();
   const [slug, setSlug] = useState(channel?.slug ?? generateSlugFromName(businessName));
   const [title, setTitle] = useState(channel?.title ?? businessName);
   const [tagline, setTagline] = useState(channel?.tagline ?? '');
@@ -97,13 +99,13 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
 
     if (!isValidSlugFormat(slug)) {
       setSlugStatus('unavailable');
-      setSlugError('Hanya huruf kecil, angka, dan tanda hubung (min 3 karakter)');
+      setSlugError(t.omniChannel.slugFormat);
       return;
     }
 
     if (isReservedSlug(slug)) {
       setSlugStatus('unavailable');
-      setSlugError('Slug ini tidak tersedia (reserved)');
+      setSlugError(t.omniChannel.slugReserved);
       return;
     }
 
@@ -124,9 +126,9 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
         } else {
           setSlugStatus('unavailable');
           const reason =
-            result.reason === 'reserved' ? 'Slug ini tidak tersedia (reserved)' :
-            result.reason === 'format' ? 'Format slug tidak valid' :
-            'Slug sudah digunakan bisnis lain';
+            result.reason === 'reserved' ? t.omniChannel.slugReserved :
+            result.reason === 'format' ? t.omniChannel.slugInvalid :
+            t.omniChannel.slugTaken;
           setSlugError(reason);
 
           // Generate and check alternative suggestions
@@ -142,18 +144,18 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [slug, channel?.slug, businessId]);
+  }, [slug, channel?.slug, businessId, t]);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      setUploadError('Hanya file gambar yang diperbolehkan');
+      setUploadError(t.omniChannel.imageOnly);
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      setUploadError('Ukuran file maksimal 2MB');
+      setUploadError(t.omniChannel.maxFileSize.replace('{size}', '2MB'));
       return;
     }
 
@@ -167,10 +169,10 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
         body: formData,
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Gagal upload foto');
+      if (!res.ok) throw new Error(json.error || t.omniChannel.uploadPhotoFailed);
       setLogoUrl(json.url);
     } catch (err: any) {
-      setUploadError(err.message || 'Gagal upload foto');
+      setUploadError(err.message || t.omniChannel.uploadPhotoFailed);
     } finally {
       setUploading(false);
       // Reset input so same file can be re-selected
@@ -203,7 +205,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
       savedRef.current = { slug, title, tagline, bio, logoUrl, bannerUrl, isPublished, layoutMode, buttonColor, bannerPosition };
       onSaved();
     } catch (err: any) {
-      setSaveError(err.message || 'Gagal menyimpan');
+      setSaveError(err.message || t.omniChannel.saveFailed);
     } finally {
       setSaving(false);
     }
@@ -213,11 +215,11 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      setBannerUploadError('Hanya file gambar yang diperbolehkan');
+      setBannerUploadError(t.omniChannel.imageOnly);
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      setBannerUploadError('Ukuran file maksimal 5MB');
+      setBannerUploadError(t.omniChannel.maxFileSize.replace('{size}', '5MB'));
       return;
     }
     setUploadingBanner(true);
@@ -230,10 +232,10 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
         body: formData,
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Gagal upload banner');
+      if (!res.ok) throw new Error(json.error || t.omniChannel.uploadBannerFailed);
       setBannerUrl(json.url);
     } catch (err: any) {
-      setBannerUploadError(err.message || 'Gagal upload banner');
+      setBannerUploadError(err.message || t.omniChannel.uploadBannerFailed);
     } finally {
       setUploadingBanner(false);
       if (bannerInputRef.current) bannerInputRef.current.value = '';
@@ -264,7 +266,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
             <EyeOff className="w-4 h-4 text-gray-400" />
           )}
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            {isPublished ? 'Halaman Publik (Aktif)' : 'Halaman Publik (Nonaktif)'}
+            {isPublished ? t.omniChannel.publicPageOn : t.omniChannel.publicPageOff}
           </span>
         </div>
         <button
@@ -290,7 +292,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
         {/* Logo Upload — kolom kiri */}
         <div className="sm:w-32">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-8">
-            Logo / Foto Profil
+            {t.omniChannel.logoLabel}
           </label>
           <div className="relative group shrink-0">
             <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 flex items-center justify-center border-2 border-gray-200 dark:border-gray-600">
@@ -322,7 +324,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
                 type="button"
                 onClick={() => { setLogoUrl(''); setUploadError(''); }}
                 className="absolute -top-1 left-[68px] w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors"
-                title="Hapus logo"
+                title={t.omniChannel.removeLogo}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -332,10 +334,10 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
           {/* Info teks — di bawah circle dengan jarak agak longgar */}
           <div className="mt-5">
             <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
-              Klik foto untuk upload.
+              {t.omniChannel.clickToUploadPhoto}
             </p>
             <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5 leading-snug">
-              JPG/PNG/WebP · Maks 2MB
+              {t.omniChannel.photoFormats}
               </p>
             {uploadError && (
               <p className="text-[11px] text-red-500 mt-1">{uploadError}</p>
@@ -348,7 +350,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
           {/* Slug */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              URL Halaman
+              {t.omniChannel.pageUrl}
             </label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500 pointer-events-none">
@@ -358,7 +360,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
                 type="text"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                placeholder="nama-bisnis"
+                placeholder={t.omniChannel.slugPlaceholder}
                 className={`w-full pl-7 pr-9 py-2 rounded-xl border text-sm text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors ${
                   slugStatus === 'unavailable'
                     ? 'border-red-300 dark:border-red-500'
@@ -380,7 +382,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
                 <p className="text-xs text-red-500">{slugError}</p>
                 {suggestions.length > 0 && (
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-xs text-gray-400 dark:text-gray-500">Coba:</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">{t.omniChannel.slugTry}</span>
                     {suggestions.map((s) => (
                       <button
                         key={s}
@@ -405,13 +407,13 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
           {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Nama / Judul
+              {t.omniChannel.titleLabel}
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Nama bisnis kamu"
+              placeholder={t.omniChannel.titlePlaceholder}
               maxLength={200}
               className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
@@ -420,13 +422,13 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
           {/* Tagline */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Tagline
+              {t.omniChannel.taglineLabel}
             </label>
             <input
               type="text"
               value={tagline}
               onChange={(e) => setTagline(e.target.value)}
-              placeholder="Deskripsi singkat satu baris"
+              placeholder={t.omniChannel.taglinePlaceholder}
               maxLength={300}
               className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
@@ -437,12 +439,12 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
       {/* Bio — full width di bawah grid */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Bio
+          {t.omniChannel.bioLabel}
         </label>
         <textarea
           value={bio}
           onChange={(e) => setBio(e.target.value)}
-          placeholder="Ceritakan tentang bisnis kamu..."
+          placeholder={t.omniChannel.bioPlaceholder}
           maxLength={1000}
           rows={3}
           className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
@@ -452,7 +454,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
       {/* Banner Upload */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Banner
+          {t.omniChannel.bannerLabel}
         </label>
         {/* Drag-to-reposition area */}
         <div
@@ -474,7 +476,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
           ) : (
             <div className="flex flex-col items-center gap-1 text-gray-400">
               <ImageIcon className="w-7 h-7" />
-              <span className="text-xs">Klik untuk upload banner</span>
+              <span className="text-xs">{t.omniChannel.bannerEmpty}</span>
             </div>
           )}
           {/* Upload overlay — hanya saat hover DAN tidak sedang drag */}
@@ -493,12 +495,12 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
           )}
           {bannerUrl && (
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full pointer-events-none">
-              Geser untuk atur posisi
+              {t.omniChannel.bannerDragHint}
             </div>
           )}
         </div>
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-          Rasio 3:1 direkomendasikan · JPG, PNG, WebP · Maks. 5MB
+          {t.omniChannel.bannerFormats}
         </p>
         {bannerUploadError && <p className="text-xs text-red-500 mt-1">{bannerUploadError}</p>}
       </div>
@@ -508,17 +510,17 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
         <div className="flex items-center gap-2">
           <LayoutTemplate className="w-4 h-4 text-gray-500 dark:text-gray-400" />
           <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-            Layout
+            {t.omniChannel.layoutTitle}
           </h4>
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          Tata letak header halaman publik kamu.
+          {t.omniChannel.layoutHint}
         </p>
         <div className="grid grid-cols-3 gap-3">
           {([
             {
               id: 'classic' as const,
-              label: 'Classic',
+              label: t.omniChannel.layoutClassic,
               preview: (
                 <svg viewBox="0 0 100 100" className="w-full h-full" aria-hidden>
                   <rect x="6" y="6" width="88" height="88" rx="6" className="fill-white dark:fill-gray-700 stroke-gray-200 dark:stroke-gray-600" strokeWidth="1.5" />
@@ -530,7 +532,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
             },
             {
               id: 'modern' as const,
-              label: 'Modern (tanpa bar)',
+              label: t.omniChannel.layoutModern,
               preview: (
                 <svg viewBox="0 0 100 100" className="w-full h-full" aria-hidden>
                   <rect x="6" y="6" width="88" height="88" rx="6" className="fill-white dark:fill-gray-700 stroke-gray-200 dark:stroke-gray-600" strokeWidth="1.5" />
@@ -542,7 +544,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
             },
             {
               id: 'clean' as const,
-              label: 'Clean (tanpa foto profil)',
+              label: t.omniChannel.layoutClean,
               preview: (
                 <svg viewBox="0 0 100 100" className="w-full h-full" aria-hidden>
                   <rect x="6" y="6" width="88" height="88" rx="6" className="fill-white dark:fill-gray-700 stroke-gray-200 dark:stroke-gray-600" strokeWidth="1.5" />
@@ -580,11 +582,10 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
       {/* Button Color */}
       <div className="border-t border-gray-100 dark:border-gray-700 pt-5">
         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-          Warna Tombol Utama
+          {t.omniChannel.buttonColorLabel}
         </label>
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-          Menyetir seluruh aksen halaman publik: tombol primary, widget reservasi,
-          dan kartu/Lobby event — termasuk label & bar progresnya.
+          {t.omniChannel.buttonColorHint}
         </p>
         <ColorPickerField value={buttonColor} onChange={setButtonColor} />
       </div>
@@ -604,12 +605,12 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
         {saving ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            Menyimpan...
+            {t.common.saving}
           </>
         ) : channel ? (
-          'Simpan Perubahan'
+          t.omniChannel.saveChanges
         ) : (
-          'Buat Halaman Publik'
+          t.omniChannel.createPage
         )}
       </button>
     </div>
