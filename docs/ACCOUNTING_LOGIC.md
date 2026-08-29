@@ -3905,7 +3905,7 @@ token kedaluwarsa — dan 34 lead sesudahnya bernama numerik semua.
 | Endpoint refresh | `src/lib/instagram/oauth.ts` | `refreshLongLivedToken()` → `ig_refresh_token`. Syarat Meta: token masih hidup & berumur ≥ 24 jam |
 | Status di UI | `ChannelIntegration.tsx` | Badge jadi "Segera kedaluwarsa" (< 14 hari) / "Token kedaluwarsa" (≤ 0), plus banner penjelas |
 | Sambung ulang | `ChannelIntegration.tsx` | Tombol "Sambungkan ulang" selalu tersedia saat terhubung |
-| Backfill nama | `app/api/leads/backfill-names/route.ts` | Resolve ulang lead bernama `@<angka>`, maks 100 per panggilan |
+| Backfill nama | `app/api/leads/backfill-names/route.ts` | Resolve ulang lead bernama `@<angka>`, maks 100 per panggilan. Tombolnya berdiri sendiri di card (bukan di dalam banner peringatan) — nama numerik justru baru bisa diperbaiki SETELAH token sehat |
 
 **Reconnect harus merge, bukan menimpa.** `channel_integrations.config` menampung token
 *dan* setelan non-token — saat ini `ai_tier`. Callback OAuth dulu menimpa `config`

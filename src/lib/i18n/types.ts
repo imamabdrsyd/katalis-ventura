@@ -2153,6 +2153,9 @@ export interface Translations {
     backfillNamesDone: string;
     backfillNamesNone: string;
     backfillNamesFailed: string;
+    backfillNamesHint: string;
+    backfillNamesPartial: string;
+    backfillNamesAllFailed: string;
     instagramDesc: string;
     whatsAppDesc: string;
     howItWorksTitle: string;

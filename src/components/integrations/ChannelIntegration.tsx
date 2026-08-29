@@ -248,11 +248,25 @@ function InstagramCard({
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || ci.backfillNamesFailed);
       const resolved = json.data?.resolved ?? 0;
-      toast.success(
-        resolved > 0
-          ? ci.backfillNamesDone.replace('{count}', String(resolved))
-          : ci.backfillNamesNone
-      );
+      const failed = json.data?.failed ?? 0;
+
+      // Bedakan tiga hasil: tidak ada yang perlu diperbaiki, sebagian gagal
+      // dilookup, dan Graph API menolak semuanya — ketiganya butuh tindak
+      // lanjut berbeda, jadi jangan disamakan jadi satu pesan sukses.
+      if (resolved === 0 && failed === 0) {
+        toast.success(ci.backfillNamesNone);
+      } else if (resolved === 0) {
+        toast.error(ci.backfillNamesAllFailed.replace('{failed}', String(failed)));
+      } else if (failed > 0) {
+        toast.success(
+          ci.backfillNamesPartial
+            .replace('{count}', String(resolved))
+            .replace('{failed}', String(failed))
+        );
+      } else {
+        toast.success(ci.backfillNamesDone.replace('{count}', String(resolved)));
+      }
+      onChanged();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : ci.backfillNamesFailed);
     } finally {
@@ -364,19 +378,26 @@ function InstagramCard({
                 : 'text-amber-500'
             }`}
           />
-          <div className="min-w-0">
-            <p className="text-sm text-gray-600 dark:text-gray-300">{tokenState.warning}</p>
-            {canManage && (
-              <button
-                onClick={handleBackfillNames}
-                disabled={backfilling}
-                className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline disabled:opacity-50"
-              >
-                {backfilling && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                {backfilling ? ci.backfillNamesRunning : ci.backfillNames}
-              </button>
-            )}
-          </div>
+          <p className="min-w-0 text-sm text-gray-600 dark:text-gray-300">{tokenState.warning}</p>
+        </div>
+      )}
+
+      {/* Nama numerik adalah sisa periode token mati, jadi tombol ini justru
+          paling dibutuhkan SETELAH koneksi sehat — tidak boleh menumpang di
+          banner peringatan yang hilang begitu token diperbaiki. */}
+      {isConnected && canManage && (
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-gray-100 dark:border-gray-700 pt-3">
+          <p className="min-w-0 text-xs text-gray-500 dark:text-gray-400">
+            {ci.backfillNamesHint}
+          </p>
+          <button
+            onClick={handleBackfillNames}
+            disabled={backfilling}
+            className="flex-shrink-0 inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline disabled:opacity-50"
+          >
+            {backfilling && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            {backfilling ? ci.backfillNamesRunning : ci.backfillNames}
+          </button>
         </div>
       )}
 
