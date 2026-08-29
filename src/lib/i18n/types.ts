@@ -2143,6 +2143,16 @@ export interface Translations {
     disconnectedWhatsApp: string;
     disconnectFailed: string;
     instagramConnected: string;
+    tokenExpired: string;
+    tokenExpiringSoon: string;
+    tokenExpiredHint: string;
+    tokenExpiringSoonHint: string;
+    reconnect: string;
+    backfillNames: string;
+    backfillNamesRunning: string;
+    backfillNamesDone: string;
+    backfillNamesNone: string;
+    backfillNamesFailed: string;
     instagramDesc: string;
     whatsAppDesc: string;
     howItWorksTitle: string;

@@ -65,21 +65,24 @@ export async function GET(request: NextRequest) {
       ? new Date(Date.now() + long.expiresIn * 1000).toISOString()
       : null;
 
-    const config = buildTokenConfig({
-      accessToken: long.accessToken,
-      tokenExpiresAt,
-      username,
-    });
-
     // Manual upsert by (business_id, 'instagram') — partial unique index tidak
     // bisa dipakai ON CONFLICT lewat PostgREST. Reconnect = update row lama.
     const { data: existing } = await supabase
       .from('channel_integrations')
-      .select('id')
+      .select('id, config')
       .eq('business_id', businessId)
       .eq('channel', 'instagram')
       .is('deleted_at', null)
       .maybeSingle();
+
+    // Reconnect harus MERGE, bukan menimpa: setelan non-token yang menumpang di
+    // config (mis. ai_tier) akan hilang kalau config di-replace bulat-bulat.
+    const config = buildTokenConfig({
+      accessToken: long.accessToken,
+      tokenExpiresAt,
+      username,
+      extra: (existing?.config as Record<string, unknown> | null) ?? undefined,
+    });
 
     if (existing) {
       const { error } = await supabase

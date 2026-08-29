@@ -23,7 +23,7 @@ import {
 import { generateLeadReply } from '@/lib/ai/leadAssistant';
 import { generateConciergeReply } from '@/lib/ai/concierge';
 import { getAiTier } from '@/lib/ai/concierge/tier';
-import { getDecryptedToken } from '@/lib/integrations/config';
+import { getFreshToken } from './token';
 import { sendInstagramMessage, sendInstagramImage, getInstagramSenderName } from './api';
 import type { InstagramWebhookEntry, InstagramMessaging } from './types';
 import type { ChannelIntegration } from '@/types';
@@ -68,8 +68,11 @@ async function processEvent(
   const customerId = isEcho ? event.recipient?.id : event.sender?.id;
   if (!customerId) return;
 
+  // Token diperpanjang di sini kalau umurnya menipis — webhook adalah satu-
+  // satunya jalur yang rutin jalan, jadi ini titik refresh paling andal.
+  const businessToken = await getFreshToken(supabase, integration);
+
   // Coba lookup nama/username via Graph API — gagal → fallback @customerId.
-  const businessToken = getDecryptedToken(integration);
   const senderName =
     (businessToken ? await getInstagramSenderName(businessToken, customerId) : null) ??
     `@${customerId}`;
@@ -109,7 +112,7 @@ async function processEvent(
   if (!result) return;
 
   if (integration.ai_mode === 'auto') {
-    const token = getDecryptedToken(integration);
+    const token = businessToken;
     if (!token) {
       console.warn('[instagram/handler] token bisnis tidak tersedia — simpan draft');
     } else {

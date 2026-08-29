@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 import {
   Loader2,
   Unlink,
+  RefreshCw,
+  AlertTriangle,
   Sparkles,
   Bot,
   CheckCircle2,
@@ -152,6 +154,68 @@ export function ChannelIntegration({ businessId, canManage, onReady, leftColumnE
   );
 }
 
+/** Refresh otomatis jalan di webhook saat sisa umur < 10 hari; peringatkan sedikit lebih awal. */
+const TOKEN_WARN_DAYS = 14;
+
+interface TokenState {
+  badgeLabel: string;
+  badgeClass: string;
+  dotClass: string;
+  /** true = user perlu bertindak / minimal tahu (kedaluwarsa atau hampir). */
+  needsAttention: boolean;
+  warning: string | null;
+}
+
+/**
+ * Terjemahkan `token_expires_at` jadi status yang kelihatan di card.
+ *
+ * Sebelum ini card selalu hijau "Terhubung" walau tokennya sudah mati berhari-
+ * hari — DM tetap masuk (webhook tidak butuh token) tapi nama pengirim jatuh
+ * ke "@<IGSID>" dan auto-kirim diam-diam mati, tanpa petunjuk apa pun di UI.
+ */
+function getTokenState(
+  config: SafeConfig | null,
+  ci: { connected: string; tokenExpired: string; tokenExpiringSoon: string; tokenExpiredHint: string; tokenExpiringSoonHint: string }
+): TokenState {
+  const healthy: TokenState = {
+    badgeLabel: ci.connected,
+    badgeClass: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
+    dotClass: 'bg-emerald-500',
+    needsAttention: false,
+    warning: null,
+  };
+
+  const raw = config?.token_expires_at;
+  if (!raw) return healthy; // expiry tidak tercatat (mis. WhatsApp) — jangan menakut-nakuti
+
+  const expiresAt = new Date(raw).getTime();
+  if (Number.isNaN(expiresAt)) return healthy;
+
+  const daysLeft = Math.ceil((expiresAt - Date.now()) / (24 * 60 * 60 * 1000));
+
+  if (daysLeft <= 0) {
+    return {
+      badgeLabel: ci.tokenExpired,
+      badgeClass: 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400',
+      dotClass: 'bg-red-500',
+      needsAttention: true,
+      warning: ci.tokenExpiredHint,
+    };
+  }
+
+  if (daysLeft <= TOKEN_WARN_DAYS) {
+    return {
+      badgeLabel: ci.tokenExpiringSoon,
+      badgeClass: 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
+      dotClass: 'bg-amber-500',
+      needsAttention: true,
+      warning: ci.tokenExpiringSoonHint.replace('{days}', String(daysLeft)),
+    };
+  }
+
+  return healthy;
+}
+
 function InstagramCard({
   integration,
   businessId,
@@ -166,8 +230,35 @@ function InstagramCard({
   const { t } = useLanguage();
   const ci = t.channelIntegration;
   const [disconnecting, setDisconnecting] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
   const isConnected = !!integration;
   const config = (integration?.config as SafeConfig | null) ?? null;
+  const tokenState = getTokenState(config, ci);
+
+  // Lead yang masuk selama token mati namanya tersimpan sebagai "@<IGSID>".
+  // Setelah koneksi sehat lagi, nama itu baru bisa di-resolve ulang.
+  const handleBackfillNames = async () => {
+    setBackfilling(true);
+    try {
+      const res = await fetch('/api/leads/backfill-names', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || ci.backfillNamesFailed);
+      const resolved = json.data?.resolved ?? 0;
+      toast.success(
+        resolved > 0
+          ? ci.backfillNamesDone.replace('{count}', String(resolved))
+          : ci.backfillNamesNone
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : ci.backfillNamesFailed);
+    } finally {
+      setBackfilling(false);
+    }
+  };
 
   const handleConnect = () => {
     window.location.href = `/api/integrations/instagram/auth?businessId=${businessId}`;
@@ -201,7 +292,7 @@ function InstagramCard({
               <Image src="/sales channel/ig.png" alt="Instagram" width={40} height={40} className="w-full h-full object-cover" />
             </div>
             {isConnected && (
-              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-800" />
+              <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-gray-800 ${tokenState.dotClass}`} />
             )}
           </div>
 
@@ -209,8 +300,8 @@ function InstagramCard({
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-semibold text-gray-900 dark:text-gray-100">Instagram</h3>
               {isConnected && (
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
-                  {ci.connected}
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${tokenState.badgeClass}`}>
+                  {tokenState.badgeLabel}
                 </span>
               )}
             </div>
@@ -229,14 +320,31 @@ function InstagramCard({
         <div className="flex items-center gap-2 flex-shrink-0 sm:pt-0.5">
           {isConnected
             ? canManage && (
-                <button
-                  onClick={handleDisconnect}
-                  disabled={disconnecting}
-                  title={ci.disconnect}
-                  className="btn-icon text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 disabled:opacity-50"
-                >
-                  <Unlink className="w-4 h-4" />
-                </button>
+                <>
+                  {/* Reconnect tanpa perlu disconnect dulu — disconnect membuat
+                      webhook berhenti mengenali akun, jadi DM yang masuk di
+                      sela-selanya hilang total. */}
+                  <button
+                    onClick={handleConnect}
+                    title={ci.reconnect}
+                    className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      tokenState.needsAttention
+                        ? 'text-white bg-gray-900 dark:bg-gray-100 dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-white'
+                        : 'text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    {ci.reconnect}
+                  </button>
+                  <button
+                    onClick={handleDisconnect}
+                    disabled={disconnecting}
+                    title={ci.disconnect}
+                    className="btn-icon text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 disabled:opacity-50"
+                  >
+                    <Unlink className="w-4 h-4" />
+                  </button>
+                </>
               )
             : canManage && (
                 <button onClick={handleConnect} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
@@ -246,6 +354,31 @@ function InstagramCard({
               )}
         </div>
       </div>
+
+      {isConnected && tokenState.warning && (
+        <div className="mt-4 flex items-start gap-2.5 rounded-lg bg-gray-50 dark:bg-gray-700/40 px-3 py-2.5">
+          <AlertTriangle
+            className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
+              tokenState.dotClass === 'bg-red-500'
+                ? 'text-red-500'
+                : 'text-amber-500'
+            }`}
+          />
+          <div className="min-w-0">
+            <p className="text-sm text-gray-600 dark:text-gray-300">{tokenState.warning}</p>
+            {canManage && (
+              <button
+                onClick={handleBackfillNames}
+                disabled={backfilling}
+                className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline disabled:opacity-50"
+              >
+                {backfilling && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {backfilling ? ci.backfillNamesRunning : ci.backfillNames}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {!isConnected && <HowItWorks />}
 

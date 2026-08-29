@@ -104,6 +104,33 @@ export async function getLongLivedToken(
   }
 }
 
+/**
+ * Perpanjang long-lived token (~60 hari lagi) tanpa OAuth ulang.
+ * Syarat Meta: token masih hidup dan usianya minimal 24 jam.
+ * Gagal (mis. sudah kedaluwarsa) → null, caller harus minta user reconnect.
+ */
+export async function refreshLongLivedToken(
+  longLivedToken: string
+): Promise<{ accessToken: string; expiresIn: number } | null> {
+  try {
+    const params = new URLSearchParams({
+      grant_type: 'ig_refresh_token',
+      access_token: longLivedToken,
+    });
+    const res = await fetch(`${GRAPH_BASE}/refresh_access_token?${params.toString()}`);
+    if (!res.ok) {
+      console.warn('[instagram/oauth] refresh token gagal:', res.status, await res.text());
+      return null;
+    }
+    const json = (await res.json()) as { access_token?: string; expires_in?: number };
+    if (!json.access_token) return null;
+    return { accessToken: json.access_token, expiresIn: json.expires_in ?? 0 };
+  } catch (err) {
+    console.warn('[instagram/oauth] refresh token error:', err);
+    return null;
+  }
+}
+
 /** Ambil user_id + username akun yang terhubung. */
 export async function getInstagramProfile(token: string): Promise<InstagramProfile | null> {
   try {
