@@ -1,9 +1,10 @@
 'use client';
 
 import { Suspense } from 'react';
-import { Target, Plus, Trash2, Pencil, Loader2 } from 'lucide-react';
+import { Target, Plus, Trash2, Pencil } from 'lucide-react';
 import { useBudget, type BudgetTab } from '@/hooks/useBudget';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { BudgetSelector } from '@/components/budget/BudgetSelector';
 import { BudgetFormModal } from '@/components/budget/BudgetFormModal';
 import { BudgetStatusActions } from '@/components/budget/BudgetStatusActions';
@@ -48,11 +49,7 @@ function BudgetForecastPageInner() {
 
   // Loading state
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   // No business
@@ -402,11 +399,7 @@ function BudgetForecastPageInner() {
 
 export default function BudgetForecastPage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-      </div>
-    }>
+    <Suspense fallback={<PageSkeleton />}>
       <BudgetForecastPageInner />
     </Suspense>
   );

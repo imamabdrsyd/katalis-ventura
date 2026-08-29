@@ -20,6 +20,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import type { Transaction } from '@/types';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { BankStatementImportModal } from '@/components/reconciliation/BankStatementImportModal';
 import { SideBySideMatcher } from '@/components/reconciliation/SideBySideMatcher';
 import { Tabs } from '@/components/ui/Tabs';
@@ -76,14 +77,7 @@ function ReconciliationPageInner() {
   } = useReconciliation();
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">{t.reconciliation.loadingData}</p>
-        </div>
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   if (!activeBusiness) {
@@ -499,11 +493,7 @@ function ReconciliationRow({
 
 export default function ReconciliationPage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto" />
-      </div>
-    }>
+    <Suspense fallback={<PageSkeleton />}>
       <ReconciliationPageInner />
     </Suspense>
   );
