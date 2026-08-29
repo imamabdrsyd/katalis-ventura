@@ -6,6 +6,7 @@ import { MapPin, PackageOpen, UserPlus, Lock, MoreVertical, Pencil, Archive, Rot
 import type { Business } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { getSectorIcon } from '@/lib/sectorIcons';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface BusinessCardProps {
   business: Business;
@@ -63,6 +64,7 @@ export function BusinessCard({
   onPeriodLock,
   showActions = true,
 }: BusinessCardProps) {
+  const { t } = useLanguage();
   // Kalau parent sudah pass creatorName (batch-fetched), pakai itu — skip fetch.
   // Kalau tidak, fallback ke fetch per-card (untuk caller lama yang belum di-update).
   const useFallbackFetch = creatorNameProp === undefined;
@@ -71,7 +73,7 @@ export function BusinessCard({
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const creatorName = useFallbackFetch ? fallbackName : (creatorNameProp || 'Unknown');
+  const creatorName = useFallbackFetch ? fallbackName : (creatorNameProp || t.businesses.unknownCreator);
 
   // Close kebab menu on outside click
   useEffect(() => {
@@ -98,16 +100,16 @@ export function BusinessCard({
         );
 
         const data = await response.json();
-        setFallbackName(data.full_name || 'Unknown');
+        setFallbackName(data.full_name || t.businesses.unknownCreator);
       } catch {
-        setFallbackName('Unknown');
+        setFallbackName(t.businesses.unknownCreator);
       } finally {
         setLoading(false);
       }
     };
 
     fetchCreatorInfo();
-  }, [business.created_by, useFallbackFetch]);
+  }, [business.created_by, useFallbackFetch, t]);
 
   // Tunda single-click sebentar supaya double-click bisa membatalkannya.
   // Tanpa ini, double-click selalu men-trigger onSelect dulu (yang men-set
@@ -189,7 +191,7 @@ export function BusinessCard({
                 setMenuOpen((v) => !v);
               }}
               className="p-2 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              title="Menu"
+              title={t.businesses.menuLabel}
             >
               <MoreVertical className="w-5 h-5" />
             </button>
@@ -205,7 +207,7 @@ export function BusinessCard({
                     className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
                     <Pencil className="w-4 h-4" />
-                    Edit
+                    {t.common.edit}
                   </button>
                 )}
                 {onArchive && (
@@ -218,7 +220,7 @@ export function BusinessCard({
                     className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   >
                     <Archive className="w-4 h-4" />
-                    Archive
+                    {t.businesses.archive}
                   </button>
                 )}
               </div>
@@ -233,7 +235,7 @@ export function BusinessCard({
                 setMenuOpen((v) => !v);
               }}
               className="p-2 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              title="Menu"
+              title={t.businesses.menuLabel}
             >
               <MoreVertical className="w-5 h-5" />
             </button>
@@ -249,7 +251,7 @@ export function BusinessCard({
                     className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
                   >
                     <RotateCcw className="w-4 h-4" />
-                    Restore
+                    {t.businesses.restore}
                   </button>
                 )}
                 {onHardDelete && (
@@ -262,7 +264,7 @@ export function BusinessCard({
                     className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
-                    Hapus Permanen
+                    {t.businesses.hardDelete}
                   </button>
                 )}
               </div>
@@ -273,7 +275,7 @@ export function BusinessCard({
 
       <div className="space-y-2 mb-4">
         <div className="flex justify-between text-sm">
-          <span className="text-gray-500 dark:text-gray-400">Business Capital</span>
+          <span className="text-gray-500 dark:text-gray-400">{t.businesses.businessCapital}</span>
           <span className="font-semibold text-gray-800 dark:text-gray-100">
             {formatCurrency(totalAssets)}
           </span>
@@ -297,7 +299,7 @@ export function BusinessCard({
               className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
             >
               <UserPlus className="w-4 h-4" />
-              Undang
+              {t.businesses.invite}
             </button>
           )}
           {onPeriodLock && (
@@ -311,10 +313,12 @@ export function BusinessCard({
                   ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50'
                   : 'text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
-              title={business.closed_until_date ? `Dikunci s/d ${business.closed_until_date}` : 'Kunci Periode'}
+              title={business.closed_until_date
+                ? t.businesses.lockedUntil.replace('{date}', business.closed_until_date)
+                : t.businesses.periodLock}
             >
               <Lock className="w-4 h-4" />
-              {business.closed_until_date ? 'Terkunci' : 'Kunci Periode'}
+              {business.closed_until_date ? t.businesses.locked : t.businesses.periodLock}
             </button>
           )}
         </div>
@@ -322,24 +326,24 @@ export function BusinessCard({
 
       <div className="flex items-center justify-between text-sm mt-auto pt-4">
         <div className="text-gray-500 dark:text-gray-400">
-          <span className="text-xs">Created by: </span>
+          <span className="text-xs">{t.businesses.createdBy} </span>
           <span className="font-medium text-gray-700 dark:text-gray-300">
-            {loading ? 'Loading...' : creatorName}
+            {loading ? t.common.loading : creatorName}
           </span>
         </div>
         <div className="flex items-center gap-2">
           {business.closed_until_date && !business.is_archived && (
             <span className="flex items-center gap-1 px-2 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 text-xs font-medium rounded-lg">
               <Lock className="w-3 h-3" />
-              s/d {business.closed_until_date}
+              {t.businesses.lockedUntilShort.replace('{date}', business.closed_until_date)}
             </span>
           )}
           {isActive && !business.is_archived && (
-            <span className="text-sm font-semibold text-emerald-500 dark:text-emerald-400">Active</span>
+            <span className="text-sm font-semibold text-emerald-500 dark:text-emerald-400">{t.businesses.activeBusiness}</span>
           )}
           {business.is_archived && (
             <span className="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs font-semibold rounded-lg">
-              Archived
+              {t.businesses.archivedBusiness}
             </span>
           )}
         </div>

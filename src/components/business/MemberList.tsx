@@ -8,21 +8,16 @@ import { Modal } from '@/components/ui/Modal';
 import { createClient } from '@/lib/supabase';
 import { saveContactFromTransaction } from '@/lib/api/contacts';
 import { normalizeRole } from '@/lib/roles';
+import { useLanguage } from '@/context/LanguageContext';
+import { renderWithStrong } from '@/components/ui/RichText';
 import type { ContactType } from '@/types';
 
-const ROLE_BADGE: Record<string, { label: string; className: string }> = {
-  business_manager: {
-    label: 'Business Manager',
-    className: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 ring-1 ring-inset ring-indigo-500/20',
-  },
-  investor: {
-    label: 'Investor',
-    className: 'bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 ring-1 ring-inset ring-sky-500/20',
-  },
-  superadmin: {
-    label: 'Super Admin',
-    className: 'bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 ring-1 ring-inset ring-gray-500/20',
-  },
+// Warna saja — label rolenya dibaca dari kamus i18n di dalam komponen
+// (konstanta modul-level tak bisa memanggil hook).
+const ROLE_BADGE_CLASS: Record<string, string> = {
+  business_manager: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 ring-1 ring-inset ring-indigo-500/20',
+  investor: 'bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 ring-1 ring-inset ring-sky-500/20',
+  superadmin: 'bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 ring-1 ring-inset ring-gray-500/20',
 };
 
 function getInitials(name: string): string {
@@ -55,9 +50,10 @@ function KebabMenu({
   onContactResult: (msg: string, isError?: boolean) => void;
   onOpenChange?: (open: boolean) => void;
 }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const name = member.profile?.full_name || 'Unknown User';
+  const name = member.profile?.full_name || t.members.unknownUser;
 
   useEffect(() => {
     onOpenChange?.(open);
@@ -88,12 +84,12 @@ function KebabMenu({
 
       const result = await saveContactFromTransaction(businessId, name, contactType, user.id);
       if (!result.created) {
-        onContactResult(`${name} sudah ada di daftar kontak`);
+        onContactResult(t.members.contactExists.replace('{name}', name));
       } else {
-        onContactResult(`${name} berhasil ditambahkan ke kontak`);
+        onContactResult(t.members.contactAdded.replace('{name}', name));
       }
     } catch {
-      onContactResult('Gagal menambahkan kontak. Coba lagi.', true);
+      onContactResult(t.members.contactFailed, true);
     }
   };
 
@@ -102,7 +98,7 @@ function KebabMenu({
       <button
         onClick={() => setOpen((v) => !v)}
         className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-        title="Opsi anggota"
+        title={t.members.memberOptions}
       >
         <MoreVertical className="w-4 h-4" />
       </button>
@@ -113,14 +109,14 @@ function KebabMenu({
             className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
           >
             <UserPlus className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-            Tambah ke Kontak
+            {t.members.addToContact}
           </button>
           <button
             onClick={() => { setOpen(false); onRemove(); }}
             className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
           >
             <UserMinus className="w-4 h-4" />
-            Keluarkan Anggota
+            {t.members.removeMember}
           </button>
         </div>
       )}
@@ -129,6 +125,7 @@ function KebabMenu({
 }
 
 export function MemberList({ members, loading, businessId, isCreator, onMemberRemoved }: MemberListProps) {
+  const { t } = useLanguage();
   const [removeConfirm, setRemoveConfirm] = useState<{ memberId: string; memberName: string } | null>(null);
   const [removing, setRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
@@ -156,11 +153,11 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
         onMemberRemoved?.();
       } else {
         const data = await response.json().catch(() => ({}));
-        setRemoveError(data.error || 'Gagal mengeluarkan anggota');
+        setRemoveError(data.error || t.members.removeFailed);
       }
     } catch (error) {
       console.error('Failed to remove member:', error);
-      setRemoveError('Gagal mengeluarkan anggota. Coba lagi.');
+      setRemoveError(t.members.removeFailedRetry);
     } finally {
       setRemoving(false);
     }
@@ -192,8 +189,8 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
             <Users className="w-7 h-7 text-indigo-400 dark:text-indigo-300" />
           </div>
         </div>
-        <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100 mb-1">Belum ada anggota</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">Undang anggota untuk bergabung ke bisnis ini</p>
+        <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100 mb-1">{t.members.noMembers}</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{t.members.inviteMembers}</p>
       </div>
     );
   }
@@ -212,9 +209,13 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
       )}
       <div className="space-y-3">
         {members.map((member) => {
-          const name = member.profile?.full_name || 'Unknown User';
+          const name = member.profile?.full_name || t.members.unknownUser;
           const normalizedRole = normalizeRole(member.role) ?? member.role;
-          const badge = ROLE_BADGE[normalizedRole] || ROLE_BADGE.business_manager;
+          const badgeClass = ROLE_BADGE_CLASS[normalizedRole] || ROLE_BADGE_CLASS.business_manager;
+          const badgeLabel =
+            normalizedRole === 'investor' ? t.roles.investor
+            : normalizedRole === 'superadmin' ? t.roles.superAdmin
+            : t.roles.businessManager;
           const canRemove = isCreator && !member.is_creator;
           const isSuperadmin = normalizedRole === 'superadmin';
           const highlight = member.is_creator || isSuperadmin;
@@ -261,17 +262,17 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
                 <div className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
                   {member.is_creator && (
                     <>
-                      <span className="font-medium text-gray-600 dark:text-gray-300">Creator</span>
+                      <span className="font-medium text-gray-600 dark:text-gray-300">{t.roles.creator}</span>
                       <span className="text-gray-300 dark:text-gray-600">•</span>
                     </>
                   )}
-                  <span className="truncate">Bergabung {formatDate(member.joined_at)}</span>
+                  <span className="truncate">{t.members.joinedAt.replace('{date}', formatDate(member.joined_at))}</span>
                 </div>
               </div>
 
               {/* Badge */}
-              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${badge.className}`}>
-                {badge.label}
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${badgeClass}`}>
+                {badgeLabel}
               </span>
 
               {/* Kebab menu */}
@@ -300,11 +301,11 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
         <Modal
           isOpen={true}
           onClose={() => { if (!removing) { setRemoveConfirm(null); setRemoveError(null); } }}
-          title="Keluarkan Anggota"
+          title={t.members.removeMember}
         >
           <div className="space-y-4">
             <p className="text-gray-600 dark:text-gray-300">
-              Apakah Anda yakin ingin mengeluarkan <span className="font-semibold">{removeConfirm.memberName}</span> dari bisnis ini?
+              {renderWithStrong(t.members.removeConfirm, { name: removeConfirm.memberName })}
             </p>
             {removeError && (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -317,14 +318,14 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
                 disabled={removing}
                 className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
               >
-                Batal
+                {t.common.cancel}
               </button>
               <button
                 onClick={handleRemoveMember}
                 disabled={removing}
                 className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
               >
-                {removing ? 'Menghapus...' : 'Keluarkan'}
+                {removing ? t.common.deleting : t.members.removeAction}
               </button>
             </div>
           </div>

@@ -1228,6 +1228,15 @@ export interface Translations {
     hardDelete: string;
     hardDeleting: string;
     periodLock: string;
+    businessCapital: string;
+    createdBy: string;
+    unknownCreator: string;
+    menuLabel: string;
+    restore: string;
+    invite: string;
+    locked: string;
+    lockedUntil: string;
+    lockedUntilShort: string;
   };
 
   // Business Form
@@ -1728,8 +1737,20 @@ export interface Translations {
     validDays: string;
     generate: string;
     generating: string;
-    activeCodes: string;
+    historyTitle: string;
     noCodes: string;
+    closeNotification: string;
+    genericError: string;
+    loadFailed: string;
+    minUses: string;
+    minDays: string;
+    createSuccess: string;
+    createFailed: string;
+    copied: string;
+    deactivateSuccess: string;
+    deactivateFailed: string;
+    deleteSuccess: string;
+    deleteFailed: string;
     copyCode: string;
     expired: string;
     deactivated: string;
@@ -1744,6 +1765,17 @@ export interface Translations {
     noMembers: string;
     inviteMembers: string;
     joinedAt: string;
+    unknownUser: string;
+    memberOptions: string;
+    addToContact: string;
+    removeMember: string;
+    removeConfirm: string;
+    removeAction: string;
+    removeFailed: string;
+    removeFailedRetry: string;
+    contactExists: string;
+    contactAdded: string;
+    contactFailed: string;
   };
 
   // AI Chat
