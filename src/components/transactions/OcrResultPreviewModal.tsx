@@ -27,6 +27,7 @@ import {
 } from '@/lib/ocr/multiLineBuilder';
 import type { MultiLineFormData } from '@/components/transactions/MultiLineJournalForm';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface OcrResultPreviewPanelProps {
   result: OcrResult | null;
@@ -36,36 +37,25 @@ interface OcrResultPreviewPanelProps {
   onClose: () => void;
 }
 
-const CATEGORY_LABEL_ID: Record<string, string> = {
-  EARN: 'Pendapatan',
-  OPEX: 'Beban Operasional',
-  VAR: 'HPP / Variabel',
-  CAPEX: 'Belanja Modal',
-  TAX: 'Pajak',
-  FIN: 'Pembiayaan',
-};
-
+// Label jenis biaya ada di kamus (`ocrPreview.charge*`) — konstanta modul-level
+// tak bisa memanggil hook, jadi di sini tinggal warna & ikonnya.
 const CHARGE_META: Record<
   OcrCharge['type'],
-  { label: string; tint: string; icon: typeof Percent }
+  { tint: string; icon: typeof Percent }
 > = {
   tax: {
-    label: 'Pajak',
     tint: 'text-amber-600 dark:text-amber-300 bg-amber-50/70 dark:bg-amber-900/15 ring-amber-200/60 dark:ring-amber-700/40',
     icon: Percent,
   },
   service: {
-    label: 'Servis',
     tint: 'text-violet-600 dark:text-violet-300 bg-violet-50/70 dark:bg-violet-900/15 ring-violet-200/60 dark:ring-violet-700/40',
     icon: ConciergeBell,
   },
   discount: {
-    label: 'Diskon',
     tint: 'text-emerald-600 dark:text-emerald-300 bg-emerald-50/70 dark:bg-emerald-900/15 ring-emerald-200/60 dark:ring-emerald-700/40',
     icon: TagIcon,
   },
   other: {
-    label: 'Lainnya',
     tint: 'text-slate-600 dark:text-slate-300 bg-slate-50/80 dark:bg-slate-800/40 ring-slate-200/60 dark:ring-slate-700/40',
     icon: TagIcon,
   },
@@ -83,7 +73,13 @@ export function OcrResultPreviewModal({
   onChooseMultiLine,
   onClose,
 }: OcrResultPreviewPanelProps) {
+  const { t } = useLanguage();
   const [collapsed, setCollapsed] = useState(false);
+  const chargeLabel = (type: OcrCharge['type']) =>
+    type === 'tax' ? t.ocrPreview.chargeTax
+    : type === 'service' ? t.ocrPreview.chargeService
+    : type === 'discount' ? t.ocrPreview.chargeDiscount
+    : t.ocrPreview.chargeOther;
 
   const multiLineEnabled = useMemo(
     () => (result ? shouldUseMultiLine(result) : false),
@@ -106,21 +102,21 @@ export function OcrResultPreviewModal({
           type="button"
           onClick={() => setCollapsed(false)}
           className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
-          title="Buka preview hasil OCR"
-          aria-label="Buka preview hasil OCR"
+          title={t.ocrPreview.expand}
+          aria-label={t.ocrPreview.expand}
         >
           <ChevronRight className="w-4 h-4" />
         </button>
         <div className="rotate-180 [writing-mode:vertical-rl] text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400 flex items-center gap-2 py-1">
           <ScanText className="w-3.5 h-3.5" />
-          Hasil Scan
+          {t.ocrPreview.railTitle}
         </div>
         <button
           type="button"
           onClick={onClose}
           className="mt-auto p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-          title="Tutup preview"
-          aria-label="Tutup preview"
+          title={t.ocrPreview.close}
+          aria-label={t.ocrPreview.close}
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -144,10 +140,10 @@ export function OcrResultPreviewModal({
           </div>
           <div className="min-w-0">
             <h3 className="text-[13px] font-semibold text-gray-900 dark:text-gray-50 leading-tight">
-              Hasil Scan Struk
+              {t.ocrPreview.title}
             </h3>
             <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight mt-0.5">
-              Pilih cara pencatatan di bawah
+              {t.ocrPreview.subtitle}
             </p>
           </div>
         </div>
@@ -156,8 +152,8 @@ export function OcrResultPreviewModal({
             type="button"
             onClick={() => setCollapsed(true)}
             className="p-1.5 rounded-md hover:bg-white/80 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
-            title="Sembunyikan panel"
-            aria-label="Sembunyikan panel"
+            title={t.ocrPreview.collapse}
+            aria-label={t.ocrPreview.collapse}
           >
             <ChevronLeft className="w-3.5 h-3.5" />
           </button>
@@ -165,8 +161,8 @@ export function OcrResultPreviewModal({
             type="button"
             onClick={onClose}
             className="p-1.5 rounded-md hover:bg-white/80 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
-            title="Tutup preview"
-            aria-label="Tutup preview"
+            title={t.ocrPreview.close}
+            aria-label={t.ocrPreview.close}
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -184,7 +180,7 @@ export function OcrResultPreviewModal({
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.14em] text-indigo-100/80 font-medium flex items-center gap-1">
                     <Receipt className="w-3 h-3" />
-                    Total
+                    {t.ocrPreview.total}
                   </div>
                   <CopyableText
                     value={String(parsed.total)}
@@ -193,10 +189,10 @@ export function OcrResultPreviewModal({
                     copyButtonClass="text-indigo-200 hover:text-white"
                   />
                 </div>
-                {parsed.category && CATEGORY_LABEL_ID[parsed.category] && (
+                {parsed.category && t.categories[parsed.category as keyof typeof t.categories] && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/15 backdrop-blur-sm text-[10px] font-medium text-white ring-1 ring-white/20 shrink-0">
                     <Sparkles className="w-2.5 h-2.5" />
-                    {CATEGORY_LABEL_ID[parsed.category]}
+                    {t.categories[parsed.category as keyof typeof t.categories]}
                   </span>
                 )}
               </div>
@@ -208,12 +204,12 @@ export function OcrResultPreviewModal({
         {(parsed.vendor || parsed.date) && (
           <div className="px-4 grid grid-cols-2 gap-2">
             {parsed.vendor && (
-              <MetaCell icon={Store} label="Vendor" value={parsed.vendor} />
+              <MetaCell icon={Store} label={t.ocrPreview.vendor} value={parsed.vendor} />
             )}
             {parsed.date && (
               <MetaCell
                 icon={Calendar}
-                label="Tanggal"
+                label={t.ocrPreview.date}
                 value={parsed.date}
                 display={formatDate(parsed.date)}
               />
@@ -232,7 +228,7 @@ export function OcrResultPreviewModal({
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400 font-semibold">
-                  Item
+                  {t.ocrPreview.items}
                 </span>
                 <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-gray-100 dark:bg-gray-700 text-[10px] font-semibold text-gray-600 dark:text-gray-300">
                   {items.length}
@@ -288,7 +284,7 @@ export function OcrResultPreviewModal({
         {charges.length > 0 && (
           <div className="px-4 pb-3">
             <div className="text-[10px] uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400 font-semibold mb-2">
-              Biaya Tambahan
+              {t.ocrPreview.charges}
             </div>
             <ul className="space-y-1">
               {charges.map((charge, idx) => {
@@ -312,7 +308,7 @@ export function OcrResultPreviewModal({
                           className="text-[12px] font-medium text-gray-800 dark:text-gray-100 leading-tight"
                         />
                         <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
-                          {meta.label}
+                          {chargeLabel(charge.type)}
                         </div>
                       </div>
                     </div>
@@ -339,8 +335,7 @@ export function OcrResultPreviewModal({
             <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-amber-50/70 dark:bg-amber-900/15 ring-1 ring-amber-200/60 dark:ring-amber-700/30">
               <AlertCircle className="w-3.5 h-3.5 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
               <p className="text-[11px] leading-snug text-amber-700 dark:text-amber-200">
-                Tidak ada item terdeteksi. Hanya total{parsed.total ? ' dan info dasar' : ''}{' '}
-                yang dipakai untuk prefill form.
+                {parsed.total ? t.ocrPreview.noItemsWithTotal : t.ocrPreview.noItems}
               </p>
             </div>
           </div>
@@ -356,14 +351,14 @@ export function OcrResultPreviewModal({
           className="group w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 active:from-indigo-700 active:to-indigo-800 text-white text-[12px] font-semibold shadow-sm shadow-indigo-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all"
           title={
             !multiLineEnabled
-              ? 'Hasil scan tidak punya cukup item untuk jurnal multi-baris'
+              ? t.ocrPreview.multiLineDisabled
               : accounts.length === 0
-                ? 'Daftar akun belum siap'
+                ? t.ocrPreview.accountsNotReady
                 : undefined
           }
         >
           <Layers className="w-3.5 h-3.5" />
-          Jurnal Multi-Baris
+          {t.ocrPreview.multiLine}
           {multiLineEnabled && items.length > 0 && (
             <span className="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-white/20 text-[10px] font-bold tabular-nums">
               {items.length + charges.length}
@@ -376,11 +371,11 @@ export function OcrResultPreviewModal({
           className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-[12px] font-medium transition-colors"
         >
           <FileText className="w-3.5 h-3.5" />
-          Isi Form Tunggal
+          {t.ocrPreview.singleForm}
         </button>
         {!multiLineEnabled && items.length > 0 && (
           <p className="text-[10px] text-gray-400 dark:text-gray-500 text-center leading-snug pt-0.5">
-            Cuma {items.length} item terdeteksi — multi-baris butuh ≥2 item atau 1 item + 1 biaya.
+            {t.ocrPreview.tooFewItems.replace('{n}', String(items.length))}
           </p>
         )}
       </div>
@@ -436,6 +431,7 @@ function CopyableText({
   alignEnd?: boolean;
   copyButtonClass?: string;
 }) {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async (e: React.MouseEvent) => {
@@ -462,8 +458,8 @@ function CopyableText({
         className={`opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity p-0.5 rounded shrink-0 ${
           copyButtonClass ?? 'text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400'
         }`}
-        title={copied ? 'Tersalin!' : 'Salin'}
-        aria-label="Salin teks"
+        title={copied ? t.ocrPreview.copied : t.ocrPreview.copy}
+        aria-label={t.ocrPreview.copyText}
       >
         {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
       </button>

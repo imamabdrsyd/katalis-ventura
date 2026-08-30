@@ -1352,6 +1352,101 @@ export interface Translations {
     icons: Record<string, string>;
   };
 
+  // Invoice — form & editor baris item
+  invoiceForm: {
+    sectionInvoice: string;
+    sectionCustomer: string;
+    sectionDescription: string;
+    sectionTax: string;
+    sectionSummary: string;
+    sectionNotes: string;
+    invoiceNumber: string;
+    invoiceDate: string;
+    dueDate: string;
+    customerName: string;
+    customerNamePlaceholder: string;
+    customerPhone: string;
+    customerId: string;
+    customerIdPlaceholder: string;
+    descriptionPlaceholder: string;
+    columnLabel: string;
+    taxType: string;
+    taxRate: string;
+    taxNone: string;
+    taxIncluded: string;
+    taxExcluded: string;
+    subtotal: string;
+    vat: string;
+    vatIncluded: string;
+    total: string;
+    notesPlaceholder: string;
+    saveInvoice: string;
+    updateInvoice: string;
+    errNumberRequired: string;
+    errDateRequired: string;
+    errCustomerRequired: string;
+    errLineItems: string;
+    qty: string;
+    unitPrice: string;
+    lineTotal: string;
+    removeItem: string;
+    addItem: string;
+    itemNamePlaceholder: string;
+  };
+
+  // Preview hasil OCR struk
+  ocrPreview: {
+    railTitle: string;
+    title: string;
+    subtitle: string;
+    expand: string;
+    collapse: string;
+    close: string;
+    total: string;
+    vendor: string;
+    date: string;
+    items: string;
+    charges: string;
+    chargeTax: string;
+    chargeService: string;
+    chargeDiscount: string;
+    chargeOther: string;
+    noItems: string;
+    noItemsWithTotal: string;
+    multiLine: string;
+    singleForm: string;
+    multiLineDisabled: string;
+    accountsNotReady: string;
+    tooFewItems: string;
+    copy: string;
+    copied: string;
+    copyText: string;
+  };
+
+  // Modal konfigurasi klasifikasi beban di Income Statement
+  incomeStatementConfig: {
+    title: string;
+    subtitle: string;
+    override: string;
+    overrideTooltip: string;
+    noAccounts: string;
+    accountCount: string;
+    detailTitle: string;
+    detailHint: string;
+    accountCode: string;
+    accountName: string;
+    defaultClassification: string;
+    currentClassification: string;
+    description: string;
+    pickAccount: string;
+    moveToCogs: string;
+    moveToOpex: string;
+    resetDefault: string;
+    unsaved: string;
+    noChanges: string;
+    saveFailed: string;
+  };
+
   // Income Statement
   incomeStatement: {
     title: string;

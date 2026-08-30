@@ -2,6 +2,7 @@
 
 import { Plus, Trash2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface LineItemInput {
   item_name: string;
@@ -15,16 +16,18 @@ interface InvoiceLineItemEditorProps {
   itemLabel?: string;
 }
 
-function getPlaceholder(itemLabel?: string): string {
-  const label = (itemLabel || 'item').toLowerCase();
-  return `Nama ${label}...`;
-}
-
 export function InvoiceLineItemEditor({
   items,
   onChange,
   itemLabel = 'Item',
 }: InvoiceLineItemEditorProps) {
+  const { t } = useLanguage();
+  // `itemLabel` diketik pemilik (konten invoice), kata pengantarnya chrome — jadi
+  // template-nya di kamus, isinya tetap apa adanya dari user.
+  const placeholder = t.invoiceForm.itemNamePlaceholder.replace(
+    '{label}',
+    (itemLabel || 'item').toLowerCase()
+  );
   const handleItemChange = (
     index: number,
     field: keyof LineItemInput,
@@ -54,13 +57,13 @@ export function InvoiceLineItemEditor({
           {itemLabel}
         </span>
         <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-          Qty
+          {t.invoiceForm.qty}
         </span>
         <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-          Harga Satuan
+          {t.invoiceForm.unitPrice}
         </span>
         <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">
-          Total
+          {t.invoiceForm.lineTotal}
         </span>
         <span />
       </div>
@@ -85,7 +88,7 @@ export function InvoiceLineItemEditor({
                   onChange={(e) =>
                     handleItemChange(index, 'item_name', e.target.value)
                   }
-                  placeholder={getPlaceholder(itemLabel)}
+                  placeholder={placeholder}
                   className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
                 />
               </div>
@@ -93,7 +96,7 @@ export function InvoiceLineItemEditor({
               {/* Quantity */}
               <div>
                 <label className="sm:hidden text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">
-                  Qty
+                  {t.invoiceForm.qty}
                 </label>
                 <input
                   type="number"
@@ -113,7 +116,7 @@ export function InvoiceLineItemEditor({
               {/* Unit price */}
               <div>
                 <label className="sm:hidden text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">
-                  Harga Satuan
+                  {t.invoiceForm.unitPrice}
                 </label>
                 <input
                   type="text"
@@ -135,7 +138,7 @@ export function InvoiceLineItemEditor({
               {/* Row total */}
               <div className="flex items-center sm:justify-end">
                 <span className="sm:hidden text-xs font-medium text-gray-500 dark:text-gray-400 mr-2">
-                  Total:
+                  {t.invoiceForm.lineTotal}:
                 </span>
                 <span className="text-sm font-medium text-gray-800 dark:text-gray-100 py-2">
                   {formatCurrency(rowTotal)}
@@ -149,7 +152,7 @@ export function InvoiceLineItemEditor({
                     type="button"
                     onClick={() => handleRemoveItem(index)}
                     className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-                    title="Hapus item"
+                    title={t.invoiceForm.removeItem}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -169,7 +172,7 @@ export function InvoiceLineItemEditor({
         className="mt-3 flex items-center gap-1.5 text-sm font-medium text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors px-1"
       >
         <Plus className="w-4 h-4" />
-        Tambah Item
+        {t.invoiceForm.addItem}
       </button>
     </div>
   );

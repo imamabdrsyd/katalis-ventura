@@ -38,6 +38,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // `app/layout.tsx` mencetak <html lang="id"> di server dan tak pernah berubah,
+  // jadi saat user pindah ke Inggris screen reader masih melafalkan halaman
+  // sebagai bahasa Indonesia. Sinkronkan atribut itu ke locale aktif.
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
+
   const setLocale = useCallback((newLocale: Locale) => {
     setLocaleState(newLocale);
     try {

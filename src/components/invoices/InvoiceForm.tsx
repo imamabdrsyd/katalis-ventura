@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import type { Invoice, InvoiceFormData, InvoiceTaxType } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { InvoiceLineItemEditor } from './InvoiceLineItemEditor';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface InvoiceFormProps {
   onSubmit: (data: InvoiceFormData) => Promise<void>;
@@ -42,11 +43,7 @@ function addDays(dateStr: string, days: number): string {
   return d.toISOString().split('T')[0];
 }
 
-const TAX_TYPE_OPTIONS: { value: InvoiceTaxType; label: string }[] = [
-  { value: 'none', label: 'Tanpa Pajak' },
-  { value: 'included', label: 'PPN (termasuk harga)' },
-  { value: 'excluded', label: 'PPN (belum termasuk)' },
-];
+const TAX_TYPES: InvoiceTaxType[] = ['none', 'included', 'excluded'];
 
 export function InvoiceForm({
   onSubmit,
@@ -77,6 +74,7 @@ export function InvoiceForm({
   const [customerName, setCustomerName] = useState(
     invoice?.customer_name || initPrefill?.customer_name || ''
   );
+  const { t } = useLanguage();
   const [customerPhone, setCustomerPhone] = useState(
     invoice?.customer_phone || initPrefill?.customer_phone || ''
   );
@@ -150,16 +148,16 @@ export function InvoiceForm({
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!invoiceNumber.trim()) newErrors.invoiceNumber = 'Nomor invoice harus diisi';
-    if (!invoiceDate) newErrors.invoiceDate = 'Tanggal invoice harus diisi';
-    if (!customerName.trim()) newErrors.customerName = 'Nama customer harus diisi';
+    if (!invoiceNumber.trim()) newErrors.invoiceNumber = t.invoiceForm.errNumberRequired;
+    if (!invoiceDate) newErrors.invoiceDate = t.invoiceForm.errDateRequired;
+    if (!customerName.trim()) newErrors.customerName = t.invoiceForm.errCustomerRequired;
 
     // Validate line items
     const hasValidItem = lineItems.some(
       (item) => item.item_name.trim() && item.quantity > 0 && item.unit_price > 0
     );
     if (!hasValidItem) {
-      newErrors.lineItems = 'Minimal satu item harus diisi lengkap';
+      newErrors.lineItems = t.invoiceForm.errLineItems;
     }
 
     setErrors(newErrors);
@@ -190,6 +188,11 @@ export function InvoiceForm({
     await onSubmit(data);
   };
 
+  const taxTypeLabel = (type: InvoiceTaxType) =>
+    type === 'included' ? t.invoiceForm.taxIncluded
+    : type === 'excluded' ? t.invoiceForm.taxExcluded
+    : t.invoiceForm.taxNone;
+
   const sectionHeading =
     'text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3';
 
@@ -197,11 +200,11 @@ export function InvoiceForm({
     <form onSubmit={handleSubmit} className="space-y-8">
       {/* Section 1: Info Invoice */}
       <div>
-        <h3 className={sectionHeading}>Info Invoice</h3>
+        <h3 className={sectionHeading}>{t.invoiceForm.sectionInvoice}</h3>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Nomor Invoice *
+              {t.invoiceForm.invoiceNumber}
             </label>
             <input
               type="text"
@@ -229,7 +232,7 @@ export function InvoiceForm({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Tanggal Invoice *
+                {t.invoiceForm.invoiceDate}
               </label>
               <input
                 type="date"
@@ -254,7 +257,7 @@ export function InvoiceForm({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Jatuh Tempo
+                {t.invoiceForm.dueDate}
               </label>
               <input
                 type="date"
@@ -269,11 +272,11 @@ export function InvoiceForm({
 
       {/* Section 2: Info Customer */}
       <div>
-        <h3 className={sectionHeading}>Info Customer</h3>
+        <h3 className={sectionHeading}>{t.invoiceForm.sectionCustomer}</h3>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Nama Customer *
+              {t.invoiceForm.customerName}
             </label>
             <input
               type="text"
@@ -289,7 +292,7 @@ export function InvoiceForm({
                 }
               }}
               className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
-              placeholder="Nama customer"
+              placeholder={t.invoiceForm.customerNamePlaceholder}
             />
             {errors.customerName && (
               <p className="text-sm text-red-500 dark:text-red-400 mt-1">
@@ -301,7 +304,7 @@ export function InvoiceForm({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                No. HP / Telepon
+                {t.invoiceForm.customerPhone}
               </label>
               <input
                 type="text"
@@ -313,14 +316,14 @@ export function InvoiceForm({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Customer ID
+                {t.invoiceForm.customerId}
               </label>
               <input
                 type="text"
                 value={customerIdLabel}
                 onChange={(e) => setCustomerIdLabel(e.target.value)}
                 className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
-                placeholder="Contoh: BDG-2026-01"
+                placeholder={t.invoiceForm.customerIdPlaceholder}
               />
             </div>
           </div>
@@ -329,13 +332,13 @@ export function InvoiceForm({
 
       {/* Section 3: Deskripsi */}
       <div>
-        <h3 className={sectionHeading}>Deskripsi</h3>
+        <h3 className={sectionHeading}>{t.invoiceForm.sectionDescription}</h3>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
           className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors resize-none"
-          placeholder="Deskripsi umum invoice (opsional)"
+          placeholder={t.invoiceForm.descriptionPlaceholder}
         />
       </div>
 
@@ -346,7 +349,7 @@ export function InvoiceForm({
             {itemLabel}
           </h3>
           <div className="flex items-center gap-1.5">
-            <span className="text-xs text-gray-400 dark:text-gray-500">Label kolom:</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">{t.invoiceForm.columnLabel}</span>
             <input
               type="text"
               value={itemLabel}
@@ -369,20 +372,20 @@ export function InvoiceForm({
 
       {/* Section 5: Pajak */}
       <div>
-        <h3 className={sectionHeading}>Pajak</h3>
+        <h3 className={sectionHeading}>{t.invoiceForm.sectionTax}</h3>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Tipe Pajak
+              {t.invoiceForm.taxType}
             </label>
             <select
               value={taxType}
               onChange={(e) => setTaxType(e.target.value as InvoiceTaxType)}
               className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
             >
-              {TAX_TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
+              {TAX_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {taxTypeLabel(type)}
                 </option>
               ))}
             </select>
@@ -391,7 +394,7 @@ export function InvoiceForm({
           {taxType !== 'none' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Tarif Pajak (%)
+                {t.invoiceForm.taxRate}
               </label>
               <input
                 type="number"
@@ -409,10 +412,10 @@ export function InvoiceForm({
 
       {/* Section 6: Ringkasan */}
       <div>
-        <h3 className={sectionHeading}>Ringkasan</h3>
+        <h3 className={sectionHeading}>{t.invoiceForm.sectionSummary}</h3>
         <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 space-y-2.5">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
+            <span className="text-gray-600 dark:text-gray-400">{t.invoiceForm.subtotal}</span>
             <span className="font-medium text-gray-800 dark:text-gray-100">
               {formatCurrency(summary.subtotal)}
             </span>
@@ -421,10 +424,10 @@ export function InvoiceForm({
           {taxType !== 'none' && (
             <div className="flex justify-between text-sm">
               <span className="text-gray-600 dark:text-gray-400">
-                PPN ({taxRate}%)
+                {t.invoiceForm.vat.replace('{rate}', String(taxRate))}
                 {taxType === 'included' && (
                   <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">
-                    (sudah termasuk)
+                    {t.invoiceForm.vatIncluded}
                   </span>
                 )}
               </span>
@@ -436,7 +439,7 @@ export function InvoiceForm({
 
           <div className="border-t border-gray-200 dark:border-gray-700 pt-2.5 flex justify-between">
             <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-              Total
+              {t.invoiceForm.total}
             </span>
             <span className="text-base font-bold text-indigo-600 dark:text-indigo-400">
               {formatCurrency(summary.total)}
@@ -447,13 +450,13 @@ export function InvoiceForm({
 
       {/* Section 7: Catatan */}
       <div>
-        <h3 className={sectionHeading}>Catatan</h3>
+        <h3 className={sectionHeading}>{t.invoiceForm.sectionNotes}</h3>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
           className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors resize-none"
-          placeholder="Catatan internal (opsional)"
+          placeholder={t.invoiceForm.notesPlaceholder}
         />
       </div>
 
@@ -465,14 +468,14 @@ export function InvoiceForm({
           disabled={loading}
           className="btn-ghost flex-1"
         >
-          Batal
+          {t.common.cancel}
         </button>
         <button
           type="submit"
           disabled={loading}
           className="btn-primary-glow flex-1"
         >
-          {loading ? 'Menyimpan...' : invoice ? 'Update Invoice' : 'Simpan Invoice'}
+          {loading ? t.common.saving : invoice ? t.invoiceForm.updateInvoice : t.invoiceForm.saveInvoice}
         </button>
       </div>
     </form>
