@@ -59,6 +59,7 @@ export interface Translations {
     noActiveBusiness: string;
     selectOrCreateBusiness: string;
     noTransactions: string;
+    contactSaveFailed: string;
   };
 
   // Label 6 kategori transaksi (+ SETTLE untuk pelunasan)
@@ -470,6 +471,7 @@ export interface Translations {
   };
 
   importModal: {
+    batchRecordFailed: string;
     title: string;
     tabSmart: string;
     tabFull: string;
@@ -2625,6 +2627,8 @@ export interface Translations {
       useTemplate: string;
       templateLines: (n: number) => string;
       deleteTemplate: string;
+      templateSaveFailed: string;
+      templateDeleteFailed: string;
       amountRp: string;
       debitAccount: string;
       selectDebitAccount: string;

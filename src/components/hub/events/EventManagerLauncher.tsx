@@ -33,6 +33,7 @@ import {
   Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useConfirm } from '@/context/ConfirmContext';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { isManagerRole } from '@/lib/roles';
@@ -99,6 +100,7 @@ function formatFullDate(iso: string): string {
 export function EventManagerLauncher({ headerSlot }: Props) {
   const { activeBusinessId, user, userRole } = useBusinessContext();
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const e = t.events;
   const canManage = isManagerRole(userRole);
 
@@ -242,7 +244,7 @@ export function EventManagerLauncher({ headerSlot }: Props) {
 
   async function handleDeleteSession() {
     if (!selectedSession) return;
-    if (!confirm(e.deleteConfirm)) return;
+    if (!(await confirm({ title: e.deleteConfirm }))) return;
     setBusy(true);
     try {
       await deleteEventSession(selectedSession.id);
@@ -275,7 +277,7 @@ export function EventManagerLauncher({ headerSlot }: Props) {
 
   async function handleRemoveDate(date: EventSessionDate) {
     const taken = takenByDate.get(date.id) ?? 0;
-    if (!confirm(e.removeDateConfirm.replace('{n}', String(taken)))) return;
+    if (!(await confirm({ title: e.removeDateConfirm.replace('{n}', String(taken)) }))) return;
     setBusy(true);
     try {
       await deleteEventDate(date.id);
@@ -289,7 +291,7 @@ export function EventManagerLauncher({ headerSlot }: Props) {
   }
 
   async function handleMarkWinner(date: EventSessionDate) {
-    if (!confirm(e.markWinnerConfirm.replace('{date}', formatFullDate(date.event_date)))) return;
+    if (!(await confirm({ title: e.markWinnerConfirm.replace('{date}', formatFullDate(date.event_date)) }))) return;
     setBusy(true);
     try {
       await markEventDateWinner(date.id);
@@ -304,7 +306,7 @@ export function EventManagerLauncher({ headerSlot }: Props) {
   }
 
   async function handleCancelSlot(reg: EventRegistration) {
-    if (!confirm(e.cancelSlotConfirm.replace('{name}', reg.name))) return;
+    if (!(await confirm({ title: e.cancelSlotConfirm.replace('{name}', reg.name) }))) return;
     setBusy(true);
     try {
       await updateRegistrationStatus(reg.id, 'cancelled');

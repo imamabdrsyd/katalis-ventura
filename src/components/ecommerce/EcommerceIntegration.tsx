@@ -17,6 +17,7 @@ import {
   Link2,
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
+import { useConfirm } from '@/context/ConfirmContext';
 
 interface EcommerceConnection {
   id: string;
@@ -136,6 +137,7 @@ function HowItWorksSteps() {
 
 export function EcommerceIntegration({ businessId, canManage, onReady }: Props) {
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const ei = t.ecommerceIntegration;
   const PLATFORM_CONFIG = {
     shopee: { ...PLATFORM_BASE.shopee, description: ei.shopeeDesc },
@@ -232,7 +234,7 @@ export function EcommerceIntegration({ businessId, canManage, onReady }: Props) 
 
   const handleDisconnect = async () => {
     if (!shopeeConnection) return;
-    if (!confirm(ei.disconnectShopeeConfirm)) return;
+    if (!(await confirm({ title: ei.disconnectShopeeConfirm }))) return;
 
     setDisconnecting(true);
     try {

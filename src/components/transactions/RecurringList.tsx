@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { useConfirm } from '@/context/ConfirmContext';
 import { RefreshCw, Pause, Play, Square, Trash2, Calendar } from 'lucide-react';
 import { formatFrequency } from '@/lib/api/recurring';
 import type { RecurringTransaction } from '@/types';
@@ -31,6 +32,7 @@ interface RecurringListProps {
 }
 
 export function RecurringList({ items, loading, onPause, onResume, onStop, onDelete }: RecurringListProps) {
+  const confirm = useConfirm();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const handleAction = async (id: string, action: (id: string) => Promise<void>) => {
@@ -150,10 +152,12 @@ export function RecurringList({ items, loading, onPause, onResume, onStop, onDel
                 </button>
               )}
               <button
-                onClick={() => {
-                  if (confirm('Hapus transaksi berulang ini? Transaksi yang sudah dibuat tidak akan terpengaruh.')) {
-                    handleAction(item.id, onDelete);
-                  }
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: 'Hapus transaksi berulang ini?',
+                    message: 'Transaksi yang sudah dibuat tidak akan terpengaruh.',
+                  });
+                  if (ok) handleAction(item.id, onDelete);
                 }}
                 disabled={isLoading}
                 className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"

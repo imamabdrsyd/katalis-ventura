@@ -9,6 +9,7 @@ import {
   reorderShowcaseImages,
   upsertOmniChannel,
 } from '@/lib/api/omniChannel';
+import { useConfirm } from '@/context/ConfirmContext';
 
 interface Props {
   businessId: string;
@@ -22,6 +23,7 @@ interface Props {
 const MAX_IMAGES = 12;
 
 export function OmniChannelShowcase({ businessId, userId, channel, initialShowcase, hasOmniChannel, onChanged }: Props) {
+  const confirm = useConfirm();
   const [showcase, setShowcase] = useState<OmniChannelShowcaseImage[]>(
     [...initialShowcase].sort((a, b) => a.sort_order - b.sort_order)
   );
@@ -119,7 +121,7 @@ export function OmniChannelShowcase({ businessId, userId, channel, initialShowca
   }
 
   async function handleDelete(path: string) {
-    if (!confirm('Hapus gambar ini dari showcase?')) return;
+    if (!(await confirm({ title: 'Hapus gambar ini dari showcase?' }))) return;
     setError('');
     setDeletingPath(path);
     try {

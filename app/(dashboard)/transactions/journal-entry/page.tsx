@@ -44,6 +44,7 @@ import {
 } from '@/lib/api/recurring';
 import type { Account, AccountType, TransactionCategory, Transaction, UnitBreakdown, TransactionAttachment, JournalLineInput, TransactionTemplate, CatalogItem } from '@/types';
 import { useLanguage } from '@/context/LanguageContext';
+import { toast } from 'sonner';
 import type { Translations, JournalEntryTypeKey, JournalEntryTypeStrings } from '@/lib/i18n/types';
 import { isAnyReceivableAccount } from '@/lib/accounting/classification';
 import {
@@ -963,6 +964,7 @@ export default function JournalEntryPage() {
       setSaveTemplateMode(false);
     } catch (err) {
       console.error('Failed to save template:', err);
+      toast.error(t.journalEntry.form.templateSaveFailed);
     } finally {
       setSavingTemplate(false);
     }
@@ -975,6 +977,7 @@ export default function JournalEntryPage() {
       setTemplates((prev) => prev.filter((t) => t.id !== id));
     } catch (err) {
       console.error('Failed to delete template:', err);
+      toast.error(t.journalEntry.form.templateDeleteFailed);
     }
   };
 
@@ -1709,6 +1712,7 @@ export default function JournalEntryPage() {
                       );
                     } catch (err) {
                       console.error('Failed to save contact:', err);
+              toast.error(t.common.contactSaveFailed);
                     }
                   }}
                   error={errors.name}

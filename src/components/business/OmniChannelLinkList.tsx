@@ -1,5 +1,6 @@
 'use client';
 
+import { toast } from 'sonner';
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import type { OmniChannelLink } from '@/types';
@@ -33,6 +34,7 @@ export function OmniChannelLinkList({ businessId, links, onChanged }: Props) {
       onChanged();
     } catch (err) {
       console.error('Failed to reorder:', err);
+      toast.error('Gagal menyimpan urutan baru.');
     }
   };
 

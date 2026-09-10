@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 10 September 2026 (§3.6 perilaku dialog & §3.7 prop `error`)
+> Terakhir diupdate: 10 September 2026 (§3.6 perilaku dialog + `useConfirm`, §3.7 prop `error`)
 
 ---
 
@@ -425,6 +425,28 @@ header/footer bawaan, jadi judulnya dirender pemanggil — karena itu **wajib** 
 `ariaLabel` (string) **atau** `ariaLabelledBy` (id heading di dalamnya). Tanpa salah
 satunya, dialog diumumkan tanpa identitas.
 
+**Konfirmasi — `useConfirm()`, jangan `window.confirm()`.** Dialog native memblokir
+thread, tak bisa di-styling, dan teksnya tak ikut pilihan bahasa. Provider-nya sudah
+terpasang di root ([`src/context/ConfirmContext.tsx`](../src/context/ConfirmContext.tsx)),
+jadi call site cukup memanggil hook-nya. Bentuknya sengaja memetakan 1:1 ke pemakaian
+lama:
+
+```tsx
+const confirm = useConfirm();
+
+// dulu: if (!confirm('Hapus link ini?')) return;
+if (!(await confirm({ title: 'Hapus link ini?' }))) return;
+```
+
+| Opsi | Default | Catatan |
+|------|---------|---------|
+| `title` | — | Wajib. Boleh satu kalimat penuh; tanpa `message`, bobot judul otomatis diturunkan agar kalimat panjang tetap terbaca |
+| `message` | — | Konsekuensi yang perlu dibaca sebelum lanjut |
+| `tone` | `'danger'` | Hampir semua konfirmasi di app ini aksi merusak. `'default'` untuk yang bukan |
+| `confirmLabel` / `cancelLabel` | `t.common.confirm` / `t.common.cancel` | Sudah dwibahasa tanpa perlu diisi |
+
+Escape dan klik backdrop me-resolve `false`, sama seperti `window.confirm`.
+
 ### 3.7 Input / Form Field — Floating Label (Google/Material "underline")
 
 **Pola default field berlabel** = komponen `<FloatingField>` / `<FloatingSelect>` di
@@ -779,6 +801,8 @@ Referensi: bagian *Riwayat Perubahan* di [`TransactionDetailModal.tsx`](../src/c
 - **Aria label:** button icon-only wajib `aria-label`
 - **Error form wajib tertaut ke input-nya.** Border merah saja tidak terbaca screen reader maupun pengguna buta warna. Jangan render `<p>` error lepas di call site — kirim lewat prop `error` (`FloatingField`, `FloatingSelect`, `AccountDropdown`, `CurrencyInputWithCalculator`, `ContactAutocomplete`), yang memasang `aria-invalid` + `aria-describedby` sekaligus. Pesan tingkat form (gagal simpan, debit≠kredit) bukan error field: beri `role="alert"`, dan untuk error submit di form panjang pindahkan fokus ke sana.
 - **Dialog:** selalu lewat `<Modal>` atau `<AnimatedDialog>` — keduanya sudah membawa kontrak fokus & ARIA di §3.6. Jangan bikin `fixed inset-0` sendiri.
+- **Jangan pakai dialog native.** `window.confirm()` diganti `useConfirm()` (§3.6); `alert()` diganti `toast.error()` dari sonner. Keduanya sudah nol pemakaian di repo — kalau muncul lagi, itu regresi.
+- **Kegagalan yang dipicu user wajib terlihat.** `catch` yang cuma `console.error` di alur submit/hapus/simpan = kegagalan senyap. Kalau kegagalannya memang tidak perlu diumumkan (aksi utamanya sudah berhasil, sisanya cuma pembersihan), tulis alasannya di komentar — supaya pembaca berikutnya tahu itu keputusan, bukan kelalaian.
 - **Umpan balik dinamis:** konten yang berubah tanpa navigasi (jumlah hasil pencarian, progress) wajib diumumkan ke screen reader. Toast pakai `sonner` — sudah punya live region internal. Untuk region kustom (mis. hasil ⌘K), bungkus status dengan `<div className="sr-only" role="status" aria-live="polite">`.
 - **Kontras teks:** minimum WCAG AA 4.5:1 untuk teks normal. Warna kategori sudah diverifikasi (§1.3) — hitung ulang saat menambah warna baru.
 

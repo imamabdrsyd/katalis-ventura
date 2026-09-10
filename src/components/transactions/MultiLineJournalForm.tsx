@@ -10,6 +10,7 @@ import { resolveContactTypeFromCategory, saveContactFromTransaction } from '@/li
 import { useParams } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { toast } from 'sonner';
 import type { TransactionCategory, JournalLineInput, Account, TransactionAttachment, SalesChannel } from '@/types';
 import { getSalesChannelOptions, SALES_CHANNEL_CONFIG } from '@/lib/salesChannels';
 import { FileUpload } from '@/components/ui/FileUpload';
@@ -331,6 +332,7 @@ export function MultiLineJournalForm({
               );
             } catch (err) {
               console.error('Failed to save contact:', err);
+              toast.error(t.common.contactSaveFailed);
             }
           }}
         />

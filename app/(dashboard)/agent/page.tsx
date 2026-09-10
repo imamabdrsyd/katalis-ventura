@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { toast } from 'sonner';
+import { useConfirm } from '@/context/ConfirmContext';
 import { ImportRevenueWidget, type SupportedChannel } from '@/components/agent/ImportRevenueWidget';
 import {
   appendAgentImportStep,
@@ -104,6 +106,7 @@ const nextId = () =>
 export default function AgentPage() {
   const router = useRouter();
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const headerTools = buildAgentTools(t.aiChat.agentPage);
   const { activeBusinessId, userRole, activeBusiness, user } = useBusinessContext();
   const canManage = isManagerRole(userRole);
@@ -197,7 +200,7 @@ export default function AgentPage() {
   // dibuka, reset ke sesi baru kosong.
   const handleDeleteSession = useCallback(async (sid: string) => {
     if (!activeBusinessId) return;
-    if (!window.confirm(t.aiChat.agentPage.deleteSessionConfirm)) return;
+    if (!(await confirm({ title: t.aiChat.agentPage.deleteSessionConfirm }))) return;
     // Optimistic: buang dari daftar dulu.
     setPastSessions(prev => prev.filter(s => s.session_id !== sid));
     try {
@@ -213,9 +216,9 @@ export default function AgentPage() {
     } catch {
       // Rollback kalau gagal.
       fetchSessions();
-      alert(t.aiChat.agentPage.deleteSessionFailed);
+      toast.error(t.aiChat.agentPage.deleteSessionFailed);
     }
-  }, [activeBusinessId, sessionId, userName, fetchSessions]);
+  }, [activeBusinessId, sessionId, userName, fetchSessions, confirm, t]);
 
   // Initialize new session ID on mount
   useEffect(() => {
@@ -711,7 +714,7 @@ export default function AgentPage() {
         finalInput = finalInput.trim() ? finalInput + attachmentNote : `Tolong pelajari file ini: ${fileName}${attachmentNote}`;
       } catch (err) {
         setIsChatting(false);
-        alert(t.aiChat.agentPage.uploadDocFailed(err instanceof Error ? err.message : t.aiChat.agentPage.genericError));
+        toast.error(t.aiChat.agentPage.uploadDocFailed(err instanceof Error ? err.message : t.aiChat.agentPage.genericError));
         return;
       }
       setIsChatting(false);

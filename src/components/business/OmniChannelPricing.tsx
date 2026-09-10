@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { useConfirm } from '@/context/ConfirmContext';
 import { DollarSign, Plus, Trash2, Loader2, Calendar } from 'lucide-react';
 import type { BusinessOmniChannel, PricingRule } from '@/types';
 import { upsertOmniChannel, createPricingRule, deletePricingRule } from '@/lib/api/omniChannel';
@@ -31,6 +32,7 @@ function formatDateID(dateStr: string): string {
 }
 
 export function OmniChannelPricing({ businessId, userId, channel, onChanged, bare = false }: Props) {
+  const confirm = useConfirm();
   const [showPricing, setShowPricing] = useState(channel?.show_pricing ?? false);
   const [defaultPrice, setDefaultPrice] = useState<number>(channel?.default_price ?? 0);
   const [priceUnit, setPriceUnit] = useState(channel?.price_unit ?? '');
@@ -121,7 +123,7 @@ export function OmniChannelPricing({ businessId, userId, channel, onChanged, bar
   }
 
   async function handleDeleteRule(rule: PricingRule) {
-    if (!confirm(`Hapus aturan harga ${formatDateID(rule.date_from)} – ${formatDateID(rule.date_to)}?`)) return;
+    if (!(await confirm({ title: `Hapus aturan harga ${formatDateID(rule.date_from)} – ${formatDateID(rule.date_to)}?` }))) return;
     try {
       await deletePricingRule(businessId, rule.id);
       onChanged();

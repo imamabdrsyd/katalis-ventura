@@ -24,10 +24,12 @@ import { FormSkeleton } from '@/components/ui/PageSkeleton';
 import { isManagerRole } from '@/lib/roles';
 import type { UserRole } from '@/types';
 import { toast } from 'sonner';
+import { useConfirm } from '@/context/ConfirmContext';
 
 export default function SettingsPage() {
   const { user, userRole, displayRole, isSuperadmin, switchRole, refetch, activeBusinessId } = useBusinessContext();
   const { locale, setLocale, t } = useLanguage();
+  const confirm = useConfirm();
   const { showAIFab, setShowAIFab } = useUIPreferences();
   const router = useRouter();
   const supabase = createClient();
@@ -131,7 +133,7 @@ export default function SettingsPage() {
   };
 
   const handleDisconnectTelegram = async () => {
-    if (!confirm(t.settings.telegramDisconnectConfirm)) return;
+    if (!(await confirm({ title: t.settings.telegramDisconnectConfirm }))) return;
     setTelegramActionLoading(true);
     try {
       await fetch('/api/telegram/link', { method: 'DELETE' });
@@ -171,7 +173,7 @@ export default function SettingsPage() {
   };
 
   const handleInitGcpSchema = async () => {
-    if (!confirm(t.settings.gcpInitConfirm)) return;
+    if (!(await confirm({ title: t.settings.gcpInitConfirm }))) return;
     setGcpLoading(true);
     try {
       const res = await fetch('/api/admin/gcp/init-schema', { method: 'POST' });

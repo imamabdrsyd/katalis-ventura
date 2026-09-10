@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useId, useRef } from 'react';
+import { toast } from 'sonner';
 import type { Transaction, TransactionCategory, TransactionMeta, TransactionAttachment, Account, TransactionTemplate, SalesChannel } from '@/types';
 import { getAccounts } from '@/lib/api/accounts';
 import { AccountDropdown } from './AccountDropdown';
@@ -988,6 +989,7 @@ export function TransactionForm({
               setFormData((prev) => ({ ...prev, contact_id: result.contact.id }));
             } catch (err) {
               console.error('Failed to save contact:', err);
+              toast.error(t.common.contactSaveFailed);
             }
           }}
         />

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { useConfirm } from '@/context/ConfirmContext';
 import {
   ArrowLeft,
   Wallet,
@@ -36,6 +37,7 @@ import type { AssetEventType } from '@/lib/assetConsole';
 
 export default function AssetInstrumentPage() {
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const ta = t.assetConsole;
   const params = useParams<{ itemId: string }>();
   const router = useRouter();
@@ -74,7 +76,8 @@ export default function AssetInstrumentPage() {
   };
 
   async function handleDisconnect() {
-    if (!holding || !window.confirm(ta.ventureDisconnectConfirm)) return;
+    if (!holding) return;
+    if (!(await confirm({ title: ta.ventureDisconnectConfirm }))) return;
     setDisconnecting(true);
     try {
       await disconnect(holding.itemId);

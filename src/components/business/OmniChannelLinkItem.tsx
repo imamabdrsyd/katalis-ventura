@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useConfirm } from '@/context/ConfirmContext';
 import { ChevronUp, ChevronDown, Pencil, Trash2, Loader2, Star } from 'lucide-react';
 import type { OmniChannelLink } from '@/types';
 import { updateOmniChannelLink, deleteOmniChannelLink } from '@/lib/api/omniChannel';
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export function OmniChannelLinkItem({ link, index, total, onMove, onEdit, onChanged }: Props) {
+  const confirm = useConfirm();
   const [deleting, setDeleting] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [togglingPrimary, setTogglingPrimary] = useState(false);
@@ -46,7 +48,7 @@ export function OmniChannelLinkItem({ link, index, total, onMove, onEdit, onChan
   };
 
   const handleDelete = async () => {
-    if (!confirm('Hapus link ini?')) return;
+    if (!(await confirm({ title: 'Hapus link ini?' }))) return;
     setDeleting(true);
     try {
       await deleteOmniChannelLink(link.id);

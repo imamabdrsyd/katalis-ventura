@@ -274,6 +274,9 @@ export function useReconciliation() {
         try {
           await saveSessionMatches(activeSession.id, [], user.id);
         } catch (err) {
+          // Sengaja senyap: reconcile-nya sendiri SUDAH berhasil di atas, yang
+          // gagal cuma membersihkan baris progres yang tak terpakai lagi.
+          // Menampilkan error di sini akan terbaca seolah reconcile-nya gagal.
           console.error('Failed to clear session matches:', err);
         }
       }

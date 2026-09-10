@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { QueryProvider } from '@/components/providers/QueryProvider';
 import { LanguageProvider } from '@/context/LanguageContext';
 import { UIPreferencesProvider } from '@/context/UIPreferencesContext';
+import { ConfirmProvider } from '@/context/ConfirmContext';
 import { Toaster } from 'sonner';
 import { CheckCircle2, CircleAlert, CircleX, Info, Loader2 } from 'lucide-react';
 import './globals.css';
@@ -155,7 +156,9 @@ export default function RootLayout({
         <QueryProvider>
           <LanguageProvider>
             <ThemeProvider>
-              <UIPreferencesProvider>{children}</UIPreferencesProvider>
+              <UIPreferencesProvider>
+                <ConfirmProvider>{children}</ConfirmProvider>
+              </UIPreferencesProvider>
               <Toaster
                 position="top-center"
                 closeButton

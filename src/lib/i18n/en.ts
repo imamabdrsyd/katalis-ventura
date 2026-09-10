@@ -58,6 +58,7 @@ export const en: Translations = {
     noActiveBusiness: 'No active business',
     selectOrCreateBusiness: 'Select or create a business first',
     noTransactions: 'No transactions',
+    contactSaveFailed: 'Could not save the contact. You can still save the transaction.',
   },
 
   categories: {
@@ -457,6 +458,7 @@ export const en: Translations = {
   },
 
   importModal: {
+    batchRecordFailed: 'The import will still run, but its audit record could not be created.',
     title: 'Import & Export Transactions',
     tabSmart: 'Smart Import',
     tabFull: 'Full Import',
@@ -2684,6 +2686,8 @@ export const en: Translations = {
       useTemplate: 'Use Template',
       templateLines: (n: number) => `${n} lines`,
       deleteTemplate: 'Delete template',
+      templateSaveFailed: 'Could not save the template.',
+      templateDeleteFailed: 'Could not delete the template.',
       amountRp: 'Amount (Rp)',
       debitAccount: 'Debit Account',
       selectDebitAccount: 'Select debit account...',

@@ -58,6 +58,7 @@ export const id: Translations = {
     noActiveBusiness: 'Tidak ada bisnis aktif',
     selectOrCreateBusiness: 'Pilih atau buat bisnis terlebih dahulu',
     noTransactions: 'Tidak ada transaksi',
+    contactSaveFailed: 'Gagal menyimpan kontak. Transaksinya tetap bisa disimpan.',
   },
 
   categories: {
@@ -457,6 +458,7 @@ export const id: Translations = {
   },
 
   importModal: {
+    batchRecordFailed: 'Impor tetap dijalankan, tapi jejak auditnya gagal dibuat.',
     title: 'Import & Export Transaksi',
     tabSmart: 'Smart Import',
     tabFull: 'Import Lengkap',
@@ -2688,6 +2690,8 @@ export const id: Translations = {
       useTemplate: 'Gunakan Template',
       templateLines: (n: number) => `${n} baris`,
       deleteTemplate: 'Hapus template',
+      templateSaveFailed: 'Gagal menyimpan template.',
+      templateDeleteFailed: 'Gagal menghapus template.',
       amountRp: 'Jumlah (Rp)',
       debitAccount: 'Akun Debit',
       selectDebitAccount: 'Pilih akun debit...',

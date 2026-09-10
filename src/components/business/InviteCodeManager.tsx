@@ -6,6 +6,7 @@ import type { InviteCode } from '@/types';
 import * as inviteCodesApi from '@/lib/api/inviteCodes';
 import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 import { useLanguage } from '@/context/LanguageContext';
+import { useConfirm } from '@/context/ConfirmContext';
 
 interface InviteCodeManagerProps {
   businessId: string;
@@ -21,6 +22,7 @@ export function InviteCodeManager({
   onClose,
 }: InviteCodeManagerProps) {
   const { t, locale } = useLanguage();
+  const confirm = useConfirm();
   const [inviteCodes, setInviteCodes] = useState<InviteCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -121,7 +123,7 @@ export function InviteCodeManager({
   };
 
   const handleDelete = async (codeId: string) => {
-    if (!confirm(t.inviteCode.deleteConfirm)) return;
+    if (!(await confirm({ title: t.inviteCode.deleteConfirm }))) return;
 
     try {
       await inviteCodesApi.deleteInviteCode(codeId);

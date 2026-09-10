@@ -31,6 +31,7 @@ import { ContactAutocomplete } from '@/components/transactions/ContactAutocomple
 import { resolveContactTypeFromFlow, saveContactFromTransaction, getContacts } from '@/lib/api/contacts';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { toast } from 'sonner';
 import OCRScanButton from '@/components/transactions/OCRScanButton';
 import type { OcrResult } from '@/lib/ocr/types';
 import { matchAccountByKeywords, matchContactByVendor } from '@/lib/ocr/matcher';
@@ -963,6 +964,7 @@ export function QuickTransactionForm({
                 setContactId(result.contact.id);
               } catch (err) {
                 console.error('Failed to save contact:', err);
+              toast.error(t.common.contactSaveFailed);
               }
             }}
           />

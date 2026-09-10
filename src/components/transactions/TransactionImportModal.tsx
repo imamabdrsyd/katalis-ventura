@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
+import { toast } from 'sonner';
 import { X, Upload, FileText, AlertCircle, CheckCircle, Download, Sparkles, Table2, Bot, FileDown } from 'lucide-react';
 import { ChannelImportTab } from '@/components/agent/ChannelImportTab';
 import { Tabs } from '@/components/ui/Tabs';
@@ -513,7 +514,10 @@ export default function TransactionImportModal({
       });
       batchId = batch.id;
     } catch (err) {
+      // Impor sengaja tetap lanjut — batch hanya untuk jejak audit, bukan syarat
+      // tersimpannya transaksi. Tapi user harus tahu jejak itu tidak ada.
       console.error('Failed to create import batch:', err);
+      toast.warning(ti.batchRecordFailed);
     }
 
     try {

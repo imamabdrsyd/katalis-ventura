@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
+import { useConfirm } from '@/context/ConfirmContext';
 import {
   Loader2,
   Unlink,
@@ -228,6 +229,7 @@ function InstagramCard({
   onChanged: () => void;
 }) {
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const ci = t.channelIntegration;
   const [disconnecting, setDisconnecting] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
@@ -280,7 +282,7 @@ function InstagramCard({
 
   const handleDisconnect = async () => {
     if (!integration) return;
-    if (!confirm(ci.disconnectConfirmInstagram)) return;
+    if (!(await confirm({ title: ci.disconnectConfirmInstagram }))) return;
     setDisconnecting(true);
     try {
       const res = await fetch(`/api/integrations/${integration.id}`, { method: 'DELETE' });
@@ -634,6 +636,7 @@ function OtaCard({
   onChanged: () => void;
 }) {
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const ci = t.channelIntegration;
   const [saving, setSaving] = useState(false);
   const isActive = !!integration;
@@ -659,7 +662,7 @@ function OtaCard({
 
   const handleDeactivate = async () => {
     if (!integration) return;
-    if (!confirm(ci.otaDeactivateConfirm)) return;
+    if (!(await confirm({ title: ci.otaDeactivateConfirm }))) return;
     setSaving(true);
     try {
       const res = await fetch(`/api/integrations/${integration.id}`, { method: 'DELETE' });
@@ -758,6 +761,7 @@ function WhatsAppCard({
   onChanged: () => void;
 }) {
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const ci = t.channelIntegration;
   const [modalOpen, setModalOpen] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -766,7 +770,7 @@ function WhatsAppCard({
 
   const handleDisconnect = async () => {
     if (!integration) return;
-    if (!confirm(ci.disconnectConfirmWhatsApp)) return;
+    if (!(await confirm({ title: ci.disconnectConfirmWhatsApp }))) return;
     setDisconnecting(true);
     try {
       const res = await fetch(`/api/integrations/${integration.id}`, { method: 'DELETE' });

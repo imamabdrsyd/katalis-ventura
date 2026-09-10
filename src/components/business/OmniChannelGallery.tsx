@@ -9,6 +9,7 @@ import {
   reorderGalleryImages,
   upsertOmniChannel,
 } from '@/lib/api/omniChannel';
+import { useConfirm } from '@/context/ConfirmContext';
 
 interface Props {
   businessId: string;
@@ -22,6 +23,7 @@ interface Props {
 const MAX_IMAGES = 12;
 
 export function OmniChannelGallery({ businessId, userId, channel, initialGallery, hasOmniChannel, onChanged }: Props) {
+  const confirm = useConfirm();
   const [gallery, setGallery] = useState<OmniChannelGalleryImage[]>(
     [...initialGallery].sort((a, b) => a.sort_order - b.sort_order)
   );
@@ -121,7 +123,7 @@ export function OmniChannelGallery({ businessId, userId, channel, initialGallery
   }
 
   async function handleDelete(path: string) {
-    if (!confirm('Hapus gambar ini dari gallery?')) return;
+    if (!(await confirm({ title: 'Hapus gambar ini dari gallery?' }))) return;
     setError('');
     setDeletingPath(path);
     try {
