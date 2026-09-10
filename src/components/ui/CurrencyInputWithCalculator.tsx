@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { Calculator, Check, Delete, Pencil, X, RefreshCw } from 'lucide-react';
 import { useFxRate } from '@/hooks/useFxRate';
@@ -101,7 +101,7 @@ interface CurrencyInputWithCalculatorProps {
   inputClassName?: string;
   placeholder?: string;
   autoFocus?: boolean;
-  error?: string;
+  error?: React.ReactNode;
   label?: string;
   required?: boolean;
   colorVariant?: 'default' | 'green' | 'red' | 'amber' | 'purple' | 'primary';
@@ -177,6 +177,7 @@ export function CurrencyInputWithCalculator({
     if (!autoApplyFxRate && fxRate && fxRate > 1) return;
     onFxRateChange(String(Math.round(autoRate)));
   }, [autoRate, activeCurrency, onFxRateChange, autoApplyFxRate, fxRate]);
+  const errorId = `${useId()}-error`;
   const [showCalc, setShowCalc] = useState(false);
   const [calcDisplay, setCalcDisplay] = useState('0');
   const [calcPrev, setCalcPrev] = useState<number | null>(null);
@@ -394,6 +395,8 @@ export function CurrencyInputWithCalculator({
           type="text"
           value={displayValue}
           onChange={handleInputChange}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
           className={`input-underline ${calcButtonVariant === 'boxed' ? 'pr-12' : 'pr-10'} ${borderColorClass} ${inputClassName}`}
           placeholder={placeholder}
           inputMode={amountAllowsDecimal ? 'decimal' : 'numeric'}
@@ -426,7 +429,7 @@ export function CurrencyInputWithCalculator({
         )}
       </div>
 
-      {error && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{error}</p>}
+      {error && <p id={errorId} className="text-sm text-red-500 dark:text-red-400 mt-1">{error}</p>}
 
       {/* FX rate + book value row — only for foreign currency */}
       {isForeign && (

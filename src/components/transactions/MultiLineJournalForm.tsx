@@ -483,7 +483,7 @@ export function MultiLineJournalForm({
         </button>
 
         {errors.balance && (
-          <div className="mt-2 flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <div role="alert" className="mt-2 flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
             <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-red-600 dark:text-red-400">{errors.balance}</p>
           </div>
@@ -533,7 +533,7 @@ export function MultiLineJournalForm({
       </div>
 
       {/* Catalog picker modal */}
-      <AnimatedDialog isOpen={showCatalogPicker} onClose={() => setShowCatalogPicker(false)}>
+      <AnimatedDialog isOpen={showCatalogPicker} onClose={() => setShowCatalogPicker(false)} ariaLabel={t.catalog.pickerTitle}>
         <div className="p-5">
           <div className="flex items-center gap-2 mb-4">
             <PackageOpen className="w-5 h-5 text-indigo-500" />

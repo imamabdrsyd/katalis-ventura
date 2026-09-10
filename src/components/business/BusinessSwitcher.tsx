@@ -219,6 +219,7 @@ export function BusinessSwitcher() {
       <AnimatedDialog
         isOpen={showAddBusiness && canManage}
         onClose={() => setShowAddBusiness(false)}
+        ariaLabel={t.businessForm.addBusiness}
       >
         <BusinessForm
           onSubmit={handleAddBusiness}

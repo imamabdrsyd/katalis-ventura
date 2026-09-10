@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { useInvoices } from '@/hooks/useInvoices';
@@ -524,6 +524,15 @@ export default function JournalEntryPage() {
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Halaman ini panjang — pesan gagal-simpan di atas form mudah terlewat kalau
+  // tombol Simpan ditekan dari bawah, jadi fokus dipindahkan ke sana.
+  const submitErrorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!errors.submit) return;
+    submitErrorRef.current?.focus();
+    submitErrorRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [errors.submit]);
 
   // Pemilihan-dulu (lihat blok "list-first entry" di bawah): user bisa keluar
   // dari daftar dan kembali ke form jurnal mentah lewat "Catat manual".
@@ -1302,7 +1311,12 @@ export default function JournalEntryPage() {
 
             {/* Submit error */}
             {errors.submit && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <div
+                ref={submitErrorRef}
+                tabIndex={-1}
+                role="alert"
+                className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg focus:outline-none"
+              >
                 <p className="text-sm text-red-500 dark:text-red-300">{errors.submit}</p>
               </div>
             )}
@@ -1395,10 +1409,8 @@ export default function JournalEntryPage() {
                         setDate(e.target.value);
                         if (errors.date) setErrors(p => { const n = { ...p }; delete n.date; return n; });
                       }}
+                      error={errors.date}
                     />
-                    {errors.date && (
-                      <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.date}</p>
-                    )}
                   </div>
                 </div>
 
@@ -1500,10 +1512,8 @@ export default function JournalEntryPage() {
                       setDate(e.target.value);
                       if (errors.date) setErrors(p => { const n = { ...p }; delete n.date; return n; });
                     }}
+                    error={errors.date}
                   />
-                  {errors.date && (
-                    <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.date}</p>
-                  )}
                 </div>
 
                 {/* Multi-line journal table */}
@@ -1517,8 +1527,11 @@ export default function JournalEntryPage() {
                     </span>
                   </div>
 
-                  <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-visible">
-                    <table className="w-full text-sm">
+                  {/* overflow-x-auto, bukan overflow-visible: menu AccountDropdown
+                      sudah di-portal keluar (lihat AccountDropdown), jadi tak ada
+                      lagi alasan membiarkan tabel meluber ke seluruh halaman. */}
+                  <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
+                    <table className="w-full min-w-[720px] text-sm">
                       <thead className="bg-gray-50 dark:bg-gray-800">
                         <tr>
                           <th className="text-left px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 w-8">#</th>
@@ -1622,7 +1635,7 @@ export default function JournalEntryPage() {
 
                   {/* Multi-line balance error */}
                   {errors.ml_balance && (
-                    <div className="mt-2 flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <div role="alert" className="mt-2 flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                       <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
                       <p className="text-sm text-red-600 dark:text-red-400">{errors.ml_balance}</p>
                     </div>
@@ -1698,10 +1711,8 @@ export default function JournalEntryPage() {
                       console.error('Failed to save contact:', err);
                     }
                   }}
+                  error={errors.name}
                 />
-                {errors.name && (
-                  <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.name}</p>
-                )}
               </div>
 
               <div>

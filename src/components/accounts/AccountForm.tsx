@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import type { Account, AccountType, NormalBalance, TransactionCategory, Contact } from '@/types';
 import { AlertCircle, Check } from 'lucide-react';
 import * as accountsApi from '@/lib/api/accounts';
@@ -90,6 +90,10 @@ export function AccountForm({
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Kode akun punya EMPAT pesan yang bisa muncul bergantian (hasil validasi,
+  // hint auto, error rentang, error field) dan sebagiannya datang async —
+  // semuanya dikumpulkan di satu live region supaya diumumkan saat berubah.
+  const codeStatusId = `${useId()}-code-status`;
   const [loadingCode, setLoadingCode] = useState(false);
   const [codeRangeError, setCodeRangeError] = useState<string | null>(null);
   const [guideOpen, setGuideOpen] = useState(true);
@@ -311,6 +315,7 @@ export function AccountForm({
             onChange={handleChange}
             disabled={loading || !!parentAccountId}
             required
+            error={errors.parent_account_id}
           >
             <option value="" disabled hidden />
             {parentAccounts.map(parent => (
@@ -324,9 +329,7 @@ export function AccountForm({
               ✓ Sub-akun akan ditambahkan ke: {selectedParent.account_name}
             </p>
           )}
-          {errors.parent_account_id && (
-            <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.parent_account_id}</p>
-          )}
+
         </div>
       )}
 
@@ -379,6 +382,12 @@ export function AccountForm({
             readOnly={isEditMode}
             inputMode="numeric"
             maxLength={4}
+            aria-describedby={codeStatusId}
+            aria-invalid={
+              errors.account_code || codeRangeError || (codeValidation && !codeValidation.valid)
+                ? true
+                : undefined
+            }
             trailing={
               !isEditMode && !loadingCode && formData.account_code && codeValidation ? (
                 codeValidation.valid ? (
@@ -389,23 +398,25 @@ export function AccountForm({
               ) : undefined
             }
           />
-          {/* Validation message */}
-          {!isEditMode && !loadingCode && codeValidation && (
-            <p className={`text-xs mt-1 ${codeValidation.valid ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
-              {codeValidation.message}
-            </p>
-          )}
-          {!isEditMode && !codeValidation && formData.account_code && !codeRangeError && !loadingCode && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {af.codeAutoHint}
-            </p>
-          )}
-          {codeRangeError && (
-            <p className="text-sm text-red-500 dark:text-red-400 mt-1">{codeRangeError}</p>
-          )}
-          {errors.account_code && (
-            <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.account_code}</p>
-          )}
+          {/* Semua pesan status kode akun — satu live region, lihat codeStatusId */}
+          <div id={codeStatusId} aria-live="polite">
+            {!isEditMode && !loadingCode && codeValidation && (
+              <p className={`text-xs mt-1 ${codeValidation.valid ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+                {codeValidation.message}
+              </p>
+            )}
+            {!isEditMode && !codeValidation && formData.account_code && !codeRangeError && !loadingCode && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {af.codeAutoHint}
+              </p>
+            )}
+            {codeRangeError && (
+              <p className="text-sm text-red-500 dark:text-red-400 mt-1">{codeRangeError}</p>
+            )}
+            {errors.account_code && (
+              <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.account_code}</p>
+            )}
+          </div>
         </div>
 
         {/* Account Type (auto from parent, read-only) */}
@@ -435,10 +446,8 @@ export function AccountForm({
           maxLength={100}
           disabled={loading}
           required
+          error={errors.account_name}
         />
-        {errors.account_name && (
-          <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.account_name}</p>
-        )}
       </div>
 
       {/* Description */}

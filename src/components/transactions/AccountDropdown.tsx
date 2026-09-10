@@ -194,6 +194,8 @@ export function AccountDropdown({
   // - label ""      → cell tabel kompak, tetap boxed `.input` (dense journal editor)
   const isCompact = !label;
   const floated = !!selectedAccount || isOpen;
+  const errorId = `${instanceId}-error`;
+  const menuId = `${instanceId}-menu`;
 
   return (
     <div className="relative">
@@ -203,6 +205,12 @@ export function AccountDropdown({
           <button
             type="button"
             onClick={() => isOpen ? setIsOpen(false) : openDropdown()}
+            role="combobox"
+            aria-haspopup="listbox"
+            aria-expanded={isOpen}
+            aria-controls={menuId}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? errorId : undefined}
             className={`input w-full text-left flex justify-between items-center ${error ? 'border-red-500 dark:border-red-400' : ''}`}
           >
             <span className={selectedAccount ? '' : 'text-gray-400 dark:text-gray-500'}>
@@ -224,6 +232,12 @@ export function AccountDropdown({
             <button
               type="button"
               onClick={() => isOpen ? setIsOpen(false) : openDropdown()}
+              role="combobox"
+              aria-haspopup="listbox"
+              aria-expanded={isOpen}
+              aria-controls={menuId}
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? errorId : undefined}
               className={`input-underline pt-5 text-left flex justify-between items-center ${
                 isOpen ? '!border-primary-500' : ''
               } ${error ? '!border-red-500 dark:!border-red-400' : ''}`}
@@ -264,12 +278,13 @@ export function AccountDropdown({
       )}
 
       {/* Error message */}
-      {error && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{error}</p>}
+      {error && <p id={errorId} className="text-sm text-red-500 dark:text-red-400 mt-1">{error}</p>}
 
       {/* Dropdown menu — di-render via portal supaya keluar dari overflow modal/tabel */}
       {isOpen && portalReady && portalRef.current && createPortal(
         <div
           ref={menuRef}
+          id={menuId}
           className="fixed bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl max-h-96 overflow-hidden"
           style={{
             zIndex: 100000,

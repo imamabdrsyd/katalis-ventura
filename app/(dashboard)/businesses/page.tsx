@@ -386,7 +386,7 @@ export default function BusinessesPage() {
       )}
 
       {/* Add Business Modal */}
-      <AnimatedDialog isOpen={isFormOpen} onClose={() => setIsFormOpen(false)}>
+      <AnimatedDialog isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} ariaLabel={t.businessForm.addBusiness}>
         <BusinessForm
           onSubmit={handleCreateBusiness}
           onCancel={() => setIsFormOpen(false)}
@@ -395,7 +395,7 @@ export default function BusinessesPage() {
       </AnimatedDialog>
 
       {/* Edit Business Modal */}
-      <AnimatedDialog isOpen={!!editingBusiness} onClose={() => setEditingBusiness(null)}>
+      <AnimatedDialog isOpen={!!editingBusiness} onClose={() => setEditingBusiness(null)} ariaLabel={t.businesses.editBusiness}>
         {editingBusiness && (
           <BusinessForm
             business={editingBusiness}

@@ -240,10 +240,8 @@ export function BusinessForm({
           onChange={handleChange}
           placeholder={bf.namePlaceholder}
           required
+          error={errors.business_name}
         />
-        {errors.business_name && (
-          <p className="text-sm text-red-500 mt-1">{errors.business_name}</p>
-        )}
       </div>
 
       {/* Tipe Bisnis */}
@@ -269,6 +267,7 @@ export function BusinessForm({
           name="business_sector"
           value={formData.business_sector}
           onChange={handleChange}
+          error={formData.business_sector === 'other' ? undefined : errors.business_sector}
         >
           {BUSINESS_SECTORS.map((sector) => (
             <option key={sector.value} value={sector.value}>
@@ -289,11 +288,9 @@ export function BusinessForm({
                 }
               }}
               placeholder={bf.sectorPlaceholder}
+              error={errors.business_sector}
             />
           </div>
-        )}
-        {errors.business_sector && (
-          <p className="text-sm text-red-500 mt-1">{errors.business_sector}</p>
         )}
       </div>
 

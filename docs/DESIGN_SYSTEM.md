@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 14 Agustus 2026 (§4.5 timeline riwayat / diff audit)
+> Terakhir diupdate: 10 September 2026 (§3.6 perilaku dialog & §3.7 prop `error`)
 
 ---
 
@@ -406,6 +406,25 @@ Komponen: [`src/components/ui/Modal.tsx`](../src/components/ui/Modal.tsx). Selal
   Submit sukses menutup modal via `isOpen=false`, bukan lewat guard, jadi tak terganggu.
   Teks konfirmasi dwibahasa via `t.common.unsavedTitle/unsavedMessage/keepEditing/discardChanges`.
 
+**Kontrak aksesibilitas (built-in, tidak perlu diulang di call site).** Panel modal
+punya `role="dialog"` + `aria-modal="true"` + `aria-labelledby` yang menunjuk ke `<h2>`
+judulnya, dan tombol close sudah ber-`aria-label` (`t.common.close`). Perilaku fokus
+ditangani hook [`useDialogA11y`](../src/hooks/useDialogA11y.ts):
+
+| Perilaku | Keterangan |
+|----------|-----------|
+| Fokus awal | Masuk ke kontrol fokusable pertama di panel; kalau tidak ada, ke panel itu sendiri (`tabIndex={-1}`) |
+| Kurungan Tab | Tab & Shift+Tab berputar di dalam panel, tidak bocor ke halaman di belakang |
+| Escape | Diteruskan ke `onEscape` pemanggil — Modal memakainya untuk guard `confirmOnClose` |
+| Kunci scroll body | Dihitung (counter), jadi modal bertingkat tidak saling membuka kunci |
+| Kembalikan fokus | Fokus balik ke elemen pemicu saat ditutup, kecuali elemennya sudah tak ada di DOM |
+
+**`AnimatedDialog`** ([`src/components/ui/AnimatedDialog.tsx`](../src/components/ui/AnimatedDialog.tsx))
+memakai hook yang sama dan kini punya kontrak identik. Bedanya dengan `Modal`: tanpa
+header/footer bawaan, jadi judulnya dirender pemanggil — karena itu **wajib** kirim
+`ariaLabel` (string) **atau** `ariaLabelledBy` (id heading di dalamnya). Tanpa salah
+satunya, dialog diumumkan tanpa identitas.
+
 ### 3.7 Input / Form Field — Floating Label (Google/Material "underline")
 
 **Pola default field berlabel** = komponen `<FloatingField>` / `<FloatingSelect>` di
@@ -447,6 +466,15 @@ import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 - **Tanpa notch/background patch** → aman di atas latar warna apa pun (beda dari varian outlined).
 - **`label` menerima `ReactNode`** (boleh string atau JSX kecil), tapi hindari JSX kompleks
   (ikut mengecil saat floating) — taruh hint tambahan di `<p>` bawah field.
+- **Pesan validasi lewat prop `error`, bukan `<p>` lepas di bawah field.** Prop ini
+  merender pesannya, mewarnai garis bawah merah, dan yang terpenting memasang
+  `aria-invalid` + `aria-describedby` sehingga pesan tertaut ke input-nya. Tipenya
+  `ReactNode`, jadi pesan ber-ikon tetap bisa: `error={err && <span className="flex
+  items-center gap-1"><AlertCircle className="w-3 h-3" /> {err}</span>}`. Kalau satu
+  field punya beberapa pesan yang bergantian (mis. kode akun di `AccountForm`:
+  hasil validasi + hint + error rentang + error field), kumpulkan semuanya di satu
+  `<div aria-live="polite">` lalu tunjuk dengan `aria-describedby` manual — prop
+  bawaan komponen di-override oleh props yang dikirim call site.
 
 **Field angka (kuantitas) — pakai `<NumberStepperField>`:**
 Spinner bawaan `<input type="number">` **tidak dirender sama sekali di browser mobile**
@@ -749,6 +777,8 @@ Referensi: bagian *Riwayat Perubahan* di [`TransactionDetailModal.tsx`](../src/c
 - **Disabled state:** `disabled:opacity-50 disabled:cursor-not-allowed`
 - **Alt text:** semua `<img>` wajib ada alt. Icon decoratif di dalam button yang sudah ada label text tidak perlu alt.
 - **Aria label:** button icon-only wajib `aria-label`
+- **Error form wajib tertaut ke input-nya.** Border merah saja tidak terbaca screen reader maupun pengguna buta warna. Jangan render `<p>` error lepas di call site — kirim lewat prop `error` (`FloatingField`, `FloatingSelect`, `AccountDropdown`, `CurrencyInputWithCalculator`, `ContactAutocomplete`), yang memasang `aria-invalid` + `aria-describedby` sekaligus. Pesan tingkat form (gagal simpan, debit≠kredit) bukan error field: beri `role="alert"`, dan untuk error submit di form panjang pindahkan fokus ke sana.
+- **Dialog:** selalu lewat `<Modal>` atau `<AnimatedDialog>` — keduanya sudah membawa kontrak fokus & ARIA di §3.6. Jangan bikin `fixed inset-0` sendiri.
 - **Umpan balik dinamis:** konten yang berubah tanpa navigasi (jumlah hasil pencarian, progress) wajib diumumkan ke screen reader. Toast pakai `sonner` — sudah punya live region internal. Untuk region kustom (mis. hasil ⌘K), bungkus status dengan `<div className="sr-only" role="status" aria-live="polite">`.
 - **Kontras teks:** minimum WCAG AA 4.5:1 untuk teks normal. Warna kategori sudah diverifikasi (§1.3) — hitung ulang saat menambah warna baru.
 

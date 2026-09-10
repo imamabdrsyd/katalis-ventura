@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useId, useRef } from 'react';
 import type { Transaction, TransactionCategory, TransactionMeta, TransactionAttachment, Account, TransactionTemplate, SalesChannel } from '@/types';
 import { getAccounts } from '@/lib/api/accounts';
 import { AccountDropdown } from './AccountDropdown';
@@ -210,6 +210,16 @@ export function TransactionForm({
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const descriptionErrorId = `${useId()}-description-error`;
+  // Error submit muncul di dasar form panjang — tanpa dipindahi fokus, pesannya
+  // sering tak pernah terlihat oleh yang menekan Simpan dari atas layar.
+  const submitErrorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!errors.submit) return;
+    submitErrorRef.current?.focus();
+    submitErrorRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [errors.submit]);
 
   // Template state
   const [templates, setTemplates] = useState<TransactionTemplate[]>([]);
@@ -965,6 +975,7 @@ export function TransactionForm({
           className="input-underline"
           placeholder={mode === 'in' ? tf.namePlaceholderCustomer : mode === 'out' ? tf.namePlaceholderVendor : tf.namePlaceholderGeneric}
           required
+          error={errors.name}
           onSaveAsContact={async (name) => {
             if (!businessId || !user) return;
             try {
@@ -980,7 +991,6 @@ export function TransactionForm({
             }
           }}
         />
-        {errors.name && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.name}</p>}
       </div>
 
       {/* 4. KETERANGAN */}
@@ -998,9 +1008,11 @@ export function TransactionForm({
               ? tf.descriptionPlaceholderAuto
               : tf.descriptionPlaceholder
           }
+          aria-invalid={errors.description ? true : undefined}
+          aria-describedby={errors.description ? descriptionErrorId : undefined}
         />
         {errors.description && (
-          <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.description}</p>
+          <p id={descriptionErrorId} className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.description}</p>
         )}
       </div>
 
@@ -1027,8 +1039,8 @@ export function TransactionForm({
           value={formData.date}
           onChange={handleChange}
           required
+          error={errors.date}
         />
-        {errors.date && <p className="text-sm text-red-500 dark:text-red-400 mt-1">{errors.date}</p>}
       </div>
 
       {/* 6. ACCOUNT FIELDS */}
@@ -1421,7 +1433,12 @@ export function TransactionForm({
       )}
 
       {errors.submit && (
-        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+        <div
+          ref={submitErrorRef}
+          tabIndex={-1}
+          role="alert"
+          className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg focus:outline-none"
+        >
           <p className="text-sm text-red-500 dark:text-red-300">{errors.submit}</p>
         </div>
       )}

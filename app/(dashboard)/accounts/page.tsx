@@ -384,6 +384,7 @@ export default function AccountsPage() {
           setShowAddModal(false);
           setPreselectedParentId(null);
         }}
+        ariaLabel={t.accountForm.titleCreate}
       >
         <AccountForm
           onSubmit={handleAddAccount}
@@ -400,7 +401,7 @@ export default function AccountsPage() {
       </AnimatedDialog>
 
       {/* Edit Account Modal */}
-      <AnimatedDialog isOpen={!!editAccount} onClose={() => setEditAccount(null)}>
+      <AnimatedDialog isOpen={!!editAccount} onClose={() => setEditAccount(null)} ariaLabel={t.accountForm.titleEdit}>
         {editAccount && (
           <AccountForm
             account={editAccount}

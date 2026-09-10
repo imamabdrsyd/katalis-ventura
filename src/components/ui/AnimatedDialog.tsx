@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useDialogA11y } from '@/hooks/useDialogA11y';
 
 interface AnimatedDialogProps {
   isOpen: boolean;
@@ -9,6 +10,13 @@ interface AnimatedDialogProps {
   children: React.ReactNode;
   panelClassName?: string;
   backdropClassName?: string;
+  /**
+   * Nama dialog untuk screen reader. Wajib diisi salah satu — ini ATAU
+   * `ariaLabelledBy` — supaya dialog tidak diumumkan tanpa identitas.
+   */
+  ariaLabel?: string;
+  /** `id` heading di dalam dialog, bila judulnya sudah dirender sebagai teks. */
+  ariaLabelledBy?: string;
 }
 
 const DEFAULT_PANEL =
@@ -23,10 +31,16 @@ export function AnimatedDialog({
   children,
   panelClassName = DEFAULT_PANEL,
   backdropClassName = DEFAULT_BACKDROP,
+  ariaLabel,
+  ariaLabelledBy,
 }: AnimatedDialogProps) {
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  // Fokus awal, kurungan Tab, Escape, kunci scroll body, dan pengembalian fokus
+  // ke pemicu — perilaku yang sama persis dengan <Modal>.
+  const panelRef = useDialogA11y(isOpen, { onEscape: onClose });
 
   useEffect(() => {
     setMounted(true);
@@ -51,7 +65,13 @@ export function AnimatedDialog({
       onClick={onClose}
     >
       <div
-        className={`${panelClassName} transition-all duration-200 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={ariaLabelledBy ? undefined : ariaLabel}
+        aria-labelledby={ariaLabelledBy}
+        tabIndex={-1}
+        className={`${panelClassName} focus:outline-none transition-all duration-200 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {children}

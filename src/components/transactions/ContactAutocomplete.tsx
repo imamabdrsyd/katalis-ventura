@@ -32,6 +32,8 @@ interface ContactAutocompleteProps {
    * dengan FloatingSelect di kolom sebelahnya.
    */
   floatingLabel?: string;
+  /** Pesan validasi — dirender di sini agar tertaut ke input lewat aria-describedby. */
+  error?: string;
 }
 
 export function ContactAutocomplete({
@@ -44,9 +46,11 @@ export function ContactAutocomplete({
   required,
   onSaveAsContact,
   floatingLabel,
+  error,
 }: ContactAutocompleteProps) {
   const generatedId = useId();
   const inputId = `contact-autocomplete-${generatedId}`;
+  const errorId = `${inputId}-error`;
   const [suggestions, setSuggestions] = useState<Contact[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -216,6 +220,8 @@ export function ContactAutocomplete({
           }`}
           required={required}
           autoComplete="off"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
         />
         {floatingLabel && (
           <label
@@ -243,6 +249,10 @@ export function ContactAutocomplete({
           <BookUser className="w-4 h-4" />
         </button>
       </div>
+
+      {error && (
+        <p id={errorId} className="text-sm text-red-500 dark:text-red-400 mt-1">{error}</p>
+      )}
 
       {/* Dropdowns via portal — tidak terpotong modal/overflow */}
       {mounted && (showContactBook || shouldShowDropdown) && createPortal(

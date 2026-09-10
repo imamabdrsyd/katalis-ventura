@@ -456,8 +456,11 @@ export function EcommerceIntegration({ businessId, canManage, onReady }: Props) 
             <Clock className="w-4 h-4 text-gray-400 dark:text-gray-500" />
             {ei.syncHistoryTitle}
           </h3>
+          {/* overflow-hidden dipertahankan di kartu agar sudut membulat tetap
+              memotong tabel; scroll horizontalnya dipegang wrapper di dalam. */}
           <div className="card-static rounded-xl p-0 overflow-hidden">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] text-sm">
               <thead>
                 <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80">
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
@@ -508,6 +511,7 @@ export function EcommerceIntegration({ businessId, canManage, onReady }: Props) 
                 ))}
               </tbody>
             </table>
+            </div>
 
             {/* Footer — link ke transaksi */}
             <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60">

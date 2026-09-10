@@ -448,12 +448,12 @@ export function CatalogItemForm({
           onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
           placeholder={formData.item_type === 'product' ? tc.namePlaceholderProduct : tc.namePlaceholderService}
           autoFocus
+          error={errors.name && (
+            <span className="flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" /> {errors.name}
+            </span>
+          )}
         />
-        {errors.name && (
-          <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
-            <AlertCircle className="w-3 h-3" /> {errors.name}
-          </p>
-        )}
       </div>
 
       {/* Kategori layanan akomodasi (migr 124) — main (sewa, menyetir base price)
@@ -534,12 +534,12 @@ export function CatalogItemForm({
               setFormData(prev => ({ ...prev, default_price: val }));
               setPriceDisplay(display);
             }}
+            error={errors.default_price && (
+              <span className="flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" /> {errors.default_price}
+              </span>
+            )}
           />
-          {errors.default_price && (
-            <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" /> {errors.default_price}
-            </p>
-          )}
         </div>
         <FloatingField
           label={tc.unitLabel}
@@ -566,12 +566,12 @@ export function CatalogItemForm({
               placeholder={tc.skuPlaceholder}
               maxLength={64}
               className="font-mono"
+              error={errors.sku && (
+                <span className="flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" /> {errors.sku}
+                </span>
+              )}
             />
-            {errors.sku && (
-              <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" /> {errors.sku}
-              </p>
-            )}
           </div>
 
           <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">

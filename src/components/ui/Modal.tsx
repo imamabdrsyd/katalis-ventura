@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLanguage } from '@/context/LanguageContext';
+import { useDialogA11y } from '@/hooks/useDialogA11y';
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
 
@@ -73,12 +74,14 @@ const SIZE_CLASSES: Record<ModalSize, string> = {
 
 export function Modal({ isOpen, onClose, title, children, footer, size = 'md', sideNavPrev, sideNavNext, sidePanel, headerAction, closeButtonClassName = '', zIndexClassName = 'z-50', confirmOnClose = false, backdropClassName = 'bg-black/50', hideScrollbar = false }: ModalProps) {
   const { t } = useLanguage();
+  const titleId = useId();
   const [mounted, setMounted] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   // Dirty = user sudah menyentuh salah satu input di dalam modal. Disimpan di
   // ref (bukan state) karena tidak perlu re-render — hanya dibaca saat menutup.
   const isDirtyRef = useRef(false);
+  const confirmRef = useRef<HTMLButtonElement>(null);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
 
   useEffect(() => {
@@ -113,29 +116,24 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', s
     onClose();
   };
 
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
+  // Fokus awal, kurungan Tab, Escape, kunci scroll body, dan pengembalian fokus
+  // ke pemicu — semuanya di useDialogA11y agar tidak ditiru per-dialog.
+  const panelRef = useDialogA11y(isOpen, {
+    onEscape: () => {
       // Escape saat konfirmasi tampil = batalkan konfirmasi, jangan tutup modal.
       if (showCloseConfirm) {
         setShowCloseConfirm(false);
         return;
       }
       requestClose();
-    };
+    },
+  });
 
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = '';
-    };
-    // requestClose sengaja tidak di-deps (closure baru tiap render tidak masalah
-    // karena listener dipasang ulang saat isOpen/showCloseConfirm berubah).
-  }, [isOpen, onClose, confirmOnClose, showCloseConfirm]);
+  // Konfirmasi menutupi panel, jadi fokus harus ikut pindah ke sana — kalau
+  // tidak, fokus tertinggal di kontrol yang sudah tidak terlihat.
+  useEffect(() => {
+    if (showCloseConfirm) confirmRef.current?.focus();
+  }, [showCloseConfirm]);
 
   if (!shouldRender || !mounted) return null;
 
@@ -150,6 +148,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', s
           onClick={(e) => { e.stopPropagation(); sideNavPrev.onClick(); }}
           disabled={sideNavPrev.disabled}
           title={sideNavPrev.title}
+          aria-label={sideNavPrev.title ?? t.common.previous}
           className="absolute left-4 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/90 dark:bg-gray-700/90 shadow-lg text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-600 disabled:opacity-25 disabled:cursor-not-allowed transition-all"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -161,6 +160,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', s
           onClick={(e) => { e.stopPropagation(); sideNavNext.onClick(); }}
           disabled={sideNavNext.disabled}
           title={sideNavNext.title}
+          aria-label={sideNavNext.title ?? t.common.next}
           className="absolute right-4 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/90 dark:bg-gray-700/90 shadow-lg text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-600 disabled:opacity-25 disabled:cursor-not-allowed transition-all"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -178,16 +178,22 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', s
         )}
 
         <div
-          className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-[calc(100vw-2rem)] ${SIZE_CLASSES[size]} max-h-modal overflow-hidden flex flex-col`}
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          tabIndex={-1}
+          className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-[calc(100vw-2rem)] ${SIZE_CLASSES[size]} max-h-modal overflow-hidden flex flex-col focus:outline-none`}
         >
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700 shrink-0">
-            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
+            <h2 id={titleId} className="text-lg font-bold text-gray-800 dark:text-gray-100">
               {title}
             </h2>
             <div className="flex items-center gap-1">
               {headerAction}
               <button
                 onClick={requestClose}
+                aria-label={t.common.close}
                 className={`p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${closeButtonClassName}`}
               >
                 <svg
@@ -237,6 +243,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', s
                 </p>
                 <div className="mt-4 flex gap-2">
                   <button
+                    ref={confirmRef}
                     type="button"
                     onClick={() => setShowCloseConfirm(false)}
                     className="btn-ghost flex-1"

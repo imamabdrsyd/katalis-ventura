@@ -371,6 +371,7 @@ function BudgetForecastPageInner() {
       <AnimatedDialog
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
+        ariaLabel={t.budget.deleteConfirm}
         panelClassName="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-sm w-full p-6"
       >
         <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">{t.budget.deleteConfirm}</h3>

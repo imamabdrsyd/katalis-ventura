@@ -561,7 +561,7 @@ export function CatalogPanel({
       </div>
 
       {/* Form modal */}
-      <AnimatedDialog isOpen={showForm} onClose={() => { setShowForm(false); setEditItem(null); }}>
+      <AnimatedDialog isOpen={showForm} onClose={() => { setShowForm(false); setEditItem(null); }} ariaLabel={editItem ? tc.formEditTitle : tc.formAddTitle}>
         <div className="p-6">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
@@ -591,7 +591,7 @@ export function CatalogPanel({
       </AnimatedDialog>
 
       {/* Tambah stok */}
-      <AnimatedDialog isOpen={!!stockItem} onClose={() => setStockItem(null)}>
+      <AnimatedDialog isOpen={!!stockItem} onClose={() => setStockItem(null)} ariaLabel={tc.addStockTitle}>
         <div className="p-6">
           <div className="w-11 h-11 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center mb-4">
             <PackagePlus className="w-5 h-5 text-primary-600 dark:text-primary-400" />
@@ -639,7 +639,7 @@ export function CatalogPanel({
       </AnimatedDialog>
 
       {/* Delete confirmation */}
-      <AnimatedDialog isOpen={!!deleteItem} onClose={() => setDeleteItem(null)}>
+      <AnimatedDialog isOpen={!!deleteItem} onClose={() => setDeleteItem(null)} ariaLabel={tc.deleteTitle}>
         <div className="p-6">
           <div className="w-11 h-11 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center mb-4">
             <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />

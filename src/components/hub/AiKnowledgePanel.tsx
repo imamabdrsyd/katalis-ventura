@@ -289,7 +289,7 @@ export function AiKnowledgePanel() {
       </div>
 
       {/* Modal edit field terstruktur */}
-      <AnimatedDialog isOpen={showFields} onClose={() => setShowFields(false)}>
+      <AnimatedDialog isOpen={showFields} onClose={() => setShowFields(false)} ariaLabel={th.fieldsModalTitle}>
         <div className="p-6">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{th.fieldsModalTitle}</h2>
@@ -539,6 +539,7 @@ export function AiKnowledgePanel() {
       <AnimatedDialog
         isOpen={!!selectedImage}
         onClose={() => setSelectedImage(null)}
+        ariaLabel={selectedImage?.title}
         panelClassName="bg-transparent shadow-none max-w-4xl w-full flex items-center justify-center p-4"
         backdropClassName="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center"
       >
@@ -548,6 +549,7 @@ export function AiKnowledgePanel() {
               onClick={() => setSelectedImage(null)}
               className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors z-10"
               title={t.common.close}
+              aria-label={t.common.close}
             >
               <X className="w-6 h-6" />
             </button>

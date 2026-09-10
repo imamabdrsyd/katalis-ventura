@@ -16,6 +16,12 @@ interface FloatingFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   trailingPad?: string;
   /** Class tambahan untuk wrapper */
   wrapperClassName?: string;
+  /**
+   * Pesan validasi. Diisi lewat prop (bukan `<p>` lepas di call site) supaya
+   * pesannya ikut tertaut ke input lewat `aria-describedby` + `aria-invalid` —
+   * border merah saja tidak terbaca screen reader maupun pengguna buta warna.
+   */
+  error?: ReactNode;
 }
 
 /**
@@ -34,9 +40,10 @@ interface FloatingFieldProps extends InputHTMLAttributes<HTMLInputElement> {
  * latar warna apa pun (tak seperti varian outlined).
  */
 const FloatingField = forwardRef<HTMLInputElement, FloatingFieldProps>(
-  ({ label, icon, trailing, trailingPad = 'pr-7', id, className = '', wrapperClassName = '', placeholder, ...props }, ref) => {
+  ({ label, icon, trailing, trailingPad = 'pr-7', id, className = '', wrapperClassName = '', placeholder, error, ...props }, ref) => {
     const generatedId = useId();
     const inputId = id ?? generatedId;
+    const errorId = `${inputId}-error`;
 
     return (
       <div className={`relative ${wrapperClassName}`}>
@@ -44,7 +51,9 @@ const FloatingField = forwardRef<HTMLInputElement, FloatingFieldProps>(
           ref={ref}
           id={inputId}
           placeholder={placeholder || ' '}
-          className={`peer block w-full appearance-none border-0 border-b-2 border-gray-300 dark:border-gray-600 bg-transparent pt-5 pb-1.5 text-gray-900 dark:text-gray-100 outline-none transition-colors
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
+          className={`peer block w-full appearance-none border-0 border-b-2 ${error ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-gray-600'} bg-transparent pt-5 pb-1.5 text-gray-900 dark:text-gray-100 outline-none transition-colors
             placeholder:text-transparent focus:placeholder:text-gray-400 dark:focus:placeholder:text-gray-500
             focus:border-primary-500 focus:ring-0
             disabled:opacity-50 disabled:cursor-not-allowed
@@ -72,6 +81,12 @@ const FloatingField = forwardRef<HTMLInputElement, FloatingFieldProps>(
         {trailing && (
           <span className="absolute right-0 top-8 -translate-y-1/2">{trailing}</span>
         )}
+
+        {error && (
+          <p id={errorId} className="mt-1 text-sm text-red-500 dark:text-red-400">
+            {error}
+          </p>
+        )}
       </div>
     );
   }
@@ -86,6 +101,8 @@ interface FloatingSelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label: ReactNode;
   /** Class tambahan untuk wrapper */
   wrapperClassName?: string;
+  /** Pesan validasi — lihat catatan `error` di FloatingField. */
+  error?: ReactNode;
 }
 
 /**
@@ -101,9 +118,10 @@ interface FloatingSelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
  * yang tidak berlaku untuk <select>); state fokus lewat peer-focus.
  */
 const FloatingSelect = forwardRef<HTMLSelectElement, FloatingSelectProps>(
-  ({ label, id, className = '', wrapperClassName = '', children, value, ...props }, ref) => {
+  ({ label, id, className = '', wrapperClassName = '', children, value, error, ...props }, ref) => {
     const generatedId = useId();
     const selectId = id ?? generatedId;
+    const errorId = `${selectId}-error`;
     const hasValue = value !== undefined && value !== null && value !== '';
 
     return (
@@ -112,7 +130,9 @@ const FloatingSelect = forwardRef<HTMLSelectElement, FloatingSelectProps>(
           ref={ref}
           id={selectId}
           value={value}
-          className={`peer block w-full appearance-none border-0 border-b-2 border-gray-300 dark:border-gray-600 bg-transparent pt-5 pb-1.5 pr-7 text-gray-900 dark:text-gray-100 outline-none transition-colors
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
+          className={`peer block w-full appearance-none border-0 border-b-2 ${error ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-gray-600'} bg-transparent pt-5 pb-1.5 pr-7 text-gray-900 dark:text-gray-100 outline-none transition-colors
             focus:border-primary-500 focus:ring-0
             disabled:opacity-50 disabled:cursor-not-allowed
             ${className}`}
@@ -131,6 +151,12 @@ const FloatingSelect = forwardRef<HTMLSelectElement, FloatingSelectProps>(
         </label>
 
         <ChevronDown className="pointer-events-none absolute right-0 top-8 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 peer-focus:text-primary-500 transition-colors" />
+
+        {error && (
+          <p id={errorId} className="mt-1 text-sm text-red-500 dark:text-red-400">
+            {error}
+          </p>
+        )}
       </div>
     );
   }
