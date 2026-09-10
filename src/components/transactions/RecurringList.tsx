@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { ListSkeleton } from '@/components/ui/PageSkeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useConfirm } from '@/context/ConfirmContext';
 import { RefreshCw, Pause, Play, Square, Trash2, Calendar } from 'lucide-react';
 import { formatFrequency } from '@/lib/api/recurring';
@@ -48,23 +50,17 @@ export function RecurringList({ items, loading, onPause, onResume, onStop, onDel
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-      </div>
+      <ListSkeleton rows={4} className="p-4" />
     );
   }
 
   if (items.length === 0) {
     return (
-      <div className="text-center py-12">
-        <RefreshCw className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-        <p className="text-gray-500 dark:text-gray-400 text-sm">
-          Belum ada transaksi berulang.
-        </p>
-        <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
-          Buat transaksi baru dan centang &quot;Jadikan Berulang&quot; untuk memulai.
-        </p>
-      </div>
+      <EmptyState
+        icon={RefreshCw}
+        title="Belum ada transaksi berulang"
+        description={'Buat transaksi baru dan centang "Jadikan Berulang" untuk memulai.'}
+      />
     );
   }
 

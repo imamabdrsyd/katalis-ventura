@@ -1,4 +1,5 @@
 'use client';
+import { ListSkeleton } from '@/components/ui/PageSkeleton';
 
 import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -397,7 +398,7 @@ function LeadsPageInner() {
         >
           <div className="flex-1 min-h-0 overflow-y-auto py-2 divide-y divide-gray-100 dark:divide-gray-700/60">
             {loadingLeads ? (
-              <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-500 text-sm">Memuat leads…</div>
+              <ListSkeleton rows={6} className="p-4" />
             ) : leads.length === 0 ? (
               <div className="flex items-center justify-center h-full">
                 {loadingChannels ? (
@@ -504,9 +505,9 @@ function LeadsPageInner() {
               {/* Pesan */}
               <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
                 {loadingMessages ? (
-                  <div className="text-center py-16 text-gray-400 dark:text-gray-500 text-sm">Memuat percakapan…</div>
+                  <ListSkeleton rows={5} className="p-4" />
                 ) : messages.length === 0 ? (
-                  <div className="text-center py-16 text-gray-400 dark:text-gray-500 text-sm">Belum ada pesan</div>
+                  <EmptyState icon={MessagesSquare} title="Belum ada pesan" size="sm" />
                 ) : (
                   messages.map((m) => (
                     <MessageBubble

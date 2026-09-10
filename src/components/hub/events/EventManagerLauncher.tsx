@@ -22,7 +22,6 @@ import {
   Check,
   Copy,
   Link2,
-  Loader2,
   Lock,
   Palette,
   PartyPopper,
@@ -33,6 +32,7 @@ import {
   Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ListSkeleton } from '@/components/ui/PageSkeleton';
 import { useConfirm } from '@/context/ConfirmContext';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -385,9 +385,7 @@ export function EventManagerLauncher({ headerSlot }: Props) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24 text-gray-400 dark:text-gray-500">
-        <Loader2 className="w-6 h-6 animate-spin" />
-      </div>
+      <ListSkeleton rows={6} className="py-6" />
     );
   }
 

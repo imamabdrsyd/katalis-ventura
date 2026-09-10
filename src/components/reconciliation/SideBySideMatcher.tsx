@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react';
 import { CheckCircle2, Circle, Link as LinkIcon, AlertCircle, Loader2, Unlink, Inbox } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { useLanguage } from '@/context/LanguageContext';
+import { ListSkeleton } from '@/components/ui/PageSkeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useBankTransactions, type BankTransaction } from '@/hooks/useBankTransactions';
 import type { Transaction } from '@/types';
 
@@ -102,9 +104,7 @@ export function SideBySideMatcher({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
-      </div>
+      <ListSkeleton rows={5} className="p-4" />
     );
   }
 
@@ -119,11 +119,11 @@ export function SideBySideMatcher({
 
   if (bankTransactions.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-        <Inbox className="w-12 h-12 mx-auto mb-3 opacity-40" />
-        <p className="font-medium">{t.reconciliation.sideBySideEmpty}</p>
-        <p className="text-xs mt-1">{t.reconciliation.sideBySideEmptyHint}</p>
-      </div>
+      <EmptyState
+        icon={Inbox}
+        title={t.reconciliation.sideBySideEmpty}
+        description={t.reconciliation.sideBySideEmptyHint}
+      />
     );
   }
 

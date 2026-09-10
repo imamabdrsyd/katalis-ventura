@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, useEffect } from 'react';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Loader2, Plus, Trash2, ArrowUp, ArrowDown, ImageIcon } from 'lucide-react';
 import type { BusinessOmniChannel, OmniChannelShowcaseImage } from '@/types';
 import {
@@ -223,12 +224,13 @@ export function OmniChannelShowcase({ businessId, userId, channel, initialShowca
       {error && <p className="text-xs text-red-500">{error}</p>}
 
       {showcase.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 px-4 py-8 text-center">
-          <ImageIcon className="w-8 h-8 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Belum ada showcase image. Klik tombol Upload untuk menambahkan.
-          </p>
-        </div>
+        <EmptyState
+          icon={ImageIcon}
+          title="Belum ada showcase image"
+          description="Klik tombol Upload untuk menambahkan."
+          size="sm"
+          className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600"
+        />
       ) : (
         <div className="space-y-3">
           {showcase.map((img, i) => (

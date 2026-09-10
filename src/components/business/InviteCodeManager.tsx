@@ -7,6 +7,7 @@ import * as inviteCodesApi from '@/lib/api/inviteCodes';
 import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 import { useLanguage } from '@/context/LanguageContext';
 import { useConfirm } from '@/context/ConfirmContext';
+import { ListSkeleton } from '@/components/ui/PageSkeleton';
 
 interface InviteCodeManagerProps {
   businessId: string;
@@ -256,10 +257,7 @@ export function InviteCodeManager({
             </h3>
 
             {loading ? (
-              <div className="text-center py-8">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{t.common.loading}</p>
-              </div>
+              <ListSkeleton rows={3} className="py-2" />
             ) : inviteCodes.length === 0 ? (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                 {t.inviteCode.noCodes}

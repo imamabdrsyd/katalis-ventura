@@ -1,4 +1,5 @@
 'use client';
+import { ListSkeleton } from '@/components/ui/PageSkeleton';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
@@ -41,11 +42,7 @@ const BackupCard = dynamic(
 );
 
 function TabChunkLoader() {
-  return (
-    <div className="flex items-center justify-center py-16">
-      <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-    </div>
-  );
+  return <ListSkeleton rows={4} className="py-4" />;
 }
 
 const BUSINESS_SECTOR_LABELS: Record<string, string> = {

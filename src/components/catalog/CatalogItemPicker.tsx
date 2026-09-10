@@ -1,4 +1,6 @@
 'use client';
+import { ListSkeleton } from '@/components/ui/PageSkeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 import { useState, useEffect, useMemo } from 'react';
 import type { CatalogItem } from '@/types';
@@ -143,18 +145,21 @@ export function CatalogItemPicker({
   }
 
   if (loading) {
-    return <div className="py-8 text-center text-sm text-gray-400">{tc.pickerLoading}</div>;
+    return <ListSkeleton rows={4} className="py-2" />;
   }
 
   if (items.length === 0 && !allowCreate) {
     return (
-      <div className="py-8 text-center">
-        <Package className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
-        <p className="text-sm text-gray-500 dark:text-gray-400">{tc.pickerEmpty}</p>
-        <a href={catalogHref} className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline mt-1 inline-block">
-          {tc.pickerCreateLink}
-        </a>
-      </div>
+      <EmptyState
+        icon={Package}
+        title={tc.pickerEmpty}
+        size="sm"
+        action={
+          <a href={catalogHref} className="btn-ghost">
+            {tc.pickerCreateLink}
+          </a>
+        }
+      />
     );
   }
 

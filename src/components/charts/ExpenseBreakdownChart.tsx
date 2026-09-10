@@ -1,10 +1,11 @@
 'use client';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 import { useMemo } from 'react';
 import { useChartPalette } from '@/hooks/useThemeMode';
 import { useRouter } from 'next/navigation';
 import { Doughnut } from 'react-chartjs-2';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, PieChart } from 'lucide-react';
 import {
   Chart as ChartJS,
   ArcElement,
@@ -180,9 +181,7 @@ export default function ExpenseBreakdownChart({
       </div>
 
       {allExpenseData.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center text-gray-400 dark:text-gray-500">
-          <p>Belum ada data expense</p>
-        </div>
+        <EmptyState icon={PieChart} title="Belum ada data expense" className="flex-1" />
       ) : (
         <div className="flex-1 min-h-0 flex flex-col">
           <div style={{ height: 200 }} className="mb-4">

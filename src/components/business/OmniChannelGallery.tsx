@@ -1,7 +1,8 @@
 'use client';
 
 import { useRef, useState, useEffect } from 'react';
-import { Loader2, Plus, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Loader2, Plus, Trash2, ArrowLeft, ArrowRight, ImageIcon } from 'lucide-react';
 import type { BusinessOmniChannel, OmniChannelGalleryImage } from '@/types';
 import {
   uploadGalleryImage,
@@ -227,11 +228,13 @@ export function OmniChannelGallery({ businessId, userId, channel, initialGallery
       {error && <p className="text-xs text-red-500">{error}</p>}
 
       {gallery.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 px-4 py-8 text-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Belum ada gambar. Klik tombol Upload untuk menambahkan.
-          </p>
-        </div>
+        <EmptyState
+          icon={ImageIcon}
+          title="Belum ada gambar"
+          description="Klik tombol Upload untuk menambahkan."
+          size="sm"
+          className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600"
+        />
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {gallery.map((img, i) => (

@@ -1,4 +1,6 @@
 'use client';
+import { ListSkeleton } from '@/components/ui/PageSkeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -80,18 +82,18 @@ export function JoinRequestList({ businessId, onApproved }: JoinRequestListProps
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-10">
-        <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-      </div>
+      <ListSkeleton rows={3} />
     );
   }
 
   if (requests.length === 0) {
     return (
-      <div className="text-center py-10 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
-        <UserCheck className="w-9 h-9 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-        <p className="text-sm text-gray-500 dark:text-gray-400">Belum ada permintaan bergabung</p>
-      </div>
+      <EmptyState
+        icon={UserCheck}
+        title="Belum ada permintaan bergabung"
+        size="sm"
+        className="bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700"
+      />
     );
   }
 

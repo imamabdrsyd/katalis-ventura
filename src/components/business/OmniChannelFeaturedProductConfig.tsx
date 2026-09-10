@@ -1,4 +1,6 @@
 'use client';
+import { ListSkeleton } from '@/components/ui/PageSkeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
@@ -112,17 +114,18 @@ export function OmniChannelFeaturedProductConfig({ businessId, userId, channel, 
 
       {/* Item list */}
       {loadingItems ? (
-        <div className="flex items-center justify-center py-8 text-gray-400">
-          <Loader2 className="w-5 h-5 animate-spin" />
-        </div>
+        <ListSkeleton rows={3} className="py-2" />
       ) : items.length === 0 ? (
-        <div className="text-center py-6">
-          <Package className="w-8 h-8 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
-          <p className="text-sm text-gray-500 dark:text-gray-400">Belum ada item katalog.</p>
-          <Link href="/point-of-sales" className="text-sm text-indigo-600 dark:text-indigo-400 font-medium hover:underline">
-            Tambah item di Katalog →
-          </Link>
-        </div>
+        <EmptyState
+          icon={Package}
+          title="Belum ada item katalog"
+          size="sm"
+          action={
+            <Link href="/point-of-sales" className="btn-ghost">
+              Tambah item di Katalog →
+            </Link>
+          }
+        />
       ) : (
         <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
           {items.map(item => {

@@ -5,6 +5,8 @@ import { createPortal } from 'react-dom';
 import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Lock, TextSearch, Search, X, CalendarSearch, Eye, FileText } from 'lucide-react';
 import { ContactTypeIcon, CONTACT_TYPE_LABELS } from '@/components/ui/ContactTypeIcon';
 import { useLanguage } from '@/context/LanguageContext';
+import { ListSkeleton } from '@/components/ui/PageSkeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { Translations } from '@/lib/i18n';
 import type { Transaction, TransactionCategory, Contact } from '@/types';
 import { SalesChannelBadge } from './SalesChannelBadge';
@@ -623,12 +625,7 @@ export function TransactionList({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-          <p className="text-gray-500 dark:text-gray-400">{t.transactions.loadingTransactions}</p>
-        </div>
-      </div>
+      <ListSkeleton rows={8} className="p-4" />
     );
   }
 
@@ -882,27 +879,19 @@ export function TransactionList({
         <tbody>
           {transactions.length === 0 ? (
             <tr>
-              <td colSpan={tableColumnCount} className="py-16">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <ClipboardList className="w-8 h-8 text-gray-400 dark:text-gray-500" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">
-                    {hasActiveFilters ? t.transactions.noTransactionsFiltered : t.transactions.noTransactions}
-                  </h3>
-                  <p className="text-gray-500 dark:text-gray-400">
-                    {hasActiveFilters ? t.transactions.noTransactionsFilteredHint : t.transactions.noTransactionsHint}
-                  </p>
-                  {hasActiveFilters && onResetFilters && (
-                    <button
-                      type="button"
-                      onClick={onResetFilters}
-                      className="mt-5 px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg transition-colors"
-                    >
-                      {t.common.reset} {t.common.filter}
-                    </button>
-                  )}
-                </div>
+              <td colSpan={tableColumnCount}>
+                <EmptyState
+                  icon={ClipboardList}
+                  title={hasActiveFilters ? t.transactions.noTransactionsFiltered : t.transactions.noTransactions}
+                  description={hasActiveFilters ? t.transactions.noTransactionsFilteredHint : t.transactions.noTransactionsHint}
+                  action={
+                    hasActiveFilters && onResetFilters ? (
+                      <button type="button" onClick={onResetFilters} className="btn-ghost">
+                        {t.common.reset} {t.common.filter}
+                      </button>
+                    ) : undefined
+                  }
+                />
               </td>
             </tr>
           ) : transactions.map((transaction, index) => {

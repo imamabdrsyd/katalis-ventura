@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 10 September 2026 (§3.6 perilaku dialog + `useConfirm`, §3.7 prop `error`)
+> Terakhir diupdate: 10 September 2026 (§3.6 dialog + `useConfirm`, §3.7 prop `error`, §6 state memuat & kosong)
 
 ---
 
@@ -800,6 +800,8 @@ Referensi: bagian *Riwayat Perubahan* di [`TransactionDetailModal.tsx`](../src/c
 - **Alt text:** semua `<img>` wajib ada alt. Icon decoratif di dalam button yang sudah ada label text tidak perlu alt.
 - **Aria label:** button icon-only wajib `aria-label`
 - **Error form wajib tertaut ke input-nya.** Border merah saja tidak terbaca screen reader maupun pengguna buta warna. Jangan render `<p>` error lepas di call site — kirim lewat prop `error` (`FloatingField`, `FloatingSelect`, `AccountDropdown`, `CurrencyInputWithCalculator`, `ContactAutocomplete`), yang memasang `aria-invalid` + `aria-describedby` sekaligus. Pesan tingkat form (gagal simpan, debit≠kredit) bukan error field: beri `role="alert"`, dan untuk error submit di form panjang pindahkan fokus ke sana.
+- **State memuat = skeleton, bukan spinner.** Spinner hanya untuk indikator di dalam tombol atau ikon refresh. Untuk halaman/panel/daftar pakai varian di [`PageSkeleton.tsx`](../src/components/ui/PageSkeleton.tsx) — `PageSkeleton`, `TableSkeleton`, `ReportSkeleton`, `FormSkeleton`, `CardFormSkeleton`, `CardGridSkeleton`, `ListSkeleton`. Semuanya sudah membawa `role="status"` + `aria-busy` dan `motion-reduce`. Tiap route dashboard juga punya `loading.tsx` yang me-render varian yang cocok (kecuali stub hub statis & route redirect).
+- **State kosong = `<EmptyState>`.** Jangan bikin ikon + `<p>` abu-abu sendiri; komponennya ada di [`EmptyState.tsx`](../src/components/ui/EmptyState.tsx) dengan `variant` (`neutral`/`accent`), `size` (`sm`/`md`), dan slot `action` untuk tombol/link jalan keluar.
 - **Dialog:** selalu lewat `<Modal>` atau `<AnimatedDialog>` — keduanya sudah membawa kontrak fokus & ARIA di §3.6. Jangan bikin `fixed inset-0` sendiri.
 - **Jangan pakai dialog native.** `window.confirm()` diganti `useConfirm()` (§3.6); `alert()` diganti `toast.error()` dari sonner. Keduanya sudah nol pemakaian di repo — kalau muncul lagi, itu regresi.
 - **Kegagalan yang dipicu user wajib terlihat.** `catch` yang cuma `console.error` di alur submit/hapus/simpan = kegagalan senyap. Kalau kegagalannya memang tidak perlu diumumkan (aksi utamanya sudah berhasil, sisanya cuma pembersihan), tulis alasannya di komentar — supaya pembaca berikutnya tahu itu keputusan, bukan kelalaian.

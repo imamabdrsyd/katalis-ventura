@@ -1,4 +1,6 @@
 'use client';
+import { ListSkeleton } from '@/components/ui/PageSkeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 import { useEffect, useMemo, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
@@ -12,7 +14,7 @@ import {
   isSettlementEntry,
 } from '@/lib/accounting/guidance';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { CheckSquare, Square, Receipt, Search, AlertCircle, ChevronDown } from 'lucide-react';
+import { CheckSquare, Square, Receipt, Search, AlertCircle, ChevronDown, Inbox } from 'lucide-react';
 import type { Transaction, Invoice } from '@/types';
 
 interface TransactionPickerModalProps {
@@ -216,15 +218,17 @@ export function TransactionPickerModal({
         {/* Transaction list */}
         <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden max-h-[420px] overflow-y-auto bg-gray-50 dark:bg-gray-800/50">
           {loading || loadingLinks ? (
-            <div className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
-              Memuat transaksi...
-            </div>
+            <ListSkeleton rows={5} className="py-2" />
           ) : filtered.length === 0 ? (
-            <div className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
-              {invoiceable.length === 0
-                ? 'Tidak ada transaksi piutang yang bisa di-invoice.'
-                : 'Tidak ada transaksi yang cocok dengan filter.'}
-            </div>
+            <EmptyState
+              icon={Inbox}
+              title={
+                invoiceable.length === 0
+                  ? 'Tidak ada transaksi piutang yang bisa di-invoice'
+                  : 'Tidak ada transaksi yang cocok dengan filter'
+              }
+              size="sm"
+            />
           ) : (
             <ul className="divide-y divide-gray-200 dark:divide-gray-700">
               {filtered.map((t) => {

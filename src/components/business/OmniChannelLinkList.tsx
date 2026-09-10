@@ -1,8 +1,9 @@
 'use client';
 
 import { toast } from 'sonner';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Link2 } from 'lucide-react';
 import type { OmniChannelLink } from '@/types';
 import { reorderOmniChannelLinks } from '@/lib/api/omniChannel';
 import { OmniChannelLinkItem } from './OmniChannelLinkItem';
@@ -41,9 +42,12 @@ export function OmniChannelLinkList({ businessId, links, onChanged }: Props) {
   return (
     <div>
       {sorted.length === 0 ? (
-        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">
-          Belum ada link. Tambahkan link pertama kamu.
-        </p>
+        <EmptyState
+          icon={Link2}
+          title="Belum ada link"
+          description="Tambahkan link pertama kamu."
+          size="sm"
+        />
       ) : (
         <div className="space-y-2 mb-4">
           {sorted.map((link, idx) => (

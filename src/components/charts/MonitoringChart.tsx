@@ -1,4 +1,6 @@
 'use client';
+import { BarChart3 } from 'lucide-react';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 import { useState, useMemo, useEffect } from 'react';
 import { useChartPalette } from '@/hooks/useThemeMode';
@@ -251,9 +253,7 @@ export default function MonitoringChart({ transactions, loading = false, selecte
       </div>
 
       {!hasData ? (
-        <div className="h-80 flex items-center justify-center text-gray-400 dark:text-gray-500">
-          <p>Belum ada data untuk ditampilkan</p>
-        </div>
+        <EmptyState icon={BarChart3} title="Belum ada data untuk ditampilkan" className="h-80" />
       ) : (
         <div style={{ height: 320 }}>
           <Line data={chartData} options={options} />

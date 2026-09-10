@@ -1,7 +1,9 @@
 'use client';
+import { ListSkeleton } from '@/components/ui/PageSkeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 import { useCallback, useEffect, useState } from 'react';
-import { History, Loader2, ArrowDown, ArrowUp, RefreshCw } from 'lucide-react';
+import { History, ArrowDown, ArrowUp, RefreshCw } from 'lucide-react';
 import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { getStockLogs, type StockLogEntry } from '@/lib/api/catalog';
@@ -63,13 +65,9 @@ export function StockLogPanel({ refreshKey = 0 }: { refreshKey?: number }) {
       </div>
 
       {loading && logs.length === 0 ? (
-        <div className="flex items-center justify-center py-8 text-gray-400 dark:text-gray-500">
-          <Loader2 className="w-5 h-5 animate-spin" />
-        </div>
+        <ListSkeleton rows={4} className="py-2" />
       ) : logs.length === 0 ? (
-        <p className="py-6 text-center text-sm text-gray-400 dark:text-gray-500">
-          {tc.stockLogEmpty}
-        </p>
+        <EmptyState icon={History} title={tc.stockLogEmpty} size="sm" />
       ) : (
         <ul className="divide-y divide-gray-100 dark:divide-gray-700 max-h-[26rem] overflow-y-auto -mx-1 px-1">
           {logs.map((log) => {

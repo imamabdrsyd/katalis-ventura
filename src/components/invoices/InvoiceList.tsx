@@ -1,4 +1,6 @@
 'use client';
+import { ListSkeleton } from '@/components/ui/PageSkeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 import { FileText, Pencil, Trash2, Download } from 'lucide-react';
 import type { Invoice } from '@/types';
@@ -26,28 +28,17 @@ export function InvoiceList({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-gray-500 dark:text-gray-400">Memuat invoice...</p>
-        </div>
-      </div>
+      <ListSkeleton rows={6} className="p-4" />
     );
   }
 
   if (invoices.length === 0) {
     return (
-      <div className="text-center py-12">
-        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-          <FileText className="w-8 h-8 text-gray-400 dark:text-gray-500" />
-        </div>
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">
-          Belum ada invoice
-        </h3>
-        <p className="text-gray-500 dark:text-gray-400">
-          Mulai dengan membuat invoice pertama Anda
-        </p>
-      </div>
+      <EmptyState
+        icon={FileText}
+        title="Belum ada invoice"
+        description="Mulai dengan membuat invoice pertama Anda"
+      />
     );
   }
 

@@ -1,4 +1,6 @@
 'use client';
+import { ListSkeleton } from '@/components/ui/PageSkeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -383,19 +385,19 @@ export function CatalogPanel({
         <div className="flex-1 min-w-0 w-full">
       {/* List */}
       {loading ? (
-        <div className="text-center py-16 text-gray-400">{tc.loading}</div>
+        <ListSkeleton rows={6} className="py-4" />
       ) : filteredItems.length === 0 ? (
-        <div className="text-center py-16">
-          <Package className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-          <p className="text-gray-500 dark:text-gray-400">
-            {items.length === 0 ? tc.emptyAll : tc.emptyFiltered}
-          </p>
-          {canManage && items.length === 0 && (
-            <button onClick={openAdd} className="mt-3 text-indigo-600 dark:text-indigo-400 font-medium hover:underline">
-              {tc.addFirstItem}
-            </button>
-          )}
-        </div>
+        <EmptyState
+          icon={Package}
+          title={items.length === 0 ? tc.emptyAll : tc.emptyFiltered}
+          action={
+            canManage && items.length === 0 ? (
+              <button onClick={openAdd} className="btn-ghost">
+                {tc.addFirstItem}
+              </button>
+            ) : undefined
+          }
+        />
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filteredItems.map(item => {

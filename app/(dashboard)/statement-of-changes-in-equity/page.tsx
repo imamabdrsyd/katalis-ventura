@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import { Building2, GitBranch, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useStatementOfChangesInEquity } from '@/hooks/useStatementOfChangesInEquity';
 import { useLanguage } from '@/context/LanguageContext';
+import { ReportSkeleton } from '@/components/ui/PageSkeleton';
 import { formatCurrency } from '@/lib/utils';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { PeriodFilterCard } from '@/components/reports/PeriodFilterCard';
@@ -63,13 +64,7 @@ function SCEPageInner() {
   // Berubah saat periode ganti → total ekuitas berdetak ulang dari 0.
   const sceAnimationKey = `${startDate}-${endDate}`;
 
-  if (loading) {
-    return (
-      <div className="p-8 flex items-center justify-center min-h-[50vh]">
-        <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (loading) return <ReportSkeleton />;
 
   if (!activeBusiness) {
     return (
@@ -287,11 +282,7 @@ function SCEPageInner() {
 
 export default function StatementOfChangesInEquityPage() {
   return (
-    <Suspense fallback={
-      <div className="p-8 flex items-center justify-center min-h-[50vh]">
-        <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    }>
+    <Suspense fallback={<ReportSkeleton />}>
       <SCEPageInner />
     </Suspense>
   );

@@ -14,6 +14,8 @@ import { isImageType, isPendingAttachment, uploadPendingAttachments, deleteAttac
 import { useDeliverableAttachmentUrl, triggerAttachmentDownload } from '@/lib/storage/signedUrl';
 import type { Contact as ContactType, ContactType as ContactTypeEnum, Transaction, TransactionAttachment } from '@/types';
 import { useLanguage } from '@/context/LanguageContext';
+import { ListSkeleton } from '@/components/ui/PageSkeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 // Label sengaja TIDAK di sini: konstanta modul-level tak bisa membaca hook
 // bahasa. Ikon & warna tetap statis, teksnya diambil lewat `typeLabel()`.
@@ -580,24 +582,19 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
 
         {/* Empty state */}
         {contacts.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Contact className="w-8 h-8 text-gray-400 dark:text-gray-500" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">{tcn.emptyTitle}</h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-4">
-              {tcn.emptyHint}
-            </p>
-            {canManage && (
-              <button
-                onClick={openAddForm}
-                className="btn-primary inline-flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                {tcn.addContact}
-              </button>
-            )}
-          </div>
+          <EmptyState
+            icon={Contact}
+            title={tcn.emptyTitle}
+            description={tcn.emptyHint}
+            action={
+              canManage ? (
+                <button onClick={openAddForm} className="btn-primary inline-flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  {tcn.addContact}
+                </button>
+              ) : undefined
+            }
+          />
         ) : filteredContacts.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-500 dark:text-gray-400">{tcn.noMatch}</p>
@@ -801,10 +798,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
             {/* Transaction List */}
             <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
               {loadingTransactions ? (
-                <div className="flex items-center justify-center py-16 text-gray-400">
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  <span className="text-sm">{tcn.loadingTransactions}</span>
-                </div>
+                <ListSkeleton rows={5} className="p-4" />
               ) : contactTransactions.length === 0 ? (
                 <div className="text-center py-16">
                   <p className="text-sm text-gray-500 dark:text-gray-400">{tcn.noTransactionsYet}</p>

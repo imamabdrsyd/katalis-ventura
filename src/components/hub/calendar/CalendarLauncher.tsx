@@ -1,4 +1,5 @@
 'use client';
+import { ListSkeleton } from '@/components/ui/PageSkeleton';
 
 /**
  * Isi tab "Kalender" di hub /calendar (bisnis jasa sektor akomodasi). Memuat
@@ -257,9 +258,7 @@ export function CalendarLauncher({ headerSlot }: CalendarLauncherProps) {
 
   if (unitsLoading || loadingData) {
     return (
-      <div className="flex items-center justify-center py-24 text-gray-400">
-        <Loader2 className="w-6 h-6 animate-spin" />
-      </div>
+      <ListSkeleton rows={6} className="py-6" />
     );
   }
 

@@ -1,6 +1,8 @@
 'use client';
+import { ListSkeleton } from '@/components/ui/PageSkeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 
-import { Bell, CheckCircle2, XCircle, AlertCircle, MessagesSquare } from 'lucide-react';
+import { Bell, CheckCircle2, XCircle, AlertCircle, MessagesSquare, UserCheck } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -253,9 +255,7 @@ export function NotificationBell({
 
           <div className="max-h-96 overflow-y-auto">
             {loading ? (
-              <div className="p-8 text-center">
-                <div className="w-6 h-6 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
-              </div>
+              <ListSkeleton rows={3} className="p-3" />
             ) : requests.length > 0 ? (
               <div className="divide-y divide-gray-100 dark:divide-gray-700">
                 {requests.map((req) => (
@@ -313,9 +313,7 @@ export function NotificationBell({
                 ))}
               </div>
             ) : (
-              <div className="p-8 text-center">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Tidak ada permintaan bergabung</p>
-              </div>
+              <EmptyState icon={UserCheck} title="Tidak ada permintaan bergabung" size="sm" />
             )}
           </div>
         </div>
