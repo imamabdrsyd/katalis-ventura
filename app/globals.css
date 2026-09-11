@@ -238,30 +238,10 @@
     @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
   }
 
-  /* Category badge classes — sync with src/lib/categoryColors.ts */
-  .badge-earn {
-    @apply bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400;
-  }
-
-  .badge-opex {
-    @apply bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400;
-  }
-
-  .badge-var {
-    @apply bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400;
-  }
-
-  .badge-capex {
-    @apply bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400;
-  }
-
-  .badge-tax {
-    @apply bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400;
-  }
-
-  .badge-fin {
-    @apply bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400;
-  }
+  /* Warna kategori TIDAK ada di sini. Dulu ada .badge-earn/.badge-opex/… yang
+     mengaku "sync with categoryColors.ts" padahal sudah drift (red vs rose,
+     yellow vs amber) dan nol pemakai. Sumber tunggalnya sekarang
+     src/lib/categoryColors.ts, dipakai lewat <CategoryBadge>. */
 }
 
 /* Hide scrollbar but keep scroll functionality */

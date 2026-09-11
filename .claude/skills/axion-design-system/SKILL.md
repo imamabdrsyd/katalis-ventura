@@ -11,7 +11,9 @@ The full design system spec lives in **[docs/DESIGN_SYSTEM.md](../../../docs/DES
 
 ## Core rules
 
-1. **Never invent classes inline when a utility exists.** `globals.css` provides `.card`, `.card-static`, `.btn-primary`, `.btn-secondary`, `.btn-danger`, `.input`, `.label`, `.badge` + `.badge-{earn|opex|var|capex|tax|fin}`. Use them.
+1. **Never invent classes inline when a utility exists.** `globals.css` provides `.card`, `.card-static`, `.btn-primary`, `.btn-secondary`, `.btn-danger`, `.btn-ghost`, `.input`, `.label`, `.badge`. Use them.
+
+   **Category badges are the exception — they are NOT a CSS class.** Use the `<CategoryBadge>` component (`src/components/ui/CategoryBadge.tsx`), which pulls colour from `src/lib/categoryColors.ts` and the label from the i18n dictionary. The old `.badge-earn`/`.badge-opex`/… classes were **deleted on 11 Sep 2026** — they had zero usages and their hues had drifted from the source of truth (red vs rose, yellow vs amber). Never reintroduce them.
 
 2. **Always pair dark mode.** Every `bg-*`, `text-*`, `border-*` that sets a visible color needs a `dark:` pasangan. No exceptions.
 
@@ -60,6 +62,8 @@ If the user asks for a component that doesn't exist yet (e.g. "dropdown menu", "
 
 ## What to never do
 
+- ❌ `.badge-earn` / `.badge-opex` / … — deleted; use `<CategoryBadge>`
+- ❌ Hardcoding a category hue (`bg-red-500` for OPEX, `text-yellow-600` for TAX) — import `CATEGORY_BADGE_CLASSES` / `CATEGORY_DOT_CLASSES` from `src/lib/categoryColors.ts`
 - ❌ `bg-indigo-500` — use `bg-primary-500`
 - ❌ Inline `px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors` — use `.btn-primary`
 - ❌ `text-gray-800` tanpa `dark:text-gray-100`

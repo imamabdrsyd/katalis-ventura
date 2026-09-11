@@ -2900,4 +2900,24 @@ export const id: Translations = {
       changeItem: 'Ganti item',
     },
   },
+
+  recurring: {
+    emptyTitle: 'Belum ada transaksi berulang',
+    emptyDescription: 'Buat transaksi baru dan centang "Jadikan Berulang" untuk memulai.',
+    actionFailed: 'Gagal melakukan aksi',
+    statusActive: 'Aktif',
+    statusPaused: 'Dijeda',
+    statusStopped: 'Dihentikan',
+    pause: 'Jeda',
+    resume: 'Lanjutkan',
+    stop: 'Hentikan',
+    deleteTitle: 'Hapus transaksi berulang ini?',
+    deleteMessage: 'Transaksi yang sudah dibuat tidak akan terpengaruh.',
+    nextDue: 'Berikutnya:',
+    generatedCount: (n: number) => `${n}x dibuat`,
+    frequency: (n: number, unit: 'weekly' | 'monthly' | 'yearly') => {
+      const label = { weekly: 'minggu', monthly: 'bulan', yearly: 'tahun' }[unit];
+      return n === 1 ? `Setiap ${label}` : `Setiap ${n} ${label}`;
+    },
+  },
 };

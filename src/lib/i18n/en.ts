@@ -2896,4 +2896,24 @@ export const en: Translations = {
       changeItem: 'Change item',
     },
   },
+
+  recurring: {
+    emptyTitle: 'No recurring transactions yet',
+    emptyDescription: 'Create a transaction and tick "Make recurring" to get started.',
+    actionFailed: 'The action failed',
+    statusActive: 'Active',
+    statusPaused: 'Paused',
+    statusStopped: 'Stopped',
+    pause: 'Pause',
+    resume: 'Resume',
+    stop: 'Stop',
+    deleteTitle: 'Delete this recurring transaction?',
+    deleteMessage: 'Transactions already created will not be affected.',
+    nextDue: 'Next:',
+    generatedCount: (n: number) => `${n} created`,
+    frequency: (n: number, unit: 'weekly' | 'monthly' | 'yearly') => {
+      const label = { weekly: 'week', monthly: 'month', yearly: 'year' }[unit];
+      return n === 1 ? `Every ${label}` : `Every ${n} ${label}s`;
+    },
+  },
 };

@@ -75,19 +75,6 @@ export function computeNextDueDate(
   return date.toISOString().split('T')[0];
 }
 
-/**
- * Format frequency for display.
- */
-export function formatFrequency(frequency: RecurringFrequency, intervalValue: number): string {
-  const labels: Record<RecurringFrequency, string> = {
-    weekly: 'minggu',
-    monthly: 'bulan',
-    yearly: 'tahun',
-  };
-  if (intervalValue === 1) return `Setiap ${labels[frequency]}`;
-  return `Setiap ${intervalValue} ${labels[frequency]}`;
-}
-
 // ============================================
 // CRUD Operations
 // ============================================

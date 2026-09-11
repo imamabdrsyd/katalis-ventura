@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 10 September 2026 (§3.6 dialog + `useConfirm`, §3.7 prop `error`, §6 state memuat & kosong)
+> Terakhir diupdate: 11 September 2026 (§1.3 palet kategori dikonsolidasi, `.badge-*` dicabut)
 
 ---
 
@@ -58,22 +58,24 @@ primary: {
 
 ### 1.3 Warna Kategori Transaksi
 
-**Source of truth: [`src/lib/categoryColors.ts`](../src/lib/categoryColors.ts)** — `CATEGORY_BADGE_CLASSES` dan `CATEGORY_TEXT_CLASSES`.
-Gunakan `<CategoryBadge category={...} />` atau import langsung dari `categoryColors.ts`.
+**Source of truth: [`src/lib/categoryColors.ts`](../src/lib/categoryColors.ts)** — `CATEGORY_BADGE_CLASSES` (badge bertulisan) dan `CATEGORY_DOT_CLASSES` (titik/strip solid, untuk penanda yang terlalu kecil memuat teks).
+Gunakan `<CategoryBadge category={...} />` atau import langsung dari `categoryColors.ts`. **Label** kategori TIDAK ada di sana — itu milik `t.categories` di kamus i18n, karena label ikut bahasa aplikasi sedangkan warna tidak.
 
-| Kategori | Color | Text class | Kontras light (teks di `bg-*-50`) |
-|----------|-------|------------|-----------------------------------|
-| EARN | emerald | `text-emerald-700 dark:text-emerald-300` | 5.21 ✓ |
-| OPEX | rose | `text-rose-700 dark:text-rose-300` | 5.72 ✓ |
-| VAR | pink | `text-pink-700 dark:text-pink-300` | 5.53 ✓ |
-| CAPEX | blue | `text-blue-600 dark:text-blue-300` | 4.75 ✓ |
-| TAX | amber | `text-amber-700 dark:text-amber-300` | 4.84 ✓ |
-| FIN | indigo | `text-indigo-600 dark:text-indigo-300` | 5.62 ✓ |
-| SETTLE | gray | `text-gray-600 dark:text-gray-400` | 6.87 ✓ |
+| Kategori | Hue | Teks badge | Titik | Kontras light (teks di `bg-*-50`) |
+|----------|-----|------------|-------|-----------------------------------|
+| EARN | emerald | `text-emerald-700 dark:text-emerald-300` | `bg-emerald-500` | 5.21 ✓ |
+| OPEX | rose | `text-rose-700 dark:text-rose-300` | `bg-rose-500` | 5.72 ✓ |
+| VAR | pink | `text-pink-700 dark:text-pink-300` | `bg-pink-500` | 5.53 ✓ |
+| CAPEX | blue | `text-blue-600 dark:text-blue-300` | `bg-blue-500` | 4.75 ✓ |
+| TAX | amber | `text-amber-700 dark:text-amber-300` | `bg-amber-500` | 4.84 ✓ |
+| FIN | indigo | `text-indigo-600 dark:text-indigo-300` | `bg-indigo-500` | 5.62 ✓ |
+| SETTLE | gray | `text-gray-600 dark:text-gray-400` | `bg-gray-400 dark:bg-gray-500` | 6.87 ✓ |
+
+> **Keluarga hue badge dan titik WAJIB sama.** Pernah tidak: titik filter memakai `red-500`/`yellow-500` sementara badge-nya rose/amber, jadi dua penanda kategori yang sama tampil beda hue di satu layar. Itu sebabnya kedua peta sekarang duduk di berkas yang sama.
 
 > **Semua pasangan badge lolos WCAG AA (≥4.5:1) untuk teks normal**, terverifikasi hitung (light + dark). OPEX & VAR sempat pakai `-600` (4.28 & 4.21 — gagal AA) → dinaikkan ke `-700`. CAPEX/FIN aman di `-600` karena hue lebih gelap. Saat menambah/mengubah warna kategori, **hitung ulang kontras** sebelum commit.
 
-> `globals.css` punya `.badge-*` classes — **jangan dipakai**, isinya outdated dan tidak sinkron. Selalu pakai `categoryColors.ts`.
+> `.badge-earn`/`.badge-opex`/… di `globals.css` sudah **dihapus** (11 Sep 2026) — nol pemakai dan nilainya sudah drift dari `categoryColors.ts`. Yang tersisa cuma kelas dasar `.badge`.
 
 ### 1.4 Warna Tipe Kontak
 
@@ -221,7 +223,7 @@ Preferensikan utility class sebelum menulis classes Tailwind panjang. Yang terse
 | `.btn-danger` | Tombol destructive merah |
 | `.input` | Input/select/textarea standar |
 | `.label` | Label form standar |
-| `.badge` + `.badge-{kategori}` | Badge kategori transaksi |
+| `.badge` | Bentuk dasar badge (pill). Untuk badge **kategori** jangan pakai ini — pakai `<CategoryBadge>` |
 | `.h-screen-dvh` | Tinggi layar penuh dengan `100dvh` + fallback `100vh` — pakai ini, bukan `h-screen`, untuk elemen full-height (URL bar mobile) |
 | `.max-h-modal` | `max-height: 90dvh` + fallback `90vh` — untuk container modal |
 
@@ -356,7 +358,7 @@ Semua variant sudah di `globals.css`. Aturan:
 
 ### 3.4 Badge
 
-Pakai `.badge .badge-{kategori}`. Untuk badge custom (status, tipe kontak), ikut pola:
+Badge **kategori transaksi**: pakai komponen [`<CategoryBadge>`](../src/components/ui/CategoryBadge.tsx) — sudah membawa warna dari `categoryColors.ts` dan label dari kamus (`showLabel`). Untuk badge custom (status, tipe kontak), pakai `.badge` lalu ikut pola:
 ```
 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-{color}-50 dark:bg-{color}-900/30 text-{color}-600 dark:text-{color}-400
 ```
@@ -816,7 +818,7 @@ Referensi: bagian *Riwayat Perubahan* di [`TransactionDetailModal.tsx`](../src/c
 |-------|------|---------|
 | Warna brand | `bg-primary-500` | `bg-indigo-500` |
 | Button primary | `className="btn-primary"` | Inline `px-4 py-2 bg-primary-500...` |
-| Badge kategori | `className="badge badge-earn"` | Custom bg-green-100 text-green-700 |
+| Badge kategori | `<CategoryBadge category="EARN" />` | `.badge-earn` (sudah dihapus) atau custom `bg-green-100 text-green-700` |
 | Binary toggle (2 opsi) | `rounded-full` pill, active `bg-white text-indigo-500` | `bg-primary-500 text-white` fill |
 | Tab navigation | `rounded-xl` container + `rounded-lg` child | Toggle pattern untuk 4+ tab |
 | Card | `.card` atau `.card-static` | Inline `bg-white rounded-2xl shadow-sm...` |

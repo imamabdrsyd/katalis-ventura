@@ -2769,6 +2769,22 @@ export interface Translations {
       changeItem: string;
     };
   };
+  recurring: {
+    emptyTitle: string;
+    emptyDescription: string;
+    actionFailed: string;
+    statusActive: string;
+    statusPaused: string;
+    statusStopped: string;
+    pause: string;
+    resume: string;
+    stop: string;
+    deleteTitle: string;
+    deleteMessage: string;
+    nextDue: string;
+    generatedCount: (n: number) => string;
+    frequency: (n: number, unit: 'weekly' | 'monthly' | 'yearly') => string;
+  };
 }
 
 export type JournalEntryTypeKey =

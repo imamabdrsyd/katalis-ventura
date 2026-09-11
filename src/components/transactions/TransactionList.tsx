@@ -11,7 +11,7 @@ import type { Translations } from '@/lib/i18n';
 import type { Transaction, TransactionCategory, Contact } from '@/types';
 import { SalesChannelBadge } from './SalesChannelBadge';
 import { isStockTransaction } from '@/lib/utils/inventoryHelper';
-import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
+import { CATEGORY_BADGE_CLASSES, CATEGORY_DOT_CLASSES } from '@/lib/categoryColors';
 import { formatCurrency, formatDateShort } from '@/lib/utils';
 
 interface TransactionListProps {
@@ -48,22 +48,10 @@ interface TransactionListProps {
 
 const CATEGORIES: TransactionCategory[] = ['EARN', 'OPEX', 'VAR', 'CAPEX', 'TAX', 'FIN'];
 
-const CATEGORY_DOT: Record<string, string> = {
-  EARN: 'bg-emerald-500',
-  OPEX: 'bg-red-500',
-  VAR: 'bg-pink-500',
-  CAPEX: 'bg-blue-500',
-  TAX: 'bg-yellow-500',
-  FIN: 'bg-indigo-500',
-  STOCK: 'bg-blue-300 dark:bg-blue-400',
-  SETTLE: 'bg-gray-400 dark:bg-gray-500',
-};
-
 // Warna badge kategori dari source of truth (src/lib/categoryColors.ts) —
 // jangan definisikan ulang di sini agar tidak drift & tetap lolos kontras WCAG.
 const SETTLE_BADGE_CLASS = CATEGORY_BADGE_CLASSES.SETTLE;
-
-const STOCK_BADGE_CLASS = 'bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400';
+const STOCK_BADGE_CLASS = CATEGORY_BADGE_CLASSES.STOCK;
 
 // Lebar kolom (px) yang bisa di-drag-resize dari header.
 // Kolom Description tidak ada di sini — tetap fleksibel menyerap sisa ruang tabel.
@@ -692,7 +680,7 @@ export function TransactionList({
                         onClick={() => { onCategoryFilterChange?.(cat); setShowCategoryDropdown(false); }}
                         className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 ${categoryFilter === cat ? 'font-medium text-gray-900 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300'}`}
                       >
-                        <span className={`w-1 h-3.5 rounded-full flex-shrink-0 ${CATEGORY_DOT[cat] ?? 'bg-gray-400 dark:bg-gray-500'}`} />
+                        <span className={`w-1 h-3.5 rounded-full flex-shrink-0 ${CATEGORY_DOT_CLASSES[cat] ?? 'bg-gray-400 dark:bg-gray-500'}`} />
                         {CATEGORY_I18N_LABELS[cat]}
                       </button>
                     ))}
