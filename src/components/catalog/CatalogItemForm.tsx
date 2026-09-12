@@ -364,6 +364,7 @@ export function CatalogItemForm({
                 type="button"
                 onClick={() => { setFormData(prev => ({ ...prev, image_url: '' })); setUploadError(''); }}
                 className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center"
+                aria-label={t.common.delete}
               >
                 <X className="w-3.5 h-3.5" />
               </button>

@@ -489,6 +489,7 @@ export function OmniChannelPageConfig({ businessId, businessName, userId, channe
               type="button"
               onClick={(e) => { e.stopPropagation(); setBannerUrl(''); setBannerPosition('center'); setBannerUploadError(''); }}
               className="absolute top-2 right-2 w-7 h-7 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center z-10"
+              aria-label={t.common.delete}
             >
               <X className="w-4 h-4" />
             </button>

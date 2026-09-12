@@ -296,6 +296,7 @@ export function AiKnowledgePanel() {
             <button
               onClick={() => setShowFields(false)}
               className="p-1 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              aria-label={t.common.close}
             >
               <X className="w-5 h-5" />
             </button>

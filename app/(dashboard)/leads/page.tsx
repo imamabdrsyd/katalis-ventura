@@ -468,6 +468,7 @@ function LeadsPageInner() {
                 <button
                   onClick={() => selectLead(null)}
                   className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 md:hidden"
+                  aria-label="Kembali ke daftar lead"
                 >
                   <ArrowLeft className="w-4 h-4" />
                 </button>

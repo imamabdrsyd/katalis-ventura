@@ -587,6 +587,9 @@ export default function BusinessMembersPage() {
 
   return (
     <div className="p-4 md:p-8">
+      {/* Judul halaman dirender sebagai h2 di dalam kartu identitas bisnis, jadi
+          h1 halamannya sr-only — lihat catatan yang sama di /dashboard. */}
+      <h1 className="sr-only">{t.nav.manageBusiness}</h1>
       {/* Header row: back + tabs + CTA */}
       <div className="flex items-center gap-4 mb-6">
         <button

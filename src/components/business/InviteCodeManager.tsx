@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { Copy, Check, X, UserPlus, Clock, Users, Ban, Trash2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import type { InviteCode } from '@/types';
 import * as inviteCodesApi from '@/lib/api/inviteCodes';
@@ -8,6 +8,7 @@ import FloatingField, { FloatingSelect } from '@/components/ui/FloatingField';
 import { useLanguage } from '@/context/LanguageContext';
 import { useConfirm } from '@/context/ConfirmContext';
 import { ListSkeleton } from '@/components/ui/PageSkeleton';
+import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
 
 interface InviteCodeManagerProps {
   businessId: string;
@@ -29,12 +30,7 @@ export function InviteCodeManager({
   const [generating, setGenerating] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const raf = requestAnimationFrame(() => setIsVisible(true));
-    return () => cancelAnimationFrame(raf);
-  }, []);
+  const titleId = useId();
 
   // Form state for new invite code
   const [role, setRole] = useState<'business_manager' | 'investor'>('investor');
@@ -150,18 +146,17 @@ export function InviteCodeManager({
   };
 
   return (
-    <div
-      className={`fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-200 ease-out ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-      onClick={onClose}
+    <AnimatedDialog
+      isOpen
+      onClose={onClose}
+      ariaLabelledBy={titleId}
+      panelClassName="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-[calc(100vw-2rem)] sm:max-w-lg lg:max-w-2xl max-h-modal overflow-y-auto"
+      backdropClassName="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
     >
-      <div
-        className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-[calc(100vw-2rem)] sm:max-w-lg lg:max-w-2xl max-h-modal overflow-y-auto transition-all duration-200 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}
-        onClick={(e) => e.stopPropagation()}
-      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <div>
-              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+              <h2 id={titleId} className="text-xl font-bold text-gray-800 dark:text-gray-100">
                 {t.inviteCode.title}
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -171,6 +166,7 @@ export function InviteCodeManager({
             <button
               onClick={onClose}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              aria-label={t.common.close}
             >
               <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
             </button>
@@ -354,7 +350,6 @@ export function InviteCodeManager({
             )}
           </div>
         </div>
-      </div>
-    </div>
+    </AnimatedDialog>
   );
 }

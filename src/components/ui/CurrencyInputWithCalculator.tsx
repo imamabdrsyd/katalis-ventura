@@ -527,6 +527,7 @@ export function CurrencyInputWithCalculator({
               type="button"
               onClick={() => setShowCalc(false)}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              aria-label="Tutup kalkulator"
             >
               <X className="w-4 h-4" />
             </button>
@@ -545,7 +546,9 @@ export function CurrencyInputWithCalculator({
           {/* Buttons */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', padding: '10px' }}>
             <button type="button" onClick={pressClear} className={btnAction}>C</button>
-            <button type="button" onClick={pressBackspace} className={btnAction}><Delete className="w-4 h-4 mx-auto" /></button>
+            <button type="button" onClick={pressBackspace} className={btnAction}
+              aria-label="Hapus satu angka"
+            ><Delete className="w-4 h-4 mx-auto" /></button>
             <button type="button" onClick={() => pressOperator('÷')} className={btnOp(calcOp === '÷')}>÷</button>
             <button type="button" onClick={() => pressOperator('×')} className={btnOp(calcOp === '×')}>×</button>
 

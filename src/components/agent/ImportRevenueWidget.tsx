@@ -195,6 +195,7 @@ export function ImportRevenueWidget({
                   onClick={e => { e.stopPropagation(); onClearFile(); }}
                   disabled={disabled}
                   className="p-1 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-800/30 text-emerald-600 dark:text-emerald-400 disabled:opacity-50"
+                  aria-label="Hapus file"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>

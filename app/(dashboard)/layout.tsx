@@ -46,6 +46,7 @@ import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import { FloatingQuickAdd } from '@/components/transactions/FloatingQuickAdd';
 import { AIChatFAB } from '@/components/ai/AIChatFAB';
 import { useUIPreferences } from '@/context/UIPreferencesContext';
+import { useDialogA11y } from '@/hooks/useDialogA11y';
 import { CATEGORY_BADGE_CLASSES } from '@/lib/categoryColors';
 import { useNotifications } from '@/hooks/useNotifications';
 import { isManagerRole } from '@/lib/roles';
@@ -139,6 +140,9 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
   const [searching, setSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Escape sengaja TIDAK diteruskan ke hook — sudah ditangani listener global di
+  // Header (bersama pintasan ⌘K), meneruskannya lagi bikin handler dobel.
+  const paletteRef = useDialogA11y(open);
   const canManage = isManagerRole(userRole);
 
   const searchablePages = useMemo(() => {
@@ -299,7 +303,12 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]" onClick={onClose}>
       <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-200 ease-out ${isVisible ? 'opacity-100' : 'opacity-0'}`} />
       <div
-        className={`relative w-full max-w-xl bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-200 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'}`}
+        ref={paletteRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t.nav.searchPlaceholder}
+        tabIndex={-1}
+        className={`relative w-full max-w-xl bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-200 ease-out focus:outline-none ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search Input */}
@@ -876,6 +885,20 @@ function Sidebar({
   const router = useRouter();
   const { navSections, t } = useNavData();
   const { activeBusiness } = useBusinessContext();
+
+  // Di <md sidebar berperilaku sebagai drawer modal (ada backdrop, menutupi
+  // halaman). Di md+ ia bagian permanen layout — mengurung fokus di sana justru
+  // mengunci pengguna keyboard di dalam menu.
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 767px)');
+    const sync = () => setIsMobile(mql.matches);
+    sync();
+    mql.addEventListener('change', sync);
+    return () => mql.removeEventListener('change', sync);
+  }, []);
+
+  const drawerRef = useDialogA11y(isOpen && isMobile, { onEscape: onClose });
   const canManage = isManagerRole(userRole);
 
   // Saat ganti bisnis sambil berada di hub (Calendar/Point of Sales), route bisa
@@ -902,7 +925,10 @@ function Sidebar({
       )}
 
       <aside
-        className={`fixed top-0 left-0 h-screen-dvh pt-[var(--safe-area-top)] bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-[inset_-4px_0_12px_rgba(0,0,0,0.04)] dark:shadow-[inset_-4px_0_12px_rgba(0,0,0,0.2)] flex flex-col z-50 transform transition-all duration-300 ease-in-out ${isCollapsed ? 'overflow-visible' : 'overflow-hidden'}
+        ref={drawerRef}
+        aria-label={t.nav.sidebarLabel}
+        tabIndex={-1}
+        className={`fixed top-0 left-0 h-screen-dvh focus:outline-none pt-[var(--safe-area-top)] bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-[inset_-4px_0_12px_rgba(0,0,0,0.04)] dark:shadow-[inset_-4px_0_12px_rgba(0,0,0,0.2)] flex flex-col z-50 transform transition-all duration-300 ease-in-out ${isCollapsed ? 'overflow-visible' : 'overflow-hidden'}
           ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
           ${isCollapsed ? 'w-16' : 'w-56'}`}
       >
@@ -959,8 +985,10 @@ function Sidebar({
           </button>
         </div>
 
-        {/* Scrollable nav area */}
-        <div className={`flex-1 min-h-0 ${isCollapsed ? 'overflow-visible' : 'overflow-y-auto'}`}>
+        {/* Scrollable nav area — satu-satunya landmark <nav> sidebar. Dulu hanya
+            blok section di bawah yang dibungkus <nav>, sehingga menu utama
+            (Transaksi/Dashboard/Kelola Bisnis) tak bisa dilompati screen reader. */}
+        <nav aria-label={t.nav.mainNavLabel} className={`flex-1 min-h-0 ${isCollapsed ? 'overflow-visible' : 'overflow-y-auto'}`}>
         {/* Independent nav items: Transactions + Dashboard + Manage Business */}
         <div className="px-2 pt-3 pb-3 space-y-1.5">
           {/* Transactions (manager only) */}
@@ -1086,7 +1114,7 @@ function Sidebar({
 
         {/* Navigation — tiap section kini link langsung ke halaman hub (kartu sub-menu),
             bukan lagi drill-down accordion. Sub-menu ditampilkan sebagai kotak di hub. */}
-        <nav className="py-4 px-2 space-y-1.5">
+        <div className="py-4 px-2 space-y-1.5">
           {navSections.map((section) => (
             <SidebarHubSection
               key={section.key}
@@ -1096,7 +1124,7 @@ function Sidebar({
               onNavigate={onClose}
             />
           ))}
-        </nav>
+        </div>
 
         {/* Line pembatas di atas section Leads/Calendar-POS */}
         <div className="mx-4 mt-2 border-t border-gray-200 dark:border-gray-700" />
@@ -1110,7 +1138,7 @@ function Sidebar({
             canManage={canManage}
           />
         </Suspense>
-        </div>
+        </nav>
 
         {/* Footer — Date & Time Widget */}
         <div className="pt-4 pb-[calc(1rem+var(--safe-area-bottom))] px-4 border-t border-gray-200 dark:border-gray-700">
@@ -1146,7 +1174,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const { userRole, activeBusinessId, activeBusiness } = useBusinessContext();
-  const { locale } = useLanguage();
+  const { locale, t } = useLanguage();
   const { showAIFab } = useUIPreferences();
   const pathname = usePathname();
   const prefersReducedMotion = useReducedMotion();
@@ -1217,6 +1245,15 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-[#F7F8FA] dark:bg-gray-900">
+      {/* Lewati navigasi — tersembunyi sampai difokus lewat Tab. Tanpa ini
+          pengguna keyboard harus menyusuri seluruh sidebar tiap pindah halaman. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-white dark:focus:bg-gray-800 focus:text-gray-900 dark:focus:text-gray-100 focus:shadow-lg focus:ring-2 focus:ring-primary-500"
+      >
+        {t.nav.skipToContent}
+      </a>
+
       {/* Fixed Sidebar */}
       <Sidebar
         isOpen={sidebarOpen}
@@ -1236,7 +1273,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       />
 
       {/* Main Content - with margins for sidebar and header */}
-      <main className={`ml-0 pt-[calc(4rem+var(--safe-area-top))] min-h-screen overflow-auto transition-[margin] duration-300 ease-in-out ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-56'}`}>
+      <main id="main-content" tabIndex={-1} className={`ml-0 pt-[calc(4rem+var(--safe-area-top))] min-h-screen overflow-auto transition-[margin] duration-300 ease-in-out focus:outline-none ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-56'}`}>
         {/*
           Page transition: enter-only animation, NO AnimatePresence, NO exit prop.
           Key={pathname} memaksa re-mount tiap navigasi — animasi enter selalu fresh dari opacity:0 → 1.

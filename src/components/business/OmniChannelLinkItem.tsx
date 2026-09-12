@@ -93,6 +93,7 @@ export function OmniChannelLinkItem({ link, index, total, onMove, onEdit, onChan
           onClick={() => onMove(index, 'up')}
           disabled={index === 0}
           className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 transition-colors"
+          aria-label="Naikkan urutan"
         >
           <ChevronUp className="w-4 h-4 text-gray-400" />
         </button>
@@ -100,6 +101,7 @@ export function OmniChannelLinkItem({ link, index, total, onMove, onEdit, onChan
           onClick={() => onMove(index, 'down')}
           disabled={index === total - 1}
           className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 transition-colors"
+          aria-label="Turunkan urutan"
         >
           <ChevronDown className="w-4 h-4 text-gray-400" />
         </button>
@@ -137,6 +139,7 @@ export function OmniChannelLinkItem({ link, index, total, onMove, onEdit, onChan
         <button
           onClick={onEdit}
           className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ml-1"
+          aria-label="Edit link"
         >
           <Pencil className="w-3.5 h-3.5 text-gray-400" />
         </button>

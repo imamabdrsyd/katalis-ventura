@@ -347,6 +347,7 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
               <button
                 onClick={e => { e.stopPropagation(); setSelectedFile(null); setImportResult(null); }}
                 className="p-1 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-800/30 text-emerald-600 dark:text-emerald-400"
+                aria-label="Hapus file"
               >
                 <X className="w-4 h-4" />
               </button>

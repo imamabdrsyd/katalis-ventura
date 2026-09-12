@@ -188,6 +188,7 @@ export function BusinessForm({
                 type="button"
                 onClick={handleRemoveLogo}
                 className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-sm"
+                aria-label={t.common.delete}
               >
                 <X className="w-3.5 h-3.5" />
               </button>

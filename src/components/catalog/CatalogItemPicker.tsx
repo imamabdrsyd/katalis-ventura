@@ -248,6 +248,7 @@ export function CatalogItemPicker({
                   type="button"
                   onClick={() => setQty(line.item.id, line.qty - 1)}
                   className="w-6 h-6 rounded-md border border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  aria-label={t.common.decrease}
                 >
                   <Minus className="w-3 h-3" />
                 </button>
@@ -256,6 +257,7 @@ export function CatalogItemPicker({
                   type="button"
                   onClick={() => setQty(line.item.id, line.qty + 1)}
                   className="w-6 h-6 rounded-md border border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  aria-label={t.common.increase}
                 >
                   <Plus className="w-3 h-3" />
                 </button>
@@ -267,6 +269,7 @@ export function CatalogItemPicker({
                 type="button"
                 onClick={() => setQty(line.item.id, 0)}
                 className="text-gray-400 hover:text-red-500"
+                aria-label={t.common.delete}
               >
                 <X className="w-3.5 h-3.5" />
               </button>

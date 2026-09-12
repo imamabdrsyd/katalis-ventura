@@ -2041,6 +2041,7 @@ function ImportPreviewCard({
           <button
             onClick={onCancel}
             className="inline-flex items-center justify-center gap-1 px-4 py-2 text-[12px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            aria-label={t.common.cancel}
           >
             <X className="w-3.5 h-3.5" />
           </button>

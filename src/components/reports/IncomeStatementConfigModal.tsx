@@ -216,6 +216,7 @@ export function IncomeStatementConfigModal({ isOpen, onClose, accounts, business
             onClick={onClose}
             disabled={saving}
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+            aria-label={t.common.close}
           >
             <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
           </button>

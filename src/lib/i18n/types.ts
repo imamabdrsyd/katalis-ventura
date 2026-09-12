@@ -115,6 +115,9 @@ export interface Translations {
     collapseSidebar: string;
     openMenu: string;
     closeMenu: string;
+    sidebarLabel: string;
+    mainNavLabel: string;
+    skipToContent: string;
     language: string;
     leads: string;
     agenticWorkspace: string;

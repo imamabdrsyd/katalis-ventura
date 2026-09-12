@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect, useMemo, type ReactNode } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo, useId, type ReactNode } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,6 +8,7 @@ import { useBusinessContext } from '@/context/BusinessContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { toast } from 'sonner';
 import { useConfirm } from '@/context/ConfirmContext';
+import { useDialogA11y } from '@/hooks/useDialogA11y';
 import { ImportRevenueWidget, type SupportedChannel } from '@/components/agent/ImportRevenueWidget';
 import {
   appendAgentImportStep,
@@ -132,6 +133,13 @@ export default function AgentPage() {
   const [isRunning, setIsRunning] = useState(false);
   const [isChatting, setIsChatting] = useState(false);
   const [isMemoryVaultOpen, setIsMemoryVaultOpen] = useState(false);
+  const memoryVaultTitleId = useId();
+  // Modal ini memakai animasi exit framer-motion, jadi tidak dipindah ke
+  // <AnimatedDialog> (yang tak punya exit). Kontrak fokus/ARIA-nya dipasang
+  // langsung lewat hook yang sama.
+  const memoryVaultRef = useDialogA11y(isMemoryVaultOpen, {
+    onEscape: () => setIsMemoryVaultOpen(false),
+  });
   const [vaultMemories, setVaultMemories] = useState<any[]>([]);
   const [chatMode, setChatMode] = useState<'general' | 'business'>('business');
   const [ragFile, setRagFile] = useState<File | null>(null);
@@ -913,7 +921,9 @@ export default function AgentPage() {
                     <File className="w-3.5 h-3.5 shrink-0" />
                   )}
                   <span className="truncate">{(selectedFile || ragFile)?.name}</span>
-                  <button onClick={() => selectedFile ? setSelectedFile(null) : setRagFile(null)} className="ml-1 hover:text-gray-900 dark:hover:text-white transition-colors">
+                  <button onClick={() => selectedFile ? setSelectedFile(null) : setRagFile(null)} className="ml-1 hover:text-gray-900 dark:hover:text-white transition-colors"
+                    aria-label={t.common.delete}
+                  >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </span>
@@ -1037,10 +1047,15 @@ export default function AgentPage() {
               className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
             />
             <motion.div
+              ref={memoryVaultRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={memoryVaultTitleId}
+              tabIndex={-1}
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[85vh]"
+              className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[85vh] focus:outline-none"
             >
               <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
                 <div className="flex items-center gap-3">
@@ -1048,13 +1063,14 @@ export default function AgentPage() {
                     <Brain className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t.aiChat.agentPage.memoryVault}</h2>
+                    <h2 id={memoryVaultTitleId} className="text-lg font-semibold text-slate-900 dark:text-white">{t.aiChat.agentPage.memoryVault}</h2>
                     <p className="text-xs text-slate-500 dark:text-slate-400">{t.aiChat.agentPage.memoryVaultDesc}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsMemoryVaultOpen(false)}
                   className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                  aria-label={t.common.close}
                 >
                   <X className="w-5 h-5" />
                 </button>

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { toast } from 'sonner';
+import { AnimatedDialog } from '@/components/ui/AnimatedDialog';
 import { X, Upload, FileText, AlertCircle, CheckCircle, Download, Sparkles, Table2, Bot, FileDown } from 'lucide-react';
 import { ChannelImportTab } from '@/components/agent/ChannelImportTab';
 import { Tabs } from '@/components/ui/Tabs';
@@ -71,19 +72,7 @@ export default function TransactionImportModal({
   const [smartRows, setSmartRows] = useState<SmartResolvedRow[]>([]);
   const [showFilter, setShowFilter] = useState<'all' | 'review'>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [shouldRender, setShouldRender] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setShouldRender(true);
-      const raf = requestAnimationFrame(() => setIsVisible(true));
-      return () => cancelAnimationFrame(raf);
-    }
-    setIsVisible(false);
-    const timeout = setTimeout(() => setShouldRender(false), 200);
-    return () => clearTimeout(timeout);
-  }, [isOpen]);
+  const titleId = useId();
 
   // Fetch accounts when modal opens
   useEffect(() => {
@@ -102,8 +91,6 @@ export default function TransactionImportModal({
       setAccounts([]);
     }
   }, [isOpen, businessId]);
-
-  if (!shouldRender) return null;
 
   /**
    * AI assist pass: ambil baris dengan confidence 'low' (rule-based gagal yakin),
@@ -689,21 +676,21 @@ export default function TransactionImportModal({
   const isFileImportMode = importMode === 'smart' || importMode === 'full';
 
   return (
-    <div
-      className={`fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-200 ease-out ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-      onClick={onClose}
+    <AnimatedDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabelledBy={titleId}
+      panelClassName="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-5xl w-full max-h-modal overflow-hidden flex flex-col"
+      backdropClassName="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
     >
-      <div
-        className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-5xl w-full max-h-modal overflow-hidden flex flex-col transition-all duration-300 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}
-        onClick={(e) => e.stopPropagation()}
-      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{ti.title}</h2>
+          <h2 id={titleId} className="text-2xl font-bold text-gray-900 dark:text-white">{ti.title}</h2>
           <button
             onClick={handleClose}
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             disabled={importing}
+            aria-label={t.common.close}
           >
             <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           </button>
@@ -1196,7 +1183,6 @@ export default function TransactionImportModal({
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </AnimatedDialog>
   );
 }

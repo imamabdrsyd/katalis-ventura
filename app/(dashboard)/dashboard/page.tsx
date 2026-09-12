@@ -377,6 +377,11 @@ export default function DashboardPage() {
 
   return (
     <div className="p-8">
+      {/* Halaman ini tidak punya judul terlihat — desainnya langsung masuk ke
+          filter periode. h1 sr-only supaya hierarki heading tetap benar dan
+          screen reader punya nama halaman untuk dilompati. */}
+      <h1 className="sr-only">{t.nav.dashboard}</h1>
+
       {/* Global Year + Month Filter */}
       <div className="flex items-center gap-3 mb-6">
         {/* Year nav pill — fixed, tidak ikut scroll */}
