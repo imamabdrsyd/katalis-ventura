@@ -545,6 +545,7 @@ export function AccountForm({
             <label className="label">{af.residualValue}</label>
             <input
               type="number"
+              inputMode="decimal"
               name="residual_value"
               value={formData.residual_value ?? ''}
               onChange={(e) => {

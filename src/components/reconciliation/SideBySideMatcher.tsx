@@ -284,7 +284,7 @@ function BankLineRow({
       {isMatched && onUnmatch && (
         <button
           onClick={(e) => { e.stopPropagation(); onUnmatch(); }}
-          className="flex-shrink-0 p-1 text-gray-400 hover:text-amber-500"
+          className="min-w-[24px] min-h-[24px] inline-flex items-center justify-center flex-shrink-0 p-1 text-gray-400 hover:text-amber-500"
           title="Unmatch"
         >
           <Unlink className="w-3.5 h-3.5" />

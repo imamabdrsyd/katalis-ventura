@@ -617,8 +617,11 @@ export function TransactionList({
     );
   }
 
+  // overflow-x-auto dibawa sendiri, tidak dititipkan ke pemanggil: tabelnya
+  // min-w-[800px], jadi pemanggil yang lupa membungkus langsung membuat SELURUH
+  // halaman geser menyamping di HP.
   return (
-    <div>
+    <div className="overflow-x-auto">
       {/* Divider vertikal antar kolom sengaja tidak dirender (transparan) —
           kolom tetap bisa di-resize via handle di header (indikator muncul saat hover) */}
       <table className="w-full table-fixed min-w-[800px]">
@@ -789,7 +792,7 @@ export function TransactionList({
                         <button
                           type="button"
                           onClick={() => setDescriptionDraft('')}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600 dark:hover:bg-gray-600 dark:hover:text-gray-200"
+                          className="min-w-[24px] min-h-[24px] inline-flex items-center justify-center absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600 dark:hover:bg-gray-600 dark:hover:text-gray-200"
                           title={t.common.reset}
                         >
                           <X className="h-3.5 w-3.5" />

@@ -403,7 +403,7 @@ function GeneralLedgerPageInner() {
                     </p>
                     <button
                       onClick={() => setLegacyNoticeDismissed(true)}
-                      className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex-shrink-0"
+                      className="min-w-[24px] min-h-[24px] inline-flex items-center justify-center p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex-shrink-0"
                       aria-label={t.common.close}
                     >
                       <X className="w-3.5 h-3.5" />

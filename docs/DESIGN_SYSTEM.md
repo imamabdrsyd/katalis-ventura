@@ -870,6 +870,7 @@ Referensi: bagian *Riwayat Perubahan* di [`TransactionDetailModal.tsx`](../src/c
 
 ## 6. Accessibility
 
+- **Tap target mobile — dua ambang, jangan dicampur.** **24×24 adalah lantai yang tidak boleh dilanggar** (WCAG 2.5.8 AA): tombol ikon di toolbar/baris padat cukup segini, pakai `min-w-[24px] min-h-[24px]` + `inline-flex items-center justify-center`. **44×44 untuk aksi utama** dan kontrol yang berdiri sendiri (hamburger, tutup modal, tombol di header) — `min-h-[44px] min-w-[44px]`. Membesarkan semua ikon ke 44px akan merusak baris padat; yang dikejar adalah lantai 24px, bukan keseragaman 44px.
   - Menghitungnya: ukuran = ikon + 2×padding. `p-1` + ikon `w-3.5` = 22px (**gagal**), `p-1.5` + `w-3.5` = 26px (lolos). Hati-hati membaca kelas Tailwind desimal — `p-1.5` bukan `p-1`.
 - **Landmark:** sidebar dibungkus satu `<nav aria-label>` (bukan per-blok), `<main id="main-content" tabIndex={-1}>` jadi target skip-link yang ada di `app/(dashboard)/layout.tsx`. Halaman yang tidak punya judul terlihat tetap wajib `<h1>` — render `sr-only`, jangan memaksa judul visual yang tidak ada di desain.
 - **Focus ring:** pakai `focus:ring-2 focus:ring-primary-500` (sudah di `.input`). Jangan hapus outline tanpa pengganti.

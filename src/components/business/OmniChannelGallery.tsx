@@ -259,7 +259,7 @@ export function OmniChannelGallery({ businessId, userId, channel, initialGallery
                     type="button"
                     onClick={() => move(i, -1)}
                     disabled={i === 0 || reordering}
-                    className="p-1 rounded bg-white/90 hover:bg-white text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="min-w-[24px] min-h-[24px] inline-flex items-center justify-center p-1 rounded bg-white/90 hover:bg-white text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
                     title="Geser kiri"
                   >
                     <ArrowLeft className="w-3 h-3" />
@@ -268,7 +268,7 @@ export function OmniChannelGallery({ businessId, userId, channel, initialGallery
                     type="button"
                     onClick={() => move(i, 1)}
                     disabled={i === gallery.length - 1 || reordering}
-                    className="p-1 rounded bg-white/90 hover:bg-white text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="min-w-[24px] min-h-[24px] inline-flex items-center justify-center p-1 rounded bg-white/90 hover:bg-white text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
                     title="Geser kanan"
                   >
                     <ArrowRight className="w-3 h-3" />
@@ -278,7 +278,7 @@ export function OmniChannelGallery({ businessId, userId, channel, initialGallery
                   type="button"
                   onClick={() => handleDelete(img.path)}
                   disabled={deletingPath === img.path}
-                  className="p-1 rounded bg-red-500/90 hover:bg-red-600 text-white"
+                  className="min-w-[24px] min-h-[24px] inline-flex items-center justify-center p-1 rounded bg-red-500/90 hover:bg-red-600 text-white"
                   title="Hapus"
                 >
                   {deletingPath === img.path ? (

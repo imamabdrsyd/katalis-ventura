@@ -36,7 +36,7 @@ function ChannelIcon({ type, customIconUrl }: { type: string; customIconUrl?: st
   }
   if (pngUrl) {
     return (
-      <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 bg-white border border-gray-100">
+      <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 bg-white border border-gray-100 dark:border-gray-700">
         <Image src={pngUrl} alt={meta.label} width={36} height={36} className="object-contain w-full h-full" />
       </div>
     );

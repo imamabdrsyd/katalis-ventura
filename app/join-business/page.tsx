@@ -356,7 +356,7 @@ export default function JoinBusinessPage() {
                           {business.requestStatus === 'pending' && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleCancelRequest(business); }}
-                              className="p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                              className="min-w-[24px] min-h-[24px] inline-flex items-center justify-center p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                               title="Batalkan permintaan"
                             >
                               <X className="w-3.5 h-3.5" />

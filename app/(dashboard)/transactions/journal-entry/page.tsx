@@ -1364,7 +1364,7 @@ export default function JournalEntryPage() {
                         <button
                           type="button"
                           onClick={(e) => handleDeleteTemplate(tmpl.id, e)}
-                          className="ml-2 p-1 rounded text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="min-w-[24px] min-h-[24px] inline-flex items-center justify-center ml-2 p-1 rounded text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
                           title={t.journalEntry.form.deleteTemplate}
                         >
                           <Trash2 className="w-3.5 h-3.5" />

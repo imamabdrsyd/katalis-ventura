@@ -1396,7 +1396,7 @@ function AgentCapabilitiesBadge() {
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shrink-0"
+                  className="min-w-[24px] min-h-[24px] inline-flex items-center justify-center p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shrink-0"
                   aria-label={t.common.close}
                 >
                   <X className="w-3.5 h-3.5" />

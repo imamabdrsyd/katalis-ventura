@@ -126,7 +126,7 @@ export function OmniChannelLinkItem({ link, index, total, onMove, onEdit, onChan
           onClick={handleTogglePrimary}
           disabled={togglingPrimary}
           title={link.is_primary ? 'Hapus sebagai primary button' : 'Set sebagai primary button'}
-          className="p-1 rounded hover:bg-yellow-50 dark:hover:bg-yellow-900/30 transition-colors ml-1"
+          className="min-w-[24px] min-h-[24px] inline-flex items-center justify-center p-1 rounded hover:bg-yellow-50 dark:hover:bg-yellow-900/30 transition-colors ml-1"
         >
           {togglingPrimary ? (
             <Loader2 className="w-3.5 h-3.5 text-yellow-400 animate-spin" />
@@ -138,7 +138,7 @@ export function OmniChannelLinkItem({ link, index, total, onMove, onEdit, onChan
         {/* Edit */}
         <button
           onClick={onEdit}
-          className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ml-1"
+          className="min-w-[24px] min-h-[24px] inline-flex items-center justify-center p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ml-1"
           aria-label="Edit link"
         >
           <Pencil className="w-3.5 h-3.5 text-gray-400" />
@@ -148,7 +148,7 @@ export function OmniChannelLinkItem({ link, index, total, onMove, onEdit, onChan
         <button
           onClick={handleDelete}
           disabled={deleting}
-          className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+          className="min-w-[24px] min-h-[24px] inline-flex items-center justify-center p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
         >
           {deleting ? (
             <Loader2 className="w-3.5 h-3.5 text-red-400 animate-spin" />

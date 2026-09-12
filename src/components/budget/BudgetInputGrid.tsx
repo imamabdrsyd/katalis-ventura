@@ -149,10 +149,11 @@ export function BudgetInputGrid({
                   ) : (
                     <input
                       type="number"
+                      inputMode="numeric"
                       min="0"
                       value={val || ''}
                       onChange={(e) => updateValue(account.id, m, parseFloat(e.target.value) || 0)}
-                      className="w-full min-w-[100px] px-2 py-1.5 text-right text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-500 transition-colors"
+                      className="w-full min-w-[100px] min-h-[44px] px-2 py-1.5 text-right text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-500 transition-colors"
                       placeholder="0"
                     />
                   )}

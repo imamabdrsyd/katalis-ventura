@@ -138,6 +138,7 @@ export function RateEditorPanel({
       <div className="flex flex-col sm:flex-row gap-2">
         <input
           type="number"
+          inputMode="numeric"
           min={0}
           className="input flex-1"
           placeholder={c.rePlaceholder.replace('{price}', formatCurrency(defaultPrice))}

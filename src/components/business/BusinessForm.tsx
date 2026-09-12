@@ -313,6 +313,7 @@ export function BusinessForm({
         <FloatingField
           label={bf.capitalInvestment}
           type="number"
+          inputMode="numeric"
           name="capital_investment"
           value={formData.capital_investment || ''}
           onChange={(e) => {

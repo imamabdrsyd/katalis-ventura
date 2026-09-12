@@ -66,7 +66,7 @@ export default function CapTableWidget({ transactions, loading = false }: CapTab
           type="button"
           onClick={() => router.push('/balance-sheet')}
           aria-label="Lihat detail di Balance Sheet"
-          className="p-1 rounded-md text-gray-400 dark:text-gray-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors cursor-pointer"
+          className="min-w-[24px] min-h-[24px] inline-flex items-center justify-center p-1 rounded-md text-gray-400 dark:text-gray-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors cursor-pointer"
         >
           <ArrowRight className="w-3.5 h-3.5" />
         </button>

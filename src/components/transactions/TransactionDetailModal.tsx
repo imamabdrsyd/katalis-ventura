@@ -638,7 +638,7 @@ export function TransactionDetailModal({
           onClick={handleDuplicate}
           title={t.transactionDetail.duplicateBtn}
           aria-label={t.transactionDetail.duplicateBtn}
-          className="sm:hidden p-1 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+          className="min-w-[24px] min-h-[24px] inline-flex items-center justify-center sm:hidden p-1 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
         >
           <Copy className="w-3.5 h-3.5" />
         </button>
@@ -775,7 +775,7 @@ export function TransactionDetailModal({
               <button
                 onClick={() => setWarningExpanded(true)}
                 title={matchingWarning.title}
-                className="w-5 h-5 rounded-full border border-gray-300 dark:border-gray-500 text-gray-400 dark:text-gray-500 hover:border-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors flex items-center justify-center flex-shrink-0"
+                className="min-w-[24px] min-h-[24px] w-5 h-5 rounded-full border border-gray-300 dark:border-gray-500 text-gray-400 dark:text-gray-500 hover:border-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors flex items-center justify-center flex-shrink-0"
               >
                 <span className="text-[10px] font-bold leading-none">!</span>
               </button>
@@ -898,7 +898,7 @@ export function TransactionDetailModal({
                     <button
                       onClick={() => { handleAddTag(); setShowSuggestions(false); }}
                       disabled={savingTag}
-                      className="w-5 h-5 flex items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors disabled:opacity-40"
+                      className="min-w-[24px] min-h-[24px] w-5 h-5 flex items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors disabled:opacity-40"
                     >
                       +
                     </button>
@@ -936,8 +936,8 @@ export function TransactionDetailModal({
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">
                 {t.transactionDetail.journalLines}
               </label>
-              <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <table className="w-full text-sm">
+              <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
+                <table className="w-full min-w-[420px] text-sm">
                   <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
                       <th className="text-left px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t.transactionDetail.account}</th>
@@ -995,7 +995,7 @@ export function TransactionDetailModal({
                   {transaction.debit_account?.account_name || 'Unknown'}
                 </p>
                 {transaction.debit_account?.account_type && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${ACCOUNT_TYPE_BG[transaction.debit_account.account_type] ?? 'bg-gray-100 text-gray-500'}`}>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${ACCOUNT_TYPE_BG[transaction.debit_account.account_type] ?? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
                     {ACCOUNT_TYPE_LABEL[transaction.debit_account.account_type] ?? transaction.debit_account.account_type}
                   </span>
                 )}
@@ -1011,7 +1011,7 @@ export function TransactionDetailModal({
                   {transaction.credit_account?.account_name || 'Unknown'}
                 </p>
                 {transaction.credit_account?.account_type && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${ACCOUNT_TYPE_BG[transaction.credit_account.account_type] ?? 'bg-gray-100 text-gray-500'}`}>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${ACCOUNT_TYPE_BG[transaction.credit_account.account_type] ?? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
                     {ACCOUNT_TYPE_LABEL[transaction.credit_account.account_type] ?? transaction.credit_account.account_type}
                   </span>
                 )}
