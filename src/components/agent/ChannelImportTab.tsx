@@ -9,7 +9,7 @@ import { appendAgentImportStep, readAgentImportSession, startAgentImportSession,
 import { useBusinessContext } from '@/context/BusinessContext';
 import type { BusinessTypeKey } from '@/lib/salesChannels';
 import type { SalesChannel } from '@/types';
-import { Bot, Upload, FileSpreadsheet, CheckCircle, ChevronDown, X, Info } from 'lucide-react';
+import { Bot, Upload, FileSpreadsheet, CheckCircle, ChevronDown, X, Info, Check, Ban } from 'lucide-react';
 
 const SUPPORTED_CHANNELS = [
   { value: 'airbnb', label: 'Airbnb', badges: ['airbnb'], description: 'CSV dari Airbnb Host dashboard', available: true, businessTypes: ['jasa'] },
@@ -391,10 +391,10 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
             <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Selesai!</span>
           </div>
           <div className="text-xs text-gray-600 dark:text-gray-300 space-y-0.5">
-            <p>✓ <strong>{importResult.inserted}</strong> transaksi berhasil diimpor sebagai <em>posted</em></p>
-            {importResult.skipped > 0 && <p>⊘ <strong>{importResult.skipped}</strong> dilewati (bukan pesanan selesai)</p>}
-            {(importResult.duplicate ?? 0) > 0 && <p>⊘ <strong>{importResult.duplicate}</strong> duplikat dilewati (sudah diimpor)</p>}
-            {importResult.failed > 0 && <p>✗ <strong>{importResult.failed}</strong> gagal</p>}
+            <p className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 shrink-0 text-emerald-500" aria-hidden="true" /><span><strong>{importResult.inserted}</strong> transaksi berhasil diimpor sebagai <em>posted</em></span></p>
+            {importResult.skipped > 0 && <p className="flex items-center gap-1.5"><Ban className="w-3.5 h-3.5 shrink-0 text-gray-400" aria-hidden="true" /><span><strong>{importResult.skipped}</strong> dilewati (bukan pesanan selesai)</span></p>}
+            {(importResult.duplicate ?? 0) > 0 && <p className="flex items-center gap-1.5"><Ban className="w-3.5 h-3.5 shrink-0 text-gray-400" aria-hidden="true" /><span><strong>{importResult.duplicate}</strong> duplikat dilewati (sudah diimpor)</span></p>}
+            {importResult.failed > 0 && <p className="flex items-center gap-1.5"><X className="w-3.5 h-3.5 shrink-0 text-red-500" aria-hidden="true" /><span><strong>{importResult.failed}</strong> gagal</span></p>}
             {importResult.errors.length > 0 && (
               <div className="mt-2 space-y-0.5">
                 {importResult.errors.map((e, i) => (

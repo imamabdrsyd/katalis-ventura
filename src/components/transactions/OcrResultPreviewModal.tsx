@@ -56,7 +56,7 @@ const CHARGE_META: Record<
     icon: TagIcon,
   },
   other: {
-    tint: 'text-slate-600 dark:text-slate-300 bg-slate-50/80 dark:bg-slate-800/40 ring-slate-200/60 dark:ring-slate-700/40',
+    tint: 'text-gray-600 dark:text-gray-300 bg-gray-50/80 dark:bg-gray-800/40 ring-gray-200/60 dark:ring-gray-700/40',
     icon: TagIcon,
   },
 };

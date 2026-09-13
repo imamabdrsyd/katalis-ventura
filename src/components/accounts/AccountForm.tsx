@@ -325,8 +325,9 @@ export function AccountForm({
             ))}
           </FloatingSelect>
           {parentAccountId && selectedParent && (
-            <p className="text-xs text-emerald-500 dark:text-emerald-400 mt-1">
-              ✓ Sub-akun akan ditambahkan ke: {selectedParent.account_name}
+            <p className="flex items-center gap-1.5 text-xs text-emerald-500 dark:text-emerald-400 mt-1">
+              <Check className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+              <span>Sub-akun akan ditambahkan ke: {selectedParent.account_name}</span>
             </p>
           )}
 

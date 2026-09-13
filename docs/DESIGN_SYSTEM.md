@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 12 September 2026 (§1.4a palet tipe akun, §1.12 avatar, §4.6 kartu KPI hero, §7.1 anti-slop berlaku seluruh aplikasi, §8.5.5 varian panel gelap)
+> Terakhir diupdate: 13 September 2026 (§5 famili neutral tunggal, §6 ambang tap target, §7.1 anti-slop; sebelumnya §1.4a palet tipe akun, §1.12 avatar, §4.6 kartu KPI hero, §8.5.5 varian panel gelap)
 
 ---
 
@@ -865,6 +865,22 @@ Referensi: bagian *Riwayat Perubahan* di [`TransactionDetailModal.tsx`](../src/c
 - **Setiap color utility wajib punya pasangan `dark:`** — tidak ada pengecualian. CI akan menangkap inline class yang lupa dark variant suatu saat.
 - Hindari `bg-white` tanpa `dark:bg-gray-800`, `text-gray-800` tanpa `dark:text-gray-100`, dst.
 - Reference mapping ada di [docs/dark-mode-hover-locations.md](./dark-mode-hover-locations.md)
+
+**Satu famili neutral saja: `gray-*`.** Ada tiga tema (Terang / Gelap / Midnight)
+tapi hanya dua state yang ditulis — Midnight adalah remap near-black atas skala
+`gray-*`, dan `dark:` sudah mencakupnya (tidak ada varian `midnight:`).
+Konsekuensinya, **`slate-*` / `zinc-*` / `neutral-*` / `stone-*` tidak ikut
+ter-remap**: di Midnight mereka duduk sebagai tambalan navy (slate) atau
+coklat (stone) di atas kanvas hitam. Berlaku juga untuk hex mentah
+(`bg-[#1f2937]`).
+
+Yang bermasalah khususnya adalah pasangan yang **kedua sisinya** non-gray
+(`text-slate-600 dark:text-slate-400`) — sisi dark-nya tidak akan ikut Midnight.
+Kalau sisi `dark:`-nya sudah `gray-*` (mis. `bg-stone-800 dark:bg-gray-100` pada
+bubble chat outbound), nilai non-gray itu hanya tampil di tema Terang dan aman.
+
+Per 13 Sep 2026 seluruh `slate-*` (46 titik: modal Memory Vault di /agent,
+OcrResultPreviewModal, /cek-bisnis, journal-entry) sudah dipindah ke `gray-*`.
 
 ---
 

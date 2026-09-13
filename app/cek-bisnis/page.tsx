@@ -108,7 +108,7 @@ const jsonLd = {
 
 export default function CekBisnisPage() {
   return (
-    <main className="min-h-screen bg-slate-950 flex flex-col items-center px-4 py-12 sm:py-16">
+    <main className="min-h-screen bg-gray-950 flex flex-col items-center px-4 py-12 sm:py-16">
       <Script
         id="json-ld-cek-bisnis"
         type="application/ld+json"
@@ -118,7 +118,7 @@ export default function CekBisnisPage() {
       <div className="w-full max-w-4xl mb-8 flex items-center justify-between">
         <Link
           href="/"
-          className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-300 transition-colors"
+          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
         >
           <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none">
             <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -133,7 +133,7 @@ export default function CekBisnisPage() {
             height={20}
             className="object-contain opacity-70"
           />
-          <span className="text-xs font-bold tracking-[0.1em] text-slate-500 uppercase">AXION</span>
+          <span className="text-xs font-bold tracking-[0.1em] text-gray-500 uppercase">AXION</span>
         </div>
       </div>
 
@@ -143,7 +143,7 @@ export default function CekBisnisPage() {
       </div>
 
       {/* Footer note */}
-      <p className="mt-8 text-center text-xs text-slate-600">
+      <p className="mt-8 text-center text-xs text-gray-600">
         Kalkulator ini tidak menyimpan data apapun. Semua kalkulasi dilakukan di browser-mu.
       </p>
     </main>

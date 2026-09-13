@@ -22,7 +22,7 @@ import type { SalesChannel } from '@/types';
 import { isManagerRole } from '@/lib/roles';
 import {
   Bot, AlertCircle, Send, ArrowUp, Sparkles, CheckCircle, XCircle, Loader2, Paperclip, Brain, ChevronRight, Globe,
-  X, Network, Briefcase, MessagesSquare, Plus, Clock, MessageCircle, FileText, FileSpreadsheet, File, Trash2
+  X, Network, Briefcase, MessagesSquare, Plus, Clock, MessageCircle, FileText, FileSpreadsheet, File, Trash2, Check, Ban
 } from 'lucide-react';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 
@@ -1044,7 +1044,7 @@ export default function AgentPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMemoryVaultOpen(false)}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
             />
             <motion.div
               ref={memoryVaultRef}
@@ -1055,21 +1055,21 @@ export default function AgentPage() {
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[85vh] focus:outline-none"
+              className="relative w-full max-w-2xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col max-h-[85vh] focus:outline-none"
             >
-              <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-lg">
                     <Brain className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 id={memoryVaultTitleId} className="text-lg font-semibold text-slate-900 dark:text-white">{t.aiChat.agentPage.memoryVault}</h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.aiChat.agentPage.memoryVaultDesc}</p>
+                    <h2 id={memoryVaultTitleId} className="text-lg font-semibold text-gray-900 dark:text-white">{t.aiChat.agentPage.memoryVault}</h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{t.aiChat.agentPage.memoryVaultDesc}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsMemoryVaultOpen(false)}
-                  className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
                   aria-label={t.common.close}
                 >
                   <X className="w-5 h-5" />
@@ -1079,24 +1079,24 @@ export default function AgentPage() {
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {vaultMemories.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <Brain className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-3" />
-                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t.aiChat.agentPage.memoryVaultEmpty}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-500 mt-1 max-w-xs">{t.aiChat.agentPage.memoryVaultEmptyHint}</p>
+                    <Brain className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t.aiChat.agentPage.memoryVaultEmpty}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1 max-w-xs">{t.aiChat.agentPage.memoryVaultEmptyHint}</p>
                   </div>
                 ) : (
                   vaultMemories.map((mem, i) => (
-                    <div key={i} className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
+                    <div key={i} className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] uppercase tracking-wider font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">
                             {mem.metadata?.source || t.aiChat.agentPage.systemSource}
                           </span>
                         </div>
-                        <span className="text-xs text-slate-400 dark:text-slate-500">
+                        <span className="text-xs text-gray-400 dark:text-gray-500">
                           {new Date(mem.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
                         </span>
                       </div>
-                      <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                      <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
                         {mem.content}
                       </p>
                     </div>
@@ -1597,10 +1597,10 @@ function RunBubble({ run }: { run: Extract<ChatMessage, { kind: 'run' }> }) {
             ? 'bg-amber-50 dark:bg-amber-900/15 border-amber-100 dark:border-amber-900/30'
             : 'bg-emerald-50 dark:bg-emerald-900/15 border-emerald-100 dark:border-emerald-900/30'
         }`}>
-          <p className="text-gray-700 dark:text-gray-200">✓ <strong>{run.result.inserted}</strong> {t.aiChat.agentPage.resultImported} <em>posted</em></p>
-          {run.result.skipped > 0 && <p className="text-gray-500 dark:text-gray-400">⊘ <strong>{run.result.skipped}</strong> {t.aiChat.agentPage.resultSkipped}</p>}
-          {(run.result.duplicate ?? 0) > 0 && <p className="text-gray-500 dark:text-gray-400">⊘ <strong>{run.result.duplicate}</strong> {t.aiChat.agentPage.resultDuplicate}</p>}
-          {run.result.failed > 0 && <p className="text-amber-700 dark:text-amber-400">✗ <strong>{run.result.failed}</strong> {t.aiChat.agentPage.resultFailed}</p>}
+          <p className="flex items-center gap-1.5 text-gray-700 dark:text-gray-200"><Check className="w-3.5 h-3.5 shrink-0 text-emerald-500" aria-hidden="true" /><span><strong>{run.result.inserted}</strong> {t.aiChat.agentPage.resultImported} <em>posted</em></span></p>
+          {run.result.skipped > 0 && <p className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400"><Ban className="w-3.5 h-3.5 shrink-0" aria-hidden="true" /><span><strong>{run.result.skipped}</strong> {t.aiChat.agentPage.resultSkipped}</span></p>}
+          {(run.result.duplicate ?? 0) > 0 && <p className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400"><Ban className="w-3.5 h-3.5 shrink-0" aria-hidden="true" /><span><strong>{run.result.duplicate}</strong> {t.aiChat.agentPage.resultDuplicate}</span></p>}
+          {run.result.failed > 0 && <p className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400"><X className="w-3.5 h-3.5 shrink-0" aria-hidden="true" /><span><strong>{run.result.failed}</strong> {t.aiChat.agentPage.resultFailed}</span></p>}
           {run.result.errors.length > 0 && (
             <div className="mt-1 space-y-0.5">
               {run.result.errors.map((e, i) => (

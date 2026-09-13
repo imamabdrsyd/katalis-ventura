@@ -156,9 +156,10 @@ function GeneralLedgerPageInner() {
               />
               <button
                 onClick={handleAllTime}
-                className="px-2 py-1.5 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                className="min-w-[24px] min-h-[24px] inline-flex items-center justify-center px-2 py-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                aria-label={t.common.reset}
               >
-                ✕
+                <X className="w-3.5 h-3.5" aria-hidden="true" />
               </button>
             </div>
           ) : (

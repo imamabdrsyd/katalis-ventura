@@ -225,9 +225,9 @@ const ENTRY_TYPE_CONFIGS: EntryTypeConfig[] = [
   {
     id: 'reklasifikasi_hutang',
     icon: <Repeat className="w-5 h-5" />,
-    color: 'text-slate-600 dark:text-slate-400',
-    bgColor: 'bg-slate-50 dark:bg-slate-900/20',
-    borderColor: 'border-slate-500',
+    color: 'text-gray-600 dark:text-gray-400',
+    bgColor: 'bg-gray-50 dark:bg-gray-900/20',
+    borderColor: 'border-gray-500',
     debitFilter: 'LIABILITY',
     creditFilter: 'LIABILITY',
     defaultDebitType: 'LIABILITY',

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, CheckCircle, XCircle, Loader2, Sparkles } from 'lucide-react';
+import { Bot, CheckCircle, XCircle, Loader2, Sparkles, X } from 'lucide-react';
 
 export interface AgentStep {
   id: string;
@@ -100,9 +100,10 @@ export function AgentProgressToast({ steps, isRunning, onDismiss }: AgentProgres
             {onDismiss && !isRunning && (
               <button
                 onClick={() => { setVisible(false); setTimeout(onDismiss, 200); }}
-                className="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs"
+                className="ml-auto min-w-[24px] min-h-[24px] inline-flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                aria-label="Tutup"
               >
-                ✕
+                <X className="w-3.5 h-3.5" aria-hidden="true" />
               </button>
             )}
           </div>

@@ -2,7 +2,7 @@
 import { ListSkeleton } from '@/components/ui/PageSkeleton';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Link2, Loader2, Phone, Check, DollarSign } from 'lucide-react';
+import { Link2, Loader2, Phone, Check, DollarSign, AlertTriangle } from 'lucide-react';
 import type { BusinessOmniChannel, Business } from '@/types';
 import { getOmniChannel, upsertOmniChannel } from '@/lib/api/omniChannel';
 import * as businessesApi from '@/lib/api/businesses';
@@ -319,8 +319,9 @@ export function OmniChannelManager({ business, userId, onBusinessUpdated }: Prop
                       </div>
 
                       {isPublicInLanding && !business.whatsapp_number && (
-                        <p className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2.5 py-1.5 rounded-lg">
-                          ⚠ Nomor WhatsApp wajib diisi agar widget dapat aktif di Storefront landing page.
+                        <p className="flex items-start gap-1.5 text-[11px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2.5 py-1.5 rounded-lg">
+                          <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" aria-hidden="true" />
+                          <span>Nomor WhatsApp wajib diisi agar widget dapat aktif di Storefront landing page.</span>
                         </p>
                       )}
                     </div>
