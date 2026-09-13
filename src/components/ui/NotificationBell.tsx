@@ -261,7 +261,7 @@ export function NotificationBell({
                 {requests.map((req) => (
                   <div key={req.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                     <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0 overflow-hidden">
+                      <div className="w-9 h-9 rounded-full bg-primary-500 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0 overflow-hidden">
                         {req.requester.avatar_url ? (
                           <Image
                             src={req.requester.avatar_url}

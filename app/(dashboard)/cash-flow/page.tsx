@@ -372,12 +372,11 @@ function CashFlowPageInner() {
               />
 
               {/* NET CASH FLOW — Hero */}
-              <div className={`relative rounded-2xl p-6 text-white bg-gradient-to-br shadow-lg mt-4 ${
+              <div className={`relative rounded-2xl p-6 text-white shadow-lg mt-4 ${
                 cashFlow.netCashFlow >= 0
-                  ? 'from-emerald-500 via-emerald-500 to-teal-500 shadow-emerald-500/10'
-                  : 'from-red-500 via-red-500 to-rose-500 shadow-red-500/10'
+                  ? 'bg-emerald-500 shadow-emerald-500/10'
+                  : 'bg-red-500 shadow-red-500/10'
               }`}>
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl pointer-events-none" />
                 <div className="relative flex justify-between items-center gap-4">
                   <div>
                     <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-white/80 mb-1">{t.cashFlowPage.netCashFlow}</h3>

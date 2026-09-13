@@ -383,7 +383,7 @@ export default function ArticlePage() {
               </div>
             ))}
           </div>
-          <div className="not-prose my-8 p-6 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl text-white">
+          <div className="not-prose my-8 p-6 bg-primary-600 rounded-2xl text-white">
             <h3 className="text-xl font-bold mb-2">Coba AXION Gratis</h3>
             <p className="text-indigo-100 mb-4 text-sm leading-relaxed">
               Platform akuntansi double-entry untuk UMKM Indonesia. Laporan laba rugi, neraca, dan arus kas otomatis. Gratis untuk bisnis pertama.

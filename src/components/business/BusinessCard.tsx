@@ -157,7 +157,7 @@ export function BusinessCard({
                 ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
                 : business.logo_url
                   ? 'bg-white'
-                  : 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'
+                  : 'bg-primary-500 text-white'
             }`}
           >
             {business.logo_url && !business.is_archived ? (

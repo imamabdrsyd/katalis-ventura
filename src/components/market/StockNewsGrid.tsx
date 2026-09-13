@@ -34,7 +34,7 @@ function NewsCardImage({ src, site }: { src: string | null | undefined; site: st
   const [errored, setErrored] = useState(false);
   if (!src || errored) {
     return (
-      <div className="relative w-full aspect-video bg-gradient-to-br from-indigo-50 via-indigo-100 to-purple-100 dark:from-indigo-900/40 dark:via-indigo-800/40 dark:to-purple-900/40 flex items-center justify-center">
+      <div className="relative w-full aspect-video bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
         <div className="flex flex-col items-center gap-2 text-indigo-400 dark:text-indigo-500">
           <Newspaper className="w-8 h-8" />
           <span className="text-xs font-semibold uppercase tracking-wider opacity-80">{site}</span>

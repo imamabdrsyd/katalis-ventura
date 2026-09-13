@@ -57,7 +57,7 @@ export function PublicOmniChannelPage({ channel, business, events = [] }: Props)
         className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-gray-800 shadow-lg"
       />
     ) : (
-      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary-500 to-purple-500 flex items-center justify-center border-4 border-white dark:border-gray-800 shadow-lg">
+      <div className="w-24 h-24 rounded-full bg-primary-500 flex items-center justify-center border-4 border-white dark:border-gray-800 shadow-lg">
         <span className="text-2xl font-bold text-white">
           {channel.title.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()}
         </span>
@@ -92,7 +92,7 @@ export function PublicOmniChannelPage({ channel, business, events = [] }: Props)
                   <Image src={business.banner_url} alt={`${channel.title} banner`} fill className="object-cover" style={{ objectPosition: business.banner_position ?? 'center' }} unoptimized priority />
                 </div>
               ) : (
-                <div className="w-full aspect-[3/1] rounded-2xl bg-gradient-to-br from-primary-500 to-purple-500" />
+                <div className="w-full aspect-[3/1] rounded-2xl bg-primary-500" />
               )}
               {/* Logo overlap di tengah bawah banner */}
               {logoBlock && (

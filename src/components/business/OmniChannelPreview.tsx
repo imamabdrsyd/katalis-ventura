@@ -349,7 +349,6 @@ function LogoSlidePreview({ business }: { business: Business }) {
 
         {/* User's business — highlight */}
         <div className="relative flex-shrink-0">
-          <div className="absolute -inset-1.5 rounded-2xl bg-gradient-to-r from-indigo-400 to-violet-500 opacity-30 blur-sm" />
           <div className="relative w-16 h-16 rounded-2xl bg-white dark:bg-gray-800 border-2 border-indigo-500 dark:border-indigo-400 flex items-center justify-center overflow-hidden shadow-md">
             {business.logo_url ? (
               <Image

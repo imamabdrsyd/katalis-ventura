@@ -380,12 +380,12 @@ function NetIncomeCard({
   };
 }) {
   const { t } = useLanguage();
-  const gradient =
+  const surface =
     netProfit === 0
-      ? 'from-gray-400 to-gray-500'
+      ? 'bg-gray-500 shadow-gray-500/10 dark:shadow-gray-900/20'
       : netProfit > 0
-        ? 'from-emerald-500 via-emerald-500 to-teal-500'
-        : 'from-red-500 via-red-500 to-rose-500';
+        ? 'bg-emerald-500 shadow-emerald-500/10 dark:shadow-emerald-900/20'
+        : 'bg-red-500 shadow-red-500/10 dark:shadow-red-900/20';
 
   const subTextClass =
     netProfit === 0 ? 'text-gray-100' : netProfit > 0 ? 'text-emerald-50' : 'text-red-50';
@@ -393,11 +393,8 @@ function NetIncomeCard({
   return (
     <div
       id="net-income"
-      className={`relative group rounded-2xl p-6 text-white cursor-default bg-gradient-to-br ${gradient} shadow-lg shadow-emerald-500/10 dark:shadow-emerald-900/20 mt-4`}
+      className={`relative group rounded-2xl p-6 text-white cursor-default shadow-lg ${surface} mt-4`}
     >
-      {/* Decorative accent */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-
       <div className="relative flex justify-between items-center gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1">

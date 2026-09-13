@@ -184,7 +184,7 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
     return (
       <div className="text-center py-14 rounded-2xl bg-white dark:bg-gray-800 border border-dashed border-gray-200 dark:border-gray-700">
         <div className="relative w-16 h-16 mx-auto mb-4">
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-100 to-indigo-50 dark:from-indigo-900/40 dark:to-indigo-900/10 rounded-full" />
+          <div className="absolute inset-0 bg-primary-50 dark:bg-primary-900/30 rounded-full" />
           <div className="relative w-full h-full flex items-center justify-center">
             <Users className="w-7 h-7 text-indigo-400 dark:text-indigo-300" />
           </div>
@@ -234,18 +234,15 @@ export function MemberList({ members, loading, businessId, isCreator, onMemberRe
             >
               {/* Avatar */}
               <div className="relative flex-shrink-0">
-                {highlight && (
-                  <div className="absolute -inset-0.5 rounded-full bg-gradient-to-br from-indigo-400/40 via-violet-400/30 to-indigo-500/40 blur-[2px]" />
-                )}
                 {member.profile?.avatar_url ? (
                   <img
                     src={member.profile.avatar_url}
                     alt={name}
-                    className={`relative w-11 h-11 rounded-full object-cover ${highlight ? 'ring-2 ring-white dark:ring-gray-800' : ''}`}
+                    className={`relative w-11 h-11 rounded-full object-cover ${highlight ? 'ring-2 ring-primary-500 dark:ring-primary-400' : ''}`}
                   />
                 ) : (
                   <div className={`relative w-11 h-11 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-700/60 ${
-                    highlight ? 'ring-2 ring-white dark:ring-gray-800' : ''
+                    highlight ? 'ring-2 ring-primary-500 dark:ring-primary-400' : ''
                   }`}>
                     <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                       {getInitials(name)}

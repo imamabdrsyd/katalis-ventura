@@ -300,7 +300,7 @@ export default function SettingsPage() {
             {/* Avatar — centered, prominent */}
             <div className="flex flex-col items-center text-center pb-6 mb-6 border-b border-gray-200 dark:border-gray-700">
               <div className="relative group mb-4">
-                <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-primary-500 to-purple-500 flex items-center justify-center text-white text-3xl font-bold ring-4 ring-white dark:ring-gray-800 shadow-md">
+                <div className="w-24 h-24 rounded-full overflow-hidden bg-primary-500 flex items-center justify-center text-white text-3xl font-bold ring-4 ring-white dark:ring-gray-800 shadow-md">
                   {avatarUrl ? (
                     <Image
                       src={avatarUrl}

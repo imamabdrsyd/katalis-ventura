@@ -9,9 +9,7 @@ type Grade = {
   emoji: string;        // for WhatsApp text only
   icon: React.ReactNode;
   cardIcon: string;     // unicode char for share card
-  color: string;        // Tailwind gradient
   ring: string;         // SVG stroke class
-  glow: string;         // shadow class
   text: string;         // text color class
   cardBg: string;       // hex for share card
 };
@@ -56,35 +54,27 @@ const getGrade = (score: number): Grade => {
     return {
       label: 'Sangat Sehat', emoji: '🎉',
       icon: GRADE_ICONS.sangat_sehat, cardIcon: '✓',
-      color: 'from-emerald-400 to-teal-400',
       ring: 'stroke-emerald-400',
-      glow: 'shadow-[0_0_60px_-10px_rgba(52,211,153,0.5)]',
       text: 'text-emerald-400', cardBg: '#34d399',
     };
   if (score >= 60)
     return {
       label: 'Sehat', emoji: '✅',
       icon: GRADE_ICONS.sehat, cardIcon: '✓',
-      color: 'from-indigo-400 to-violet-400',
       ring: 'stroke-indigo-400',
-      glow: 'shadow-[0_0_60px_-10px_rgba(99,102,241,0.55)]',
       text: 'text-indigo-400', cardBg: '#818cf8',
     };
   if (score >= 40)
     return {
       label: 'Perlu Perhatian', emoji: '⚠️',
       icon: GRADE_ICONS.perlu_perhatian, cardIcon: '!',
-      color: 'from-amber-400 to-orange-400',
       ring: 'stroke-amber-400',
-      glow: 'shadow-[0_0_60px_-10px_rgba(251,191,36,0.5)]',
       text: 'text-amber-400', cardBg: '#fbbf24',
     };
   return {
     label: 'Kritis', emoji: '🚨',
     icon: GRADE_ICONS.kritis, cardIcon: '✕',
-    color: 'from-rose-400 to-red-400',
     ring: 'stroke-rose-400',
-    glow: 'shadow-[0_0_60px_-10px_rgba(251,113,133,0.5)]',
     text: 'text-rose-400', cardBg: '#fb7185',
   };
 };
@@ -221,24 +211,18 @@ export default function HealthScoreCalculator({
   const progress     = (animatedScore / 100) * circumference;
 
   return (
-    <section className="relative isolate overflow-hidden rounded-3xl bg-gray-900 p-6 sm:p-10 ring-1 ring-white/10">
-      {/* Brand gradient: indigo top-right, purple bottom-left */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.2),transparent_45%),radial-gradient(circle_at_bottom_left,rgba(139,92,246,0.12),transparent_50%)]" />
-
+    <section className="relative isolate overflow-hidden rounded-2xl bg-gray-900 p-6 sm:p-10 ring-1 ring-white/10">
       <div className="relative">
         {/* ── STEP 1: INPUT ── */}
         {step === 'input' && (
           <div className="mx-auto max-w-xl animate-[fadeUp_0.5s_ease-out]">
-            <div className="mb-1 inline-flex items-center gap-2 rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-300 ring-1 ring-indigo-500/20">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400" />
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
               Gratis • Tanpa daftar
-            </div>
+            </p>
 
             <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
               Cek Kesehatan Keuangan{' '}
-              <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
-                Bisnismu
-              </span>
+              <span className="text-gray-500">Bisnismu</span>
             </h2>
             <p className="mt-3 text-base text-gray-400">Gratis. 3 angka. 10 detik.</p>
 
@@ -255,15 +239,12 @@ export default function HealthScoreCalculator({
 
               <button
                 type="submit"
-                className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 hover:scale-[1.01] active:scale-[0.99]"
+                className="group flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-4 text-base font-semibold text-gray-900 transition-colors hover:bg-primary-500 hover:text-white"
               >
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  Hitung Sekarang
-                  <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" viewBox="0 0 16 16" fill="none">
-                    <path d="M3 8h10m0 0L8 3m5 5l-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </span>
-                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                Hitung Sekarang
+                <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 8h10m0 0L8 3m5 5l-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </button>
             </form>
 
@@ -280,7 +261,7 @@ export default function HealthScoreCalculator({
             <div className="flex flex-col items-center text-center">
               <div className="mb-2 text-sm font-medium text-gray-400">Skor Kesehatan Keuangan</div>
 
-              <div className={`relative inline-flex items-center justify-center rounded-full ${grade.glow}`}>
+              <div className="relative inline-flex items-center justify-center rounded-full">
                 <svg width="220" height="220" className="-rotate-90">
                   <circle cx="110" cy="110" r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="14" />
                   <circle
@@ -290,7 +271,7 @@ export default function HealthScoreCalculator({
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <div className={`bg-gradient-to-br ${grade.color} bg-clip-text text-6xl font-bold leading-none tracking-tight text-transparent sm:text-7xl`}>
+                  <div className={`text-6xl font-bold leading-none tracking-tight sm:text-7xl ${grade.text}`}>
                     {animatedScore}
                   </div>
                   <div className="mt-1 text-sm text-gray-500">dari 100</div>
@@ -464,19 +445,16 @@ export default function HealthScoreCalculator({
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a
                 href="/signup"
-                className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-6 py-4 text-center text-base font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 hover:scale-[1.01]"
+                className="group flex flex-1 items-center justify-center gap-2 rounded-full bg-white px-6 py-4 text-center text-base font-semibold text-gray-900 transition-colors hover:bg-primary-500 hover:text-white"
               >
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  Lacak Otomatis dengan AXION — Gratis 14 Hari
-                  <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" viewBox="0 0 16 16" fill="none">
-                    <path d="M3 8h10m0 0L8 3m5 5l-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </span>
-                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                Lacak Otomatis dengan AXION — Gratis 14 Hari
+                <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 8h10m0 0L8 3m5 5l-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </a>
               <button
                 onClick={reset}
-                className="rounded-xl bg-white/5 px-6 py-4 text-base font-medium text-gray-300 ring-1 ring-white/10 transition-colors hover:bg-white/10 hover:text-white"
+                className="rounded-full bg-white/5 px-6 py-4 text-base font-medium text-gray-300 ring-1 ring-white/10 transition-colors hover:bg-white/10 hover:text-white"
               >
                 Hitung Ulang
               </button>

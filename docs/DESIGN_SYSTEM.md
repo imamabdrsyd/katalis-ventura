@@ -3,7 +3,7 @@
 > **Live document** — setiap perubahan pada token, komponen kanonik, atau pattern UI wajib update dokumen ini di sesi yang sama.
 > Source of truth untuk semua keputusan visual di Katalis Ventura (branding: **AXION**).
 >
-> Terakhir diupdate: 11 September 2026 (§1.3 palet kategori dikonsolidasi, `.badge-*` dicabut)
+> Terakhir diupdate: 12 September 2026 (§1.4a palet tipe akun, §1.12 avatar, §4.6 kartu KPI hero, §7.1 anti-slop berlaku seluruh aplikasi, §8.5.5 varian panel gelap)
 
 ---
 
@@ -45,6 +45,7 @@ primary: {
 - `primary-50/100` untuk background subtle (info banner, badge accent terang)
 - `primary-400` di dark mode sebagai text/icon accent
 - **Jangan** pakai indigo-* mentah dari Tailwind — selalu pakai `primary-*` supaya themeable
+- **Jangan** pakai gradient sebagai warna brand (`from-indigo-500 to-purple-500` dsb). Brand AXION = satu hue solid. Gradient indigo→purple adalah penanda visual generik dan `purple` sudah punya arti lain — lihat §1.4a.
 
 ### 1.2 Warna Semantik
 
@@ -89,6 +90,30 @@ Disimpan di komponen ContactList & memory:
 | staff | amber / orange |
 | investor | indigo |
 | other | gray |
+
+### 1.4a Warna Tipe Akun (Account Type)
+
+Dipakai di CoA, trial balance, general ledger, dan picker akun untuk menandai
+`account_type`. **Ini warna semantik, bukan dekorasi** — `purple` di sini berarti
+EQUITY, jangan dipakai ulang untuk hiasan.
+
+| Tipe | Hue | Dipakai di |
+|------|-----|------------|
+| ASSET | `blue` | badge, dot, teks akun |
+| LIABILITY | `amber` | idem |
+| EQUITY | `purple` | idem |
+| REVENUE | `green` / `emerald` ⚠️ | idem |
+| EXPENSE | `red` | idem |
+
+⚠️ **Belum ada source of truth.** Palet ini diduplikasi inline di 5+ file
+([trial-balance](<../app/(dashboard)/trial-balance/page.tsx>),
+[general-ledger](<../app/(dashboard)/general-ledger/page.tsx>),
+[accounts](<../app/(dashboard)/accounts/page.tsx>),
+[TransactionDetailModal](../src/components/transactions/TransactionDetailModal.tsx),
+[QuickTransactionForm](../src/components/transactions/QuickTransactionForm.tsx))
+dan REVENUE sudah melenceng: `green-*` di tiga file, `emerald-*` di dua file.
+Ini pola drift yang sama dengan `.badge-*` sebelum dicabut (§1.3) — perlu
+dikonsolidasi ke satu modul seperti `categoryColors.ts`.
 
 ### 1.5 Surface (Background)
 
@@ -203,6 +228,34 @@ Ikut skala Tailwind default. Padding kanonik per komponen:
 ### 1.11 Transition
 
 Default: `transition-colors` untuk perubahan warna, `transition-all` untuk kombinasi color + shadow + transform. Durasi default Tailwind (150ms). **Jangan** pakai animasi custom kecuali untuk modal (`animate-in fade-in zoom-in-95 duration-200`).
+
+---
+
+### 1.12 Avatar & Blok Identitas
+
+Avatar (user, bisnis, member), badge logo header, dan ikon identitas halaman
+memakai **fill solid**, tidak pernah gradient:
+
+```tsx
+// ✅ avatar / logo fallback
+<div className="w-9 h-9 rounded-full bg-primary-500 text-white
+                flex items-center justify-center font-semibold">
+  {initials}
+</div>
+```
+
+- Fill: `bg-primary-500 text-white`
+- Highlight member aktif: `ring-2 ring-primary-500 dark:ring-primary-400` — **bukan**
+  glow gradient ber-`blur`
+- Placeholder gambar yang gagal/kosong: netral (`bg-gray-100 dark:bg-gray-800`),
+  bukan warna brand — placeholder bukan momen branding
+
+Dulu ada 11 implementasi inline `bg-gradient-to-br from-indigo-500 to-purple-500`
+yang diseragamkan 12 Sep 2026. Jangan diperkenalkan lagi.
+
+> Catatan: [`BusinessInitialsAvatar`](../src/components/omnichannel/BusinessInitialsAvatar.tsx)
+> masih memakai bahasa lain (pastel rotasi 5 warna, **tanpa pasangan `dark:`**).
+> Dua sistem avatar masih hidup berdampingan — belum dikonsolidasi.
 
 ---
 
@@ -722,7 +775,7 @@ Dua varian:
 | `<ReportSkeleton>` | laporan (cash-flow, income-statement, balance-sheet, scenario-modeling) — 2 chart + summary |
 | `<TableSkeleton>` | tabular (trial-balance, ar-ap, transactions, invoices, general-ledger) — header + baris tabel |
 | `<FormSkeleton>` | halaman pengaturan 2 panel (settings) — header + panel profil + tumpukan kartu isian |
-| `<CardFormSkeleton>` | kartu form terpusat di luar layout dashboard (setup-business, join-business); taruh di dalam pembungkus gradient halaman |
+| `<CardFormSkeleton>` | kartu form terpusat di luar layout dashboard (setup-business, join-business); taruh di dalam pembungkus kanvas halaman (`bg-gray-50 dark:bg-gray-900`, sama dengan shell aplikasi) |
 
 **Skeleton region** (tanpa header — untuk bagian yang memuat sendiri sementara header/tab halaman sudah tampil):
 
@@ -752,6 +805,27 @@ Semua skeleton dibungkus `SkeletonRoot`: `role="status"` + `aria-busy` + teks `s
   <p className="text-xs text-gray-500 dark:text-gray-400">Deskripsi...</p>
 </div>
 ```
+
+### 4.6 Kartu KPI Hero (angka penutup laporan)
+
+Kartu bertekst putih yang menutup laporan — Laba Bersih di income statement, Arus
+Kas Bersih di cash flow. **Fill solid semantik, bukan gradient.**
+
+```tsx
+const surface =
+  value === 0  ? 'bg-gray-500 shadow-gray-500/10 dark:shadow-gray-900/20'
+: value >  0   ? 'bg-emerald-500 shadow-emerald-500/10 dark:shadow-emerald-900/20'
+               : 'bg-red-500 shadow-red-500/10 dark:shadow-red-900/20';
+
+<div className={`relative rounded-2xl p-6 text-white shadow-lg ${surface} mt-4`}>
+```
+
+- Warna dari §1.2 (Success/Danger/Neutral) — angkanya yang bercerita, bukan warnanya
+- **Jangan** tambahkan blob `blur-3xl` di pojok kartu
+- **Jangan** `bg-gradient-to-br from-emerald-500 via-emerald-500 to-teal-500` — `from`
+  dan `via` sama persis, jadi itu gradient palsu yang cuma menyelipkan hue kedua
+- Warna shadow harus ikut varian; sebelum 12 Sep 2026 `shadow-emerald-*` ter-hardcode
+  walau kartunya merah
 
 ### 4.5 Timeline Riwayat (audit / diff)
 
@@ -796,7 +870,8 @@ Referensi: bagian *Riwayat Perubahan* di [`TransactionDetailModal.tsx`](../src/c
 
 ## 6. Accessibility
 
-- **Tap target mobile:** minimum `44x44` untuk button icon-only (pakai `min-h-[44px] min-w-[44px]` kalau perlu)
+  - Menghitungnya: ukuran = ikon + 2×padding. `p-1` + ikon `w-3.5` = 22px (**gagal**), `p-1.5` + `w-3.5` = 26px (lolos). Hati-hati membaca kelas Tailwind desimal — `p-1.5` bukan `p-1`.
+- **Landmark:** sidebar dibungkus satu `<nav aria-label>` (bukan per-blok), `<main id="main-content" tabIndex={-1}>` jadi target skip-link yang ada di `app/(dashboard)/layout.tsx`. Halaman yang tidak punya judul terlihat tetap wajib `<h1>` — render `sr-only`, jangan memaksa judul visual yang tidak ada di desain.
 - **Focus ring:** pakai `focus:ring-2 focus:ring-primary-500` (sudah di `.input`). Jangan hapus outline tanpa pengganti.
 - **Disabled state:** `disabled:opacity-50 disabled:cursor-not-allowed`
 - **Alt text:** semua `<img>` wajib ada alt. Icon decoratif di dalam button yang sudah ada label text tidak perlu alt.
@@ -824,6 +899,25 @@ Referensi: bagian *Riwayat Perubahan* di [`TransactionDetailModal.tsx`](../src/c
 | Card | `.card` atau `.card-static` | Inline `bg-white rounded-2xl shadow-sm...` |
 | Modal | `<Modal>` component | Custom fixed inset-0 |
 | Dark mode | Selalu pair `dark:` | `text-gray-800` tanpa pasangan |
+| Avatar / logo | `bg-primary-500 text-white` solid | `bg-gradient-to-br from-indigo-500 to-purple-500` |
+| Kanvas auth & onboarding | `bg-gray-50 dark:bg-gray-900` (= shell app) | Wash pastel `from-indigo-50 via-white to-purple-50` |
+| Warna tipe akun | Hue semantik §1.4a | Meminjam hue-nya untuk dekorasi |
+
+### 7.1 Anti-slop — berlaku di **seluruh** aplikasi
+
+Aturan di §8.5.8 awalnya cuma untuk landing page. Sejak 12 Sep 2026 aturan ini
+berlaku di dashboard, onboarding, modal, dan halaman publik juga:
+
+- ❌ Gradient text `bg-clip-text text-transparent`
+- ❌ Gradient multi-hue sebagai fill brand (indigo→purple/violet)
+- ❌ Wash pastel 3-stop sebagai background halaman
+- ❌ Blob dekoratif `blur-2xl`/`blur-3xl` di dalam kartu
+- ❌ Shimmer sweep (`-translate-x-full` + gradient overlay) saat hover
+- ❌ Emoji di dalam UI copy atau sebagai ikon — pakai lucide
+- ❌ Glyph teks `✓ ✕ ✗ ⚠` sebagai ikon — pakai lucide, supaya berat & warnanya terkontrol
+
+Ukurannya sederhana: **kalau elemen itu dihapus dan tidak ada informasi yang
+hilang, elemen itu dekorasi.** Hapus.
 
 ---
 
@@ -934,6 +1028,20 @@ Landing pakai pill rounded penuh + neutral inverse (bukan `.btn-primary` indigo)
   <ArrowRightIcon />
 </Link>
 ```
+
+**Varian panel gelap.** Di section yang latarnya selalu gelap (mis.
+[HealthScoreCalculator](../src/components/landing/HealthScoreCalculator.tsx) di atas
+`bg-gray-900`), pakai lengan dark dari pola di atas secara permanen — bukan
+gradient, bukan `hover:scale`:
+
+```tsx
+className="group flex items-center justify-center gap-2 rounded-full bg-white
+           px-6 py-4 text-base font-semibold text-gray-900
+           transition-colors hover:bg-primary-500 hover:text-white"
+```
+
+Untuk de-emphasis heading di panel gelap, `text-gray-500` (bukan `text-gray-600`
+seperti di §8.5.2) — gray-600 di atas gray-900 hanya ~2:1, gagal AA.
 
 CTA sekunder = text link dengan ikon arrow yang nudge:
 

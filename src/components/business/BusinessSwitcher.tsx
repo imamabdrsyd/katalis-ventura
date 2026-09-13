@@ -92,7 +92,7 @@ export function BusinessSwitcher() {
               className={`w-7 h-7 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0 ${
                 activeBusiness.logo_url
                   ? 'bg-white'
-                  : 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'
+                  : 'bg-primary-500 text-white'
               }`}
             >
               {activeBusiness.logo_url ? (
@@ -141,7 +141,7 @@ export function BusinessSwitcher() {
                         business.logo_url
                           ? 'bg-white'
                           : business.id === activeBusiness?.id
-                            ? 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'
+                            ? 'bg-primary-500 text-white'
                             : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                       }`}
                     >
