@@ -34,12 +34,20 @@ import { CreateInvoiceFromTransactionsModal } from '@/components/invoices/Create
 import { findDefaultCashAccount } from '@/lib/utils/quickTransactionHelper';
 import { isAdvanceReceivableAccount } from '@/lib/accounting/classification';
 import { useBusinessContext } from '@/context/BusinessContext';
-import { AlertTriangle, ArrowRight, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, RotateCcw, ZoomIn, ZoomOut, Receipt, CirclePlus, ChevronLeft, ChevronRight, Maximize2, Loader2, Copy, Printer } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Info, X, CheckCircle2, Banknote, FileText, Download, ExternalLink, Link2, ChevronDown, History, Contact as ContactIcon, RotateCcw, ZoomIn, ZoomOut, Receipt, CirclePlus, ChevronLeft, ChevronRight, Maximize2, Loader2, Copy, Printer, Images } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { updateTransaction } from '@/lib/api/transactions';
 import { CurrencyInputWithCalculator } from '@/components/ui/CurrencyInputWithCalculator';
 import { formatFileSize, isImageType } from '@/lib/storage/attachments';
 import { useDeliverableAttachmentUrl, triggerAttachmentDownload } from '@/lib/storage/signedUrl';
+import {
+  AttachmentLoading,
+  PdfViewerFrame,
+  SignedAttachmentDownloadButton,
+  SignedAttachmentImage,
+  SignedAttachmentPdf,
+  isPdfAttachment,
+} from '@/components/transactions/SignedAttachmentViewers';
 import { AddToCalendarButton } from '@/components/transactions/AddToCalendarButton';
 
 interface TransactionDetailModalProps {
@@ -91,17 +99,6 @@ const ACCOUNT_TYPE_BG: Record<string, string> = {
   REVENUE: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300',
   EXPENSE: 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-300',
 };
-
-function isPdfAttachment(attachment: TransactionAttachment): boolean {
-  const mimeType = attachment.mime_type?.toLowerCase() ?? '';
-  const filename = attachment.filename?.toLowerCase() ?? '';
-  return mimeType.includes('pdf') || filename.endsWith('.pdf');
-}
-
-function withPdfViewerParams(url: string): string {
-  if (url.includes('#')) return url;
-  return `${url}#toolbar=1&navpanes=0&view=FitH`;
-}
 
 
 export function TransactionDetailModal({
@@ -1032,9 +1029,20 @@ export function TransactionDetailModal({
         {/* Attachment / Dokumen Sumber */}
         {attachments.length > 0 && (
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-            <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-              {t.transactionDetail.attachment}
-            </h4>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                {t.transactionDetail.attachment}
+              </h4>
+              {/* Jalan pintas ke galeri seluruh lampiran bisnis — ditaruh di sini
+                  karena justru saat melihat satu bukti orang teringat mencari yang lain. */}
+              <Link
+                href="/transactions/attachments"
+                className="flex-shrink-0 inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-indigo-500 dark:text-gray-400 dark:hover:text-indigo-400 transition-colors"
+              >
+                <Images className="w-3.5 h-3.5" />
+                {t.attachmentGallery.navLabel}
+              </Link>
+            </div>
             <div className="space-y-2">
               {attachments.map((att) => (
                 <AttachmentPreviewItem
@@ -2390,153 +2398,5 @@ function AttachmentPreviewItem({
       </div>
       <Download className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors flex-shrink-0" />
     </button>
-  );
-}
-
-function PdfViewerFrame({
-  url,
-  title,
-  ...rest
-}: { url: string; title: string } & React.IframeHTMLAttributes<HTMLIFrameElement>) {
-  return (
-    <iframe
-      {...rest}
-      src={withPdfViewerParams(url)}
-      title={title}
-      loading="lazy"
-    />
-  );
-}
-
-/** Indikator loading lampiran (saat menunggu signed URL + file termuat). */
-function AttachmentLoading({ dark, label }: { dark?: boolean; label?: string }) {
-  const { t } = useLanguage();
-  return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-2">
-      <Loader2 className={`h-7 w-7 animate-spin ${dark ? 'text-white/80' : 'text-indigo-500'}`} />
-      <span className={`text-[11px] font-medium ${dark ? 'text-white/60' : 'text-gray-400 dark:text-gray-500'}`}>
-        {label ?? t.transactionDetail.loadingGeneric}
-      </span>
-    </div>
-  );
-}
-
-/**
- * PDF iframe pembungkus yang pakai signed URL untuk src.
- */
-function SignedAttachmentPdf({
-  attachment,
-  title,
-  className,
-  ...rest
-}: { attachment: TransactionAttachment; title: string } & React.IframeHTMLAttributes<HTMLIFrameElement>) {
-  const { t } = useLanguage();
-  const url = useDeliverableAttachmentUrl(attachment);
-  const [loaded, setLoaded] = useState(false);
-  useEffect(() => setLoaded(false), [url]);
-  return (
-    <div className="relative h-full w-full">
-      {url && (
-        <PdfViewerFrame
-          {...rest}
-          url={url}
-          title={title}
-          onLoad={() => setLoaded(true)}
-          className={`${className ?? ''} transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
-        />
-      )}
-      {(!url || !loaded) && (
-        <div className="absolute inset-0">
-          <AttachmentLoading dark label={t.transactionDetail.loadingPdf} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * Tombol unduh lampiran — resolve signed URL lalu trigger download (bukan buka
- * di tab browser), supaya tidak perlu mengandalkan URL publik.
- */
-function SignedAttachmentDownloadButton({
-  attachment,
-  children,
-  className,
-  title,
-}: {
-  attachment: TransactionAttachment;
-  children: React.ReactNode;
-  className?: string;
-  title?: string;
-}) {
-  const url = useDeliverableAttachmentUrl(attachment);
-  const [downloading, setDownloading] = useState(false);
-  const ready = !!url;
-  const handleClick = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!ready || downloading) return;
-    setDownloading(true);
-    try {
-      await triggerAttachmentDownload(attachment);
-    } catch {
-      // gagal unduh — diabaikan
-    } finally {
-      setDownloading(false);
-    }
-  };
-  return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={!ready || downloading}
-      className={className}
-      title={title}
-      aria-label={title}
-    >
-      {children}
-    </button>
-  );
-}
-
-/**
- * Image pembungkus yang pakai signed URL untuk src.
- */
-function SignedAttachmentImage({
-  attachment,
-  alt,
-  className,
-  ...rest
-}: { attachment: TransactionAttachment; alt: string } & React.ImgHTMLAttributes<HTMLImageElement>) {
-  const { t } = useLanguage();
-  const url = useDeliverableAttachmentUrl(attachment);
-  const [loaded, setLoaded] = useState(false);
-  const imgRef = useRef<HTMLImageElement | null>(null);
-  useEffect(() => {
-    if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
-      setLoaded(true);
-    } else {
-      setLoaded(false);
-    }
-  }, [url]);
-  return (
-    <div className={`relative flex items-center justify-center ${loaded ? '' : 'min-h-[40vh] min-w-[260px]'}`}>
-      {url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          {...rest}
-          ref={imgRef}
-          src={url}
-          alt={alt}
-          onLoad={() => setLoaded(true)}
-          onError={() => setLoaded(true)}
-          className={`${className ?? ''} transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
-        />
-      )}
-      {(!url || !loaded) && (
-        <div className="absolute inset-0">
-          <AttachmentLoading dark label={t.transactionDetail.loadingImage} />
-        </div>
-      )}
-    </div>
   );
 }

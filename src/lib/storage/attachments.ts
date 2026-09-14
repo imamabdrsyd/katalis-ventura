@@ -1,7 +1,7 @@
 import type { TransactionAttachment } from '@/types';
 
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-const MAX_FILES = 3;
+const MAX_FILES = 5;
 const ALLOWED_TYPES = [
   'image/jpeg',
   'image/png',

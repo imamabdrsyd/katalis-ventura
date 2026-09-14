@@ -81,20 +81,45 @@ export function isCloudinaryAttachmentUrl(url: string | null | undefined): boole
   );
 }
 
+/**
+ * Cache signed URL Cloudinary selama sesi tab.
+ *
+ * Signature Cloudinary di route `cloudinary-sign` bersifat STATIS (tanpa
+ * auth_token/TTL — lihat komentar di route-nya), jadi hasilnya aman disimpan
+ * selama halaman hidup. Ini yang membuat Galeri Lampiran tidak menembakkan satu
+ * request tanda tangan per kartu setiap kali user pindah tab atau scroll balik.
+ * Legacy Supabase Storage TIDAK di-cache — signed URL-nya ber-TTL.
+ *
+ * Menyimpan promise (bukan hasilnya) supaya N render bersamaan atas file yang
+ * sama hanya memicu satu request.
+ */
+const cloudinarySignedUrlCache = new Map<string, Promise<string>>();
+
 export async function fetchSignedCloudinaryUrl(
   publicId: string,
   resourceType: 'image' | 'raw' | 'video' = 'image'
 ): Promise<string> {
-  const params = new URLSearchParams({ public_id: publicId, resource_type: resourceType });
-  const res = await fetch(
-    `/api/transactions/attachments/cloudinary-sign?${params.toString()}`,
-    { credentials: 'include' }
-  );
-  if (!res.ok) {
-    throw new Error(`Failed to sign Cloudinary URL (status ${res.status})`);
-  }
-  const json = await res.json();
-  return json.data.url as string;
+  const cacheKey = `${resourceType}|${publicId}`;
+  const cached = cloudinarySignedUrlCache.get(cacheKey);
+  if (cached) return cached;
+
+  const request = (async () => {
+    const params = new URLSearchParams({ public_id: publicId, resource_type: resourceType });
+    const res = await fetch(
+      `/api/transactions/attachments/cloudinary-sign?${params.toString()}`,
+      { credentials: 'include' }
+    );
+    if (!res.ok) {
+      throw new Error(`Failed to sign Cloudinary URL (status ${res.status})`);
+    }
+    const json = await res.json();
+    return json.data.url as string;
+  })();
+
+  // Kegagalan tidak boleh ter-cache permanen — buang entry-nya supaya bisa dicoba lagi.
+  request.catch(() => cloudinarySignedUrlCache.delete(cacheKey));
+  cloudinarySignedUrlCache.set(cacheKey, request);
+  return request;
 }
 
 /**

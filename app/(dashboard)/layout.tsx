@@ -37,6 +37,7 @@ import {
   Upload,
   Bot,
   MessagesSquare,
+  Paperclip,
 } from 'lucide-react';
 
 import { motion, useReducedMotion } from 'framer-motion';
@@ -153,6 +154,9 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
         : []),
       { href: '/leads', label: t.nav.leads, icon: MessagesSquare },
       { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
+      // Tidak ada di sidebar (pintunya di halaman Transaksi) — tapi tetap harus
+      // bisa ditemukan lewat ⌘K, kalau tidak fitur ini praktis tersembunyi.
+      { href: '/transactions/attachments', label: t.attachmentGallery.navLabel, icon: Paperclip },
       ...navSections.flatMap((s) => s.items),
       { href: '/settings', label: t.nav.settings, icon: Settings },
     ];

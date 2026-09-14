@@ -17,7 +17,7 @@ import type { TransactionCategory, Transaction } from '@/types';
 import { QuickTransactionForm } from '@/components/transactions/QuickTransactionForm';
 import { RecurringList } from '@/components/transactions/RecurringList';
 import { useRecurringTransactions } from '@/hooks/useRecurringTransactions';
-import { Plus, X, Trash2, CreditCard, CheckCircle2, Calculator, RefreshCw, Printer, Loader2, Contact as ContactIcon, Receipt, ArrowDownUp } from 'lucide-react';
+import { Plus, X, Trash2, CreditCard, CheckCircle2, Calculator, RefreshCw, Printer, Loader2, Contact as ContactIcon, Receipt, ArrowDownUp, Paperclip } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, Suspense, useMemo, useId } from 'react';
 import { motion } from 'framer-motion';
@@ -628,25 +628,43 @@ function TransactionsPageInner() {
               {t.transactions.manageTransactions}
             </h1>
         </div>
-        {canManageTransactions && (
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowImportModal(true)}
-              className="btn-ghost flex items-center gap-2"
-            >
-              <ArrowDownUp className="h-4 w-4" />
-              {t.transactions.importExcel}
-            </button>
+        <div className="flex items-center gap-3">
+          {/* Galeri Lampiran sengaja diakses dari sini, bukan menu sidebar baru:
+              lampiran selalu milik transaksi, jadi pintunya duduk di halaman
+              transaksi. Tersedia untuk semua role — investor boleh melihat bukti
+              dokumen meski tidak boleh mencatat. */}
+          <button
+            onClick={() => router.push('/transactions/attachments')}
+            className="btn-ghost flex items-center gap-2"
+            title={t.attachmentGallery.navLabel}
+            aria-label={t.attachmentGallery.navLabel}
+          >
+            <Paperclip className="h-4 w-4" />
+            {/* Label disembunyikan di layar sempit supaya header tidak berdesakan —
+                nama aksesibelnya tetap ada lewat aria-label di atas. */}
+            <span className="hidden sm:inline">{t.attachmentGallery.navLabel}</span>
+          </button>
 
-            <button
-              onClick={() => router.push('/transactions/journal-entry')}
-              className="btn-primary-glow flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              {t.transactions.journalEntry}
-            </button>
-          </div>
-        )}
+          {canManageTransactions && (
+            <>
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="btn-ghost flex items-center gap-2"
+              >
+                <ArrowDownUp className="h-4 w-4" />
+                {t.transactions.importExcel}
+              </button>
+
+              <button
+                onClick={() => router.push('/transactions/journal-entry')}
+                className="btn-primary-glow flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                {t.transactions.journalEntry}
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Error */}

@@ -2788,6 +2788,31 @@ export interface Translations {
     generatedCount: (n: number) => string;
     frequency: (n: number, unit: 'weekly' | 'monthly' | 'yearly') => string;
   };
+  attachmentGallery: {
+    title: string;
+    subtitle: string;
+    navLabel: string;
+    backToTransactions: string;
+    tabImages: string;
+    tabFiles: string;
+    searchPlaceholder: string;
+    clearSearch: string;
+    emptyTitle: string;
+    emptyDescription: string;
+    emptyImagesTitle: string;
+    emptyImagesDescription: string;
+    emptyFilesTitle: string;
+    emptyFilesDescription: string;
+    noResultsTitle: string;
+    noResultsDescription: string;
+    loadMore: string;
+    showingCount: (shown: number, total: number) => string;
+    viewTransaction: string;
+    openPreview: string;
+    download: string;
+    scanned: string;
+    loadFailed: string;
+  };
 }
 
 export type JournalEntryTypeKey =

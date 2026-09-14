@@ -233,6 +233,58 @@ export async function getTransactionsForExport(
   return resolveCatalogNames(rows);
 }
 
+/** Baris ramping untuk Galeri Lampiran — hanya kolom yang dipakai kartu galeri. */
+export type TransactionAttachmentRow = Pick<
+  Transaction,
+  'id' | 'date' | 'name' | 'description' | 'amount' | 'category' | 'currency_code' | 'meta'
+>;
+
+const ATTACHMENT_PAGE_SIZE = 500;
+
+/**
+ * Ambil seluruh transaksi yang PUNYA lampiran, untuk halaman Galeri Lampiran
+ * (`/transactions/attachments`).
+ *
+ * Tiga keputusan yang disengaja:
+ * - **Proyeksi ramping, tanpa join.** Galeri hanya butuh identitas transaksi
+ *   sebagai keterangan kartu; menarik akun debit/kredit + baris jurnal seperti
+ *   `getTransactions()` berarti mengunduh berkali lipat data untuk ditampilkan
+ *   sebagai satu baris teks.
+ * - **Filter di server.** `meta->attachments`/`meta->attachment` disaring lewat
+ *   PostgREST supaya transaksi tanpa lampiran (mayoritas) tidak pernah ikut
+ *   terkirim. Baris dengan `attachments: []` masih lolos filter dan dibuang di
+ *   sisi klien — murah, karena jumlahnya kecil.
+ * - **Paginasi eksplisit.** Response PostgREST terpotong di 1000 baris; galeri
+ *   yang diam-diam kehilangan lampiran lama adalah kegagalan yang sulit
+ *   disadari. `date` + `id` dipakai bersama supaya urutan halaman stabil.
+ */
+export async function getTransactionsWithAttachments(
+  businessId: string
+): Promise<TransactionAttachmentRow[]> {
+  const supabase = createClient();
+  const rows: TransactionAttachmentRow[] = [];
+
+  for (let offset = 0; ; offset += ATTACHMENT_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('id, date, name, description, amount, category, currency_code, meta')
+      .eq('business_id', businessId)
+      .is('deleted_at', null)
+      .or('meta->attachments.not.is.null,meta->attachment.not.is.null')
+      .order('date', { ascending: false })
+      .order('id', { ascending: false })
+      .range(offset, offset + ATTACHMENT_PAGE_SIZE - 1);
+
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) break;
+
+    rows.push(...(data as TransactionAttachmentRow[]));
+    if (data.length < ATTACHMENT_PAGE_SIZE) break;
+  }
+
+  return rows;
+}
+
 export async function getTransactions(businessId: string): Promise<Transaction[]> {
   const supabase = createClient();
   const { data, error } = await supabase

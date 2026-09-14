@@ -87,7 +87,7 @@ export interface TransactionMeta {
   settlement_amount?: number;
   /** Dokumen sumber / bukti transaksi (faktur, nota, kuitansi) — legacy single */
   attachment?: TransactionAttachment;
-  /** Dokumen sumber multi-file (maks 3) — menggantikan attachment */
+  /** Dokumen sumber multi-file (maks MAX_FILES, lihat lib/storage/attachments) — menggantikan attachment */
   attachments?: TransactionAttachment[];
   /** ID recurring template yang men-generate transaksi ini */
   recurring_template_id?: string;
