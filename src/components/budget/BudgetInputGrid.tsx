@@ -3,9 +3,9 @@
 import { useState, useMemo, useCallback, Fragment } from 'react';
 import { Save, Copy, Divide, Loader2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import { useLanguage } from '@/context/LanguageContext';
 import type { Account, BudgetLine, BudgetLineInput } from '@/types';
 
-const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
 
 interface BudgetInputGridProps {
   accounts: Account[];
@@ -26,6 +26,10 @@ export function BudgetInputGrid({
   onSave,
   onCopyFromActual,
 }: BudgetInputGridProps) {
+  const { t } = useLanguage();
+  const tb = t.budget;
+  const MONTH_LABELS = t.common.monthsShort;
+
   // Build initial grid values from existing budget lines
   const initialValues = useMemo(() => {
     const map = new Map<string, number>();
@@ -125,7 +129,7 @@ export function BudgetInputGrid({
             );
           })}
           <td className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">
-            Total
+            {t.common.total}
           </td>
           {!readOnly && <td className="px-2 py-2 w-10"></td>}
         </tr>
@@ -167,7 +171,7 @@ export function BudgetInputGrid({
               <td className="px-1 py-1">
                 <button
                   onClick={() => distributeEvenly(account.id)}
-                  title="Bagi rata"
+                  title={tb.splitEvenly}
                   className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   <Divide className="w-3.5 h-3.5" />
@@ -207,7 +211,7 @@ export function BudgetInputGrid({
             className="btn-primary inline-flex items-center gap-2"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {saving ? 'Menyimpan...' : 'Simpan'}
+            {saving ? t.common.saving : t.common.save}
           </button>
           {onCopyFromActual && (
             <button
@@ -215,11 +219,11 @@ export function BudgetInputGrid({
               className="btn-secondary inline-flex items-center gap-2"
             >
               <Copy className="w-4 h-4" />
-              Copy dari Aktual
+              {tb.copyFromActual}
             </button>
           )}
           {hasChanges && (
-            <span className="text-xs text-amber-600 dark:text-amber-400">Ada perubahan belum disimpan</span>
+            <span className="text-xs text-amber-600 dark:text-amber-400">{tb.unsavedChanges}</span>
           )}
         </div>
       )}
@@ -228,8 +232,8 @@ export function BudgetInputGrid({
       <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-xl">
         <table className="w-full text-sm">
           <tbody>
-            {renderAccountSection('Pendapatan', revenueAccounts)}
-            {renderAccountSection('Beban', expenseAccounts)}
+            {renderAccountSection(tb.revenue, revenueAccounts)}
+            {renderAccountSection(tb.expense, expenseAccounts)}
           </tbody>
         </table>
       </div>

@@ -4,6 +4,7 @@ import { useState, useMemo, Fragment } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { BudgetVsActualRow, AccountType } from '@/types';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface BudgetVarianceTableProps {
   rows: BudgetVsActualRow[];
@@ -11,15 +12,9 @@ interface BudgetVarianceTableProps {
 
 type SortKey = 'accountCode' | 'budgeted' | 'actual' | 'variance' | 'variancePercent';
 
-const ACCOUNT_TYPE_LABELS: Record<string, string> = {
-  REVENUE: 'Pendapatan',
-  EXPENSE: 'Beban',
-  ASSET: 'Aset',
-  LIABILITY: 'Liabilitas',
-  EQUITY: 'Ekuitas',
-};
-
 export function BudgetVarianceTable({ rows }: BudgetVarianceTableProps) {
+  const { t } = useLanguage();
+  const tb = t.budget;
   const [sortKey, setSortKey] = useState<SortKey>('accountCode');
   const [sortAsc, setSortAsc] = useState(true);
   const [expandedTypes, setExpandedTypes] = useState<Set<AccountType>>(new Set(['REVENUE', 'EXPENSE']));
@@ -125,11 +120,11 @@ export function BudgetVarianceTable({ rows }: BudgetVarianceTableProps) {
         <thead>
           <tr className="border-b border-gray-200 dark:border-gray-700">
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer" onClick={() => toggleSort('accountCode')}>
-              Akun {sortKey === 'accountCode' ? (sortAsc ? '↑' : '↓') : ''}
+              {t.common.code} {sortKey === 'accountCode' ? (sortAsc ? '↑' : '↓') : ''}
             </th>
-            <SortHeader label="Budget" field="budgeted" />
-            <SortHeader label="Aktual" field="actual" />
-            <SortHeader label="Variance" field="variance" />
+            <SortHeader label={tb.budgeted} field="budgeted" />
+            <SortHeader label={tb.actual} field="actual" />
+            <SortHeader label={tb.variance} field="variance" />
             <SortHeader label="%" field="variancePercent" />
           </tr>
         </thead>
@@ -156,7 +151,7 @@ export function BudgetVarianceTable({ rows }: BudgetVarianceTableProps) {
                   <td className="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-200" colSpan={1}>
                     <span className="flex items-center gap-1.5">
                       {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                      {ACCOUNT_TYPE_LABELS[type] || type}
+                      {t.common.accountTypes[type] ?? type}
                     </span>
                   </td>
                   <td className="px-4 py-2.5 text-right font-semibold text-gray-700 dark:text-gray-200">

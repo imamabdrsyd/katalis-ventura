@@ -2,17 +2,12 @@
 
 import { ChevronDown } from 'lucide-react';
 import type { Budget } from '@/types';
+import { useLanguage } from '@/context/LanguageContext';
 
 const STATUS_COLORS: Record<string, string> = {
   draft: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
   approved: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   locked: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  draft: 'Draft',
-  approved: 'Disetujui',
-  locked: 'Terkunci',
 };
 
 interface BudgetSelectorProps {
@@ -22,6 +17,9 @@ interface BudgetSelectorProps {
 }
 
 export function BudgetSelector({ budgets, selectedBudgetId, onSelect }: BudgetSelectorProps) {
+  const { t } = useLanguage();
+  const statusLabel = (s: string) =>
+    ({ draft: t.budget.statusDraft, approved: t.budget.statusApproved, locked: t.budget.statusLocked }[s] ?? s);
   const selected = budgets.find((b) => b.id === selectedBudgetId);
 
   if (budgets.length === 0) return null;
@@ -42,7 +40,7 @@ export function BudgetSelector({ budgets, selectedBudgetId, onSelect }: BudgetSe
       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
       {selected && (
         <span className={`ml-3 inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${STATUS_COLORS[selected.status]}`}>
-          {STATUS_LABELS[selected.status]}
+          {statusLabel(selected.status)}
         </span>
       )}
     </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import type { Budget, BudgetFormData } from '@/types';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface BudgetFormModalProps {
   isOpen: boolean;
@@ -16,6 +17,8 @@ const inputClass =
   'w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors';
 
 export function BudgetFormModal({ isOpen, onClose, onSubmit, saving, editBudget }: BudgetFormModalProps) {
+  const { t } = useLanguage();
+  const tb = t.budget;
   const currentYear = new Date().getFullYear();
 
   const [form, setForm] = useState<BudgetFormData>({
@@ -50,18 +53,18 @@ export function BudgetFormModal({ isOpen, onClose, onSubmit, saving, editBudget 
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editBudget ? 'Edit Budget' : 'Buat Budget Baru'}>
+    <Modal isOpen={isOpen} onClose={onClose} title={editBudget ? tb.formTitleEdit : tb.formTitleCreate}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Nama Budget
+            {tb.nameLabel}
           </label>
           <input
             type="text"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             className={inputClass}
-            placeholder="Budget 2026"
+            placeholder={tb.namePlaceholder}
             required
           />
         </div>
@@ -69,7 +72,7 @@ export function BudgetFormModal({ isOpen, onClose, onSubmit, saving, editBudget 
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Mulai
+              {tb.startLabel}
             </label>
             <input
               type="date"
@@ -81,7 +84,7 @@ export function BudgetFormModal({ isOpen, onClose, onSubmit, saving, editBudget 
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Selesai
+              {tb.endLabel}
             </label>
             <input
               type="date"
@@ -95,14 +98,14 @@ export function BudgetFormModal({ isOpen, onClose, onSubmit, saving, editBudget 
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Catatan (opsional)
+            {`${t.common.notes} (${t.common.optional})`}
           </label>
           <textarea
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
             className={`${inputClass} resize-none`}
             rows={3}
-            placeholder="Catatan tentang budget ini..."
+            placeholder={tb.notesPlaceholder}
           />
         </div>
 
@@ -112,14 +115,14 @@ export function BudgetFormModal({ isOpen, onClose, onSubmit, saving, editBudget 
             onClick={onClose}
             className="btn-secondary"
           >
-            Batal
+            {t.common.cancel}
           </button>
           <button
             type="submit"
             disabled={saving}
             className="btn-primary"
           >
-            {saving ? 'Menyimpan...' : editBudget ? 'Update' : 'Buat Budget'}
+            {saving ? t.common.saving : editBudget ? tb.update : tb.createBudget}
           </button>
         </div>
       </form>

@@ -782,7 +782,7 @@ export function QuickTransactionForm({
                       <div key={type}>
                         <div className="px-3 py-1.5 bg-gray-50 dark:bg-gray-700/50 text-xs font-semibold uppercase tracking-wide sticky top-0">
                           <span className={ACCOUNT_TYPE_COLORS[type]}>
-                            {t.quickForm.accountTypeLabels[type]}
+                            {t.common.accountTypes[type]}
                           </span>
                         </div>
                         {accs.map((account) => (

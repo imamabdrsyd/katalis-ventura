@@ -170,7 +170,7 @@ export function CalendarBoard({
             {pickerOpen && (
               <MonthYearPicker
                 monthCursor={monthCursor}
-                monthLabels={c.monthsShort}
+                monthLabels={t.common.monthsShort}
                 prevYearLabel={c.prevYear}
                 nextYearLabel={c.nextYear}
                 onPick={(y, m) => {

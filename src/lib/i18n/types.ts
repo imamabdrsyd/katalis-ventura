@@ -60,6 +60,8 @@ export interface Translations {
     selectOrCreateBusiness: string;
     noTransactions: string;
     contactSaveFailed: string;
+    monthsShort: string[];
+    accountTypes: Record<'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENSE', string>;
   };
 
   // Label 6 kategori transaksi (+ SETTLE untuk pelunasan)
@@ -570,7 +572,6 @@ export interface Translations {
     saveTransaction: string;
     saveDraftTooltip: string;
     saveDraft: string;
-    accountTypeLabels: Record<'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENSE', string>;
     amount: string;
     category: string;
     date: string;
@@ -922,7 +923,6 @@ export interface Translations {
     setPriceCellTitle: string;
     basePrice: string; // legend
     weekdays: string[]; // Mon..Sun
-    monthsShort: string[]; // Jan..Dec (picker)
     // Booking bar states (legend + bar)
     stateConfirmed: string;
     statePaid: string;
@@ -1904,6 +1904,36 @@ export interface Translations {
     projectionPeriod: string;
     variancePerAccount: string;
     financialTrendProjection: string;
+    formTitleCreate: string;
+    formTitleEdit: string;
+    nameLabel: string;
+    namePlaceholder: string;
+    startLabel: string;
+    endLabel: string;
+    notesPlaceholder: string;
+    update: string;
+    splitEvenly: string;
+    copyFromActual: string;
+    unsavedChanges: string;
+    revenue: string;
+    expense: string;
+    expenseKpi: string;
+    burnRate: string;
+    remainingPeriod: string;
+    statusDraft: string;
+    statusApproved: string;
+    statusLocked: string;
+    approve: string;
+    lock: string;
+    backToDraft: string;
+    actual: string;
+    budgeted: string;
+    variance: string;
+    targetBudget: string;
+    ofBudget: (v: string) => string;
+    perMonth: string;
+    monthsLeft: (n: number) => string;
+    utilization: (p: string) => string;
   };
 
   // Invite Code Manager

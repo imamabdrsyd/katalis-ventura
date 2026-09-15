@@ -15,6 +15,7 @@ import {
 import type { TooltipItem } from 'chart.js';
 import type { BudgetVsActualRow } from '@/types';
 import { formatCurrency } from '@/lib/utils';
+import { useLanguage } from '@/context/LanguageContext';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -24,9 +25,11 @@ interface BudgetVsActualChartProps {
   rows: BudgetVsActualRow[];
 }
 
-const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
 
 export function BudgetVsActualChart({ rows }: BudgetVsActualChartProps) {
+  const { t } = useLanguage();
+  const tb = t.budget;
+  const MONTH_LABELS = t.common.monthsShort;
   const [filter, setFilter] = useState<FilterType>('all');
   const chart = useChartPalette();
   const isDark = chart.isDark;
@@ -57,7 +60,7 @@ export function BudgetVsActualChart({ rows }: BudgetVsActualChartProps) {
           ...data,
         };
       });
-  }, [rows, filter]);
+  }, [rows, filter, MONTH_LABELS]);
 
   if (rows.length === 0) {
     return (
@@ -71,7 +74,7 @@ export function BudgetVsActualChart({ rows }: BudgetVsActualChartProps) {
     labels: monthlyData.map((d) => d.label),
     datasets: [
       {
-        label: 'Budget',
+        label: tb.budgeted,
         data: monthlyData.map((d) => d.budgeted),
         backgroundColor: isDark ? 'rgba(99, 102, 241, 0.4)' : 'rgba(99, 102, 241, 0.6)',
         borderColor: 'rgb(99, 102, 241)',
@@ -79,7 +82,7 @@ export function BudgetVsActualChart({ rows }: BudgetVsActualChartProps) {
         borderRadius: 6,
       },
       {
-        label: 'Aktual',
+        label: tb.actual,
         data: monthlyData.map((d) => d.actual),
         backgroundColor: isDark ? 'rgba(16, 185, 129, 0.4)' : 'rgba(16, 185, 129, 0.6)',
         borderColor: 'rgb(16, 185, 129)',
@@ -144,7 +147,7 @@ export function BudgetVsActualChart({ rows }: BudgetVsActualChartProps) {
                 : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           >
-            {f === 'all' ? 'Semua' : f === 'revenue' ? 'Pendapatan' : 'Beban'}
+            {f === 'all' ? t.common.all : f === 'revenue' ? tb.revenue : tb.expense}
           </button>
         ))}
       </div>

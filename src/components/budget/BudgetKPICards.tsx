@@ -3,42 +3,45 @@
 import { TrendingUp, TrendingDown, Wallet, Clock } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { BudgetSummaryKPI } from '@/types';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface BudgetKPICardsProps {
   kpi: BudgetSummaryKPI;
 }
 
 export function BudgetKPICards({ kpi }: BudgetKPICardsProps) {
+  const { t } = useLanguage();
+  const tb = t.budget;
   const cards = [
     {
-      label: 'Pendapatan',
+      label: tb.revenue,
       icon: TrendingUp,
       value: formatCurrency(kpi.totalActualRevenue),
-      subValue: `dari ${formatCurrency(kpi.totalBudgetedRevenue)}`,
+      subValue: tb.ofBudget(formatCurrency(kpi.totalBudgetedRevenue)),
       percent: kpi.revenueVariancePercent,
       favorable: kpi.revenueVariance >= 0,
     },
     {
-      label: 'Pengeluaran',
+      label: tb.expenseKpi,
       icon: TrendingDown,
       value: formatCurrency(kpi.totalActualExpense),
-      subValue: `dari ${formatCurrency(kpi.totalBudgetedExpense)}`,
+      subValue: tb.ofBudget(formatCurrency(kpi.totalBudgetedExpense)),
       percent: kpi.expenseVariancePercent,
       favorable: kpi.expenseVariance >= 0,
     },
     {
-      label: 'Burn Rate',
+      label: tb.burnRate,
       icon: Wallet,
       value: formatCurrency(kpi.burnRate),
-      subValue: 'per bulan',
+      subValue: tb.perMonth,
       percent: null,
       favorable: null,
     },
     {
-      label: 'Sisa Periode',
+      label: tb.remainingPeriod,
       icon: Clock,
-      value: `${kpi.monthsRemaining} bulan`,
-      subValue: `Utilisasi ${kpi.budgetUtilization.toFixed(1)}%`,
+      value: tb.monthsLeft(kpi.monthsRemaining),
+      subValue: tb.utilization(kpi.budgetUtilization.toFixed(1)),
       percent: null,
       favorable: null,
     },

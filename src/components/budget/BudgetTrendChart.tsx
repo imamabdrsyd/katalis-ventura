@@ -17,10 +17,10 @@ import {
 import type { TooltipItem } from 'chart.js';
 import type { ProjectedMonth } from '@/types';
 import { formatCurrency } from '@/lib/utils';
+import { useLanguage } from '@/context/LanguageContext';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
-const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
 
 interface BudgetTrendChartProps {
   projections: ProjectedMonth[];
@@ -29,6 +29,9 @@ interface BudgetTrendChartProps {
 }
 
 export function BudgetTrendChart({ projections, projectionMonths, onProjectionMonthsChange }: BudgetTrendChartProps) {
+  const { t } = useLanguage();
+  const tb = t.budget;
+  const MONTH_LABELS = t.common.monthsShort;
   const chart = useChartPalette();
   const isDark = chart.isDark;
 
@@ -40,7 +43,7 @@ export function BudgetTrendChart({ projections, projectionMonths, onProjectionMo
       const [, m] = p.month.split('-');
       return MONTH_LABELS[parseInt(m, 10) - 1] || p.month;
     }),
-    [projections]
+    [projections, MONTH_LABELS]
   );
 
   // Split actual vs projected line
@@ -71,7 +74,7 @@ export function BudgetTrendChart({ projections, projectionMonths, onProjectionMo
     labels,
     datasets: [
       {
-        label: 'Aktual',
+        label: tb.actual,
         data: actualData,
         borderColor: 'rgb(16, 185, 129)',
         backgroundColor: 'rgba(16, 185, 129, 0.1)',
@@ -82,7 +85,7 @@ export function BudgetTrendChart({ projections, projectionMonths, onProjectionMo
         spanGaps: false,
       },
       {
-        label: 'Proyeksi',
+        label: tb.projection,
         data: projectedData,
         borderColor: 'rgb(99, 102, 241)',
         backgroundColor: 'rgba(99, 102, 241, 0.08)',
@@ -94,7 +97,7 @@ export function BudgetTrendChart({ projections, projectionMonths, onProjectionMo
         spanGaps: false,
       },
       {
-        label: 'Target Budget',
+        label: tb.targetBudget,
         data: budgetData,
         borderColor: isDark ? 'rgba(156, 163, 175, 0.4)' : 'rgba(156, 163, 175, 0.6)',
         backgroundColor: isDark ? 'rgba(156, 163, 175, 0.05)' : 'rgba(156, 163, 175, 0.1)',
