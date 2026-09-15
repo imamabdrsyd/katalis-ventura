@@ -1,5 +1,7 @@
 'use client';
 
+import { useLanguage } from '@/context/LanguageContext';
+
 import { useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import { SalesChannelBadge } from '@/components/transactions/SalesChannelBadge';
@@ -60,6 +62,8 @@ export function ImportRevenueWidget({
   disabled,
   hint,
 }: ImportRevenueWidgetProps) {
+  const { t } = useLanguage();
+  const ta = t.agentImport;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
 
@@ -67,15 +71,15 @@ export function ImportRevenueWidget({
 
   const handleFile = useCallback((file: File) => {
     if (!file.name.match(/\.csv$/i)) {
-      toast.error('Hanya file CSV yang didukung. Ekspor data dari channel sebagai CSV.');
+      toast.error(ta.errCsvOnly);
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('File terlalu besar (maks 5MB)');
+      toast.error(ta.errFileTooLarge);
       return;
     }
     onFile(file);
-  }, [onFile]);
+  }, [onFile, ta]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -101,7 +105,7 @@ export function ImportRevenueWidget({
         {/* Channel selector */}
         <div>
           <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-            Channel
+            {ta.channelLabel}
           </label>
           <div className="relative">
             <button
@@ -114,7 +118,7 @@ export function ImportRevenueWidget({
                 <ChannelBadges badges={channel.badges} />
                 {!channel.available && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-400 font-normal">
-                    Segera
+                    {ta.comingSoon}
                   </span>
                 )}
               </span>
@@ -143,7 +147,7 @@ export function ImportRevenueWidget({
                         <ChannelBadges badges={ch.badges} />
                         <p className="text-xs text-gray-400">{ch.description}</p>
                       </div>
-                      {!ch.available && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-400">Segera</span>}
+                      {!ch.available && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-400">{ta.comingSoon}</span>}
                       {ch.available && selectedChannel === ch.value && <CheckCircle className="w-4 h-4 text-primary-500 flex-shrink-0" />}
                     </button>
                   ))}
@@ -195,7 +199,7 @@ export function ImportRevenueWidget({
                   onClick={e => { e.stopPropagation(); onClearFile(); }}
                   disabled={disabled}
                   className="min-w-[24px] min-h-[24px] inline-flex items-center justify-center p-1 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-800/30 text-emerald-600 dark:text-emerald-400 disabled:opacity-50"
-                  aria-label="Hapus file"
+                  aria-label={ta.removeFile}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -206,7 +210,7 @@ export function ImportRevenueWidget({
             <>
               <Upload className="h-7 w-7 text-gray-400 dark:text-gray-500 mx-auto mb-2.5" />
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                {dragOver ? 'Lepas file di sini' : 'Drop file CSV di sini'}
+                {dragOver ? ta.dropHere : ta.dropzoneIdleShort}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Format: .csv (max 5MB)

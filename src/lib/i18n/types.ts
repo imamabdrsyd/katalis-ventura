@@ -2871,6 +2871,30 @@ export interface Translations {
     perOneUsd: string;
     cachedData: string;
   };
+  agentImport: {
+    widgetTitle: string;
+    channelLabel: string;
+    instructionLabel: string;
+    comingSoon: string;
+    callAgent: string;
+    dropHere: string;
+    dropzoneIdle: string;
+    dropzoneIdleShort: string;
+    removeFile: string;
+    errFileTooLarge: string;
+    errCsvOnly: string;
+    errChannelUnsupported: string;
+    errServer: string;
+    hintTikTok: string;
+    hintGeneric: string;
+    sourceShopee: string;
+    sourceTikTok: string;
+    sourceAirbnb: string;
+    progressTitle: string;
+    agentWorking: string;
+    agentDone: string;
+    agentStopped: string;
+  };
 }
 
 export type JournalEntryTypeKey =

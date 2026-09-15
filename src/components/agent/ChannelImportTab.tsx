@@ -7,19 +7,21 @@ import { AgentProgressToast, type AgentStep } from '@/components/agent/AgentProg
 import { SalesChannelBadge } from '@/components/transactions/SalesChannelBadge';
 import { appendAgentImportStep, readAgentImportSession, startAgentImportSession, updateAgentImportSession } from '@/lib/agent/importSession';
 import { useBusinessContext } from '@/context/BusinessContext';
+import { useLanguage } from '@/context/LanguageContext';
 import type { BusinessTypeKey } from '@/lib/salesChannels';
 import type { SalesChannel } from '@/types';
 import { Bot, Upload, FileSpreadsheet, CheckCircle, ChevronDown, X, Info, Check, Ban } from 'lucide-react';
 
 const SUPPORTED_CHANNELS = [
-  { value: 'airbnb', label: 'Airbnb', badges: ['airbnb'], description: 'CSV dari Airbnb Host dashboard', available: true, businessTypes: ['jasa'] },
-  { value: 'tiktok_tokopedia', label: 'TikTok Shop / Tokopedia', badges: ['tiktok', 'tokopedia'], description: 'Ekspor pesanan Seller Center (gabungan)', available: true, businessTypes: ['produk', 'dagang'] },
-  { value: 'shopee', label: 'Shopee', badges: ['shopee'], description: 'Laporan transaksi Shopee', available: false, businessTypes: ['produk', 'dagang'] },
+  { value: 'airbnb', label: 'Airbnb', badges: ['airbnb'], descriptionKey: 'sourceAirbnb', available: true, businessTypes: ['jasa'] },
+  { value: 'tiktok_tokopedia', label: 'TikTok Shop / Tokopedia', badges: ['tiktok', 'tokopedia'], descriptionKey: 'sourceTikTok', available: true, businessTypes: ['produk', 'dagang'] },
+  { value: 'shopee', label: 'Shopee', badges: ['shopee'], descriptionKey: 'sourceShopee', available: false, businessTypes: ['produk', 'dagang'] },
 ] satisfies Array<{
   value: string;
   label: string;
   badges: SalesChannel[];
-  description: string;
+  /** Kunci deskripsi di kamus — label channel-nya sendiri nama produk, tidak diterjemahkan. */
+  descriptionKey: 'sourceAirbnb' | 'sourceTikTok' | 'sourceShopee';
   available: boolean;
   /** Tipe bisnis tempat channel ini relevan. `undefined` = semua tipe. */
   businessTypes?: BusinessTypeKey[];
@@ -47,6 +49,8 @@ interface ChannelImportTabProps {
 }
 
 export function ChannelImportTab({ businessId, onImportComplete }: ChannelImportTabProps) {
+  const { t } = useLanguage();
+  const ta = t.agentImport;
   const router = useRouter();
   const { activeBusiness } = useBusinessContext();
   const businessType = activeBusiness?.business_type;
@@ -96,17 +100,17 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
 
   const handleFile = useCallback((file: File) => {
     if (!file.name.match(/\.csv$/i)) {
-      toast.error('Hanya file CSV yang didukung. Ekspor data dari channel sebagai CSV.');
+      toast.error(ta.errCsvOnly);
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('File terlalu besar (maks 5MB)');
+      toast.error(ta.errFileTooLarge);
       return;
     }
     setSelectedFile(file);
     setImportResult(null);
     setAgentSteps([]);
-  }, []);
+  }, [ta]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -223,7 +227,7 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
         await reader.cancel().catch(() => {});
       }
     } catch (err) {
-      addStep({ type: 'error', message: err instanceof Error ? err.message : 'Gagal menghubungi server' });
+      addStep({ type: 'error', message: err instanceof Error ? err.message : ta.errServer });
       updateAgentImportSession(businessId, { status: 'error' });
     } finally {
       const session = readAgentImportSession(businessId);
@@ -233,7 +237,7 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
       setIsRunning(false);
       runningRef.current = false;
     }
-  }, [selectedFile, businessId, selectedChannel, instruction, addStep, router, onImportComplete]);
+  }, [selectedFile, businessId, selectedChannel, instruction, addStep, router, onImportComplete, ta]);
 
   return (
     <div className="space-y-6">
@@ -242,7 +246,7 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
         {/* Channel selector */}
         <div>
           <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-            Channel
+            {ta.channelLabel}
           </label>
           <div className="relative">
             <button
@@ -254,7 +258,7 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
                 <ChannelBadges badges={channel.badges} />
                 {!channel.available && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-400 font-normal">
-                    Segera
+                    {ta.comingSoon}
                   </span>
                 )}
               </span>
@@ -281,9 +285,9 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
                     >
                       <div className="flex-1 min-w-0">
                         <ChannelBadges badges={ch.badges} />
-                        <p className="text-xs text-gray-400">{ch.description}</p>
+                        <p className="text-xs text-gray-400">{ta[ch.descriptionKey]}</p>
                       </div>
-                      {!ch.available && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-400">Segera</span>}
+                      {!ch.available && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-400">{ta.comingSoon}</span>}
                       {ch.available && selectedChannel === ch.value && <CheckCircle className="w-4 h-4 text-indigo-500 flex-shrink-0" />}
                     </button>
                   ))}
@@ -296,7 +300,7 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
         {/* Instruksi tambahan */}
         <div>
           <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-            Instruksi <span className="font-normal text-gray-400">(opsional)</span>
+            {ta.instructionLabel} <span className="font-normal text-gray-400">({t.common.optional})</span>
           </label>
           <input
             type="text"
@@ -304,8 +308,8 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
             onChange={e => setInstruction(e.target.value)}
             disabled={isRunning || !channel.available}
             placeholder={selectedChannel === 'airbnb'
-              ? '"hanya bulan Mei" · "masukkan ke piutang dulu" · "jadikan draft"'
-              : '"hanya TikTok bulan Mei" · "masukkan ke piutang dulu" · "jadikan draft"'
+              ? ta.hintGeneric
+              : ta.hintTikTok
             }
             className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500 disabled:opacity-50"
           />
@@ -347,7 +351,7 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
               <button
                 onClick={e => { e.stopPropagation(); setSelectedFile(null); setImportResult(null); }}
                 className="p-1 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-800/30 text-emerald-600 dark:text-emerald-400"
-                aria-label="Hapus file"
+                aria-label={ta.removeFile}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -358,7 +362,7 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
           <>
             <Upload className="h-8 w-8 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
             <p className="text-base font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              {dragOver ? 'Lepas file di sini' : 'Drop file CSV di sini atau klik untuk pilih file'}
+              {dragOver ? ta.dropHere : ta.dropzoneIdle}
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Format: .csv (max 5MB)
@@ -375,7 +379,7 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
             ? 'Jurnal 3-baris per booking: Dr Bank · Dr Komisi · Cr Pendapatan Sewa (gross). Bianca menerjemahkan instruksi jadi filter & akun — angka tetap deterministik.'
             : selectedChannel === 'tiktok_tokopedia'
             ? '1 transaksi per pesanan selesai; duplikat Order ID dilewati otomatis. Bianca menerjemahkan instruksi jadi filter & akun — angka tetap deterministik.'
-            : 'Channel ini belum didukung. Pilih channel lain.'}
+            : ta.errChannelUnsupported}
         </p>
       </div>
 
@@ -429,7 +433,7 @@ export function ChannelImportTab({ businessId, onImportComplete }: ChannelImport
         ) : (
           <>
             <Bot className="w-4 h-4" />
-            Panggil Bianca
+            {ta.callAgent}
           </>
         )}
       </button>

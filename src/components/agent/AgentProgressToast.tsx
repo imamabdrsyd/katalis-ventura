@@ -1,5 +1,7 @@
 'use client';
 
+import { useLanguage } from '@/context/LanguageContext';
+
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, CheckCircle, XCircle, Loader2, Sparkles, X } from 'lucide-react';
@@ -20,6 +22,8 @@ interface AgentProgressToastProps {
 }
 
 export function AgentProgressToast({ steps, isRunning, onDismiss }: AgentProgressToastProps) {
+  const { t } = useLanguage();
+  const ta = t.agentImport;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
@@ -95,13 +99,13 @@ export function AgentProgressToast({ steps, isRunning, onDismiss }: AgentProgres
                   : 'text-gray-900 dark:text-gray-100'
               }`}
             >
-              {isRunning ? 'Bianca sedang membukukan...' : isError ? 'Bianca berhenti' : 'Bianca selesai'}
+              {isRunning ? ta.agentWorking : isError ? ta.agentStopped : ta.agentDone}
             </span>
             {onDismiss && !isRunning && (
               <button
                 onClick={() => { setVisible(false); setTimeout(onDismiss, 200); }}
                 className="ml-auto min-w-[24px] min-h-[24px] inline-flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                aria-label="Tutup"
+                aria-label={t.common.close}
               >
                 <X className="w-3.5 h-3.5" aria-hidden="true" />
               </button>
@@ -112,7 +116,7 @@ export function AgentProgressToast({ steps, isRunning, onDismiss }: AgentProgres
           {progressStep && progressStep.total && (
             <div className="px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
               <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-                <span>Progres import</span>
+                <span>{ta.progressTitle}</span>
                 <span>{progressStep.current}/{progressStep.total}</span>
               </div>
               <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
