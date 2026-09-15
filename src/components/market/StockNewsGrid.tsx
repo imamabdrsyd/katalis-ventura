@@ -9,6 +9,9 @@ interface StockNewsGridProps {
   limit?: number;
   emptyMessage?: string;
   columns?: 2 | 3 | 4;
+  readMoreLabel?: string;
+  /** Hanya untuk format tanggal; label lain lewat prop. */
+  locale?: string;
 }
 
 const COLUMN_CLASSES: Record<2 | 3 | 4, string> = {
@@ -17,10 +20,10 @@ const COLUMN_CLASSES: Record<2 | 3 | 4, string> = {
   4: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4',
 };
 
-function formatRelativeDate(dateStr: string): string {
+function formatRelativeDate(dateStr: string, locale: string): string {
   try {
     const d = new Date(dateStr);
-    return d.toLocaleDateString('id-ID', {
+    return d.toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-US', {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -65,6 +68,8 @@ export function StockNewsGrid({
   limit = 4,
   emptyMessage = 'Berita pasar belum tersedia',
   columns = 4,
+  readMoreLabel = 'Baca selengkapnya',
+  locale = 'id',
 }: StockNewsGridProps) {
   const visible = items.slice(0, limit);
 
@@ -94,14 +99,14 @@ export function StockNewsGrid({
               </span>
               <span className="flex items-center gap-1 flex-shrink-0">
                 <Clock className="w-3 h-3" />
-                {formatRelativeDate(item.publishedDate)}
+                {formatRelativeDate(item.publishedDate, locale)}
               </span>
             </div>
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-snug mb-2 line-clamp-3 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
               {item.title}
             </h3>
             <span className="mt-auto inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 pt-2">
-              Baca selengkapnya
+              {readMoreLabel}
               <ExternalLink className="w-3 h-3" />
             </span>
           </div>

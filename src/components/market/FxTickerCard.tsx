@@ -5,9 +5,17 @@ interface FxTickerCardProps {
   data: FxRate | null;
   status: MarketCacheStatus;
   size?: 'sm' | 'lg';
+  perUsdLabel?: string;
+  cachedLabel?: string;
 }
 
-export function FxTickerCard({ data, status, size = 'sm' }: FxTickerCardProps) {
+export function FxTickerCard({
+  data,
+  status,
+  size = 'sm',
+  perUsdLabel = 'Per 1 USD',
+  cachedLabel = 'Cached (data terakhir)',
+}: FxTickerCardProps) {
   const isLg = size === 'lg';
 
   if (!data) {
@@ -37,7 +45,7 @@ export function FxTickerCard({ data, status, size = 'sm' }: FxTickerCardProps) {
           {formattedRate}
         </p>
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-          {status === 'stale_fallback' ? 'Cached (data terakhir)' : 'Per 1 USD'}
+          {status === 'stale_fallback' ? cachedLabel : perUsdLabel}
         </p>
       </div>
     </div>

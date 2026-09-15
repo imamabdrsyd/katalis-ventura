@@ -1,16 +1,24 @@
 import { ArrowUpRight } from 'lucide-react';
 import type { FmpArticle } from '@/lib/marketData/types';
 
+/*
+ * Label dikirim lewat prop, BUKAN useLanguage. Komponen ini dipakai juga oleh
+ * app/market-insights (server component, halaman marketing publik yang sengaja
+ * Indonesia-only) — hook client akan memecah render di sana. Default-nya
+ * Indonesia untuk halaman publik; dashboard /market mengirim versi terjemahan.
+ */
 interface ArticleSidebarProps {
   articles: FmpArticle[];
   limit?: number;
   title?: string;
+  emptyLabel?: string;
 }
 
 export function ArticleSidebar({
   articles,
   limit = 6,
   title = 'VC, PE & UMKM Insights',
+  emptyLabel = 'Belum ada artikel terkait',
 }: ArticleSidebarProps) {
   const visible = articles.slice(0, limit);
 
@@ -21,7 +29,7 @@ export function ArticleSidebar({
       </h3>
       {visible.length === 0 ? (
         <p className="text-sm text-gray-400 dark:text-gray-500">
-          Belum ada artikel terkait
+          {emptyLabel}
         </p>
       ) : (
         <ul className="space-y-3 flex-1 overflow-y-auto">

@@ -2991,4 +2991,18 @@ export const id: Translations = {
     expenseBreakdownEmpty: 'Belum ada data pengeluaran',
     seeAllExpenses: 'Lihat semua pengeluaran di Laporan Laba Rugi',
   },
+  market: {
+    pageTitle: 'Market Tracker',
+    pageSubtitle: 'Pulse pasar global hari ini',
+    pageLead: 'Kurs valuta, makroekonomi, dan berita keuangan terbaru.',
+    stockNewsTitle: 'Berita Pasar Saham',
+    macroTrackerTitle: 'Macro Tracker',
+    insightsTitle: 'VC, PE & UMKM Insights',
+    noRelatedArticles: 'Belum ada artikel terkait',
+    noStockNews: 'Berita pasar belum tersedia',
+    noMacroData: 'Data makroekonomi belum tersedia',
+    readMore: 'Baca selengkapnya',
+    perOneUsd: 'Per 1 USD',
+    cachedData: 'Cached (data terakhir)',
+  },
 };

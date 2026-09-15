@@ -2856,6 +2856,21 @@ export interface Translations {
     expenseBreakdownEmpty: string;
     seeAllExpenses: string;
   };
+
+  market: {
+    pageTitle: string;
+    pageSubtitle: string;
+    pageLead: string;
+    stockNewsTitle: string;
+    macroTrackerTitle: string;
+    insightsTitle: string;
+    noRelatedArticles: string;
+    noStockNews: string;
+    noMacroData: string;
+    readMore: string;
+    perOneUsd: string;
+    cachedData: string;
+  };
 }
 
 export type JournalEntryTypeKey =

@@ -30,9 +30,15 @@ ChartJS.register(
 interface MacroChartProps {
   series: MacroSeries | null;
   height?: number;
+  /** Lihat catatan prop-label di MacroTrackerSection. */
+  emptyLabel?: string;
 }
 
-export default function MacroChart({ series, height = 320 }: MacroChartProps) {
+export default function MacroChart({
+  series,
+  height = 320,
+  emptyLabel = 'Data makroekonomi belum tersedia',
+}: MacroChartProps) {
   const chart = useChartPalette();
 
   const chartData = useMemo(() => {
@@ -105,7 +111,7 @@ export default function MacroChart({ series, height = 320 }: MacroChartProps) {
         className="flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm"
         style={{ height }}
       >
-        Data makroekonomi belum tersedia
+        {emptyLabel}
       </div>
     );
   }

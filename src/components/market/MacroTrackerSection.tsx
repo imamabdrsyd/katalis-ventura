@@ -8,14 +8,24 @@ import type { MacroSeries, MarketResult } from '@/lib/marketData/types';
 
 const MacroChart = dynamic(() => import('./MacroChart'), { ssr: false });
 
+/*
+ * Label dikirim lewat prop, BUKAN useLanguage. Komponen ini dipakai juga oleh
+ * app/market-insights (server component, halaman marketing publik yang sengaja
+ * Indonesia-only) — hook client akan memecah render di sana. Default-nya
+ * Indonesia untuk halaman publik; dashboard /market mengirim versi terjemahan.
+ */
 interface MacroTrackerSectionProps {
   initialSeries: MacroSeries | null;
   initialSeriesId?: string;
+  title?: string;
+  emptyLabel?: string;
 }
 
 export function MacroTrackerSection({
   initialSeries,
   initialSeriesId = DEFAULT_FRED_SERIES,
+  title = 'Macro Tracker',
+  emptyLabel,
 }: MacroTrackerSectionProps) {
   const [seriesId, setSeriesId] = useState<string>(initialSeriesId);
   const [series, setSeries] = useState<MacroSeries | null>(initialSeries);
@@ -52,7 +62,7 @@ export function MacroTrackerSection({
           </div>
           <div>
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Macro Tracker
+              {title}
             </p>
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
               {meta?.title ?? seriesId}
@@ -83,7 +93,7 @@ export function MacroTrackerSection({
             <div className="animate-pulse text-sm text-gray-400">Memuat data...</div>
           </div>
         ) : (
-          <MacroChart series={series} />
+          <MacroChart series={series} emptyLabel={emptyLabel} />
         )}
       </div>
 

@@ -2987,4 +2987,18 @@ export const en: Translations = {
     expenseBreakdownEmpty: 'No expense data yet',
     seeAllExpenses: 'See all expenses in the Income Statement',
   },
+  market: {
+    pageTitle: 'Market Tracker',
+    pageSubtitle: "Today's global market pulse",
+    pageLead: 'Exchange rates, macroeconomics, and the latest financial news.',
+    stockNewsTitle: 'Stock Market News',
+    macroTrackerTitle: 'Macro Tracker',
+    insightsTitle: 'VC, PE & SME Insights',
+    noRelatedArticles: 'No related articles yet',
+    noStockNews: 'No market news yet',
+    noMacroData: 'No macroeconomic data yet',
+    readMore: 'Read more',
+    perOneUsd: 'Per 1 USD',
+    cachedData: 'Cached (last known data)',
+  },
 };

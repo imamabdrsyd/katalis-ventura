@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { StockNewsGrid } from '@/components/market/StockNewsGrid';
 import { ArticleSidebar } from '@/components/market/ArticleSidebar';
 import { FxMiniWidget } from '@/components/market/FxMiniWidget';
+import { useLanguage } from '@/context/LanguageContext';
 import { DEFAULT_FRED_SERIES } from '@/lib/marketData/constants';
 import type {
   StockNews,
@@ -26,6 +27,8 @@ interface MarketState {
 }
 
 export default function MarketDashboardPage() {
+  const { t, locale } = useLanguage();
+  const tm = t.market;
   const [state, setState] = useState<MarketState>({
     news: [],
     articles: [],
@@ -67,13 +70,13 @@ export default function MarketDashboardPage() {
       <header className="flex items-start justify-between gap-4 mb-6">
         <div>
           <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-2">
-            Market Tracker
+            {tm.pageTitle}
           </p>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">
-            Pulse pasar global hari ini
+            {tm.pageSubtitle}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Kurs valuta, makroekonomi, dan berita keuangan terbaru.
+            {tm.pageLead}
           </p>
         </div>
 
@@ -90,6 +93,8 @@ export default function MarketDashboardPage() {
             <MacroTrackerSection
               initialSeries={state.macro}
               initialSeriesId={DEFAULT_FRED_SERIES}
+              title={tm.macroTrackerTitle}
+              emptyLabel={tm.noMacroData}
             />
           )}
         </div>
@@ -97,7 +102,12 @@ export default function MarketDashboardPage() {
           {state.loading ? (
             <div className="h-full rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
           ) : (
-            <ArticleSidebar articles={state.articles} limit={10} />
+            <ArticleSidebar
+              articles={state.articles}
+              limit={10}
+              title={tm.insightsTitle}
+              emptyLabel={tm.noRelatedArticles}
+            />
           )}
         </div>
       </div>
@@ -105,7 +115,7 @@ export default function MarketDashboardPage() {
       {/* Berita Pasar Saham — full width */}
       <section>
         <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
-          Berita Pasar Saham
+          {tm.stockNewsTitle}
         </h2>
         {state.loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -115,7 +125,14 @@ export default function MarketDashboardPage() {
             ))}
           </div>
         ) : (
-          <StockNewsGrid items={state.news} limit={9} columns={3} />
+          <StockNewsGrid
+            items={state.news}
+            limit={9}
+            columns={3}
+            emptyMessage={tm.noStockNews}
+            readMoreLabel={tm.readMore}
+            locale={locale}
+          />
         )}
       </section>
     </div>
