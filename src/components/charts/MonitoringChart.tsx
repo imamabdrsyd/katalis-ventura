@@ -1,6 +1,7 @@
 'use client';
 import { BarChart3 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useLanguage } from '@/context/LanguageContext';
 
 import { useState, useMemo, useEffect } from 'react';
 import { useChartPalette } from '@/hooks/useThemeMode';
@@ -43,6 +44,8 @@ interface MonitoringChartProps {
 }
 
 export default function MonitoringChart({ transactions, loading = false, selectedYear }: MonitoringChartProps) {
+  const { t } = useLanguage();
+  const tc = t.charts;
   const [period, setPeriod] = useState<MonitoringPeriod>('monthly');
   const [interval, setInterval] = useState<MonitoringInterval>('1m');
   const chart = useChartPalette();
@@ -78,7 +81,7 @@ export default function MonitoringChart({ transactions, loading = false, selecte
         labels,
         datasets: [
           {
-            label: 'Revenue',
+            label: tc.revenue,
             data: earningData,
             borderColor: '#3b82f6',
             backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -92,7 +95,7 @@ export default function MonitoringChart({ transactions, loading = false, selecte
             pointHoverRadius,
           },
           {
-            label: 'Expenses',
+            label: tc.expenses,
             data: expenseData,
             borderColor: '#f87171',
             backgroundColor: 'rgba(248, 113, 113, 0.1)',
@@ -110,7 +113,7 @@ export default function MonitoringChart({ transactions, loading = false, selecte
       },
       maxValue: max * 1.1 || 100000,
     };
-  }, [chartDataPoints, pointRadius, pointHoverRadius]);
+  }, [chartDataPoints, pointRadius, pointHoverRadius, tc]);
 
   const options = useMemo(() => ({
     responsive: true,
@@ -221,7 +224,7 @@ export default function MonitoringChart({ transactions, loading = false, selecte
   return (
     <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-card border border-transparent dark:border-gray-700 p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Monitoring Overview</h3>
+        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">{tc.monitoringTitle}</h3>
         <div className="flex items-center gap-2">
           {period === 'monthly' && (
             <div className="flex items-center gap-3">
@@ -244,16 +247,16 @@ export default function MonitoringChart({ transactions, loading = false, selecte
             value={period}
             onChange={setPeriod}
             options={[
-              { value: 'monthly', label: 'Monthly' },
-              { value: 'yearly', label: 'Yearly' },
+              { value: 'monthly', label: tc.monthly },
+              { value: 'yearly', label: tc.yearly },
             ]}
-            ariaLabel="Period"
+            ariaLabel={tc.periodToggleLabel}
           />
         </div>
       </div>
 
       {!hasData ? (
-        <EmptyState icon={BarChart3} title="Belum ada data untuk ditampilkan" className="h-80" />
+        <EmptyState icon={BarChart3} title={tc.monitoringEmpty} className="h-80" />
       ) : (
         <div style={{ height: 320 }}>
           <Line data={chartData} options={options} />

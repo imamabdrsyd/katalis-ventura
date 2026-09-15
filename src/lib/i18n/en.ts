@@ -2974,4 +2974,17 @@ export const en: Translations = {
     scanned: 'Scanned',
     loadFailed: 'Failed to load attachments',
   },
+
+  charts: {
+    monitoringTitle: 'Monitoring Overview',
+    revenue: 'Revenue',
+    expenses: 'Expenses',
+    monthly: 'Monthly',
+    yearly: 'Yearly',
+    periodToggleLabel: 'Period',
+    monitoringEmpty: 'No data to show yet',
+    expenseBreakdownTitle: 'Expense Breakdown',
+    expenseBreakdownEmpty: 'No expense data yet',
+    seeAllExpenses: 'See all expenses in the Income Statement',
+  },
 };

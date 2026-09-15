@@ -2978,4 +2978,17 @@ export const id: Translations = {
     scanned: 'Hasil scan',
     loadFailed: 'Gagal memuat lampiran',
   },
+
+  charts: {
+    monitoringTitle: 'Ringkasan Monitoring',
+    revenue: 'Pendapatan',
+    expenses: 'Pengeluaran',
+    monthly: 'Bulanan',
+    yearly: 'Tahunan',
+    periodToggleLabel: 'Periode',
+    monitoringEmpty: 'Belum ada data untuk ditampilkan',
+    expenseBreakdownTitle: 'Rincian Pengeluaran',
+    expenseBreakdownEmpty: 'Belum ada data pengeluaran',
+    seeAllExpenses: 'Lihat semua pengeluaran di Laporan Laba Rugi',
+  },
 };

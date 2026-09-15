@@ -1,5 +1,6 @@
 'use client';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useLanguage } from '@/context/LanguageContext';
 
 import { useMemo } from 'react';
 import { useChartPalette } from '@/hooks/useThemeMode';
@@ -48,6 +49,8 @@ export default function ExpenseBreakdownChart({
   selectedMonth = null,
   periodLabel,
 }: ExpenseBreakdownChartProps) {
+  const { t } = useLanguage();
+  const tc = t.charts;
   const router = useRouter();
   const chart = useChartPalette();
   const activePeriodLabel = periodLabel
@@ -162,7 +165,7 @@ export default function ExpenseBreakdownChart({
   return (
     <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-card border border-transparent dark:border-gray-700 p-6 flex flex-col h-full">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Expense Breakdown</h3>
+        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">{tc.expenseBreakdownTitle}</h3>
         <div className="flex items-center gap-2">
           <span className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-2.5 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
             {activePeriodLabel}
@@ -171,7 +174,7 @@ export default function ExpenseBreakdownChart({
             <button
               type="button"
               onClick={() => router.push('/income-statement')}
-              aria-label="Lihat semua expense di Income Statement"
+              aria-label={tc.seeAllExpenses}
               className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors cursor-pointer"
             >
               <ArrowRight className="w-4 h-4" />
@@ -181,7 +184,7 @@ export default function ExpenseBreakdownChart({
       </div>
 
       {allExpenseData.length === 0 ? (
-        <EmptyState icon={PieChart} title="Belum ada data expense" className="flex-1" />
+        <EmptyState icon={PieChart} title={tc.expenseBreakdownEmpty} className="flex-1" />
       ) : (
         <div className="flex-1 min-h-0 flex flex-col">
           <div style={{ height: 200 }} className="mb-4">

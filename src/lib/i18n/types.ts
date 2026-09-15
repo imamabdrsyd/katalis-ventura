@@ -2843,6 +2843,19 @@ export interface Translations {
     scanned: string;
     loadFailed: string;
   };
+
+  charts: {
+    monitoringTitle: string;
+    revenue: string;
+    expenses: string;
+    monthly: string;
+    yearly: string;
+    periodToggleLabel: string;
+    monitoringEmpty: string;
+    expenseBreakdownTitle: string;
+    expenseBreakdownEmpty: string;
+    seeAllExpenses: string;
+  };
 }
 
 export type JournalEntryTypeKey =
