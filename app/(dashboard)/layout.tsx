@@ -935,39 +935,35 @@ function Sidebar({
           ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
           ${isCollapsed ? 'w-16' : 'w-56'}`}
       >
-        {/* Logo + Hamburger row */}
+        {/* Logo + toggle row — pola yang sama di HP dan desktop:
+            collapsed  → favicon sendirian, dia tombol expand-nya;
+            expanded   → toggle PanelLeft lalu wordmark AXION.
+            Di HP drawer menciut jadi rail 64px (bukan menutup); menutupnya lewat
+            tap backdrop, geser ke kiri, atau Escape. */}
         <div className={`flex items-center border-b border-transparent h-16 flex-shrink-0 ${isCollapsed ? 'justify-center px-2' : 'gap-2 px-3'}`}>
           {isCollapsed ? (
             /* Favicon sebagai tombol expand */
             <button
               onClick={onToggleCollapse}
-              className="hidden md:flex p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              title="Expand sidebar"
+              aria-label={t.nav.expandSidebar}
+              aria-expanded={false}
+              className="flex min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 items-center justify-center p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              title={t.nav.expandSidebar}
             >
-              <Image src="/images/favicon.png" alt="Expand sidebar" width={28} height={28} className="object-contain dark:hidden" />
-              <Image src="/images/favicon-dark.png" alt="Expand sidebar" width={28} height={28} className="object-contain hidden dark:block" />
+              <Image src="/images/favicon.png" alt="" width={28} height={28} className="object-contain dark:hidden" />
+              <Image src="/images/favicon-dark.png" alt="" width={28} height={28} className="object-contain hidden dark:block" />
             </button>
           ) : (
             <>
-              {/* Panel toggle — desktop only */}
+              {/* Panel toggle */}
               <button
                 onClick={onToggleCollapse}
-                className="hidden md:flex p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0"
-                title="Collapse sidebar"
+                aria-label={t.nav.collapseSidebar}
+                aria-expanded
+                className="flex min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 items-center justify-center p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0"
+                title={t.nav.collapseSidebar}
               >
                 <PanelLeft className="w-5 h-5" />
-              </button>
-
-              {/* Tombol tutup versi HP — duduk di slot yang sama dengan toggle
-                  collapse desktop dan memakai ikon merek, bukan X di ujung kanan.
-                  Pola yang sama dengan favicon = tombol expand saat collapsed. */}
-              <button
-                onClick={onClose}
-                aria-label={t.nav.closeMenu}
-                className="md:hidden flex min-w-[44px] min-h-[44px] flex-shrink-0 items-center justify-center rounded-lg p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <Image src="/images/favicon.png" alt="" width={28} height={28} className="object-contain dark:hidden" />
-                <Image src="/images/favicon-dark.png" alt="" width={28} height={28} className="object-contain hidden dark:block" />
               </button>
 
               {/* Logo — fade out saat collapsed */}
