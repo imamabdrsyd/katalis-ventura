@@ -481,7 +481,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
 
   return (
     <>
-      <header className={`fixed top-0 left-0 right-0 h-[calc(4rem+var(--safe-area-top))] pt-[var(--safe-area-top)] bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-30 flex items-center justify-between px-4 md:px-6 transition-[left] duration-300 ease-in-out ${isCollapsed ? 'md:left-16' : 'md:left-56'}`}>
+      <header className={`fixed top-0 left-0 right-0 h-[calc(4rem+var(--safe-area-top))] pt-[var(--safe-area-top)] bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-30 flex items-center justify-between gap-2 min-w-0 px-4 md:px-6 transition-[left] duration-300 ease-in-out ${isCollapsed ? 'md:left-16' : 'md:left-56'}`}>
       {/* Mobile Menu Button */}
       <button
         onClick={onMenuClick}
@@ -495,7 +495,7 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
       <BusinessSwitcher />
 
       {/* Right Side Actions */}
-      <div className="flex items-center gap-2 md:gap-4">
+      <div className="flex flex-shrink-0 items-center gap-2 md:gap-4">
         {/* Search */}
         <button
           onClick={() => setIsSearchOpen(true)}
@@ -1192,12 +1192,45 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
     return () => clearInterval(timer);
   }, []);
 
-  // Swipe to open/close sidebar on mobile
+  // Swipe to open/close sidebar on mobile.
+  //
+  // Geser-buka BUKAN cuma dari tepi kiri: jempol harus pindah ke ujung layar
+  // dulu, padahal sidebar biasanya dibutuhkan saat jempol ada di tengah. Jadi
+  // gesture diterima dari mana saja, dengan dua rem supaya tidak salah picu:
+  //   1. Gesture yang lahir di dalam elemen yang memang bisa digeser mendatar
+  //      (strip tab, tabel, carousel) dibiarkan milik elemen itu.
+  //   2. Gesture di dalam modal/dialog diabaikan — sidebar ada di belakangnya.
+  // Plus syarat arah yang lebih ketat daripada sekadar "lebih lebar dari tinggi".
   useEffect(() => {
-    const SWIPE_THRESHOLD = 50;
-    const EDGE_ZONE = 30; // px from left edge to start swipe-open
+    const SWIPE_THRESHOLD = 60;
+    const HORIZONTAL_DOMINANCE = 1.5; // |deltaX| harus sekian kali |deltaY|
+
+    // Naik dari target sentuhan: apakah gesture ini milik scroller mendatar
+    // atau lahir di dalam dialog?
+    const isClaimedByDescendant = (target: EventTarget | null) => {
+      const origin = target instanceof Element ? target : null;
+      if (!origin) return false;
+      if (origin.closest('[role="dialog"]')) return true;
+      // Berhenti di #main-content: <main> sendiri overflow-auto, dan kalau ada
+      // satu halaman yang isinya meluber mendatar, gesture tidak boleh ikut mati
+      // di seluruh halaman itu.
+      let el: Element | null = origin;
+      while (el && el !== document.body && el.id !== 'main-content') {
+        if (el.scrollWidth > el.clientWidth + 1) {
+          const overflowX = window.getComputedStyle(el).overflowX;
+          if (overflowX === 'auto' || overflowX === 'scroll') return true;
+        }
+        el = el.parentElement;
+      }
+      return false;
+    };
 
     const handleTouchStart = (e: TouchEvent) => {
+      if (isClaimedByDescendant(e.target)) {
+        touchStartX.current = null;
+        touchStartY.current = null;
+        return;
+      }
       touchStartX.current = e.touches[0].clientX;
       touchStartY.current = e.touches[0].clientY;
     };
@@ -1207,13 +1240,12 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       const deltaX = e.changedTouches[0].clientX - touchStartX.current;
       const deltaY = e.changedTouches[0].clientY - touchStartY.current;
 
-      // Only trigger if horizontal swipe is dominant
-      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > SWIPE_THRESHOLD) {
-        if (deltaX > 0 && touchStartX.current < EDGE_ZONE && !sidebarOpen) {
-          // Swipe right from left edge → open
+      if (Math.abs(deltaX) > SWIPE_THRESHOLD && Math.abs(deltaX) > Math.abs(deltaY) * HORIZONTAL_DOMINANCE) {
+        if (deltaX > 0 && !sidebarOpen) {
+          // Geser ke kanan dari mana saja → buka
           setSidebarOpen(true);
         } else if (deltaX < 0 && sidebarOpen) {
-          // Swipe left while open → close
+          // Geser ke kiri saat terbuka → tutup
           setSidebarOpen(false);
         }
       }

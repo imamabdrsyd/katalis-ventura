@@ -82,14 +82,14 @@ export function BusinessSwitcher() {
 
   return (
     <>
-      <div className="relative" ref={dropdownRef}>
+      <div className="relative min-w-0 flex-1 md:flex-none" ref={dropdownRef}>
         <button
           onClick={() => setIsOpen((open) => !open)}
-          className="flex items-center gap-2 text-gray-800 dark:text-gray-200 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+          className="flex w-full min-w-0 items-center gap-2 text-gray-800 dark:text-gray-200 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
         >
           {activeBusiness && (
             <div
-              className={`w-7 h-7 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0 ${
+              className={`w-7 h-7 rounded-lg hidden md:flex items-center justify-center overflow-hidden flex-shrink-0 ${
                 activeBusiness.logo_url
                   ? 'bg-white'
                   : 'bg-primary-500 text-white'
@@ -109,15 +109,15 @@ export function BusinessSwitcher() {
               )}
             </div>
           )}
-          <span className="font-semibold">
+          <span className="min-w-0 truncate font-semibold">
             {activeBusiness?.business_name || t.nav.selectBusiness}
           </span>
           {businessTypeLabel && (
-            <span className="flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            <span className="hidden md:inline-flex flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               {businessTypeLabel}
             </span>
           )}
-          <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
 
         {isOpen && (
