@@ -6,8 +6,10 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Briefcase, TrendingUp } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function SelectRolePage() {
+  const { t } = useLanguage();
   const [selectedRole, setSelectedRole] = useState<'business_manager' | 'investor'>('business_manager');
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -59,7 +61,7 @@ export default function SelectRolePage() {
         router.push('/join-business');
       }
     } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan. Silakan coba lagi.');
+      setError(err.message || t.auth.errGeneric);
     } finally {
       setLoading(false);
     }
@@ -79,8 +81,8 @@ export default function SelectRolePage() {
       <Image src="/images/favicon-dark.png" alt="AXION" width={60} height={60} className="object-contain hidden dark:block" />
       <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Pilih Peran Anda</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">Bagaimana Anda ingin menggunakan AXION?</p>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{t.auth.selectRoleTitle}</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">{t.auth.selectRoleSubtitle}</p>
         </div>
 
         {error && (
@@ -102,10 +104,10 @@ export default function SelectRolePage() {
             <div className="flex-1">
               <div className="font-semibold text-gray-800 dark:text-white flex items-center gap-2">
                 <Briefcase className="w-5 h-5" />
-                Business Manager
+                {t.roles.businessManager}
               </div>
               <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Setup dan kelola bisnis baru
+                {t.auth.selectRoleManagerDesc}
               </div>
             </div>
           </label>
@@ -122,10 +124,10 @@ export default function SelectRolePage() {
             <div className="flex-1">
               <div className="font-semibold text-gray-800 dark:text-white flex items-center gap-2">
                 <TrendingUp className="w-5 h-5" />
-                Investor
+                {t.roles.investor}
               </div>
               <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Bergabung dan pantau bisnis yang sudah ada
+                {t.auth.selectRoleInvestorDesc}
               </div>
             </div>
           </label>
@@ -136,7 +138,7 @@ export default function SelectRolePage() {
           disabled={loading}
           className="btn-primary w-full py-3"
         >
-          {loading ? 'Menyimpan...' : 'Lanjutkan'}
+          {loading ? t.common.saving : t.auth.selectRoleContinue}
         </button>
       </div>
     </>

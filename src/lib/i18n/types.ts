@@ -195,6 +195,12 @@ export interface Translations {
     signInLink: string;
     errGoogleSignUp: string;
     errSignUp: string;
+    selectRoleTitle: string;
+    selectRoleSubtitle: string;
+    selectRoleManagerDesc: string;
+    selectRoleInvestorDesc: string;
+    selectRoleContinue: string;
+    errGeneric: string;
   };
 
   roles: {
@@ -202,6 +208,37 @@ export interface Translations {
     investor: string;
     superAdmin: string;
     creator: string;
+  };
+
+  joinBusinessPage: {
+    title: string;
+    subtitle: string;
+    modeAriaLabel: string;
+    modeCode: string;
+    modeList: string;
+    codeLabel: string;
+    codePlaceholder: string;
+    codeHint: string;
+    join: string;
+    joining: string;
+    searchPlaceholder: string;
+    noMatch: string;
+    noneAvailable: string;
+    capitalLabel: string;
+    cancelRequest: string;
+    statusPending: string;
+    statusApproved: string;
+    statusRejected: string;
+    sendRequest: string;
+    sending: string;
+    successJoined: string;
+    successRequestSent: (name: string) => string;
+    requestApproved: string;
+    requestRejected: string;
+    errLoadList: string;
+    errSendRequest: string;
+    errCancelRequest: string;
+    errUseCode: string;
   };
 
   // Settings Page
