@@ -20,7 +20,6 @@ import {
   LucideIcon,
   Menu,
   PanelLeft,
-  X,
   Settings,
   BookOpen,
   ClipboardCheck,
@@ -959,6 +958,18 @@ function Sidebar({
                 <PanelLeft className="w-5 h-5" />
               </button>
 
+              {/* Tombol tutup versi HP — duduk di slot yang sama dengan toggle
+                  collapse desktop dan memakai ikon merek, bukan X di ujung kanan.
+                  Pola yang sama dengan favicon = tombol expand saat collapsed. */}
+              <button
+                onClick={onClose}
+                aria-label={t.nav.closeMenu}
+                className="md:hidden flex min-w-[44px] min-h-[44px] flex-shrink-0 items-center justify-center rounded-lg p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <Image src="/images/favicon.png" alt="" width={28} height={28} className="object-contain dark:hidden" />
+                <Image src="/images/favicon-dark.png" alt="" width={28} height={28} className="object-contain hidden dark:block" />
+              </button>
+
               {/* Logo — fade out saat collapsed */}
               <div className="flex items-center overflow-hidden">
                 <Image
@@ -978,15 +989,6 @@ function Sidebar({
               </div>
             </>
           )}
-
-          {/* Mobile close button */}
-          <button
-            onClick={onClose}
-            aria-label={t.nav.closeMenu}
-            className="ml-auto min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 md:hidden"
-          >
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
         {/* Scrollable nav area — satu-satunya landmark <nav> sidebar. Dulu hanya

@@ -1207,6 +1207,7 @@ export interface Translations {
     searchPlaceholder: string;
     clearSearch: string;
     clearSearchTitle: string;
+    backToList: string;
     filterAllTypes: string;
     countLabel: (shown: number) => string;
     countOfTotal: (total: number) => string;

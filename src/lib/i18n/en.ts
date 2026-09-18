@@ -1192,6 +1192,7 @@ export const en: Translations = {
     searchPlaceholder: 'Search name, phone, email...',
     clearSearch: 'Clear contact search',
     clearSearchTitle: 'Clear search',
+    backToList: 'Back to contact list',
     filterAllTypes: 'All Types',
     countLabel: (shown: number) => `${shown} contact(s)`,
     countOfTotal: (total: number) => ` (of ${total} total)`,

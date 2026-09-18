@@ -1196,6 +1196,7 @@ export const id: Translations = {
     searchPlaceholder: 'Cari nama, telepon, email...',
     clearSearch: 'Batalkan pencarian kontak',
     clearSearchTitle: 'Batalkan pencarian',
+    backToList: 'Kembali ke daftar kontak',
     filterAllTypes: 'Semua Tipe',
     countLabel: (shown: number) => `${shown} kontak`,
     countOfTotal: (total: number) => ` (dari ${total} total)`,

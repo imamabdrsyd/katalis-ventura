@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Contact, Phone, Mail, Plus, Search, Pencil, Trash2, User, Building, Users2, Handshake, UserCog, TrendingUp, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Loader2, X } from 'lucide-react';
+import { Contact, Phone, Mail, Plus, Search, Pencil, Trash2, User, Building, Users2, Handshake, UserCog, TrendingUp, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, ArrowLeft, Loader2, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { FileUpload } from '@/components/ui/FileUpload';
 import FloatingField from '@/components/ui/FloatingField';
@@ -528,10 +528,13 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
   }
 
   // ============ SPLIT LAYOUT: list left + detail right ============
+  // Di bawah lg dua kolom 50% tidak pernah muat, jadi polanya master-detail:
+  // daftar kontak disembunyikan begitu satu kontak dipilih, dan panel detail
+  // punya tombol kembali sendiri.
   return (
-    <div className="flex gap-6">
+    <div className="flex flex-col lg:flex-row gap-6">
       {/* LEFT: Contact List */}
-      <div className={`space-y-4 ${selectedContact ? 'w-1/2 flex-shrink-0' : 'w-full'}`}>
+      <div className={`space-y-4 ${selectedContact ? 'hidden lg:block lg:w-1/2 lg:flex-shrink-0' : 'w-full'}`}>
         {/* Search + Filter bar */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -603,7 +606,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
           /* Contact list */
           <div
             ref={listRef}
-            className="overflow-y-auto max-h-[calc(100vh-280px)] space-y-2 pr-1 outline-none"
+            className="space-y-2 pr-1 outline-none lg:max-h-[calc(100vh-280px)] lg:overflow-y-auto"
             tabIndex={-1}
             onKeyDown={(e) => {
               if (e.key === 'ArrowDown') { e.preventDefault(); navigateList('down'); }
@@ -709,12 +712,21 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
 
       {/* RIGHT: Transaction Detail Panel */}
       {selectedContact && (
-        <div className="w-1/2 flex-shrink-0">
-          <div className="sticky top-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="w-full lg:w-1/2 lg:flex-shrink-0">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden lg:sticky lg:top-4">
             {/* Panel Header */}
             <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedContact(null)}
+                    aria-label={tcn.backToList}
+                    title={tcn.backToList}
+                    className="lg:hidden -ml-2 flex min-h-[44px] min-w-[44px] flex-shrink-0 items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
                   <div className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700/60 flex items-center justify-center flex-shrink-0">
                     <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
                       {getInitials(selectedContact.name)}
@@ -796,7 +808,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
             </div>
 
             {/* Transaction List */}
-            <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
+            <div className="max-h-[70vh] overflow-y-auto lg:max-h-[calc(100vh-320px)]">
               {loadingTransactions ? (
                 <ListSkeleton rows={5} className="p-4" />
               ) : contactTransactions.length === 0 ? (
