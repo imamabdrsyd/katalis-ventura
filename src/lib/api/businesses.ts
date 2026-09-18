@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase';
-import type { Business, Database } from '@/types';
+import type { Business, Database, DiscoverableBusiness } from '@/types';
 import { apiFetch } from './_fetchHelper';
 
 type BusinessUpdate = Database['public']['Tables']['businesses']['Update'] & {
@@ -128,35 +128,17 @@ export async function hardDeleteBusiness(businessId: string): Promise<{ id: stri
   });
 }
 
-export async function getAvailableBusinesses(userId: string): Promise<Business[]> {
-  const supabase = createClient();
-  // Get businesses that user already joined
-  const { data: userRoles, error: rolesError } = await supabase
-    .from('user_business_roles')
-    .select('business_id')
-    .eq('user_id', userId);
-
-  if (rolesError) throw rolesError;
-
-  const joinedBusinessIds = userRoles?.map((r) => r.business_id) || [];
-
-  // Get all active businesses (is_public is for omnichannel widget, not for join access)
-  let query = supabase
-    .from('businesses')
-    .select('*')
-    .eq('is_archived', false)
-    .order('business_name', { ascending: true });
-
-  // Filter out businesses user already joined
-  if (joinedBusinessIds.length > 0) {
-    query = query.not('id', 'in', `(${joinedBusinessIds.join(',')})`);
-  }
-
-  const { data, error } = await query;
-
-  if (error) throw error;
-
-  return data || [];
+export async function getAvailableBusinesses(
+  _userId: string
+): Promise<DiscoverableBusiness[]> {
+  // Lewat API route + admin client, bukan query langsung ke tabel `businesses`.
+  // Dulu fungsi ini `select('*')` dari browser dan bergantung pada policy RLS
+  // "Authenticated users can view all businesses", sehingga setiap user yang
+  // login ikut menarik kolom rahasia (ical_feed_token, qris_image_url, alamat)
+  // milik seluruh bisnis. Server kini hanya mengembalikan empat kolom yang
+  // dipakai kartu pilihan, dan menyaring bisnis yang sudah diikuti.
+  void _userId; // identitas diambil server dari cookie sesi
+  return apiFetch<DiscoverableBusiness[]>('/api/businesses/discoverable');
 }
 
 /**

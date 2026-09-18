@@ -9,19 +9,21 @@ import * as businessesApi from '@/lib/api/businesses';
 import * as inviteCodesApi from '@/lib/api/inviteCodes';
 import * as joinRequestsApi from '@/lib/api/joinRequests';
 import { formatCurrency } from '@/lib/utils';
-import type { Business } from '@/types';
+import type { DiscoverableBusiness } from '@/types';
+import { useLanguage } from '@/context/LanguageContext';
 import { SegmentedToggle } from '@/components/ui/SegmentedToggle';
 import FloatingField from '@/components/ui/FloatingField';
 import { CardFormSkeleton, ListSkeleton } from '@/components/ui/PageSkeleton';
 
 type RequestStatus = 'pending' | 'approved' | 'rejected' | null;
 
-interface BusinessWithRequest extends Business {
+interface BusinessWithRequest extends DiscoverableBusiness {
   requestId?: string;
   requestStatus?: RequestStatus;
 }
 
 export default function JoinBusinessPage() {
+  const { t } = useLanguage();
   const [joinMode, setJoinMode] = useState<'list' | 'code'>('code');
   const [businesses, setBusinesses] = useState<BusinessWithRequest[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -67,7 +69,7 @@ export default function JoinBusinessPage() {
       });
       setBusinesses(enriched);
     } catch {
-      setError('Gagal memuat daftar bisnis');
+      setError(t.joinBusinessPage.errLoadList);
     } finally {
       setLoading(false);
     }
@@ -94,7 +96,7 @@ export default function JoinBusinessPage() {
         (payload) => {
           const updated = payload.new as { business_id: string; status: 'pending' | 'approved' | 'rejected' };
           if (updated.status === 'approved') {
-            setSuccess('Permintaan Anda telah disetujui! Mengarahkan ke dashboard...');
+            setSuccess(t.joinBusinessPage.requestApproved);
             setTimeout(() => router.push('/dashboard'), 1500);
             return;
           }
@@ -104,7 +106,7 @@ export default function JoinBusinessPage() {
             )
           );
           if (updated.status === 'rejected') {
-            setError('Permintaan bergabung Anda ditolak oleh pemilik bisnis.');
+            setError(t.joinBusinessPage.requestRejected);
           }
         }
       )
@@ -113,7 +115,7 @@ export default function JoinBusinessPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, supabase, router]);
+  }, [userId, supabase, router, t]);
 
   const filteredBusinesses = businesses.filter((b) =>
     b.business_name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -131,10 +133,10 @@ export default function JoinBusinessPage() {
           b.id === selectedBusiness.id ? { ...b, requestId: newRequest.id, requestStatus: 'pending' } : b
         )
       );
-      setSuccess(`Permintaan bergabung ke "${selectedBusiness.business_name}" telah dikirim. Tunggu persetujuan dari pemilik bisnis.`);
+      setSuccess(t.joinBusinessPage.successRequestSent(selectedBusiness.business_name));
       setSelectedBusiness(null);
     } catch (err: any) {
-      setError(err.message || 'Gagal mengirim permintaan bergabung');
+      setError(err.message || t.joinBusinessPage.errSendRequest);
     } finally {
       setJoining(false);
     }
@@ -151,7 +153,7 @@ export default function JoinBusinessPage() {
       );
       if (selectedBusiness?.id === business.id) setSelectedBusiness(null);
     } catch {
-      setError('Gagal membatalkan permintaan');
+      setError(t.joinBusinessPage.errCancelRequest);
     }
   };
 
@@ -164,13 +166,13 @@ export default function JoinBusinessPage() {
     try {
       const result = await inviteCodesApi.useInviteCode(inviteCode.toUpperCase(), userId);
       if (result.success) {
-        setSuccess('Berhasil bergabung dengan bisnis!');
+        setSuccess(t.joinBusinessPage.successJoined);
         setTimeout(() => router.push('/dashboard'), 1500);
       } else {
-        setError(result.message || 'Gagal menggunakan kode undangan');
+        setError(result.message || t.joinBusinessPage.errUseCode);
       }
     } catch (err: any) {
-      setError(err.message || 'Gagal menggunakan kode undangan');
+      setError(err.message || t.joinBusinessPage.errUseCode);
     } finally {
       setJoining(false);
     }
@@ -179,17 +181,17 @@ export default function JoinBusinessPage() {
   const getRequestBadge = (status: RequestStatus) => {
     if (status === 'pending') return (
       <span className="flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
-        <Clock className="w-3 h-3" /> Menunggu
+        <Clock className="w-3 h-3" /> {t.joinBusinessPage.statusPending}
       </span>
     );
     if (status === 'approved') return (
       <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">
-        <CheckCircle className="w-3 h-3" /> Disetujui
+        <CheckCircle className="w-3 h-3" /> {t.joinBusinessPage.statusApproved}
       </span>
     );
     if (status === 'rejected') return (
       <span className="flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-2 py-0.5 rounded-full">
-        <XCircle className="w-3 h-3" /> Ditolak
+        <XCircle className="w-3 h-3" /> {t.joinBusinessPage.statusRejected}
       </span>
     );
     return null;
@@ -212,9 +214,9 @@ export default function JoinBusinessPage() {
           <div className="w-16 h-16 bg-primary-500 rounded-xl mx-auto mb-4 flex items-center justify-center text-white">
             <Building2 className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Bergabung dengan Bisnis</h1>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t.joinBusinessPage.title}</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">
-            Gunakan kode undangan atau pilih dari daftar bisnis
+            {t.joinBusinessPage.subtitle}
           </p>
         </div>
 
@@ -224,10 +226,10 @@ export default function JoinBusinessPage() {
             value={joinMode}
             onChange={(mode) => { setJoinMode(mode); setError(null); setSuccess(null); setSelectedBusiness(null); }}
             fullWidth
-            ariaLabel="Metode bergabung"
+            ariaLabel={t.joinBusinessPage.modeAriaLabel}
             options={[
-              { value: 'code', label: 'Gunakan Kode' },
-              { value: 'list', label: 'Pilih dari Daftar' },
+              { value: 'code', label: t.joinBusinessPage.modeCode },
+              { value: 'list', label: t.joinBusinessPage.modeList },
             ]}
           />
         </div>
@@ -249,28 +251,28 @@ export default function JoinBusinessPage() {
           <div>
             <div className="mb-6">
               <FloatingField
-                label="Masukkan Kode Undangan"
+                label={t.joinBusinessPage.codeLabel}
                 type="text"
-                placeholder="Contoh: ABC12345"
+                placeholder={t.joinBusinessPage.codePlaceholder}
                 value={inviteCode}
                 onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                 className="text-center text-lg tracking-widest font-mono"
                 maxLength={8}
               />
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-                Masukkan kode 8 karakter yang Anda terima dari business manager
+                {t.joinBusinessPage.codeHint}
               </p>
             </div>
             <div className="flex gap-3">
               <button onClick={() => router.back()} className="btn-secondary flex-1 py-3" disabled={joining}>
-                Kembali
+                {t.common.back}
               </button>
               <button
                 onClick={handleJoinWithCode}
                 className="btn-primary-glow flex-1 py-3"
                 disabled={!inviteCode.trim() || inviteCode.length !== 8 || joining}
               >
-                {joining ? 'Bergabung...' : 'Bergabung'}
+                {joining ? t.joinBusinessPage.joining : t.joinBusinessPage.join}
               </button>
             </div>
           </div>
@@ -283,7 +285,7 @@ export default function JoinBusinessPage() {
             <div className="mb-4">
               <input
                 type="text"
-                placeholder="Cari bisnis..."
+                placeholder={t.joinBusinessPage.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="input"
@@ -297,7 +299,7 @@ export default function JoinBusinessPage() {
               <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-xl">
                 <div className="flex justify-center mb-3"><Building2 className="w-10 h-10 text-gray-400" /></div>
                 <p className="text-gray-600 dark:text-gray-400">
-                  {searchQuery ? 'Tidak ada bisnis yang cocok' : 'Belum ada bisnis tersedia'}
+                  {searchQuery ? t.joinBusinessPage.noMatch : t.joinBusinessPage.noneAvailable}
                 </p>
               </div>
             ) : (
@@ -348,7 +350,7 @@ export default function JoinBusinessPage() {
                             {business.business_name}
                           </h3>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Modal: {formatCurrency(business.capital_investment)}
+                            {t.joinBusinessPage.capitalLabel}: {formatCurrency(business.capital_investment)}
                           </p>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
@@ -357,7 +359,7 @@ export default function JoinBusinessPage() {
                             <button
                               onClick={(e) => { e.stopPropagation(); handleCancelRequest(business); }}
                               className="min-w-[24px] min-h-[24px] inline-flex items-center justify-center p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-                              title="Batalkan permintaan"
+                              title={t.joinBusinessPage.cancelRequest}
                             >
                               <X className="w-3.5 h-3.5" />
                             </button>
@@ -378,14 +380,14 @@ export default function JoinBusinessPage() {
             {/* Actions */}
             <div className="flex gap-3">
               <button onClick={() => router.back()} className="btn-secondary flex-1 py-3" disabled={joining}>
-                Kembali
+                {t.common.back}
               </button>
               <button
                 onClick={handleRequestJoin}
                 className="btn-primary-glow flex-1 py-3"
                 disabled={!canRequest || joining}
               >
-                {joining ? 'Mengirim...' : 'Kirim Permintaan'}
+                {joining ? t.joinBusinessPage.sending : t.joinBusinessPage.sendRequest}
               </button>
             </div>
           </>

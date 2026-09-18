@@ -314,6 +314,22 @@ export interface Business {
   updated_by?: string;
 }
 
+/**
+ * Bentuk ramping bisnis untuk daftar pilihan di /join-business.
+ *
+ * Sengaja hanya empat kolom yang memang dirender kartunya. Dilayani
+ * GET /api/businesses/discoverable lewat admin client — bukan query langsung
+ * dari browser — supaya kolom sensitif di `Business` (ical_feed_token,
+ * qris_image_url, property_address, registered_address, invoice_settings)
+ * tidak ikut terkirim ke user yang belum jadi anggota.
+ */
+export interface DiscoverableBusiness {
+  id: string;
+  business_name: string;
+  logo_url?: string;
+  capital_investment: number;
+}
+
 // One line in a multi-line journal entry
 export interface JournalLine {
   id: string;
