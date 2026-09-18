@@ -399,6 +399,7 @@ export interface Translations {
     selectRow: string;
     alreadyInvoiced: string;
     selectMany: string;
+    selectAll: string;
     viewDetail: string;
     manageTransactions: string;
     importExcel: string;

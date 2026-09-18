@@ -395,6 +395,7 @@ export const en: Translations = {
     selectRow: 'Select',
     alreadyInvoiced: 'Already invoiced',
     selectMany: 'Select Many',
+    selectAll: 'Select all',
     viewDetail: 'View Detail',
     manageTransactions: 'Manage Transactions',
     importExcel: 'Import / Export',

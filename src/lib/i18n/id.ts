@@ -395,6 +395,7 @@ export const id: Translations = {
     selectRow: 'Pilih',
     alreadyInvoiced: 'Sudah dibuatkan invoice',
     selectMany: 'Pilih Banyak',
+    selectAll: 'Pilih semua',
     viewDetail: 'Lihat Detail',
     manageTransactions: 'Kelola Transaksi',
     importExcel: 'Import / Export',

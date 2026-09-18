@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, type CSSProperties } from 'react';
+import { Fragment, useState, useRef, useEffect, useCallback, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Lock, TextSearch, Search, X, CalendarSearch, Eye, FileText } from 'lucide-react';
+import { ClipboardList, Pencil, Trash2, ListChecks, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Lock, TextSearch, Search, X, CalendarSearch, Eye, FileText, SlidersHorizontal } from 'lucide-react';
 import { ContactTypeIcon, CONTACT_TYPE_LABELS } from '@/components/ui/ContactTypeIcon';
 import { useLanguage } from '@/context/LanguageContext';
 import { ListSkeleton } from '@/components/ui/PageSkeleton';
@@ -237,6 +237,56 @@ function getAccountDisplay(transaction: Transaction, t: Translations): { account
   }
 }
 
+// Gugus badge baris (kategori/STOCK/SETTLE/channel + DRAFT + INV). Dipakai
+// tabel (md+) DAN kartu HP supaya keduanya tak pernah drift.
+function RowBadges({ transaction, invoiced }: { transaction: Transaction; invoiced?: boolean }) {
+  const { t } = useLanguage();
+  return (
+    <div className="flex items-center gap-1">
+      {isStockTransaction(transaction) ? (
+        <span className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${STOCK_BADGE_CLASS}`}>
+          STOCK
+        </span>
+      ) : transaction.meta?.settlement_of_transaction_id ? (
+        <span className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${SETTLE_BADGE_CLASS}`}>
+          SETTLE
+        </span>
+      ) : transaction.category === 'EARN' && transaction.sales_channel ? (
+        <SalesChannelBadge channel={transaction.sales_channel} size="sm" />
+      ) : (
+        <span
+          className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${CATEGORY_BADGE_CLASSES[transaction.category]}`}
+        >
+          {transaction.category}
+        </span>
+      )}
+      {transaction.status === 'draft' && (
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">
+          DRAFT
+        </span>
+      )}
+      {invoiced && (
+        <span
+          className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+          title={t.transactions.alreadyInvoiced}
+        >
+          INV
+        </span>
+      )}
+    </div>
+  );
+}
+
+// Warna nominal per kategori — sama untuk baris tabel dan kartu HP.
+function amountToneClass(transaction: Transaction): string {
+  if (transaction.meta?.settlement_of_transaction_id) return 'text-gray-900 dark:text-gray-300';
+  if (transaction.category === 'EARN') return 'text-emerald-500 dark:text-emerald-400';
+  if (transaction.category === 'OPEX' || transaction.category === 'VAR' || transaction.category === 'TAX') {
+    return 'text-red-500 dark:text-red-400';
+  }
+  return 'text-gray-900 dark:text-gray-300';
+}
+
 // Helper function to find the saved contact matching a subject name
 function findSubjectContact(subject: string, contacts: Contact[]): Contact | undefined {
   return contacts.find(c => c.name.toLowerCase() === subject.toLowerCase());
@@ -299,7 +349,10 @@ export function TransactionList({
     if (!savedHighlightIds || savedHighlightIds.size === 0) return;
     const targetId = transactions.find((tx) => savedHighlightIds.has(tx.id))?.id;
     if (!targetId) return;
-    const row = document.querySelector(`tr[data-tx-id="${targetId}"]`);
+    // Baris tabel dan kartu HP memakai atribut yang sama — ambil yang benar-benar
+    // terlihat (yang satunya di-display:none oleh breakpoint).
+    const candidates = Array.from(document.querySelectorAll<HTMLElement>(`[data-tx-id="${targetId}"]`));
+    const row = candidates.find((el) => el.offsetParent !== null) ?? candidates[0];
     row?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [savedHighlightIds, transactions]);
 
@@ -328,6 +381,10 @@ export function TransactionList({
   // Date filter dropdown state
   const [showDateDropdown, setShowDateDropdown] = useState(false);
   const dateDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Panel filter versi HP — dropdown header tabel tidak ikut terpakai di sini
+  // (header-nya tidak dirender di bawah md), jadi filter punya panelnya sendiri.
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   // Context menu (klik kanan pada baris) state
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; transaction: Transaction } | null>(null);
@@ -617,11 +674,320 @@ export function TransactionList({
     );
   }
 
-  // overflow-x-auto dibawa sendiri, tidak dititipkan ke pemanggil: tabelnya
-  // min-w-[800px], jadi pemanggil yang lupa membungkus langsung membuat SELURUH
-  // halaman geser menyamping di HP.
+  // Jumlah filter aktif — dipakai badge tombol Filter di HP.
+  const mobileFilterCount =
+    (categoryFilter ? 1 : 0) +
+    (contactFilter ? 1 : 0) +
+    (activeDescriptionSearch ? 1 : 0) +
+    (dateRange?.start || dateRange?.end ? 1 : 0);
+
+  const monthLabel = (date: string) => {
+    const d = new Date(date);
+    return `${t.common.monthsShort[d.getMonth()] ?? ''} ${d.getFullYear()}`;
+  };
+
+  const mobileFieldClass =
+    'w-full min-h-[44px] px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500';
+  const mobileLabelClass = 'mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400';
+
   return (
-    <div className="overflow-x-auto">
+    <>
+      {/* ═══ Tampilan HP (<md) ═══
+          Tabel 8 kolom (min-w-[800px]) tidak pernah muat di layar telepon —
+          di bawah md baris dirender sebagai kartu, dan filter yang biasanya
+          menempel di header tabel pindah ke panel sendiri. */}
+      <div className="md:hidden">
+        <div className="mb-3 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowMobileFilters((open) => !open)}
+            aria-expanded={showMobileFilters}
+            className="btn-ghost flex min-h-[44px] flex-1 items-center justify-center gap-2 px-3"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            {t.common.filter}
+            {mobileFilterCount > 0 && (
+              <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-100 px-1.5 text-xs font-semibold text-primary-600 dark:bg-primary-900/40 dark:text-primary-300">
+                {mobileFilterCount}
+              </span>
+            )}
+          </button>
+          {onEnterSelectMode && !selectMode && (
+            <button
+              type="button"
+              onClick={() => onEnterSelectMode()}
+              title={t.transactions.selectMany}
+              aria-label={t.transactions.selectMany}
+              className="btn-ghost flex min-h-[44px] min-w-[44px] items-center justify-center px-3"
+            >
+              <ListChecks className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        {showMobileFilters && (
+          <div className="mb-3 space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/60">
+            {onCategoryFilterChange && (
+              <div>
+                <label className={mobileLabelClass} htmlFor="tx-mobile-category">{t.transactions.tableCategory}</label>
+                <select
+                  id="tx-mobile-category"
+                  value={categoryFilter ?? ''}
+                  onChange={(e) => onCategoryFilterChange(e.target.value as '' | TransactionCategory | 'SETTLE' | 'STOCK')}
+                  className={mobileFieldClass}
+                >
+                  <option value="">{t.common.all}</option>
+                  {([...CATEGORIES, 'STOCK', 'SETTLE'] as (TransactionCategory | 'STOCK' | 'SETTLE')[]).map((cat) => (
+                    <option key={cat} value={cat}>{CATEGORY_I18N_LABELS[cat]}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {onContactFilterChange && (
+              <div>
+                <label className={mobileLabelClass} htmlFor="tx-mobile-contact">{t.transactions.tableSubject}</label>
+                <select
+                  id="tx-mobile-contact"
+                  value={contactFilter ?? ''}
+                  onChange={(e) => onContactFilterChange(e.target.value)}
+                  className={mobileFieldClass}
+                >
+                  <option value="">{t.common.all}</option>
+                  {/* Filter kontak bisa datang dari luar daftar kontak tersimpan —
+                      tetap tampilkan supaya nilainya tidak diam-diam hilang. */}
+                  {contactFilter && !contacts.some((c) => c.name === contactFilter) && (
+                    <option value={contactFilter}>{contactFilter}</option>
+                  )}
+                  {contacts.map((c) => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {onDescriptionSearchChange && (
+              <div>
+                <label className={mobileLabelClass} htmlFor="tx-mobile-description">{t.transactions.tableDescription}</label>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+                  <input
+                    id="tx-mobile-description"
+                    type="text"
+                    value={descriptionDraft}
+                    onChange={(e) => {
+                      setDescriptionDraft(e.target.value);
+                      onDescriptionSearchChange(e.target.value.trim());
+                    }}
+                    placeholder={`${t.common.search}...`}
+                    className={`${mobileFieldClass} pl-9`}
+                  />
+                </div>
+              </div>
+            )}
+
+            {onDateRangeChange && (
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className={mobileLabelClass} htmlFor="tx-mobile-date-start">{t.common.from}</label>
+                  <input
+                    id="tx-mobile-date-start"
+                    type="date"
+                    value={dateRange?.start || ''}
+                    onChange={(e) => onDateRangeChange({ start: e.target.value, end: dateRange?.end || '' })}
+                    className={mobileFieldClass}
+                  />
+                </div>
+                <div>
+                  <label className={mobileLabelClass} htmlFor="tx-mobile-date-end">{t.common.to}</label>
+                  <input
+                    id="tx-mobile-date-end"
+                    type="date"
+                    value={dateRange?.end || ''}
+                    onChange={(e) => onDateRangeChange({ start: dateRange?.start || '', end: e.target.value })}
+                    className={mobileFieldClass}
+                  />
+                </div>
+              </div>
+            )}
+
+            {hasActiveFilters && onResetFilters && (
+              <button
+                type="button"
+                onClick={() => { onResetFilters(); setDescriptionDraft(''); }}
+                className="w-full min-h-[44px] rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+              >
+                {t.common.reset} {t.common.filter}
+              </button>
+            )}
+          </div>
+        )}
+
+        {selectMode && transactions.length > 0 && (
+          <label className="mb-2 flex min-h-[44px] items-center gap-2.5 px-1 text-sm text-gray-600 dark:text-gray-300">
+            <input
+              type="checkbox"
+              checked={!!allSelected}
+              onChange={() => onSelectAll?.()}
+              className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 accent-gray-900 dark:accent-gray-100 focus:ring-gray-500"
+            />
+            {t.transactions.selectAll}
+          </label>
+        )}
+
+        {transactions.length === 0 ? (
+          <EmptyState
+            icon={ClipboardList}
+            title={hasActiveFilters ? t.transactions.noTransactionsFiltered : t.transactions.noTransactions}
+            description={hasActiveFilters ? t.transactions.noTransactionsFilteredHint : t.transactions.noTransactionsHint}
+            action={
+              hasActiveFilters && onResetFilters ? (
+                <button type="button" onClick={onResetFilters} className="btn-ghost">
+                  {t.common.reset} {t.common.filter}
+                </button>
+              ) : undefined
+            }
+          />
+        ) : (
+          <div className="flex flex-col gap-2">
+            {transactions.map((transaction, index) => {
+              const isNewMonth = index === 0 || getMonthKey(transaction.date) !== getMonthKey(transactions[index - 1].date);
+              const isHighlighted = (highlightAfter && transaction.created_at && transaction.created_at >= highlightAfter)
+                || savedHighlightIds?.has(transaction.id);
+              const isIdHighlighted = highlightIds?.has(transaction.id);
+              const isSelected = selectedIds?.has(transaction.id) ?? false;
+              const flow = transaction.is_multi_line
+                ? getMultiLineCashDisplay(transaction, t)
+                : getAccountDisplay(transaction, t);
+              const rowContact = (transaction.contact_id && contacts.find((c) => c.id === transaction.contact_id))
+                || findSubjectContact(getTransactionContactName(transaction), contacts);
+              const catalogName = transaction.meta?.catalog_item?.name;
+              const hasAttachment = !!(transaction.meta?.attachments?.length || transaction.meta?.attachment);
+              const interactive = selectMode || !!onRowClick;
+              const openRow = () => (selectMode ? onToggleSelect?.(transaction.id) : onRowClick?.(transaction));
+
+              return (
+                <Fragment key={transaction.id}>
+                  {isNewMonth && (
+                    <div className="px-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                      {monthLabel(transaction.date)}
+                    </div>
+                  )}
+                  <div
+                    data-tx-id={transaction.id}
+                    role={interactive ? 'button' : undefined}
+                    tabIndex={interactive ? 0 : undefined}
+                    onClick={interactive ? openRow : undefined}
+                    onKeyDown={interactive ? (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openRow();
+                      }
+                    } : undefined}
+                    className={`rounded-xl border px-3 py-3 transition-colors ${
+                      isSelected
+                        ? 'border-primary-300 bg-primary-50 dark:border-primary-700 dark:bg-primary-900/20'
+                        : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'
+                    } ${interactive ? 'cursor-pointer active:bg-gray-50 dark:active:bg-gray-700/60' : ''} ${
+                      isHighlighted ? 'animate-import-highlight' : ''
+                    } ${isIdHighlighted ? 'border-l-2 border-l-blue-400 bg-blue-50 dark:border-l-blue-500 dark:bg-blue-900/20' : ''}`}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      {selectMode && (
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => onToggleSelect?.(transaction.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="mt-1 h-4 w-4 flex-shrink-0 rounded border-gray-300 dark:border-gray-600 accent-gray-900 dark:accent-gray-100 focus:ring-gray-500"
+                        />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <RowBadges transaction={transaction} invoiced={invoicedTransactionIds?.has(transaction.id)} />
+                          <span className="flex-shrink-0 text-[11px] text-gray-400 dark:text-gray-500">
+                            {formatDateShort(transaction.date)}
+                          </span>
+                        </div>
+
+                        <div className="mt-2 flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            {rowContact && (
+                              <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
+                                <ContactTypeIcon type={rowContact.type} sizeClassName="w-3 h-3" />
+                              </span>
+                            )}
+                            <span className="truncate text-sm font-medium text-gray-800 dark:text-gray-200">
+                              {getRowSubject(transaction)}
+                            </span>
+                          </div>
+                          <div className="flex-shrink-0 text-right">
+                            <div className={`text-sm font-semibold tabular-nums ${amountToneClass(transaction)}`}>
+                              {formatCurrency(transaction.amount)}
+                            </div>
+                            {transaction.currency_code && transaction.currency_code !== 'IDR' && transaction.original_amount && (
+                              <div className="text-[10px] font-normal text-gray-400 dark:text-gray-500">
+                                {formatCurrency(transaction.original_amount, transaction.currency_code)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {(transaction.description || catalogName || hasAttachment) && (
+                          <p className="mt-1.5 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">
+                            {catalogName && (
+                              <span className="mr-1.5 inline-flex max-w-full items-center rounded-full bg-gray-100 px-2 py-0.5 align-middle text-[11px] font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                                <span className="truncate">{catalogName}</span>
+                              </span>
+                            )}
+                            {hasAttachment && (
+                              <FileText
+                                className="mr-1.5 inline-block h-3.5 w-3.5 align-middle text-gray-400 dark:text-gray-500"
+                                aria-label={t.transactions.hasAttachment}
+                              />
+                            )}
+                            {transaction.description}
+                          </p>
+                        )}
+
+                        <div className="mt-2 flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+                          {flow ? (
+                            <>
+                              {flow.isInflow ? (
+                                <ArrowDownLeft className="h-3.5 w-3.5 flex-shrink-0 text-emerald-500 dark:text-emerald-400" />
+                              ) : (
+                                <ArrowUpRight className="h-3.5 w-3.5 flex-shrink-0 text-red-500 dark:text-red-400" />
+                              )}
+                              <span className="truncate font-medium">{flow.accountName}</span>
+                            </>
+                          ) : (
+                            <>
+                              <ArrowLeftRight className="h-3.5 w-3.5 flex-shrink-0 text-indigo-500 dark:text-indigo-400" />
+                              <span className="truncate font-medium">{t.transactions.multiLineJournal}</span>
+                            </>
+                          )}
+                          {!!closedUntilDate && transaction.date <= closedUntilDate && (
+                            <Lock
+                              className="ml-auto h-3.5 w-3.5 flex-shrink-0 text-amber-400 dark:text-amber-500"
+                              aria-label={t.transactions.periodLockedUntil.replace('{date}', closedUntilDate)}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Fragment>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ═══ Tampilan md+ : tabel ═══
+          Tabel membawa overflow-x-auto sendiri, tidak dititipkan ke pemanggil:
+          lebarnya min-w-[800px], jadi pemanggil yang lupa membungkus langsung
+          membuat SELURUH halaman geser menyamping. */}
+      <div className="hidden md:block overflow-x-auto">
       {/* Divider vertikal antar kolom sengaja tidak dirender (transparan) —
           kolom tetap bisa di-resize via handle di header (indikator muncul saat hover) */}
       <table className="w-full table-fixed min-w-[800px]">
@@ -946,38 +1312,7 @@ export function TransactionList({
                 )}
               </td>
               <td className="py-3 pl-1 pr-2 md:py-4 md:pl-2 md:pr-4">
-                <div className="flex items-center gap-1">
-                  {isStockTransaction(transaction) ? (
-                    <span className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${STOCK_BADGE_CLASS}`}>
-                      STOCK
-                    </span>
-                  ) : transaction.meta?.settlement_of_transaction_id ? (
-                    <span className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${SETTLE_BADGE_CLASS}`}>
-                      SETTLE
-                    </span>
-                  ) : transaction.category === 'EARN' && transaction.sales_channel ? (
-                    <SalesChannelBadge channel={transaction.sales_channel} size="sm" />
-                  ) : (
-                    <span
-                      className={`inline-flex items-center px-2 md:px-3 py-1 rounded-full text-xs font-semibold ${CATEGORY_BADGE_CLASSES[transaction.category]}`}
-                    >
-                      {transaction.category}
-                    </span>
-                  )}
-                  {transaction.status === 'draft' && (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">
-                      DRAFT
-                    </span>
-                  )}
-                  {invoicedTransactionIds?.has(transaction.id) && (
-                    <span
-                      className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
-                      title={t.transactions.alreadyInvoiced}
-                    >
-                      INV
-                    </span>
-                  )}
-                </div>
+                <RowBadges transaction={transaction} invoiced={invoicedTransactionIds?.has(transaction.id)} />
               </td>
               <td className="py-3 px-2 md:py-4 text-sm font-medium text-gray-800 dark:text-gray-200 break-words">
                 <div className="flex items-center gap-2">
@@ -1011,15 +1346,7 @@ export function TransactionList({
               <td className="py-3 pl-1 pr-2 md:py-4 md:pl-1 md:pr-4 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
                 {formatDateShort(transaction.date)}
               </td>
-              <td className={`py-3 px-2 md:py-4 md:px-4 text-sm font-medium whitespace-nowrap tabular-nums ${
-                transaction.meta?.settlement_of_transaction_id
-                  ? 'text-gray-900 dark:text-gray-300'
-                  : transaction.category === 'EARN'
-                  ? 'text-emerald-500 dark:text-emerald-400'
-                  : transaction.category === 'OPEX' || transaction.category === 'VAR' || transaction.category === 'TAX'
-                  ? 'text-red-500 dark:text-red-400'
-                  : 'text-gray-900 dark:text-gray-300'
-              }`}>
+              <td className={`py-3 px-2 md:py-4 md:px-4 text-sm font-medium whitespace-nowrap tabular-nums ${amountToneClass(transaction)}`}>
                 <div className="text-right">
                   <div>{formatCurrency(transaction.amount)}</div>
                   {transaction.currency_code && transaction.currency_code !== 'IDR' && transaction.original_amount && (
@@ -1142,6 +1469,7 @@ export function TransactionList({
           })}
         </tbody>
       </table>
+      </div>
 
       {/* Context menu klik kanan pada baris transaksi */}
       {mounted && contextMenu && createPortal(
@@ -1226,6 +1554,6 @@ export function TransactionList({
         })(),
         document.body
       )}
-    </div>
+    </>
   );
 }

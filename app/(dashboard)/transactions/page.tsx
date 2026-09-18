@@ -619,23 +619,25 @@ function TransactionsPageInner() {
   }
 
   return (
-    <div className="p-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
-              <CreditCard className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
+    <div className="p-4 pb-24 md:p-8">
+      {/* Header — di HP judul dan baris aksi ditumpuk. Sebelumnya keduanya
+          dipaksa satu baris sehingga tombol mendorong lebar halaman dan
+          SELURUH halaman bisa digeser menyamping. */}
+      <div className="mb-6 md:mb-8 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2 md:gap-3">
+              <CreditCard className="w-6 h-6 md:w-7 md:h-7 flex-shrink-0 text-indigo-500 dark:text-indigo-400" />
               {t.transactions.manageTransactions}
             </h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           {/* Galeri Lampiran sengaja diakses dari sini, bukan menu sidebar baru:
               lampiran selalu milik transaksi, jadi pintunya duduk di halaman
               transaksi. Tersedia untuk semua role — investor boleh melihat bukti
               dokumen meski tidak boleh mencatat. */}
           <button
             onClick={() => router.push('/transactions/attachments')}
-            className="btn-ghost flex items-center gap-2"
+            className="btn-ghost flex min-h-[44px] items-center justify-center gap-2 px-3 sm:min-h-0 sm:px-4"
             title={t.attachmentGallery.navLabel}
             aria-label={t.attachmentGallery.navLabel}
           >
@@ -649,15 +651,19 @@ function TransactionsPageInner() {
             <>
               <button
                 onClick={() => setShowImportModal(true)}
-                className="btn-ghost flex items-center gap-2"
+                className="btn-ghost flex min-h-[44px] items-center justify-center gap-2 px-3 sm:min-h-0 sm:px-4"
+                title={t.transactions.importExcel}
+                aria-label={t.transactions.importExcel}
               >
-                <ArrowDownUp className="h-4 w-4" />
-                {t.transactions.importExcel}
+                <ArrowDownUp className="h-4 w-4 flex-shrink-0" />
+                {/* Label ikut disembunyikan di layar sempit; nama aksesibelnya
+                    tetap ada lewat aria-label di atas. */}
+                <span className="hidden sm:inline">{t.transactions.importExcel}</span>
               </button>
 
               <button
                 onClick={() => router.push('/transactions/journal-entry')}
-                className="btn-primary-glow flex items-center gap-2"
+                className="btn-primary-glow flex min-h-[44px] flex-1 items-center justify-center gap-2 whitespace-nowrap sm:min-h-0 md:flex-none"
               >
                 <Plus className="h-4 w-4" />
                 {t.transactions.journalEntry}
@@ -678,11 +684,13 @@ function TransactionsPageInner() {
       )}
 
       {/* Transaction List */}
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_24px_rgba(0,0,0,0.04)] p-5">
+      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_24px_rgba(0,0,0,0.04)] p-3 md:p-5">
 
         {/* Status Filter Tabs + Tag Filter */}
-        <div className="flex items-center mb-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-1 flex-1">
+        <div className="flex flex-wrap items-center mb-4 border-b border-gray-200 dark:border-gray-700">
+          {/* Tab menggeser di dalam wadahnya sendiri (scrollbar-hide), bukan
+              melebarkan halaman. */}
+          <div className="flex items-center gap-1 flex-1 min-w-0 overflow-x-auto scrollbar-hide">
             {(() => {
               const isAll = activeView === 'transactions' && statusFilter === 'all';
               const isDraft = activeView === 'transactions' && statusFilter === 'draft';
@@ -690,7 +698,7 @@ function TransactionsPageInner() {
               const isUnsettled = activeView === 'unsettled';
               const isRecurring = activeView === 'recurring';
               const tabClass = (active: boolean) =>
-                `relative px-4 py-2.5 text-sm font-medium border-b-2 border-transparent transition-colors flex items-center gap-2 ${
+                `relative flex-shrink-0 whitespace-nowrap px-2.5 md:px-4 py-2.5 text-sm font-medium border-b-2 border-transparent transition-colors flex items-center gap-1.5 md:gap-2 ${
                   active
                     ? 'text-indigo-600 dark:text-indigo-400'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
@@ -759,7 +767,7 @@ function TransactionsPageInner() {
 
           {/* Tag Filter — scrollable chips ujung kanan */}
           {allTags.length > 0 && (
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-px max-w-xs flex-shrink-0 pl-2">
+            <div className="flex w-full order-last items-center gap-1.5 overflow-x-auto scrollbar-hide pb-2 pt-1 md:order-none md:w-auto md:max-w-xs md:flex-shrink-0 md:pb-px md:pt-0 md:pl-2">
               {allTags.map((tag) => (
                 <button
                   key={tag}
@@ -780,7 +788,7 @@ function TransactionsPageInner() {
           {businessId && (
             <button
               onClick={() => router.push(`/businesses/${businessId}/config?tab=contacts`)}
-              className="ml-2 mb-1 flex-shrink-0 p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+              className="ml-1 md:ml-2 mb-1 flex-shrink-0 inline-flex min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 items-center justify-center p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
               title={t.transactionDetail.manageContacts}
             >
               <ContactIcon className="w-4 h-4" />
@@ -805,7 +813,7 @@ function TransactionsPageInner() {
             Filter (Category/Contact/Description/Date) bekerja client-side
             atas subset unsettled — dropdown-nya fungsional, bukan read-only. */}
         {activeView === 'unsettled' && (
-          <div className="overflow-auto max-h-[70vh]">
+          <div className="md:overflow-auto md:max-h-[70vh]">
             <TransactionList
               transactions={filteredUnsettled}
               loading={loading}
@@ -835,8 +843,8 @@ function TransactionsPageInner() {
         {activeView === 'transactions' && <>
         {/* Select Mode Action Bar */}
         {selectMode && (
-          <div className="sticky top-0 z-20 flex items-center justify-between mb-4 px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-card">
-            <div className="flex items-center gap-3">
+          <div className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 mb-4 px-3 md:px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-card">
+            <div className="flex flex-wrap items-center gap-2 md:gap-3">
               <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
                 {t.transactions.selected.replace('{n}', String(selectedIds.size))}
               </span>
@@ -892,7 +900,7 @@ function TransactionsPageInner() {
                 </>
               )}
               {showSelectedSummary && selectedIds.size > 0 && (
-                <div className="flex items-center gap-3 ml-2 text-sm">
+                <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 text-sm md:ml-2 md:w-auto">
                   <span className="text-gray-600 dark:text-gray-300 font-medium">
                     {t.transactions.cashIn} {selectedSummary.masuk.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}
                   </span>
@@ -915,7 +923,7 @@ function TransactionsPageInner() {
           </div>
         )}
 
-        <div className="overflow-auto max-h-[70vh]">
+        <div className="md:overflow-auto md:max-h-[70vh]">
           <TransactionList
             transactions={tagFilteredTransactions}
             loading={loading}
@@ -949,20 +957,20 @@ function TransactionsPageInner() {
 
         {/* Pagination */}
         {!loading && transactions.length > 0 && (
-          <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex min-w-0 items-center justify-between gap-1 sm:justify-start sm:gap-2">
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                className="flex-shrink-0 min-h-[44px] sm:min-h-0 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                {t.common.previous}
+                <span className="hidden sm:inline">{t.common.previous}</span>
               </button>
 
-              <div className="flex items-center gap-1">
+              <div className="flex min-w-0 items-center gap-1 overflow-x-auto scrollbar-hide">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
                   const showPage =
                     page === 1 ||
@@ -987,7 +995,7 @@ function TransactionsPageInner() {
                     <button
                       key={page}
                       onClick={() => setCurrentPage(page)}
-                      className={`min-w-[40px] h-[40px] rounded-lg text-sm font-medium transition-colors ${
+                      className={`min-w-[40px] h-[40px] flex-shrink-0 rounded-lg text-sm font-medium transition-colors ${
                         currentPage === page
                           ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
                           : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -1002,9 +1010,9 @@ function TransactionsPageInner() {
               <button
                 onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                className="flex-shrink-0 min-h-[44px] sm:min-h-0 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
               >
-                {t.common.next}
+                <span className="hidden sm:inline">{t.common.next}</span>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
@@ -1014,13 +1022,11 @@ function TransactionsPageInner() {
             <select
               value={rowsPerPage}
               onChange={(e) => setRowsPerPage(Number(e.target.value))}
-              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+              className="w-full sm:w-auto min-h-[44px] sm:min-h-0 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
             >
-              <option value={5}>5 / halaman</option>
-              <option value={8}>8 / halaman</option>
-              <option value={10}>10 / halaman</option>
-              <option value={20}>20 / halaman</option>
-              <option value={50}>50 / halaman</option>
+              {[5, 8, 10, 20, 50].map((n) => (
+                <option key={n} value={n}>{n} {t.common.perPage}</option>
+              ))}
             </select>
           </div>
         )}
