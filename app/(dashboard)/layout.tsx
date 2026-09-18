@@ -18,7 +18,6 @@ import {
   ChevronDown,
   ChevronRight,
   LucideIcon,
-  Menu,
   PanelLeft,
   Settings,
   BookOpen,
@@ -481,13 +480,21 @@ function Header({ onMenuClick, onQuickAddClick, isCollapsed }: { onMenuClick: ()
   return (
     <>
       <header className={`fixed top-0 left-0 right-0 h-[calc(4rem+var(--safe-area-top))] pt-[var(--safe-area-top)] bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-30 flex items-center justify-between gap-2 min-w-0 px-4 md:px-6 transition-[left] duration-300 ease-in-out ${isCollapsed ? 'md:left-16' : 'md:left-56'}`}>
-      {/* Mobile Menu Button */}
+      {/* Mobile Menu Button — wujud "collapsed" sidebar di HP: saat drawer
+          tertutup yang terlihat hanya ikon merek di sini. Tap (atau geser ke
+          kanan di layar) membukanya; tap di luar drawer menutupnya lagi. */}
       <button
         onClick={onMenuClick}
         aria-label={t.nav.openMenu}
-        className="md:hidden min-w-[44px] min-h-[44px] -ml-2 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-600 dark:text-gray-400"
+        title={t.nav.openMenu}
+        className="md:hidden min-h-[44px] -ml-2 flex items-center gap-0.5 pl-1.5 pr-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
       >
-        <Menu className="w-6 h-6" />
+        <Image src="/images/favicon.png" alt="" width={28} height={28} className="object-contain dark:hidden" />
+        <Image src="/images/favicon-dark.png" alt="" width={28} height={28} className="object-contain hidden dark:block" />
+        {/* Panah kecil: penanda bahwa sidebar bisa ditarik keluar — entah dengan
+            geser ke kanan di layar atau tap ikon ini. Tanpa ini gesture-nya
+            tersembunyi total. */}
+        <ChevronRight className="w-4 h-4 flex-shrink-0 text-gray-400 dark:text-gray-500" />
       </button>
 
       {/* Business Switcher */}
@@ -902,6 +909,11 @@ function Sidebar({
   }, []);
 
   const drawerRef = useDialogA11y(isOpen && isMobile, { onEscape: onClose });
+
+  // Rail 64px adalah pola DESKTOP. Di HP sidebar hanya punya dua keadaan
+  // (terbuka / tertutup), jadi `isCollapsed` yang tersisa dari desktop — mis.
+  // saat jendela dikecilkan — tidak boleh ikut menciutkan drawer jadi rail.
+  const isRail = isCollapsed && !isMobile;
   const canManage = isManagerRole(userRole);
 
   // Saat ganti bisnis sambil berada di hub (Calendar/Point of Sales), route bisa
@@ -931,23 +943,24 @@ function Sidebar({
         ref={drawerRef}
         aria-label={t.nav.sidebarLabel}
         tabIndex={-1}
-        className={`fixed top-0 left-0 h-screen-dvh focus:outline-none pt-[var(--safe-area-top)] bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-[inset_-4px_0_12px_rgba(0,0,0,0.04)] dark:shadow-[inset_-4px_0_12px_rgba(0,0,0,0.2)] flex flex-col z-50 transform transition-all duration-300 ease-in-out ${isCollapsed ? 'overflow-visible' : 'overflow-hidden'}
+        className={`fixed top-0 left-0 h-screen-dvh focus:outline-none pt-[var(--safe-area-top)] bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-[inset_-4px_0_12px_rgba(0,0,0,0.04)] dark:shadow-[inset_-4px_0_12px_rgba(0,0,0,0.2)] flex flex-col z-50 transform transition-all duration-300 ease-in-out ${isRail ? 'overflow-visible' : 'overflow-hidden'}
           ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
-          ${isCollapsed ? 'w-16' : 'w-56'}`}
+          ${isRail ? 'w-16' : 'w-56'}`}
       >
-        {/* Logo + toggle row — pola yang sama di HP dan desktop:
-            collapsed  → favicon sendirian, dia tombol expand-nya;
-            expanded   → toggle PanelLeft lalu wordmark AXION.
-            Di HP drawer menciut jadi rail 64px (bukan menutup); menutupnya lewat
-            tap backdrop, geser ke kiri, atau Escape. */}
-        <div className={`flex items-center border-b border-transparent h-16 flex-shrink-0 ${isCollapsed ? 'justify-center px-2' : 'gap-2 px-3'}`}>
-          {isCollapsed ? (
+        {/* Logo + toggle row. Collapse (rail 64px) adalah pola DESKTOP:
+            collapsed → favicon sendirian, dia tombol expand-nya;
+            expanded  → toggle PanelLeft lalu wordmark AXION.
+            Di HP sidebar hanya punya dua keadaan, terbuka atau tertutup —
+            wujud tertutupnya adalah ikon merek di topbar. Drawer ditutup dengan
+            tap di luar, geser ke kiri, atau Escape. */}
+        <div className={`flex items-center border-b border-transparent h-16 flex-shrink-0 ${isRail ? 'justify-center px-2' : 'gap-2 px-3'}`}>
+          {isRail ? (
             /* Favicon sebagai tombol expand */
             <button
               onClick={onToggleCollapse}
               aria-label={t.nav.expandSidebar}
               aria-expanded={false}
-              className="flex min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 items-center justify-center p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="hidden md:flex items-center justify-center p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               title={t.nav.expandSidebar}
             >
               <Image src="/images/favicon.png" alt="" width={28} height={28} className="object-contain dark:hidden" />
@@ -960,7 +973,7 @@ function Sidebar({
                 onClick={onToggleCollapse}
                 aria-label={t.nav.collapseSidebar}
                 aria-expanded
-                className="flex min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 items-center justify-center p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0"
+                className="hidden md:flex items-center justify-center p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0"
                 title={t.nav.collapseSidebar}
               >
                 <PanelLeft className="w-5 h-5" />
@@ -990,7 +1003,7 @@ function Sidebar({
         {/* Scrollable nav area — satu-satunya landmark <nav> sidebar. Dulu hanya
             blok section di bawah yang dibungkus <nav>, sehingga menu utama
             (Transaksi/Dashboard/Kelola Bisnis) tak bisa dilompati screen reader. */}
-        <nav aria-label={t.nav.mainNavLabel} className={`flex-1 min-h-0 ${isCollapsed ? 'overflow-visible' : 'overflow-y-auto'}`}>
+        <nav aria-label={t.nav.mainNavLabel} className={`flex-1 min-h-0 ${isRail ? 'overflow-visible' : 'overflow-y-auto'}`}>
         {/* Independent nav items: Transactions + Dashboard + Manage Business */}
         <div className="px-2 pt-3 pb-3 space-y-1.5">
           {/* Transactions (manager only) */}
@@ -1016,12 +1029,12 @@ function Sidebar({
                   <Link
                     href="/transactions"
                     onClick={onClose}
-                    className={`whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out hover:text-indigo-500 dark:hover:text-indigo-400 ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}
+                    className={`whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out hover:text-indigo-500 dark:hover:text-indigo-400 ${isRail ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}
                   >
                     {t.nav.transactions}
                   </Link>
                 </div>
-                {isCollapsed && (
+                {isRail && (
                   <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-[60] overflow-hidden">
                     <Link href="/transactions/journal-entry" onClick={onClose} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
                       <Plus className="w-3.5 h-3.5" />
@@ -1056,11 +1069,11 @@ function Sidebar({
                     }`}
                 >
                   <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`} />
-                  <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+                  <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out ${isRail ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
                     {item.label}
                   </span>
                 </Link>
-                {isCollapsed && (
+                {isRail && (
                   <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg px-3 py-2 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-[60]">
                     {item.label}
                     <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
@@ -1097,11 +1110,11 @@ function Sidebar({
                     }`}
                 >
                   <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`} />
-                  <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+                  <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out ${isRail ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
                     {item.label}
                   </span>
                 </Link>
-                {isCollapsed && (
+                {isRail && (
                   <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800 dark:bg-gray-700 text-white text-xs font-medium rounded-lg px-3 py-2 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-[60]">
                     {item.label}
                     <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-800 dark:border-r-gray-700" />
@@ -1122,7 +1135,7 @@ function Sidebar({
               key={section.key}
               section={section}
               pathname={pathname}
-              isCollapsed={isCollapsed}
+              isCollapsed={isRail}
               onNavigate={onClose}
             />
           ))}
@@ -1135,7 +1148,7 @@ function Sidebar({
             useSearchParams (lihat catatan di SidebarQuickBoxes). */}
         <Suspense fallback={<div className="px-2 pt-5 pb-3 h-[152px]" />}>
           <SidebarQuickBoxes
-            isCollapsed={isCollapsed}
+            isCollapsed={isRail}
             onClose={onClose}
             canManage={canManage}
           />
@@ -1145,9 +1158,9 @@ function Sidebar({
         {/* Footer — Date & Time Widget */}
         <div className="pt-4 pb-[calc(1rem+var(--safe-area-bottom))] px-4 border-t border-gray-200 dark:border-gray-700">
           {currentTime && (
-            <div className={`flex items-center gap-2 px-2.5 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-gray-700 dark:text-gray-200 transition-all duration-300 ease-in-out ${isCollapsed ? 'justify-center' : ''}`}>
+            <div className={`flex items-center gap-2 px-2.5 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-gray-700 dark:text-gray-200 transition-all duration-300 ease-in-out ${isRail ? 'justify-center' : ''}`}>
               <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
-              <div className={`leading-tight overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+              <div className={`leading-tight overflow-hidden transition-all duration-300 ease-in-out ${isRail ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
                 {/* Format singkat "Thu, 13 Aug 2026" / "Kam, 13 Agu 2026" — versi
                     panjang tak muat dibaca sekilas di sidebar. Locale Inggris
                     sengaja 'en-GB' (bukan 'en-US') supaya urutannya hari-bulan,
@@ -1161,7 +1174,7 @@ function Sidebar({
               </div>
             </div>
           )}
-          <p className={`text-[10px] text-gray-400 dark:text-gray-500 whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out mt-2 ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+          <p className={`text-[10px] text-gray-400 dark:text-gray-500 whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out mt-2 ${isRail ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
             PT Imam Katalis Ventura
           </p>
         </div>
