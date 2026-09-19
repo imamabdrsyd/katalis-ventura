@@ -175,6 +175,19 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
 
   // Detail panel state
   const [selectedContact, setSelectedContact] = useState<ContactType | null>(null);
+  // Mulai lg layoutnya split (daftar + detail berdampingan), jadi memilih kontak
+  // pertama secara otomatis itu wajar. Di bawah lg polanya master-detail: memilih
+  // otomatis membuat pengguna HP mendarat langsung di detail satu kontak dan
+  // daftarnya tak pernah terlihat. Mulai false supaya HP aman lebih dulu; desktop
+  // menyusul begitu efek sinkronisasi jalan.
+  const [isSplitLayout, setIsSplitLayout] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 1024px)');
+    const sync = () => setIsSplitLayout(mql.matches);
+    sync();
+    mql.addEventListener('change', sync);
+    return () => mql.removeEventListener('change', sync);
+  }, []);
   const [contactTransactions, setContactTransactions] = useState<Transaction[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
 
@@ -263,6 +276,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
 
   useEffect(() => {
     if (loading || selectedContact || contacts.length === 0 || contactParam) return;
+    if (!isSplitLayout) return;
 
     const storedContactId = window.localStorage.getItem(getContactDetailStorageKey(businessId));
     const persistedContact = storedContactId
@@ -273,7 +287,7 @@ export const ContactList = forwardRef<ContactListHandle, ContactListProps>(funct
     setSelectedContact(contactToShow);
     window.localStorage.setItem(getContactDetailStorageKey(businessId), contactToShow.id);
     loadContactTransactions(contactToShow.name);
-  }, [businessId, contactParam, contacts, loadContactTransactions, loading, selectedContact]);
+  }, [businessId, contactParam, contacts, isSplitLayout, loadContactTransactions, loading, selectedContact]);
 
   const filteredContacts = contacts.filter((c) => {
     const matchSearch =

@@ -590,15 +590,42 @@ export default function BusinessMembersPage() {
       {/* Judul halaman dirender sebagai h2 di dalam kartu identitas bisnis, jadi
           h1 halamannya sr-only — lihat catatan yang sama di /dashboard. */}
       <h1 className="sr-only">{t.nav.manageBusiness}</h1>
-      {/* Header row: back + tabs + CTA */}
-      <div className="flex items-center gap-2 md:gap-4 mb-6">
-        <button
-          onClick={() => router.push('/businesses')}
-          className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0"
-          title={t.businessConfig.backToBusiness}
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
+      {/* Header row: back + tabs + CTA.
+          Strip tab-nya full-bleed (`-mx-4 px-4`, lihat Tabs scrollable) supaya
+          bisa digeser sampai tepi layar. Di dalam satu baris bersama tombol,
+          margin negatif itu merangsek ke tetangga kiri-kanannya, jadi di HP tab
+          dapat barisnya sendiri. `md:contents` mengembalikan susunan satu baris
+          di layar lebar tanpa menduplikasi markup. */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4 mb-6">
+        <div className="flex items-center justify-between gap-2 md:contents">
+          <button
+            onClick={() => router.push('/businesses')}
+            className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0"
+            title={t.businessConfig.backToBusiness}
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+
+          {activeTab === 'members' && !isInvestor && (
+            <button
+              onClick={() => setShowInviteManager(true)}
+              className="btn-primary-glow flex min-h-[44px] flex-shrink-0 items-center justify-center gap-2 sm:min-h-0 md:order-last"
+            >
+              <UserPlus className="h-4 w-4 flex-shrink-0" />
+              {t.businessConfig.inviteMember}
+            </button>
+          )}
+
+          {activeTab === 'contacts' && canManage && (
+            <button
+              onClick={() => contactListRef.current?.openAddForm()}
+              className="btn-primary-glow flex min-h-[44px] flex-shrink-0 items-center justify-center gap-2 sm:min-h-0 md:order-last"
+            >
+              <Plus className="h-4 w-4 flex-shrink-0" />
+              {t.businessConfig.addContact}
+            </button>
+          )}
+        </div>
 
         <Tabs<BusinessConfigTab>
           value={activeTab}
@@ -642,29 +669,6 @@ export default function BusinessMembersPage() {
           ]}
         />
 
-        {activeTab === 'members' && !isInvestor && (
-          <button
-            onClick={() => setShowInviteManager(true)}
-            className="btn-primary-glow flex min-h-[44px] min-w-[44px] flex-shrink-0 items-center justify-center gap-2 px-3 sm:min-h-0 sm:min-w-0 sm:px-4"
-            title={t.businessConfig.inviteMember}
-            aria-label={t.businessConfig.inviteMember}
-          >
-            <UserPlus className="h-4 w-4 flex-shrink-0" />
-            <span className="hidden sm:inline">{t.businessConfig.inviteMember}</span>
-          </button>
-        )}
-
-        {activeTab === 'contacts' && canManage && (
-          <button
-            onClick={() => contactListRef.current?.openAddForm()}
-            className="btn-primary-glow flex min-h-[44px] min-w-[44px] flex-shrink-0 items-center justify-center gap-2 px-3 sm:min-h-0 sm:min-w-0 sm:px-4"
-            title={t.businessConfig.addContact}
-            aria-label={t.businessConfig.addContact}
-          >
-            <Plus className="h-4 w-4 flex-shrink-0" />
-            <span className="hidden sm:inline">{t.businessConfig.addContact}</span>
-          </button>
-        )}
       </div>
 
       {/* Tab Content */}

@@ -290,7 +290,7 @@ export default function DashboardPage() {
 
   if (businessLoading || transactionsLoading) {
     return (
-      <div className="p-8 animate-pulse">
+      <div className="p-4 md:p-8 animate-pulse">
         {/* Filter bar skeleton */}
         <div className="h-9 w-full max-w-2xl bg-gray-200 dark:bg-gray-700 rounded-lg mb-6" />
         {/* Stats cards skeleton — 4 kolom */}
@@ -376,7 +376,7 @@ export default function DashboardPage() {
 
 
   return (
-    <div className="p-8">
+    <div className="p-4 pb-24 md:p-8">
       {/* Halaman ini tidak punya judul terlihat — desainnya langsung masuk ke
           filter periode. h1 sr-only supaya hierarki heading tetap benar dan
           screen reader punya nama halaman untuk dilompati. */}
@@ -695,10 +695,10 @@ export default function DashboardPage() {
 
       {/* AR Tracker (Monitor Piutang) — hanya tampil bila ada piutang outstanding */}
       {arData.total > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-card border border-transparent dark:border-gray-700 p-6 mb-6 transition-all duration-200 hover:shadow-card-hover dark:hover:border-gray-600 hover:-translate-y-1">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-card border border-transparent dark:border-gray-700 p-4 md:p-6 mb-6 transition-all duration-200 hover:shadow-card-hover dark:hover:border-gray-600 hover:-translate-y-1">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.arTrackerTitle}</h2>
+              <h2 className="text-lg md:text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.arTrackerTitle}</h2>
               {arData.count > 0 && (
                 <div className="flex items-center gap-1">
                   <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-700 text-[10px] font-bold text-gray-600 dark:text-gray-300">
@@ -727,7 +727,7 @@ export default function DashboardPage() {
             <div className="lg:col-span-2">
               <div className="mb-4">
                 <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t.dashboard.arTotalOutstanding}</div>
-                <div className="text-3xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">{formatCurrency(arData.total)}</div>
+                <div className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 break-all tabular-nums">{formatCurrency(arData.total)}</div>
               </div>
               {/* Aging bar */}
               <div className="flex rounded-lg overflow-hidden h-2 bg-gray-100 dark:bg-gray-700 mb-3">
@@ -805,9 +805,9 @@ export default function DashboardPage() {
       {transactions.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Financial Summary */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-card border border-transparent dark:border-gray-700 p-6 transition-all duration-200 hover:shadow-card-hover dark:hover:border-gray-600 hover:-translate-y-1">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-card border border-transparent dark:border-gray-700 p-4 md:p-6 transition-all duration-200 hover:shadow-card-hover dark:hover:border-gray-600 hover:-translate-y-1">
             <div className="flex items-center justify-between gap-3 mb-4">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.financialSummary}</h2>
+              <h2 className="text-lg md:text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.financialSummary}</h2>
               <span className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-2.5 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
                 {selectedPeriodLabel}
               </span>
@@ -888,9 +888,9 @@ export default function DashboardPage() {
           </div>
 
           {/* Recent Transactions */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-card border border-transparent dark:border-gray-700 p-6 transition-all duration-200 hover:shadow-card-hover dark:hover:border-gray-600 hover:-translate-y-1">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-card border border-transparent dark:border-gray-700 p-4 md:p-6 transition-all duration-200 hover:shadow-card-hover dark:hover:border-gray-600 hover:-translate-y-1">
           <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.recentTransactions}</h2>
+            <h2 className="text-lg md:text-xl font-bold text-gray-800 dark:text-gray-100">{t.dashboard.recentTransactions}</h2>
             <button
               onClick={() => router.push('/transactions')}
               aria-label={t.dashboard.viewAll}
@@ -922,10 +922,13 @@ export default function DashboardPage() {
                       className="cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800"
                       title={t.dashboard.viewTransactionDetail}
                     >
-                      <td className="py-3 pr-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                      {/* Kolom waktu disembunyikan di HP — empat kolom tidak
+                          muat di layar telepon dan memaksa tabel geser mendatar.
+                          Isinya dipindah jadi baris kecil di kolom deskripsi. */}
+                      <td className="hidden sm:table-cell py-3 pr-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                         {formatRelativeTime(transaction.created_at, transaction.date)}
                       </td>
-                      <td className="py-3 pr-4 max-w-[220px]">
+                      <td className="py-3 pr-3 md:pr-4 max-w-[150px] sm:max-w-[220px]">
                         <div className="truncate text-sm font-medium text-gray-800 dark:text-gray-200">
                           {descriptionText}
                         </div>
@@ -934,8 +937,11 @@ export default function DashboardPage() {
                             {contactName}
                           </div>
                         )}
+                        <div className="mt-0.5 truncate text-xs text-gray-400 dark:text-gray-500 sm:hidden">
+                          {formatRelativeTime(transaction.created_at, transaction.date)}
+                        </div>
                       </td>
-                      <td className="py-3 pr-4">
+                      <td className="py-3 pr-3 md:pr-4">
                         <CategoryBadge category={transaction.category} size="xs" />
                       </td>
                       <td className={`py-3 text-sm font-semibold text-right whitespace-nowrap tabular-nums ${
