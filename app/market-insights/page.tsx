@@ -10,20 +10,30 @@ import { FxTickerCard } from '@/components/market/FxTickerCard';
 import { StockNewsGrid } from '@/components/market/StockNewsGrid';
 import { MacroTrackerSection } from '@/components/market/MacroTrackerSection';
 import { ArticleSidebar } from '@/components/market/ArticleSidebar';
+import { getCollectionIndexContent } from '@/lib/site/server';
 
-export const metadata: Metadata = {
-  title: 'Market Insights — AXION | VC, PE & Macro Data untuk Indonesia',
-  description:
-    'Pulse pasar global, makroekonomi (suku bunga The Fed, inflasi, kurs USD/IDR), dan berita Venture Capital, Private Equity, dan UMKM Indonesia — semua dalam satu halaman.',
-  alternates: { canonical: 'https://axionventura.com/market-insights' },
-  openGraph: {
-    title: 'Market Insights — AXION',
-    description:
-      'Data pasar, makroekonomi, dan berita VC/PE/UMKM untuk family office & investor Indonesia.',
-    url: 'https://axionventura.com/market-insights',
-    type: 'website',
-  },
-};
+/**
+ * Kepala halaman (eyebrow, judul, paragraf) dan metadata SEO diambil dari Site
+ * CMS supaya bisa diubah platform admin tanpa deploy.
+ *
+ * Isi halamannya — kurs, makro, berita — SENGAJA tidak masuk CMS: itu data hidup
+ * dari API eksternal lewat `src/lib/marketData/service.ts`, bukan konten tulisan.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const content = await getCollectionIndexContent('market_insights');
+
+  return {
+    title: content.seo.title,
+    description: content.seo.description,
+    alternates: { canonical: 'https://axionventura.com/market-insights' },
+    openGraph: {
+      title: content.seo.title,
+      description: content.seo.description,
+      url: 'https://axionventura.com/market-insights',
+      type: 'website',
+    },
+  };
+}
 
 // Server Component — di-render di server tiap request, mengandalkan cache layer
 // di service.ts untuk membatasi external API calls. Revalidate ringan dari Next
@@ -31,7 +41,8 @@ export const metadata: Metadata = {
 export const revalidate = 600; // 10 menit
 
 export default async function MarketInsightsPage() {
-  const [fxResult, newsResult, articlesResult, macroResult] = await Promise.all([
+  const [content, fxResult, newsResult, articlesResult, macroResult] = await Promise.all([
+    getCollectionIndexContent('market_insights'),
     getFxRate(),
     getStockNews(),
     getVcPeSmeArticles(),
@@ -42,16 +53,12 @@ export default async function MarketInsightsPage() {
     <div className="container mx-auto px-6 py-12 max-w-6xl">
       <header className="mb-10 max-w-3xl">
         <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-3">
-          Market Insights
+          {content.eyebrow}
         </p>
         <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-4 leading-tight">
-          Market & Macro Insights for Indonesian Investors
+          {content.title}
         </h1>
-        <p className="text-lg text-gray-600 dark:text-gray-400">
-          Kurs, suku bunga global, inflasi, dan berita keuangan terbaru — diagregasi
-          dari Reuters, CNBC, FRED, dan ExchangeRate-API agar setiap keputusan
-          investasi punya konteks data yang up-to-date.
-        </p>
+        <p className="text-lg text-gray-600 dark:text-gray-400">{content.lead}</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">

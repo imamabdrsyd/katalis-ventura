@@ -45,8 +45,9 @@ const ENTRIES = [
     href: '/admin/posts',
     icon: Newspaper,
     title: 'Blog & Market Insights',
-    description: 'Artikel di /blog dan kepala halaman /market-insights.',
-    ready: false,
+    description:
+      'Tulis artikel /blog, dan atur kepala halaman /blog serta /market-insights.',
+    ready: true,
   },
 ];
 

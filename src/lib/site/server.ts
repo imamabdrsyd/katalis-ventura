@@ -27,7 +27,17 @@ import { LANDING_DEFAULTS } from './defaults/landing';
 import { SEO_DEFAULTS } from './defaults/seo';
 import { PRIVACY_DEFAULTS } from './defaults/privacy';
 import { TERMS_DEFAULTS } from './defaults/terms';
-import type { LandingContent, LegalContent, SeoContent, SitePageKey } from './types';
+import {
+  BLOG_INDEX_DEFAULTS,
+  MARKET_INSIGHTS_INDEX_DEFAULTS,
+} from './defaults/collections';
+import type {
+  CollectionIndexContent,
+  LandingContent,
+  LegalContent,
+  SeoContent,
+  SitePageKey,
+} from './types';
 
 /**
  * Ambil `published_content` mentah satu halaman.
@@ -97,6 +107,21 @@ const LEGAL_DEFAULTS: Record<'privacy' | 'terms', LegalContent> = {
   terms: TERMS_DEFAULTS,
 };
 
+export async function getCollectionIndexContent(
+  pageKey: 'blog_index' | 'market_insights'
+): Promise<CollectionIndexContent> {
+  const published = await cachedPublishedContent(pageKey)();
+  return mergeSiteContent(COLLECTION_INDEX_DEFAULTS[pageKey], published);
+}
+
+const COLLECTION_INDEX_DEFAULTS: Record<
+  'blog_index' | 'market_insights',
+  CollectionIndexContent
+> = {
+  blog_index: BLOG_INDEX_DEFAULTS,
+  market_insights: MARKET_INSIGHTS_INDEX_DEFAULTS,
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Jalur admin: draft (tanpa cache)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -139,6 +164,9 @@ export async function getPageRecord(pageKey: SitePageKey): Promise<{
 export function getPageDefaults(pageKey: 'landing'): LandingContent;
 export function getPageDefaults(pageKey: 'seo'): SeoContent;
 export function getPageDefaults(pageKey: 'privacy' | 'terms'): LegalContent;
+export function getPageDefaults(
+  pageKey: 'blog_index' | 'market_insights'
+): CollectionIndexContent;
 export function getPageDefaults(pageKey: SitePageKey): unknown;
 export function getPageDefaults(pageKey: SitePageKey): unknown {
   switch (pageKey) {
@@ -150,9 +178,9 @@ export function getPageDefaults(pageKey: SitePageKey): unknown {
       return PRIVACY_DEFAULTS;
     case 'terms':
       return TERMS_DEFAULTS;
-    default:
-      // Indeks koleksi (blog_index, market_insights) belum punya default;
-      // editor menampilkannya sebagai "belum dikelola CMS".
-      return null;
+    case 'blog_index':
+      return BLOG_INDEX_DEFAULTS;
+    case 'market_insights':
+      return MARKET_INSIGHTS_INDEX_DEFAULTS;
   }
 }

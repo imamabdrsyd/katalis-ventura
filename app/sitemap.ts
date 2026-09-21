@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { createAdminClient } from '@/lib/supabase-server';
 import { BLOG_POSTS } from '@/lib/blog/posts';
+import { getPublishedPostSlugs } from '@/lib/site/posts';
 
 const baseUrl = 'https://axionventura.com';
 
@@ -53,13 +54,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // Blog articles
+  // Artikel blog dari kode
   const blogRoutes: MetadataRoute.Sitemap = BLOG_POSTS.map((post) => ({
     url: `${baseUrl}/blog/${post.slug}`,
     lastModified: new Date(post.updatedAt),
     changeFrequency: 'monthly' as const,
     priority: 0.8,
   }));
+
+  // Artikel blog dari CMS. Kegagalan di sini tidak boleh menjatuhkan sitemap —
+  // kalau Supabase tidak terjangkau, lebih baik sitemap tanpa artikel CMS
+  // daripada tidak ada sitemap sama sekali.
+  let cmsBlogRoutes: MetadataRoute.Sitemap = [];
+  try {
+    const cmsPosts = await getPublishedPostSlugs('blog');
+    cmsBlogRoutes = cmsPosts.map((post) => ({
+      url: `${baseUrl}/blog/${post.slug}`,
+      lastModified: new Date(post.updatedAt),
+      changeFrequency: 'monthly' as const,
+      priority: 0.8,
+    }));
+  } catch {
+    cmsBlogRoutes = [];
+  }
 
   // Dynamic omni-channel public pages
   try {
@@ -77,8 +94,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     }));
 
-    return [...staticRoutes, ...blogRoutes, ...dynamicRoutes];
+    return [...staticRoutes, ...blogRoutes, ...cmsBlogRoutes, ...dynamicRoutes];
   } catch {
-    return [...staticRoutes, ...blogRoutes];
+    return [...staticRoutes, ...blogRoutes, ...cmsBlogRoutes];
   }
 }

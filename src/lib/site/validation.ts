@@ -243,9 +243,9 @@ export const legalContentSchema = z.object({
 });
 
 export const collectionIndexContentSchema = z.object({
-  eyebrow: localizedText(),
-  title: localizedText(z.string().max(300)),
-  lead: localizedText(longText),
+  eyebrow: shortText,
+  title: z.string().min(1).max(300),
+  lead: longText,
   seo: z.object({
     title: z.string().min(1).max(200),
     description: z.string().min(1).max(500),

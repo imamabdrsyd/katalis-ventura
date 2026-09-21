@@ -206,10 +206,17 @@ export interface LegalContent {
   };
 }
 
+/**
+ * Kepala halaman indeks koleksi (/blog, /market-insights).
+ *
+ * Satu bahasa, sama seperti halaman yang tayang sekarang — keduanya memang tidak
+ * punya pengalih bahasa sendiri (yang di footer landing page hanya memengaruhi
+ * landing page).
+ */
 export interface CollectionIndexContent {
-  eyebrow: LocalizedText;
-  title: LocalizedText;
-  lead: LocalizedText;
+  eyebrow: string;
+  title: string;
+  lead: string;
   seo: {
     title: string;
     description: string;

@@ -32,9 +32,6 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
   if (!pageKey) return badRequest(`Halaman "${rawKey}" tidak dikenal.`);
 
   const defaults = getPageDefaults(pageKey);
-  if (defaults === null) {
-    return badRequest(`Halaman "${pageKey}" belum dikelola lewat CMS.`);
-  }
 
   try {
     const supabase = await createServerClient();
@@ -84,11 +81,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   const { pageKey: rawKey } = await params;
   const pageKey = parsePageKey(rawKey);
   if (!pageKey) return badRequest(`Halaman "${rawKey}" tidak dikenal.`);
-
-  const defaults = getPageDefaults(pageKey);
-  if (defaults === null) {
-    return badRequest(`Halaman "${pageKey}" belum dikelola lewat CMS.`);
-  }
 
   let body: unknown;
   try {
