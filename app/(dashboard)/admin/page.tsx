@@ -27,11 +27,19 @@ const ENTRIES = [
     ready: true,
   },
   {
-    href: '/admin/legal',
+    href: '/admin/legal/privacy',
     icon: Scale,
-    title: 'Halaman Legal',
-    description: 'Kebijakan Privasi & Syarat Ketentuan.',
-    ready: false,
+    title: 'Kebijakan Privasi',
+    description:
+      'Isi /privacy. Diverifikasi Google saat consent screen OAuth dipublish — ubah dengan hati-hati.',
+    ready: true,
+  },
+  {
+    href: '/admin/legal/terms',
+    icon: Scale,
+    title: 'Syarat & Ketentuan',
+    description: 'Isi /terms — layanan, akun, kepemilikan data, batasan tanggung jawab.',
+    ready: true,
   },
   {
     href: '/admin/posts',

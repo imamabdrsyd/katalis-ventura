@@ -25,7 +25,9 @@ import { mergeSiteContent } from './merge';
 import { SITE_CONTENT_REVALIDATE_SECONDS, sitePageCacheTag } from './cache';
 import { LANDING_DEFAULTS } from './defaults/landing';
 import { SEO_DEFAULTS } from './defaults/seo';
-import type { LandingContent, SeoContent, SitePageKey } from './types';
+import { PRIVACY_DEFAULTS } from './defaults/privacy';
+import { TERMS_DEFAULTS } from './defaults/terms';
+import type { LandingContent, LegalContent, SeoContent, SitePageKey } from './types';
 
 /**
  * Ambil `published_content` mentah satu halaman.
@@ -85,6 +87,16 @@ export async function getSeoContent(): Promise<SeoContent> {
   return mergeSiteContent(SEO_DEFAULTS, published);
 }
 
+export async function getLegalContent(pageKey: 'privacy' | 'terms'): Promise<LegalContent> {
+  const published = await cachedPublishedContent(pageKey)();
+  return mergeSiteContent(LEGAL_DEFAULTS[pageKey], published);
+}
+
+const LEGAL_DEFAULTS: Record<'privacy' | 'terms', LegalContent> = {
+  privacy: PRIVACY_DEFAULTS,
+  terms: TERMS_DEFAULTS,
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Jalur admin: draft (tanpa cache)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -126,6 +138,7 @@ export async function getPageRecord(pageKey: SitePageKey): Promise<{
 /** Default kode per halaman — dipakai editor sebagai titik awal & dasar merge. */
 export function getPageDefaults(pageKey: 'landing'): LandingContent;
 export function getPageDefaults(pageKey: 'seo'): SeoContent;
+export function getPageDefaults(pageKey: 'privacy' | 'terms'): LegalContent;
 export function getPageDefaults(pageKey: SitePageKey): unknown;
 export function getPageDefaults(pageKey: SitePageKey): unknown {
   switch (pageKey) {
@@ -133,9 +146,13 @@ export function getPageDefaults(pageKey: SitePageKey): unknown {
       return LANDING_DEFAULTS;
     case 'seo':
       return SEO_DEFAULTS;
+    case 'privacy':
+      return PRIVACY_DEFAULTS;
+    case 'terms':
+      return TERMS_DEFAULTS;
     default:
-      // Halaman legal & indeks koleksi belum punya default; editor akan
-      // menampilkannya sebagai "belum dikelola CMS".
+      // Indeks koleksi (blog_index, market_insights) belum punya default;
+      // editor menampilkannya sebagai "belum dikelola CMS".
       return null;
   }
 }

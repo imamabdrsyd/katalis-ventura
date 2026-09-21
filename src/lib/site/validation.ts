@@ -194,40 +194,44 @@ export const seoContentSchema = z.object({
 // Blok konten (halaman legal & artikel)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Blok satu bahasa — lihat catatan di `ContentBlock` (types.ts) soal kenapa
+ * kebahasaan ditangani satu tingkat di atas, bukan per blok.
+ */
 export const contentBlockSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('heading'), text: localizedText(z.string().max(300)) }),
-  z.object({ type: z.literal('paragraph'), text: localizedText(longText) }),
+  z.object({ type: z.literal('heading'), text: z.string().max(300) }),
+  z.object({ type: z.literal('paragraph'), text: longText }),
   z.object({
     type: z.literal('list'),
     ordered: z.boolean().optional(),
-    items: z.array(localizedText(longText)).max(50),
+    items: z.array(longText).max(50),
   }),
   z.object({
     type: z.literal('callout'),
     tone: z.enum(['info', 'warning', 'success']),
-    text: localizedText(longText),
+    text: longText,
   }),
   z.object({
     type: z.literal('table'),
-    headers: z.array(localizedText()).max(8),
-    rows: z.array(z.array(localizedText(longText)).max(8)).max(60),
+    headers: z.array(shortText).max(8),
+    rows: z.array(z.array(longText).max(8)).max(60),
   }),
   z.object({
     type: z.literal('image'),
     src: imageSrc,
-    alt: localizedText(),
-    caption: localizedText().optional(),
+    alt: shortText,
+    caption: shortText.optional(),
   }),
 ]);
 
 export const legalContentSchema = z.object({
-  title: localizedText(),
-  effectiveDate: localizedText(),
-  intro: localizedText(longText),
+  title: shortText.min(1),
+  effectiveDate: shortText.min(1),
+  intro: longText,
   sections: z
     .array(
       z.object({
-        heading: localizedText(z.string().max(300)),
+        heading: z.string().min(1).max(300),
         blocks: z.array(contentBlockSchema).max(80),
       })
     )

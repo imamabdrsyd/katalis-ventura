@@ -99,10 +99,34 @@ export function List({ items }: { items: ReactNode[] }) {
   );
 }
 
-/** Blok sorot untuk poin yang perlu menonjol (mis. komitmen Limited Use Google). */
-export function Callout({ children }: { children: ReactNode }) {
+/**
+ * Blok sorot untuk poin yang perlu menonjol (mis. komitmen Limited Use Google).
+ *
+ * `tone` default 'info' = tampilan netral yang dipakai sejak awal, jadi call
+ * site lama tidak perlu diubah. 'warning' dipakai penafian yang konsekuensinya
+ * nyata bila terlewat — mis. "AXION bukan jasa akuntansi" di Syarat & Ketentuan.
+ */
+const CALLOUT_TONES = {
+  info: 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 text-gray-700 dark:text-gray-200',
+  warning:
+    'border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-900/20 text-amber-900 dark:text-amber-100',
+  success:
+    'border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-900 dark:text-emerald-100',
+} as const;
+
+export type CalloutTone = keyof typeof CALLOUT_TONES;
+
+export function Callout({
+  children,
+  tone = 'info',
+}: {
+  children: ReactNode;
+  tone?: CalloutTone;
+}) {
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-5 py-4 text-base leading-relaxed text-gray-700 dark:text-gray-200">
+    <div
+      className={`rounded-xl border px-5 py-4 text-base leading-relaxed ${CALLOUT_TONES[tone]}`}
+    >
       {children}
     </div>
   );

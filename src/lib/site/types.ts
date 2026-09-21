@@ -171,36 +171,40 @@ export interface SeoContent {
  * mentah dari form admin berarti jalur injeksi; blok menutupnya karena teks
  * selalu dirender sebagai teks.
  *
- * `text` mendukung penekanan inline terbatas lewat **tebal** (lihat
- * `renderInlineEmphasis`), bukan markdown penuh.
+ * Blok SATU BAHASA, bukan `LocalizedText`. Kebahasaan ditangani satu tingkat di
+ * atas: halaman legal memang hanya bahasa Indonesia (menerjemahkan dokumen yang
+ * mengikat secara hukum butuh penerjemah, bukan field kosong di form), dan
+ * artikel menyimpan `body` terpisah per bahasa (lihat `SitePostContent.locales`).
+ * Menempelkan dua bahasa ke setiap blok akan memaksa keduanya punya struktur
+ * paragraf yang identik — asumsi yang tidak berlaku untuk prosa panjang.
+ *
+ * `text` mendukung penekanan inline terbatas: `**tebal**`, `*miring*`,
+ * `` `kode` ``, dan `[teks](url)` — lihat `src/lib/site/inlineMarkup.ts`.
  */
 export type ContentBlock =
-  | { type: 'heading'; text: LocalizedText }
-  | { type: 'paragraph'; text: LocalizedText }
-  | { type: 'list'; ordered?: boolean; items: LocalizedText[] }
-  | { type: 'callout'; tone: 'info' | 'warning' | 'success'; text: LocalizedText }
-  | { type: 'table'; headers: LocalizedText[]; rows: LocalizedText[][] }
-  | { type: 'image'; src: string; alt: LocalizedText; caption?: LocalizedText };
+  | { type: 'heading'; text: string }
+  | { type: 'paragraph'; text: string }
+  | { type: 'list'; ordered?: boolean; items: string[] }
+  | { type: 'callout'; tone: 'info' | 'warning' | 'success'; text: string }
+  | { type: 'table'; headers: string[]; rows: string[][] }
+  | { type: 'image'; src: string; alt: string; caption?: string };
 
 export interface LegalSection {
-  heading: LocalizedText;
+  heading: string;
   blocks: ContentBlock[];
 }
 
 export interface LegalContent {
-  title: LocalizedText;
-  effectiveDate: LocalizedText;
-  intro: LocalizedText;
+  title: string;
+  /** Tanggal berlaku sebagai teks, mis. "6 Agustus 2026". */
+  effectiveDate: string;
+  intro: string;
   sections: LegalSection[];
   seo: {
     title: string;
     description: string;
   };
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Indeks blog & market insights (kepala halaman saja)
-// ─────────────────────────────────────────────────────────────────────────────
 
 export interface CollectionIndexContent {
   eyebrow: LocalizedText;
