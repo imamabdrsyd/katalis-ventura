@@ -36,6 +36,7 @@ import {
   Bot,
   MessagesSquare,
   Paperclip,
+  Globe,
 } from 'lucide-react';
 
 import { motion, useReducedMotion } from 'framer-motion';
@@ -894,7 +895,7 @@ function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
   const { navSections, t } = useNavData();
-  const { activeBusiness } = useBusinessContext();
+  const { activeBusiness, isSuperadmin } = useBusinessContext();
 
   // Di <md sidebar berperilaku sebagai drawer modal (ada backdrop, menutupi
   // halaman). Di md+ ia bagian permanen layout — mengurung fokus di sana justru
@@ -1095,6 +1096,12 @@ function Sidebar({
               : []),
             { href: '/businesses', label: t.nav.manageBusiness, icon: Building2 },
             ...(canManage ? [{ href: '/agent', label: t.nav.agenticWorkspace, icon: Bot }] : []),
+            // Konten situs publik bukan milik bisnis mana pun — hanya platform
+            // admin yang melihatnya. Menyembunyikannya di sini cuma kerapian UI;
+            // penjagaan sebenarnya ada di app/(dashboard)/admin/layout.tsx.
+            ...(isSuperadmin
+              ? [{ href: '/admin', label: t.nav.siteContent, icon: Globe }]
+              : []),
           ].map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');

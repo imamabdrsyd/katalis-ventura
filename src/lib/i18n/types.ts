@@ -123,6 +123,7 @@ export interface Translations {
     language: string;
     leads: string;
     agenticWorkspace: string;
+    siteContent: string;
     searchingTransactions: string;
     searchingData: string;
     /** Pengumuman jumlah hasil untuk screen reader (aria-live). */

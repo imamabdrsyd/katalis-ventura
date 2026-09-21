@@ -21,6 +21,11 @@ export const RESERVED_SLUGS = new Set([
   'api',
   'blog',
   'cek-bisnis',
+  // Route Site CMS. Wajib di sini: route statis menang atas `[slug]`, jadi
+  // bisnis yang mengklaim slug ini akan mendapat halaman publik yang tidak
+  // pernah bisa dibuka — gagal diam-diam, bukan pesan error.
+  'admin',
+  'preview',
 ]);
 
 /**

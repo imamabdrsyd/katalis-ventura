@@ -126,6 +126,7 @@ export const id: Translations = {
     language: 'Bahasa',
     leads: 'Leads',
     agenticWorkspace: 'Agentic Workspace',
+    siteContent: 'Konten Situs',
     searchingTransactions: 'Mencari transaksi...',
     searchingData: 'Mencari data...',
     searchResultsCount: (n: number) => `${n} hasil ditemukan`,

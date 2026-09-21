@@ -126,6 +126,7 @@ export const en: Translations = {
     language: 'Language',
     leads: 'Leads',
     agenticWorkspace: 'Agentic Workspace',
+    siteContent: 'Site Content',
     searchingTransactions: 'Searching transactions...',
     searchingData: 'Searching data...',
     searchResultsCount: (n: number) => `${n} result${n === 1 ? '' : 's'} found`,
