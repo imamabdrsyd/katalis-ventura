@@ -40,6 +40,34 @@ export const LANDING_SECTION_KEYS = [
 
 export type LandingSectionKey = (typeof LANDING_SECTION_KEYS)[number];
 
+/**
+ * Jangkar HTML tiap section (`id` di elemen `<section>`), dipakai menu navbar
+ * dan tombol hero untuk melompat ke sana.
+ *
+ * SUMBER TUNGGAL. Renderer memakainya untuk memasang `id`, sedangkan renderer
+ * dan editor memakai kebalikannya untuk tahu sebuah link menunjuk ke section
+ * mana — supaya link ke section yang disembunyikan ikut hilang, bukan jadi
+ * tautan mati. Kalau peta ini dipecah jadi dua salinan, keduanya akan melenceng
+ * dan editor akan berbohong soal apa yang sebenarnya tampil.
+ *
+ * `null` = section tanpa jangkar (tidak bisa dituju link).
+ */
+export const LANDING_SECTION_ANCHOR: Record<LandingSectionKey, string | null> = {
+  accounting: 'section-accounting',
+  ssot: 'section-ssot',
+  omnichannel: 'section-omnichannel',
+  ecommerce: 'section-ecommerce',
+  health: null,
+};
+
+/** Kebalikan `LANDING_SECTION_ANCHOR`. */
+export const LANDING_ANCHOR_TO_SECTION: Record<string, LandingSectionKey> =
+  Object.fromEntries(
+    Object.entries(LANDING_SECTION_ANCHOR)
+      .filter(([, value]) => value !== null)
+      .map(([key, value]) => [value as string, key as LandingSectionKey])
+  );
+
 /** Kepala section: eyebrow + judul + paragraf pengantar. Dipakai semua section. */
 export interface LandingSectionHeader {
   visible: boolean;

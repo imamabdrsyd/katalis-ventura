@@ -22,12 +22,14 @@ import { OmnichannelSection } from '@/components/omnichannel/OmnichannelSection'
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import HealthScoreCalculator from '@/components/landing/HealthScoreCalculator';
 import SingleSourceOfTruth from '@/components/landing/SingleSourceOfTruth';
-import type {
-  LandingContent,
-  LandingSectionKey,
-  Locale,
-  LocalizedText,
+import {
+  LANDING_SECTION_ANCHOR,
+  type LandingContent,
+  type LandingSectionKey,
+  type Locale,
+  type LocalizedText,
 } from '@/lib/site/types';
+import { hasLiveTarget } from '@/lib/site/landingNav';
 
 interface BusinessLogo {
   id: string;
@@ -86,14 +88,6 @@ const SECTION_SHELL: Record<LandingSectionKey, string> = {
     'py-24 md:py-32 bg-gray-50 dark:bg-gray-900/40 border-y border-gray-200 dark:border-gray-800',
 };
 
-const SECTION_ANCHOR: Record<LandingSectionKey, string | undefined> = {
-  accounting: 'section-accounting',
-  ssot: 'section-ssot',
-  omnichannel: 'section-omnichannel',
-  ecommerce: 'section-ecommerce',
-  health: undefined,
-};
-
 export default function LandingPageClient({ content }: { content: LandingContent }) {
   const [stats, setStats] = useState<Stats>({ users: 0, businesses: 0, businessLogos: [] });
   const [loading, setLoading] = useState(true);
@@ -141,7 +135,11 @@ export default function LandingPageClient({ content }: { content: LandingContent
   const { hero, nav, trustStrip, sections, closing, footer } = content;
   const heroTitle1Words = tx(hero.title1).split(' ');
   const heroTitle2Words = tx(hero.title2).split(' ');
-  const navItems = nav.items.filter((item) => item.visible);
+
+  // Menu yang menunjuk ke section tersembunyi ikut hilang — lihat `landingNav.ts`.
+  const navItems = nav.items.filter(
+    (item) => item.visible && hasLiveTarget(content, item.href)
+  );
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 flex flex-col antialiased" style={{ scrollBehavior: 'smooth' }}>
@@ -302,13 +300,20 @@ export default function LandingPageClient({ content }: { content: LandingContent
                       </svg>
                     </Link>
 
-                    <a
-                      href={hero.secondaryCta.href}
-                      className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors group cursor-pointer"
-                    >
-                      {tx(hero.secondaryCta.label)}
-                      <span className="transition-transform group-hover:translate-x-1">↓</span>
-                    </a>
+                    {/* Tombol kedua hero biasanya menunjuk ke section ("Lihat
+                        cara kerjanya" → #section-ssot). Kalau section tujuannya
+                        disembunyikan, tombolnya ikut hilang — tombol yang diklik
+                        lalu tidak terjadi apa-apa lebih buruk daripada tidak ada
+                        tombol sama sekali. */}
+                    {hasLiveTarget(content, hero.secondaryCta.href) && (
+                      <a
+                        href={hero.secondaryCta.href}
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors group cursor-pointer"
+                      >
+                        {tx(hero.secondaryCta.label)}
+                        <span className="transition-transform group-hover:translate-x-1">↓</span>
+                      </a>
+                    )}
                   </motion.div>
                 </motion.div>
               </div>
@@ -418,7 +423,7 @@ export default function LandingPageClient({ content }: { content: LandingContent
           const section = sections[key];
           if (!section.visible) return null;
 
-          const anchor = SECTION_ANCHOR[key];
+          const anchor = LANDING_SECTION_ANCHOR[key] ?? undefined;
 
           return (
             <motion.section

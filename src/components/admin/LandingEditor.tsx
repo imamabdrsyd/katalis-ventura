@@ -24,6 +24,7 @@ import {
   emptyLocalized,
 } from './SiteEditorFields';
 import type { LandingContent, LandingSectionKey } from '@/lib/site/types';
+import { anchorSectionKey, isSectionRendered } from '@/lib/site/landingNav';
 
 const SECTION_META: Record<LandingSectionKey, { title: string; description: string }> = {
   accounting: {
@@ -47,6 +48,17 @@ const SECTION_META: Record<LandingSectionKey, { title: string; description: stri
     description: 'Judul + kalkulator skor kesehatan bisnis',
   },
 };
+
+/**
+ * Nama section tujuan bila link ini menunjuk ke section yang tidak dirender —
+ * `null` kalau tujuannya hidup, atau kalau link-nya bukan jangkar section.
+ */
+function hiddenTargetLabel(draft: LandingContent | null, href: string): string | null {
+  if (!draft) return null;
+  const key = anchorSectionKey(href);
+  if (!key) return null;
+  return isSectionRendered(draft, key) ? null : SECTION_META[key].title;
+}
 
 export function LandingEditor() {
   const editor = useSiteEditor<LandingContent>('landing');
@@ -103,6 +115,16 @@ export function LandingEditor() {
               }
               renderItem={(item, _index, onItemChange) => (
                 <>
+                  {/* Menu yang menunjuk ke section tersembunyi ikut hilang dari
+                      navbar, apa pun isi centang di bawah. Tanpa penanda ini,
+                      centang "Tampilkan menu ini" terlihat rusak. */}
+                  {hiddenTargetLabel(draft, item.href) && (
+                    <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+                      Menu ini menunjuk ke {hiddenTargetLabel(draft, item.href)} yang sedang
+                      disembunyikan, jadi ia tidak tampil di navbar. Tampilkan section itu
+                      dulu bila menunya ingin muncul.
+                    </p>
+                  )}
                   <LocalizedField
                     label="Label"
                     value={item.label}

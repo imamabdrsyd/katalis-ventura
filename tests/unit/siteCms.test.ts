@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { isSafeHref, parseInlineMarkup } from '@/lib/site/inlineMarkup';
 import { isSameContent, mergeSiteContent } from '@/lib/site/merge';
+import { anchorSectionKey, hasLiveTarget, isSectionRendered } from '@/lib/site/landingNav';
+import { LANDING_DEFAULTS } from '@/lib/site/defaults/landing';
+import type { LandingContent } from '@/lib/site/types';
 
 /**
  * Dua bagian Site CMS yang paling berisiko kalau salah, jadi dua-duanya diuji:
@@ -166,5 +169,73 @@ describe('isSameContent', () => {
 
   it('membedakan isi yang benar-benar berbeda', () => {
     expect(isSameContent({ a: 1 }, { a: 2 })).toBe(false);
+  });
+});
+
+describe('landingNav — link ke section tersembunyi', () => {
+  /**
+   * Regresi nyata: menyembunyikan section Ecommerce lewat /admin menghilangkan
+   * section-nya, tapi menu "Ecommerce Integration" tetap ada di navbar dan
+   * mengarah ke jangkar yang sudah tidak dirender.
+   */
+  const withHidden = (key: 'ecommerce' | 'ssot'): LandingContent => ({
+    ...LANDING_DEFAULTS,
+    sections: {
+      ...LANDING_DEFAULTS.sections,
+      [key]: { ...LANDING_DEFAULTS.sections[key], visible: false },
+    },
+  });
+
+  it('memetakan jangkar ke key section-nya', () => {
+    expect(anchorSectionKey('#section-ecommerce')).toBe('ecommerce');
+    expect(anchorSectionKey('#section-ssot')).toBe('ssot');
+  });
+
+  it('mengembalikan null untuk link non-section', () => {
+    expect(anchorSectionKey('/blog')).toBeNull();
+    expect(anchorSectionKey('https://example.com')).toBeNull();
+    expect(anchorSectionKey('#bukan-section')).toBeNull();
+  });
+
+  it('menganggap section default sebagai dirender', () => {
+    expect(isSectionRendered(LANDING_DEFAULTS, 'ecommerce')).toBe(true);
+    expect(hasLiveTarget(LANDING_DEFAULTS, '#section-ecommerce')).toBe(true);
+  });
+
+  it('mematikan link saat section-nya disembunyikan', () => {
+    const content = withHidden('ecommerce');
+    expect(isSectionRendered(content, 'ecommerce')).toBe(false);
+    expect(hasLiveTarget(content, '#section-ecommerce')).toBe(false);
+  });
+
+  it('tidak ikut mematikan link ke section lain', () => {
+    const content = withHidden('ecommerce');
+    expect(hasLiveTarget(content, '#section-ssot')).toBe(true);
+  });
+
+  it('mematikan link saat key dibuang dari sectionOrder', () => {
+    // Dikeluarkan dari urutan = tidak dirender, meski flag visible masih true.
+    const content: LandingContent = {
+      ...LANDING_DEFAULTS,
+      sectionOrder: LANDING_DEFAULTS.sectionOrder.filter((key) => key !== 'ecommerce'),
+    };
+    expect(content.sections.ecommerce.visible).toBe(true);
+    expect(hasLiveTarget(content, '#section-ecommerce')).toBe(false);
+  });
+
+  it('membiarkan link non-anchor apa adanya', () => {
+    const content = withHidden('ecommerce');
+    expect(hasLiveTarget(content, '/blog')).toBe(true);
+    expect(hasLiveTarget(content, 'https://instagram.com/imamabdrsyd')).toBe(true);
+  });
+
+  it('menyaring menu navbar persis seperti yang dilakukan renderer', () => {
+    const content = withHidden('ecommerce');
+    const visible = content.nav.items
+      .filter((item) => item.visible && hasLiveTarget(content, item.href))
+      .map((item) => item.key);
+
+    expect(visible).toEqual(['accounting', 'ssot', 'omnichannel']);
+    expect(visible).not.toContain('ecommerce');
   });
 });
