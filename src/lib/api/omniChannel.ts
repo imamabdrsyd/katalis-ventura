@@ -50,6 +50,26 @@ export async function upsertOmniChannel(
   return json.data;
 }
 
+/**
+ * Minta server membuang cache data halaman publik `/[slug]` bisnis ini.
+ *
+ * Dipakai jalur tulis yang TIDAK lewat route handler — mutasi event ditulis
+ * langsung lewat Supabase client, jadi tidak ada server yang bisa memanggil
+ * `revalidateTag` sendiri. Tanpa ini, perubahan seperti membuka pendaftaran
+ * event baru terlihat di halaman publik setelah cache 60 detiknya lewat.
+ *
+ * SENGAJA tidak pernah melempar: aksinya sudah tersimpan di DB sebelum fungsi
+ * ini dipanggil. Gagal membuang cache itu masalah kesegaran, bukan kegagalan
+ * aksi — menampilkan toast merah di situ cuma menyesatkan.
+ */
+export async function revalidatePublicPage(businessId: string): Promise<void> {
+  try {
+    await fetch(`/api/omni-channel/${businessId}/revalidate`, { method: 'POST' });
+  } catch {
+    // best-effort
+  }
+}
+
 export async function addOmniChannelLink(
   _omniChannelId: string,
   payload: UpsertOmniChannelLinkData & { businessId: string }

@@ -60,6 +60,7 @@ export const SURFACE_BY_ID: Record<Surface, SurfaceMeta> = SURFACES.reduce(
 export type SectionId =
   | 'page-config'
   | 'featured-product'
+  | 'rate-card'
   | 'widget'
   | 'links'
   | 'gallery'
@@ -73,6 +74,9 @@ export interface SectionMeta {
 export const SECTION_SURFACES: Record<SectionId, Surface[]> = {
   'page-config': ['public-page'],
   'featured-product': ['public-page'],
+  // Rate Card hanya ada di halaman bio; Storefront landing menampilkan widget &
+  // link saja, tidak pernah daftar harga.
+  'rate-card': ['public-page'],
   // 'widget' menggabungkan: Widget Utama (kontak), Konfigurasi Widget Reservasi,
   // dan Harga Layanan — semuanya feed ke satu widget output yang sama.
   'widget': ['public-page', 'storefront'],

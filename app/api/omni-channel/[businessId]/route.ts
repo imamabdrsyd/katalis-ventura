@@ -54,6 +54,13 @@ const upsertSchema = z.object({
   price_unit: z.string().max(50).nullable().optional(),
   featured_product: featuredProductSchema,
   featured_item_ids: z.array(z.string().uuid()).optional(),
+  // Rate Card (migr 152). Field yang tidak terdaftar di schema ini DIBUANG
+  // Zod secara senyap — gejalanya "tombol simpan jalan tapi tidak ada yang
+  // berubah", jadi setiap kolom baru wajib ikut didaftarkan di sini.
+  show_rate_card: z.boolean().optional(),
+  rate_card_item_ids: z.array(z.string().uuid()).max(50).optional(),
+  rate_card_title: z.string().max(80).nullable().optional(),
+  rate_card_note: z.string().max(300).nullable().optional(),
   button_color: z.string().max(20).nullable().optional(),
   banner_position: z.string().max(50).nullable().optional(),
 });

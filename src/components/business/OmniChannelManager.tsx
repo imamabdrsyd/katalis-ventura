@@ -12,6 +12,7 @@ import { OmniChannelGallery } from './OmniChannelGallery';
 import { OmniChannelShowcase } from './OmniChannelShowcase';
 import { OmniChannelPricing } from './OmniChannelPricing';
 import { OmniChannelFeaturedProductConfig } from './OmniChannelFeaturedProductConfig';
+import { OmniChannelRateCardConfig } from './OmniChannelRateCardConfig';
 import { OmniChannelWidgetConfig } from './OmniChannelWidgetConfig';
 import { ConfigSection } from './ConfigSection';
 import { OmniChannelPreview } from './OmniChannelPreview';
@@ -63,6 +64,7 @@ export function OmniChannelManager({ business, userId, onBusinessUpdated }: Prop
   const [loading, setLoading] = useState(true);
   const [togglingWidget, setTogglingWidget] = useState(false);
   const [togglingLinks, setTogglingLinks] = useState(false);
+  const [togglingRateCard, setTogglingRateCard] = useState(false);
   const [togglingLanding, setTogglingLanding] = useState(false);
   const [activeFilter, setActiveFilter] = useState<SurfaceFilter>('all');
 
@@ -103,7 +105,7 @@ export function OmniChannelManager({ business, userId, onBusinessUpdated }: Prop
   }, [fetchChannel]);
 
   async function toggleField(
-    field: 'show_widget' | 'show_links',
+    field: 'show_widget' | 'show_links' | 'show_rate_card',
     current: boolean,
     setSaving: (v: boolean) => void
   ) {
@@ -125,6 +127,7 @@ export function OmniChannelManager({ business, userId, onBusinessUpdated }: Prop
         show_showcase: channel.show_showcase,
         show_widget: field === 'show_widget' ? !current : channel.show_widget,
         show_links: field === 'show_links' ? !current : channel.show_links,
+        show_rate_card: field === 'show_rate_card' ? !current : channel.show_rate_card,
       }, userId);
       fetchChannel();
     } catch {
@@ -229,6 +232,31 @@ export function OmniChannelManager({ business, userId, onBusinessUpdated }: Prop
                 userId={userId}
                 channel={channel}
                 onChanged={fetchChannel}
+              />
+            </ConfigSection>
+          )}
+
+          {/* Section: Rate Card (migr 152) — daftar harga wire dari katalog.
+              Tanpa gating sektor: daftar harga relevan untuk jasa, produk,
+              maupun dagang. Yang menentukan tampil cuma toggle-nya. */}
+          {channel && (
+            <ConfigSection
+              sectionId="rate-card"
+              activeFilter={activeFilter}
+            >
+              <OmniChannelRateCardConfig
+                businessId={businessId}
+                userId={userId}
+                channel={channel}
+                onChanged={fetchChannel}
+                catalogHref={business.business_type === 'jasa' ? '/calendar' : '/point-of-sales'}
+                visibilityToggle={
+                  <VisibilityToggle
+                    checked={channel.show_rate_card ?? false}
+                    onChange={() => toggleField('show_rate_card', channel.show_rate_card ?? false, setTogglingRateCard)}
+                    disabled={togglingRateCard}
+                  />
+                }
               />
             </ConfigSection>
           )}

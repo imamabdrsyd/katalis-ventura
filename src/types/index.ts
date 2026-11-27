@@ -714,6 +714,11 @@ export interface BusinessOmniChannel {
   featured_product?: FeaturedProduct | null;
   /** Item katalog yang difitur di widget "Produk Unggulan" (urut sesuai array). */
   featured_item_ids?: string[];
+  /** Rate Card (migr 152) — daftar harga yang juga bersumber dari katalog. */
+  show_rate_card?: boolean;
+  rate_card_item_ids?: string[];
+  rate_card_title?: string | null;
+  rate_card_note?: string | null;
   button_color?: string | null;
   banner_position?: string | null;
   created_at: string;
@@ -745,6 +750,10 @@ export interface UpsertOmniChannelData {
   public_url_mode?: 'slug-only' | 'axion-only' | 'both';
   featured_product?: FeaturedProduct | null;
   featured_item_ids?: string[];
+  show_rate_card?: boolean;
+  rate_card_item_ids?: string[];
+  rate_card_title?: string | null;
+  rate_card_note?: string | null;
   button_color?: string | null;
   banner_position?: string | null;
 }

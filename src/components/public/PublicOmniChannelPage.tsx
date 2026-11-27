@@ -9,6 +9,7 @@ import { OmnichannelWidget } from '@/components/omnichannel/OmnichannelWidget';
 import { OmnichannelLinks } from '@/components/omnichannel/OmnichannelLinks';
 import { OmnichannelFeaturedProduct } from '@/components/omnichannel/OmnichannelFeaturedProduct';
 import { OmnichannelEventCard } from '@/components/omnichannel/OmnichannelEventCard';
+import { OmnichannelRateCard } from '@/components/omnichannel/OmnichannelRateCard';
 
 interface Props {
   channel: BusinessOmniChannel;
@@ -26,6 +27,8 @@ export function PublicOmniChannelPage({ channel, business, events = [] }: Props)
   const showWidget = business.show_widget;
   const eventSlug = business.slug;
   const hasEvents = events.length > 0 && !!eventSlug;
+  const rateCardItems = business.rate_card_items ?? [];
+  const hasRateCard = !!business.show_rate_card && rateCardItems.length > 0;
   const showLinks = business.show_links && business.links.length > 0;
   const layout = business.layout_mode;
   const showLogo = layout !== 'clean';
@@ -163,6 +166,23 @@ export function PublicOmniChannelPage({ channel, business, events = [] }: Props)
               products={featuredProducts}
               whatsappNumber={business.whatsapp_number}
               businessName={business.business_name}
+            />
+          </div>
+        )}
+
+        {/* RATE CARD — daftar harga, di bawah CTA (widget/event) dan di atas link.
+            Urutan bacanya disengaja: aksi dulu, harga sebagai bahan pertimbangan,
+            baru kanal lain. Kolomnya sama sempit dengan Links supaya daftar
+            harganya tetap terbaca di layar lebar. */}
+        {hasRateCard && (
+          <div className="max-w-md mx-auto w-full mt-6">
+            <OmnichannelRateCard
+              items={rateCardItems}
+              title={business.rate_card_title}
+              note={business.rate_card_note}
+              whatsappNumber={business.whatsapp_number}
+              businessName={business.business_name}
+              buttonColor={business.button_color}
             />
           </div>
         )}

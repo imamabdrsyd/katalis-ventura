@@ -40,7 +40,7 @@ import { isManagerRole } from '@/lib/roles';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ColorPickerField } from '@/components/ui/ColorPickerField';
 import { DEFAULT_BRAND_COLOR } from '@/lib/colorUtils';
-import { getOmniChannel, upsertOmniChannel } from '@/lib/api/omniChannel';
+import { getOmniChannel, revalidatePublicPage, upsertOmniChannel } from '@/lib/api/omniChannel';
 import {
   addEventDate,
   deleteEventDate,
@@ -224,8 +224,22 @@ export function EventManagerLauncher({ headerSlot }: Props) {
     [loadRegistrations]
   );
 
+  /**
+   * Buang cache halaman publik setelah event berubah.
+   *
+   * Mutasi di modul ini ditulis langsung lewat Supabase client, jadi tidak ada
+   * route handler yang bisa memanggil `revalidateTag` sendiri — tanpa ini,
+   * kartu event di `/[slug]` baru menyusul sampai 60 detik kemudian dan owner
+   * yang baru menekan "Buka pendaftaran" melihat halaman bio-nya kosong.
+   * Best-effort & tidak di-await: aksinya sudah tersimpan.
+   */
+  const refreshPublicPage = useCallback(() => {
+    if (activeBusinessId) void revalidatePublicPage(activeBusinessId);
+  }, [activeBusinessId]);
+
   async function handleSaved(saved: EventSession) {
     await load(saved.id);
+    refreshPublicPage();
   }
 
   async function handleStatusChange(status: EventSessionStatus) {
@@ -235,6 +249,7 @@ export function EventManagerLauncher({ headerSlot }: Props) {
       await updateEventSession(selectedSession.id, { status });
       toast.success(e.toastUpdated);
       await load(selectedSession.id);
+      refreshPublicPage();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : e.saveFailed);
     } finally {
@@ -251,6 +266,7 @@ export function EventManagerLauncher({ headerSlot }: Props) {
       toast.success(e.toastDeleted);
       setSelectedSessionId(null);
       await load();
+      refreshPublicPage();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : e.saveFailed);
     } finally {
@@ -268,6 +284,7 @@ export function EventManagerLauncher({ headerSlot }: Props) {
       toast.success(e.toastDateAdded);
       await load(selectedSession.id);
       setSelectedDateId(created.id);
+      refreshPublicPage();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : e.saveFailed);
     } finally {
@@ -283,6 +300,7 @@ export function EventManagerLauncher({ headerSlot }: Props) {
       await deleteEventDate(date.id);
       toast.success(e.toastDateRemoved);
       await load(selectedSession?.id);
+      refreshPublicPage();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : e.saveFailed);
     } finally {
@@ -298,6 +316,7 @@ export function EventManagerLauncher({ headerSlot }: Props) {
       toast.success(e.toastWinner);
       await load(selectedSession?.id);
       setSelectedDateId(date.id);
+      refreshPublicPage();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : e.saveFailed);
     } finally {
@@ -314,6 +333,7 @@ export function EventManagerLauncher({ headerSlot }: Props) {
       setRegistrations((prev) =>
         prev.map((r) => (r.id === reg.id ? { ...r, status: 'cancelled' as const } : r))
       );
+      refreshPublicPage();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : e.saveFailed);
     } finally {

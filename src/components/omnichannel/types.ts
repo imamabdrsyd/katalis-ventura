@@ -69,6 +69,22 @@ export interface PublicEventSummary {
   dates: Array<{ id: string; event_date: string; taken: number }>;
 }
 
+/**
+ * Satu baris Rate Card (migr 152) — proyeksi dari `catalog_items`.
+ *
+ * Harga & satuan SENGAJA tidak disalin ke konfigurasi omni-channel: yang
+ * dipajang ke publik selalu harga katalog yang sama dengan yang dipakai saat
+ * mencatat pendapatan. Tidak ada field gambar di sini — rate card adalah daftar
+ * harga yang padat, bukan etalase (itu tugas `PublicFeaturedProduct`).
+ */
+export interface PublicRateCardItem {
+  id: string;
+  name: string;
+  description?: string | null;
+  price: number;
+  unit?: string | null;
+}
+
 export interface PublicPricingRule {
   id: string;
   date_from: string;
@@ -105,6 +121,11 @@ export interface PublicBusiness {
   monthly_price?: number | null;
   pricing_rules?: PublicPricingRule[];
   featured_products?: PublicFeaturedProduct[];
+  /** Rate Card (migr 152). Kartu tampil hanya bila toggle ON *dan* ada itemnya. */
+  show_rate_card?: boolean;
+  rate_card_title?: string | null;
+  rate_card_note?: string | null;
+  rate_card_items?: PublicRateCardItem[];
   button_color?: string | null;
   banner_position?: string | null;
 }

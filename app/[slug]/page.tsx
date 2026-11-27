@@ -27,6 +27,7 @@ import type {
   PublicLink,
   PublicPricingRule,
   PublicFeaturedProduct,
+  PublicRateCardItem,
 } from '@/components/omnichannel/types';
 
 /**
@@ -188,6 +189,7 @@ interface PublicPageData {
   oc: any;
   biz: any;
   featuredProducts: PublicFeaturedProduct[];
+  rateCardItems: PublicRateCardItem[];
   events: PublicEventSummary[];
   rateData: UnitRateData | null;
 }
@@ -233,6 +235,7 @@ async function fetchPublicPageData(
       show_gallery, show_showcase, show_widget, show_links,
       widget_date_mode, widget_labels,
       show_pricing, default_price, price_unit, featured_item_ids,
+      show_rate_card, rate_card_item_ids, rate_card_title, rate_card_note,
       links:business_omni_channel_links ( id, channel_type, label, subtitle, url, is_active, is_primary, sort_order, custom_icon_url, lucide_icon, display_mode ),
       pricing_rules:business_pricing_rules ( id, date_from, date_to, price, label )
     `)
@@ -248,6 +251,17 @@ async function fetchPublicPageData(
   const featuredIds: string[] = Array.isArray(oc.featured_item_ids) ? oc.featured_item_ids : [];
   const showPricingRaw = !!oc.show_pricing;
 
+  // Rate Card (migr 152) ikut bersumber dari `catalog_items`, jadi id-nya
+  // DIGABUNG ke query Produk Unggulan di bawah alih-alih bikin query sendiri.
+  // Halaman ini baru saja dibenahi khusus soal TTFB (lihat catatan di atas);
+  // menambah satu round trip Vercel→Supabase untuk tabel yang SAMA akan
+  // membatalkan sebagian perbaikan itu demi kenyamanan menulis kode.
+  const showRateCardRaw = !!oc.show_rate_card;
+  const rateCardIds: string[] = showRateCardRaw && Array.isArray(oc.rate_card_item_ids)
+    ? oc.rate_card_item_ids
+    : [];
+  const catalogIds = [...new Set([...featuredIds, ...rateCardIds])];
+
   // ── Gelombang 2: tiga query yang sama-sama cuma butuh business_id ──────────
   // Dulu dijalankan berurutan (bizData → catData → business_units), padahal
   // tidak ada yang bergantung pada hasil yang lain. Di jalur cache-miss, tiap
@@ -259,11 +273,11 @@ async function fetchPublicPageData(
       .select('id, business_name, business_type, business_sector, city, whatsapp_number, widget_action_label, logo_url')
       .eq('id', oc.business_id)
       .single(),
-    featuredIds.length > 0
+    catalogIds.length > 0
       ? supabase
           .from('catalog_items')
           .select('id, name, description, default_price, unit, image_url, image_fit, image_position_x, image_position_y, link_url, link_label')
-          .in('id', featuredIds)
+          .in('id', catalogIds)
           .eq('business_id', oc.business_id)
           .eq('is_active', true)
           .is('deleted_at', null)
@@ -302,6 +316,20 @@ async function fetchPublicPageData(
       link_label: c.link_label ?? null,
     }));
 
+  // Item yang sudah dinonaktifkan/dihapus di Katalog otomatis rontok di sini
+  // (query-nya menyaring is_active + deleted_at), jadi id basi di konfigurasi
+  // tidak pernah jadi baris kosong di halaman publik.
+  const rateCardItems: PublicRateCardItem[] = rateCardIds
+    .map((id) => byId.get(id))
+    .filter(Boolean)
+    .map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      description: c.description ?? null,
+      price: typeof c.default_price === 'string' ? parseFloat(c.default_price) : (c.default_price ?? 0),
+      unit: c.unit ?? null,
+    }));
+
   // ── Gelombang 3: dua cabang yang baru bisa jalan setelah gelombang 2 ───────
   // events butuh business_type/sector (gating §2), rate butuh unit_id. Saling
   // lepas satu sama lain, jadi jalan bareng.
@@ -316,7 +344,7 @@ async function fetchPublicPageData(
     rateUnitId ? loadUnitRateData(supabase, oc.business_id, rateUnitId) : Promise.resolve(null),
   ]);
 
-  return { oc, biz, featuredProducts, events, rateData };
+  return { oc, biz, featuredProducts, rateCardItems, events, rateData };
 }
 
 export default async function PublicSlugPage({ params }: Props) {
@@ -327,7 +355,7 @@ export default async function PublicSlugPage({ params }: Props) {
   const pageData = await loadPublicPageData(slug);
   if (!pageData) notFound();
 
-  const { oc, biz, featuredProducts, events, rateData } = pageData;
+  const { oc, biz, featuredProducts, rateCardItems, events, rateData } = pageData;
 
   const channel = oc as unknown as BusinessOmniChannel;
   const activeLinks = ((oc.links ?? []) as OmniChannelLink[])
@@ -403,6 +431,10 @@ export default async function PublicSlugPage({ params }: Props) {
     pricing_rules: pricingRules,
     banner_url: oc.banner_url ?? null,
     featured_products: featuredProducts,
+    show_rate_card: !!oc.show_rate_card,
+    rate_card_title: oc.rate_card_title ?? null,
+    rate_card_note: oc.rate_card_note ?? null,
+    rate_card_items: rateCardItems,
     button_color: oc.button_color ?? null,
     banner_position: oc.banner_position ?? 'center',
   };
