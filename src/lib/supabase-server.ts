@@ -89,3 +89,33 @@ export async function canManageBusiness(
 ): Promise<boolean> {
   return isManagerRole(await getBusinessRoleForUser(supabase, userId, businessId));
 }
+
+/**
+ * Privilege khusus untuk mengubah transaksi yang normalnya terkunci.
+ *
+ * - `isSuperadmin` (profiles.default_role) → boleh edit transaksi posted DAN
+ *   menembus period lock.
+ * - `isBusinessCreator` (businesses.created_by) → boleh edit transaksi posted
+ *   di bisnis buatannya sendiri, tapi TETAP tunduk pada period lock (kunci
+ *   periode adalah keputusan tutup buku bisnis itu sendiri; creator bisa
+ *   membukanya lewat PeriodLockManager bila perlu).
+ *
+ * Ini bukan pengganti cek akses tulis — route tetap wajib `canManageBusiness()`.
+ * Aturan yang sama ditegakkan ulang di RPC `update_multi_line_transaction`
+ * (migr 153).
+ */
+export async function getTransactionEditPrivileges(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  userId: string,
+  businessId: string
+): Promise<{ isSuperadmin: boolean; isBusinessCreator: boolean }> {
+  const [{ data: profile }, { data: business }] = await Promise.all([
+    supabase.from('profiles').select('default_role').eq('id', userId).maybeSingle(),
+    supabase.from('businesses').select('created_by').eq('id', businessId).maybeSingle(),
+  ]);
+
+  return {
+    isSuperadmin: normalizeRole(profile?.default_role) === 'superadmin',
+    isBusinessCreator: !!business?.created_by && business.created_by === userId,
+  };
+}

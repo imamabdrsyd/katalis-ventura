@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { canManageBusiness, createServerClient, getAuthenticatedUser } from '@/lib/supabase-server';
+import {
+  canManageBusiness,
+  createServerClient,
+  getAuthenticatedUser,
+  getTransactionEditPrivileges,
+} from '@/lib/supabase-server';
 import { transactionIdSchema, updateMultiLineTransactionSchema } from '@/lib/validations';
 import { badRequest, forbidden, notFound, serverError, unauthorized, validationError } from '@/lib/api/server/responses';
-import { isSuperadminRole } from '@/lib/roles';
 import { normalizeCurrencyFields } from '@/lib/currency';
 
 interface RouteParams {
@@ -47,18 +51,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return forbidden('Hanya manager bisnis yang dapat mengubah transaksi');
     }
 
-    // Superadmin punya privilege bypass cek posted & period lock
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('default_role')
-      .eq('id', user.id)
-      .single();
-    const isSuperadmin = isSuperadminRole(profile?.default_role);
+    // Superadmin bypass cek posted & period lock; creator bisnis bypass cek
+    // posted saja (period lock tetap berlaku). Dicek ulang di RPC (migr 153).
+    const { isSuperadmin, isBusinessCreator } = await getTransactionEditPrivileges(
+      supabase,
+      user.id,
+      existing.business_id
+    );
+    const canEditPosted = isSuperadmin || isBusinessCreator;
 
-    // Block editing posted unless status-only change (superadmin dikecualikan)
+    // Block editing posted unless status-only change (superadmin & creator dikecualikan)
     const isOnlyStatusChange =
       Object.keys(parsed.data).length === 1 && parsed.data.status === 'posted';
-    if (existing.status === 'posted' && !isOnlyStatusChange && !isSuperadmin) {
+    if (existing.status === 'posted' && !isOnlyStatusChange && !canEditPosted) {
       return badRequest('Transaksi yang sudah di-posting tidak dapat diedit');
     }
 
